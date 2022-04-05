@@ -131,7 +131,7 @@ class Emsg(AbcEnum):
 
     IllegalState = IllegalStateError,
 
-    Timeout = TimeoutError,
+    Timeout = TimeoutError, "Timeout of {}ms exceeded", (int,)
 
     def __init__(self, cls: type[ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):

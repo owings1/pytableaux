@@ -664,7 +664,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     rules: TabRules
 
     #: The build options.
-    opts: MapCover[str, bool|int|None]
+    opts: Mapping[str, bool|int|None]
 
     #: The FlagEnum value.
     flag: TabFlag
@@ -703,10 +703,10 @@ class Tableau(Sequence[Branch], EventEmitter):
     current_step: int
 
     #: Ordered view of the open branches.
-    open: SequenceCover[Branch]
+    open: Sequence[Branch]
 
     #: The history of rule applications.
-    history: SequenceCover[StepEntry]
+    history: Sequence[StepEntry]
 
     #: A tree structure of the tableau. This is generated after the tableau
     #: is finished. If the `build_timeout` was exceeded, the tree is `not`
@@ -735,8 +735,8 @@ class Tableau(Sequence[Branch], EventEmitter):
 
         # Protected attributes
         self.__flag        : TabFlag         = TabFlag.PREMATURE
-        self.__history     : list[StepEntry] = list()
-        self.__branch_list : list[Branch]    = list()
+        self.__history     : list[StepEntry] = []
+        self.__branch_list : list[Branch]    = []
         self.__open        : linqset[Branch] = linqset()
         self.__branchstat  : dict[Branch, BranchStat] = {}
 
@@ -834,7 +834,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     def current_step(self) -> int:
         return len(self.history) + (TabFlag.TRUNK_BUILT in self.__flag)
 
-    def build(self):
+    def build(self) -> Tableau:
         'Build the tableau. Returns self.'
         with self.timers.build:
             while not self.finished:
@@ -885,7 +885,7 @@ class Tableau(Sequence[Branch], EventEmitter):
                 self.finish()
         return stepentry
 
-    def branch(self, /, parent: Branch = None):
+    def branch(self, /, parent: Branch = None) -> Branch:
         """Create a new branch on the tableau, as a copy of ``parent``, if given.
 
         :param Branch parent: The parent branch, if any.
@@ -898,7 +898,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.add(branch)
         return branch
 
-    def add(self, /, branch: Branch):
+    def add(self, /, branch: Branch) -> Tableau:
         """Add a new branch to the tableau. Returns self.
 
         :param Branch branch: The branch to add.
@@ -926,7 +926,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         branch.on(self.__branch_listeners)
         return self
 
-    def finish(self):
+    def finish(self) -> Tableau:
         """Mark the tableau as finished, and perform post-build tasks, including
         populating the ``tree``, ``stats``, and ``models`` properties.
         
@@ -1071,7 +1071,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     # *** Util
 
-    def __get_group_application(self, branch: Branch, group: RuleGroup) -> RuleTarget:
+    def __get_group_application(self, branch: Branch, group: RuleGroup) -> _RuleTarget:
         """Find and return the next available rule application for the given open
         branch and rule group. 
         
@@ -1097,7 +1097,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         for rule in group:
             target = rule.get_target(branch)
             if target:
-                ruletarget = RuleTarget(rule, target)
+                ruletarget = _RuleTarget(rule, target)
                 if not is_group_optim:
                     target.update(
                         group_score         = None,
@@ -1110,7 +1110,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         if results:
             return self.__select_optim_group_application(results)
 
-    def __select_optim_group_application(self, results: Sequence[RuleTarget]) -> RuleTarget:
+    def __select_optim_group_application(self, results: Sequence[_RuleTarget]) -> _RuleTarget:
         """Choose the highest scoring element from given results. The ``results``
         parameter is assumed to be a non-empty list/tuple of (rule, target) pairs.
 
@@ -1145,9 +1145,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         """Build the trunk of the tableau. Delegates to the ``build_trunk()``
         method of ``TableauxSystem``. This is called automatically when the
         tableau has non-empty ``argument`` and ``logic`` properties.
-        Returns self.
 
-        :return: self
         :raises errors.IllegalStateError: if the trunk is already built.
         """
         self.__check_not_started()
@@ -1156,7 +1154,6 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.System.build_trunk(self, self.argument)
             self.__flag |= TabFlag.TRUNK_BUILT
             self.emit(TabEvent.AFTER_TRUNK_BUILD, self)
-        return self
 
     def __compute_stats(self):
         'Compute the stats property after the tableau is finished.'
@@ -1182,10 +1179,11 @@ class Tableau(Sequence[Branch], EventEmitter):
             tree_duration_ms   = timers.tree.elapsed_ms(),
             models_duration_ms = timers.models.elapsed_ms(),
             rules_time_ms = sum(
-                timer.elapsed_ms()
+                rule.timers[name].elapsed_ms()
                 for rule in self.rules
-                    for timer in (
-                        rule.timers['search'], rule.timers['apply']
+                    for name in (
+                        'search',
+                        'apply',
                     )
             ),
             rules = tuple(map(self.__compute_rule_stats, self.rules)),
@@ -1214,11 +1212,15 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.timers.build.stop()
             self.__flag |= TabFlag.TIMED_OUT
             self.finish()
-            raise Emsg.Timeout('Timeout of %dms exceeded.' % timeout)
+            raise Emsg.Timeout(timeout)
 
     def __is_max_steps_exceeded(self):
         max_steps = self.opts['max_steps']
-        return max_steps is not None and len(self.history) >= max_steps
+        return (
+            max_steps is not None and
+            max_steps >= 0 and
+            len(self.history) >= max_steps
+        )
 
     def __check_not_started(self):
         if TabFlag.TRUNK_BUILT in self.__flag or len(self.history) > 0:
@@ -1371,10 +1373,12 @@ class Tableau(Sequence[Branch], EventEmitter):
 
 @static
 class TableauxSystem(Abc):
+    'Tableaux system base class.'
 
     @classmethod
     @abstract
     def build_trunk(cls, tableau: Tableau, argument: Argument, /):
+        'Build the trunk for an argument on the tableau.'
         raise NotImplementedError
 
     @classmethod
@@ -1395,7 +1399,7 @@ class TableauxSystem(Abc):
 
 if 'Data Classes' or True:
 
-    class RuleTarget(NamedTuple):
+    class _RuleTarget(NamedTuple):
         #: The rule instance that will apply.
         rule   : Rule
         #: The target produced by the rule.
@@ -1441,54 +1445,80 @@ if 'Data Classes' or True:
             return {k: self[k] for k in self._defaults}
 
     class TreeStruct(dmapattr):
+        'Recursive tree structure representation of a tableau.'
 
-        def __init__(self, values = None, /, **kw):
-            self.root: TreeStruct = None
-            #: The nodes on this structure.
-            self.nodes: list[Node] = list()
-            #: This child structures.
-            self.children: list[TreeStruct] = list()
-            #: Whether this is a terminal (childless) structure.
-            self.leaf: bool = False
-            #: Whether this is a terminal structure that is closed.
-            self.closed: bool = False
-            #: Whether this is a terminal structure that is open.
-            self.open: bool = False
-            #: The pre-ordered tree left value.
-            self.left: int = None
-            #: The pre-ordered tree right value.
-            self.right: int = None
-            #: The total node count of all descendants.
-            self.descendant_node_count: int = 0
-            #: The node count plus descendant node count.
-            self.structure_node_count: int = 0
-            #: The depth of this structure (ancestor structure count).
-            self.depth: int = None
-            #: Whether this structure or a descendant is open.
-            self.has_open: bool = False
-            #: Whether this structure or a descendant is closed.
-            self.has_closed: bool = False
-            #: If closed, the step number at which it closed.
-            self.closed_step: int|None = None
-            #: The step number at which this structure first appears.
-            self.step: int = None
-            #: The number of descendant terminal structures, or 1.
-            self.width: int = 0
-            #: 0.5x the width of the first child structure, plus 0.5x the
-            #: width of the last child structure (if distinct from the first),
-            #: plus the sum of the widths of the other (distinct) children.
-            self.balanced_line_width: float = None
-            #: 0.5x the width of the first child structure divided by the
-            #: width of this structure.
-            self.balanced_line_margin: float = None
-            #: The branch id, only set for leaves
-            self.branch_id: int|None = None
-            #: The model id, if exists, only set for leaves
-            self.model_id: int|None = None
-            #: Whether this is the one and only branch
-            self.is_only_branch: bool = False
-            #: The step at which the branch was added.
-            self.branch_step: int = None
+        root: TreeStruct
+        #: The nodes on this structure.
+        nodes: list[Node]
+        #: The child structures.
+        children: list[TreeStruct]
+        #: Whether this is a terminal (childless) structure.
+        leaf: bool
+        #: Whether this is a terminal structure that is closed.
+        closed: bool
+        #: Whether this is a terminal structure that is open.
+        open: bool
+        #: The pre-ordered tree left value.
+        left: int
+        #: The pre-ordered tree right value.
+        right: int
+        #: The total node count of all descendants.
+        descendant_node_count: int
+        #: The node count plus descendant node count.
+        structure_node_count: int
+        #: The depth of this structure (ancestor structure count).
+        depth: int
+        #: Whether this structure or a descendant is open.
+        has_open: bool
+        #: Whether this structure or a descendant is closed.
+        has_closed: bool
+        #: If closed, the step number at which it closed.
+        closed_step: int|None
+        #: The step number at which this structure first appears.
+        step: int
+        #: The number of descendant terminal structures, or 1.
+        width: int
+        #: 0.5x the width of the first child structure, plus 0.5x the
+        #: width of the last child structure (if distinct from the first),
+        #: plus the sum of the widths of the other (distinct) children.
+        balanced_line_width: float
+        #: 0.5x the width of the first child structure divided by the
+        #: width of this structure.
+        balanced_line_margin: float
+        #: The branch id, only set for leaves
+        branch_id: int|None
+        #: The model id, if exists, only set for leaves
+        model_id: int|None
+        #: Whether this is the one and only branch
+        is_only_branch: bool
+        #: The step at which the branch was added.
+        branch_step: int
+
+        def __init__(self, values: Mapping = None, /, **kw):
+            
+            self.nodes = []
+            self.children = []
+
+            self.root = None
+            self.leaf = False
+            self.closed = False
+            self.open = False
+            self.left = None
+            self.right = None
+            self.descendant_node_count = 0
+            self.structure_node_count = 0
+            self.depth = None
+            self.has_open = False
+            self.has_closed = False
+            self.closed_step = None
+            self.step = None
+            self.width = 0
+            self.balanced_line_width = None
+            self.balanced_line_margin = None
+            self.branch_id = None
+            self.model_id = None
+            self.is_only_branch = False
+            self.branch_step = None
 
             if values is not None:
                 self.update(values)

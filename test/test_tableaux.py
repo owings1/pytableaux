@@ -84,9 +84,9 @@ class TestTableau(BaseSuite):
         assert len(tab.open) == 0
 
     def test_regress_structure_has_model_id(self):
-        proof = Tableau('CPL', exarg('Triviality 1'), is_build_models=True)
-        proof.build()
-        assert proof.tree['model_id']
+        tab = Tableau('CPL', exarg('Triviality 1'), is_build_models=True)
+        tab.build()
+        assert tab.tree.model_id
 
     def test_getrule_returns_arg_if_rule_instance(self):
         proof = Tableau('CPL')

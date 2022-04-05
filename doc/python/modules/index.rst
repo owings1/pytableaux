@@ -9,6 +9,8 @@ Modules
 
     parsers
 
+    proof.common
+
     proof.tableaux
 
     proof.writers

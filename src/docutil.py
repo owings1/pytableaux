@@ -138,7 +138,10 @@ class Helper:
     # TODO: shouldn't this check rule groups?
     SKIP_RULES = Rule, ClosingRule
 
-    SKIP_TRUNKS = () # Tableau.build_trunk
+    SKIP_TRUNKS = (
+        TabSys.build_trunk,
+        # Tableau.build_trunk
+    )
 
     TT_TEMPL = JENV.get_template('truth_table.jinja2')
 

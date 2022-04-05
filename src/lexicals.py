@@ -1729,7 +1729,7 @@ class Notation(Bases.Enum):
     polish   = eauto(), 'ascii'
     standard = eauto(), 'unicode'
 
-    def __init__(self, num, default_charset, /):
+    def __init__(self, num, default_charset: str, /):
         self.charsets = setm((default_charset,))
         self.default_charset = default_charset
         self.writers = setm()

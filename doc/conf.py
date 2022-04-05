@@ -24,6 +24,14 @@ extensions = [
 
 autodoc_member_order = 'bysource'
 
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+intersphinx_mapping = dict(
+    python = (
+        'https://docs.python.org/3',
+        None,
+    )
+)
+
 # General information about the project.
 project = u'pytableaux'
 
@@ -108,7 +116,7 @@ def setup(app):
         html_theme = html_theme,
     ))
 
-def ____():
+if False:
     pass
     # -------------------------------------------------------------------
     # The encoding of source files.

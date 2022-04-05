@@ -12,29 +12,29 @@ Tableaux Module
 
         .. autoattribute:: argument
 
-        .. autoattribute:: completed
+        .. autoattribute:: logic
 
         .. autoattribute:: finished
 
-        .. autoattribute:: history
-
-        .. autoattribute:: id
+        .. autoattribute:: valid
 
         .. autoattribute:: invalid
 
-        .. autoattribute:: logic
-
-        .. autoattribute:: rules
+        .. autoattribute:: completed
 
         .. autoattribute:: premature
+
+        .. autoattribute:: id
+
+        .. autoattribute:: history
+
+        .. autoattribute:: rules
 
         .. autoattribute:: open
 
         .. autoattribute:: tree
 
-        .. autoattribute:: valid
-
-        .. automethod:: build()
+        .. automethod:: build
 
         .. automethod:: step
 
@@ -42,8 +42,14 @@ Tableaux Module
 
         .. automethod:: add
 
-    .. autoclass:: Branch
+        .. automethod:: finish
 
-    .. autoclass:: Node
+    .. autoclass:: Rule
+
+    .. autoclass:: ClosingRule
 
     .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TreeStruct
+        :members:
