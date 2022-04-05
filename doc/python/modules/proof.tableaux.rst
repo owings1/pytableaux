@@ -44,12 +44,14 @@ Tableaux Module
 
         .. automethod:: finish
 
+    .. autoclass:: TreeStruct
+        :members:
+
     .. autoclass:: Rule
 
     .. autoclass:: ClosingRule
 
-    .. autoclass:: TableauxSystem
-        :members:
+    .. autoclass:: TabRules
 
-    .. autoclass:: TreeStruct
+    .. autoclass:: TableauxSystem
         :members:

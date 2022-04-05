@@ -117,15 +117,15 @@ def init_sphinx(app: Sphinx, opts: dict):
     app.add_role('oper', helper.role_lexrender_oper)
     app.add_role('m', helper.role_lexrender_meta)
 
-    app.add_css_file('css/doc.css')
+    # app.add_css_file('css/doc.css')
 
-    if opts['html_theme'] == 'sphinx_rtd_theme':
-        themecss = 'doc.rtd.css'
-    elif opts['html_theme'] == 'default':
-        themecss = 'doc.default.css'
-    app.add_css_file('/'.join(['css', themecss]))
+    # if opts['html_theme'] == 'sphinx_rtd_theme':
+    #     themecss = 'doc.rtd.css'
+    # elif opts['html_theme'] == 'default':
+    #     themecss = 'doc.default.css'
+    # app.add_css_file('/'.join(['css', themecss]))
 
-    app.add_css_file('tableau.css')
+    # app.add_css_file('tableau.css')
 
 def sphinx_role_defaults(func: F) -> F:
     func.options = {'class': directives.class_option}

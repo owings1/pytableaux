@@ -8,7 +8,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import sys
 sys.path.insert(1, '../src')
-
+from sphinx.application import Sphinx
 import docutil, fixed
 
 copyright = fixed.copyright#'2014-2022, Doug Owings. Released under the GNU Affero General Public License v3 or later'
@@ -20,6 +20,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',
+    # https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#configuration
+    'sphinx.ext.napoleon',
 ]
 
 autodoc_member_order = 'bysource'
@@ -49,6 +51,7 @@ pygments_style = 'colorful'
 #pygments_style = 'material'
 
 # html_theme = 'default'
+# https://github.com/readthedocs/sphinx_rtd_theme
 html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -56,8 +59,8 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 html_theme_options = {}
 
-# https://github.com/readthedocs/sphinx_rtd_theme
 if html_theme == 'sphinx_rtd_theme':
+    # https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html
     html_theme_options.update(
         style_external_links = True,
     )
@@ -74,13 +77,10 @@ html_show_sphinx = False
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
 html_static_path = [
-    'res',
+    # 'res',
     '../src/www/static',
     '../src/proof/templates/html/static',
 ]
-
-# Output file base name for HTML help builder.
-htmlhelp_basename = 'pytableauxdoc'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -104,6 +104,9 @@ source_suffix = '.rst'
 # The master toctree document.
 master_doc = 'index'
 
+# Output file base name for HTML help builder.
+htmlhelp_basename = 'pytableauxdoc'
+
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
 add_module_names = False
@@ -111,7 +114,16 @@ add_module_names = False
 def sphinxcontrib_autodoc_filterparams(fun, param):
     raise NotImplementedError
 
-def setup(app):
+def setup(app: Sphinx):
+    app.add_css_file('css/doc.css')
+
+    if html_theme == 'sphinx_rtd_theme':
+        themecss = 'doc.rtd.css'
+    elif html_theme == 'default':
+        themecss = 'doc.default.css'
+    app.add_css_file(f'css/{themecss}')
+
+    app.add_css_file('tableau.css')
     docutil.init_sphinx(app, dict(
         html_theme = html_theme,
     ))

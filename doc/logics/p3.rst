@@ -4,11 +4,23 @@
 :m:`P3` - Post 3-valued logic
 *****************************
 
+.. figure:: /res/img/Emil_Leon_Post.jpg
+    :alt: Photo of Emil Post
+    :align: right
+    :scale: 50 %
+    :target: https://en.wikipedia.org/wiki/File:Emil_Leon_Post.jpg
+
+    Emil Post
+
 Emil Post's three-valued logic (:m:`T`, :m:`F`, and :m:`N`) has a deviant negation
 that performs a *cyclic shift* in value. The result is a system much different
-from classical logic, as well as more well-known many-valued systems.
+from :ref:`CFOL`, as well as more well-known many-valued systems.
 
 .. contents:: :local:
+
+.. raw:: html
+
+    <div style="clear:both"></div>
 
 .. automodule:: logics.p3
 
@@ -53,13 +65,13 @@ from classical logic, as well as more well-known many-valued systems.
 
             .. Note:: :m:`P3` did not originally define quantification. This is a novel construction.
 
-            The universal quantifier is thought of like `generalized conjunction`.
-            Since :s:`A & B` is defined as :s:`~(~A V ~B)`, we can generalize conjunction
+            The :s:`L` quantifier is thought of like `generalized conjunction`.
+            Given that :s:`A & B` is defined as :s:`~(~A V ~B)`, we interpret :s:`L`
             in the following way. Take the set of values of the sentence resulting
             from the substitution of the variable with each constant. Then apply
             the negation function to each of those values. Then take the maximum
             of those values (the `generalized disjunction`), and apply the negation
-            function to that minimum value. The result is the value of the universal
+            function to that maximum value. The result is the value of the universal
             sentence.
 
     Logical Consequence
@@ -87,16 +99,6 @@ from classical logic, as well as more well-known many-valued systems.
       American Journal of Mathematics, vol. 43. 1921.
 
     - Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
-
-    - `Wikipedia entry on Emil Post <https://en.wikipedia.org/wiki/Emil_Leon_Post>`_.
-
-    - Here is a picture of Emil Leon Post (from `Wikimedia Commons <https://en.wikipedia.org/wiki/File:Emil_Leon_Post.jpg>`_
-      in the public domain):
-
-      .. raw:: html
-
-          <img src="../_static/img/Emil_Leon_Post.jpg">
-
 
 .. _Introduction to a General Theory of Elementary Propositions: https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
 .. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en

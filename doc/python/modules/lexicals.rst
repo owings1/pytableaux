@@ -8,17 +8,25 @@ Lexicals Module
 
 .. automodule:: lexicals
 
+    Parsing & Writing
+    =================
+
+    .. autoclass:: Parser
+        :members: parse, argument
+
     .. autoclass:: LexWriter
         :members: write
 
-    .. autoclass:: Predicates
+    .. autoclass:: Notation
 
-    .. autoclass:: Sentence
+    Vocabulary
+    ==========
 
-    .. autoclass:: Argument
+    .. autoclass:: Lexical
 
-    Lexical Items
-    -------------
+    .. autoclass:: Quantifier()
+
+    .. autoclass:: Operator()
 
     .. autoclass:: Constant
 
@@ -26,10 +34,23 @@ Lexicals Module
 
     .. autoclass:: Predicate
 
-    .. autoclass:: Predicated
+    .. autoclass:: Sentence
+
+    Sentence Types
+    --------------
 
     .. autoclass:: Atomic
+
+    .. autoclass:: Predicated
 
     .. autoclass:: Quantified
 
     .. autoclass:: Operated
+
+    Containers
+    ==========
+
+    .. autoclass:: Argument
+
+    .. autoclass:: Predicates
+    
