@@ -24,19 +24,17 @@ __all__ = 'Helper',
 
 from collections import defaultdict
 
-import inspect, os, re, traceback
+import os, re, traceback
 from typing import Any, Callable
 from jinja2 import Environment, FileSystemLoader
 from html import escape as htmlesc, unescape as htmlun
 from os.path import abspath, join as pjoin, basename as bname
-from inspect import getmro, getsource #, isclass, ismethod
-from copy import deepcopy
+from inspect import getmro, getsource
 
 from sphinx.application import Sphinx
 from sphinx.util import logging
 from docutils import nodes as docnodes
 
-# from docutils.parsers.rst import Directive, roles
 import docutils.parsers.rst.directives as directives
 from tools.abcs import F, MapProxy
 
@@ -100,10 +98,6 @@ class Helper:
     def setup_sphinx(app: Sphinx, opts: dict) -> Helper:
 
         helper = Helper(opts)
-
-        # helper.connect_sphinx(app, 'autodoc-process-signature',
-        #     'sphinx_filter_signature',
-        # )
         helper.connect_sphinx(app, 'autodoc-process-docstring',
             'sphinx_obj_lines_append_autodoc',
             'sphinx_regex_line_replace_autodoc',
@@ -115,13 +109,6 @@ class Helper:
             'sphinx_regex_simple_replace_source',
         )
 
-        # helper.connect_sphinx(app, 'build-finished',
-
-        # )
-
-        # helper.connect_sphinx(app, 'object-description-transform',
-        #     'sphinx_evtest',
-        # )
         app.add_role('s', helper.role_lexrender_auto)
         app.add_role('oper', helper.role_lexrender_oper)
         app.add_role('m', helper.role_lexrender_meta)
@@ -216,19 +203,6 @@ class Helper:
         lines = '\n'.join(tables).split('\n')
         lines.append('<div class="clear"></div>')
         return rawblock(lines, indent)
-
-    # def lines_rule_docstring(self, rule:str|type[Rule], logic: Any = None, indent: str|int = None):
-    #     'Docstring lines (stripped, indented) for a ``Rule`` class.'
-    #     logic = get_logic(logic or rule)
-    #     found: type[Rule] = None
-    #     for name, member in inspect.getmembers(logic.TabRules):
-    #         if name == rule or member == rule:
-    #             found = member
-    #             break
-    #     else:
-    #         raise ValueError(f'Rule not found: {rule}, (logic: {logic.name})')
-    #     lines = [line.strip() for line in found.__doc__.split('\n')]
-    #     return indented(lines, indent)
 
     def lines_inherited_ruledoc(self, rule: type[Rule], indent: str|int = None):
         'Docstring lines (stripped, indented) for an "inheriting only" ``Rule`` class.'
@@ -474,14 +448,6 @@ class Helper:
         for check, func in defns:
             if check and (not callable(check) or check(obj)):
                 lines += func(obj)
-
-    # def sphinx_evtest(self, app, domain, objtype, contentnode):
-    #     #print('\n\n\n', (domain, objtype, contentnode), '\n')
-    #     # if pagename == '_modules/logics/fde':
-    #     #     for n in doctree.traverse():
-    #     #         print(str(n.attlist()))
-    #     # # print('\n\n\n', (pagename, templatename), '\n')
-    #     pass
 
 
     ## Custom Sphinx Roles
@@ -854,6 +820,28 @@ def set_classes(options: dict):
             raise KeyError("classes")
         options['classes'] = options['class']
         del options['class']
+
+
+
+# helper.connect_sphinx(app, 'autodoc-process-signature',
+#     'sphinx_filter_signature',
+# )
+
+# helper.connect_sphinx(app, 'build-finished',
+
+# )
+
+# helper.connect_sphinx(app, 'object-description-transform',
+#     'sphinx_evtest',
+# )
+
+# def sphinx_evtest(self, app, domain, objtype, contentnode):
+#     #print('\n\n\n', (domain, objtype, contentnode), '\n')
+#     # if pagename == '_modules/logics/fde':
+#     #     for n in doctree.traverse():
+#     #         print(str(n.attlist()))
+#     # # print('\n\n\n', (pagename, templatename), '\n')
+#     pass
 
 # class ParseRenderDirective(Directive):
 #     sp = create_parser(
