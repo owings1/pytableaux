@@ -64,7 +64,7 @@ CType = LexType|Marking|type[Predicate.System]
 
 class ParseTable(MapCover[str, tuple[CType, int|Lexical]], _Bases.CacheNotationData):
 
-    default_fetch_name = 'default'
+    default_fetch_key = 'default'
 
     __slots__ = 'reversed', 'chars'
 
@@ -167,7 +167,7 @@ def create_parser(notn: Notation = None, vocab: Predicates = None, table: ParseT
     else:
         notn = Notation(notn)
     if table is None:
-        table = ParseTable.default_fetch_name
+        table = ParseTable.default_fetch_key
     if isinstance(table, str):
         table = ParseTable.fetch(notn, table)
     return notn.Parser(vocab, table, **opts)
@@ -283,7 +283,7 @@ class BaseParser(Parser):
 
     def __init__(self, preds: Predicates = Predicate.System, table: ParseTable|str = None, /, **opts):
         if table is None:
-            table = ParseTable.default_fetch_name
+            table = ParseTable.default_fetch_key
         if isinstance(table, str):
             table = ParseTable.fetch(self.notation, table)
         self.table = table

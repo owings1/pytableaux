@@ -244,6 +244,16 @@ if 'Metas' or True:
             except NameError: raise AttributeError
             setattr(LexWriter, '__sys', value)
 
+    class ParserMeta(AbcBaseMeta):
+        def __call__(cls, *args, **kw):
+            if cls is Parser:
+                if args:
+                    notn = Notation(args[0])
+                    args = args[1:]
+                else:
+                    notn = Notation.default
+                return notn.Parser(*args, **kw)
+            return super().__call__(*args, **kw)
 
 @abcm.clsafter
 class Lexical:
@@ -635,28 +645,28 @@ class Bases:
 
     class CacheNotationData(metaclass = AbcBaseMeta):
 
-        default_fetch_name = 'default'
+        default_fetch_key = 'default'
         _instances: ClassVar[dict[Notation, dict[str, CnT]]]
 
         __slots__ = EMPTY_SET
 
         @classmethod
-        def load(cls: type[CnT], notn: Notation, name: str, data: Mapping) -> CnT:
-            instcheck(name, str)
+        def load(cls: type[CnT], notn: Notation, key: str, data: Mapping) -> CnT:
+            instcheck(key, str)
             idx = cls._instances[notn]
-            if name in idx:
-                raise Emsg.DuplicateKey((notn, name))
-            return idx.setdefault(name, cls(data))
+            if key in idx:
+                raise Emsg.DuplicateKey((notn, key))
+            return idx.setdefault(key, cls(data))
 
         @classmethod
-        def fetch(cls: type[CnT], notn: Notation, name: str = None) -> CnT:
-            if name is None:
-                name = cls.default_fetch_name
+        def fetch(cls: type[CnT], notn: Notation, key: str = None) -> CnT:
+            if key is None:
+                key = cls.default_fetch_key
             try:
-                return cls._instances[notn][name]
+                return cls._instances[notn][key]
             except KeyError:
                 pass
-            return cls.load(notn, name, cls._builtin[notn][name])
+            return cls.load(notn, key, cls._builtin[notn][key])
 
         @classmethod
         def available(cls, notn: Notation) -> list[str]:
@@ -677,8 +687,8 @@ class Bases:
                 # Default for notation.
                 cls.fetch(notn)
                 # All available.
-                for name in cls.available(notn):
-                    cls.fetch(notn, name)
+                for key in cls.available(notn):
+                    cls.fetch(notn, key)
 
 ##############################################################
 ##############################################################
@@ -1844,7 +1854,7 @@ class LexWriter(metaclass = LexWriterMeta):
 
 class RenderSet(Bases.CacheNotationData):
 
-    default_fetch_name = 'ascii'
+    default_fetch_key = 'ascii'
 
     name: str
     notation: Notation
@@ -1996,7 +2006,7 @@ class StandardLexWriter(BaseLexWriter):
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
 
-class Parser(metaclass = AbcBaseMeta):
+class Parser(metaclass = ParserMeta):
     'Parser interface and coordinator.'
 
     __slots__ = EMPTY_SET

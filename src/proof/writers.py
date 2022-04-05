@@ -171,6 +171,7 @@ class HtmlTabWriter(TemplateWriter):
     )
 
     def attachments(self, tableau: Tableau, /):
+        # TODO: Cache
         with open(path.join(self.template_dir, 'static/tableau.css'), 'r') as f:
             return dict(css = f.read())
 
