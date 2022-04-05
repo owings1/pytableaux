@@ -234,7 +234,7 @@ class TestMappingApi(BaseSuite):
 
     def test_subclasses(self):
         # Ensure modules are loaded
-        from parsers import CharTable
+        from parsers import ParseTable
         from proof.common import Target
         from proof.helpers import BranchCache
         from proof.tableaux import TreeStruct
@@ -251,7 +251,7 @@ class TestMappingApi(BaseSuite):
         classes = get_subclasses(MappingApi) | (
             # Make sure these are tested, for good measure.
             BranchCache,
-            CharTable,
+            ParseTable,
             EventsListeners,
             Target,
             TreeStruct,
@@ -269,7 +269,7 @@ class TestMappingApi(BaseSuite):
                 # TreeStruct has defaults.
                 exp = dict(TreeStruct())
             else:
-                # CharTable neeed [str, item] structure.
+                # ParseTable needs [str, item] structure.
                 # Target requires branch key.
                 exp = dict(branch = (..., ...),)
 

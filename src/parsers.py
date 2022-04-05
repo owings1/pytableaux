@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 __all__ = (
-    'CharTable',
+    'ParseTable',
     'BaseParser',
     'PolishParser',
     'StandardParser',
@@ -62,7 +62,7 @@ notations = Notation.seq
 
 CType = LexType|Marking|type[Predicate.System]
 
-class CharTable(MapCover[str, tuple[CType, int|Lexical]], _Bases.CacheNotationData):
+class ParseTable(MapCover[str, tuple[CType, int|Lexical]], _Bases.CacheNotationData):
 
     default_fetch_name = 'default'
 
@@ -125,6 +125,9 @@ class CharTable(MapCover[str, tuple[CType, int|Lexical]], _Bases.CacheNotationDa
 
     __delattr__ = raisr(AttributeError)
 
+# legacy
+# CharTable = ParseTable
+
 def parse(input: str, *args, **opts) -> Sentence:
     """
     Parse a string and return a sentence.
@@ -141,7 +144,7 @@ def parse_argument(conclusion, premises = None, title: str = None, **opts) -> Ar
     """
     return create_parser(**opts).argument(conclusion, premises, title = title)
 
-def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTable = None, **opts) -> BaseParser:
+def create_parser(notn: Notation = None, vocab: Predicates = None, table: ParseTable = None, **opts) -> BaseParser:
     """
     Create a sentence parser with the given spec. This is
     useful if you parsing many sentences with the same notation
@@ -149,7 +152,7 @@ def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTa
 
     :param notn: The parser notation. Uses the default notation if not passed.
     :param vocab: The predicates store for parsing user-defined predicates.
-    :param CharTable table: A custom parser table to use.
+    :param ParseTable table: A custom parser table to use.
     :return: The parser instance
     :raises ValueError: on invalid notation, or table.
     :raises TypeError: on invalid argument types.
@@ -164,16 +167,16 @@ def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTa
     else:
         notn = Notation(notn)
     if table is None:
-        table = CharTable.default_fetch_name
+        table = ParseTable.default_fetch_name
     if isinstance(table, str):
-        table = CharTable.fetch(notn, table)
+        table = ParseTable.fetch(notn, table)
     return notn.Parser(vocab, table, **opts)
 
 class ParseContext:
 
     __slots__ = 'input', 'type', 'preds', 'is_open', 'pos', 'bound_vars'
 
-    def __init__(self, input_: str, table: CharTable, preds: Predicates, /):
+    def __init__(self, input_: str, table: ParseTable, preds: Predicates, /):
         self.input = input_
         self.type = table.type
         self.preds = preds
@@ -212,9 +215,7 @@ class ParseContext:
         :raises errors.ParseError: if after last.
         """
         if not self.has_current():
-            raise ParseError(
-                'Unexpected end of input at position %d.' % self.pos
-            )
+            raise ParseError(f'Unexpected end of input at position {self.pos}.')
         return self.type(self.current())
 
     def assert_current_is(self, ctype: str):
@@ -265,8 +266,8 @@ class ParseContext:
         if ctype is None:
             pfx = 'Unexpected symbol'
         else:
-            pfx = 'Unexpected %s symbol' % ctype
-        msg = "%s '%s' at position %d." % (pfx, char, self.pos)
+            pfx = f'Unexpected {ctype} symbol'
+        msg = f"{pfx} '{char}' at position {self.pos}."
         if len(exp):
             msg += ' Expected %s.' % ', '.join(map(str, exp))
         return msg
@@ -278,15 +279,13 @@ _PARAM_CTYPES = setf({LexType.Constant, LexType.Variable})
 
 class BaseParser(Parser):
 
-    default_table = ClassVar[CharTable]
-
     __slots__ = 'table', 'preds', 'opts'
 
-    def __init__(self, preds: Predicates = Predicate.System, table: CharTable|str = None, /, **opts):
+    def __init__(self, preds: Predicates = Predicate.System, table: ParseTable|str = None, /, **opts):
         if table is None:
-            table = CharTable.default_fetch_name
+            table = ParseTable.default_fetch_name
         if isinstance(table, str):
-            table = CharTable.fetch(self.notation, table)
+            table = ParseTable.fetch(self.notation, table)
         self.table = table
         self.preds = preds
         self.opts = opts
@@ -300,6 +299,8 @@ class BaseParser(Parser):
             context.chomp()
             context.assert_end()
             return s
+
+    __call__ = parse
 
     @abstract
     def _read(self, context: ParseContext) -> Sentence:
@@ -460,7 +461,6 @@ class StandardParser(BaseParser):
     __slots__ = EMPTY_SET
 
     def parse(self, input):
-        pass
         # Override to allow dropped outer parens.
         try:
             return super().parse(input)
@@ -474,6 +474,8 @@ class StandardParser(BaseParser):
             except ParseError:
                 pass
             raise
+
+    __call__ = parse
 
     def _read(self, context: ParseContext):
         ctype = context.assert_current()
@@ -541,7 +543,7 @@ class StandardParser(BaseParser):
             length += 1
         if oper is None:
             raise ParseError(
-                'Paren expression missing binary operator at position {0}.'.format(context.pos)
+                f'Paren expression missing binary operator at position {context.pos}.'
             )
         # now we can divide the string into lhs and rhs
         lhs_start = context.pos + 1
@@ -571,9 +573,9 @@ class StandardParser(BaseParser):
 
 Notation.standard.Parser = StandardParser
 
-CharTable._initcache(Notation, {
-    Notation.standard: {
-        'default': {
+ParseTable._initcache(Notation, {
+    Notation.standard: dict(
+        default = {
             'A' : (LexType.Atomic, 0),
             'B' : (LexType.Atomic, 1),
             'C' : (LexType.Atomic, 2),
@@ -619,9 +621,9 @@ CharTable._initcache(Notation, {
             '8' : (Marking.digit, 8),
             '9' : (Marking.digit, 9),
         }
-    },
-    Notation.polish: {
-        'default': {
+    ),
+    Notation.polish: dict(
+        default = {
             'a' : (LexType.Atomic, 0),
             'b' : (LexType.Atomic, 1),
             'c' : (LexType.Atomic, 2),
@@ -665,10 +667,5 @@ CharTable._initcache(Notation, {
             '8' : (Marking.digit, 8),
             '9' : (Marking.digit, 9),
         },
-    }
+    ),
 })
-
-
-for _notn in Notation:
-    _notn.Parser.default_table = CharTable.fetch(_notn)
-del(_notn)

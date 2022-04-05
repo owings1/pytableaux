@@ -40,7 +40,7 @@ __all__ = (
 from tools.abcs import AbcEnum
 from tools.decorators import closure
 from tools.misc import get_logic
-from parsers import CharTable
+from parsers import ParseTable
 from lexicals import LexType, Notation, LexWriter
 import examples
 
@@ -380,7 +380,7 @@ def _():
                 premises = tuple(map(lw, arg.premises)),
                 conclusion = lw(arg.conclusion),
             )
-        parser_nups[notn.name] = CharTable.fetch(notn).chars[LexType.Predicate]
+        parser_nups[notn.name] = ParseTable.fetch(notn).chars[LexType.Predicate]
 
     for modname, logic in APP_LOGICS.items():
         category = logic.Meta.category

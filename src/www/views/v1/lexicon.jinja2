@@ -15,7 +15,7 @@
     </div>
     <div class="lexicon-panel">
         {%- for notn in Notation -%}
-            {%- set table = CharTable.fetch(notn) -%}
+            {%- set table = ParseTable.fetch(notn) -%}
             <div class="lexicon hidden notation-{{ notn.name|e }}">
                 <span class="label">Atomics</span>
                 <ul class="item-symbols">
@@ -43,7 +43,7 @@
     </div>
     <div class="lexicon-panel last">
         {%- for notn in Notation -%}
-            {%- set table = CharTable.fetch(notn) -%}
+            {%- set table = ParseTable.fetch(notn) -%}
             <div class="lexicon hidden notation-{{ notn.name|e }}">
                 <span class="label">Constants</span>
                 <ul class="item-symbols">
@@ -76,7 +76,7 @@
                         <tr class="systemPredicate">
                             <td>
                                 {% for notn in Notation %}
-                                    {%- set symbol = notn.Parser.default_table.char(PredSys, pred) -%}
+                                    {%- set symbol = ParseTable.fetch(notn).char(PredSys, pred) -%}
                                     {%- set subscript = pred.subscript -%}
                                     <span class="predicateSymbol notation-{{ notn.name|e }} hidden">
                                         {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
@@ -93,7 +93,7 @@
                         {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
                         {%- call helper.predicate_row(index, subscript, name, arity) %}
                             {% for notn in Notation -%}
-                                {%- set table = CharTable.fetch(notn) -%}
+                                {%- set table = ParseTable.fetch(notn) -%}
                                 {{- helper.predicate_symbol(notn.name, table.char(LexType.Predicate, index), subscript) }}
                             {% endfor -%}
                         {%- endcall -%}

@@ -226,10 +226,10 @@ if 'Metas' or True:
                     args = args[1:]
                 else:
                     notn = Notation.default
-                return notn.default_writer(*args, **kw)
+                return notn.DefaultWriter(*args, **kw)
                 # return Notation(
                 #     notn or Notation.default
-                # ).default_writer(*args, **kw)
+                # ).DefaultWriter(*args, **kw)
             return super().__call__(*args, **kw)
 
         @lazy.dynca
@@ -636,7 +636,7 @@ class Bases:
     class CacheNotationData(metaclass = AbcBaseMeta):
 
         default_fetch_name = 'default'
-        _instances: dict[Notation, dict[str, CnT]]
+        _instances: ClassVar[dict[Notation, dict[str, CnT]]]
 
         __slots__ = EMPTY_SET
 
@@ -1722,7 +1722,7 @@ class Notation(Bases.Enum):
     charsets         : setm[str]
     default_charset  : str
     writers          : setm[type[LexWriter]]
-    default_writer   : type[LexWriter]
+    DefaultWriter    : type[LexWriter]
     rendersets       : setm[RenderSet]
     Parser           : type[Parser]
 
@@ -1733,12 +1733,12 @@ class Notation(Bases.Enum):
         self.charsets = setm((default_charset,))
         self.default_charset = default_charset
         self.writers = setm()
-        self.default_writer = None
+        self.DefaultWriter = None
         self.rendersets = setm()
 
     __slots__ = (
         'Parser',
-        'writers', 'default_writer',
+        'writers', 'DefaultWriter',
         'rendersets', 'charsets', 'default_charset',
     )
 
@@ -1749,13 +1749,14 @@ class Notation(Bases.Enum):
             super().__setattr__(name, value)
 
 class LexWriter(metaclass = LexWriterMeta):
-    'LexWriter Api and Coordinator class.'
+    'LexWriter interface and coordinator.'
 
-    __slots__ = EMPTY_SET
+    __slots__ = 'opts', 'renderset'
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables
 
     notation: ClassVar[Notation]
+    defaults: ClassVar[dict] = {}
     _methodmap = MapProxy[LexType, str](dict(
         zip(LexType, repeat(NotImplemented))
     ))
@@ -1763,10 +1764,15 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables
 
-    # encoding: str
+    renderset: RenderSet
+    opts: dict
     charset: str
 
-    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Exteneral API
+    @property
+    def charset(self) -> str:
+        return self.renderset.charset
+
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ External API
 
     def write(self, item: Lexical) -> str:
         'Write a lexical item.'
@@ -1781,8 +1787,16 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init
 
-    @abstract
-    def __init__(self): ...
+    def __init__(self, charset: str = None, renderset: RenderSet = None, **opts):
+        if renderset is None:
+            notn = self.notation
+            if charset is None:
+                charset = notn.default_charset
+            renderset = RenderSet.fetch(notn, charset)
+        elif charset is not None and charset != renderset.charset:
+            raise Emsg.WrongValue(charset, renderset.charset)
+        self.opts = dict(self.defaults, **opts)
+        self.renderset = renderset
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Internal API
 
@@ -1817,8 +1831,8 @@ class LexWriter(metaclass = LexWriterMeta):
         notn = subcls.notation = Notation(subcls.notation)
         type(cls).register(cls, subcls)
         notn.writers.add(subcls)
-        if notn.default_writer is None:
-            notn.default_writer = subcls
+        if notn.DefaultWriter is None:
+            notn.DefaultWriter = subcls
         return subcls
 
     def __init_subclass__(subcls: type[LexWriter], **kw):
@@ -1832,29 +1846,33 @@ class RenderSet(Bases.CacheNotationData):
 
     default_fetch_name = 'ascii'
 
-    def __init__(self, data: Mapping):
-        self.name: str = data['name']
+    name: str
+    notation: Notation
+    charset: str
+    renders: Mapping[Any, Callable[..., str]]
+    strings: Mapping[Any, str]
+    data: Mapping[str, Any]
+
+    def __init__(self, data: Mapping[str, Any]):
+        self.name = data['name']
         self.notation = notn = Notation(data['notation'])
-        self.charset: str = data['charset']
-        self.renders: Mapping[Any, Callable[..., str]] = data.get('renders', {})
-        self.strings: Mapping[Any, str] = data.get('strings', {})
+        self.charset = data['charset']
+        self.renders = data.get('renders', {})
+        self.strings = data.get('strings', {})
         self.data = data
         notn.charsets.add(self.charset)
         notn.rendersets.add(self)
 
-    def strfor(self, ctype, value):
+    def strfor(self, ctype: Any, value: Any) -> str:
         if ctype in self.renders:
             return self.renders[ctype](value)
         return self.strings[ctype][value]
 
 class BaseLexWriter(LexWriter):
 
-    __slots__ = 'opts', 'renderset'
+    __slots__ = EMPTY_SET
 
-    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables
-
-    defaults: ClassVar[dict] = {}
-    _methodmap: ClassVar = {
+    _methodmap = {
         LexType.Operator   : '_write_plain',
         LexType.Quantifier : '_write_plain',
         LexType.Predicate  : '_write_predicate',
@@ -1865,34 +1883,6 @@ class BaseLexWriter(LexWriter):
         LexType.Quantified : '_write_quantified',
         LexType.Operated   : '_write_operated',
     }
-
-    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables
-
-    opts: dict
-    renderset: RenderSet
-
-    # @property
-    # def encoding(self) -> str:
-    #     return self.renderset.encoding
-
-    @property
-    def charset(self) -> str:
-        return self.renderset.charset
-
-    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init
-
-    def __init__(self, charset: str = None, renderset: RenderSet = None, **opts):
-        notation = self.notation
-        if renderset is None:
-            if charset is None:
-                charset = notation.default_charset
-            renderset = RenderSet.fetch(notation, charset)
-        elif charset is not None and charset != renderset.charset:
-            raise Emsg.WrongValue(charset, renderset.charset)
-        self.opts = self.defaults | opts
-        self.renderset = renderset
-
-    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Default implementations
 
     @abstract
     def _write_operated(self, item: Operated): ...
@@ -1931,6 +1921,7 @@ class PolishLexWriter(BaseLexWriter):
     __slots__ = EMPTY_SET
 
     notation = Notation.polish
+    defaults = {}
 
     def _write_operated(self, item: Operated):
         return ''.join(map(self._write, (item.operator, *item)))
@@ -1939,6 +1930,7 @@ class PolishLexWriter(BaseLexWriter):
 class StandardLexWriter(BaseLexWriter):
 
     __slots__ = EMPTY_SET
+
     notation = Notation.standard
     defaults = dict(drop_parens = True)
 
@@ -2005,11 +1997,11 @@ class StandardLexWriter(BaseLexWriter):
         return super()._test() + list(map(self, [s1, s2, s3]))
 
 class Parser(metaclass = AbcBaseMeta):
+    'Parser interface and coordinator.'
 
     __slots__ = EMPTY_SET
 
     notation: ClassVar[Notation]
-    default_table : ClassVar[Mapping[str, Any]]
 
     @abstract
     def parse(self, input: str) -> Sentence:
@@ -2022,8 +2014,7 @@ class Parser(metaclass = AbcBaseMeta):
         """
         raise NotImplementedError
 
-    def __call__(self, input: str) -> Sentence:
-        return self.parse(input)
+    __call__ = parse
 
     def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
         """Parse the input strings and create an argument.

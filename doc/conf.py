@@ -8,10 +8,22 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import sys
 sys.path.insert(1, '../src')
-from sphinx.application import Sphinx
-import docutil, fixed
 
-copyright = fixed.copyright#'2014-2022, Doug Owings. Released under the GNU Affero General Public License v3 or later'
+
+import fixed
+
+copyright = fixed.copyright
+# The version info for the project you're documenting, acts as replacement for
+# |version| and |release|, also used in various other places throughout the
+# built documents.
+#
+# The short X.Y version.
+version = fixed.__version__
+# The full version, including alpha/beta/rc tags.
+release = version
+
+del(fixed)
+
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -22,11 +34,13 @@ extensions = [
     'sphinx.ext.viewcode',
     # https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#configuration
     'sphinx.ext.napoleon',
+    # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+    'sphinx.ext.intersphinx',
 ]
 
 autodoc_member_order = 'bysource'
 
-# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
 intersphinx_mapping = dict(
     python = (
         'https://docs.python.org/3',
@@ -35,16 +49,7 @@ intersphinx_mapping = dict(
 )
 
 # General information about the project.
-project = u'pytableaux'
-
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
-#
-# The short X.Y version.
-version = fixed.__version__
-# The full version, including alpha/beta/rc tags.
-release = version
+project = 'pytableaux'
 
 pygments_style = 'colorful'
 #pygments_style = 'xcode'
@@ -111,21 +116,25 @@ htmlhelp_basename = 'pytableauxdoc'
 # unit titles (such as .. function::).
 add_module_names = False
 
-def sphinxcontrib_autodoc_filterparams(fun, param):
-    raise NotImplementedError
 
-def setup(app: Sphinx):
-    app.add_css_file('css/doc.css')
+def setup(app):
+    from sphinx.application import Sphinx
+    app: Sphinx = app
 
     if html_theme == 'sphinx_rtd_theme':
         themecss = 'doc.rtd.css'
     elif html_theme == 'default':
         themecss = 'doc.default.css'
-    app.add_css_file(f'css/{themecss}')
+    else:
+        raise ValueError(html_theme)
 
+    app.add_css_file('css/doc.css')
+    app.add_css_file(f'css/{themecss}')
     app.add_css_file('tableau.css')
-    docutil.init_sphinx(app, dict(
-        html_theme = html_theme,
+
+    from docutil import Helper
+    Helper.setup_sphinx(app, dict(
+
     ))
 
 if False:

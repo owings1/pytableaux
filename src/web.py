@@ -37,7 +37,7 @@ from lexicals import (
     Predicate,
     Predicates,
 )
-from parsers import CharTable
+from parsers import ParseTable
 from proof.tableaux import Tableau
 from proof.writers import TabWriter
 
@@ -114,7 +114,7 @@ base_view_data = MapCover(dict(
     lexicals            = lexicals,
     LexType             = LexType,
     Notation            = Notation,
-    CharTable           = CharTable,
+    ParseTable           = ParseTable,
     Json                = json,
 
     example_args        = example_args,
