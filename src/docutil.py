@@ -22,34 +22,17 @@ from __future__ import annotations
 
 __all__ = 'Helper',
 
-from collections import defaultdict
-
-import os, re, traceback
-from typing import Any, Callable
-from jinja2 import Environment, FileSystemLoader
-from html import escape as htmlesc, unescape as htmlun
-from os.path import abspath, join as pjoin, basename as bname
-from inspect import getmro, getsource
-
-from sphinx.application import Sphinx
-from sphinx.util import logging
-from docutils import nodes as docnodes
-
-import docutils.parsers.rst.directives as directives
-from tools.abcs import F, MapProxy
-
-from tools.misc import cat, get_logic
 import examples
 from lexicals import (
     Constant,
-    Notation,
-    Variable,
-    RenderSet,
-    Predicate,
-    Operator,
     LexType,
     LexWriter,
+    Notation,
+    Operator,
     Parser,
+    Predicate,
+    RenderSet,
+    Variable,
 )
 from parsers import ParseTable
 from proof.tableaux import (
@@ -61,6 +44,44 @@ from proof.tableaux import (
 from proof.writers import TabWriter
 from proof.helpers import EllipsisExampleHelper
 from models import BaseModel
+from tools.abcs import (
+    F,
+    MapProxy,
+)
+from tools.misc import (
+    cat,
+    get_logic,
+)
+
+from collections import defaultdict
+from docutils import nodes as docnodes
+import docutils.parsers.rst.directives as directives
+from html import (
+    escape as htmlesc,
+    unescape as htmlun,
+)
+from inspect import (
+    getmro,
+    getsource,
+)
+from jinja2 import (
+    Environment,
+    FileSystemLoader,
+)
+import os
+from os.path import (
+    abspath,
+    basename as bname,
+    join as pjoin,
+)
+import re
+from sphinx.application import Sphinx
+from sphinx.util import logging
+import traceback
+from typing import (
+    Any,
+    Callable,
+)
 
 # Python domain:
 #    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain
@@ -88,9 +109,7 @@ LOGICS = tuple(
     if file.endswith('.rst')
 )
 
-
 logger = logging.getLogger(__name__)
-
 
 class Helper:
 
