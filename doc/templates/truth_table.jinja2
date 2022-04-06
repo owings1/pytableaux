@@ -5,9 +5,9 @@
         <thead>
             <tr>
                 {% if arity == 1 %}
-                    <th class="operator-name" colspan="2">{{ operator.label }}</th>
+                    <th class="operator-name" colspan="2">{{ operator.label|e }}</th>
                 {% elif arity == 2 %}
-                    <th class="operator-name" colspan="{{ num_values + 1 }}">{{ operator.label }}</th>
+                    <th class="operator-name" colspan="{{ num_values + 1 }}">{{ operator.label|e }}</th>
                 {% endif %}
             </tr>
         </thead>
