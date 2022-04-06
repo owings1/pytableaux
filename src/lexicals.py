@@ -150,8 +150,8 @@ if 'Types' or True:
     PredsItemRef   : type[PredicateRef  | Predicate] = PredicateRef
     PredsItemSpec  : type[PredicateSpec | Predicate] = PredicateSpec
     QuantifiedItem : type[Quantifier | Variable | Sentence]
-    ParseTableKey  : type[LexType|Marking|type[Predicate.System]]
-    ParseTableValue : type[int|Lexical] = int
+    # ParseTableValue = int|Lexical
+    # ParseTableKey   = LexType|Marking|type[Predicate.System]
 
 ##############################################################
 
@@ -230,9 +230,6 @@ if 'Metas' or True:
                 else:
                     notn = Notation.default
                 return notn.DefaultWriter(*args, **kw)
-                # return Notation(
-                #     notn or Notation.default
-                # ).DefaultWriter(*args, **kw)
             return super().__call__(*args, **kw)
 
         @lazy.dynca
@@ -248,6 +245,8 @@ if 'Metas' or True:
             setattr(LexWriter, '__sys', value)
 
     class ParserMeta(AbcBaseMeta):
+        'Parser Metaclass.'
+
         def __call__(cls, *args, **kw):
             if cls is Parser:
                 if args:
@@ -441,7 +440,6 @@ class Lexical:
                 setattr(subcls, name, value)
 
 LexicalItemMeta.Cache = ItemCacheType(Lexical, ITEM_CACHE_SIZE)
-ParseTableValue |= Lexical
 
 @static
 class Bases:
@@ -1485,8 +1483,6 @@ class LexType(Bases.Enum):
         'Enum lookup index init hook.'
         return super()._member_keys(member) | {member.cls}
 
-ParseTableKey = LexType
-
 ##############################################################
 ##############################################################
 
@@ -1581,8 +1577,6 @@ class Predicates(qset[Predicate], metaclass = AbcBaseMeta,
             }
             ns |= members
             ns._member_names += members.keys()
-
-ParseTableKey |= type[Predicate.System]
 
 class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     'Create an argument from sentence objects.'
@@ -1727,8 +1721,6 @@ class Marking(Bases.Enum):
     meta        = eauto()
     subscript   = eauto()
 
-ParseTableKey |= Marking
-
 class Notation(Bases.Enum):
     'Notation (polish/standard) enum class.'
 
@@ -1744,7 +1736,7 @@ class Notation(Bases.Enum):
     rendersets       : setm[RenderSet]
     Parser           : type[Parser]
 
-    polish   = eauto(), 'ascii'
+    polish   = eauto(), 'unicode'
     standard = eauto(), 'unicode'
 
     def __init__(self, num, default_charset: str, /):
@@ -1809,6 +1801,8 @@ class Parser(metaclass = ParserMeta):
         """
         raise NotImplementedError
 
+    @overload
+    def __call__(self, input: str) -> Sentence: ...
     __call__ = parse
 
     def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
@@ -1826,12 +1820,14 @@ class Parser(metaclass = ParserMeta):
             title = title,
         )
 
-    def __init_subclass__(subcls: type[Parser], **kw):
-        'Subclass init hook. Merge _defaults and update _optkeys. Sync ``__call__()``.'
+    def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
+        'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
         super().__init_subclass__(**kw)
         abcm.merge_mroattr(subcls, '_defaults', supcls = __class__)
         subcls._optkeys = subcls._defaults.keys()
         subcls.__call__ = subcls.parse
+        if primary:
+            subcls.notation.Parser = subcls
 
 class LexWriter(metaclass = LexWriterMeta):
     'LexWriter interface and coordinator.'
@@ -1863,6 +1859,8 @@ class LexWriter(metaclass = LexWriterMeta):
         'Write a lexical item.'
         return self._write(item)
 
+    @overload
+    def __call__(self, item: Lexical) -> str: ...
     __call__ = write
 
     @classmethod
@@ -1895,7 +1893,7 @@ class LexWriter(metaclass = LexWriterMeta):
             raise NotImplementedError(type(item))
         return getattr(self, method)(item)
 
-    def _test(self):
+    def _test(self) -> list[str]:
         'Smoke test. Returns a rendered list of each lex type.'
         return list(map(self, (t.cls.first() for t in LexType)))
 
@@ -1921,11 +1919,12 @@ class LexWriter(metaclass = LexWriterMeta):
         return subcls
 
     def __init_subclass__(subcls: type[LexWriter], **kw):
-        'Subclass init hook. Merge and freeze method map from mro.'
+        'Merge and freeze method map from mro. Sync ``__call__()``.'
         super().__init_subclass__(**kw)
         abcm.merge_mroattr(
             subcls, '_methodmap', supcls = __class__, transform = MapProxy
         )
+        subcls.__call__ = subcls.write
 
 class BaseLexWriter(LexWriter):
 
@@ -1944,33 +1943,33 @@ class BaseLexWriter(LexWriter):
     }
 
     @abstract
-    def _write_operated(self, item: Operated): ...
+    def _write_operated(self, item: Operated) -> str: ...
 
-    def _strfor(self, *args, **kw):
-        return self.renderset.strfor(*args, **kw)
+    def _strfor(self, *args, **kw) -> str:
+        return self.renderset.string(*args, **kw)
 
-    def _write_plain(self, item: Lexical):
+    def _write_plain(self, item: Lexical) -> str:
         return self._strfor(item.TYPE, item)
 
-    def _write_coordsitem(self, item: Bases.CoordsItem):
+    def _write_coordsitem(self, item: Bases.CoordsItem) -> str:
         return ''.join((
             self._strfor(item.TYPE, item.index),
             self._write_subscript(item.subscript),
         ))
 
-    def _write_predicate(self, item: Predicate):
+    def _write_predicate(self, item: Predicate) -> str:
         return ''.join((
             self._strfor((LexType.Predicate, item.is_system), item.index),
             self._write_subscript(item.subscript),
         ))
 
-    def _write_quantified(self, item: Quantified):
+    def _write_quantified(self, item: Quantified) -> str:
         return ''.join(map(self._write, item.items))
 
-    def _write_predicated(self, item: Predicated):
+    def _write_predicated(self, item: Predicated) -> str:
         return ''.join(map(self._write, (item.predicate, *item)))
 
-    def _write_subscript(self, s: int):
+    def _write_subscript(self, s: int) -> str:
         if s == 0: return ''
         return self._strfor(Marking.subscript, s)
 
@@ -1982,7 +1981,7 @@ class PolishLexWriter(BaseLexWriter):
     notation = Notation.polish
     defaults = {}
 
-    def _write_operated(self, item: Operated):
+    def _write_operated(self, item: Operated) -> str:
         return ''.join(map(self._write, (item.operator, *item)))
 
 @LexWriter.register
@@ -1993,14 +1992,12 @@ class StandardLexWriter(BaseLexWriter):
     notation = Notation.standard
     defaults = dict(drop_parens = True)
 
-    def write(self, item: Lexical):
+    def write(self, item: Lexical) -> str:
         if self.opts['drop_parens'] and isinstance(item, Operated):
             return self._write_operated(item, drop_parens = True)
         return super().write(item)
 
-    __call__ = write
-
-    def _write_predicated(self, item: Predicated):
+    def _write_predicated(self, item: Predicated) -> str:
         if len(item) < 2:
             return super()._write_predicated(item)
         # Infix notation for predicates of arity > 1
@@ -2018,7 +2015,7 @@ class StandardLexWriter(BaseLexWriter):
             ''.join(map(self._write, item.params[1:])),
         ))
 
-    def _write_operated(self, item: Operated, drop_parens = False):
+    def _write_operated(self, item: Operated, drop_parens = False) -> str:
         oper = item.operator
         arity = oper.arity
         if arity == 1:
@@ -2040,7 +2037,7 @@ class StandardLexWriter(BaseLexWriter):
             ))
         raise NotImplementedError('arity %s' % arity)
 
-    def _write_negated_identity(self, item: Operated):
+    def _write_negated_identity(self, item: Operated) -> str:
         si: Predicated = item.lhs
         params = si.params
         return self._strfor(Marking.whitespace, 0).join((
@@ -2049,11 +2046,15 @@ class StandardLexWriter(BaseLexWriter):
             self._write(params[1]),
         ))
 
-    def _test(self):
+    def _test(self) -> list[str]:
         s1 = Predicate.System.Identity(Constant.gen(2)).negate()
         s2 = Operator.Conjunction(Atomic.gen(2))
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
+
+
+ParseTableKey   = LexType|Marking|type[Predicate.System]
+ParseTableValue = int|Lexical
 
 class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], Bases.CacheNotationData):
 
@@ -2145,14 +2146,17 @@ class RenderSet(Bases.CacheNotationData):
         notn.charsets.add(self.charset)
         notn.rendersets.add(self)
 
-    def strfor(self, ctype: Any, value: Any) -> str:
+    def string(self, ctype: Any, value: Any) -> str:
         if ctype in self.renders:
             return self.renders[ctype](value)
         return self.strings[ctype][value]
+
+    strfor = string
+
 @closure
 def _():
 
-    def unisub(sub):
+    def unisub(sub: int) -> str:
         # ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'],
         return ''.join(chr(0x2080 + int(d)) for d in str(sub))
 

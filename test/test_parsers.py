@@ -20,6 +20,7 @@
 from pytest import raises
 from errors import ParseError
 from lexicals import Predicate, LexType, Predicates
+from parsers import Parser
 from parsers import create_parser, parse, parse_argument as argument
 
 preds = Predicates(Predicate.gen(3))
@@ -27,12 +28,12 @@ std = create_parser('standard', preds)
 pol = create_parser('polish', preds)
 
 def test_parse_standard():
-    s = parse('A & B', notn='standard')
+    s = Parser('standard').parse('A & B')
     assert s.TYPE is LexType.Operated
     assert s.operator == 'Conjunction'
 
 def test_parse_polish():
-    s = parse('Kab', notn='polish')
+    s = Parser('polish')('Kab')
     assert s.TYPE is LexType.Operated
     assert s.operator == 'Conjunction'
 

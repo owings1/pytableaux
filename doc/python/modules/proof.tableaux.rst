@@ -52,6 +52,10 @@ Tableaux Module
     .. autoclass:: ClosingRule
 
     .. autoclass:: TabRules
+    
+    .. autoclass:: RuleGroups
+    
+    .. autoclass:: RuleGroup
 
     .. autoclass:: TableauxSystem
         :members:

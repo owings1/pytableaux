@@ -8,9 +8,11 @@ Parsers Module
 
 .. automodule:: parsers
 
-    .. autofunction:: parse
+    .. autoclass:: BaseParser
 
-    .. autofunction:: parse_argument
+    .. autoclass:: ParseContext
 
-    .. autofunction:: create_parser
+    .. autoclass:: PolishParser
+
+    .. autoclass:: StandardParser
 

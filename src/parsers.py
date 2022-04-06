@@ -19,11 +19,12 @@
 # pytableaux - parsers module
 from __future__ import annotations
 
-
 __all__ = (
+    'BaseParser',
+    'Notation',
+    'ParseContext',
     'Parser',
     'ParseTable',
-    'BaseParser',
     'PolishParser',
     'StandardParser',
 )
@@ -35,17 +36,7 @@ from errors import (
     UnboundVariableError,
     IllegalStateError,
 )
-# from tools.abcs import abcf
-# from tools.callables import gets
-from tools.decorators import abstract, overload, raisr
-# from tools.hybrids import qset
-# from tools.mappings import ItemsIterator, MapCover, MapProxy, dmap
-# from tools.sequences import seqf
-from tools.sets import setf, EMPTY_SET
-
 from lexicals import (
-    # Bases as _Bases,
-    # Lexical,
     BiCoords,
     Operator as Oper, Quantifier,
     Predicate, Parameter, Constant, Variable,
@@ -53,17 +44,12 @@ from lexicals import (
     LexType, Predicates, Argument, Marking, Notation,
     Parser, ParseTable, ParseTableKey,
 )
+from tools.decorators import abstract, overload, raisr
+from tools.sets import setf, EMPTY_SET
 
 from collections.abc import Set
-# from typing import (
-#     # Any,
-#     # Iterable,
-#     ClassVar,
-#     Mapping,
-# )
 
 NOARG = object()
-notations = Notation.seq
 
 def parse(input: str, *args, **opts) -> Sentence:
     """
@@ -208,9 +194,9 @@ class ParseContext:
             pfx = 'Unexpected symbol'
         else:
             pfx = f'Unexpected {ctype} symbol'
-        msg = f"{pfx} '{char}' at position {self.pos}."
-        if len(exp):
-            msg += ' Expected %s.' % ', '.join(map(str, exp))
+        msg = f"{pfx} '{char}' at position {self.pos}"
+        # if len(exp):
+        #     msg += ', expecting %s.' % ', '.join(map(str, exp))
         return msg
 
 _PRED_CTYPES = setf({LexType.Predicate, Predicate.System})
@@ -230,8 +216,6 @@ class BaseParser(Parser):
             context.chomp()
             context.assert_end()
             return s
-
-    # __call__ = parse
 
     @abstract
     def _read(self, context: ParseContext) -> Sentence:
@@ -281,9 +265,8 @@ class BaseParser(Parser):
         if v not in s.variables:
             vchr = self.table.reversed[LexType.Variable, v.index]
             raise BoundVariableError(
-                "Unused bound variable '{0}' ({1}) at position {2}.".format(
-                    vchr, v.subscript, context.pos
-                )
+                f"Unused bound variable '{vchr}' ({v.subscript}) "
+                f"at position {context.pos}"
             )
         context.bound_vars.remove(v)
         return Quantified(q, v, s)
@@ -364,7 +347,7 @@ class BaseParser(Parser):
 
     __delattr__ = raisr(AttributeError)
 
-class PolishParser(BaseParser):
+class PolishParser(BaseParser, primary = True):
 
     __slots__ = EMPTY_SET
 
@@ -375,17 +358,13 @@ class PolishParser(BaseParser):
         if ctype is LexType.Operator:
             oper: Oper = self.table.value(context.current())
             context.advance()
-            s = Operated(
+            return Operated(
                 oper,
                 tuple(self._read(context) for _ in range(oper.arity))
             )
-        else:
-            s = super()._read(context)
-        return s
+        return super()._read(context)
 
-Notation.polish.Parser = PolishParser
-
-class StandardParser(BaseParser):
+class StandardParser(BaseParser, primary = True):
 
     __slots__ = EMPTY_SET
 
@@ -408,8 +387,6 @@ class StandardParser(BaseParser):
                     pass
             raise
 
-    # __call__ = parse
-
     def _read(self, context: ParseContext):
         ctype = context.assert_current()
         if ctype is LexType.Operator:
@@ -420,19 +397,18 @@ class StandardParser(BaseParser):
             return self.__read_infix_predicated(context)
         return super()._read(context)
 
-    def __read_operated(self, context: ParseContext):
+    def __read_operated(self, context: ParseContext) -> Operated:
         oper: Oper = self.table.value(context.current())
         # only unary operators can be prefix operators
         if oper.arity != 1:
             raise ParseError(
-                "Unexpected non-prefix operator symbol '{0}' at position {1}.".format(
-                    context.current(), context.pos
-                )
+                f"Unexpected non-prefix operator symbol '{context.current()}' "
+                f" at position {context.pos}"
             )
         context.advance()
         return Operated(oper, (self._read(context),))
 
-    def __read_infix_predicated(self, context: ParseContext):
+    def __read_infix_predicated(self, context: ParseContext) -> Predicated:
         lhp = self._read_parameter(context)
         context.assert_current_in(_PRED_CTYPES)
         ppos = context.pos
@@ -440,12 +416,11 @@ class StandardParser(BaseParser):
         arity = pred.arity
         if arity < 2:
             raise ParseError(
-                "Unexpected {0}-ary predicate symbol at position {1}. "
-                "Infix notation requires arity > 1.".format(arity, ppos)
+                f"Unexpected infixed {arity}-ary predicate symbol at position {ppos}"
             )
         return Predicated(pred, (lhp, *self._read_params(context, arity - 1)))
 
-    def __read_from_paren_open(self, context: ParseContext):
+    def __read_from_paren_open(self, context: ParseContext) -> Operated:
         # if we have an open parenthesis, then we demand a binary infix operator sentence.
         # scan ahead to:
         #   - find the corresponding close parenthesis position
@@ -455,7 +430,7 @@ class StandardParser(BaseParser):
         while depth:
             if not context.has_next(length):
                 raise ParseError(
-                    'Unterminated open paren at position %d.' % context.pos
+                    f'Unterminated open paren at position {context.pos}'
                 )
             peek = context.next(length)
             ptype = self.table.type(peek)
@@ -466,17 +441,16 @@ class StandardParser(BaseParser):
             elif ptype is LexType.Operator:
                 peek_oper: Oper = self.table.value(peek)
                 if peek_oper.arity == 2 and depth == 1:
-                    if oper is not None:
-                        msg = 'Unexpected binary operator symbol at position %d.' % (
-                            context.pos + length
-                        ) 
-                        raise ParseError(msg)
                     oper_pos = context.pos + length
+                    if oper is not None:
+                        raise ParseError(
+                            f'Unexpected {oper.name} symbol at position {oper_pos}'
+                        )
                     oper = peek_oper
             length += 1
         if oper is None:
             raise ParseError(
-                f'Paren expression missing binary operator at position {context.pos}.'
+                f'Missing binary operator at position {context.pos}'
             )
         # now we can divide the string into lhs and rhs
         lhs_start = context.pos + 1
@@ -487,11 +461,9 @@ class StandardParser(BaseParser):
         context.chomp()
         if context.pos != oper_pos:
             raise ParseError(
-                'Invalid left side expression starting at position {0} '
-                'and ending at position {1}, which proceeds past operator '
-                '({2}) at position {3}.'.format(
-                    lhs_start, context.pos, oper, oper_pos
-                )
+                f'Invalid left side expression starting at position {lhs_start} '
+                f'and ending at position {context.pos}, which proceeds past operator '
+                f'({oper.name}) at position {oper_pos}'
             )
         # move past the operator
         context.advance()
@@ -503,8 +475,6 @@ class StandardParser(BaseParser):
         # move past the close paren
         context.advance()
         return Operated(oper, (lhs, rhs))
-
-Notation.standard.Parser = StandardParser
 
 ParseTable._initcache(Notation, {
     Notation.standard: dict(

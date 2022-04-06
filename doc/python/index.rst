@@ -48,26 +48,21 @@ Quick Start
 
 The following is an example for building a proof in {@CPL} for Modus Ponens::
 
-    from parsers import parse_argument
+    from parsers import Parser
     from proof.tableaux import Tableau
-    from proof.writers import write_tableau
+    from proof.writers import TabWriter
 
     # Create an argument
-    argument = parse_argument(conclusion='b', premises=['Uab', 'a'])
+    argument = Parser('polish').argument('b', ('Uab', 'a'))
 
     # Build a tableau for the logic CPL
-    tableau = Tableau('CPL', argument)
-    tableau.build()
-
+    tableau = Tableau('CPL', argument).build()
     # This one should be valid!
     assert proof.valid
 
     # Output the proof
-    output = write_tableau(tableau)
-    print(output)
-
-This parses with the default notation (Polish), builds the proof, and outputs
-a tableau in the default format (text).
+    text = TabWriter('text').write(tableau)
+    print(text)
 
 
 API Reference

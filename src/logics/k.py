@@ -683,8 +683,8 @@ class TableauxSystem(BaseSystem):
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
         """
         To build the trunk for an argument, add a node with each premise, with
-        world :m:`*w0*`, followed by a node with the negation of the conclusion
-        with world :m:`*w0*`.
+        world :m:`w0`, followed by a node with the negation of the conclusion
+        with world :m:`w0`.
         """
         w = 0 if cls.modal else None
         add = tab.branch().append

@@ -69,7 +69,7 @@ values is:
     .. _fde-consequence:
 
     Logical Consequence
-    ===================
+    -------------------
 
     **Logical Consequence** is defined in terms of the *designated* values :m:`T` and :m:`B`:
 

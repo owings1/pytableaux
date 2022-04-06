@@ -16,7 +16,7 @@
 #
 # ------------------
 #
-# pytableaux - tableaux module
+# pytableaux - proof.tableaux module
 from __future__ import annotations
 
 __all__ = (
@@ -68,6 +68,7 @@ if 'Imports' or True:
     )
 
     from collections import deque
+    from collections.abc import Set
     import operator as opr
     from types import ModuleType
     from typing import (
@@ -82,7 +83,6 @@ if 'Imports' or True:
         # MutableSequence,
         NamedTuple,
         Sequence,
-        Set,
         SupportsIndex,
         TypeVar,
     )
@@ -98,32 +98,36 @@ if 'Constants' or True:
 if 'Util Functions' or True:
     def locking(method: F) -> F:
         'Decorator for locking TabRules methods after Tableau is started.'
+        @wraps(method)
         def f(self: TabRules, *args, **kw):
             try:
                 if self._root._locked:
                     raise Emsg.IllegalState('locked')
             except AttributeError: pass
             return method(self, *args, **kw)
-        return wraps(method)(f)
+        return f
 
 # ----------------------------------------------
 
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
 
-    #: Helper classes.
-    Helpers: qsetf[type[RuleHelper]] = EMPTY_QSET
+    _defaults = dict(is_rank_optim = True, nolock = False)
+    _optkeys: ClassVar[setf[str]]
 
-    #: StopWatch names to create in self.timers mapping.
-    Timers: qsetf[str] = qsetf(('search', 'apply'))
+    #: Helper classes.
+    Helpers: ClassVar[qsetf[type[RuleHelper]]] = EMPTY_QSET
+
+    #: StopWatch names to create in ``timers`` mapping.
+    Timers: ClassVar[qsetf[str]] = qsetf(('search', 'apply'))
 
     #: The rule class name.
     name: ClassVar[str]
 
-    _defaults = dict(is_rank_optim = True, nolock = False)
-    _optkeys: ClassVar[setf[str]]
-
-    branch_level: int = 1
+    #: The number of branches resulting from an application. A value
+    #: of ``1`` means no additional branches. A value of ``2`` means
+    #: one additional branch, etc.
+    branch_level: ClassVar[int] = 1
 
     #: The tableau instance.
     tableau: Tableau
@@ -133,15 +137,16 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     #: Helper instances mapped by class.
     #:
-    #: :type: Mapping[type, object]
+    #: :type: Mapping[type[RuleHelper], RuleHelper]
     helpers: TypeInstDict[RuleHelper]
 
     #: StopWatch instances mapped by name.
     timers: Mapping[str, StopWatch]
 
     #: The targets applied to.
-    history: SequenceCover[Target]
+    history: Sequence[Target]
 
+    #: The state bit flag.
     flag: RuleFlag
 
     __slots__ = setf(
@@ -215,7 +220,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         return node.get('sentence')
 
     # Scoring
-    def group_score(self, target: Target, /):
+    def group_score(self, target: Target, /) -> float:
         # Called in tableau
         return self.score_candidate(target) / max(1, self.branch_level)
 
@@ -224,7 +229,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         return 0.0
 
     @final
-    def get_target(self, branch: Branch) -> Target:
+    def target(self, branch: Branch) -> Target:
         with self.timers['search']:
             targets = self._get_targets(branch)
             if targets:
@@ -243,7 +248,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         """Create a new branch on the tableau. Convenience for
         ``self.tableau.branch()``.
 
-        :param common.Branch parent: The parent branch, if any.
+        :param parent: The parent branch, if any.
         :return: The new branch.
         """
         return self.tableau.branch(parent)
@@ -360,11 +365,10 @@ class ClosingRule(Rule):
         target.branch.close()
 
     @abstract
-    def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch):
+    def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch) -> bool:
         """For calculating a target's closure score. This default
         implementation delegates to the abstract ``node_will_close_branch()``."""
         raise NotImplementedError
-
 
 # ----------------------------------------------
 
@@ -376,6 +380,9 @@ class TabRules(SequenceApi[Rule]):
         '_locked', 'groups'
     ))
  
+    #: The rule groups sequence view.
+    groups: RuleGroups
+
     def __init__(self, tab: Tableau, /):
         self._locked: bool = False
         self._root = self
@@ -386,14 +393,6 @@ class TabRules(SequenceApi[Rule]):
         self._tab = tab
         self.groups = RuleGroups(self)
         tab.once(TabEvent.AFTER_BRANCH_ADD, self._lock)
-
-    @locking
-    def _lock(self, _ = None):
-        self._tab.off(TabEvent.AFTER_BRANCH_ADD, self._lock)
-        self.groups._lock()
-        self._ruleindex  = MapCover(self._ruleindex)
-        self._groupindex = MapCover(self._groupindex)
-        self._locked = True
 
     def append(self, rule: type[Rule]):
         'Add a single Rule to a new (unnamed) group.'
@@ -413,7 +412,7 @@ class TabRules(SequenceApi[Rule]):
         'Get a rule instance by name, class, or instance of same type.'
         return self._ruleindex_get(self._ruleindex, ref, default)
 
-    def names(self):
+    def names(self) -> list[str]:
         'List all the rule names in the sequence.'
         return list(R.__name__ for R in map(type, self))
 
@@ -424,7 +423,8 @@ class TabRules(SequenceApi[Rule]):
         return self.get(ref, NOGET) is not NOGET
 
     def __iter__(self) -> Iterator[Rule]:
-        for group in self.groups: yield from group
+        for group in self.groups:
+            yield from group
 
     def __reversed__(self) -> Iterator[Rule]:
         for group in reversed(self.groups):
@@ -451,10 +451,28 @@ class TabRules(SequenceApi[Rule]):
             raise TypeError # should never run.
         return getitem
 
+    def __repr__(self):
+        return orepr(self, logic = self._tab.logic,
+            groups = len(self.groups), rules = len(self),
+        )
+
     __delattr__ = raisr(AttributeError)
     __setattr__ = locking(object.__setattr__)
 
-    @static
+    @locking
+    def _lock(self, _ = None):
+        self._tab.off(TabEvent.AFTER_BRANCH_ADD, self._lock)
+        self.groups._lock()
+        self._ruleindex  = MapCover(self._ruleindex)
+        self._groupindex = MapCover(self._groupindex)
+        self._locked = True
+
+    def _checkname(self, name: str, /):
+        'Validate a new rule or group name before it is added.'
+        if name in self._groupindex or name in self._ruleindex:
+            raise Emsg.DuplicateKey(name)
+
+    @staticmethod
     def _ruleindex_get(
         idx: Mapping[str, Rule], ref: str|RuleT|type[RuleT], default = NOARG, /
     ) -> RuleT:
@@ -477,19 +495,25 @@ class TabRules(SequenceApi[Rule]):
             if default is not NOARG: return default
         raise Emsg.MissingValue(ref)
 
-    def _checkname(self, name: str, inst, /):
-        '''Validate a new rule or group name before it is added.'''
-        if (name in self._groupindex or name in self._ruleindex):
-            raise Emsg.DuplicateKey(name)
-
-    def __repr__(self):
-        return orepr(self, logic = self._tab.logic,
-            groups = len(self.groups), rules = len(self),
-        )
-
 class RuleGroup(SequenceApi[Rule]):
-    "A rule group for a Tableau's TabRules."
+    """A rule group of a Tableau's ``rules``.
+    
+    This class supports the full ``Sequence`` standard interface for iterating,
+    subscripting, and slicing.
+
+    The ``append``, ``extend``, and ``clear`` methods provide mutability
+    until the instance is locked. An input value is a subclass of ``Rule``,
+    which is then instantiated for the tableau before it is added to the
+    sequence.
+    
+    Rule instances are indexed, and can be retrieved by its class or class
+    name using the ``get`` method.
+    """
+
     __slots__ = '_root', '_seq', '_name', '_ruleindex'
+
+    #: The group name, or ``None``.
+    name: str|None
 
     def __init__(self, name: str|None, root: TabRules):
         self._name = name
@@ -498,40 +522,71 @@ class RuleGroup(SequenceApi[Rule]):
         #: Rule classname to instance.
         self._ruleindex: dict[str, Rule] = {}
 
-
-    def _lock(self):
-        self._seq = SequenceCover(self._seq)
-        self._ruleindex = MapCover(self._ruleindex)
-
     @property
-    def name(self):
-        'The group name, or None.'
+    def name(self) -> str|None:
         return self._name
 
     @locking
-    def append(self, RuleCls: type[Rule]):
-        'Instantiate and append a rule class. Raise IllegalStateError if locked.'
+    def append(self, value: type[Rule], /):
+        """Instantiate and append a rule class.
+
+        Args:
+          value: A ``Rule`` class.
+
+        Raises:
+          ValueError: If there is a duplicate name.
+          TypeError: If ``value`` is not a subclass of ``Rule``.
+          errors.IllegalStateError: If locked.
+        """
         root = self._root
-        name = subclscheck(RuleCls, Rule).__name__
-        root._checkname(name, self)
-        rule = RuleCls(root._tab, **root._tab.opts)
+        name = subclscheck(value, Rule).__name__
+        root._checkname(name)
+        rule = value(root._tab, **root._tab.opts)
         self._seq.append(rule)
         root._ruleindex[name] = self._ruleindex[name] = rule
 
-    def extend(self, Rules: Iterable[type[Rule]]):
-        'Append multiple rules. Raise IllegalStateError if locked.'
-        for _ in map(self.append, Rules): pass
+    def extend(self, values: Iterable[type[Rule]], /):
+        """Append multiple rules.
+
+        Args:
+          values: An iterable of ``Rule`` classes.
+
+        Raises:
+          ValueError: If there is a duplicate name.
+          TypeError: If an element is not a subclass of ``Rule``.
+          errors.IllegalStateError: If locked.
+        """
+        for _ in map(self.append, values): pass
 
     @locking
     def clear(self):
-        'Clear the rule group. Raise IllegalStateError if locked.'
+        """Clear the rule group.
+
+        Raises:
+          errors.IllegalStateError: If locked.
+        """
         self._seq.clear()
         self._ruleindex.clear()
 
     def get(self, ref:str|RuleT|type[RuleT], default = NOARG, /) -> RuleT:
-        'Get a member instance by name, type, or instance of same type'
+        """Get a member instance by name, type, or instance of same type.
+
+        Args:
+          ref: A ``Rule`` class, class name, or instance.
+          default: A value to return if rule not found.
+
+        Returns:
+          The rule instance, or ``default`` if it is specified and the rule was
+          not found.
+
+        Raises:
+          ValueError: If rule not found and ``default`` not passed.
+          TypeError: For bad ``ref`` type.
+        """
         return self._root._ruleindex_get(self._ruleindex, ref, default)
 
+    @overload
+    def names(self) -> list[str]: ...
     names = TabRules.names
 
     @overload
@@ -552,30 +607,30 @@ class RuleGroup(SequenceApi[Rule]):
     def __contains__(self, ref):
         return self.get(ref, NOGET) is not NOGET
 
-    __delattr__ = raisr(AttributeError)
-    __setattr__ = locking(object.__setattr__)
-
     def __repr__(self):
         return orepr(self, name = self.name, rules = len(self))
 
+    __delattr__ = raisr(AttributeError)
+    __setattr__ = locking(object.__setattr__)
+
+    def _lock(self):
+        self._seq = SequenceCover(self._seq)
+        self._ruleindex = MapCover(self._ruleindex)
+
 class RuleGroups(SequenceApi[RuleGroup]):
+
+    __slots__ = '_root', '_seq',
 
     def __init__(self, root: TabRules):
         self._root = root
         self._seq: list[RuleGroup] = []
-
-    __slots__ = '_root', '_seq',
-
-    def _lock(self):
-        for _ in map(RuleGroup._lock, self): pass
-        self._seq = SequenceCover(self._seq)
 
     @locking
     def create(self, name: str = None) -> RuleGroup:
         'Create and return a new emtpy rule group.'
         root = self._root
         if name is not None:
-            root._checkname(name, self)
+            root._checkname(name)
         group = RuleGroup(name, root)
         self._seq.append(group)
         if name is not None:
@@ -632,9 +687,6 @@ class RuleGroups(SequenceApi[RuleGroup]):
             if item is check: return True
         return False
 
-    __delattr__ = raisr(AttributeError)
-    __setattr__ = locking(object.__setattr__)
-
     def __repr__(self):
         return orepr(self,
             logic = self._root._tab.logic,
@@ -642,6 +694,13 @@ class RuleGroups(SequenceApi[RuleGroup]):
             names = self.names(),
             rules = sum(map(len, self))
         )
+
+    __delattr__ = raisr(AttributeError)
+    __setattr__ = locking(object.__setattr__)
+
+    def _lock(self):
+        for _ in map(RuleGroup._lock, self): pass
+        self._seq = SequenceCover(self._seq)
 
 # ----------------------------------------------
 
@@ -712,8 +771,15 @@ class Tableau(Sequence[Branch], EventEmitter):
     #: is finished. If the `build_timeout` was exceeded, the tree is `not`
     #: built.
     tree: TreeStruct
-    stats: dict
+
+    #: The stats, built after finished.
+    stats: dict[str, Any]
+
+    #: The models, built after finished if the tableau is `invalid` and the
+    #: `is_build_models` option is enabled.
     models: setf[BaseModel]
+
+    #: The tableau timers.
     timers: TabTimers
 
     _defaults = MapCover(dict(
@@ -781,7 +847,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             return self.__logic
 
     @property
-    def System(self) -> TableauxSystem:
+    def System(self) -> TableauxSystem|None:
         try:
             return self.logic.TableauxSystem
         except AttributeError:
@@ -843,7 +909,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.finish()
         return self
 
-    def next_step(self):
+    def next(self):
         """Choose the next rule step to perform. Returns the (rule, target)
         pair, or ``None``if no rule can be applied.
 
@@ -861,7 +927,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         If the tableau is already finished when this method is called, return
         ``False``.
 
-        .. Internally, this calls the ``next_step()`` method to select the
+        .. Internally, this calls the ``next()`` method to select the
         .. next step, and, if non-empty, applies the rule and appends the entry
         .. to the history.
 
@@ -874,7 +940,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         ruletarget = stepentry = None
         with StopWatch() as timer:
             if not self.__is_max_steps_exceeded():
-                ruletarget = self.next_step()
+                ruletarget = self.next()
                 if not ruletarget:
                     self.__flag &= ~TabFlag.PREMATURE
             if ruletarget:
@@ -952,7 +1018,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.stats = self.__compute_stats()
         return self
 
-    def branching_complexity(self, node: Node, /):
+    def branching_complexity(self, node: Node, /) -> int:
         """Caching method for the logic's ``TableauxSystem.branching_complexity()``
         method. If the tableau has no logic, then ``0`` is returned.
 
@@ -1075,7 +1141,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         """Find and return the next available rule application for the given open
         branch and rule group. 
         
-        This calls the ``rule.get_target(branch)`` on the rules.
+        This calls the ``rule.target(branch)`` on the rules.
 
         If the `is_group_optim` option is `disabled`, then the first non-empty
         target returned by a rule is selected. The target is updated with the
@@ -1095,7 +1161,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         is_group_optim = self.opts['is_group_optim']
         results = deque(maxlen = len(group) if is_group_optim else 0)
         for rule in group:
-            target = rule.get_target(branch)
+            target = rule.target(branch)
             if target:
                 ruletarget = _RuleTarget(rule, target)
                 if not is_group_optim:
@@ -1155,7 +1221,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.__flag |= TabFlag.TRUNK_BUILT
             self.emit(TabEvent.AFTER_TRUNK_BUILD, self)
 
-    def __compute_stats(self):
+    def __compute_stats(self) -> dict[str, Any]:
         'Compute the stats property after the tableau is finished.'
         try:
             distinct_nodes = self.tree.root.distinct_nodes
@@ -1189,12 +1255,12 @@ class Tableau(Sequence[Branch], EventEmitter):
             rules = tuple(map(self.__compute_rule_stats, self.rules)),
         )
 
-    def __compute_rule_stats(self, rule: Rule):
+    def __compute_rule_stats(self, rule: Rule) -> dict[str, Any]:
         'Compute the stats for a rule after the tableau is finished.'
         return dict(
-            name            = rule.name,
-            applied         = len(rule.history),
-            timers          = {
+            name    = rule.name,
+            applied = len(rule.history),
+            timers  = {
                 name : dict(
                     duration_ms  = timer.elapsed_ms(),
                     duration_avg = timer.elapsed_avg(),
@@ -1214,7 +1280,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.finish()
             raise Emsg.Timeout(timeout)
 
-    def __is_max_steps_exceeded(self):
+    def __is_max_steps_exceeded(self) -> bool:
         max_steps = self.opts['max_steps']
         return (
             max_steps is not None and
@@ -1226,7 +1292,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         if TabFlag.TRUNK_BUILT in self.__flag or len(self.history) > 0:
             raise Emsg.IllegalState("Tableau already started.")
 
-    def __result_word(self):
+    def __result_word(self) -> str:
         if self.valid:
             return 'Valid'
         if self.invalid:
@@ -1396,136 +1462,137 @@ class TableauxSystem(Abc):
             rules.groups.create().extend(classes)
 
 # ----------------------------------------------
+# Data Classes
+# ----------------------------------------------
 
-if 'Data Classes' or True:
+class _RuleTarget(NamedTuple):
+    #: The rule instance that will apply.
+    rule   : Rule
+    #: The target produced by the rule.
+    target : Target
 
-    class _RuleTarget(NamedTuple):
-        #: The rule instance that will apply.
-        rule   : Rule
-        #: The target produced by the rule.
-        target : Target
+class StepEntry(NamedTuple):
+    #: The rule instance that was applied.
+    rule   : Rule
+    #: The target returned by the rule.
+    target : Target
+    #: The duration in milliseconds of the application.
+    duration_ms: int
 
-    class StepEntry(NamedTuple):
-        #: The rule instance that was applied.
-        rule   : Rule
-        #: The target returned by the rule.
-        target : Target
-        #: The duration in milliseconds of the application.
-        duration_ms: int
+class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None]):
 
-    class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None]):
+    __slots__ = EMPTY_SET
 
-        __slots__ = EMPTY_SET
+    _defaults = MapProxy({
+        TabStatKey.FLAGS       : TabFlag.NONE,
+        TabStatKey.STEP_ADDED  : TabFlag.NONE,
+        TabStatKey.STEP_CLOSED : TabFlag.NONE,
+        TabStatKey.INDEX       : None,
+        TabStatKey.PARENT      : None,
+    })
 
-        _defaults = MapProxy({
-            TabStatKey.FLAGS       : TabFlag.NONE,
-            TabStatKey.STEP_ADDED  : TabFlag.NONE,
-            TabStatKey.STEP_CLOSED : TabFlag.NONE,
-            TabStatKey.INDEX       : None,
-            TabStatKey.PARENT      : None,
-        })
+    def __init__(self, mapping: Mapping = None, /, **kw):
+        super().__init__(self._defaults)
+        self[TabStatKey.NODES] = {}
+        if mapping is not None:
+            self.update(mapping)
+        if len(kw):
+            self.update(kw)
 
-        def __init__(self, mapping: Mapping = None, /, **kw):
-            super().__init__(self._defaults)
-            self[TabStatKey.NODES] = {}
-            if mapping is not None:
-                self.update(mapping)
-            if len(kw):
-                self.update(kw)
+    def node(self, node: Node) -> NodeStat:
+        'Get the stat info for the node, and create if missing.'
+        # Avoid using defaultdict, since it may hide problems.
+        try:
+            return self[TabStatKey.NODES][node]
+        except KeyError:
+            return self[TabStatKey.NODES].setdefault(node, NodeStat())
 
-        def node(self, node: Node) -> NodeStat:
-            'Get the stat info for the node, and create if missing.'
-            # Avoid using defaultdict, since it may hide problems.
-            try:
-                return self[TabStatKey.NODES][node]
-            except KeyError:
-                return self[TabStatKey.NODES].setdefault(node, NodeStat())
+    def view(self) -> dict[TabStatKey, TabFlag|int|Branch|None]:
+        return {k: self[k] for k in self._defaults}
 
-        def view(self) -> dict[TabStatKey, TabFlag|int|Branch|None]:
-            return {k: self[k] for k in self._defaults}
+class TreeStruct(dmapattr):
+    'Recursive tree structure representation of a tableau.'
 
-    class TreeStruct(dmapattr):
-        'Recursive tree structure representation of a tableau.'
+    root: TreeStruct
+    
+    #: The nodes on this structure.
+    nodes: list[Node]
+    #: The child structures.
+    children: list[TreeStruct]
+    #: Whether this is a terminal (childless) structure.
+    leaf: bool
+    #: Whether this is a terminal structure that is closed.
+    closed: bool
+    #: Whether this is a terminal structure that is open.
+    open: bool
+    #: The pre-ordered tree left value.
+    left: int
+    #: The pre-ordered tree right value.
+    right: int
+    #: The total node count of all descendants.
+    descendant_node_count: int
+    #: The node count plus descendant node count.
+    structure_node_count: int
+    #: The depth of this structure (ancestor structure count).
+    depth: int
+    #: Whether this structure or a descendant is open.
+    has_open: bool
+    #: Whether this structure or a descendant is closed.
+    has_closed: bool
+    #: If closed, the step number at which it closed.
+    closed_step: int|None
+    #: The step number at which this structure first appears.
+    step: int
+    #: The number of descendant terminal structures, or 1.
+    width: int
+    #: 0.5x the width of the first child structure, plus 0.5x the
+    #: width of the last child structure (if distinct from the first),
+    #: plus the sum of the widths of the other (distinct) children.
+    balanced_line_width: float
+    #: 0.5x the width of the first child structure divided by the
+    #: width of this structure.
+    balanced_line_margin: float
+    #: The branch id, only set for leaves
+    branch_id: int|None
+    #: The model id, if exists, only set for leaves
+    model_id: int|None
+    #: Whether this is the one and only branch
+    is_only_branch: bool
+    #: The step at which the branch was added.
+    branch_step: int
 
-        root: TreeStruct
-        #: The nodes on this structure.
-        nodes: list[Node]
-        #: The child structures.
-        children: list[TreeStruct]
-        #: Whether this is a terminal (childless) structure.
-        leaf: bool
-        #: Whether this is a terminal structure that is closed.
-        closed: bool
-        #: Whether this is a terminal structure that is open.
-        open: bool
-        #: The pre-ordered tree left value.
-        left: int
-        #: The pre-ordered tree right value.
-        right: int
-        #: The total node count of all descendants.
-        descendant_node_count: int
-        #: The node count plus descendant node count.
-        structure_node_count: int
-        #: The depth of this structure (ancestor structure count).
-        depth: int
-        #: Whether this structure or a descendant is open.
-        has_open: bool
-        #: Whether this structure or a descendant is closed.
-        has_closed: bool
-        #: If closed, the step number at which it closed.
-        closed_step: int|None
-        #: The step number at which this structure first appears.
-        step: int
-        #: The number of descendant terminal structures, or 1.
-        width: int
-        #: 0.5x the width of the first child structure, plus 0.5x the
-        #: width of the last child structure (if distinct from the first),
-        #: plus the sum of the widths of the other (distinct) children.
-        balanced_line_width: float
-        #: 0.5x the width of the first child structure divided by the
-        #: width of this structure.
-        balanced_line_margin: float
-        #: The branch id, only set for leaves
-        branch_id: int|None
-        #: The model id, if exists, only set for leaves
-        model_id: int|None
-        #: Whether this is the one and only branch
-        is_only_branch: bool
-        #: The step at which the branch was added.
-        branch_step: int
+    def __init__(self, values: Mapping = None, /, **kw):
 
-        def __init__(self, values: Mapping = None, /, **kw):
-            
-            self.nodes = []
-            self.children = []
+        self.nodes = []
+        self.children = []
 
-            self.root = None
-            self.leaf = False
-            self.closed = False
-            self.open = False
-            self.left = None
-            self.right = None
-            self.descendant_node_count = 0
-            self.structure_node_count = 0
-            self.depth = None
-            self.has_open = False
-            self.has_closed = False
-            self.closed_step = None
-            self.step = None
-            self.width = 0
-            self.balanced_line_width = None
-            self.balanced_line_margin = None
-            self.branch_id = None
-            self.model_id = None
-            self.is_only_branch = False
-            self.branch_step = None
+        self.root = None
+        self.leaf = False
+        self.closed = False
+        self.open = False
+        self.left = None
+        self.right = None
+        self.descendant_node_count = 0
+        self.structure_node_count = 0
+        self.depth = None
+        self.has_open = False
+        self.has_closed = False
+        self.closed_step = None
+        self.step = None
+        self.width = 0
+        self.balanced_line_width = None
+        self.balanced_line_margin = None
+        self.branch_id = None
+        self.model_id = None
+        self.is_only_branch = False
+        self.branch_step = None
 
-            if values is not None:
-                self.update(values)
-            if len(kw):
-                self.update(kw)
+        if values is not None:
+            self.update(values)
+        if len(kw):
+            self.update(kw)
 
-            self.id = id(self)
+        self.id = id(self)
 
 # ----------------------------------------------
 

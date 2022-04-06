@@ -1,3 +1,22 @@
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux - proof.types module
 from __future__ import annotations
 
 __all__ = (
@@ -24,7 +43,6 @@ from tools.abcs import (
     T, VT,
 )
 from tools.decorators import membr
-
 from tools.hybrids import qsetf, EMPTY_QSET
 from tools.mappings import dmap
 from tools.sets import setf, EMPTY_SET
@@ -41,6 +59,7 @@ from typing import (
 #******  Branch Enum
 
 class BranchEvent(AbcEnum):
+    'Branch events.'
     AFTER_BRANCH_CLOSE = eauto()
     AFTER_NODE_ADD     = eauto()
     AFTER_NODE_TICK    = eauto()
@@ -48,11 +67,13 @@ class BranchEvent(AbcEnum):
 #******  Helper Enum
 
 class HelperAttr(str, AbcEnum):
+    'Special ``RuleHelper`` class attribute names.'
     InitRuleCls = '__init_ruleclass__'
 
 #******  Rule Enum
 
 class RuleAttr(str, AbcEnum):
+    'Special ``Rule`` class attribute names.'
     Helpers     = 'Helpers'
     Timers      = 'Timers'
     NodeFilters = 'NodeFilters'
@@ -62,10 +83,12 @@ class RuleAttr(str, AbcEnum):
     IgnoreTicked = 'ignore_ticked'
 
 class RuleEvent(AbcEnum):
+    'Rule events.'
     BEFORE_APPLY = eauto()
     AFTER_APPLY  = eauto()
 
 class RuleFlag(FlagEnum):
+    'Rule state bit flags.'
     __slots__ = 'value', '_value_'
     NONE   = 0
     INIT   = 1
@@ -74,6 +97,7 @@ class RuleFlag(FlagEnum):
 #******  Tableau Enum
 
 class TabEvent(AbcEnum):
+    'Tableau events.'
     AFTER_BRANCH_ADD    = eauto()
     AFTER_BRANCH_CLOSE  = eauto()
     AFTER_NODE_ADD      = eauto()
@@ -82,6 +106,7 @@ class TabEvent(AbcEnum):
     BEFORE_TRUNK_BUILD  = eauto()
 
 class TabStatKey(AbcEnum):
+    'Tableau ``stat()`` keys.'
     FLAGS       = eauto()
     STEP_ADDED  = eauto()
     STEP_TICKED = eauto()
@@ -91,6 +116,7 @@ class TabStatKey(AbcEnum):
     NODES       = eauto()
 
 class TabFlag(FlagEnum):
+    'Tableau state bit flags.'
     __slots__ = 'value', '_value_'
     NONE   = 0
     TICKED = 1
@@ -103,6 +129,7 @@ class TabFlag(FlagEnum):
 #******  Rule Helper
 
 class RuleHelper(metaclass = AbcMeta):
+    'Rule helper interface.'
 
     __slots__ = EMPTY_SET
 
@@ -182,6 +209,7 @@ class NodeStat(dict[TabStatKey, TabFlag|int|None]):
         super().__init__(self._defaults)
 
 class TabTimers(NamedTuple):
+    'Tableau timers data class.'
 
     build  : StopWatch
     trunk  : StopWatch
@@ -231,7 +259,7 @@ if 'Util Functions' or True:
         except KeyError:
             if default is not None:
                 base[metacls] = default
-                _rule_basecls.__kwdefaults__ |= dict(base = MapProxy(base))
+                _rule_basecls.__kwdefaults__.update(base = MapProxy(base))
             return default
 
     @closure

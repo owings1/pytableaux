@@ -49,6 +49,7 @@ from proof.writers import TabWriter
 from tools.abcs import (
     F,
     MapProxy,
+    closure,
 )
 from tools.decorators import (
     overload,
@@ -226,35 +227,25 @@ class Helper:
     ## Doc Lines
 
     def lines_rule_example(self, rule: Rule|type[Rule], logic: Any = None, indent: str|int = None):
-        'ReST lines (indented) for ``Rule`` example.'
+        'ReST lines for ``Rule`` example.'
         lines = ['Example:', '']
         lines.extend(
             rawblock(self.html_rule_example(rule, logic).split('\n'))
         )
         return indented(lines, indent)
-        # plines = self.html_rule_example(rule, logic = logic).split('\n')
-        # return indented(['Example:', ''] + rawblock(plines), indent)
 
     def lines_trunk_example(self, logic: Any, indent: str|int = None):
-        'ReST lines (indented) for ``build_trunk`` example.'
+        'ReST lines for ``build_trunk`` example.'
         lines = ['Example:', '']
         lines.extend(
             rawblock(self.html_trunk_example(logic).split('\n'))
         )
         return indented(lines, indent)
-        # plines = self.html_trunk_example(logic).split('\n')
-        # return indented(['Example:', ''] + rawblock(plines), indent)
 
     def lines_logic_truth_tables(self, logic: Any, indent: str|int = None):
-        'ReST lines (indented) for truth tables of all operators.'
+        'ReST lines for truth tables of all operators.'
         logic = get_logic(logic)
         m: BaseModel = logic.Model()
-        # tables = [
-        #     self.html_truth_table(logic, oper)
-        #     for oper in sorted(m.truth_functional_operators)
-        #         for line in self.html_truth_table(logic, oper).split('\n')
-        # ]
-        # lines = '\n'.join(tables).split('\n')
         lines = [
             line
             for oper in sorted(m.truth_functional_operators)
@@ -264,7 +255,7 @@ class Helper:
         return rawblock(lines, indent)
 
     def lines_inherited_ruledoc(self, rule: type[Rule], indent: str|int = None):
-        'Docstring lines (stripped, indented) for an "inheriting only" ``Rule`` class.'
+        'Docstring lines for an "inheriting only" ``Rule`` class.'
         prule = getmro(rule)[1]
         plogic = get_logic(prule)
         lines = [
@@ -277,31 +268,33 @@ class Helper:
         return indented(lines, indent)
 
     def lines_opers_table(self, indent: str|int = None):
-        'ReST lines (indented) for the Operators reference table CSV data.'
-        sympol, symstd = (
-            {o: table.char(LexType.Operator, o) for o in Operator}
+        'ReST lines for the Operators table CSV data.'
+        charpol, charstd = (
+            {o: table.char(o.TYPE, o) for o in Operator}
             for table in (
                 ParseTable.fetch(Notation.polish),
                 ParseTable.fetch(Notation.standard),
             )
         )
-        symhtml, symunic = (
-            {o: rset.strfor(o.TYPE, o) for o in Operator}
+        strhtml, strunic = (
+            {o: rset.string(o.TYPE, o) for o in Operator}
             for rset in (
                 RenderSet.fetch(Notation.standard, 'html'),
-                RenderSet.fetch(Notation.standard, 'unicode')
+                RenderSet.fetch(Notation.standard, 'unicode'),
             )
         )
         lines = [
-            '"","","","Render only"',
-            '"Operator Name","Polish","Standard","Standard HTML","Standard Unicode"',
+            '"",' * 3                       + '"Render only"',
+            '"Operator", "Polish", "Standard", "Std. HTML", "Std. Unicode"',
         ]
         lines.extend(
-            '"{0}","``{1}``","``{2}``","{3}","{4}"'.format(*row)
-            for row in (
-                (o, sympol[o], symstd[o], htmlun(symhtml[o]), symunic[o])
-                for o in Operator
-            )
+            f'"{o}", "``{charpol[o]}``", "``{charstd[o]}``", '
+            f'"{htmlun(strhtml[o])}", "{strunic[o]}"'
+            for o in Operator
+            # for row in (
+            #     (o, charpol[o], charstd[o], htmlun(strhtml[o]), strunic[o])
+            #     for o in Operator
+            # )
         )
         return indented(lines, indent)
 
@@ -342,7 +335,7 @@ class Helper:
             rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
         b = tab.branch()
         b.extend(rule.example_nodes())
-        rule.apply(rule.get_target(b))
+        rule.apply(rule.target(b))
         tab.finish()
         return pw(tab)
 
@@ -379,7 +372,7 @@ class Helper:
             if isinstance(f, str):
                 f = getattr(self, f)
             logger.info(f'Connecting {f.__name__} to {event}')
-            append(f)
+            append(instcheck(f, Callable))
 
     def sphinx_regex_simple_replace_common(self, lines: list[str], is_source: bool = False):
         logicmatch = '|'.join(self.logic_names)
@@ -437,7 +430,10 @@ class Helper:
                 self.lines_opers_table,
             )
         )
-        proclines = lines[0].split('\n') if is_source else lines
+        if is_source:
+            proclines = lines[0].split('\n')
+        else:
+            proclines = lines
         i = 0
         rpl = {}
         for line in proclines:
@@ -445,7 +441,7 @@ class Helper:
                 if indic in line:
                     matches = re.findall(regex, line)
                     if not matches:
-                        raise ValueError(f'Bad expression: {line}')
+                        raise ValueError(f"Bad expression: {repr(line)}")
                     match = matches[0]
                     if isinstance(match, str):
                         # Corner case of one capture group
@@ -457,7 +453,7 @@ class Helper:
             pos = i + 1
             proclines[i:pos] = rpl[i]
         if rpl and is_source:
-            lines[0] ='\n'.join(proclines)
+            lines[0] = '\n'.join(proclines)
 
     def sphinx_regex_line_replace_source(self, app: Sphinx, docname: str, lines: list[str]):
         'Replace a line matching a regex with 1 or more lines in a docstring.'
@@ -492,7 +488,6 @@ class Helper:
 
     ## Custom Sphinx Roles
 
-
     @staticmethod
     @overload
     def sphinxrole(func: F, /) -> F: ...
@@ -524,7 +519,7 @@ class Helper:
                 except:
                     logger.error(
                         f"{func.__name__}: lineno={lineno}, "
-                        f"rawtext={repr(rawtext)}, content={content}"# + '\n'.join(content)
+                        f"rawtext={repr(rawtext)}, content={content}"
                     )
                     logger.info('Printing traceback')
                     traceback.print_exc()
@@ -616,81 +611,99 @@ class Helper:
         ]
 
     @sphinxrole
-    def role_lexrender_meta(self, /, *, text: str, **_):
+    @closure
+    def role_lexrender_meta():
+        LANGLE = '\\langle'
+        RANGLE = '\\rangle'
 
-        classes = ['lexmeta']
+        from logics import fde as FDE
 
-        textuc = text.upper()
+        _sets = dict(
+            subber = {'P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'},
+            subsup = {'B3E', 'K3W', 'K3WQ'},
+            truthvals = {'T', 'F', 'N', 'B'},
+            # truthvals = FDE.Model.Value,
+        )
 
-        if textuc in ('P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'):
-            classes.append('subber')
-            main, down = textuc[0:2]
-            if len(text) == 3:
-                main = textuc[2] + main
-            if main == 'L':
-                main = 'Ł'
-            return [
-                docnodes.inline(text = main, classes = classes + ['main']),
-                docnodes.subscript(text = down, classes = classes + ['down']),
-            ]
+        def role(self: Helper, /, *, text: str, **_):
 
-        if textuc in ('B3E', 'K3W', 'K3WQ'):
-            # :math:`{B^E_3}`
-            classes.append('subsup')
-            main, up, down = textuc[0:3]
-            if len(text) == 4:
-                down += textuc[3]
-            return [
-                docnodes.inline(text = main, classes = classes + ['main']),
-                docnodes.superscript(text = up, classes = classes + ['up']),
-                docnodes.subscript(text = down, classes = classes + ['down']),
-            ]
+            classes = ['lexmeta']
 
-        attrs = {}
+            textuc = text.upper()
 
-        langle = '\\langle'
-        rangle = '\\rangle'
+            if textuc in _sets['subber']:#('P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'):
+                classes.append('subber')
+                main, down = textuc[0:2]
+                if len(text) == 3:
+                    main = textuc[2] + main
+                if main == 'L':
+                    main = 'Ł'
+                return [
+                    docnodes.inline(text = main, classes = classes + ['main']),
+                    docnodes.subscript(text = down, classes = classes + ['down']),
+                ]
 
-        if text == 'ntuple':
-            # n-tuple.
-            nodecls = docnodes.math
-            classes.extend(('tuple', 'ntuple'))
-            rend = f'{langle} a_0,...,a_n{rangle}'
-        # elif text in FDE.Model.Value:
-        elif text in ('T', 'F', 'N', 'B'):
-            # Truth values.
-            nodecls = docnodes.strong
-            classes.extend(('truth-value',))
-            rend = text
-        elif re.match(r'^w[0-9]', text):
-            # w0 or w0Rw1
-            nodecls = docnodes.math
-            classes.append('modal')
-            parts = text.split('R')
-            if len(parts) > 1:
-                classes.append('access')
-            else:
-                classes.append('world')
-            # insert underscore
-            parts = [re.sub(r'w([0-9]+)', 'w_\\1', n) for n in parts]
-            # rejoin with R
-            rend = '\\mathcal{R}'.join(parts)
-        elif text == 'w' or re.match(r'', text):
-            # <w, w'> etc.
-            nodecls = docnodes.math
-            classes.append('modal')
-            if '<' in text:
-                classes.append('tuple')
-            rend = text.replace('<', f'{langle} ').replace('>', rangle)
-            #rend = text.replace('<', '⟨').replace('>', '⟩')
-            #nodecls = docnodes.inline
+            if textuc in _sets['subsup']:#('B3E', 'K3W', 'K3WQ'):
+                # :math:`{B^E_3}`
+                classes.append('subsup')
+                main, up, down = textuc[0:3]
+                if len(text) == 4:
+                    down += textuc[3]
+                return [
+                    docnodes.inline(text = main, classes = classes + ['main']),
+                    docnodes.superscript(text = up, classes = classes + ['up']),
+                    docnodes.subscript(text = down, classes = classes + ['down']),
+                ]
 
-        else:
+
+            if text == 'ntuple':
+                # n-tuple.
+                classes.extend(('tuple', 'ntuple'))
+                rendered = f'{LANGLE} a_0,...,a_n{RANGLE}'
+                return [
+                    docnodes.math(text = rendered, classes = classes)
+                ]
+
+            # if text in FDE.Model.Value:
+            if text in _sets['truthvals']:#('T', 'F', 'N', 'B'):
+                assert text in {'T', 'F', 'N', 'B'} # sanity
+                # Truth values.
+                classes.append('truth-value')
+                return [
+                    docnodes.strong(text = text, classes = classes)
+                ]
+
+            if re.match(r'^w[0-9]', text):
+                # w0 or w0Rw1
+                classes.append('modal')
+                parts = text.split('R')
+                if len(parts) > 1:
+                    classes.append('access')
+                else:
+                    classes.append('world')
+                # insert underscore
+                parts = [re.sub(r'w([0-9]+)', 'w_\\1', n) for n in parts]
+                # rejoin with R
+                rendered = '\\mathcal{R}'.join(parts)
+                return [
+                    docnodes.math(text = rendered, classes = classes)
+                ]
+
+            if text == 'w' or re.match(r'', text):
+                # <w, w'> etc.
+                classes.append('modal')
+                if '<' in text:
+                    classes.append('tuple')
+                rendered = text.replace('<', f'{LANGLE} ').replace('>', RANGLE)
+                #rendered = text.replace('<', '⟨').replace('>', '⟩')
+                #nodecls = docnodes.inline
+                return [
+                    docnodes.math(text = rendered, classes = classes)
+                ]
+
             raise ValueError(f"Unrecognized meta-lexical text '{text}'")
-        node = nodecls(text = rend, classes = classes, **attrs)
 
-        return [node]
-
+        return role
 
     ## Dispatcher
 
@@ -733,8 +746,10 @@ class Helper:
         """
         # print('Checking:', str(rule))
         check = (
-            isnodoc(rule) and isnocode(rule) and
-            selfgrouped(rule) and parentgrouped(rule)
+            isnodoc(rule) and
+            isnocode(rule) and
+            selfgrouped(rule) and
+            parentgrouped(rule)
         )
         if check:
             # print('INHERIT', str(rule))
@@ -817,34 +832,40 @@ def isnocode(obj: Any) -> bool:
         # raise
         return False
 
-def rulegrouped(rule, logic) -> bool:
-    if Rule not in safemro(rule):
+def isrulecls(obj: Any) -> bool:
+    return isinstance(obj, type) and issubclass(obj, Rule)
+
+def rulegrouped(rule: type[Rule], logic: Any) -> bool:
+    'Whether the Rule class is grouped in the TabRules of the given logic.'
+    if not isrulecls(rule):
         return False
     try:
         logic = get_logic(logic)
-        rcls = logic.TabRules
-        if rule in rcls.closure_rules:
+    except:
+        return False
+    tabrules = logic.TabRules
+    if rule in tabrules.closure_rules:
+        return True
+    for grp in tabrules.rule_groups:
+        if rule in grp:
             return True
-        for grp in rcls.rule_groups:
-            if rule in grp:
-                return True
-        return False
-    except:
-        return False
+    return False
 
-def selfgrouped(rule) -> bool:
-    try:
-        return rulegrouped(rule, get_logic(rule))
-    except:
-        return False
+def selfgrouped(rule: type[Rule]) -> bool:
+    'Whether the Rule class is grouped in the TabRules of its own logic.'
+    return rulegrouped(rule, rule)
 
-def parentgrouped(rule) -> bool:
-    try:
-        parent = getmro(rule)[1]
-        plgc = get_logic(parent)
-        return rulegrouped(parent, plgc)
-    except:
+def parentgrouped(rule: type[Rule]) -> bool:
+    "Whether the Rule class's parent is grouped in its own logic."
+    if not isinstance(rule, type):
         return False
+    return selfgrouped(rule.mro()[1])
+    # try:
+    #     parent = getmro(rule)[1]
+    #     plgc = get_logic(parent)
+    #     return rulegrouped(parent, plgc)
+    # except:
+    #     return False
 
 def set_classes(options: dict):
     """Set options['classes'] and delete options['class'].
@@ -856,7 +877,6 @@ def set_classes(options: dict):
             raise KeyError("classes")
         options['classes'] = options['class']
         del options['class']
-
 
 
 # helper.connect_sphinx(app, 'autodoc-process-signature',

@@ -27,11 +27,9 @@ from lexicals import Predicate, Constant, Variable, Operator, Quantifier, \
     Predicates, Argument
 from proof.tableaux import Tableau, Rule
 from proof.common import Branch, Node
-from parsers import parse, parse_argument
 from models import BaseModel
 from .tutils import BaseSuite, larg, using, skip
 from enum import Enum
-import examples
 from logics import k as K, fde as FDE
 Existential = Quantifier.Existential
 Universal = Quantifier.Universal
@@ -363,13 +361,13 @@ class Test_FDE(BaseSuite):
                 self.m().value_of_quantified(s)
 
         def test_model_read_branch_with_negated_opaque_then_faithful(self):
-            arg = parse_argument('a', premises=['NLa', 'b'])
+            arg = self.parg('a', 'NLa', 'b')
             proof = Tableau(self.logic, arg, is_build_models=True)
             proof.build()
             model = proof[0].model
-            assert model.value_of(parse('a')) == 'F'
-            assert model.value_of(parse('La')) == 'F'
-            assert model.value_of(parse('NLa')) == 'T'
+            assert model.value_of(self.p('a')) == 'F'
+            assert model.value_of(self.p('La')) == 'F'
+            assert model.value_of(self.p('NLa')) == 'T'
             assert model.is_countermodel_to(arg)
 
         def test_observed_value_of_universal_with_diamond_min_arg_is_an_empty_sequence(self):
@@ -584,19 +582,19 @@ class TestK3W(BaseSuite):
                 tab, b = self.bt(('NKab', False))
                 tab.step()
                 b1, b2, b3 = tab
-                assert b1.has({'sentence': parse('a'), 'designated': False})
-                assert b1.has({'sentence': parse('Na'), 'designated': False})
-                assert b2.has({'sentence': parse('b'), 'designated': False})
-                assert b2.has({'sentence': parse('Nb'), 'designated': False})
-                assert b3.has({'sentence': parse('a'), 'designated': True})
-                assert b3.has({'sentence': parse('b'), 'designated': True})
+                assert b1.has({'sentence': self.p('a'), 'designated': False})
+                assert b1.has({'sentence': self.p('Na'), 'designated': False})
+                assert b2.has({'sentence': self.p('b'), 'designated': False})
+                assert b2.has({'sentence': self.p('Nb'), 'designated': False})
+                assert b3.has({'sentence': self.p('a'), 'designated': True})
+                assert b3.has({'sentence': self.p('b'), 'designated': True})
 
         class Test_Optimizations(BaseSuite):
             def test_optimize1(self):
                 tab = self.tab()
                 tab.branch().extend([
-                    {'sentence': parse('ANaUab'), 'designated': False},
-                    {'sentence': parse('NANaUab'), 'designated': False},
+                    {'sentence': self.p('ANaUab'), 'designated': False},
+                    {'sentence': self.p('NANaUab'), 'designated': False},
                 ])
                 step = tab.step()
                 assert step.rule.name == 'DisjunctionNegatedUndesignated'
@@ -613,7 +611,7 @@ class TestK3W(BaseSuite):
             # this was because sorting of constants had not been implemented.
             # it was only observed when we were sorting predicated sentences
             # that ended up in the opaques of a model.
-            arg = parse_argument('VxMFx', ['VxUFxSyMFy', 'Fm'], vocab=self.vocab)
+            arg = self.parg('VxMFx', 'VxUFxSyMFy', 'Fm')
             proof = Tableau(self.logic, arg, is_build_models=True, max_steps=100)
             proof.build()
             assert proof.invalid
@@ -827,7 +825,7 @@ class TestLP(BaseSuite):
             def test_regression_bad_rule_neg_bicond_undes(self):
                 tab = self.tab('NBab', 'NBab', is_build = False)
                 rule = tab.rules.get('BiconditionalNegatedUndesignated')
-                assert rule.get_target(tab[0])
+                assert rule.target(tab[0])
                 tab.build()
                 assert tab.valid
 
@@ -871,9 +869,9 @@ class TestRM3(BaseSuite):
 
     def test_model_value_of_biconditional(self):
         model = self.m()
-        model.set_literal_value(parse('a'), 'B')
-        model.set_literal_value(parse('b'), 'F')
-        assert model.value_of(parse('Bab')) == 'F'
+        model.set_literal_value(self.p('a'), 'B')
+        model.set_literal_value(self.p('b'), 'F')
+        assert model.value_of(self.p('Bab')) == 'F'
 
     def test_valid_cond_mp(self):
         proof = self.tab('Conditional Modus Ponens')
@@ -896,7 +894,7 @@ class TestRM3(BaseSuite):
         assert proof.valid
 
     def test_invalid_b_then_a_arrow_b(self):
-        arg = parse_argument('Uab', premises=['b'])
+        arg = self.parg('Uab', 'b')
         proof = Tableau(self.logic, arg).build()
         assert not proof.valid
 
@@ -905,26 +903,26 @@ class TestRM3(BaseSuite):
         assert proof.valid
 
     def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_a_arrow_b(self):
-        proof = Tableau(self.logic, parse_argument('NUab', ['a', 'UaNUbc'])).build()
+        proof = Tableau(self.logic, self.parg('NUab', 'a', 'UaNUbc')).build()
         assert not proof.valid
 
     def test_valid_a_a_arrow_not_b_arrow_c_thus_not_b_arrow_c(self):
         # this is an instance of modus ponens
-        proof = Tableau(self.logic, parse_argument('NUbc', ['a', 'UaNUbc'])).build()
+        proof = Tableau(self.logic, self.parg('NUbc', 'a', 'UaNUbc')).build()
         assert proof.valid
 
     def test_valid_bicond_thus_matbicond(self):
-        arg = parse_argument('Eab', premises=['Bab'])
+        arg = self.parg('Eab', 'Bab')
         proof = Tableau(self.logic, arg).build()
         assert proof.valid
 
     def test_invalid_matbicon_thus_bicond(self):
-        arg = parse_argument('Bab', premises=['Eab'])
+        arg = self.parg('Bab', 'Eab')
         proof = Tableau(self.logic, arg).build()
         assert not proof.valid
 
     def test_valid_mp_with_neg_bicon(self):
-        arg = parse_argument('NBab', premises=['c', 'BcNUab'])
+        arg = self.parg('NBab', 'c', 'BcNUab')
         proof = Tableau(self.logic, arg).build()
         assert proof.valid
 
@@ -982,78 +980,78 @@ class TestGO(BaseSuite):
     def test_MaterialConditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': parse('NCab'), 'designated': True})
+        branch.add({'sentence': self.p('NCab'), 'designated': True})
         proof.step()
-        assert branch.has({'sentence': parse('Na'), 'designated': False})
-        assert branch.has({'sentence': parse('b'), 'designated': False})
+        assert branch.has({'sentence': self.p('Na'), 'designated': False})
+        assert branch.has({'sentence': self.p('b'), 'designated': False})
 
     def test_MaterialBionditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
-        proof.branch().add({'sentence': parse('NEab'), 'designated': True})
+        proof.branch().add({'sentence': self.p('NEab'), 'designated': True})
         proof.step()
         b1, b2 = proof
-        assert b1.has({'sentence': parse('Na'), 'designated': False})
-        assert b1.has({'sentence': parse('b'), 'designated': False})
-        assert b2.has({'sentence': parse('a'), 'designated': False})
-        assert b2.has({'sentence': parse('Nb'), 'designated': False})
+        assert b1.has({'sentence': self.p('Na'), 'designated': False})
+        assert b1.has({'sentence': self.p('b'), 'designated': False})
+        assert b2.has({'sentence': self.p('a'), 'designated': False})
+        assert b2.has({'sentence': self.p('Nb'), 'designated': False})
 
     def test_ConditionalDesignated_step(self):
         proof = Tableau(self.logic)
-        proof.branch().add({'sentence': parse('Uab'), 'designated': True})
+        proof.branch().add({'sentence': self.p('Uab'), 'designated': True})
         proof.step()
         b1, b2 = proof
-        assert b1.has({'sentence': parse('ANab'), 'designated': True})
-        assert b2.has({'sentence': parse('a'), 'designated': False})
-        assert b2.has({'sentence': parse('b'), 'designated': False})
-        assert b2.has({'sentence': parse('Na'), 'designated': False})
-        assert b2.has({'sentence': parse('Nb'), 'designated': False})
+        assert b1.has({'sentence': self.p('ANab'), 'designated': True})
+        assert b2.has({'sentence': self.p('a'), 'designated': False})
+        assert b2.has({'sentence': self.p('b'), 'designated': False})
+        assert b2.has({'sentence': self.p('Na'), 'designated': False})
+        assert b2.has({'sentence': self.p('Nb'), 'designated': False})
 
     def test_ConditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
-        proof.branch().add({'sentence': parse('NUab'), 'designated': True})
+        proof.branch().add({'sentence': self.p('NUab'), 'designated': True})
         proof.step()
         b1, b2 = proof
-        assert b1.has({'sentence': parse('a'), 'designated': True})
-        assert b1.has({'sentence': parse('b'), 'designated': False})
-        assert b2.has({'sentence': parse('Na'), 'designated': False})
-        assert b2.has({'sentence': parse('Nb'), 'designated': True})
+        assert b1.has({'sentence': self.p('a'), 'designated': True})
+        assert b1.has({'sentence': self.p('b'), 'designated': False})
+        assert b2.has({'sentence': self.p('Na'), 'designated': False})
+        assert b2.has({'sentence': self.p('Nb'), 'designated': True})
 
     def test_BiconditionalDesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': parse('Bab'), 'designated': True})
+        branch.add({'sentence': self.p('Bab'), 'designated': True})
         proof.step()
-        assert branch.has({'sentence': parse('Uab'), 'designated': True})
-        assert branch.has({'sentence': parse('Uba'), 'designated': True})
+        assert branch.has({'sentence': self.p('Uab'), 'designated': True})
+        assert branch.has({'sentence': self.p('Uba'), 'designated': True})
 
     def test_BiconditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
-        proof.branch().add({'sentence': parse('NBab'), 'designated': True})
+        proof.branch().add({'sentence': self.p('NBab'), 'designated': True})
         proof.step()
         b1, b2 = proof
-        assert b1.has({'sentence': parse('NUab'), 'designated': True})
-        assert b2.has({'sentence': parse('NUba'), 'designated': True})
+        assert b1.has({'sentence': self.p('NUab'), 'designated': True})
+        assert b2.has({'sentence': self.p('NUba'), 'designated': True})
 
     def test_AssertionUndesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': parse('Ta'), 'designated': False})
+        branch.add({'sentence': self.p('Ta'), 'designated': False})
         proof.step()
-        assert branch.has({'sentence': parse('a'), 'designated': False})
+        assert branch.has({'sentence': self.p('a'), 'designated': False})
 
     def test_AssertionNegatedDesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': parse('NTa'), 'designated': True})
+        branch.add({'sentence': self.p('NTa'), 'designated': True})
         proof.step()
-        assert branch.has({'sentence': parse('a'), 'designated': False})
+        assert branch.has({'sentence': self.p('a'), 'designated': False})
 
     def test_AssertionNegatedUndesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': parse('NTa'), 'designated': False})
+        branch.add({'sentence': self.p('NTa'), 'designated': False})
         proof.step()
-        assert branch.has({'sentence': parse('a'), 'designated': True})
+        assert branch.has({'sentence': self.p('a'), 'designated': True})
 
     def test_valid_neg_exist_from_univ(self):
         proof = self.tab('Quantifier Interdefinability 1')
@@ -1080,7 +1078,7 @@ class TestGO(BaseSuite):
         assert not proof.valid
 
     def test_valid_prior_b3e_rule_defect2(self):
-        arg = parse_argument('AANaTbNa', premises=['Na'], notn='polish')
+        arg = self.parg('AANaTbNa', 'Na')
         proof = Tableau(self.logic, arg)
         proof.build()
         assert proof.valid
@@ -1088,7 +1086,7 @@ class TestGO(BaseSuite):
     def test_branching_complexity_inherits_branchables(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': parse('Kab'), 'designated': False})
+        branch.add({'sentence': self.p('Kab'), 'designated': False})
         node = branch[0]
         assert self.logic.TableauxSystem.branching_complexity(node) == 0
 
@@ -1402,7 +1400,7 @@ class Test_K(BaseSuite):
                     {'sentence': self.p('Imm'), 'world': 0},
                     {'sentence': self.p('Fs'),  'world': 0},
                 ))
-                assert not rule.get_target(b)
+                assert not rule.target(b)
 
     class Test_Models(BaseSuite):
 
@@ -1638,8 +1636,8 @@ class Test_K(BaseSuite):
 
             def test_difference_opaque_values_equiv(self):
                 model = self.m()
-                model.set_opaque_value(parse('Ma'), 'T', world=0)
-                model.set_opaque_value(parse('Ma'), 'T', world=1)
+                model.set_opaque_value(self.p('Ma'), 'T', world=0)
+                model.set_opaque_value(self.p('Ma'), 'T', world=1)
                 frame_a = model.world_frame(0)
                 frame_b = model.world_frame(1)
                 assert frame_a.is_equivalent_to(frame_b)
@@ -1787,7 +1785,7 @@ class TestCPL(BaseSuite):
                     {'sentence': s2, 'world': 0},
                 ))
                 rule = tab.rules.get('IdentityIndiscernability')
-                assert not rule.get_target(b)
+                assert not rule.target(b)
 
         class Test_Arguments(BaseSuite):
 
@@ -2060,7 +2058,7 @@ class TestD(BaseSuite):
         from logics import d as D
         tab = self.tab()
         rule = tab.rules.get(D.TabRules.Serial)
-        assert not rule.get_target(tab.branch())
+        assert not rule.target(tab.branch())
 
     def test_verify_core_bugfix_branch_should_not_have_w1_with_more_than_one_w2(self):
         tab = self.tab('CaLMa')
