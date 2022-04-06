@@ -22,20 +22,14 @@ from __future__ import annotations
 __all__ = 'arguments', 'argument', 'tabiter'
 
 from errors import instcheck
+from lexicals import Argument, Predicate, Predicates
+from parsers import Parser
+
+from tools.abcs import closure
 from tools.hybrids import qsetf
-from tools.sets import EMPTY_SET
-from lexicals import Predicate, Predicates, Argument
-from parsers import create_parser
-import itertools
-import re
-from types import MappingProxyType as MapProxy
+from tools.mappings import MapProxy
 
-logic_names = qsetf((
-    'CPL', 'CFOL', 'FDE', 'K3', 'K3W', 'K3WQ', 'B3E', 'GO', 'MH',
-    'L3', 'G3', 'P3', 'LP', 'NH', 'RM3', 'K', 'D', 'T', 'S4', 'S5',
-))
-
-args = MapProxy({
+_args = MapProxy({
     'Addition'                         : (('a',), 'Aab'),
     'Affirming a Disjunct 1'           : (('Aab', 'a'), 'b'),
     'Affirming a Disjunct 2'           : (('Aab', 'a'), 'Nb'),
@@ -135,11 +129,7 @@ args = MapProxy({
     'Universal from Existential'       : (('SxFx',), 'VxFx'),
 })
 
-titles = qsetf(sorted(args.keys()))
-preds = vocab = Predicates(Predicate.gen(3))
-parser = create_parser(notn='polish', vocab = preds)
-
-aliases = MapProxy({
+_aliases = MapProxy({
     'Triviality 1': ('TRIV', 'TRIV1'),
     'Triviality 2': ('TRIV2',),
     'Law of Excluded Middle': ('LEM',),
@@ -179,45 +169,99 @@ aliases = MapProxy({
     'S4 Material Inference 2': ('S42',),
     'S5 Material Inference 1': ('S5', 'S51', 'RST'),
 })
-_idx = {}
-for name in args:
-    _idx.update({
-        k.lower(): name for k in (
-            name, re.sub(' ','', name), *aliases.get(name, EMPTY_SET)
+
+_titles = qsetf(sorted(_args.keys()))
+
+preds = Predicates(Predicate.gen(3))
+
+@closure
+def argument():
+
+    index = {}
+    cache = {}
+
+    args = _args
+
+    from tools.sets import EMPTY_SET
+    import re
+
+    for name in args:
+        index.update({
+            k.lower(): name for k in (
+                name, re.sub(' ','', name), *_aliases.get(name, EMPTY_SET)
+            )
+        })
+
+    parsearg = Parser('polish', preds).argument
+
+    def argument(key: str|Argument) -> Argument:
+        if isinstance(key, Argument):
+            return key
+        instcheck(key, str)
+        title = index[key.lower()]
+        if title not in cache:
+            info = args[title]
+            if isinstance(info, tuple):
+                premises, conclusion = info
+            else:
+                premises = None
+                conclusion = info
+            cache[title] = parsearg(conclusion, premises, title = title)
+        return cache[title]
+
+    return argument
+
+@closure
+def arguments():
+
+    titles = _titles
+
+    def arguments(*keys: str|Argument) -> tuple[Argument, ...]:
+        if not len(keys):
+            keys = titles
+        return tuple(map(argument, keys))
+
+    return arguments
+
+@closure
+def tabiter():
+
+    titles = _titles
+    logic_names = qsetf((
+        'CPL', 'CFOL', 'FDE', 'K3', 'K3W', 'K3WQ', 'B3E', 'GO', 'MH',
+        'L3', 'G3', 'P3', 'LP', 'NH', 'RM3', 'K', 'D', 'T', 'S4', 'S5',
+    ))
+
+    def gettab(*args, build = True, **opts):
+        from proof.tableaux import Tableau
+        tab = Tableau(*args, **opts)
+        if build:
+            tab.build()
+        return tab
+
+    from itertools import chain
+
+    def tabiter(*logics, build = True, **opts):
+        if not len(logics):
+            logics = logic_names
+        return chain.from_iterable(
+            (
+                gettab(logic, argument(title), build = build, **opts)
+                for title in titles
+            )
+            for logic in logics
         )
-    })
 
-_cache = {}
-def argument(key: str|Argument) -> Argument:
-    if isinstance(key, Argument):
-        return key
-    instcheck(key, str)
-    title = _idx[key.lower()]
-    if title not in _cache:
-        info = args[title]
-        if isinstance(info, tuple):
-            premises, conclusion = info
-        else:
-            premises = None
-            conclusion = info
-        _cache[title] = parser.argument(conclusion, premises, title=title)
-    return _cache[title]
+    return tabiter
 
-def arguments(*keys):
-    if not len(keys):
-        keys = titles
-    return tuple(map(argument, keys))
-
-def tabiter(*logics, **opts):
-    from proof.tableaux import Tableau
-    if not logics:
-        logics = logic_names
-    argmts = arguments()
-    # logics = iter(tuple((logic,) if logic else available['logics']))
-    return itertools.chain.from_iterable(
-        (
-            Tableau(logic, arg, **opts).build()
-            for arg in argmts
-        )
-        for logic in logics
-    )
+del(
+    _aliases,
+    _args,
+    _titles,
+    closure,
+    MapProxy,
+    Parser,
+    Predicate,
+    Predicates,
+    qsetf,
+)

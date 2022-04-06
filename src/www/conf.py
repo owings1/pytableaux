@@ -19,13 +19,13 @@
 # pytableaux - Web App Configuration
 from __future__ import annotations
 
-from tools.sequences import seqf
-
 __all__ = (
     'APP_ENVCONF',
     'APP_JENV',
     'APP_LOGICS',
     'REGEX_EMAIL',
+
+    'Metric',
 
     'cp_config',
     'cp_global_config',
@@ -33,27 +33,27 @@ __all__ = (
     'output_charsets',
     'logger',
     'logic_categories',
-    'Metric',
     'parser_nups',
 )
 
+import examples
+from lexicals import LexType, Notation, LexWriter
+from parsers import ParseTable
 from tools.abcs import AbcEnum
 from tools.decorators import closure
 from tools.misc import get_logic
-from parsers import ParseTable
-from lexicals import LexType, Notation, LexWriter
-import examples
 
 from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, FileSystemLoader
-import logging, os, os.path
+import logging
+import os
 import prometheus_client as prom
 
-#  Base app dir.
-_APP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 
-def _app_path(*args):
-    return os.path.join(_APP_DIR, *args)
+def _app_path(*args,
+    _appdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+):
+    return os.path.join(_appdir, *args)
 
 def _static_path(*args):
     return _app_path('www/static', *args)
@@ -362,25 +362,32 @@ cp_config = {
 
 ## Static Data
 
+# Rendered example arguments
+example_args = {
+    arg.title : {
+        notn.name: dict(
+            premises = tuple(map(lw, arg.premises)),
+            conclusion = lw(arg.conclusion),
+        )
+        for notn, lw in (
+            (notn, LexWriter(notn, charset = 'ascii'))
+            for notn in Notation
+        )
+    }
+    for arg in examples.arguments()
+}
+
+# Predicate symbols
+parser_nups = {
+    notn.name: ParseTable.fetch(notn).chars[LexType.Predicate]
+    for notn in Notation
+}
+
+# Logic category groupings.
 logic_categories: dict[str, list[str]] = {}
-parser_nups: dict[str, seqf[str]] = {}
-example_args: dict[str, dict[str, dict]] = {}
 
 @closure
 def _():
-
-    exargs = examples.arguments()
-    for arg in exargs:
-        example_args[arg.title] = {}
-    for notn in Notation:
-        # Build rendered example arguments
-        lw = LexWriter(notn, charset = 'ascii')
-        for arg in exargs:
-            example_args[arg.title][notn.name] = dict(
-                premises = tuple(map(lw, arg.premises)),
-                conclusion = lw(arg.conclusion),
-            )
-        parser_nups[notn.name] = ParseTable.fetch(notn).chars[LexType.Predicate]
 
     for modname, logic in APP_LOGICS.items():
         category = logic.Meta.category
@@ -412,7 +419,6 @@ output_charsets = _get_common_charsets()
 ## Cleanup
 
 del(
-    _APP_DIR,
     _OPTDEFS,
     _PATHS,
     _,
@@ -431,5 +437,7 @@ del(
     FileSystemLoader,
     Notation,
 
+    examples,
     logging,
+    os,
 )

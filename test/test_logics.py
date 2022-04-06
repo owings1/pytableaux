@@ -1644,8 +1644,8 @@ class Test_K(BaseSuite):
                 assert frame_b.is_equivalent_to(frame_a)
 
             def test_difference_extension_keys_diff(self):
-                vocab = Predicates({(0, 0, 1), (1, 0, 2)})
-                s1, s2 = self.pp('Fm', 'Gmn', vocab)
+                preds = Predicates({(0, 0, 1), (1, 0, 2)})
+                s1, s2 = self.pp('Fm', 'Gmn', preds)
                 model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 model.set_predicated_value(s2, 'T', world=1)
@@ -1779,7 +1779,7 @@ class TestCPL(BaseSuite):
 
             def test_IdentityIndiscernability_not_applies(self):
                 preds = Predicates({(0, 0, 2)})
-                s1, s2 = self.pp('Fmn', 'Io1o2', vocab = preds)
+                s1, s2 = self.pp('Fmn', 'Io1o2', preds)
                 tab, b = self.tabb((
                     {'sentence': s1, 'world': 0},
                     {'sentence': s2, 'world': 0},

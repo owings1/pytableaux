@@ -14,7 +14,7 @@ from lexicals import (
     Argument, Predicates, Sentence, LexWriter, Notation
 )
 from models import BaseModel
-from parsers import create_parser, parse_argument, Parser
+from parsers import Parser
 import examples
 from proof.common import Branch, Node
 from proof.tableaux import (
@@ -155,7 +155,7 @@ class ArgModels(NamedTuple):
 @dynattrs('logic')
 class BaseSuite:
 
-    vocab = examples.preds
+    preds: Predicates = examples.preds
     notn = Notation.polish
     logic = get_logic('CFOL')
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
@@ -175,19 +175,17 @@ class BaseSuite:
     def crparser(self, *args, **kw):
         for val in args:
             if isinstance(val, Predicates):
-                key = 'vocab'
-            elif val in Notation:
+                key = 'preds'
+            elif isinstance(val, (str, Notation)) and val in Notation:
                 key = 'notn'
             else:
-                raise ValueError('Unrecognized positional argument {}'.format(val))
+                raise ValueError(f"Unrecognized positional argument '{val}'")
             if key in kw:
-                raise KeyError('Positional argument {} duplicates keyword {}'.format(val, key))
+                raise TypeError(f"Positional argument '{val}' duplicates keyword '{key}'")
             kw[key] = val
-        if 'vocab' not in kw:
-            kw['vocab'] = self.vocab
-        if 'notn' not in kw:
-            kw['notn'] = self.notn
-        return create_parser(**kw)
+        kw.setdefault('preds', self.preds)
+        kw.setdefault('notn', self.notn)
+        return Parser(kw['notn'], kw['preds'])
 
     def p(self, s, *args, **kw):
         return self.crparser(*args, **kw).parse(s)
@@ -215,32 +213,43 @@ class BaseSuite:
             return examples.argument(conc)
         except (KeyError, TypeError):
             pass
-        kw.setdefault('notn', self.notn)
         premises = []
-        for prem in prems:
-            if isinstance(prem, Predicates):
-                if 'vocab' in kw:
-                    raise KeyError('duplicate: vocab')
-                kw['vocab'] = prem
-            elif isinstance(prem, Iterable) and not isinstance(prem, (str, Sentence)):
-                premises.extend(prem)
+        for val in prems:
+            key = None
+            if isinstance(val, Predicates):
+                key = 'preds'
+            elif isinstance(val, (str, Notation)) and val in Notation:
+                key = 'notn'
+            elif isinstance(val, Iterable) and not isinstance(val, (str, Sentence)):
+                premises.extend(val)
             else:
-                premises.append(prem)
-        kw.setdefault('vocab', self.vocab)
-        return parse_argument(conc, premises, **kw)
+                premises.append(val)
+            if key is not None:
+                if key in kw:
+                    raise TypeError(f"Positional argument '{val}' duplicates keyword '{key}'")
+                kw[key] = val
+        kw.setdefault('preds', self.preds)
+        kw.setdefault('notn', self.notn)
+        parser = Parser(kw['notn'], kw['preds'])
+        return parser.argument(conc, premises)
 
     def tab(self, *args, is_build = None, nn = None, ss = None, **kw) -> Tableau:
         kw.setdefault('is_build_models', True)
         val = args[0] if len(args) == 1 else None
-        if val in examples.args:
-            arg = examples.argument(val)
-        elif isinstance(val, Argument):
-            arg = val
-        elif args:
-            arg = self.parg(*args, **kw)
-        else:
-            arg = None
-        if arg and is_build is None:
+        arg = None
+        if val is not None:
+            try:
+                arg = examples.argument(val)
+            except KeyError:
+                pass
+
+        if arg is None:
+            if isinstance(val, Argument):
+                arg = val
+            elif len(args):
+                arg = self.parg(*args, **kw)
+
+        if arg is not None and is_build is None:
             is_build = True
         tab = Tableau(self.logic, arg, **kw)
         if nn:

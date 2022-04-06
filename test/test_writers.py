@@ -19,8 +19,8 @@
 # pytableaux - writers test cases
 import pytest
 
-from lexicals import Atomic, Operated, Predicates, LexWriter
-from parsers import parse, create_parser
+from lexicals import Atomic, Predicates, LexWriter
+from parsers import Parser
 from errors import *
 from proof.tableaux import Tableau
 from proof.writers import TabWriter
@@ -34,7 +34,10 @@ stduni = LexWriter('standard', charset = 'unicode')
 stdhtm = LexWriter('standard', charset = 'html')
 
 pol = LexWriter('polish')
-pstd = create_parser('standard')
+ppol = Parser('polish')
+pstd = Parser('standard')
+
+htm = TabWriter('html', 'standard')
 
 class TestBase(object):
 
@@ -50,40 +53,40 @@ class TestStandard(object):
 
     def test_atomic(self):
         s = Atomic(0, 0)
-        res = std.write(s)
+        res = std(s)
         assert res == 'A'
 
     def test_writes_parens_asc(self):
-        s = parse('UUaba')
-        res = stdasc.write(s)
+        s = ppol('UUaba')
+        res = stdasc(s)
         assert '(' in res
         assert ')' in res
     def test_writes_parens_uni(self):
-        s = parse('UUaba')
-        res = stduni.write(s)
+        s = ppol('UUaba')
+        res = stduni(s)
         assert '(' in res
         assert ')' in res
     def test_writes_parens_htm(self):
-        s = parse('UUaba')
-        res = stdhtm.write(s)
+        s = ppol('UUaba')
+        res = stdhtm(s)
         assert '(' in res
         assert ')' in res
     def test_drop_parens_asc(self):
-        s = parse('Uab')
+        s = ppol('Uab')
         lw = LexWriter('standard', 'ascii', drop_parens=True)
-        res = lw.write(s)
+        res = lw(s)
         assert '(' not in res
         assert ')' not in res
     def test_drop_parens_uni(self):
-        s = parse('Uab')
+        s = ppol('Uab')
         lw = LexWriter('standard', 'unicode', drop_parens=True)
         res = lw.write(s)
         assert '(' not in res
         assert ')' not in res
     def test_drop_parens_htm(self):
-        s = parse('Uab')
+        s = ppol('Uab')
         lw = LexWriter('standard', 'html', drop_parens=True)
-        res = lw.write(s)
+        res = lw(s)
         assert '(' not in res
         assert ')' not in res
     # def test_symset_returns_same(self):
@@ -92,7 +95,7 @@ class TestStandard(object):
         # assert res == ss
 
     def test_write_predicate_sys(self):
-        res = std.write(Predicates.System['Identity'])
+        res = std(Predicates.System['Identity'])
         assert res == '='
 
     # def test_write_parameter_not_impl_base_param(self):
@@ -106,8 +109,8 @@ class TestStandard(object):
         assert '>1</s' in res
 
     def test_write_neg_ident_html(self):
-        s1 = parse('NImn')
-        res = stdhtm.write(s1)
+        s1 = ppol('NImn')
+        res = stdhtm(s1)
         assert '&ne;' in res
 
     # def test_write_operated_3ary_not_impl(self):
@@ -124,22 +127,18 @@ class TestStandard(object):
     def test_parse_errors_various_parens(self):
         # coverage
         with pytest.raises(ParseError):
-            parse('(A & &A)', notn='standard')
+            pstd('(A & &A)')
         with pytest.raises(ParseError):
-            parse('(A & ())', notn='standard')
+            pstd('(A & ())')
 
 class TestPolish(object):
 
     def test_atomic(self):
         s = Atomic(0, 0)
-        res = pol.write(s)
+        res = pol(s)
         assert res == 'a'
 
 # Proof writers
-
-# asc = ascii.Writer()
-htm = TabWriter('html', 'standard')
-# asv = asciiv.Writer()
 
 def example_proof(logic, name, is_build=True):
     arg = examples.argument(name)

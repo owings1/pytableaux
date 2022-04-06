@@ -21,14 +21,13 @@ from pytest import raises
 from errors import ParseError
 from lexicals import Predicate, LexType, Predicates
 from parsers import Parser
-from parsers import create_parser, parse, parse_argument as argument
 
 preds = Predicates(Predicate.gen(3))
-std = create_parser('standard', preds)
-pol = create_parser('polish', preds)
+std = Parser('standard', preds)
+pol = Parser('polish', preds)
 
 def test_parse_standard():
-    s = Parser('standard').parse('A & B')
+    s = Parser('standard')('A & B')
     assert s.TYPE is LexType.Operated
     assert s.operator == 'Conjunction'
 
@@ -38,26 +37,26 @@ def test_parse_polish():
     assert s.operator == 'Conjunction'
 
 def test_argument_no_prems_1_std_untitled():
-    a = argument(conclusion='A', notn='standard')
+    a = std.argument('A')
     assert len(a.premises) == 0
     assert a.conclusion.TYPE is LexType.Atomic
 
 def test_argument_prems_preparsed_titled():
-    premises = (parse('Aab'), parse('Nb'))
-    conclusion = parse('a')
-    a = argument(conclusion, premises, title='TestArgument')
+    premises = pol('Aab'), pol('Nb')
+    conclusion = pol('a')
+    a = pol.argument(conclusion, premises, title='TestArgument')
     assert len(a.premises) == 2
     assert a.title == 'TestArgument'
 
 def test_argument_parse_prems_preparsed_conclusion():
     premises = ('Aab', 'Nb')
-    conclusion = parse('a')
-    a = argument(conclusion, premises, notn='polish')
+    conclusion = pol('a')
+    a = pol.argument(conclusion, premises)
     assert len(a.premises) == 2
     assert a.conclusion == conclusion
 
 def test_argument_repr_coverage():
-    a = argument(conclusion='a', notn='polish', title='TestArg')
+    a = pol.argument('a', title='TestArg')
     res = a.__repr__()
     assert '(0, 0)' in res or 'TestArg' in res
 
@@ -133,8 +132,7 @@ class TestPolish(object):
         assert pol('a').TYPE is LexType.Atomic
 
     def test_parse_negated(self):
-        s = pol('Na')
-        assert s.operator == 'Negation'
+        assert pol('Na').operator == 'Negation'
 
     def test_unexpected_constant_error(self):
         with raises(ParseError):

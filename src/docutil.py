@@ -900,10 +900,7 @@ def set_classes(options: dict):
 #     pass
 
 # class ParseRenderDirective(Directive):
-#     sp = create_parser(
-#         notation = 'standard',
-#         preds = examples.preds,
-#     )
+#     sp = Parser('standard', examples.preds)
 #     sw = create_swriter(
 #         notation = 'standard',
 #         symbol_set = 'html',

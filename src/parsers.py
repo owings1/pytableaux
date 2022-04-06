@@ -51,50 +51,6 @@ from collections.abc import Set
 
 NOARG = object()
 
-def parse(input: str, *args, **opts) -> Sentence:
-    """
-    Parse a string and return a sentence.
-    Convenience wrapper for ``create_parser().parse()``.
-    """
-    return create_parser(*args, **opts).parse(input)
-
-def parse_argument(conclusion, premises = None, title: str = None, **opts) -> Argument:
-    """
-    Parse conclusion, and optional premises, and return an argument.
-    Convenience wrapper for ``create_parser().parse_argument()``.
-
-    :rtype: lexicals.Argument
-    """
-    return create_parser(**opts).argument(conclusion, premises, title = title)
-
-def create_parser(notn: Notation = None, vocab: Predicates = None, table: ParseTable = None, **opts) -> BaseParser:
-    """
-    Create a sentence parser with the given spec. This is
-    useful if you parsing many sentences with the same notation
-    and predicates.
-
-    :param notn: The parser notation. Uses the default notation if not passed.
-    :param vocab: The predicates store for parsing user-defined predicates.
-    :param ParseTable table: A custom parser table to use.
-    :return: The parser instance
-    :raises ValueError: on invalid notation, or table.
-    :raises TypeError: on invalid argument types.
-    """
-    if isinstance(notn, Predicates) or isinstance(vocab, (Notation, str)):
-        # Accept inverted args for backwards compatibility.
-        notn, vocab = (vocab, notn)
-    if vocab is None:
-        vocab = Predicates.System
-    if notn is None:
-        notn = Notation.default
-    else:
-        notn = Notation(notn)
-    if table is None:
-        table = ParseTable.default_fetch_key
-    if isinstance(table, str):
-        table = ParseTable.fetch(notn, table)
-    return notn.Parser(vocab, table, **opts)
-
 class ParseContext:
 
     __slots__ = 'input', 'type', 'preds', 'is_open', 'pos', 'bound_vars'

@@ -21,9 +21,6 @@
 
 from errors import *
 from lexicals import *
-# from lexicals import Types
-from lexicals import Lexical
-from parsers import parse
 from tools.sets import EMPTY_SET
 
 try:
@@ -328,12 +325,11 @@ class TestSentence(BaseSuite):
             assert res == check
 
         def test_complex_quantified_substitution(self):
-            vocab = Predicates()
-            vocab.add((0, 0, 2))
-            s1 = parse('SxMVyFxy', vocab=vocab)
+            preds = Predicates({(0, 0, 2)})
+            s1: Quantified = self.p('SxMVyFxy', preds)
             m = Constant(0, 0)
             s2 = s1.sentence.substitute(m, s1.variable)
-            s3 = parse('MVyFmy', vocab=vocab)
+            s3 = self.p('MVyFmy', preds)
             assert s2 == s3
 
     class TestOperated(BaseSuite):
@@ -345,7 +341,7 @@ class TestSentence(BaseSuite):
                 Operated(Operator.Negation, (A, A))
 
         def test_operators(self):
-            s = parse('KAMVxJxNbTNNImn')
+            s = self.p('KAMVxJxNbTNNImn')
             ops = s.operators
             assert len(ops) == 7
             assert ','.join(map(str, ops)) == (

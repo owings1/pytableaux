@@ -19,7 +19,6 @@ import examples
 
 import time
 from pytest import raises
-from typing import TypeVar
 
 from .tutils import BaseSuite, using, skip
 

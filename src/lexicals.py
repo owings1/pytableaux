@@ -1771,7 +1771,7 @@ class Parser(metaclass = ParserMeta):
     preds: Predicates
     opts: Mapping[str, Any]
 
-    def __init__(self, preds: Predicates = Predicate.System, table: ParseTable|str = None, /, **opts):
+    def __init__(self, preds: Predicates = Predicate.System, /, table: ParseTable|str = None, **opts):
         if table is None:
             table = ParseTable.fetch(self.notation)
         elif isinstance(table, str):
@@ -2051,7 +2051,6 @@ class StandardLexWriter(BaseLexWriter):
         s2 = Operator.Conjunction(Atomic.gen(2))
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
-
 
 ParseTableKey   = LexType|Marking|type[Predicate.System]
 ParseTableValue = int|Lexical
