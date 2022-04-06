@@ -24,7 +24,7 @@ class Meta(object):
     category = 'Many-valued'
     description = 'Emil Post three-valued logic (T, F, and N) with mirror-image negation'
     tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
-    category_display_order = 120
+    category_order = 120
 
 from lexicals import Constant, Operator as Oper, Quantifier, Quantified
 from proof.common import Branch, Node

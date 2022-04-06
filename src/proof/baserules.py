@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations as _
 from typing import Generator, Iterable
 
 __all__ = (

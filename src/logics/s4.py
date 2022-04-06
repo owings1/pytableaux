@@ -24,7 +24,7 @@ class Meta:
     category = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive and transitive access relation'
     tags = ['bivalent', 'modal', 'first-order']
-    category_display_order = 4
+    category_order = 4
 
 from proof.common import Access, Branch, Node, Target
 from proof.helpers import FilterHelper, MaxWorlds, WorldIndex

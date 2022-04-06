@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Web Application
-from __future__ import annotations
+from __future__ import annotations as _
 
 __all__ = ()
 

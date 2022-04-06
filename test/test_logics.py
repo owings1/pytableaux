@@ -603,9 +603,9 @@ class TestK3W(BaseSuite):
 
         def test_truth_table_conjunction(self):
             tbl = self.m().truth_table(Oper.Conjunction)
-            assert tbl['outputs'][0] == 'F'
-            assert tbl['outputs'][3] == 'N'
-            assert tbl['outputs'][8] == 'T'
+            assert tbl.outputs[0] == 'F'
+            assert tbl.outputs[3] == 'N'
+            assert tbl.outputs[8] == 'T'
 
         def test_models_with_opaques_observed_fail(self):
             # this was because sorting of constants had not been implemented.
@@ -659,21 +659,21 @@ class TestB3E(BaseSuite):
 
     def test_truth_table_assertion(self):
         tbl = self.m().truth_table('Assertion')
-        assert tbl['outputs'][0] == 'F'
-        assert tbl['outputs'][1] == 'F'
-        assert tbl['outputs'][2] == 'T'
+        assert tbl.outputs[0] == 'F'
+        assert tbl.outputs[1] == 'F'
+        assert tbl.outputs[2] == 'T'
 
     def test_truth_table_conditional(self):
         tbl = self.m().truth_table('Conditional')
-        assert tbl['outputs'][3] == 'T'
-        assert tbl['outputs'][4] == 'T'
-        assert tbl['outputs'][7] == 'F'
+        assert tbl.outputs[3] == 'T'
+        assert tbl.outputs[4] == 'T'
+        assert tbl.outputs[7] == 'F'
 
     def test_truth_table_biconditional(self):
         tbl = self.m().truth_table('Biconditional')
-        assert tbl['outputs'][2] == 'F'
-        assert tbl['outputs'][4] == 'T'
-        assert tbl['outputs'][7] == 'F'
+        assert tbl.outputs[2] == 'F'
+        assert tbl.outputs[4] == 'T'
+        assert tbl.outputs[7] == 'F'
         
     def test_valid_cond_contraction(self):
         self.valid_tab('Conditional Contraction')
@@ -747,9 +747,9 @@ class TestL3(BaseSuite):
 
     def test_truth_table_conditional(self):
         tbl = self.m().truth_table('Conditional')
-        assert tbl['outputs'][3] == 'N'
-        assert tbl['outputs'][4] == 'T'
-        assert tbl['outputs'][6] == 'F'
+        assert tbl.outputs[3] == 'N'
+        assert tbl.outputs[4] == 'T'
+        assert tbl.outputs[6] == 'F'
 
 @using(logic = 'G3')
 class TestG3(BaseSuite):
@@ -857,15 +857,15 @@ class TestRM3(BaseSuite):
 
     def test_truth_table_conditional(self):
         tbl = self.m().truth_table('Conditional')
-        assert tbl['outputs'][0] == 'T'
-        assert tbl['outputs'][1] == 'T'
-        assert tbl['outputs'][2] == 'T'
-        assert tbl['outputs'][3] == 'F'
-        assert tbl['outputs'][4] == 'B'
-        assert tbl['outputs'][5] == 'T'
-        assert tbl['outputs'][6] == 'F'
-        assert tbl['outputs'][7] == 'F'
-        assert tbl['outputs'][8] == 'T'
+        assert tbl.outputs[0] == 'T'
+        assert tbl.outputs[1] == 'T'
+        assert tbl.outputs[2] == 'T'
+        assert tbl.outputs[3] == 'F'
+        assert tbl.outputs[4] == 'B'
+        assert tbl.outputs[5] == 'T'
+        assert tbl.outputs[6] == 'F'
+        assert tbl.outputs[7] == 'F'
+        assert tbl.outputs[8] == 'T'
 
     def test_model_value_of_biconditional(self):
         model = self.m()
@@ -931,51 +931,51 @@ class TestGO(BaseSuite):
 
     def test_truth_table_assertion(self):
         tbl = self.m().truth_table('Assertion')
-        assert tbl['outputs'][0] == 'F'
-        assert tbl['outputs'][1] == 'F'
-        assert tbl['outputs'][2] == 'T'
+        assert tbl.outputs[0] == 'F'
+        assert tbl.outputs[1] == 'F'
+        assert tbl.outputs[2] == 'T'
 
     def test_truth_table_negation(self):
         tbl = self.m().truth_table('Negation')
-        assert tbl['outputs'][0] == 'T'
-        assert tbl['outputs'][1] == 'N'
-        assert tbl['outputs'][2] == 'F'
+        assert tbl.outputs[0] == 'T'
+        assert tbl.outputs[1] == 'N'
+        assert tbl.outputs[2] == 'F'
 
     def test_truth_table_disjunction(self):
         tbl = self.m().truth_table('Disjunction')
-        assert tbl['outputs'][0] == 'F'
-        assert tbl['outputs'][1] == 'F'
-        assert tbl['outputs'][2] == 'T'
+        assert tbl.outputs[0] == 'F'
+        assert tbl.outputs[1] == 'F'
+        assert tbl.outputs[2] == 'T'
 
     def test_truth_table_conjunction(self):
         tbl = self.m().truth_table('Conjunction')
-        assert tbl['outputs'][0] == 'F'
-        assert tbl['outputs'][1] == 'F'
-        assert tbl['outputs'][8] == 'T'
+        assert tbl.outputs[0] == 'F'
+        assert tbl.outputs[1] == 'F'
+        assert tbl.outputs[8] == 'T'
 
     def test_truth_table_mat_cond(self):
         tbl = self.m().truth_table('Material Conditional')
-        assert tbl['outputs'][0] == 'T'
-        assert tbl['outputs'][1] == 'T'
-        assert tbl['outputs'][4] == 'F'
+        assert tbl.outputs[0] == 'T'
+        assert tbl.outputs[1] == 'T'
+        assert tbl.outputs[4] == 'F'
 
     def test_truth_table_mat_bicond(self):
         tbl = self.m().truth_table('Material Biconditional')
-        assert tbl['outputs'][0] == 'T'
-        assert tbl['outputs'][1] == 'F'
-        assert tbl['outputs'][4] == 'F'
+        assert tbl.outputs[0] == 'T'
+        assert tbl.outputs[1] == 'F'
+        assert tbl.outputs[4] == 'F'
 
     def test_truth_table_cond(self):
         tbl = self.m().truth_table('Conditional')
-        assert tbl['outputs'][0] == 'T'
-        assert tbl['outputs'][3] == 'F'
-        assert tbl['outputs'][4] == 'T'
+        assert tbl.outputs[0] == 'T'
+        assert tbl.outputs[3] == 'F'
+        assert tbl.outputs[4] == 'T'
 
     def test_truth_table_bicond(self):
         tbl = self.m().truth_table('Biconditional')
-        assert tbl['outputs'][0] == 'T'
-        assert tbl['outputs'][4] == 'T'
-        assert tbl['outputs'][7] == 'F'
+        assert tbl.outputs[0] == 'T'
+        assert tbl.outputs[4] == 'T'
+        assert tbl.outputs[7] == 'F'
 
     def test_MaterialConditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
@@ -1945,7 +1945,7 @@ class TestCFOL(BaseSuite):
     def test_model_read_node_opaque(self):
         m = self.m()
         s1 = self.p('La')
-        m.read_node(Node({'sentence': s1}))
+        m._read_node(Node({'sentence': s1}))
         assert m.value_of(s1) == 'T'
 
     def test_model_add_access_not_impl(self):

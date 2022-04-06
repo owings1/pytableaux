@@ -27,7 +27,7 @@ class Meta(object):
         'and a classical-like conditional',
     ))
     tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
-    category_display_order = 70
+    category_order = 70
 
 from lexicals import Operator as Oper, Sentence, Quantified
 from proof.common import Node

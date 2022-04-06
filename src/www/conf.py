@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Web App Configuration
-from __future__ import annotations
+from __future__ import annotations as _
 
 __all__ = (
     'APP_ENVCONF',
@@ -396,7 +396,7 @@ def _():
         logic_categories[category].append(modname)
 
     def get_category_order(modname: str) -> int:
-        return APP_LOGICS[modname].Meta.category_display_order
+        return APP_LOGICS[modname].Meta.category_order
 
     for group in logic_categories.values():
         group.sort(key = get_category_order)

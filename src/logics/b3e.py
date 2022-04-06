@@ -24,7 +24,7 @@ class Meta:
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-    category_display_order = 50
+    category_order = 50
 
 from lexicals import Operator as Oper
 from proof.common import Branch, Node

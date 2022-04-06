@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Gappy Object 3-valued Logic
-from __future__ import annotations
+from __future__ import annotations as _
 name = 'GO'
 
 class Meta:
@@ -25,7 +25,7 @@ class Meta:
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-    category_display_order = 60
+    category_order = 60
 
 from lexicals import Quantified, Operator as Oper, Quantifier
 from proof.common import Branch, Node

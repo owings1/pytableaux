@@ -25,7 +25,7 @@ class Meta:
     description = 'Normal modal logic with a reflexive, symmetric, and transitive access relation'
     tags = ['bivalent', 'modal', 'first-order']
     category = 'Bivalent Modal'
-    category_display_order = 5
+    category_order = 5
 
 from proof.baserules import adds, group
 from proof.common import Access, Branch, Node

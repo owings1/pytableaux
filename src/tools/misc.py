@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - tools.misc module
-from __future__ import annotations
+from __future__ import annotations as _
 
 __all__ = 'get_logic',
 

@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - example arguments
-from __future__ import annotations
+from __future__ import annotations as _
 
 __all__ = 'arguments', 'argument', 'tabiter'
 
@@ -188,7 +188,9 @@ def argument():
     for name in args:
         index.update({
             k.lower(): name for k in (
-                name, re.sub(' ','', name), *_aliases.get(name, EMPTY_SET)
+                name,
+                re.sub(' ','', name),
+                *_aliases.get(name, EMPTY_SET),
             )
         })
 

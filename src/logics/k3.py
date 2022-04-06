@@ -17,28 +17,31 @@
 # ------------------
 #
 # pytableaux - Strong Kleene Logic
+from __future__ import annotations as _
+
 name = 'K3'
 
 class Meta:
-    title    = 'Strong Kleene 3-valued logic'
-    category = 'Many-valued'
+    title       = 'Strong Kleene 3-valued logic'
+    category    = 'Many-valued'
     description = 'Three-valued logic (T, F, N)'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-    category_display_order = 20
+    category_order = 20
+    tags = (
+        'many-valued',
+        'gappy',
+        'non-modal',
+        'first-order',
+    )
 
+from logics import fde as FDE
 from models import Mval
 from proof.baserules import BaseClosureRule
-from tools.hybrids import qsetf
-from lexicals import Atomic
 from proof.common import Branch, Node, Target
+from tools.hybrids import qsetf
 from tools.sets import setf
 
-from . import fde as FDE
-from logics.fde import sdnode
-
 class Model(FDE.Model):
-    """
-    A K3 model is like an :ref:`FDE model <fde-model>` without the :m:`B` value.
+    """A L{K3} model is like an {@FDE model} without the V{B} value.
     """
 
     class Value(Mval):
@@ -50,33 +53,31 @@ class Model(FDE.Model):
     #: The (singleton) set of designated values in model.
     #:
     #: :type: set
-    #: :value: {T}
-    #: :meta hide-value:
     designated_values = setf({Value.T})
 
     unassigned_value = Value.N
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    K3's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    L{K3}'s Tableaux System inherits directly from the {@FDE system},
     employing designation markers, and building the trunk in the same way.
     """
     pass
         
 class TabRules:
     """
-    The Tableaux System for K3 contains all the rules from :ref:`FDE <fde-rules>`, as well
-    as an additional closure rule.
+    The Tableaux System for L{K3} contains all the {@FDE rules}, as well as an
+    additional closure rule.
     """
 
     class GlutClosure(BaseClosureRule):
         """
-        A branch closes when a sentence and its negation both appear as designated nodes.
-        This rule is **in addition to** the :class:`FDE DesignationClosure rule
-        <DesignationClosure>`
+        A branch closes when a sentence and its negation both appear as designated nodes
+        on the branch. This rule is **in addition to** the :class:`FDE DesignationClosure
+        rule <DesignationClosure>`.
         """
 
-        def _branch_target_hook(self, node: Node, branch: Branch):
+        def _branch_target_hook(self, node: Node, branch: Branch, /):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
                return Target(
@@ -84,17 +85,10 @@ class TabRules:
                    branch = branch,
                 )
 
-        def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
+        def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
             return bool(self._find_closing_node(node, branch))
 
-        @staticmethod
-        def example_nodes():
-            a = Atomic.first()
-            return sdnode(a, True), sdnode(~a, True)
-
-        # util
-
-        def _find_closing_node(self, node: Node, branch: Branch):
+        def _find_closing_node(self, node: Node, branch: Branch, /):
             if node.get('designated'):
                 s = self.sentence(node)
                 if s is not None:
@@ -102,6 +96,13 @@ class TabRules:
                         sentence = s.negative(),
                         designated = True,
                     ))
+
+        @staticmethod
+        def example_nodes():
+            from lexicals import Atomic
+            from logics.fde import sdnode
+            a = Atomic.first()
+            return sdnode(a, True), sdnode(~a, True)
 
     class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass

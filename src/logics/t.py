@@ -24,7 +24,7 @@ class Meta:
     category = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive access relation'
     tags = ['bivalent', 'modal', 'first-order']
-    category_display_order = 3
+    category_order = 3
 
 from lexicals import Atomic
 from proof.baserules import adds, group

@@ -24,7 +24,7 @@ class Meta:
     category = 'Many-valued'
     description = 'Three-valued logic (T, F, B)'
     tags = ('many-valued', 'glutty', 'non-modal', 'first-order')
-    category_display_order = 100
+    category_order = 100
 
 from lexicals import Atomic
 from models import Mval

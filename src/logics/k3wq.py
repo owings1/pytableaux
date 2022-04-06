@@ -24,7 +24,7 @@ class Meta(object):
     category = 'Many-valued'
     description = 'Three-valued logic with values T, F, and N, with alternate quantification'
     tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
-    category_display_order = 40
+    category_order = 40
 
 from proof.common import Branch, Node
 from lexicals import Quantifier, Quantified, Operated

@@ -24,7 +24,7 @@ class Meta:
     category = 'Many-valued'
     description = 'Three-valued logic with values T, F, and N'
     tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
-    category_display_order = 30
+    category_order = 30
 
 from lexicals import Operated, Operator as Oper
 from proof.common import Branch, Node

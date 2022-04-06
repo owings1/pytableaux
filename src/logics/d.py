@@ -24,7 +24,7 @@ class Meta:
     category = 'Bivalent Modal'
     description = 'Normal modal logic with a serial access relation'
     tags = ['bivalent', 'modal', 'first-order']
-    category_display_order = 2
+    category_order = 2
 
 from proof.baserules import BaseSimpleRule
 from proof.common import Access, Branch, Node, Target

@@ -18,7 +18,7 @@
 # ------------------
 #
 # pytableaux - Gödel 3-valued logic
-from __future__ import annotations
+from __future__ import annotations as _
 
 name = 'G3'
 
@@ -27,7 +27,7 @@ class Meta:
     category = 'Many-valued'
     description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-    category_display_order = 90
+    category_order = 90
 
 
 from lexicals import Operator as Oper

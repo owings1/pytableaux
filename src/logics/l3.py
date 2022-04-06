@@ -25,7 +25,7 @@ class Meta:
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
     tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
-    category_display_order = 80
+    category_order = 80
 
 from lexicals import Operator as Oper
 from proof.common import Node

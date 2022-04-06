@@ -51,9 +51,8 @@ intersphinx_mapping = dict(
 # General information about the project.
 project = 'pytableaux'
 
+# Others tried: material, xcode
 pygments_style = 'colorful'
-#pygments_style = 'xcode'
-#pygments_style = 'material'
 
 # html_theme = 'default'
 # https://github.com/readthedocs/sphinx_rtd_theme
@@ -67,12 +66,13 @@ html_theme_options = {}
 if html_theme == 'sphinx_rtd_theme':
     # https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html
     html_theme_options.update(
-        style_external_links = True,
+        # style_external_links = True,
     )
 
-# If true, SmartyPants will be used to convert quotes and dashes to
-# typographically correct entities.
-html_use_smartypants = False
+# Smartquote
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes
+# https://docutils.sourceforge.io/docs/user/smartquotes.html
+smartquotes = False
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 html_show_sphinx = False
@@ -133,9 +133,7 @@ def setup(app):
     app.add_css_file('tableau.css')
 
     from docutil import Helper
-    Helper.setup_sphinx(app, dict(
-
-    ))
+    Helper.setup_sphinx(app)
 
 if False:
     pass

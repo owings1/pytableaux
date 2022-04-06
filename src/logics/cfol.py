@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Classical First-Order Logic
-from __future__ import annotations
+from __future__ import annotations as _
 
 from tools.abcs import Abc, abcf
 
@@ -28,7 +28,7 @@ class Meta:
     category = 'Bivalent'
     description = 'Standard bivalent logic with full first-order quantification'
     tags = ['bivalent', 'non-modal', 'first-order']
-    category_display_order = 2
+    category_order = 2
 
 from lexicals import Sentence, Quantified
 from logics import k as K, cpl as CPL

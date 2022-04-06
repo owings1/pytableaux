@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - proof.types module
-from __future__ import annotations
+from __future__ import annotations as _
 
 __all__ = (
     'BranchEvent',

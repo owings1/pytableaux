@@ -25,7 +25,7 @@ def test_html_truth_table_negation_cpl():
     assert len(res) > 0
 
 def test_lines_logic_truth_tables():
-    res = helper.lines_logic_truth_tables('cpl')
+    res = helper.lines_truth_tables('cpl')
     assert len(res) > 0
 
 def test_rule_example_html_1():

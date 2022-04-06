@@ -1,14 +1,14 @@
-{% macro write_model(lw, branch) -%}
+{% macro write_model(lw, branch, tableau) -%}
     {% set model = branch.model -%}
     {% set data = model.get_data() -%}
     <div class="model" data-model-id="{{ model.id|e }}" data-branch-id="{{ branch.id|e }}">
         <ul class="details">
-            <li>
+            {# <li>
                 <div class="prop">Is countermodel</div>
                 <div class="value">
                     <span class="is-countermodel {{ bool_to_yn(model.is_countermodel)|lower }}">{{ bool_to_yn(model.is_countermodel) }}</span>
                 </div>
-            </li>
+            </li> #}
             {% for key in data -%}
                 {% set info = data[key] -%}
                 <li>

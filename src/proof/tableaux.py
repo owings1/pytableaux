@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - proof.tableaux module
-from __future__ import annotations
+from __future__ import annotations as _
 
 __all__ = (
     'ClosingRule',
@@ -1309,7 +1309,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.__check_timeout()
             model = Model()
             model.read_branch(branch)
-            model.is_countermodel = argument and model.is_countermodel_to(argument)
+            # model.is_countermodel = argument and model.is_countermodel_to(argument)
             branch.model = model
             yield model
 

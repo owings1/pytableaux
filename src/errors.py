@@ -17,7 +17,7 @@
 #
 # ------------------
 # pytableaux - errors module
-from __future__ import annotations
+from __future__ import annotations as _
 
 # Allowed local imports: tools.abcs
 from tools.abcs import AbcEnum, ExT, T

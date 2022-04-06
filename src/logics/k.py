@@ -18,7 +18,7 @@
 # ------------------
 #
 # pytableaux - Kripke Normal Modal Logic
-from __future__ import annotations
+from __future__ import annotations as _
 name = 'K'
 
 class Meta(object):
@@ -26,9 +26,9 @@ class Meta(object):
     category = 'Bivalent Modal'
     description = 'Base normal modal logic with no access relation restrictions'
     tags = ['bivalent', 'modal', 'first-order']
-    category_display_order = 1
+    category_order = 1
 
-from tools.abcs import static, T
+from tools.abcs import closure, static, T
 from tools.hybrids import qsetf
 from tools.sets import EMPTY_SET
 
@@ -63,7 +63,6 @@ from errors import DenotationError, ModelValueError, instcheck
 
 import operator as opr
 
-from logics.fde import Model as FDEModel
 
 Identity  = Predicates.System.Identity
 Existence = Predicates.System.Existence
@@ -104,18 +103,37 @@ class Model(BaseModel):
         self.constants: set[Constant] = set()
 
         self.predicates: set[Predicate] = {Identity, Existence}
-        self.fde = FDEModel()
-        self.fde.Value = self.Value
+        # self.fde = FDEModel()
+        # self.fde.Value = self.Value
 
         # ensure there is a w0
         self.world_frame(0)
 
-    def value_of_operated(self, s: Operated, **kw):
-        if self.is_sentence_opaque(s):
-            return self.value_of_opaque(s, **kw)
-        if s.operator in self.modal_operators:
-            return self.value_of_modal(s, **kw)
-        return super().value_of_operated(s, **kw)
+    @staticmethod
+    @closure
+    def truth_function(Value = Value):
+        from logics import fde as FDE
+        model = FDE.Model()
+        model.Value = Value
+        return model.truth_function
+
+    # def truth_function(self, operator: Oper, a, b=None):
+    #     return self.fde.truth_function(operator, a, b)
+
+    # def value_of_operated(self, s: Operated, **kw):
+    #     if self.is_sentence_opaque(s):
+    #         return self.value_of_opaque(s, **kw)
+    #     if s.operator in self.modal_operators:
+    #         return self.value_of_modal(s, **kw)
+    #     return super().value_of_operated(s, **kw)
+
+    # def value_of_modal(self, s: Operated, **kw):
+    #     oper = s.operator
+    #     if oper == Oper.Possibility:
+    #         return self.value_of_possibility(s, **kw)
+    #     if oper == Oper.Necessity:
+    #         return self.value_of_necessity(s, **kw)
+    #     raise NotImplementedError
 
     def value_of_predicated(self, s: Predicated, **kw):
         """
@@ -180,7 +198,7 @@ class Model(BaseModel):
                 return Fals
         return Value.T
 
-    def is_countermodel_to(self, argument: Argument):
+    def is_countermodel_to(self, argument: Argument, /) -> bool:
         """
         A model is a countermodel for an argument iff the value of each premise
         is :m:`T` at `w0` and the value of the conclusion is :m:`F` at :m:`w0`.
@@ -193,8 +211,8 @@ class Model(BaseModel):
         return self.value_of(argument.conclusion, world=0) is Value.F
 
     def get_data(self) -> dict:
-        return {
-            'Worlds': {
+        return dict(
+            Worlds = {
                 'description'     : 'set of worlds',
                 'in_summary'      : True,
                 'datatype'        : 'set',
@@ -203,7 +221,7 @@ class Model(BaseModel):
                 'symbol'          : 'W',
                 'values'          : sorted(self.frames),
             },
-            'Access': {
+            Access = {
                 'description'     : 'access relation',
                 'in_summary'      : True,
                 'datatype'        : 'set',
@@ -213,23 +231,26 @@ class Model(BaseModel):
                 'symbol'          : 'R',
                 'values'          : sorted(self.access),
             },
-            'Frames': {
+            Frames = {
                 'description'     : 'world frames',
                 'datatype'        : 'list',
                 'typehint'        : 'frames',
                 'member_datatype' : 'map',
                 'member_typehint' : 'frame',
                 'symbol'          : 'F',
-                'values'          : [frame.get_data() for frame in sorted(self.frames.values())]
+                'values'          : [
+                    frame.get_data()
+                    for frame in sorted(self.frames.values())
+                ]
             }
-        }
+        )
 
-    def read_branch(self, branch: Branch):
-        for node in branch:
-            self.read_node(node)
+    def read_branch(self, branch: Branch, /):
+        for _ in map(self._read_node, branch):
+            pass
         self.finish()
 
-    def read_node(self, node: Node):
+    def _read_node(self, node: Node, /):
         s: Sentence = node.get('sentence')
         if s:
             w = node.get('world')
@@ -462,25 +483,6 @@ class Model(BaseModel):
 
     def value_of_atomic(self, s: Atomic, world = 0, **kw):
         return self.world_frame(world).atomics.get(s, self.unassigned_value)
-
-    def value_of_modal(self, s: Operated, **kw):
-        oper = s.operator
-        if oper == Oper.Possibility:
-            return self.value_of_possibility(s, **kw)
-        if oper == Oper.Necessity:
-            return self.value_of_necessity(s, **kw)
-        raise NotImplementedError
-
-    def value_of_quantified(self, s: Quantified, **kw):
-        q = s.quantifier
-        if q == Quantifier.Existential:
-            return self.value_of_existential(s, **kw)
-        elif q == Quantifier.Universal:
-            return self.value_of_universal(s, **kw)
-        raise NotImplementedError
-
-    def truth_function(self, operator: Oper, a, b=None):
-        return self.fde.truth_function(operator, a, b)
 
 class Denotum:
     __slots__ = EMPTY_SET

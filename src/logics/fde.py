@@ -18,7 +18,7 @@
 # ------------------
 #
 # pytableaux - First Degree Entailment Logic
-from __future__ import annotations
+from __future__ import annotations as _
 
 name = 'FDE'
 
@@ -27,11 +27,10 @@ class Meta:
     category = 'Many-valued'
     description = 'Four-valued logic (True, False, Neither, Both)'
     tags = 'many-valued', 'gappy', 'glutty', 'non-modal', 'first-order'
-    category_display_order = 10
+    category_order = 10
 
 from errors import ModelValueError
-from tools.abcs import T
-from tools.decorators import static
+from tools.abcs import closure, static, MapProxy, T
 from tools.sets import setf
 from tools.hybrids import qsetf
 from lexicals import (
@@ -124,7 +123,7 @@ class Model(BaseModel):
         #: Track set of predicates for performance.
         self.predicates: set[Predicate] = set()
 
-    def value_of_predicated(self, s: Predicated, /, **kw):
+    def value_of_predicated(self, s: Predicated, /, **kw) -> Model.Value:
         Value = self.Value
         params = s.params
         pred = s.predicate
@@ -138,7 +137,7 @@ class Model(BaseModel):
             return Value.F
         return Value.N
 
-    def value_of_existential(self, s: Quantified, /, **kw):
+    def value_of_existential(self, s: Quantified, /, **kw) -> Model.Value:
         """
         The value of an existential sentence is the maximum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
@@ -154,7 +153,7 @@ class Model(BaseModel):
                     break
         return value
 
-    def value_of_universal(self, s: Quantified, /, **kw):
+    def value_of_universal(self, s: Quantified, /, **kw) -> Model.Value:
         """
         The value of an universal sentence is the minimum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
@@ -180,18 +179,18 @@ class Model(BaseModel):
             s.operator in self.modal_operators
         ) or super().is_sentence_opaque(s)
 
-    def is_countermodel_to(self, argument: Argument, /) -> bool:
+    def is_countermodel_to(self, a: Argument, /) -> bool:
         """
         A model is a countermodel to an argument iff the value of every premise
         is in the set of designated values, and the value of the conclusion
         is not in the set of designated values.
         """
-        for premise in argument.premises:
+        for premise in a.premises:
             if self.value_of(premise) not in self.designated_values:
                 return False
-        return self.value_of(argument.conclusion) not in self.designated_values
+        return self.value_of(a.conclusion) not in self.designated_values
 
-    def get_data(self):
+    def get_data(self) -> dict[str, Any]:
         return dict(
             Atomics = dict(
                 description     = 'atomic values',
@@ -424,61 +423,79 @@ class Model(BaseModel):
             self.predicates.add(pred)
         return self.anti_extensions[pred]
 
-    def value_of_atomic(self, s: Sentence, /, **kw):
+    def value_of_atomic(self, s: Sentence, /, **kw) -> Model.Value:
         return self.atomics.get(s, self.unassigned_value)
 
-    def value_of_opaque(self, s: Sentence, /, **kw):
+    def value_of_opaque(self, s: Sentence, /, **kw) -> Model.Value:
         return self.opaques.get(s, self.unassigned_value)
 
-    def value_of_quantified(self, s: Quantified, /, **kw):
-        try:
-            q = s.quantifier
-        except AttributeError:
-            raise TypeError
-        if q is Quantifier.Existential:
-            return self.value_of_existential(s, **kw)
-        elif q is Quantifier.Universal:
-            return self.value_of_universal(s, **kw)
-        return super().value_of_quantified(s, **kw)
+    value_of_possibility = value_of_opaque
+    value_of_necessity = value_of_opaque
 
-    def truth_function(self, oper: Oper, a, b = None, /):
-        oper = Oper(oper)
+    @closure
+    def truth_function():
+
         # Define as generically as possible for reuse.
-        if oper is Oper.Assertion:
+
+        def assertion(self: Model, a, _, /):
             return self.Value[a]
-        if oper is Oper.Negation:
+
+        def negation(self: Model, a, _, /):
             Value = self.Value
             if a == Value.F:
                 return Value.T
             if a == Value.T:
                 return Value.F
             return Value[a]
-        elif oper is Oper.Conjunction:
+
+        def conjunction(self: Model, a, b, /):
             return min(self.Value[a], self.Value[b])
-        elif oper is Oper.Disjunction:
+
+        def disjunction(self: Model, a, b, /):
             return max(self.Value[a], self.Value[b])
-        elif oper is Oper.MaterialConditional:
-            return self.truth_function(
-                Oper.Disjunction,
-                self.truth_function(Oper.Negation, a),
-                b
-            )
-        elif oper is Oper.MaterialBiconditional:
-            return self.truth_function(
-                Oper.Conjunction,
-                self.truth_function(Oper.MaterialConditional, a, b),
-                self.truth_function(Oper.MaterialConditional, b, a)
-            )
-        elif oper is Oper.Conditional:
+
+        def conditional(self: Model, a, b, /):
             return self.truth_function(Oper.MaterialConditional, a, b)
-        elif oper is Oper.Biconditional:
+
+        def biconditional(self: Model, a, b, /):
             return self.truth_function(
                 Oper.Conjunction,
                 self.truth_function(Oper.Conditional, a, b),
                 self.truth_function(Oper.Conditional, b, a)
             )
-        else:
-            raise NotImplementedError
+
+        def material_conditional(self: Model, a, b, /):
+            return self.truth_function(
+                Oper.Disjunction,
+                self.truth_function(Oper.Negation, a),
+                b
+            )
+
+        def material_biconditional(self: Model, a, b, /):
+            return self.truth_function(
+                Oper.Conjunction,
+                self.truth_function(Oper.MaterialConditional, a, b),
+                self.truth_function(Oper.MaterialConditional, b, a)
+            )
+
+        _funcmap = MapProxy({
+            Oper.Assertion     : assertion,
+            Oper.Negation      : negation,
+            Oper.Conjunction   : conjunction,
+            Oper.Disjunction   : disjunction,
+            Oper.Conditional   : conditional,
+            Oper.Biconditional : biconditional,
+            Oper.MaterialConditional   : material_conditional,
+            Oper.MaterialBiconditional : material_biconditional,
+        })
+
+        def func_mapper(self: Model, oper: Oper, a, b = None, /) -> Model.Value:
+            try:
+                return _funcmap[Oper(oper)](self, a, b)
+            except KeyError:
+                raise NotImplementedError(oper)
+
+        return func_mapper
 
     _error_formats = {
         ModelValueError: {

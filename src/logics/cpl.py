@@ -24,7 +24,7 @@ class Meta(object):
     category = 'Bivalent'
     description = 'Standard bivalent logic with predication, without quantification'
     tags = ['bivalent', 'non-modal']
-    category_display_order = 1
+    category_order = 1
 
 from tools.abcs import Abc, abcf
 from lexicals import Sentence, Quantified, Operated, Argument
