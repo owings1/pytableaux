@@ -19,6 +19,7 @@
 #
 # pytableaux - documentation utility functions
 from __future__ import annotations
+from errors import instcheck
 
 __all__ = 'Helper',
 
@@ -30,23 +31,28 @@ from lexicals import (
     Notation,
     Operator,
     Parser,
+    ParseTable,
     Predicate,
     RenderSet,
     Variable,
 )
-from parsers import ParseTable
+from logics import fde as FDE
+from models import BaseModel
+from proof.helpers import EllipsisExampleHelper
 from proof.tableaux import (
+    ClosingRule,
     Tableau,
     TableauxSystem as TabSys,
     Rule,
-    ClosingRule,
 )
 from proof.writers import TabWriter
-from proof.helpers import EllipsisExampleHelper
-from models import BaseModel
 from tools.abcs import (
     F,
     MapProxy,
+)
+from tools.decorators import (
+    overload,
+    wraps
 )
 from tools.misc import (
     cat,
@@ -96,36 +102,48 @@ from typing import (
 # Font (GPL):
 #    http://www.gust.org.pl/projects/e-foundry/tg-math/download/index_html#Bonum_Math
 
-DOC_DIR = abspath(pjoin(os.path.dirname(__file__), '../doc'))
-TEMPLATES_DIR = pjoin(DOC_DIR, 'templates')
-JENV = Environment(
-    loader = FileSystemLoader(TEMPLATES_DIR),
-    trim_blocks = True,
-    lstrip_blocks = True,
-)
-LOGICS = tuple(
-    bname('.'.join(file.split('.')[0:-1])).upper()
-    for file in os.listdir(pjoin(DOC_DIR, 'logics'))
-    if file.endswith('.rst')
-)
 
 logger = logging.getLogger(__name__)
 
+# From: https://docutils.sourceforge.io/docs/howto/rst-roles.html
+#
+# > Role functions return a tuple of two values:
+# >
+# > - A list of nodes which will be inserted into the document tree at the
+# >   point where the interpreted role was encountered (can be an empty
+# >   list).
+# >
+# > - A list of system messages, which will be inserted into the document tree
+# >   immediately after the end of the current block (can also be empty).
+_RoleRet = tuple[list[docnodes.Node], list[str]]
+
 class Helper:
+
+    _defaults = MapProxy(dict(
+        doc_dir          = abspath(pjoin(os.path.dirname(__file__), '../doc')),
+        logics_doc_dir   = 'logics',
+        template_dir     = 'templates',
+        truth_table_tmpl = 'truth_table.jinja2',
+        truth_tables_rev = True,
+        write_notation   = Notation.standard,
+        parse_notation   = Notation.standard,
+        preds            = examples.preds,
+    ))
 
     @staticmethod
     def setup_sphinx(app: Sphinx, opts: dict) -> Helper:
 
         helper = Helper(opts)
+
         helper.connect_sphinx(app, 'autodoc-process-docstring',
-            'sphinx_obj_lines_append_autodoc',
-            'sphinx_regex_line_replace_autodoc',
-            'sphinx_regex_simple_replace_autodoc',
+            helper.sphinx_obj_lines_append_autodoc,
+            helper.sphinx_regex_line_replace_autodoc,
+            helper.sphinx_regex_simple_replace_autodoc,
         )
 
         helper.connect_sphinx(app, 'source-read',
-            'sphinx_regex_line_replace_source',
-            'sphinx_regex_simple_replace_source',
+            helper.sphinx_regex_line_replace_source,
+            helper.sphinx_regex_simple_replace_source,
         )
 
         app.add_role('s', helper.role_lexrender_auto)
@@ -140,24 +158,30 @@ class Helper:
         Rule,
         ClosingRule,
     )
-
     SKIP_TRUNKS = (
         TabSys.build_trunk,
     )
-
     TRUNK_ARG = Parser('polish').argument('b', ('a1', 'a2'))
-
-    _defaults = MapProxy(dict(
-        truth_table_tmpl = 'truth_table.jinja2',
-        truth_tables_rev = True,
-        write_notation   = Notation.standard,
-        parse_notation   = Notation.standard,
-        preds            = examples.preds,
-    ))
+    DIV_CLEAR = '<div class="clear"></div>'
 
     def __init__(self, opts: dict = {}):
 
         self.opts = opts = dict(self._defaults) | opts
+
+        self.logic_names = tuple(
+            bname('.'.join(file.split('.')[0:-1])).upper()
+            for file in os.listdir(
+                pjoin(opts['doc_dir'], opts['logics_doc_dir'])
+            )
+            if file.endswith('.rst')
+        )
+        self.jenv = Environment(
+            loader = FileSystemLoader(
+                pjoin(opts['doc_dir'], opts['template_dir'])
+            ),
+            trim_blocks = True,
+            lstrip_blocks = True,
+        )
 
         self.parser = Parser(
             opts['parse_notation'],
@@ -203,24 +227,40 @@ class Helper:
 
     def lines_rule_example(self, rule: Rule|type[Rule], logic: Any = None, indent: str|int = None):
         'ReST lines (indented) for ``Rule`` example.'
-        plines = self.html_rule_example(rule, logic = logic).split('\n')
-        return indented(['Example:', ''] + rawblock(plines), indent)
+        lines = ['Example:', '']
+        lines.extend(
+            rawblock(self.html_rule_example(rule, logic).split('\n'))
+        )
+        return indented(lines, indent)
+        # plines = self.html_rule_example(rule, logic = logic).split('\n')
+        # return indented(['Example:', ''] + rawblock(plines), indent)
 
     def lines_trunk_example(self, logic: Any, indent: str|int = None):
         'ReST lines (indented) for ``build_trunk`` example.'
-        plines = self.html_trunk_example(logic).split('\n')
-        return indented(['Example:', ''] + rawblock(plines), indent)
+        lines = ['Example:', '']
+        lines.extend(
+            rawblock(self.html_trunk_example(logic).split('\n'))
+        )
+        return indented(lines, indent)
+        # plines = self.html_trunk_example(logic).split('\n')
+        # return indented(['Example:', ''] + rawblock(plines), indent)
 
     def lines_logic_truth_tables(self, logic: Any, indent: str|int = None):
         'ReST lines (indented) for truth tables of all operators.'
         logic = get_logic(logic)
         m: BaseModel = logic.Model()
-        tables = [
-            self.html_truth_table(logic, oper)
+        # tables = [
+        #     self.html_truth_table(logic, oper)
+        #     for oper in sorted(m.truth_functional_operators)
+        #         for line in self.html_truth_table(logic, oper).split('\n')
+        # ]
+        # lines = '\n'.join(tables).split('\n')
+        lines = [
+            line
             for oper in sorted(m.truth_functional_operators)
+                for line in self.html_truth_table(logic, oper).split('\n')
         ]
-        lines = '\n'.join(tables).split('\n')
-        lines.append('<div class="clear"></div>')
+        lines.append(self.DIV_CLEAR)
         return rawblock(lines, indent)
 
     def lines_inherited_ruledoc(self, rule: type[Rule], indent: str|int = None):
@@ -252,21 +292,17 @@ class Helper:
                 RenderSet.fetch(Notation.standard, 'unicode')
             )
         )
-        # lwhtm = LexWriter('standard', charset = 'unicode')
-        # symhtml = {
-        #     # o: htmlun(lwhtm.write(o)) for o in oplist
-        #     o: lwhtm.write(o) for o in oplist
-        # }
         lines = [
             '"","","","Render only"',
             '"Operator Name","Polish","Standard","Standard HTML","Standard Unicode"',
-        ] + [
+        ]
+        lines.extend(
             '"{0}","``{1}``","``{2}``","{3}","{4}"'.format(*row)
             for row in (
                 (o, sympol[o], symstd[o], htmlun(symhtml[o]), symunic[o])
                 for o in Operator
             )
-        ]
+        )
         return indented(lines, indent)
 
     ## HTML Output
@@ -290,12 +326,8 @@ class Helper:
         if lw.charset != 'html':
             prems = map(htmlesc, prems)
             conc = htmlesc(conc)
-        return cat(
-            'Argument: <i>',
-            '</i> ... <i>'.join(prems),
-            f'</i> &there4; <i>{conc}</i>\n',
-            pw(tab),
-        )
+        pstr = '</i> ... <i>'.join(prems)
+        return f'Argument: <i>{pstr}</i> &there4; <i>{conc}</i>\n{pw(tab)}'
 
     def html_rule_example(self, rule: Rule|type[Rule], logic: Any = None) -> str:
         "HTML for ``Rule`` example."
@@ -314,19 +346,18 @@ class Helper:
         tab.finish()
         return pw(tab)
 
-    def html_truth_table(self, logic: Any, oper: str|Operator, classes: list[str] = []):
+    def html_truth_table(self, logic: Any, oper: str|Operator) -> str:
         'HTML for a truth table of ``oper``.'
         model: BaseModel = get_logic(logic).Model()
         oper = Operator[oper]
         opts = self.opts
         table = model.truth_table(oper, reverse = opts['truth_tables_rev'])
-        template = JENV.get_template(opts['truth_table_tmpl'])
+        template = self.jenv.get_template(opts['truth_table_tmpl'])
         return template.render(dict(
             num_values = len(model.Value),
             table      = table,
             operator   = oper,
             lw         = self.lwhtml,
-            classes    = list(classes),
         ))
 
     ## Sphinx Event Handlers
@@ -334,11 +365,8 @@ class Helper:
     # See https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
     def connect_sphinx(self, app: Sphinx, event: str, *methods: str|Callable):
-        """
-        Attach a listener to a Sphinx event. We handle our own listeners so we
-        can do proper error handling. Each of ``methods`` can be a function or
-        name of a Helper method.  One handler per event is attached to Sphinx,
-        which is a lambda wrapper for ``__dispatch_sphinx()``.
+        """Attach a listener to a Sphinx event. Each of ``methods`` can be a function
+        or ``Helper`` method name.
         """
         if event not in self._connids:
             logger.info(f'Creating dispatcher for {event}')
@@ -354,7 +382,7 @@ class Helper:
             append(f)
 
     def sphinx_regex_simple_replace_common(self, lines: list[str], is_source: bool = False):
-        logicmatch = '|'.join(v.upper() for v in LOGICS)
+        logicmatch = '|'.join(self.logic_names)
         defns = (
             # Truth values
             (r'{v.([TBNF])}', ':math:`\\1`'),
@@ -396,13 +424,6 @@ class Helper:
         the only thing on a line.
         """
         defns = (
-            # (
-            #     '//ruledoc//',
-            #     r'(\s*)//ruledoc//(.*?)//(.*)//',
-            #     lambda indent, logic, rule: (
-            #         self.lines_rule_docstring(rule, logic = logic, indent = indent)
-            #     ),
-            # ),
             (
                 '//truth_tables//',
                 r'(\s*)//truth_tables//(.*?)//',
@@ -471,69 +492,88 @@ class Helper:
 
     ## Custom Sphinx Roles
 
-    # See: https://docutils.sourceforge.io/docs/howto/rst-roles.html
-    #
-    # > Role functions return a tuple of two values:
-    # >
-    # > - A list of nodes which will be inserted into the document tree at the
-    # >   point where the interpreted role was encountered (can be an empty
-    # >   list).
-    # >
-    # > - A list of system messages, which will be inserted into the document tree
-    # >   immediately after the end of the current block (can also be empty).
 
     @staticmethod
-    def sphinxrole(func: F) -> F:
-        'Decorator for .'
-        func.options = {'class': directives.class_option}
-        func.content = True
-        return func
+    @overload
+    def sphinxrole(func: F, /) -> F: ...
+
+    @staticmethod
+    @overload
+    def sphinxrole(*, keyed: bool = True, content: bool = True, options: dict = {}) -> Callable[[F], F]: ...
+
+    @staticmethod
+    def sphinxrole(func = None, /, **kw):
+        'Decorator/factory for Sphinx role method.'
+
+        def decorator(func: F) -> F:
+            fopts = dict(keyed = True, content = True, options = {})
+            fopts.update(kw)
+            @wraps(func)
+            def f(self, name: str, rawtext: str, text: str, lineno: int,
+                inliner, opts: dict = {}, content: list[str] = [], /):
+                kwargs = dict(
+                    name = name, rawtext = rawtext, text = text, lineno = lineno,
+                    inliner = inliner, opts = opts, content = content
+                )
+                set_classes(opts)
+                try:
+                    if fopts['keyed']:
+                        ret = func(self, **kwargs)
+                    else:
+                        ret = func(self, *kwargs.values())
+                except:
+                    logger.error(
+                        f"{func.__name__}: lineno={lineno}, "
+                        f"rawtext={repr(rawtext)}, content={content}"# + '\n'.join(content)
+                    )
+                    logger.info('Printing traceback')
+                    traceback.print_exc()
+                    raise
+                else:
+                    if not isinstance(ret, tuple):
+                        ret = ret, []
+                    return ret
+            f.options = {'class': directives.class_option} | fopts['options']
+            f.content = fopts['content']
+            _RoleRet # fail if missing
+            f.__annotations__['return'] = '_RoleRet'
+            return f
+
+        if func is None:
+            return decorator
+
+        if len(kw):
+            raise TypeError('Unexpected kwargs with `func` parameter')
+
+        return decorator(instcheck(func, Callable))
 
     @sphinxrole
-    def role_lexrender_auto(self,
-        name: str,
-        rawtext: str,
-        text: str,
-        lineno: int,
-        inliner,
-        opts: dict = {},
-        content: list[str] = [], /
-    ) -> tuple[list[docnodes.Node], list[str]]:
-        try:
-            return self._lexrender_common(text, opts)
-        except Exception as e:
-            logger.error(e)
-            logger.error(f'role_lexrender_auto: rawtext={rawtext}, lineno={lineno}')
-            logger.error('content=\n' + '\n'.join(content))
-            raise e
+    def role_lexrender_auto(self, /, *, text: str, opts: dict, **_):
+        return self._lexrender_common(text, opts)
+        # try:
+        #     return self._lexrender_common(text, opts)
+        # except Exception as e:
+        #     logger.error(e)
+        #     logger.error(f'role_lexrender_auto: rawtext={rawtext}, lineno={lineno}')
+        #     logger.error('content=\n' + '\n'.join(content))
+        #     raise e
 
     @sphinxrole
-    def role_lexrender_oper(self,
-        name: str,
-        rawtext: str,
-        text: str,
-        lineno: int,
-        inliner,
-        opts: dict = {},
-        content: list[str] = [], /
-    ) -> tuple[list[docnodes.Node], list[str]]:
-        try:
-            return self._lexrender_common(text, opts, what = 'operator')
-        except Exception as e:
-            logger.error(e)
-            logger.error(f'role_lexrender_oper: rawtext={rawtext}, lineno={lineno}')
-            logger.error('content=\n' + '\n'.join(content))
-            raise e
+    def role_lexrender_oper(self, /, *, text: str, opts: dict, **_):
+        return self._lexrender_common(text, opts, 'operator')
+        # try:
+        #     return self._lexrender_common(text, opts, what = 'operator')
+        # except Exception as e:
+        #     logger.error(e)
+        #     logger.error(f'role_lexrender_oper: rawtext={rawtext}, lineno={lineno}')
+        #     logger.error('content=\n' + '\n'.join(content))
+        #     raise e
 
-    def _lexrender_common(self,
-        text: str,
-        opts: dict,
-        what: Any = None
-    ) -> tuple[list[docnodes.Node], list[str]]:
+    def _lexrender_common(self, text: str, opts: dict, what: Any = None, /):
         'Common lexrender routine.'
         classes = ['lexitem']
         item = None
-        if not what:
+        if what is None:
             m = re.match(r'^(.)([0-9]*)$', text)
             if m:
                 table = self.parser.table
@@ -560,145 +600,122 @@ class Helper:
                     _, item = table[char]
                     item = Predicate.System(item)
                     classes.extend(('system_predicate', item.name))
-        if not what:
+        if what is None:
             what = 'sentence'
         if what == 'sentence':
             item = self.parser(text)
-        if not item:
+        if item is None:
             item = text
         if not isinstance(what, str):
             what = type(item).__name__
         classes.append(what)
         raw = self.lwhtml(item)
         rendered = htmlun(raw)
-        node = docnodes.inline(text = rendered, classes = classes)
-        set_classes(opts)
-        return [node], []
+        return [
+            docnodes.inline(text = rendered, classes = classes)
+        ]
 
     @sphinxrole
-    def role_lexrender_meta(self,
-        name: str,
-        rawtext: str,
-        text: str,
-        lineno: int,
-        inliner,
-        opts: dict = {},
-        content: list[str] = [], /
-    ) -> tuple[list[docnodes.Node], list[str]]:
+    def role_lexrender_meta(self, /, *, text: str, **_):
+
         classes = ['lexmeta']
 
-        if text.upper() in ('P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'):
+        textuc = text.upper()
+
+        if textuc in ('P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'):
             classes.append('subber')
-            parts = list(text.upper())
-            r = parts.pop(0) if len(parts) == 3 else None
-            main, down = parts
-            if r:
-                main = r + main
+            main, down = textuc[0:2]
+            if len(text) == 3:
+                main = textuc[2] + main
             if main == 'L':
                 main = 'Ł'
-            nlist = [
+            return [
                 docnodes.inline(text = main, classes = classes + ['main']),
                 docnodes.subscript(text = down, classes = classes + ['down']),
             ]
-            return (nlist, [])
 
-        if text.upper() in ('B3E', 'K3W', 'K3WQ'):
+        if textuc in ('B3E', 'K3W', 'K3WQ'):
             # :math:`{B^E_3}`
             classes.append('subsup')
-            parts = list(text.upper())
-            q = parts.pop() if len(parts) == 4 else None
-            main, up, down = parts
-            if q:
-                down += q
-            nlist = [
+            main, up, down = textuc[0:3]
+            if len(text) == 4:
+                down += textuc[3]
+            return [
                 docnodes.inline(text = main, classes = classes + ['main']),
                 docnodes.superscript(text = up, classes = classes + ['up']),
                 docnodes.subscript(text = down, classes = classes + ['down']),
             ]
-            # if q:
-            #     nlist.append(
-            #         docnodes.inline(text=q, classes = classes + ['post'])
-            #     )
-            return nlist, []
 
-        nodecls = docnodes.math
         attrs = {}
-        bs = '\\'
+
+        langle = '\\langle'
+        rangle = '\\rangle'
+
         if text == 'ntuple':
-            classes.extend(['tuple', 'ntuple'])
-            rend = cat(bs, 'langle a_0,...,a_n', bs, 'rangle')
+            # n-tuple.
+            nodecls = docnodes.math
+            classes.extend(('tuple', 'ntuple'))
+            rend = f'{langle} a_0,...,a_n{rangle}'
+        # elif text in FDE.Model.Value:
         elif text in ('T', 'F', 'N', 'B'):
-            classes.extend(['truth-value'])
-            rend = text
+            # Truth values.
             nodecls = docnodes.strong
+            classes.extend(('truth-value',))
+            rend = text
         elif re.match(r'^w[0-9]', text):
             # w0 or w0Rw1
-            wparts = text.split('R')
-            rend = '\\mathcal{R}'.join(
-                re.sub(r'w([0-9]+)', 'w_\\1', wtxt)
-                for wtxt in wparts
-            )
-            classes.append('modal')#
-            classes.append('access' if len(wparts) > 1 else 'world')
+            nodecls = docnodes.math
+            classes.append('modal')
+            parts = text.split('R')
+            if len(parts) > 1:
+                classes.append('access')
+            else:
+                classes.append('world')
+            # insert underscore
+            parts = [re.sub(r'w([0-9]+)', 'w_\\1', n) for n in parts]
+            # rejoin with R
+            rend = '\\mathcal{R}'.join(parts)
         elif text == 'w' or re.match(r'', text):
             # <w, w'> etc.
+            nodecls = docnodes.math
+            classes.append('modal')
             if '<' in text:
                 classes.append('tuple')
-            rend = text.replace('<', '\\langle ').replace('>', '\\rangle')
+            rend = text.replace('<', f'{langle} ').replace('>', rangle)
             #rend = text.replace('<', '⟨').replace('>', '⟩')
             #nodecls = docnodes.inline
-            classes.extend(['modal'])
 
         else:
-            if '.' in text:
-                pfx, text = text.split('.', 1)
-            else:
-                raise ValueError(f'Unspecified metalexical type: {text}')
-            if pfx == 'v':
-                # truth-values
-                # escape for safety
-                rend = htmlesc(text)
-            else:
-                raise ValueError(f'Unknown metalexical type: {pfx}')
+            raise ValueError(f"Unrecognized meta-lexical text '{text}'")
         node = nodecls(text = rend, classes = classes, **attrs)
-        # if ismath:
-        #     node = docnodes.math(text = rend, classes=['fooclass'])
-        # else:
-        #     node = docnodes.inline(text = rend, classes=['fooclass'])
-        set_classes(opts)
-        return [node], []
 
-    del(sphinxrole)
+        return [node]
+
 
     ## Dispatcher
 
     def __dispatch_sphinx(self, event: str, args: tuple):
+        'Consolidated Sphinx event dispatcher.'
         for func in self._listeners[event]:
             try:
                 func(*args)
-            except Exception as e:
-                if event == 'autodoc-process-docstring' and len(args) > 2:
-                    arginfo = str({'what': args[1], 'name': args[2]})
-                elif event == 'source-read' and len(args) > 2:
-                    arginfo = '\n'.join((
-                        '',
-                        'docname: {0}\n'.format(args[1]),
-                        'content: \n\n{0}'.format('\n'.join(args[2])),
-                    ))
-                else:
-                    arginfo = str(args)
-                print('\n', '\n'.join((
-                    'Failed running method {0} for event {1}'.format(
-                        func.__name__, event
-                    ),
-                    'Exception Class: {0}, Args: {1}'.format(
-                        e.__class__.__name__, str(e.args)
-                    ),
-                    'Event Arguments: {0}'.format(arginfo),
-                )))
-                print('Printing traceback')
+            except:
+                # if event == 'autodoc-process-docstring' and len(args) > 2:
+                #     arginfo = str({'what': args[1], 'name': args[2]})
+                # elif event == 'source-read' and len(args) > 2:
+                #     arginfo = '\n'.join((
+                #         '',
+                #         'docname: {0}\n'.format(args[1]),
+                #         'content: \n\n{0}'.format('\n'.join(args[2])),
+                #     ))
+                # else:
+                #     arginfo = str(args)
+                logger.error(
+                    f"Event '{event}' failed for {func} with args {args}",
+                )
+                logger.info('Printing traceback')
                 traceback.print_exc()
-                raise e
+                raise
 
     ## Other
     def should_inherit_ruledoc(self, rule: type[Rule]):
