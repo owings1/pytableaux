@@ -4,9 +4,10 @@
 :m:`K3W` - Weak Kleene Logic
 ****************************
 
-:m:`K3W` is a 3-valued logic with values :m:`T`, :m:`F`, and :m:`N`. The logic is similar
-to :ref:`K3 <K3>`, but with slightly different behavior of the :m:`N` value. This logic is also
-known as Bochvar Internal (:m:`B3`). A common interpretation of these values is:
+:m:`K3W` is a 3-valued logic with values :m:`T`, :m:`F`, and :m:`N`. The logic is
+similar to :ref:`K3 <K3>`, but with slightly different behavior of the :m:`N` value.
+This logic is also known as Bochvar Internal (:m:`B3`). A common interpretation of
+these values is:
 
 - :m:`T`: just true
 - :m:`F`: just false

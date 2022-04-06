@@ -40,7 +40,8 @@ Normal modal logic with reflexive and transitive access relation.
     Reflexivity & Transitivity
     --------------------------
 
-    S4 includes the *reflexivity* restriction of :ref:`T <T>` on the access relation for models:
+    S4 includes the *reflexivity* restriction of :ref:`T <T>` on the access
+    relation for models:
 
     .. include:: include/t/m.reflexivity.rst
 
@@ -48,7 +49,8 @@ Normal modal logic with reflexive and transitive access relation.
 
     .. include:: include/s4/m.transitivity.rst
 
-    This is witnessed in the tableaux system through the :ref:`Transitive Rule <transitive-rule>`.
+    This is witnessed in the tableaux system through the :ref:`Transitive Rule
+    <transitive-rule>`.
 
     Logical Consequence
     -------------------

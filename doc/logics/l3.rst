@@ -30,6 +30,13 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
             //truth_tables//l3//
 
+    Logical Consequence
+    -------------------
+
+    Logical consequence is defined just like in :m:`K3`:
+    
+    .. include:: include/k3/m.consequence.rst
+
 
     Tableaux System
     ===============
@@ -39,13 +46,6 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
     .. autoclass:: TabRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    Logical consequence is defined just like in :m:`K3`:
-    
-    .. include:: include/k3/m.consequence.rst
 
     Notes
     =====

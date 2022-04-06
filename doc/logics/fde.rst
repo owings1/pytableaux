@@ -106,7 +106,7 @@ values is:
     * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
       United Kingdom, Oxford University Press, 2003.
 
-    * Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
+    * Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
       Cambridge University Press, 2008.
 
     For futher reading see:

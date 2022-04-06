@@ -4,8 +4,9 @@
 T - Reflexive Normal Modal Logic
 ********************************
 
-Reflexive Modal Logic is an extension of :ref:`K <K>`, with a *reflexive* accessibility relation,
-which states that for every world *w*, *w* accesses *w* (itself).
+Reflexive Modal Logic is an extension of :ref:`K <K>`, with a *reflexive*
+accessibility relation, which states that for every world *w*,
+*w* accesses *w* (itself).
 
 .. contents:: :local:
 

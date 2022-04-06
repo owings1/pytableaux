@@ -26,6 +26,13 @@ MH - Paracomplete Hybrid Logic
 
             //truth_tables//mh//
 
+    Logical Consequence
+    -------------------
+
+    Logical consequence is defined just like in :m:`K3`:
+    
+    .. include:: include/k3/m.consequence.rst
+
     Tableaux System
     ===============
 
@@ -34,13 +41,6 @@ MH - Paracomplete Hybrid Logic
 
     .. autoclass:: TabRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    Logical consequence is defined just like in :m:`K3`:
-    
-    .. include:: include/k3/m.consequence.rst
 
 
 ..

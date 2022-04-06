@@ -30,7 +30,7 @@ It is similar to :ref:`LP`, with a different conditional operator.
             //truth_tables//rm3//
 
     Logical Consequence
-    ===================
+    -------------------
 
     Logical consequence is defined, just as in :ref:`FDE <FDE>`, in terms of
     *designated* values :m:`T` and :m:`B`:

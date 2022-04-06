@@ -6,8 +6,7 @@
 
 This is a version of :ref:`K3W <K3W>` with a different treatment of the quantifiers
 in terms of generalized conjunction/disjunction. This yields some interesting
-rules for the quantifiers, given the behavior of those operators in
-:ref:`K3W <K3W>`.
+rules for the quantifiers, given the behavior of those operators in :ref:`K3W <K3W>`.
 
 .. contents:: :local:
 

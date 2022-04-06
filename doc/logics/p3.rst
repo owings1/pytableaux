@@ -39,19 +39,19 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
 
         .. method:: truth_function(operator, a, b)
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+            The value of a sentence with a truth-functional operator is determined
+            by the values of its operands according to the following tables.
 
-            Most notable is the behavior of negation. Disjunction :s:`V` is the same as in
-            :ref:`K3 <K3>`, but conjunction is quite different, which is defined in terms of
-            disjunction in the standard way as :s:`~(~A V ~B)`.
+            Most notable is the behavior of negation. Disjunction :s:`V` is the same
+            as in :ref:`K3 <K3>`, but conjunction is quite different, which is defined
+            in terms of disjunction in the standard way as :s:`~(~A V ~B)`.
 
             //truth_tables//p3//
 
         .. method:: value_of_predicated(sentence)
 
-            Predication is given the same treatment as :ref:`K3 <k3-model>`, defined in terms of a
-            predicate's *extenstion* and *anti-extension*.
+            Predication is given the same treatment as :ref:`K3 <k3-model>`,
+            defined in terms of a predicate's *extenstion* and *anti-extension*.
 
             .. include:: include/k3/m.predication.rst
 
@@ -63,7 +63,8 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
 
         .. method:: value_of_universal(sentence)
 
-            .. Note:: :m:`P3` did not originally define quantification. This is a novel construction.
+            .. Note:: :m:`P3` did not originally define quantification. This is a novel
+               construction.
 
             The :s:`L` quantifier is thought of like `generalized conjunction`.
             Given that :s:`A & B` is defined as :s:`~(~A V ~B)`, we interpret :s:`L`
@@ -100,5 +101,7 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
 
     - Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
 
-.. _Introduction to a General Theory of Elementary Propositions: https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
+.. _Introduction to a General Theory of Elementary Propositions:
+    https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
+
 .. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en

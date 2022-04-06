@@ -56,7 +56,8 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
     In every model, for each world :m:`w` and each world :m:`w'`, if :m:`<w,w'>`
     is in the access relation, then so is :m:`<w',w>`.
 
-    This is witnessed in the tableaux system through the :ref:`Symmetric Rule <symmetric-rule>`.
+    This is witnessed in the tableaux system through the :ref:`Symmetric Rule
+    <symmetric-rule>`.
 
     Logical Consequence
     -------------------
