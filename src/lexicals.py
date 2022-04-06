@@ -22,8 +22,8 @@ from __future__ import annotations
 __all__ = (
     'Argument',
     'Atomic',
-    'BaseLexWriter',
     'Constant',
+    'Lexical',
     'LexType',
     'LexWriter',
     'Notation',
@@ -31,14 +31,13 @@ __all__ = (
     'Operator',
     'Quantifier',
     'Parameter',
-    'PolishLexWriter',
+    'Parser',
     'Predicate',
     'Predicated',
     'Predicates',
     'Quantified',
     'Quantifier',
     'Sentence',
-    'StandardLexWriter',
     'Variable',
 )
 ##############################################################
@@ -46,15 +45,17 @@ __all__ = (
 from errors import Emsg, instcheck
 import tools.abcs as abcs
 from tools.abcs import abcm, abcf, eauto, T
+from tools.callables import gets
 from tools.decorators import (
     abstract, closure, final, overload, static,
     fixed, lazy, membr, raisr, wraps, NoSetAttr
 )
 from tools.hybrids   import qsetf, qset
-from tools.mappings  import dmap, MapCover, MapProxy
+from tools.mappings  import dmap, ItemsIterator, MapCover, MapProxy
 from tools.sequences import SequenceApi, seqf, EMPTY_SEQ
 from tools.sets      import setf, setm, EMPTY_SET
 
+from collections.abc import Set
 import enum as _enum
 from functools import partial
 from itertools import chain, repeat
@@ -149,6 +150,8 @@ if 'Types' or True:
     PredsItemRef   : type[PredicateRef  | Predicate] = PredicateRef
     PredsItemSpec  : type[PredicateSpec | Predicate] = PredicateSpec
     QuantifiedItem : type[Quantifier | Variable | Sentence]
+    ParseTableKey  : type[LexType|Marking|type[Predicate.System]]
+    ParseTableValue : type[int|Lexical] = int
 
 ##############################################################
 
@@ -438,6 +441,7 @@ class Lexical:
                 setattr(subcls, name, value)
 
 LexicalItemMeta.Cache = ItemCacheType(Lexical, ITEM_CACHE_SIZE)
+ParseTableValue |= Lexical
 
 @static
 class Bases:
@@ -1144,7 +1148,6 @@ class Predicated(Sentence, Sequence[Parameter]):
     def __contains__(self, p: Any, /):
         return p in self.paramset
 
-
 @final
 class Quantified(Sentence, Sequence[QuantifiedItem]):
     'Quantified sentence.'
@@ -1264,7 +1267,6 @@ class Quantified(Sentence, Sequence[QuantifiedItem]):
 
     def count(self, item: Any, /) -> Literal[0]|Literal[1]:
         return int(item in self.items)
-
 
 @final
 class Operated(Sentence, Sequence[Sentence]):
@@ -1483,6 +1485,8 @@ class LexType(Bases.Enum):
         'Enum lookup index init hook.'
         return super()._member_keys(member) | {member.cls}
 
+ParseTableKey = LexType
+
 ##############################################################
 ##############################################################
 
@@ -1577,6 +1581,8 @@ class Predicates(qset[Predicate], metaclass = AbcBaseMeta,
             }
             ns |= members
             ns._member_names += members.keys()
+
+ParseTableKey |= type[Predicate.System]
 
 class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     'Create an argument from sentence objects.'
@@ -1721,6 +1727,8 @@ class Marking(Bases.Enum):
     meta        = eauto()
     subscript   = eauto()
 
+ParseTableKey |= Marking
+
 class Notation(Bases.Enum):
     'Notation (polish/standard) enum class.'
 
@@ -1758,6 +1766,73 @@ class Notation(Bases.Enum):
         else:
             super().__setattr__(name, value)
 
+class Parser(metaclass = ParserMeta):
+    'Parser interface and coordinator.'
+
+    __slots__ = 'table', 'preds', 'opts'
+
+    notation: ClassVar[Notation]
+    _defaults: ClassVar[dict[str, Any]] = {}
+    _optkeys: ClassVar[Set[str]] = _defaults.keys()
+
+    table: ParseTable
+    preds: Predicates
+    opts: Mapping[str, Any]
+
+    def __init__(self, preds: Predicates = Predicate.System, table: ParseTable|str = None, /, **opts):
+        if table is None:
+            table = ParseTable.fetch(self.notation)
+        elif isinstance(table, str):
+            table = ParseTable.fetch(self.notation, table)
+        self.table = table
+        self.preds = preds
+
+        # self.opts = dict(self._defaults, **opts)
+
+        if opts:
+            opts = dmap(opts)
+            opts &= self._optkeys
+            opts %= self._defaults
+        else:
+            opts = dict(self._defaults)
+        self.opts = opts
+        # self.opts = MapProxy(opts)
+
+    @abstract
+    def parse(self, input: str) -> Sentence:
+        """Parse a sentence from an input string.
+
+        :param input: The input string.
+        :return: The parsed sentence.
+        :raises errors.ParseError:
+        :raises TypeError:
+        """
+        raise NotImplementedError
+
+    __call__ = parse
+
+    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
+        """Parse the input strings and create an argument.
+
+        :param conclusion: The argument's conclusion.
+        :param premises: Premise strings, if any.
+        :return: The argument.
+        :raises errors.ParseError:
+        :raises TypeError:
+        """
+        return Argument(
+            self.parse(conclusion),
+            premises and tuple(map(self.parse, premises)),
+            title = title,
+        )
+
+    def __init_subclass__(subcls: type[Parser], **kw):
+        'Subclass init hook. Merge _defaults and update _optkeys. Sync ``__call__()``.'
+        super().__init_subclass__(**kw)
+        abcm.merge_mroattr(subcls, '_defaults', supcls = __class__)
+        subcls._optkeys = subcls._defaults.keys()
+        subcls.__call__ = subcls.parse
+
 class LexWriter(metaclass = LexWriterMeta):
     'LexWriter interface and coordinator.'
 
@@ -1766,7 +1841,7 @@ class LexWriter(metaclass = LexWriterMeta):
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables
 
     notation: ClassVar[Notation]
-    defaults: ClassVar[dict] = {}
+    defaults: ClassVar[dict[str, Any]] = {}
     _methodmap = MapProxy[LexType, str](dict(
         zip(LexType, repeat(NotImplemented))
     ))
@@ -1775,7 +1850,7 @@ class LexWriter(metaclass = LexWriterMeta):
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables
 
     renderset: RenderSet
-    opts: dict
+    opts: dict[str, Any]
     charset: str
 
     @property
@@ -1851,32 +1926,6 @@ class LexWriter(metaclass = LexWriterMeta):
         abcm.merge_mroattr(
             subcls, '_methodmap', supcls = __class__, transform = MapProxy
         )
-
-class RenderSet(Bases.CacheNotationData):
-
-    default_fetch_key = 'ascii'
-
-    name: str
-    notation: Notation
-    charset: str
-    renders: Mapping[Any, Callable[..., str]]
-    strings: Mapping[Any, str]
-    data: Mapping[str, Any]
-
-    def __init__(self, data: Mapping[str, Any]):
-        self.name = data['name']
-        self.notation = notn = Notation(data['notation'])
-        self.charset = data['charset']
-        self.renders = data.get('renders', {})
-        self.strings = data.get('strings', {})
-        self.data = data
-        notn.charsets.add(self.charset)
-        notn.rendersets.add(self)
-
-    def strfor(self, ctype: Any, value: Any) -> str:
-        if ctype in self.renders:
-            return self.renders[ctype](value)
-        return self.strings[ctype][value]
 
 class BaseLexWriter(LexWriter):
 
@@ -2006,41 +2055,100 @@ class StandardLexWriter(BaseLexWriter):
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
 
-class Parser(metaclass = ParserMeta):
-    'Parser interface and coordinator.'
+class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], Bases.CacheNotationData):
 
-    __slots__ = EMPTY_SET
+    default_fetch_key = 'default'
 
-    notation: ClassVar[Notation]
+    __slots__ = 'reversed', 'chars'
 
-    @abstract
-    def parse(self, input: str) -> Sentence:
-        """Parse a sentence from an input string.
+    reversed: Mapping[tuple[ParseTableKey, ParseTableValue], str]
+    chars: Mapping[ParseTableKey, seqf[str]]
 
-        :param input: The input string.
-        :return: The parsed sentence.
-        :raises errors.ParseError:
-        :raises TypeError:
+    def __init__(self, data: Mapping[str, tuple[ParseTableKey, ParseTableValue]], /):
+
+        super().__init__(MapProxy(data))
+
+        vals = self.values()
+
+        # list of types
+        ctypes: qset[ParseTableKey] = qset(map(gets.Key0, vals))
+
+        tvals: dict[ParseTableKey, qset[ParseTableValue]] = {}
+        for ctype in ctypes:
+            tvals[ctype] = qset()
+        for ctype, value in vals:
+            tvals[ctype].add(value)
+        for ctype in ctypes:
+            tvals[ctype].sort()
+
+        # flipped table
+        self.reversed = rev = MapCover(dict(
+            map(reversed, ItemsIterator(self))
+        ))
+
+        # chars for each type in value order, duplicates discarded
+        self.chars = MapCover(dict(
+            (ctype, seqf(rev[ctype, val] for val in tvals[ctype]))
+            for ctype in ctypes
+        ))
+
+    def type(self, char: str, default = NOARG, /) -> ParseTableKey:
         """
-        raise NotImplementedError
-
-    __call__ = parse
-
-    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
-        """Parse the input strings and create an argument.
-
-        :param conclusion: The argument's conclusion.
-        :param premises: Premise strings, if any.
-        :return: The argument.
-        :raises errors.ParseError:
-        :raises TypeError:
+        :param str char: The character symbol.
+        :param Any default: The value to return if missing.
+        :return: The symbol type, or ``default`` if provided.
+        :raises KeyError: if symbol not in table and no default passed.
         """
-        return Argument(
-            self.parse(conclusion),
-            premises and tuple(map(self.parse, premises)),
-            title = title,
-        )
+        try:
+            return self[char][0]
+        except KeyError:
+            if default is NOARG:
+                raise
+            return NOARG
 
+    def value(self, char: str, /) -> ParseTableValue:
+        """
+        :param str char: The character symbol.
+        :return: Table item value, e.g. ``1`` or ``Operator.Negation``.
+        :raises KeyError: if symbol not in table.
+        """
+        return self[char][1]
+
+    def char(self, ctype: ParseTableKey, value: ParseTableValue, /) -> str:
+        return self.reversed[ctype, value]
+
+    def __setattr__(self, name, value):
+        if name in self.__slots__ and hasattr(self, name):
+            raise AttributeError(name)
+        super().__setattr__(name, value)
+
+    __delattr__ = raisr(AttributeError)
+
+class RenderSet(Bases.CacheNotationData):
+
+    default_fetch_key = 'ascii'
+
+    name: str
+    notation: Notation
+    charset: str
+    renders: Mapping[Any, Callable[..., str]]
+    strings: Mapping[Any, str]
+    data: Mapping[str, Any]
+
+    def __init__(self, data: Mapping[str, Any]):
+        self.name = data['name']
+        self.notation = notn = Notation(data['notation'])
+        self.charset = data['charset']
+        self.renders = data.get('renders', {})
+        self.strings = data.get('strings', {})
+        self.data = data
+        notn.charsets.add(self.charset)
+        notn.rendersets.add(self)
+
+    def strfor(self, ctype: Any, value: Any) -> str:
+        if ctype in self.renders:
+            return self.renders[ctype](value)
+        return self.strings[ctype][value]
 @closure
 def _():
 
