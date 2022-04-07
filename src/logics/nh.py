@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - Paraconsistent Hybrid 3-valued Logic
+from __future__ import annotations
+
 name = 'NH'
 
 class Meta(object):

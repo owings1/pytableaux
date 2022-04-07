@@ -18,6 +18,8 @@
 # ------------------
 #
 # pytableaux - S5 Normal Modal Logic
+from __future__ import annotations
+
 name = 'S5'
 
 class Meta:

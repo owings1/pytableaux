@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - Weak Kleene Logic
+from __future__ import annotations
+
 name = 'K3W'
 
 class Meta:
@@ -214,7 +216,7 @@ class TabRules:
     class DisjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         Either the disjunction is designated, or at least one of the disjuncts
-        has the value :m:`N`. So, from an unticked, undesignated, negated
+        has the value V{N}. So, from an unticked, undesignated, negated
         disjunction node *n* on a branch *b*, make three branches *b'*, *b''*,
         and *b'''* from *b*. On *b'* add a designated node with the disjunction.
         On *b''* add two undesignated nodes with the first disjunct and its

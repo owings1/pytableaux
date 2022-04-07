@@ -17,26 +17,31 @@
 # ------------------
 #
 # pytableaux - Logic of Paradox
+from __future__ import annotations as annotations
+
 name = 'LP'
 
 class Meta:
-    title = 'Logic of Paradox'
-    category = 'Many-valued'
+    title       = 'Logic of Paradox'
+    category    = 'Many-valued'
     description = 'Three-valued logic (T, F, B)'
-    tags = ('many-valued', 'glutty', 'non-modal', 'first-order')
     category_order = 100
+    tags = (
+        'many-valued',
+        'glutty',
+        'non-modal',
+        'first-order',
+    )
 
-from lexicals import Atomic
+from logics import fde as FDE
 from models import Mval
 from proof.baserules import BaseClosureRule
 from proof.common import Branch, Node, Target
 from tools.hybrids import qsetf
-from . import fde as FDE
-from logics.fde import sdnode
 
 class Model(FDE.Model):
     """
-    An LP model is like an :ref:`FDE model <fde-model>` without the :m:`N` value,
+    An L{LP} model is like an {@FDE model} without the V{N} value,
     which yields an exhaustion restraint an predicate's extension/anti-extension.
     """
     class Value(Mval):
@@ -48,23 +53,23 @@ class Model(FDE.Model):
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    LP's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    L{LP}'s Tableaux System inherits directly from the {@FDE system},
     employing designation markers, and building the trunk in the same way.
     """
 
 class TabRules:
     """
-    The Tableaux System for LP contains all the rules from :ref:`FDE <FDE>`, as
+    The Tableaux System for L{LP} contains all the rules from L{FDE}, as
     well as an additional closure rule.
     """
 
     class GapClosure(BaseClosureRule):
         """
         A branch closes when a sentence and its negation both appear as undesignated nodes.
-        This rule is **in addition to** the :m:`FDE` ``DesignationClosure`` rule.
+        This rule is **in addition to** the L{FDE} :class:`TabRules.DesignationClosure` rule.
         """
 
-        def _branch_target_hook(self, node: Node, branch: Branch):
+        def _branch_target_hook(self, node: Node, branch: Branch, /):
             nnode = self._find_closing_node(node, branch)
             if nnode:
                 return Target(
@@ -72,17 +77,10 @@ class TabRules:
                     branch = branch,
                 )
 
-        def node_will_close_branch(self, node: Node, branch: Branch):
+        def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
             return bool(self._find_closing_node(node, branch))
 
-        @staticmethod
-        def example_nodes():
-            s = Atomic.first()
-            return sdnode(s, False), sdnode(~s, False)
-
-        # private util
-
-        def _find_closing_node(self, node: Node, branch: Branch):
+        def _find_closing_node(self, node: Node, branch: Branch, /):
             if node.get('designated') is False:
                 s = self.sentence(node)
                 if s is not None:
@@ -90,6 +88,13 @@ class TabRules:
                         sentence = s.negative(),
                         designated = False,
                     ))
+
+        @staticmethod
+        def example_nodes():
+            from lexicals import Atomic
+            from logics.fde import sdnode
+            s = Atomic.first()
+            return sdnode(s, False), sdnode(~s, False)
 
     class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass

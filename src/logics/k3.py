@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Strong Kleene Logic
-from __future__ import annotations as _
+from __future__ import annotations
 
 name = 'K3'
 
@@ -41,8 +41,7 @@ from tools.hybrids import qsetf
 from tools.sets import setf
 
 class Model(FDE.Model):
-    """A L{K3} model is like an {@FDE model} without the V{B} value.
-    """
+    """A L{K3} model is like an {@FDE model} without the V{B} value."""
 
     class Value(Mval):
         'The admissible values for sentences.'
@@ -66,15 +65,13 @@ class TableauxSystem(FDE.TableauxSystem):
         
 class TabRules:
     """
-    The Tableaux System for L{K3} contains all the {@FDE rules}, as well as an
-    additional closure rule.
+    The rules for L{K3} comprise all the {@FDE rules}, plus an additional
+    closure rule.
     """
 
     class GlutClosure(BaseClosureRule):
-        """
-        A branch closes when a sentence and its negation both appear as designated nodes
-        on the branch. This rule is **in addition to** the :class:`FDE DesignationClosure
-        rule <DesignationClosure>`.
+        """A branch closes when a sentence and its negation both appear as
+        designated nodes on the branch.
         """
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):

@@ -18,7 +18,7 @@
 # ------------------
 #
 # pytableaux - Gödel 3-valued logic
-from __future__ import annotations as _
+from __future__ import annotations
 
 name = 'G3'
 
@@ -67,7 +67,7 @@ class TableauxSystem(FDE.TableauxSystem):
 class TabRules:
     """
     The closure rules for :m:`G3` are the FDE closure rule, and the :m:`K3` closure rule.
-    The operator rules for :m:`G3` are mostly the rules for :ref:`FDE <FDE>`, with the exception
+    The operator rules for :m:`G3` are mostly the rules for L{FDE}, with the exception
     of the rules for the conditional and biconditional operators, and some of
     the negation rules.
     """

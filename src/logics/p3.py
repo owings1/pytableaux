@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - Post 3-valued logic
+from __future__ import annotations
+
 name = 'P3'
 
 class Meta(object):
@@ -123,9 +125,9 @@ class TableauxSystem(FDE.TableauxSystem):
 class TabRules:
     """
     The Tableaux System for :m:`P3` contains the FDE closure rule, and the
-    :m:`K3` closure rule. Some of the operator rules are the same as :ref:`FDE <FDE>`,
+    :m:`K3` closure rule. Some of the operator rules are the same as L{FDE},
     most notably disjunction. However, many rules for :m:`P3` are different
-    from :ref:`FDE <FDE>`, given the non-standard negation. Notably, an undesignated
+    from L{FDE}, given the non-standard negation. Notably, an undesignated
     double-negation will branch.
     """
 

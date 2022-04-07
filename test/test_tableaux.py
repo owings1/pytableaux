@@ -1,4 +1,4 @@
-from __future__ import annotations as _
+from __future__ import annotations
 
 from errors import *
 from tools.abcs import MapProxy

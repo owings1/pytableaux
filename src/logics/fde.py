@@ -18,21 +18,25 @@
 # ------------------
 #
 # pytableaux - First Degree Entailment Logic
-from __future__ import annotations as _
+from __future__ import annotations
 
 name = 'FDE'
 
 class Meta:
-    title    = 'First Degree Entailment'
-    category = 'Many-valued'
+    title       = 'First Degree Entailment'
+    category    = 'Many-valued'
     description = 'Four-valued logic (True, False, Neither, Both)'
-    tags = 'many-valued', 'gappy', 'glutty', 'non-modal', 'first-order'
     category_order = 10
+    tags = (
+        'many-valued',
+        'gappy',
+        'glutty',
+        'non-modal',
+        'first-order',
+    )
 
 from errors import ModelValueError
-from tools.abcs import closure, static, MapProxy, T
-from tools.sets import setf
-from tools.hybrids import qsetf
+import lexicals
 from lexicals import (
     Argument,
     Atomic,
@@ -46,7 +50,6 @@ from lexicals import (
     Sentence,
 )
 from models import BaseModel, Mval
-from proof.common import Branch, Node, Target
 from proof.baserules import (
     BaseClosureRule,
     ExtendedQuantifierRule,
@@ -55,11 +58,15 @@ from proof.baserules import (
     OperatedSentenceRule,
     QuantifiedSentenceRule,
 )
+from proof.common import Branch, Node, Target
 from proof.filters import NodeFilters
 from proof.tableaux import (
     Tableau,
     TableauxSystem as BaseSystem,
 )
+from tools.abcs import closure, static, MapProxy, T
+from tools.sets import setf
+from tools.hybrids import qsetf
 
 from typing import Any
 
@@ -83,27 +90,25 @@ class Model(BaseModel):
         T = 'True',    1.0
 
     #: The set of designated values.
-    #:
-    #: :type: set
-    #: :value: {T, B}
-    #: :meta hide-value:
     designated_values = setf({Value.B, Value.T})
 
     unassigned_value = Value.N
+
+    #: A mapping from each predicate to its extension. An extension for an
+    #: *n*-ary predicate is a set of *n*-tuples of constants.
+    #:
+    #: :type: dict[lexicals.Predicate, set[tuple[lexicals.Constant, ...]]]
+    extensions: dict[Predicate, set[tuple[lexicals.Constant, ...]]]
 
     def __init__(self):
 
         super().__init__()
 
-        #: A mapping from each predicate to its extension. An extension for an
-        #: *n*-ary predicate is a set of *n*-tuples of constants.
-        #:
-        #: :type: dict
-        self.extensions: dict[Predicate, set[tuple[Constant, ...]]] = {}
+        self.extensions = {}
 
         #: A map of predicates to their anti-extension.
         #:
-        #: :type: dict
+        #: :type: dict[lexicals.Predicate, set[tuple[lexicals.Constant, ...]]]
         self.anti_extensions: dict[Predicate, set[tuple[Constant, ...]]] = {}
 
         #: An assignment of each atomic sentence to an admissible truth value.
@@ -141,7 +146,7 @@ class Model(BaseModel):
         """
         The value of an existential sentence is the maximum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
-        the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
+        the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
         """
         maxval = max(self.Value)
         value = min(self.Value)
@@ -157,7 +162,7 @@ class Model(BaseModel):
         """
         The value of an universal sentence is the minimum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
-        the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
+        the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
         """
         minval = min(self.Value)
         value = max(self.Value)

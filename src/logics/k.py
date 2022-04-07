@@ -18,7 +18,8 @@
 # ------------------
 #
 # pytableaux - Kripke Normal Modal Logic
-from __future__ import annotations as _
+from __future__ import annotations
+
 name = 'K'
 
 class Meta(object):
@@ -201,7 +202,7 @@ class Model(BaseModel):
     def is_countermodel_to(self, argument: Argument, /) -> bool:
         """
         A model is a countermodel for an argument iff the value of each premise
-        is :m:`T` at `w0` and the value of the conclusion is :m:`F` at :m:`w0`.
+        is V{T} at `w0` and the value of the conclusion is V{F} at :m:`w0`.
         """
         Value = self.Value
         Tru = Value.T

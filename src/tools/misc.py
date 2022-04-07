@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - tools.misc module
-from __future__ import annotations as _
+from __future__ import annotations
 
 __all__ = 'get_logic',
 
@@ -84,7 +84,7 @@ def get_logic(ref) -> ModuleType:
     """
     Get the logic module from the specified reference.
 
-    Each of following examples returns the :ref:`FDE <FDE>` logic module::
+    Each of following examples returns the L{FDE} logic module::
 
         get_logic('fde')
         get_logic('FDE')

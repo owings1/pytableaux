@@ -36,6 +36,3 @@ def test_lines_trunk_example():
     res = helper.lines_trunk_example('cpl')
     assert len(res) > 0
 
-def test_lexrender_common():
-    res = helper._lexrender_common('a', {})
-    assert len(res) > 0

@@ -10,10 +10,10 @@ body {
     vertical-align: sub;
     font-size: 80%;
 }
-.lexmeta.subsup.main {
+.metawrite.subsup.main {
     font-size: 115%;
 }
-sub.lexmeta.subsup.down {
+sub.metawrite.subsup.down {
     bottom: -0.45em;
     margin-left: -0.55em;
 }
@@ -39,9 +39,9 @@ p.definition > em {
     margin-right: 10px;
 }
 p.definiens .lexitem,
-p.definiens .lexmeta,
+p.definiens .metawrite,
 p.definition .lexitem,
-p.definition .lexmeta {
+p.definition .metawrite {
     font-size: 110%;
 }
 

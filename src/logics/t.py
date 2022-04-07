@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - Reflexive Normal Modal Logic
+from __future__ import annotations
+
 name = 'T'
 
 class Meta:

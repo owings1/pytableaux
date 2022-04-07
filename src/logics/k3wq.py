@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - Weak Kleene Logic with alternate quantification
+from __future__ import annotations
+
 name = 'K3WQ'
 
 class Meta(object):
@@ -76,7 +78,7 @@ class Model(K3W.Model):
     def value_of_universal(self, s: Quantified, /, **kw):
         """
         A universal sentence is interpreted in terms of `generalized conjunction`.
-        If we order the values least to greatest as :m:`N`, :m:`F`, :m:`T`, then we
+        If we order the values least to greatest as V{N}, V{F}, V{T}, then we
         can define the value of a universal in terms of the `minimum` value of
         the set of values for the substitution of each constant in the model for
         the variable.
@@ -92,7 +94,7 @@ class Model(K3W.Model):
     def value_of_existential(self, s: Quantified, **kw):
         """
         An existential sentence is interpreted in terms of `generalized disjunction`.
-        If we order the values least to greatest as :m:`N`, :m:`T`, :m:`F`, then we
+        If we order the values least to greatest as V{N}, V{T}, V{F}, then we
         can define the value of an existential in terms of the `maximum` value of
         the set of values for the substitution of each constant in the model for
         the variable.

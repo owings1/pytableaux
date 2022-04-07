@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - R-mingle 3 logic
+from __future__ import annotations
+
 name = 'RM3'
 
 class Meta:
@@ -65,7 +67,7 @@ class TableauxSystem(FDE.TableauxSystem):
 class TabRules:
     """
     The closure rules for RM3 are the FDE closure rule, and the LP closure rule.
-    Most of the operator rules are the same as :ref:`FDE <FDE>`, except for the conditional
+    Most of the operator rules are the same as L{FDE}, except for the conditional
     rules. The biconditional rules are borrowed from `L3_`, since they are
     simplification rules.
     """

@@ -1,5 +1,5 @@
 
-from __future__ import annotations as _
+from __future__ import annotations
 
 if 'Exports' or True:
     __all__ = (

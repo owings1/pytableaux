@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Classical First-Order Logic
-from __future__ import annotations as _
+from __future__ import annotations
 
 from tools.abcs import Abc, abcf
 

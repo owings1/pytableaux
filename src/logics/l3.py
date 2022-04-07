@@ -18,6 +18,8 @@
 # ------------------
 #
 # pytableaux - Lukasiewicz 3-valued Logic
+from __future__ import annotations
+
 name = 'L3'
 
 class Meta:
@@ -63,7 +65,7 @@ class TableauxSystem(FDE.TableauxSystem):
 class TabRules:
     """
     The closure rules for :m:`L3` are the FDE closure rule, and the :m:`K3` closure rule.
-    The operator rules for :m:`L3` are mostly the rules for :ref:`FDE <FDE>`, with
+    The operator rules for :m:`L3` are mostly the rules for L{FDE}, with
     the exception of the rules for the conditional and biconditional operators.
     """
 

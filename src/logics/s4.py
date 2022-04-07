@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - S4 Normal Modal Logic
+from __future__ import annotations
+
 name = 'S4'
 
 class Meta:

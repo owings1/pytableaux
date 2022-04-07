@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - Deonitic Normal Modal Logic
+from __future__ import annotations
+
 name = 'D'
 
 class Meta:

@@ -17,7 +17,8 @@
 # ------------------
 #
 # pytableaux - Gappy Object 3-valued Logic
-from __future__ import annotations as _
+from __future__ import annotations
+
 name = 'GO'
 
 class Meta:
@@ -70,7 +71,7 @@ class Model(K3.Model):
         values* of the sentences that result from replacing each constant for the
         quantified variable.
 
-        The *crunched value* of *v* is 1 (:m:`T`) if *v* is 1, else 0 (:m:`F`).
+        The *crunched value* of *v* is 1 (V{T}) if *v* is 1, else 0 (V{F}).
 
         Note that this is in accord with interpreting the existential quantifier
         in terms of `generalized disjunction`.
@@ -87,7 +88,7 @@ class Model(K3.Model):
         of the sentences that result from replacing each constant for the quantified
         variable.
 
-        The *crunched value* of *v* is 1 (:m:`T`) if *v* is 1, else 0 (:m:`F`).
+        The *crunched value* of *v* is 1 (V{T}) if *v* is 1, else 0 (V{F}).
 
         Note that this is in accord with interpreting the universal quantifier
         in terms of generalized conjunction.
@@ -142,7 +143,7 @@ class TabRules:
     """
     The closure rules for GO are the FDE closure rule, and the K3 closure rule.
     Most of the operators rules are unique to GO, with a few rules that are
-    the same as :ref:`FDE <FDE>`. The rules for assertion mirror those of
+    the same as L{FDE}. The rules for assertion mirror those of
     :ref:`B3E <B3E>`.
     """
 

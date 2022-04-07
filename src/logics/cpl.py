@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - Classical Predicate Logic
+from __future__ import annotations
+
 name = 'CPL'
 
 class Meta(object):

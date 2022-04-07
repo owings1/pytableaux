@@ -17,7 +17,7 @@
 #
 # ------------------
 # pytableaux - parsers module
-from __future__ import annotations as _
+from __future__ import annotations
 
 __all__ = (
     'BaseParser',

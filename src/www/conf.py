@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Web App Configuration
-from __future__ import annotations as _
+from __future__ import annotations
 
 __all__ = (
     'APP_ENVCONF',

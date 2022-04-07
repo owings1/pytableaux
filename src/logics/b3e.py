@@ -17,6 +17,8 @@
 # ------------------
 #
 # pytableaux - Bochvar 3 External logic
+from __future__ import annotations
+
 name = 'B3E'
 
 class Meta:
@@ -80,7 +82,7 @@ class TableauxSystem(FDE.TableauxSystem):
 class TabRules:
     """
     The closure rules for :m:`B3E` are the FDE closure rule, and the K3 closure rule.
-    The operator rules are mostly a mix of :ref:`FDE <FDE>` and :ref:`K3W <K3W>`
+    The operator rules are mostly a mix of L{FDE} and :ref:`K3W <K3W>`
     rules, but with different rules for the assertion, conditional and
     biconditional operators.
     """
