@@ -26,8 +26,8 @@ MH - Paracomplete Hybrid Logic
 
             //truth_tables//mh//
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical consequence is defined just like in :m:`K3`:
     

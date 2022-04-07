@@ -18,14 +18,13 @@
 # ------------------
 #
 # pytableaux - documentation utility functions
-from __future__ import annotations as _
-from errors import instcheck
+from __future__ import annotations
 
 __all__ = 'Helper',
 
+from errors import instcheck
 import examples
 from lexicals import (
-    Constant,
     LexType,
     LexWriter,
     Notation,
@@ -34,31 +33,19 @@ from lexicals import (
     ParseTable,
     Predicate,
     RenderSet,
-    Variable,
+    # Sentence,
 )
 from models import BaseModel
 from proof.helpers import EllipsisExampleHelper
 from proof.tableaux import (
     ClosingRule,
+    Rule,
     Tableau,
     TableauxSystem as TabSys,
-    Rule,
 )
-from proof.writers import TabWriter
-from tools.abcs import (
-    F,
-    MapProxy,
-    closure,
-)
-from tools.decorators import (
-    overload,
-    wraps
-)
-from tools.hybrids import qsetf
-from tools.misc import (
-    cat,
-    get_logic,
-)
+from tools.abcs import F, MapProxy
+from tools.decorators import closure, overload, wraps
+from tools.misc import get_logic
 
 from collections import defaultdict
 from docutils import nodes as docnodes
@@ -67,14 +54,7 @@ from html import (
     escape as htmlesc,
     unescape as htmlun,
 )
-from inspect import (
-    getmro,
-    getsource,
-)
-from jinja2 import (
-    Environment,
-    FileSystemLoader,
-)
+from inspect import getsource
 import os
 from os.path import (
     abspath,
@@ -82,17 +62,10 @@ from os.path import (
     join as pjoin,
 )
 import re
-from re import (
-    Match,
-    Pattern,
-)
 from sphinx.application import Sphinx
 from sphinx.util import logging
 import traceback
-from typing import (
-    Any,
-    Callable,
-)
+from typing import Any, Callable
 
 # Python domain:
 #    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain
@@ -106,6 +79,8 @@ from typing import (
 #    https://docutils.sourceforge.io/docs/ref/doctree.html
 # Font (GPL):
 #    http://www.gust.org.pl/projects/e-foundry/tg-math/download/index_html#Bonum_Math
+# Creating  Directives:
+#    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
 
 logger = logging.getLogger(__name__)
@@ -133,7 +108,8 @@ class Helper:
         write_notation   = Notation.standard,
         parse_notation   = Notation.standard,
         preds            = examples.preds,
-        lexmeta_roles    = ('m',)
+        lexwrite_roles   = ('s',),
+        metawrite_roles  = ('m',),
     ))
 
     @staticmethod
@@ -141,6 +117,10 @@ class Helper:
 
         helper = Helper(**opts)
         opts = helper.opts
+
+        includer = include_directive(app)
+        app.add_directive('inctest', includer)
+        app.add_directive('include', includer, override = True)
 
         helper.connect_sphinx(app, 'autodoc-process-docstring',
             helper.sphinx_obj_lines_append_autodoc,
@@ -153,35 +133,30 @@ class Helper:
             helper.sphinx_simple_replace_source,
         )
 
-        app.add_role('s', helper.role_lexrender_auto)
-        app.add_role('oper', helper.role_lexrender_oper)
-        for name in opts['lexmeta_roles']:
-            app.add_role(name, helper.role_lexrender_meta)
+        helper.connect_sphinx(app, 'include-read',
+            helper.sphinx_line_replace_include,
+            helper.sphinx_simple_replace_include,
+        )
 
+        for name in opts['lexwrite_roles']:
+            app.add_role(name, helper.role_lexwrite)
+        for name in opts['metawrite_roles']:
+            app.add_role(name, helper.role_metawrite)
+     
         return helper
 
-    # Don't build rules for abstract classes
-    # TODO: shouldn't this check rule groups?
-    SKIP_RULES = (
-        Rule,
-        ClosingRule,
-    )
-    SKIP_TRUNKS = (
-        TabSys.build_trunk,
-    )
-    TRUNK_ARG = Parser('polish').argument('b', ('a1', 'a2'))
+
     DIV_CLEAR = '<div class="clear"></div>'
 
-    _simple_replace: tuple[tuple[str|Pattern, str|Callable], ...] = None
-    _line_replace: tuple[tuple[str, str|Pattern, Callable], ...] = None
-
     def __init__(self, **opts):
+        from proof.writers import TabWriter
+        from tools.hybrids import qsetf
+
+        import jinja2
 
         self.opts = opts = dict(self._defaults) | opts
 
-        if isinstance(opts['lexmeta_roles'], str):
-            opts['lexmeta_roles'] = opts['lexmeta_roles'],
-        opts['lexmeta_roles'] = tuple(opts['lexmeta_roles'])
+        instcheck(opts['metawrite_roles'], tuple)
 
         self.logic_names = qsetf(
             bname('.'.join(file.split('.')[0:-1])).upper()
@@ -192,22 +167,20 @@ class Helper:
         )
         self.logic_union = '|'.join(self.logic_names)
 
-        self.jenv = Environment(
-            loader = FileSystemLoader(
+        self.jenv = jinja2.Environment(
+            loader = jinja2.FileSystemLoader(
                 pjoin(opts['doc_dir'], opts['template_dir'])
             ),
             trim_blocks = True,
             lstrip_blocks = True,
         )
 
-        self.parser = Parser(
-            opts['parse_notation'],
-            opts['preds'],
-        )
+        self.parser = Parser(opts['parse_notation'], opts['preds'])
 
         lwnotn = Notation(opts['write_notation'])
         self.lwhtml = LexWriter(lwnotn, 'html')
 
+        # Make a RenderSet that renders subscript 2 as n.
         rskey = 'docutil.trunk'
         try:
             rstrunk = RenderSet.fetch(lwnotn, rskey)
@@ -272,7 +245,7 @@ class Helper:
 
     def lines_ruledoc_inherit(self, rule: type[Rule], indent: str|int = None):
         'Docstring lines for an "inheriting only" ``Rule`` class.'
-        prule = getmro(rule)[1]
+        prule = rule.mro()[1]
         plogic = get_logic(prule)
         lines = [
             f'*This rule is the same as* :class:`{plogic.name} {prule.__name__}',
@@ -321,7 +294,7 @@ class Helper:
         # Inject the helper.
         rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
         # Build trunk.
-        tab.argument = arg = self.TRUNK_ARG
+        tab.argument = arg = Parser('polish').argument('b', ('a1', 'a2'))
         tab.finish()
         # Render argument.
         pw = self.pwtrunk
@@ -358,12 +331,7 @@ class Helper:
         opts = self.opts
         table = model.truth_table(oper, reverse = opts['truth_tables_rev'])
         template = self.jenv.get_template(opts['truth_table_tmpl'])
-        return template.render(dict(
-            num_values = len(model.Value),
-            table      = table,
-            operator   = oper,
-            lw         = self.lwhtml,
-        ))
+        return template.render(dict(table = table, lw = self.lwhtml))
 
     ## Sphinx Event Handlers
 
@@ -373,7 +341,7 @@ class Helper:
         """
         if event not in self._connids:
             logger.info(f'Creating dispatcher for {event}')
-            dispatch = self.__dispatch_sphinx
+            dispatch = self._dispatch_sphinx
             def dispatcher(*args):
                 return dispatch(event, args)
             self._connids[event] = app.connect(event, dispatcher)
@@ -388,19 +356,27 @@ class Helper:
 
     def sphinx_simple_replace_source(self, app: Sphinx, docname: str, lines: list[str]):
         'Regex replace in a docstring using ``re.sub()``.'
-        self._simple_replace_common(lines, is_source = True)
+        self._simple_replace_common(lines, mode = 'source')
+
+    def sphinx_simple_replace_include(self, app: Sphinx, lines: list[str]):
+        'Regex replace for custom include-read event.'
+        self._simple_replace_common(lines, mode = 'include')
 
     def sphinx_simple_replace_autodoc(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
         'Regex replace for autodoc event.'
-        self._simple_replace_common(lines, is_source = False)
+        self._simple_replace_common(lines)
 
     def sphinx_line_replace_source(self, app: Sphinx, docname: str, lines: list[str]):
         'Replace a line matching a regex with 1 or more lines in a docstring.'
-        self._line_replace_common(lines, is_source = True)
+        self._line_replace_common(lines, mode = 'source')
+
+    def sphinx_line_replace_include(self, app: Sphinx, lines: list[str]):
+        'Regex line replace for custom include-read event.'
+        self._line_replace_common(lines, mode = 'include')
 
     def sphinx_line_replace_autodoc(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
         'Regex line replace for autodoc event.'
-        self._line_replace_common(lines, is_source = False)
+        self._line_replace_common(lines)
 
     def sphinx_obj_lines_append_autodoc(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
         """Append lines to a docstring extracted from the autodoc extention.
@@ -424,10 +400,13 @@ class Helper:
             if check(obj):
                 lines += func(obj)
 
+    _simple_replace: tuple[tuple[str|re.Pattern, str|Callable], ...] = None
+    _line_replace  : tuple[tuple[str, str|re.Pattern, Callable], ...] = None
+
     @closure
     def _simple_replace_common():
 
-        def logic_ref(match: Match):
+        def logic_ref(match: re.Match):
             name: str = match.group(1)
             sect: str|None = match.group(2)
             if sect is None:
@@ -436,9 +415,6 @@ class Helper:
                 anchor = f'{name}-{sect.strip()}'.lower()
                 title = f'{name}{sect}'
             return f":ref:`{title} <{anchor}>`"
-            
-            # return f":ref:`{name} <{name}>`"
-            # return f":class:`{name} <logics.{name.lower()}>`"
 
         def getdefns(self: Helper):
             defns = self._simple_replace
@@ -446,68 +422,51 @@ class Helper:
                 return defns
 
             opts = self.opts
-            lexmeta_name = opts['lexmeta_roles'][0]
+            metawrite_name = opts['metawrite_roles'][0]
 
-            def rolewrap_lexmeta(match: Match):
-                return f":{lexmeta_name}:`{match[0]}`"
-            def roletran_lexmeta(match: Match):
-                return f"{match[1]}:{lexmeta_name}:`{match[2]}`"
+            def rolewrap_metawrite(match: re.Match):
+                return f"{match[1]}:{metawrite_name}:`{match[2]}`"
 
             defns = tuple((re.compile(p), f) for p, f in (
-                # Wrap to lexmeta role:
+                # Wrap to metawrite role:
                 # -----------------------
                 #   L{FDE} -> :m:`L{FDE}`
                 #   L{K3}  -> :m:`L{K3}`
-                (r'L{[A-Z][A-Z0-9]*}', rolewrap_lexmeta),
+                #   L{K3}'s-> :m:`L{K3}`'s
+                (r'(^|[^`])(L{[A-Z][A-Z0-9]*})', rolewrap_metawrite),
                 #   V{T} -> :m:`V{T}`
                 #   V{N} -> :m:`V{N}`
-                (r'V{[A-Z]}', rolewrap_lexmeta),
+                (r'(^|[^`])(V{[A-Z]})', rolewrap_metawrite),
                 #   V{0}    -> :m:`V{0}`
                 #   V{0.25} -> :m:`V{0.25}`
                 #   V{1.0}  -> :m:`V{1.0}`
                 #   V{1/4}  -> :m:`V{1/4}`
-                (r'V{[0-9][./]?[0-9]*}', rolewrap_lexmeta),
-                # Translate to lexmeta role:
-                # -------------------------
+                (r'(^|[^`])(V{[0-9][./]?[0-9]*})', rolewrap_metawrite),
                 #   :{any} -> :m:`any`
-                (r'(^|\s):{(.*)}', roletran_lexmeta),
-
+                (r'(^|\s):{(.*)}', rolewrap_metawrite),
                 # Link to a logic:
                 # ----------------
-                #   L{@FDE}      -> :ref:`FDE <FDE>`
                 #   {@K3}        -> :ref:`K3 <K3>`
                 #   {@FDE Model} -> :ref:`FDE Model <fde-model>`
-                (r'L?{@(%s)([ A-Za-z-]+)?}' % self.logic_union, logic_ref),
+                (r'{@(%s)([ A-Za-z-]+)?}' % self.logic_union, logic_ref),
             ))
-
 
             self._simple_replace = defns
             return defns
 
-        def common(self: Helper, lines: list[str], is_source: bool = False):
-            # defns = (
-            #     # Truth values
-            #     # (r'{v.([TBNF])}', ':math:`\\1`'),
-
-            #     # Logic class links:
-            #     #   {@FDE} -> :class:`FDE <logics.fde>`
-            #     ('{@(%s)}' % self.logic_union, logic_ref,
-            #         # r'{{@({0})}}'.format(logicmatch),
-            #         # lambda pat: (
-            #         #     ':class:`{0} <logics.{1}>`'.format(
-            #         #         pat.group(1), pat.group(1).lower()
-            #         #     )
-            #         # )
-            #     ),
-            #     # # Meta-tuple params - :m:`ntuple`
-            #     # (':m:`ntuple`', ':math:`\\\\langle a_0,...,a_n\\\\rangle`'),
-            # )
+        def common(self: Helper, lines: list[str], mode: str = None):
             defns = getdefns(self)
             text = rendered = '\n'.join(lines)
-            for regex, repl in defns:
-                rendered = re.sub(regex, repl, rendered)
-            if text != rendered:
-                if is_source:
+            ischange = False
+            for pat, func in defns:
+                rendered = re.sub(pat, func, rendered)
+                ischange = ischange or text != rendered
+                if ischange:
+                    pass
+                    # Once only
+                    # break
+            if ischange:
+                if mode == 'source':
                     lines[0]= rendered
                 else:
                     lines.clear()
@@ -519,6 +478,7 @@ class Helper:
     def _line_replace_common():
 
         def getdefns(self: Helper):
+
             defns = self._line_replace
             if defns is not None:
                 return defns
@@ -542,7 +502,7 @@ class Helper:
             self._line_replace = defns
             return defns
 
-        def common(self: Helper, lines: list[str], is_source: bool = False):
+        def common(self: Helper, lines: list[str], mode:str = None):
             """
             Replace a line matching a regex with 1 or more lines. Lines could come
             from autodoc extraction or straight from source. In the latter case,
@@ -553,7 +513,7 @@ class Helper:
             the only thing on a line.
             """
             defns = getdefns(self)
-            if is_source:
+            if mode == 'source':
                 proclines = lines[0].split('\n')
             else:
                 proclines = lines
@@ -575,11 +535,10 @@ class Helper:
             for i in rpl:
                 pos = i + 1
                 proclines[i:pos] = rpl[i]
-            if rpl and is_source:
+            if rpl and mode == 'source':
                 lines[0] = '\n'.join(proclines)
 
         return common
-
 
     ## Custom Sphinx Roles
 
@@ -589,15 +548,19 @@ class Helper:
 
     @staticmethod
     @overload
-    def sphinxrole(*, keyed: bool = True, content: bool = True, options: dict = {}) -> Callable[[F], F]: ...
+    def sphinxrole(*,
+        keyed: bool = True, content: bool = True, options: dict = {},
+    ) -> Callable[[F], F]: ...
 
     @staticmethod
     def sphinxrole(func = None, /, **kw):
         'Decorator/factory for Sphinx role method.'
 
         def decorator(func: F) -> F:
-            fopts = dict(keyed = True, content = True, options = {})
+
+            fopts = dict(content = True, options = {})
             fopts.update(kw)
+
             @wraps(func)
             def f(self, name: str, rawtext: str, text: str, lineno: int,
                 inliner, opts: dict = {}, content: list[str] = [], /):
@@ -607,14 +570,11 @@ class Helper:
                 )
                 set_classes(opts)
                 try:
-                    if fopts['keyed']:
-                        ret = func(self, **kwargs)
-                    else:
-                        ret = func(self, *kwargs.values())
+                    ret = func(self, **kwargs)
                 except:
                     logger.error(
-                        f"{func.__name__}: lineno={lineno}, "
-                        f"rawtext={repr(rawtext)}, content={content}"
+                        f"{func.__name__}: rawtext={repr(rawtext)}, "
+                        f"content={content}"
                     )
                     logger.info('Printing traceback')
                     traceback.print_exc()
@@ -623,10 +583,13 @@ class Helper:
                     if not isinstance(ret, tuple):
                         ret = ret, []
                     return ret
-            f.options = {'class': directives.class_option} | fopts['options']
+
+            f.options = {'class': directives.class_option}
+            f.options.update(fopts['options'])
             f.content = fopts['content']
             _RoleRet # fail if missing
             f.__annotations__['return'] = '_RoleRet'
+
             return f
 
         if func is None:
@@ -638,95 +601,93 @@ class Helper:
         return decorator(instcheck(func, Callable))
 
     @sphinxrole
-    def role_lexrender_auto(self, /, *, text: str, opts: dict, **_):
-        return self._lexrender_common(text, opts)
+    @closure
+    def role_lexwrite():
 
-    @sphinxrole
-    def role_lexrender_oper(self, /, *, text: str, opts: dict, **_):
-        return self._lexrender_common(text, opts, 'operator')
+        _ctypes = dict(
+            valued = {
+                LexType.Operator,
+                LexType.Quantifier,
+                Predicate.System
+            }
+        )
+        _ctypes['nonsentence'] = _ctypes['valued'] | {
+            LexType.Constant,
+            LexType.Variable,
+            LexType.Predicate,
+        }
 
-    def _lexrender_common(self, text: str, opts: dict, what: Any = None, /):
-        'Common lexrender routine.'
-        classes = ['lexitem']
-        item = None
-        if what is None:
-            m = re.match(r'^(.)([0-9]*)$', text)
-            if m:
+        def role(self: Helper, /, *, text: str, **_):
+
+            classes = ['lexitem']
+
+            item = None
+            match = re.match(r'^(.)([0-9]*)$', text)
+
+            if match:
+                char, sub = match.groups()
                 table = self.parser.table
-                char, sub = m.groups()
-                sub = int(sub) if len(sub) else 0
                 ctype = table.type(char)
-                if ctype in (LexType.Operator, LexType.Quantifier):
-                    what, item = table[char]
-                elif ctype in (LexType.Constant, LexType.Variable):
-                    what, idx = table[char]
-                    if ctype is LexType.Constant:
-                        item = Constant(idx, sub)
-                        classes.append('constant')
+                if ctype in _ctypes['nonsentence']:
+                    # Non-sentence items.
+                    sub = int(sub) if len(sub) else 0
+                    if ctype in _ctypes['valued']:
+                        item = table.value(char)
+                    elif ctype is LexType.Predicate:
+                        preds = self.opts['preds']
+                        item = preds.get((table.value(char), sub))
                     else:
-                        item = Variable(idx, sub)
-                        classes.append('variable')
-                elif ctype is LexType.Predicate:
-                    what = 'predicate'
-                    _, idx = table[char]
-                    item = self.opts['preds'].get((idx, sub))
-                    classes.append('user_predicate')
-                elif ctype is Predicate.System:
-                    what = 'predicate'
-                    _, item = table[char]
-                    item = Predicate.System(item)
-                    classes.extend(('system_predicate', item.name))
-        if what is None:
-            what = 'sentence'
-        if what == 'sentence':
-            item = self.parser(text)
-        if item is None:
-            item = text
-        if not isinstance(what, str):
-            what = type(item).__name__
-        classes.append(what)
-        raw = self.lwhtml(item)
-        rendered = htmlun(raw)
-        return [
-            docnodes.inline(text = rendered, classes = classes)
-        ]
+                        item = ctype.cls(table.value(char), sub)
+
+            if item is None:
+                # Parse as sentence.
+                item = self.parser(text)
+
+            classes.append(item.TYPE.name.lower())
+            rendered = htmlun(self.lwhtml(item))
+
+            return [
+                docnodes.inline(text = rendered, classes = classes)
+            ]
+
+        return role
 
     @sphinxrole
     @closure
-    def role_lexrender_meta():
+    def role_metawrite():
         LANGLE = '\\langle'
         RANGLE = '\\rangle'
 
         rdat = dict(
+            langle = LANGLE,
+            rangle = RANGLE,
             subber = {'P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'},
             subsup = {'B3E', 'K3W', 'K3WQ'},
             truthvals = {'T', 'F', 'N', 'B'},
-            ntuple = f'{LANGLE} a_0,...,a_n{RANGLE}'
+            mfixed = {
+                'ntuple': (f'{LANGLE} a_0,...,a_n{RANGLE}', 'tuple', 'ntuple')
+            }
         )
-        rdat.update(
-            truthval_union = '|'.join(rdat['truthvals'])
-        )
+        rdat.update(truthval_union = '|'.join(rdat['truthvals']))
 
-        def role(self: Helper, /, *, text: str, rawtext: str, **_):
+        def role(self: Helper, /, *, text: str, **_):
 
-            classes = ['lexmeta']
+            classes = ['metawrite']
 
-            if text == 'ntuple':
-                # n-tuple.
-                classes.extend(('tuple', 'ntuple'))
-                rendered = rdat['ntuple']
+            if text in rdat['mfixed']:
+                rendered, *addclasses = rdat['mfixed'][text]
+                classes.extend(addclasses)
                 return [
                     docnodes.math(text = rendered, classes = classes)
                 ]
 
             if text in rdat['truthvals']:
+                # Normalize truth values.
                 text = 'V{%s}' % text
 
-            # if text in FDE.Model.Value:
-            # if text in rdat['truthvals']:#('T', 'F', 'N', 'B'):
-            match = re.match('^V{(%s)}$' % rdat['truthval_union'], text)
+            match = re.match(r'^V{(%s)}$' % rdat['truthval_union'], text)
             if match:
-                # Truth values.
+                # Truth value.
                 classes.append('truth-value')
                 value = match.group(1)
                 return [
@@ -734,11 +695,13 @@ class Helper:
                 ]
 
             if text in self.logic_names:
+                # Normalize logic names.
                 text = 'L{%s}' % text
             
-            # if text in self.logic_names or text == 'L.T':
             match = re.match(r'^L{(%s)}$' % self.logic_union, text)
             if match:
+
+                # Logic name.
 
                 logic = get_logic(match.group(1))
                 lname: str = logic.name
@@ -767,7 +730,7 @@ class Helper:
                         docnodes.superscript(text = up, classes = classes + ['up']),
                         docnodes.subscript(text = down, classes = classes + ['down']),
                     ]
-                
+
                 return [
                     docnodes.inline(text = lname, classes = classes)
                 ]
@@ -788,19 +751,21 @@ class Helper:
                     docnodes.math(text = rendered, classes = classes)
                 ]
 
-            if text == 'w' or re.match(r'', text):
-                # <w, w'> etc.
-                classes.append('modal')
-                if '<' in text:
-                    classes.append('tuple')
-                rendered = text.replace('<', f'{LANGLE} ').replace('>', RANGLE)
-                #rendered = text.replace('<', '⟨').replace('>', '⟩')
-                #nodecls = docnodes.inline
-                return [
-                    docnodes.math(text = rendered, classes = classes)
-                ]
+            # Generic fallback.
 
-            raise ValueError(f"Unrecognized meta-lexical text '{text}'")
+            # Examples:
+            #       <w, w'>
+            rendered = text
+            if 'w' in text:
+                classes.append('modal')
+            if '<' in text:
+                classes.append('tuple')
+                rendered = rendered.replace('<', rdat['langle'] + ' ')
+                rendered = rendered.replace('>', rdat['rangle'])
+
+            return [
+                docnodes.math(text = rendered, classes = classes)
+            ]
 
         return role
 
@@ -822,36 +787,49 @@ class Helper:
             parentgrouped(obj)
         )
 
-    def _should_rule_example(self, obj: Any):
-        return isrulecls(obj) and obj not in self.SKIP_RULES
+    def _should_rule_example(self, obj: Any, /, skip = {Rule, ClosingRule}):
+        return isrulecls(obj) and obj not in skip
 
-    def _should_trunk_example(self, obj: Any):
-        return TabSys.build_trunk in methmro(obj) and obj not in self.SKIP_TRUNKS
+    def _should_trunk_example(self, obj: Any, /, skip = {TabSys.build_trunk}):
+        return TabSys.build_trunk in methmro(obj) and obj not in skip
 
     ## Dispatcher
 
-    def __dispatch_sphinx(self, event: str, args: tuple):
+    def _dispatch_sphinx(self, event: str, args: tuple):
         'Consolidated Sphinx event dispatcher.'
         for func in self._listeners[event]:
             try:
                 func(*args)
             except:
-                # if event == 'autodoc-process-docstring' and len(args) > 2:
-                #     arginfo = str({'what': args[1], 'name': args[2]})
-                # elif event == 'source-read' and len(args) > 2:
-                #     arginfo = '\n'.join((
-                #         '',
-                #         'docname: {0}\n'.format(args[1]),
-                #         'content: \n\n{0}'.format('\n'.join(args[2])),
-                #     ))
-                # else:
-                #     arginfo = str(args)
                 logger.error(
-                    f"Event '{event}' failed for {func} with args {args}",
+                    f"Event '{event}' failed for "
+                    f"{func} with args {args}"
                 )
                 logger.info('Printing traceback')
                 traceback.print_exc()
                 raise
+
+
+def include_directive(app: Sphinx):
+
+    app.add_event('include-read')
+
+    from sphinx.directives.other import Include as BaseInclude
+
+    class Include(BaseInclude):
+
+        def parse(self, text: str, doc):
+            lines = text.split('\n')
+            source = doc.attributes['source']
+            app.emit('include-read', lines)
+            self.state_machine.insert_input(lines, source)
+
+        def run(self):
+            self.options['parser'] = lambda: self
+            super().run()
+            return []
+
+    return Include
 
 # Misc util
 
@@ -867,47 +845,36 @@ def indented(lines: list[str], indent: str|int = None) -> list[str]:
     elif isinstance(indent, int):
         indent *= ' '
     return [
-        cat(indent, line) if len(line) else line
+        indent + line if len(line) else line
         for line in lines
     ]
-
-def safemro(obj: Any) -> tuple[type, ...]:
-    'Try to get the mro of the class, else empty list'
-    try:
-        return getmro(obj)
-    except:
-        return ()
 
 def methmro(meth: Any) -> list[str]:
     """Get the methods of the same name of the mro (safe) of the class the
     method is bound to."""
     try:
-        clsmro = getmro(meth.__self__)
-        meths = [getattr(c, meth.__name__, None) for c in clsmro]
-        return [m for m in meths if m]
+        it = (getattr(c, meth.__name__, None) for c in meth.__self__.__mro__)
     except:
         return []
+    return list(filter(None, it))
 
 def isnodoc(obj: Any) -> bool:
     return not bool(getattr(obj, '__doc__', None))
 
 def isnocode(obj: Any) -> bool:
     'Try to determine if obj has no "effective" code.'
+    isblock = False
+    isfirst = True
+    pat = re.compile(rf'^(class|def) {obj.__name__}(\([a-zA-Z0-9_.]+\))?:$')
     try:
-        lines = [
-            line
-            for line in (
-                line.strip()
-                for line in getsource(obj).split('\n')
-             ) if line
-        ]
-        isblock = False
-        isfirst = True
-        for line in lines:
+        it = filter(len, map(str.strip, getsource(obj).split('\n')))
+    except:
+        return False
+    try:
+        for line in it:
             if isfirst:
                 isfirst = False
-                regex = r'^(class|def) {0}(\([a-zA-Z0-9_.]+\))?:$'.format(obj.__name__)
-                m = re.findall(regex, line)
+                m = re.findall(pat, line)
                 if not m:
                     return False
                 continue
@@ -925,14 +892,15 @@ def isnocode(obj: Any) -> bool:
             return False
         return True
     except:
-        # raise
+        raise
         return False
 
 def isrulecls(obj: Any) -> bool:
+    'Wether obj is a rule class.'
     return isinstance(obj, type) and issubclass(obj, Rule)
 
 def rulegrouped(rule: type[Rule], logic: Any) -> bool:
-    'Whether the Rule class is grouped in the TabRules of the given logic.'
+    'Whether the rule class is grouped in the TabRules of the given logic.'
     if not isrulecls(rule):
         return False
     try:
@@ -974,19 +942,9 @@ def set_classes(options: dict):
         options['classes'] = options['class']
         del options['class']
 
-
 # helper.connect_sphinx(app, 'autodoc-process-signature',
 #     'sphinx_filter_signature',
 # )
-
-# helper.connect_sphinx(app, 'build-finished',
-
-# )
-
-# helper.connect_sphinx(app, 'object-description-transform',
-#     'sphinx_evtest',
-# )
-
 # def sphinx_evtest(self, app, domain, objtype, contentnode):
 #     #print('\n\n\n', (domain, objtype, contentnode), '\n')
 #     # if pagename == '_modules/logics/fde':
@@ -995,22 +953,6 @@ def set_classes(options: dict):
 #     # # print('\n\n\n', (pagename, templatename), '\n')
 #     pass
 
-# class ParseRenderDirective(Directive):
-#     sp = Parser('standard', examples.preds)
-#     sw = create_swriter(
-#         notation = 'standard',
-#         symbol_set = 'html',
-#     )
-#     has_content = True
-#     required_arguments = 0
-#     optional_arguments = 2
-#     final_argument_whitespace = False
-#     def run(self):
-#         print('\n'.join((
-#             '\ncontent:\n', str(self.content),
-#         )))
-#         node = docnodes.inline(text=self.sw.write(self.sp.parse('A V ~A')))
-#         return [node]
 # def sphinx_filter_signature(self, app, what, name, obj, options, signature, return_annotation):
 #     raise NotImplementedError()
 #     if what == 'class' and name.startswith('logics.') and '.TabRules.' in name:

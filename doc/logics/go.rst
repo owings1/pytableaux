@@ -4,7 +4,7 @@
 GO - Gappy Object Logic
 ***********************
 
-GO is a 3-valued logic (:m:`T`, :m:`F`, and :m:`N`) with non-standard readings of
+GO is a 3-valued logic (V{T}, V{F}, and V{N}) with non-standard readings of
 disjunction and conjunction, as well as different behavior of the quantifiers.
 
 .. contents:: :local:
@@ -30,9 +30,9 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
               //truth_tables//go//
 
               Note that, given the tables above, conjunctions and disjunctions
-              always have a classical value (:m:`T` or :m:`F`). This means that
+              always have a classical value (V{T} or V{F}). This means that
               only atomic sentences (with zero or more negations) can have the
-              non-classical :m:`N` value.
+              non-classical V{N} value.
 
               This property of "classical containment" means, that we can define
               a conditional operator that satisfies Identity :s:`A $ A`. It also
@@ -46,8 +46,8 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 
         .. automethod:: value_of_universal(sentence)
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical consequence is defined just like in :m:`K3`:
     

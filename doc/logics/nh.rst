@@ -26,14 +26,14 @@ NH - Paraconsistent Hybrid Logic
 
             //truth_tables//nh//
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
-    **Logical Consequence** is defined, just as in :ref:`FDE <FDE>` and :ref:`LP`, in
-    terms of *designated* values :m:`T` and :m:`B`:
+    **Logical Consequence** is defined, just as in L{FDE} and :ref:`LP`, in
+    terms of *designated* values V{T} and V{B}:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a
-      *desginated* value (:m:`T` or :m:`B`) are models where *C* also has a
+      *desginated* value (V{T} or V{B}) are models where *C* also has a
       *designated* value.
 
     Tableaux System

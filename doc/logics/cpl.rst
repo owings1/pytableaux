@@ -5,7 +5,7 @@ CPL - Classical Predicate Logic
 *******************************
 
 Classical Predicate Logic (CPL) is the standard bivalent logic with
-values :m:`T` and :m:`F`, commonly interpretated as 'true' and 'false',
+values V{T} and V{F}, commonly interpretated as 'true' and 'false',
 respectively.
 
 .. contents:: :local:
@@ -38,7 +38,7 @@ respectively.
             The value of predicated sentences are handled in terms of their *extension*:
 
                 | A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
-                | has the value :m:`T` iff :m:`ntuple` is in the extension of :math:`P`.
+                | has the value V{T} iff :m:`ntuple` is in the extension of :math:`P`.
 
 
         .. Note:: CPL does not give a treatment of the quantifiers. Quantified sentences
@@ -47,8 +47,8 @@ respectively.
 
     .. _cpl-consequence:
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     **Logical Consequence** is defined in the standard way:
 

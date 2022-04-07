@@ -4,7 +4,7 @@
 :m:`RM3` - R-mingle 3
 *********************
 
-R-mingle 3 (:m:`RM3`) is a three-valued logic with values :m:`T`, :m:`F`, and :m:`B`.
+R-mingle 3 (:m:`RM3`) is a three-valued logic with values V{T}, V{F}, and V{B}.
 It is similar to :ref:`LP`, with a different conditional operator.
 
 .. contents:: :local:
@@ -29,11 +29,11 @@ It is similar to :ref:`LP`, with a different conditional operator.
 
             //truth_tables//rm3//
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
-    Logical consequence is defined, just as in :ref:`FDE <FDE>`, in terms of
-    *designated* values :m:`T` and :m:`B`:
+    Logical consequence is defined, just as in L{FDE}, in terms of
+    *designated* values V{T} and V{B}:
     
     .. include:: include/fde/m.consequence.rst
 

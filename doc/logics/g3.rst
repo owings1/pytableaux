@@ -4,7 +4,7 @@
 :m:`G3` - Gödel 3-valued logic
 ******************************
 
-Gödel 3-valued logic (:m:`T`, :m:`F`, and :m:`N`) with classical-like negation.
+Gödel 3-valued logic (V{T}, V{F}, and V{N}) with classical-like negation.
 
 .. contents:: :local:
 
@@ -29,8 +29,8 @@ Gödel 3-valued logic (:m:`T`, :m:`F`, and :m:`N`) with classical-like negation.
 
             //truth_tables//g3//
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical consequence is defined just like in :m:`K3`:
     

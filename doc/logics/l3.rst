@@ -1,11 +1,11 @@
 .. _L3:
 
-************************************
-:m:`L3` - Łukasiewicz 3-valued Logic
-************************************
+********************************************
+L{L3} - Łukasiewicz 3-valued Logic
+********************************************
 
-:m:`L3` is a three-valued logic with values :m:`T`, :m:`F`, and :m:`N`. It is
-similar to :ref:`K3 <K3>`, but with a different, primitive conditional 
+L{L3} is a three-valued logic with values V{T}, V{F}, and V{N}. It is
+similar to {@K3}, but with a different, primitive conditional 
 operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
 .. contents:: :local:
@@ -15,6 +15,8 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
     Semantics
     =========
 
+    .. _l3-model:
+
     .. autoclass:: Model
 
         .. autoclass:: logics.l3::Model.Value()
@@ -23,20 +25,25 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
         .. include:: include/fde/m.attributes.rst
 
-        .. method:: truth_function(operator, a, b)
+    .. _l3-truth-tables:
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+    Truth Tables
+    ------------
 
-            //truth_tables//l3//
+    .. include:: include/truth_table_blurb.rst
 
-    Logical Consequence
-    -------------------
+    //truth_tables//l3//
+
+    .. _l3-consequence:
+
+    Consequence
+    -----------
 
     Logical consequence is defined just like in :m:`K3`:
     
     .. include:: include/k3/m.consequence.rst
 
+    .. _l3-system:
 
     Tableaux System
     ===============
@@ -44,13 +51,15 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
+    .. _l3-rules:
+
     .. autoclass:: TabRules
         :members:
 
     Notes
     =====
 
-    * Łukasiewicz, J. (1920). On 3-valued logic. Ruch Filozoficzny 5, 169–171.
+    * Łukasiewicz, J. (1920). On 3-valued logic. Ruch Filozoficzny 5, 169-171.
 
-    * Łukasiewicz, J. (1957). Aristotle’s Syllogistic from the Standpoint of Modern
+    * Łukasiewicz, J. (1957). Aristotle's Syllogistic from the Standpoint of Modern
       Formal Logic. Oxford: Clarendon Press

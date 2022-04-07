@@ -46,8 +46,8 @@ accessibility relation, which states that for every world *w*,
 
     This is witnessed in the tableaux system through the :ref:`Reflexive Rule <reflexive-rule>`.
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical Consequence is defined just as in :ref:`K <K>`:
 

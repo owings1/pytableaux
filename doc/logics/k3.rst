@@ -18,57 +18,66 @@ as {@FDE} without the V{B} value.
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.k3::Model.Value()
-            :members: F, N, T
-            :undoc-members:
+      .. autoclass:: logics.k3::Model.Value()
+          :members: F, N, T
+          :undoc-members:
 
-        .. include:: include/fde/m.attributes.rst
+      .. include:: include/fde/m.attributes.rst
 
-        .. method:: truth_function(operator, a, b)
+    .. _k3-truth-tables:
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+    Truth Tables
+    ------------
 
-            //truth_tables//k3//
+    .. include:: include/truth_table_blurb.rst
 
-        .. method:: value_of_predicated(sentence)
+    //truth_tables//k3//
 
-            Like L{FDE}, L{K3} predication defines a predicate's
-            *extenstion* and *anti-extension*. The value of a predicated sentence
-            is determined as follows:
+    .. _k3-predication:
 
-            .. include:: include/k3/m.predication.rst
+    Predication
+    -----------
 
-            Note, unlike L{FDE}, there is an *exclusivity constraint*
-            on a predicate's extension/anti-extension. This means that :m:`ntuple`
-            cannot be in **both** the extension and the anti-extension of `P`.
+    Like L{FDE}, L{K3} predication defines a predicate's *extenstion* and
+    *anti-extension*. The value of a predicated sentence is determined as
+    follows:
 
-            Like L{FDE}, there is no *exhaustion constraint*: there are
-            permissible L{K3} models where some tuple :m:`ntuple` is in **neither**
-            the extension nor the anti-extension of some predicate :math:`P`.
+    .. include:: include/k3/m.predication.rst
 
-        .. method:: value_of_existential(sentence)
+    Note, unlike L{FDE}, there is an *exclusivity constraint*
+    on a predicate's extension/anti-extension. This means that :{ntuple}
+    cannot be in *both* the extension and the anti-extension of :math:`P`.
 
-            The Existential quantifier :s:`X` is interpreted similary to
-            :ref:`FDE <fde-model>`, without the V{B} value.
+    Like L{FDE}, there is no *exhaustion constraint*: there are
+    permissible L{K3} models where some tuple :{ntuple} is in *neither*
+    the extension nor the anti-extension of some predicate :math:`P`.
 
-            .. include:: include/k3/m.existential.rst
+    .. _k3-quantification:
 
-        .. method:: value_of_universal(sentence)
+    Quantification
+    --------------
 
-            The Universal quantifier :s:`L` is interpreted similary to
-            :ref:`FDE <fde-model>`, without the V{B} value.
+    The quantifiers :s:`X` and :s:`L` are interpreted similary to
+    :ref:`FDE <fde-quantification>`, without the V{B} value.
 
-            .. include:: include/k3/m.universal.rst
+    Existential
+    ^^^^^^^^^^^
+
+    .. include:: include/k3/m.existential.rst
+
+    Universal
+    ^^^^^^^^^
+
+    .. include:: include/k3/m.universal.rst
 
     .. _k3-consequence:
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     **Logical Consequence** uses the same formulation as {@CPL consequence}:
 
-        .. include:: include/k3/m.consequence.rst
+    .. include:: include/k3/m.consequence.rst
 
     Alternatively, we can use the formulating of {@FDE consequence} in terms of
     *designated* values, since L{K3} has only the designated value V{T}.

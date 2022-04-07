@@ -36,8 +36,8 @@ rules for the quantifiers, given the behavior of those operators in :ref:`K3W <K
 
         .. automethod:: value_of_universal(sentence)
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical consequence is defined just like in :m:`K3`:
     

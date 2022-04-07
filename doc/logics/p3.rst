@@ -12,7 +12,7 @@
 
     Emil Post
 
-Emil Post's three-valued logic (:m:`T`, :m:`F`, and :m:`N`) has a deviant negation
+Emil Post's three-valued logic (V{T}, V{F}, and V{N}) has a deviant negation
 that performs a *cyclic shift* in value. The result is a system much different
 from :ref:`CFOL`, as well as more well-known many-valued systems.
 
@@ -75,8 +75,8 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
             function to that maximum value. The result is the value of the universal
             sentence.
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical consequence is defined just like in :m:`K3`:
     

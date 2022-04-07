@@ -55,8 +55,8 @@ of :ref:`CFOL <CFOL>`, adding the modal operators for possibility and necessity.
 
         .. automethod:: value_of_necessity(sentence)
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     .. _k-consequence:
 

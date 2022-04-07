@@ -1,18 +1,18 @@
 .. _FDE:
 
-*****************************
-FDE - First Degree Entailment
-*****************************
+***************************************
+L{FDE} - First Degree Entailment
+***************************************
 
 .. contents:: :local:
 
-FDE is a 4-valued logic (:m:`T`, :m:`F`, :m:`N` and :m:`B`). A common interpretation of these
-values is:
+L{FDE} is a 4-valued logic (V{T}, V{F}, V{N} and V{B}). A common reading
+of these values is:
 
-- :m:`T`: just true
-- :m:`F`: just false
-- :m:`N`: neither true nor false
-- :m:`B`: both true and false
+- V{T}: just true
+- V{F}: just false
+- V{N}: neither true nor false
+- V{B}: both true and false
 
 .. automodule:: logics.fde
 
@@ -23,57 +23,79 @@ values is:
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.fde::Model.Value()
-            :members: F, N, B, T
-            :undoc-members:
+      .. autoclass:: logics.fde::Model.Value()
+          :members: F, N, B, T
+          :undoc-members:
 
-        .. include:: include/fde/m.attributes.rst
+      .. autoattribute:: designated_values
 
-        .. method:: truth_function(operator, a, b)
+      .. autoattribute:: extensions
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+      .. autoattribute:: anti_extensions
 
-            //truth_tables//fde//
+      .. autoattribute:: atomics
 
-        .. method:: value_of_predicated(sentence)
+    .. _fde-truth-tables:
 
-            A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
-            has the value:
+    Truth Tables
+    ------------
 
-            * :m:`T` iff :m:`ntuple` is in the *extension* of :math:`P` and
-              not in the *anti-extension* of :math:`P`.
+    .. include:: include/truth_table_blurb.rst
 
-            * :m:`F` iff :m:`ntuple` is in the *anti-extension* of :math:`P`
-              and not in the *extension* of :math:`P`.
+    //truth_tables//fde//
 
-            * :m:`B` iff :m:`ntuple` is in **both** the extension and anti-extension
-              of :math:`P`.
+    .. _fde-predication:
 
-            * :m:`N` iff :m:`ntuple` is in **neither** in the extension nor the 
-              anti-extension of :math:`P`.
+    Predication
+    -----------
 
-            Note, for FDE, there is no *exclusivity* nor *exhaustion* constraint on a predicate's
-            extension and anti-extension. This means that :m:`ntuple` could be in *neither*
-            the extension nor the anti-extension of a predicate, or it could be in *both* the extension
-            and the anti-extension.
+    A sentence with *n*-ary predicate :math:`P` over parameters :{ntuple}
+    has the value:
 
-        .. method:: value_of_existential(sentence)
+    * V{T} iff :{ntuple} is in the *extension* of :math:`P` and
+      not in the *anti-extension* of :math:`P`.
 
-            .. include:: include/fde/m.existential.rst
+    * V{F} iff :{ntuple} is in the *anti-extension* of :math:`P`
+      and not in the *extension* of :math:`P`.
 
-        .. method:: value_of_universal(sentence)
+    * V{B} iff :{ntuple} is in *both* the extension and anti-extension
+      of :math:`P`.
 
-            .. include:: include/fde/m.universal.rst
+    * V{N} iff :{ntuple} is in *neither* in the extension nor the 
+      anti-extension of :math:`P`.
+
+    Note, for L{FDE}, there is no *exclusivity* nor *exhaustion* constraint on a
+    predicate's extension and anti-extension. This means that :{ntuple} could
+    be in *neither* the extension nor the anti-extension of a predicate, or it
+    could be in *both* the extension and the anti-extension.
+
+    .. _fde-quantification:
+
+    Quantification
+    --------------
+
+    Existential
+    ^^^^^^^^^^^
+
+    The value of an existential sentence is the maximum value of the sentences that
+    result from replacing each constant for the quantified variable. The ordering of
+    the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
+
+    Universal
+    ^^^^^^^^^
+
+    The value of an universal sentence is the minimum value of the sentences that
+    result from replacing each constant for the quantified variable. The ordering of
+    the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
 
     .. _fde-consequence:
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
-    **Logical Consequence** is defined in terms of the *designated* values :m:`T` and :m:`B`:
+    **Logical Consequence** is defined in terms of the *designated* values V{T} and V{B}:
 
-        .. include:: include/fde/m.consequence.rst
+      .. include:: include/fde/m.consequence.rst
 
     .. _fde-system:
 
@@ -91,20 +113,23 @@ values is:
     Notes
     =====
 
-    Some notable features of FDE include:
+    Some notable features of L{FDE} include:
 
     * No logical truths. The means that the Law of Excluded Middle :s:`A V ~A`, and the
-      Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as Conditional Identity :s:`A $ A`.
+      Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as Conditional Identity
+      :s:`A $ A`.
   
-    * Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical validities.
+    * Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical
+      validities.
 
-    * DeMorgan laws are valid, as well as Conditional Contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
+    * DeMorgan laws are valid, as well as Conditional Contraction (:s:`A $ (A $ B)`
+      implies :s:`A $ B`).
 
     References
     ==========
 
-    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
-      United Kingdom, Oxford University Press, 2003.
+    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and
+      Many-valued Logic. United Kingdom, Oxford University Press, 2003.
 
     * Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
       Cambridge University Press, 2008.

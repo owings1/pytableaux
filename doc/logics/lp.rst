@@ -1,11 +1,11 @@
 .. _LP:
 
-*********************
-LP - Logic of Paradox
-*********************
+*****************************
+L{LP} - Logic of Paradox
+*****************************
 
-LP is a 3-valued logic (:m:`T`, :m:`F`, and :m:`B`). It can be understood as
-:ref:`FDE <FDE>` without the :m:`N` value.
+L{LP} is a 3-valued logic (V{T}, V{F}, and V{B}). It can be understood as
+{@FDE} without the V{N} value.
 
 .. contents:: :local:
 
@@ -14,36 +14,69 @@ LP is a 3-valued logic (:m:`T`, :m:`F`, and :m:`B`). It can be understood as
     Semantics
     =========
 
+    .. _lp-model:
+
+    Model
+    -----
+
     .. autoclass:: Model
 
-        .. autoclass:: logics.lp::Model.Value()
-            :members: F, B, T
-            :undoc-members:
+      .. autoclass:: logics.lp::Model.Value()
+          :members: F, B, T
+          :undoc-members:
 
-        .. include:: include/fde/m.attributes.rst
+      .. autoattribute:: designated_values
 
-        .. method:: truth_function(operator, a, b)
+      .. autoattribute:: extensions
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+      .. autoattribute:: anti_extensions
 
-            //truth_tables//lp//
+      .. autoattribute:: atomics
 
-        .. method:: value_of_predicated(sentence)
+    .. _lp-truth-tables:
 
-            A sentence with predicate `P` with parameters :m:`ntuple` has the value:
+    Truth Tables
+    ------------
 
-            * V{T} iff :{ntuple} is in the extension of `P` and not in the
-              anti-extension of `P`.
-            * :m:`F` iff :m:`ntuple` is in the anti-extension of `P` and not
-              in the extension of `P`.
-            * :m:`B` iff :m:`ntuple` is in both the extension and anti-extension
-              of `P`.
+    .. include:: include/truth_table_blurb.rst
 
-            Note, unlike :ref:`FDE <FDE>`, there is an exhaustion constraint on a predicate's
-            extension/anti-extension. This means that :m:`ntuple` must be in either the
-            extension and the anti-extension of `P`. Like L{FDE}, there is no exclusion
-            restraint.
+    //truth_tables//lp//
+
+    .. _lp-predication:
+
+    Predication
+    -----------
+
+    A sentence with predicate `P` with parameters :{ntuple} is assigned a
+    value as follows:
+
+    * V{T} iff :{ntuple} is in the extension of `P` and not in the
+      anti-extension of `P`.
+
+    * V{F} iff :{ntuple} is in the anti-extension of `P` and not
+      in the extension of `P`.
+
+    * V{B} iff :{ntuple} is in both the extension and anti-extension
+      of `P`.
+
+    Note, unlike {@FDE}, there is an *exhaustion constraint* on a predicate's
+    extension/anti-extension. This means that :{ntuple} must be in either the
+    extension and the anti-extension of `P`. Like L{FDE}, there is no exclusion
+    restraint.
+
+    .. _lp-consequence:
+
+    Consequence
+    -----------
+
+    **Logical Consequence** is defined, just as in {@FDE}, in terms of *designated*
+    values V{T} and V{B}:
+
+    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a
+      *desginated* value (V{T} or V{B}) are models where *C* also has a *designated*
+      value.
+
+    .. _lp-system:
 
     Tableaux System
     ===============
@@ -51,32 +84,25 @@ LP is a 3-valued logic (:m:`T`, :m:`F`, and :m:`B`). It can be understood as
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
+    .. _lp-rules:
+
     .. autoclass:: TabRules
         :members:
-
-    Logical Consequence
-    -------------------
-
-    **Logical Consequence** is defined, just as in :ref:`FDE <FDE>`, in terms of *designated*
-    values :m:`T` and :m:`B`:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated*
-      value (:m:`T` or :m:`B`) are models where *C* also has a *designated* value.
 
     Notes
     =====
 
-    Some notable features of LP include:
+    Some notable features of L{LP} include:
 
-    * Everything valid in :ref:`FDE <FDE>` is valid in LP.
+    * Everything valid in {@FDE} is valid in L{LP}.
 
-    * Like :ref:`FDE <FDE>`, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
+    * Like {@FDE}, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
 
-    * Unlike :ref:`FDE <FDE>`, LP has some logical truths. For example, the Law of Excluded
+    * Unlike {@FDE}, L{LP} has some logical truths. For example, the Law of Excluded
       Middle (:s:`(A V ~A)`), and Conditional Identity (:s:`(A $ A)`).
 
-    * Many classical validities fail, such as Modus Ponens, Modus Tollens, and Disjunctive
-      Syllogism.
+    * Many classical validities fail, such as Modus Ponens, Modus Tollens,
+      and Disjunctive Syllogism.
 
     * DeMorgan laws are valid.
 
@@ -88,6 +114,7 @@ LP is a 3-valued logic (:m:`T`, :m:`F`, and :m:`B`). It can be understood as
 
     For futher reading see:
 
-    * `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
+    * `Stanford Encyclopedia entry on paraconsistent logic
+      <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
 
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en

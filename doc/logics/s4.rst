@@ -52,8 +52,8 @@ Normal modal logic with reflexive and transitive access relation.
     This is witnessed in the tableaux system through the :ref:`Transitive Rule
     <transitive-rule>`.
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical Consequence is defined just as in :ref:`K <K>`:
 

@@ -1,12 +1,12 @@
 .. _B3E:
 
-******************************************
-:m:`B3E` - Bochvar 3-valued External Logic
-******************************************
+*************************************************
+L{B3E} - Bochvar 3-valued External Logic
+*************************************************
 
-:m:`B3E` is a three-valued logic with values :m:`T`, :m:`F`, and :m:`N`. :m:`B3E`
-is similar to :ref:`K3W <K3W>`, with a special Assertion operator, that always
-results in a classical value (:m:`T` or :m:`F`).
+L{B3E} is a three-valued logic with values V{T}, V{F}, and V{N}. L{B3E}
+is similar to :ref:`K3W <K3W>`, with a special Assertion operator, that
+always results in a classical value (V{T} or V{F}).
 
 .. contents:: :local:
 
@@ -19,82 +19,104 @@ results in a classical value (:m:`T` or :m:`F`).
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.b3e::Model.Value()
-            :members: F, N, T
-            :undoc-members:
-            :noindex:
+      .. autoclass:: logics.b3e::Model.Value()
+          :members: F, N, T
+          :undoc-members:
+          :noindex:
 
-        .. include:: include/fde/m.attributes.rst
+      .. include:: include/fde/m.attributes.rst
 
-        .. method:: truth_function(operator, a, b)
+    .. _b3e-truth-tables:
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+    Truth Tables
+    ------------
 
-            //truth_tables//b3e//
+    .. include:: include/truth_table_blurb.rst
 
-            Note that the conditional operator :s:`$` is definable in terms of the
-            assertion operator :s:`*`:
-            
-            .. cssclass:: definition
-            
-                :s:`A $ B` :math:`:=` :s:`~*A V *B` 
+    //truth_tables//b3e//
 
-            Bochvar also defined `external` versions of :s:`&` and :s:`V`
-            using the assertion operator:
+    Note that the Conditional operator :s:`$` is definable in terms of
+    the Assertion operator :s:`*`:
+    
+    .. cssclass:: definition
+    
+      :s:`A $ B` :math:`:=` :s:`~*A V *B`
 
-            .. cssclass:: definiendum
-            
-            External Conjunction
+    .. _b3e-external-connectives:
 
-            .. cssclass:: definiens
+    External Connectives
+    --------------------
 
-            :s:`A` :s:`&`:sub:`ext` :s:`B` :math:`:=` :s:`*A & *B`
+    Bochvar also defined `external` versions of :s:`&` and :s:`V`
+    using :s:`*`:
 
-            .. cssclass:: definiendum
+    .. cssclass:: definiendum
+    
+    External Conjunction
 
-            External Disjunction
+    .. cssclass:: definiens
 
-            .. cssclass:: definiens
+    :s:`A` :s:`&`:sub:`ext` :s:`B` :math:`:=` :s:`*A & *B`
 
-            :s:`A` :s:`V`:sub:`ext` :s:`B` :math:`:=` :s:`*A V *B`
+    .. cssclass:: definiendum
 
-            These connectives always result in a classical value. For compatibility,
-            we use the standard `internal` readings of :s:`$` and :s:`V`,
-            and use the `internal` reading for :s:`$` and :s:`%`.
+    External Disjunction
 
-        .. method:: value_of_predicated(sentence)
+    .. cssclass:: definiens
 
-            :m:`B3E` predication is defined just as in :m:`K3`:
+    :s:`A` :s:`V`:sub:`ext` :s:`B` :math:`:=` :s:`*A V *B`
 
-            .. include:: include/k3/m.predication.rst
+    These connectives always result in a classical value (V{T} or V{F}).
+    For compatibility, we use the standard `internal` readings of :s:`$`
+    and :s:`V`, and use the `internal` reading for :s:`$` and :s:`%`.
 
-        .. method:: value_of_existential(sentence)
+    .. _b3e-predication:
 
-            Existential quantification is defined just as in :m:`K3`:
+    Predication
+    -----------
 
-            .. include:: include/k3/m.existential.rst
+    L{B3E} predication is defined just as in L{K3}:
 
-        .. method:: value_of_universal(sentence)
+    .. include:: include/k3/m.predication.rst
 
-            Universal quantification is defined just as in :m:`K3`:
+    .. _b3e-quantification:
 
-            .. include:: include/k3/m.existential.rst
+    Quantification
+    --------------
+
+    The quantifiers :s:`X` and :s:`L` are interpreted just as in L{K3}.
+
+    Existential
+    ^^^^^^^^^^^
+
+    .. include:: include/k3/m.existential.rst
+
+    Universal
+    ^^^^^^^^^
+
+    .. include:: include/k3/m.universal.rst
+
+    .. _b3e-consequence:
         
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
-    Logical consequence is defined just like in :m:`K3`:
+    Logical consequence is defined just like in L{K3}:
     
     .. include:: include/k3/m.consequence.rst
 
-    Tableaux System
-    ===============
-
     .. _b3e-system:
+
+    Tableaux
+    ========
 
     .. autoclass:: TableauxSystem
         :members: build_trunk
+
+    .. _b3e-rules:
+
+    Rules
+    -----
 
     .. cssclass:: tableaux-rules
 
@@ -104,13 +126,13 @@ results in a classical value (:m:`T` or :m:`F`).
     Notes
     =====
 
-    * Unlike :ref:`K3W`, :m:`B3E` has some logical truths. For example
+    * Unlike L{K3W}, L{B3E} has some logical truths. For example
       :s:`(A $ B) V ~(A $ B)`. This logical truth is an instance of the
       Law of Excluded Middle.
 
-    * The assertion operator can express alternate versions of validities that
-      fail in :ref:`K3W`. For example, :s:`A` implies :s:`A V *B` in :m:`B3E`,
-      which fails in :ref:`K3W`.
+    * The Assertion operator :s:`*` can express alternate versions of validities
+      that fail in L{K3W}. For example, :s:`A` implies :s:`A V *B` in L{B3E},
+      which fails in L{K3W}.
 
     * D. A. Bochvar published his paper in 1938. An English translation by Merrie
       Bergmann was published in 1981. *On a three-valued logical calculus and its

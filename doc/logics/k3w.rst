@@ -4,14 +4,14 @@
 :m:`K3W` - Weak Kleene Logic
 ****************************
 
-:m:`K3W` is a 3-valued logic with values :m:`T`, :m:`F`, and :m:`N`. The logic is
-similar to :ref:`K3 <K3>`, but with slightly different behavior of the :m:`N` value.
+:m:`K3W` is a 3-valued logic with values V{T}, V{F}, and V{N}. The logic is
+similar to :ref:`K3 <K3>`, but with slightly different behavior of the V{N} value.
 This logic is also known as Bochvar Internal (:m:`B3`). A common interpretation of
 these values is:
 
-- :m:`T`: just true
-- :m:`F`: just false
-- :m:`N`: meaningless (or senseless)
+- V{T}: just true
+- V{F}: just false
+- V{N}: meaningless (or senseless)
 
 .. contents:: :local:
 
@@ -37,8 +37,8 @@ these values is:
 
             //truth_tables//k3w//
 
-            Note that, for the binary connectives, if either operand has the value :m:`N`,
-            then the whole sentence has the value :m:`N`. To (re-)quote a Chinese proverb,
+            Note that, for the binary connectives, if either operand has the value V{N},
+            then the whole sentence has the value V{N}. To (re-)quote a Chinese proverb,
             "a single jot of rat's dung spoils the soup."
 
         .. method:: value_of_predicated(sentence)
@@ -65,8 +65,8 @@ these values is:
             conjunction and disjunction to :s:`L` and :s:`X`.
 
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical consequence is defined just like in :m:`K3`:
     

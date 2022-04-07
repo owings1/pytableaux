@@ -53,8 +53,8 @@ a world *w'* such that *w* accesses *w'*.
 
     This is witnessed in the tableaux system through the :ref:`Serial Rule <serial-rule>`.
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical Consequence is defined just as in :ref:`K <K>`:
 

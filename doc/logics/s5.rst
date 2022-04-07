@@ -59,8 +59,8 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
     This is witnessed in the tableaux system through the :ref:`Symmetric Rule
     <symmetric-rule>`.
 
-    Logical Consequence
-    -------------------
+    Consequence
+    -----------
 
     Logical Consequence is defined just as in :ref:`K <K>`:
 
