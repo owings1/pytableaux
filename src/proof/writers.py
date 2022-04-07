@@ -66,7 +66,7 @@ class TabWriter(metaclass = TabWriterMeta):
     def attachments(self, tableau: Tableau, /) -> Mapping[str, Any]:
         return {}
 
-    def write(self, tableau: Tableau, /):
+    def write(self, tableau: Tableau, /) -> str:
         return self._write_tableau(tableau)
 
     __call__ = write

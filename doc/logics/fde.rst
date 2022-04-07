@@ -6,18 +6,30 @@ L{FDE} - First Degree Entailment
 
 .. contents:: :local:
 
-L{FDE} is a 4-valued logic (V{T}, V{F}, V{N} and V{B}). A common reading
-of these values is:
-
-- V{T}: just true
-- V{F}: just false
-- V{N}: neither true nor false
-- V{B}: both true and false
+------------------------
 
 .. automodule:: logics.fde
 
+    .. _fde-semantics:
+
     Semantics
     =========
+
+    .. _fde-truth-values:
+
+    Truth Values
+    ------------
+
+    L{FDE} is a 4-valued logic (V{T}, V{F}, V{N} and V{B}). One common reading
+    of these values is:
+
+    - V{T}: just true
+    - V{F}: just false
+    - V{N}: neither true nor false
+    - V{B}: both true and false
+
+    Model
+    -----
 
     .. _fde-model:
 
@@ -93,19 +105,23 @@ of these values is:
     Consequence
     -----------
 
-    **Logical Consequence** is defined in terms of the *designated* values V{T} and V{B}:
+    **Logical Consequence** is defined in terms of the set of *designated* values
+    V{T, B}:
 
       .. include:: include/fde/m.consequence.rst
 
     .. _fde-system:
 
-    Tableaux System
-    ===============
+    Tableaux
+    ========
 
     .. autoclass:: TableauxSystem
         :members:
 
     .. _fde-rules:
+
+    Rules
+    -----
 
     .. autoclass:: TabRules
         :members:

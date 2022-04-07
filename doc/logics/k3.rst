@@ -90,6 +90,11 @@ as {@FDE} without the V{B} value.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
+    .. _k3-rules:
+
+    Rules
+    -----
+
     .. autoclass:: TabRules
         :members:
 
