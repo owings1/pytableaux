@@ -29,7 +29,7 @@ MH - Paracomplete Hybrid Logic
     Consequence
     -----------
 
-    Logical consequence is defined just like in :m:`K3`:
+    Logical consequence is defined just like in L{K3}:
     
     .. include:: include/k3/m.consequence.rst
 

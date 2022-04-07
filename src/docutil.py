@@ -45,22 +45,18 @@ from proof.tableaux import (
 )
 from tools.abcs import F, MapProxy
 from tools.decorators import closure, overload, wraps
+from tools.hybrids import qsetf
 from tools.misc import get_logic
 
 from collections import defaultdict
 from docutils import nodes as docnodes
-import docutils.parsers.rst.directives as directives
+# import docutils.parsers.rst.directives as directives
 from html import (
     escape as htmlesc,
     unescape as htmlun,
 )
 from inspect import getsource
 import os
-from os.path import (
-    abspath,
-    basename as bname,
-    join as pjoin,
-)
 import re
 from sphinx.application import Sphinx
 from sphinx.util import logging
@@ -84,7 +80,7 @@ from typing import Any, Callable
 
 
 logger = logging.getLogger(__name__)
-
+doc_suffix = '.rst'
 # From: https://docutils.sourceforge.io/docs/howto/rst-roles.html
 #
 # > Role functions return a tuple of two values:
@@ -97,11 +93,79 @@ logger = logging.getLogger(__name__)
 # >   immediately after the end of the current block (can also be empty).
 _RoleRet = tuple[list[docnodes.Node], list[str]]
 
+Metawrite = {
+    'prefixes' : {
+        'L': 'logic_name',
+        'V': 'truth_value',
+        '!': 'fixed',
+    },
+}
+Metawrite.update({
+    'patterns': {
+        'prefixed': r'(?P<raw>(?P<prefix>[%s]){(?P<value>.*?)})' % (
+            re.escape(''.join(Metawrite['prefixes'].keys()))
+        ),
+    },
+})
+Metawrite['patterns'].update({
+    'prefixed_role': '^%s$' % Metawrite['patterns']['prefixed']
+})
+Metawrite.update({
+    'modes': {
+        'fixed': {
+            'ntuple': {
+                'rend': '\\langle a_0,...,a_n\\rangle',
+                'classes': ('tuple', 'ntuple'),
+            },
+        },
+        'logic_name': {
+            'match': {
+                r'^(?:(?P<main>B|G|K|L|Ł|P|RM)(?P<down>3))$' : ('subber',),
+                r'^(?:(?P<main>B)(?P<up>3)(?P<down>E))$'  : ('subsup',),
+                r'^(?:(?P<main>K)(?P<up>3)(?P<down>WQ?))$': ('subsup',),
+                # r'^(?P<name>(?P<main>B|K)(?P<up>3)(?P<down>E|WQ?))$': 'subsup',
+                #{'B3E', 'K3W', 'K3WQ'},
+                # r'^(B|K)3E|3(?P<down>WQ?)$': 'subsup',
+            },
+            'nodecls': docnodes.inline,
+            'nodecls_map': {
+                'main': docnodes.inline,
+                'up'  : docnodes.superscript,
+                'down': docnodes.subscript
+            },
+        },
+        'truth_value': {
+            'nodecls': docnodes.strong,
+        },
+        # Regex rewrite.
+        'rewrite': {
+            r'^(?:([a-zA-Z])-)?ntuple$': {
+                'rep': lambda m, a='a': (
+                    f'\\langle {m[1] or a}_0,...,{m[1] or a}_n\\rangle'
+                ),
+                'classes': ('tuple', 'ntuple'),
+                'nodecls': docnodes.math,
+            },
+            r'^(w)([0-9]+)$': {
+                'rep': r'\1_\2',
+                'classes': ('modal', 'world'),
+                'nodecls': docnodes.math,
+            }
+        },
+    },
+    'generic': {
+        # Math symbol replace.
+        'math_symbols': {
+            r'<': re.escape('\\langle '),
+            r'>': re.escape('\\rangle'),
+        }
+    },
+})
+
+
 class Helper:
 
     _defaults = MapProxy(dict(
-        doc_dir          = abspath(pjoin(os.path.dirname(__file__), '../doc')),
-        logics_doc_dir   = 'logics',
         template_dir     = 'templates',
         truth_table_tmpl = 'truth_table.jinja2',
         truth_tables_rev = True,
@@ -118,9 +182,8 @@ class Helper:
         helper = Helper(**opts)
         opts = helper.opts
 
-        includer = include_directive(app)
-        app.add_directive('inctest', includer)
-        app.add_directive('include', includer, override = True)
+        Include = include_directive(app)
+        app.add_directive('include', Include, override = True)
 
         helper.connect_sphinx(app, 'autodoc-process-docstring',
             helper.sphinx_obj_lines_append_autodoc,
@@ -148,28 +211,29 @@ class Helper:
 
     DIV_CLEAR = '<div class="clear"></div>'
 
-    def __init__(self, **opts):
-        from proof.writers import TabWriter
-        from tools.hybrids import qsetf
+    doc_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '../doc')
+    )
+    logic_docpath = os.path.join(doc_dir, 'logics')
+    logic_names = qsetf(
+        os.path.basename(file).removesuffix(doc_suffix).upper()
+        for file in os.listdir(logic_docpath)
+        if file.endswith(doc_suffix)
+    )
+    logic_union = '|'.join(sorted(logic_names, key = len, reverse = True))
 
+    def __init__(self, **opts):
+
+        from proof.writers import TabWriter
         import jinja2
 
         self.opts = opts = dict(self._defaults) | opts
 
         instcheck(opts['metawrite_roles'], tuple)
 
-        self.logic_names = qsetf(
-            bname('.'.join(file.split('.')[0:-1])).upper()
-            for file in os.listdir(
-                pjoin(opts['doc_dir'], opts['logics_doc_dir'])
-            )
-            if file.endswith('.rst')
-        )
-        self.logic_union = '|'.join(self.logic_names)
-
         self.jenv = jinja2.Environment(
             loader = jinja2.FileSystemLoader(
-                pjoin(opts['doc_dir'], opts['template_dir'])
+                os.path.join(self.doc_dir, opts['template_dir'])
             ),
             trim_blocks = True,
             lstrip_blocks = True,
@@ -179,6 +243,15 @@ class Helper:
 
         lwnotn = Notation(opts['write_notation'])
         self.lwhtml = LexWriter(lwnotn, 'html')
+
+        self.pwrule = TabWriter('html',
+            lw = self.lwhtml,
+            classes = ('example', 'rule'),
+        )
+        self.pwclosure = TabWriter('html',
+            lw = self.lwhtml,
+            classes = ('example', 'rule', 'closure'),
+        )
 
         # Make a RenderSet that renders subscript 2 as n.
         rskey = 'docutil.trunk'
@@ -194,15 +267,6 @@ class Helper:
                     )
                 )
             ))
-
-        self.pwrule = TabWriter('html',
-            lw = self.lwhtml,
-            classes = ('example', 'rule'),
-        )
-        self.pwclosure = TabWriter('html',
-            lw = self.lwhtml,
-            classes = ('example', 'rule', 'closure'),
-        )
         self.pwtrunk = TabWriter('html',
             lw = LexWriter(lwnotn, renderset = rstrunk),
             classes = ('example', 'build-trunk'),
@@ -252,7 +316,7 @@ class Helper:
             f'<{prule.__module__}.{prule.__qualname__}>`',
             '',
         ]
-        lines.extend(line.strip() for line in prule.__doc__.split('\n'))
+        lines.extend(map(str.strip, prule.__doc__.split('\n')))
         lines.append('')
         return indented(lines, indent)
 
@@ -400,21 +464,37 @@ class Helper:
             if check(obj):
                 lines += func(obj)
 
-    _simple_replace: tuple[tuple[str|re.Pattern, str|Callable], ...] = None
-    _line_replace  : tuple[tuple[str, str|re.Pattern, Callable], ...] = None
+    _simple_replace = None
+    _line_replace   = None
 
     @closure
     def _simple_replace_common():
 
         def logic_ref(match: re.Match):
-            name: str = match.group(1)
-            sect: str|None = match.group(2)
+            matchd = match.groupdict()
+            name = matchd['name']
+            sect: str|None = matchd['sect']
+            anchor: str|None = matchd['anchor']
             if sect is None:
-                anchor = title = name
+                title = name
             else:
-                anchor = f'{name}-{sect.strip()}'.lower()
-                title = f'{name}{sect}'
-            return f":ref:`{title} <{anchor}>`"
+                title = f'{name} {sect}'.strip()
+            if anchor is None:
+                if sect is None:
+                    slug = name
+                else:
+                    #   `FDE truth tables <fde-truth-tables>`
+                    slug = '-'.join(re.split(r'\s+', title.lower()))
+                anchor = f'<{slug}>'
+            return f":ref:`{title} {anchor}`"
+            # name: str = match.group(1)
+            # sect: str|None = match.group(2)
+            # if sect is None:
+            #     anchor = title = name
+            # else:
+            #     anchor = f'{name}-{sect.strip()}'.lower()
+            #     title = f'{name}{sect}'
+            # return f":ref:`{title} <{anchor}>`"
 
         def getdefns(self: Helper):
             defns = self._simple_replace
@@ -422,55 +502,45 @@ class Helper:
                 return defns
 
             opts = self.opts
-            metawrite_name = opts['metawrite_roles'][0]
+            # metawrite_name = opts['metawrite_roles'][0]
 
-            def rolewrap_metawrite(match: re.Match):
-                return f"{match[1]}:{metawrite_name}:`{match[2]}`"
+            # def metawrite_wrap(match: re.Match):
+            #     return f"{match[1]}:{metawrite_name}:`{match[2]}`"
 
-            defns = tuple((re.compile(p), f) for p, f in (
-                # Wrap to metawrite role:
-                # -----------------------
-                #   L{FDE} -> :m:`L{FDE}`
-                #   L{K3}  -> :m:`L{K3}`
-                #   L{K3}'s-> :m:`L{K3}`'s
-                (r'(^|[^`])(L{[A-Z][A-Z0-9]*})', rolewrap_metawrite),
-                #   V{T} -> :m:`V{T}`
-                #   V{N} -> :m:`V{N}`
-                (r'(^|[^`])(V{[A-Z]})', rolewrap_metawrite),
-                #   V{0}    -> :m:`V{0}`
-                #   V{0.25} -> :m:`V{0.25}`
-                #   V{1.0}  -> :m:`V{1.0}`
-                #   V{1/4}  -> :m:`V{1/4}`
-                (r'(^|[^`])(V{[0-9][./]?[0-9]*})', rolewrap_metawrite),
-                #   :{any} -> :m:`any`
-                (r'(^|\s):{(.*)}', rolewrap_metawrite),
+            rolemap = {
+                # regex: rolename
+                Metawrite['patterns']['prefixed']: opts['metawrite_roles'][0]
+            }
+            defns = tuple(
+                (r'(?<!`)' + pat, name)
+                for pat, name in rolemap.items()
+            )
+            defns = (
+                # Wrap to metawrite role
+                (r'(?<!`)' + Metawrite['patterns']['prefixed'], r':%s:`\1`' % opts['metawrite_roles'][0]),
                 # Link to a logic:
-                # ----------------
                 #   {@K3}        -> :ref:`K3 <K3>`
                 #   {@FDE Model} -> :ref:`FDE Model <fde-model>`
-                (r'{@(%s)([ A-Za-z-]+)?}' % self.logic_union, logic_ref),
-            ))
+                # (r'{@(%s)([ A-Za-z-]+)?}' % self.logic_union, logic_ref),
+                (r'{@(?P<name>%s)(?:\s+(?P<sect>[\sa-zA-Z-]+)?(?P<anchor><.*?>)?)?}' % self.logic_union, logic_ref),
+            )
 
             self._simple_replace = defns
             return defns
 
         def common(self: Helper, lines: list[str], mode: str = None):
             defns = getdefns(self)
-            text = rendered = '\n'.join(lines)
-            ischange = False
-            for pat, func in defns:
-                rendered = re.sub(pat, func, rendered)
-                ischange = ischange or text != rendered
-                if ischange:
-                    pass
-                    # Once only
-                    # break
-            if ischange:
+            rend = '\n'.join(lines)
+            count = 0
+            for pat, rep in defns:
+                rend, num = re.subn(pat, rep, rend)
+                count += num
+            if count:
                 if mode == 'source':
-                    lines[0]= rendered
+                    lines[0]= rend
                 else:
                     lines.clear()
-                    lines.extend(rendered.split('\n'))
+                    lines.extend(rend.split('\n'))
 
         return common
 
@@ -558,9 +628,6 @@ class Helper:
 
         def decorator(func: F) -> F:
 
-            fopts = dict(content = True, options = {})
-            fopts.update(kw)
-
             @wraps(func)
             def f(self, name: str, rawtext: str, text: str, lineno: int,
                 inliner, opts: dict = {}, content: list[str] = [], /):
@@ -568,7 +635,6 @@ class Helper:
                     name = name, rawtext = rawtext, text = text, lineno = lineno,
                     inliner = inliner, opts = opts, content = content
                 )
-                set_classes(opts)
                 try:
                     ret = func(self, **kwargs)
                 except:
@@ -580,13 +646,17 @@ class Helper:
                     traceback.print_exc()
                     raise
                 else:
-                    if not isinstance(ret, tuple):
+                    if isinstance(ret, docnodes.Node):
+                        ret = [ret], []
+                    elif not isinstance(ret, tuple):
                         ret = ret, []
                     return ret
 
-            f.options = {'class': directives.class_option}
-            f.options.update(fopts['options'])
-            f.content = fopts['content']
+            fopts = dict(content = True, options = {})
+            fopts.update(kw)
+            for name, value in fopts.items():
+                setattr(f, name, value)
+
             _RoleRet # fail if missing
             f.__annotations__['return'] = '_RoleRet'
 
@@ -611,7 +681,7 @@ class Helper:
                 Predicate.System
             }
         )
-        _ctypes['nonsentence'] = _ctypes['valued'] | {
+        _ctypes['nosent'] = _ctypes['valued'] | {
             LexType.Constant,
             LexType.Variable,
             LexType.Predicate,
@@ -628,7 +698,7 @@ class Helper:
                 char, sub = match.groups()
                 table = self.parser.table
                 ctype = table.type(char)
-                if ctype in _ctypes['nonsentence']:
+                if ctype in _ctypes['nosent']:
                     # Non-sentence items.
                     sub = int(sub) if len(sub) else 0
                     if ctype in _ctypes['valued']:
@@ -644,128 +714,245 @@ class Helper:
                 item = self.parser(text)
 
             classes.append(item.TYPE.name.lower())
-            rendered = htmlun(self.lwhtml(item))
+            rend = htmlun(self.lwhtml(item))
 
-            return [
-                docnodes.inline(text = rendered, classes = classes)
-            ]
+            return docnodes.inline(text = rend, classes = classes)
 
         return role
 
     @sphinxrole
     @closure
     def role_metawrite():
-        LANGLE = '\\langle'
-        RANGLE = '\\rangle'
 
-        rdat = dict(
-            langle = LANGLE,
-            rangle = RANGLE,
-            subber = {'P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'},
-            subsup = {'B3E', 'K3W', 'K3WQ'},
-            truthvals = {'T', 'F', 'N', 'B'},
-            mfixed = {
-                'ntuple': (f'{LANGLE} a_0,...,a_n{RANGLE}', 'tuple', 'ntuple')
-            }
-        )
-        rdat.update(truthval_union = '|'.join(rdat['truthvals']))
+        # langle = '\\langle '
+        # rangle = '\\rangle'
+
+        # rdat = dict(
+        #     subber = {'P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'},
+        #     subsup = {'B3E', 'K3W', 'K3WQ'},
+        #     truthvals = {'T', 'F', 'N', 'B'},
+
+        #     # Fixed math strings.
+        #     mfixed = {
+        #         'ntuple': (f'{langle}a_0,...,a_n{rangle}', ['tuple', 'ntuple'])
+        #     },
+
+        #     # Regex sub math.
+        #     msubs = tuple((re.compile(p), *a) for p, *a in (
+        #         # w0   ->   w_0
+        #         (r'^(w)([0-9]+)$', '\\1_\\2', ['modal', 'world']),
+        #     )),
+
+        #     # Generic math symbols.
+        #     msyms = {
+        #         '<': langle,
+        #         '>': rangle,
+        #     }.items()
+        # )
+        # # rdat.update((k, re.compile(v)) for k, v in dict(
+        # #     # re_prefixed = r'^%s$' % Metawrite['patterns']['prefixed'],
+        # #     # re_truthval = r'^V{(%s)}$' % '|'.join(rdat['truthvals']),
+        # #     # re_truthval  = r'^V{(.*?)}$',
+        # #     # re_logicname = r'^L{(.*?)}$',
+        # #     # re_mfixed    = r'^!{(.*?)}$',
+        # # ).items())
+
+        # def mathsyms(text: str):
+        #     for p, rep in rdat['msyms']:
+        #         text = text.replace(p, rep)
+        #     return text
+
+        # '\\mathcal{R}'
 
         def role(self: Helper, /, *, text: str, **_):
 
             classes = ['metawrite']
 
-            if text in rdat['mfixed']:
-                rendered, *addclasses = rdat['mfixed'][text]
-                classes.extend(addclasses)
-                return [
-                    docnodes.math(text = rendered, classes = classes)
-                ]
+            match = re.match(Metawrite['patterns']['prefixed_role'], text)
 
-            if text in rdat['truthvals']:
-                # Normalize truth values.
-                text = 'V{%s}' % text
+            if not match:
 
-            match = re.match(r'^V{(%s)}$' % rdat['truthval_union'], text)
-            if match:
-                # Truth value.
-                classes.append('truth-value')
-                value = match.group(1)
-                return [
-                    docnodes.strong(text = value, classes = classes)
-                ]
-
-            if text in self.logic_names:
-                # Normalize logic names.
-                text = 'L{%s}' % text
-            
-            match = re.match(r'^L{(%s)}$' % self.logic_union, text)
-            if match:
-
-                # Logic name.
-
-                logic = get_logic(match.group(1))
-                lname: str = logic.name
-
-                classes.append('logic-name')
-
-                if lname in rdat['subber']:
-                    classes.append('subber')
-                    main, down = lname[0:2]
-                    if len(lname) == 3:
-                        main = lname[2] + main
-                    if main == 'L':
-                        main = 'Ł'
-                    return [
-                        docnodes.inline(text = main, classes = classes + ['main']),
-                        docnodes.subscript(text = down, classes = classes + ['down']),
-                    ]
-
-                if lname in rdat['subsup']:
-                    classes.append('subsup')
-                    main, up, down = lname[0:3]
-                    if len(lname) == 4:
-                        down += lname[3]
-                    return [
-                        docnodes.inline(text = main, classes = classes + ['main']),
-                        docnodes.superscript(text = up, classes = classes + ['up']),
-                        docnodes.subscript(text = down, classes = classes + ['down']),
-                    ]
-
-                return [
-                    docnodes.inline(text = lname, classes = classes)
-                ]
-
-            if re.match(r'^w[0-9]', text):
-                # w0 or w0Rw1
-                classes.append('modal')
-                parts = text.split('R')
-                if len(parts) > 1:
-                    classes.append('access')
+                # Regex rewrite.
+                mode = 'rewrite'
+                for pat, info in Metawrite['modes'][mode].items():
+                    rend, num = re.subn(pat, info['rep'], text)
+                    if num:
+                        classes.extend(info['classes'])
+                        nodecls = info['nodecls']
+                        break
                 else:
-                    classes.append('world')
-                # insert underscore
-                parts = [re.sub(r'w([0-9]+)', 'w_\\1', n) for n in parts]
-                # rejoin with R
-                rendered = '\\mathcal{R}'.join(parts)
-                return [
-                    docnodes.math(text = rendered, classes = classes)
-                ]
+                    # Generic math symbols.
+                    mode = 'math_symbols'
+                    nodecls = docnodes.math
+                    if 'w' in text:
+                        classes.append('modal')
+                    if '<' in text and '>' in text:
+                        classes.append('tuple')
+                    rend = text
+                    for pat, rep in Metawrite['generic'][mode].items():
+                        rend = re.sub(pat, rep, rend)
+                    logger.info((text,rend))
 
-            # Generic fallback.
+                classes.append(mode)
+                return nodecls(text = rend, classes = classes)
 
-            # Examples:
-            #       <w, w'>
-            rendered = text
-            if 'w' in text:
-                classes.append('modal')
-            if '<' in text:
-                classes.append('tuple')
-                rendered = rendered.replace('<', rdat['langle'] + ' ')
-                rendered = rendered.replace('>', rdat['rangle'])
+            matchd = match.groupdict()
+            mode = Metawrite['prefixes'][matchd['prefix']]
+            value = matchd['value']
+            classes.append(mode)
 
-            return [
-                docnodes.math(text = rendered, classes = classes)
-            ]
+            moded = Metawrite['modes'][mode]
+
+            if mode == 'fixed':
+                try:
+                    rend = moded[value]['rend']
+                except KeyError:
+                    raise ValueError(value)
+                classes.extend(moded[value]['classes'])
+                return docnodes.math(text = rend, classes = classes)
+
+            if mode == 'truth_value':
+                rend = value
+                nodecls = moded['nodecls']
+                return nodecls(text = rend, classes = classes)
+
+            if mode == 'logic_name':
+
+                for pat, addcls in moded['match'].items():
+                    m = re.match(pat, value)
+                    if not m:
+                        continue
+                    md = m.groupdict()
+                    classes.extend(addcls)
+                    return [
+                        nodecls(text = md[key], classes = classes + [key])
+                        for key, nodecls in moded['nodecls_map'].items()
+                        if key in md
+                    ]
+                
+                rend = value
+                return docnodes.inline(text = rend, classes = classes)
+
+            raise NotImplementedError(mode)
+        return role
+
+                    # for key, nodcls in {
+                    #     'main': docnodes.inline,
+                    #     'up'  : docnodes.superscript,
+                    #     'down': docnodes.subscript
+                    # }.items():
+                    #     if key in minfo:
+
+
+                    # nodes = [
+                    #     docnodes.inline(text = m['main'], classes = classes + ['main'])
+                    # ]
+                    # if 'up' in minfo:
+                    #     nodes.append(
+                    #         docnodes.superscript(text = up, classes = classes + ['up'])
+                    #     )
+                    # nodes.append(
+                    #     docnodes.subscript(text = down, classes = classes + ['down'])
+                    # )
+
+                # if value in rdat['subber']:
+                #     classes.append('subber')
+                #     main, down = value[0:2]
+                #     if len(value) == 3:
+                #         main = value[2] + main
+                #     if main == 'L':
+                #         main = 'Ł'
+                #     return [
+                #         docnodes.inline(text = main, classes = classes + ['main']),
+                #         docnodes.subscript(text = down, classes = classes + ['down']),
+                #     ]
+
+                # if value in rdat['subsup']:
+                #     classes.append('subsup')
+                #     main, up, down = value[0:3]
+                #     if len(value) == 4:
+                #         down += value[3]
+                #     return [
+                #         docnodes.inline(text = main, classes = classes + ['main']),
+                #         docnodes.superscript(text = up, classes = classes + ['up']),
+                #         docnodes.subscript(text = down, classes = classes + ['down']),
+                #     ]
+
+            # # Fixed math strings.
+            # match = re.match(rdat['re_mfixed'], text)
+            # # if text in rdat['mfixed']:
+            # if match:
+            #     classes.append('mfixed')
+            #     key = match.group(1)
+            #     try:
+            #         rend, addcls = rdat['mfixed'][key]
+            #     except KeyError:
+            #         raise ValueError(key)
+            #     classes.extend(addcls)
+            #     return docnodes.math(text = rend, classes = classes)
+
+            # # # Normalization.
+            # # if text in rdat['truthvals']:
+            # #     logger.info(text)
+            # #     text = 'V{%s}' % text
+            # # elif text in self.logic_names:
+            # #     logger.info(text)
+            # #     text = 'L{%s}' % text
+
+            # match = re.match(rdat['re_truthval'], text)
+            # if match:
+            #     classes.append('truth-value')
+            #     rend = match.group(1)
+            #     return docnodes.strong(text = rend, classes = classes)
+
+            # # match = re.match(r'^L{(%s)}$' % self.logic_union, text)
+            # match = re.match(rdat['re_logicname'], text)
+            # if match:
+            #     classes.append('logic-name')
+            #     logic_name = match.group(1)
+
+            #     if logic_name in rdat['subber']:
+            #         classes.append('subber')
+            #         main, down = logic_name[0:2]
+            #         if len(logic_name) == 3:
+            #             main = logic_name[2] + main
+            #         if main == 'L':
+            #             main = 'Ł'
+            #         return [
+            #             docnodes.inline(text = main, classes = classes + ['main']),
+            #             docnodes.subscript(text = down, classes = classes + ['down']),
+            #         ]
+
+            #     if logic_name in rdat['subsup']:
+            #         classes.append('subsup')
+            #         main, up, down = logic_name[0:3]
+            #         if len(logic_name) == 4:
+            #             down += logic_name[3]
+            #         return [
+            #             docnodes.inline(text = main, classes = classes + ['main']),
+            #             docnodes.superscript(text = up, classes = classes + ['up']),
+            #             docnodes.subscript(text = down, classes = classes + ['down']),
+            #         ]
+
+            #     return docnodes.inline(text = logic_name, classes = classes)
+
+            # # Regex sub math.
+            # for pat, rep, addcls in rdat['msubs']:
+            #     rend, num = re.subn(pat, rep, text)
+            #     if num > 0:
+            #         classes.extend(addcls)
+            #         return docnodes.math(text = rend, classes = classes)
+
+            # # Generic math symbols.
+            # if 'w' in text:
+            #     classes.append('modal')
+            # if '<' in text and '>' in text:
+            #     classes.append('tuple')
+            # rend = mathsyms(text)
+
+            # # logger.info((text, rend, classes))
+
+            # return docnodes.math(text = rend, classes = classes)
 
         return role
 
@@ -924,23 +1111,17 @@ def parentgrouped(rule: type[Rule]) -> bool:
     if not isinstance(rule, type):
         return False
     return selfgrouped(rule.mro()[1])
-    # try:
-    #     parent = getmro(rule)[1]
-    #     plgc = get_logic(parent)
-    #     return rulegrouped(parent, plgc)
-    # except:
-    #     return False
 
-def set_classes(options: dict):
-    """Set options['classes'] and delete options['class'].
+# def set_classes(options: dict):
+#     """Set options['classes'] and delete options['class'].
 
-    From: https://github.com/docutils-mirror/docutils/blob/master/docutils/parsers/rst/roles.py#L385
-    """
-    if 'class' in options:
-        if 'classes' in options:
-            raise KeyError("classes")
-        options['classes'] = options['class']
-        del options['class']
+#     From: https://github.com/docutils-mirror/docutils/blob/master/docutils/parsers/rst/roles.py#L385
+#     """
+#     if 'class' in options:
+#         if 'classes' in options:
+#             raise KeyError("classes")
+#         options['classes'] = options['class']
+#         del options['class']
 
 # helper.connect_sphinx(app, 'autodoc-process-signature',
 #     'sphinx_filter_signature',

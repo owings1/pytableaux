@@ -35,7 +35,7 @@ from logics.fde import adds, group, sdnode
 
 class Model(K3.Model):
     """
-    A :m:`P3` model is just like a :ref:`K3 model <k3-model>` with different tables
+    A L{P3} model is just like a :ref:`K3 model <k3-model>` with different tables
     for some of the connectives.
     """
 
@@ -80,7 +80,7 @@ class Model(K3.Model):
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    :m:`P3`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    L{P3}'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
     """
 
@@ -124,9 +124,9 @@ class TableauxSystem(FDE.TableauxSystem):
 
 class TabRules:
     """
-    The Tableaux System for :m:`P3` contains the FDE closure rule, and the
-    :m:`K3` closure rule. Some of the operator rules are the same as L{FDE},
-    most notably disjunction. However, many rules for :m:`P3` are different
+    The Tableaux System for L{P3} contains the FDE closure rule, and the
+    L{K3} closure rule. Some of the operator rules are the same as L{FDE},
+    most notably disjunction. However, many rules for L{P3} are different
     from L{FDE}, given the non-standard negation. Notably, an undesignated
     double-negation will branch.
     """

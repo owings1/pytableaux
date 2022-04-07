@@ -1,12 +1,12 @@
 .. _K3WQ:
 
-************************************************************
-:m:`K3WQ` - Weak Kleene Logic with alternate quantification
-************************************************************
+*******************************************************************
+L{K3WQ} - Weak Kleene Logic with alternate quantification
+*******************************************************************
 
-This is a version of :ref:`K3W <K3W>` with a different treatment of the quantifiers
+This is a version of {@K3W} with a different treatment of the quantifiers
 in terms of generalized conjunction/disjunction. This yields some interesting
-rules for the quantifiers, given the behavior of those operators in :ref:`K3W <K3W>`.
+rules for the quantifiers, given the behavior of those operators in {@K3W}.
 
 .. contents:: :local:
 
@@ -39,7 +39,7 @@ rules for the quantifiers, given the behavior of those operators in :ref:`K3W <K
     Consequence
     -----------
 
-    Logical consequence is defined just like in :m:`K3`:
+    Logical consequence is defined just like in L{K3}:
     
     .. include:: include/k3/m.consequence.rst
 

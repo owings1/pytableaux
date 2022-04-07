@@ -1,8 +1,8 @@
 .. _G3:
 
-******************************
-:m:`G3` - Gödel 3-valued logic
-******************************
+*************************************
+L{G3} - Gödel 3-valued logic
+*************************************
 
 Gödel 3-valued logic (V{T}, V{F}, and V{N}) with classical-like negation.
 
@@ -32,7 +32,7 @@ Gödel 3-valued logic (V{T}, V{F}, and V{N}) with classical-like negation.
     Consequence
     -----------
 
-    Logical consequence is defined just like in :m:`K3`:
+    Logical consequence is defined just like in L{K3}:
     
     .. include:: include/k3/m.consequence.rst
 

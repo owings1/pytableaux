@@ -36,7 +36,7 @@ from logics.fde import adds, group, sdnode
 
 class Model(K3.Model):
     """
-    An :m:`L3` model is just like a :ref:`K3 model <k3-model>` with different tables
+    An L{L3} model is just like a :ref:`K3 model <k3-model>` with different tables
     for the conditional and bi-conditional operators.
     """
 
@@ -48,7 +48,7 @@ class Model(K3.Model):
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    :m:`L3`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    L{L3}'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
     """
     branchables = FDE.TableauxSystem.branchables | {
@@ -64,8 +64,8 @@ class TableauxSystem(FDE.TableauxSystem):
 
 class TabRules:
     """
-    The closure rules for :m:`L3` are the FDE closure rule, and the :m:`K3` closure rule.
-    The operator rules for :m:`L3` are mostly the rules for L{FDE}, with
+    The closure rules for L{L3} are the FDE closure rule, and the L{K3} closure rule.
+    The operator rules for L{L3} are mostly the rules for L{FDE}, with
     the exception of the rules for the conditional and biconditional operators.
     """
 

@@ -45,11 +45,11 @@ as {@FDE} without the V{B} value.
     .. include:: include/k3/m.predication.rst
 
     Note, unlike L{FDE}, there is an *exclusivity constraint*
-    on a predicate's extension/anti-extension. This means that :{ntuple}
+    on a predicate's extension/anti-extension. This means that !{ntuple}
     cannot be in *both* the extension and the anti-extension of :math:`P`.
 
     Like L{FDE}, there is no *exhaustion constraint*: there are
-    permissible L{K3} models where some tuple :{ntuple} is in *neither*
+    permissible L{K3} models where some tuple !{ntuple} is in *neither*
     the extension nor the anti-extension of some predicate :math:`P`.
 
     .. _k3-quantification:
@@ -58,7 +58,7 @@ as {@FDE} without the V{B} value.
     --------------
 
     The quantifiers :s:`X` and :s:`L` are interpreted similary to
-    :ref:`FDE <fde-quantification>`, without the V{B} value.
+    {@FDE <fde-quantification>}, without the V{B} value.
 
     Existential
     ^^^^^^^^^^^
@@ -79,7 +79,7 @@ as {@FDE} without the V{B} value.
 
     .. include:: include/k3/m.consequence.rst
 
-    Alternatively, we can use the formulating of {@FDE consequence} in terms of
+    Alternatively, we can use the formulation of {@FDE consequence} in terms of
     *designated* values, since L{K3} has only the designated value V{T}.
 
     Tableaux System

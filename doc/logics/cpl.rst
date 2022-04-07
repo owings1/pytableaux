@@ -37,12 +37,12 @@ respectively.
 
             The value of predicated sentences are handled in terms of their *extension*:
 
-                | A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
-                | has the value V{T} iff :m:`ntuple` is in the extension of :math:`P`.
+                | A sentence with *n*-ary predicate :math:`P` over parameters :m:`!{ntuple}`
+                | has the value V{T} iff :m:`!{ntuple}` is in the extension of :math:`P`.
 
 
         .. Note:: CPL does not give a treatment of the quantifiers. Quantified sentences
-            are treated as opaque (uninterpreted). See :ref:`CFOL <CFOL>` for quantification.
+            are treated as opaque (uninterpreted). See {@CFOL} for quantification.
               
 
     .. _cpl-consequence:

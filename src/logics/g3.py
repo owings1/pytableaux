@@ -26,8 +26,13 @@ class Meta:
     title    = 'Gödel 3-valued logic'
     category = 'Many-valued'
     description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_order = 90
+    tags = (
+        'many-valued',
+        'gappy',
+        'non-modal',
+        'first-order',
+    )
 
 
 from lexicals import Operator as Oper
@@ -37,7 +42,7 @@ from logics.fde import adds, group, sdnode
 
 class Model(L3.Model):
     """
-    A :m:`G3` model is similar to a :ref:`K3 model <k3-model>`, but with different tables
+    A L{G3} model is similar to a :ref:`K3 model <k3-model>`, but with different tables
     for some of the operators.
     """
 
@@ -49,7 +54,7 @@ class Model(L3.Model):
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    :m:`G3`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    L{G3}'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
     """
 
@@ -66,8 +71,8 @@ class TableauxSystem(FDE.TableauxSystem):
 
 class TabRules:
     """
-    The closure rules for :m:`G3` are the FDE closure rule, and the :m:`K3` closure rule.
-    The operator rules for :m:`G3` are mostly the rules for L{FDE}, with the exception
+    The closure rules for L{G3} are the L{FDE} closure rule, and the L{K3} closure rule.
+    The operator rules for L{G3} are mostly the rules for L{FDE}, with the exception
     of the rules for the conditional and biconditional operators, and some of
     the negation rules.
     """

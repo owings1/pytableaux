@@ -35,7 +35,7 @@ from logics.fde import adds, group, sdnode
 
 class Model(K3.Model):
     """
-    A :m:`K3W` model is just like a :ref:`K3 model <k3-model>` with different tables for
+    A L{K3W} model is just like a :ref:`K3 model <k3-model>` with different tables for
     some of the connectives.
     """
 
@@ -47,7 +47,7 @@ class Model(K3.Model):
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    :m:`K3W`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    L{K3W}'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
     """
     branchables = {
@@ -90,9 +90,9 @@ class TableauxSystem(FDE.TableauxSystem):
 
 class TabRules:
     """
-    The Tableaux System for :m:`K3W` contains the FDE closure rule, and the :m:`K3` closure
+    The Tableaux System for L{K3W} contains the FDE closure rule, and the L{K3} closure
     rule. Several of the operator rules are the same as :ref:`FDE <fde-system>`.
-    However, many rules for :m:`K3W` are different from FDE, given
+    However, many rules for L{K3W} are different from FDE, given
     the behavior of the *N* value.
     """
 

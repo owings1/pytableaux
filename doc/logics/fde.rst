@@ -49,23 +49,23 @@ of these values is:
     Predication
     -----------
 
-    A sentence with *n*-ary predicate :math:`P` over parameters :{ntuple}
+    A sentence with *n*-ary predicate :math:`P` over parameters !{ntuple}
     has the value:
 
-    * V{T} iff :{ntuple} is in the *extension* of :math:`P` and
+    * V{T} iff !{ntuple} is in the *extension* of :math:`P` and
       not in the *anti-extension* of :math:`P`.
 
-    * V{F} iff :{ntuple} is in the *anti-extension* of :math:`P`
+    * V{F} iff !{ntuple} is in the *anti-extension* of :math:`P`
       and not in the *extension* of :math:`P`.
 
-    * V{B} iff :{ntuple} is in *both* the extension and anti-extension
+    * V{B} iff !{ntuple} is in *both* the extension and anti-extension
       of :math:`P`.
 
-    * V{N} iff :{ntuple} is in *neither* in the extension nor the 
+    * V{N} iff !{ntuple} is in *neither* in the extension nor the 
       anti-extension of :math:`P`.
 
     Note, for L{FDE}, there is no *exclusivity* nor *exhaustion* constraint on a
-    predicate's extension and anti-extension. This means that :{ntuple} could
+    predicate's extension and anti-extension. This means that !{ntuple} could
     be in *neither* the extension nor the anti-extension of a predicate, or it
     could be in *both* the extension and the anti-extension.
 

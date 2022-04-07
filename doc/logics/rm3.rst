@@ -1,11 +1,11 @@
 .. _RM3:
 
-*********************
-:m:`RM3` - R-mingle 3
-*********************
+***************************
+L{RM3} - R-mingle 3
+***************************
 
-R-mingle 3 (:m:`RM3`) is a three-valued logic with values V{T}, V{F}, and V{B}.
-It is similar to :ref:`LP`, with a different conditional operator.
+R-mingle 3 (L{RM3}) is a three-valued logic with values V{T}, V{F}, and V{B}.
+It is similar to {@LP}, with a different conditional operator.
 
 .. contents:: :local:
 
@@ -13,6 +13,8 @@ It is similar to :ref:`LP`, with a different conditional operator.
 
     Semantics
     =========
+
+    .. _rm3-model:
 
     .. autoclass:: Model
 
@@ -22,12 +24,16 @@ It is similar to :ref:`LP`, with a different conditional operator.
 
         .. include:: include/fde/m.attributes.rst
 
-        .. method:: truth_function(operator, a, b)
+    .. _rm3-truth-tables:
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+    Truth Tables
+    ------------
 
-            //truth_tables//rm3//
+    .. include:: include/truth_table_blurb.rst
+
+    //truth_tables//rm3//
+
+    .. _rm3-consequence:
 
     Consequence
     -----------
@@ -37,11 +43,15 @@ It is similar to :ref:`LP`, with a different conditional operator.
     
     .. include:: include/fde/m.consequence.rst
 
+    .. _rm3-system:
+
     Tableaux System
     ===============
 
     .. autoclass:: TableauxSystem
         :members: build_trunk
+
+    .. _rm3-rules:
 
     .. autoclass:: TabRules
         :members:
@@ -49,10 +59,10 @@ It is similar to :ref:`LP`, with a different conditional operator.
     Notes
     =====
 
-    * With the conditional operator, Modus Ponens (:s:`A`, :s:`A $ B`, therefore :s:`B`) is
-      valid in :m:`RM3`, but it fails in:ref:`LP`.
+    * With the Conditional operator :s:`$`, Modus Ponens (:s:`A`, :s:`A $ B`, therefore :s:`B`) is
+      valid in L{RM3}, but it fails in {@LP}.
 
-    * The argument :s:`B`, therefore :s:`A $ B` is valid in :ref:`LP`, but not in :m:`RM3`.
+    * The argument :s:`B`, therefore :s:`A $ B` is valid in L{LP}, but not in L{RM3}.
 
     References
     ==========

@@ -49,7 +49,7 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     Consequence
     -----------
 
-    Logical consequence is defined just like in :m:`K3`:
+    Logical consequence is defined just like in L{K3}:
     
     .. include:: include/k3/m.consequence.rst
 
@@ -67,15 +67,15 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     Notes
     -----
 
-    - GO has some similarities to :m:`K3`. Material Identity :s:`A $ A` and the
+    - GO has some similarities to L{K3}. Material Identity :s:`A $ A` and the
       Law of Excluded Middle :s:`A V ~A` fail.
 
-    - Unlike :m:`K3`, there are logical truths, e.g. The Law of Non-Contradiction
+    - Unlike L{K3}, there are logical truths, e.g. The Law of Non-Contradiction
       :s:`~(A & ~A)`.
 
     - GO contains an additional conditional operator besides the material conditional,
-      which is similar to :m:`L3`. However, this conditional is *non-primitive*,
-      unlike :m:`L3`, and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
+      which is similar to L{L3}. However, this conditional is *non-primitive*,
+      unlike L{L3}, and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
 
     .. rubric:: Further Reading
 

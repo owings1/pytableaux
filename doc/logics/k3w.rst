@@ -1,12 +1,12 @@
 .. _K3W:
 
-****************************
-:m:`K3W` - Weak Kleene Logic
-****************************
+**********************************
+L{K3W} - Weak Kleene Logic
+**********************************
 
-:m:`K3W` is a 3-valued logic with values V{T}, V{F}, and V{N}. The logic is
-similar to :ref:`K3 <K3>`, but with slightly different behavior of the V{N} value.
-This logic is also known as Bochvar Internal (:m:`B3`). A common interpretation of
+L{K3W} is a 3-valued logic with values V{T}, V{F}, and V{N}. The logic is
+similar to {@K3}, but with slightly different behavior of the V{N} value.
+This logic is also known as Bochvar Internal (L{B3}). A common interpretation of
 these values is:
 
 - V{T}: just true
@@ -60,7 +60,7 @@ these values is:
 
             .. include:: include/k3/m.existential.rst
 
-        .. Note:: For an alternate interpretation of the quantifiers in :m:`K3W`, see
+        .. Note:: For an alternate interpretation of the quantifiers in L{K3W}, see
             :ref:`K3WQ <k3wq-model>`. There we apply the notion of *generalized*
             conjunction and disjunction to :s:`L` and :s:`X`.
 
@@ -68,7 +68,7 @@ these values is:
     Consequence
     -----------
 
-    Logical consequence is defined just like in :m:`K3`:
+    Logical consequence is defined just like in L{K3}:
     
     .. include:: include/k3/m.consequence.rst
 
@@ -86,7 +86,7 @@ these values is:
     Notes
     -----
 
-    Addition fails in :m:`K3W`. That is :s:`A` does not imply :s:`A V B`.
+    Addition fails in L{K3W}. That is :s:`A` does not imply :s:`A V B`.
 
     For further reading, see:
 

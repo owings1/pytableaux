@@ -1,8 +1,8 @@
 .. _P3:
 
-*****************************
-:m:`P3` - Post 3-valued logic
-*****************************
+***********************************
+L{P3} - Post 3-valued logic
+***********************************
 
 .. figure:: /res/img/Emil_Leon_Post.jpg
     :alt: Photo of Emil Post
@@ -63,7 +63,7 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
 
         .. method:: value_of_universal(sentence)
 
-            .. Note:: :m:`P3` did not originally define quantification. This is a novel
+            .. Note:: L{P3} did not originally define quantification. This is a novel
                construction.
 
             The :s:`L` quantifier is thought of like `generalized conjunction`.
@@ -78,7 +78,7 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
     Consequence
     -----------
 
-    Logical consequence is defined just like in :m:`K3`:
+    Logical consequence is defined just like in L{K3}:
     
     .. include:: include/k3/m.consequence.rst
 
