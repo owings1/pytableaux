@@ -43,7 +43,7 @@ from proof.tableaux import (
     Tableau,
     TableauxSystem as TabSys,
 )
-from tools._docext import include_directive, LexwriteRole
+from tools._docext import include_directive, LexwriteRole, MetawriteRole
 from tools import _docinspect
 from tools.abcs import F, MapProxy
 from tools.decorators import closure, overload, wraps
@@ -89,71 +89,6 @@ from typing import Any, Callable
 _RoleRet = tuple[list[docnodes.Node], list[str]]
 
 logger = logging.getLogger(__name__)
-
-Metawrite = dict(
-    prefixes = {
-        'L': 'logic_name',
-        'V': 'truth_value',
-        '!': 'rewrite',
-    },
-)
-Metawrite.update(
-    patterns = dict(
-        prefixed = r'(?P<raw>(?P<prefix>[%s]){(?P<value>.*?)})' % (
-            re.escape(''.join(Metawrite['prefixes'].keys()))
-        ),
-    ),
-)
-Metawrite['patterns'].update(
-    prefixed_role = '^%s$' % Metawrite['patterns']['prefixed']
-)
-Metawrite.update(
-    modes = dict(
-        logic_name = dict(
-            match = {
-                r'^(?:(?P<main>B|G|K|L|Ł|P|RM)(?P<down>3))$' : ('subber',),
-                r'^(?:(?P<main>B)(?P<up>3)(?P<down>E))$'  : ('subsup',),
-                r'^(?:(?P<main>K)(?P<up>3)(?P<down>WQ?))$': ('subsup',),
-                # r'^(?P<name>(?P<main>B|K)(?P<up>3)(?P<down>E|WQ?))$': 'subsup',
-                #{'B3E', 'K3W', 'K3WQ'},
-                # r'^(B|K)3E|3(?P<down>WQ?)$': 'subsup',
-            },
-            nodecls = docnodes.inline,
-            nodecls_map = {
-                'main': docnodes.inline,
-                'up'  : docnodes.superscript,
-                'down': docnodes.subscript
-            },
-        ),
-        truth_value = {
-            'nodecls': docnodes.strong,
-        },
-        # Regex rewrite.
-        rewrite = {
-            r'^(?:([a-zA-Z])-)?ntuple$': dict(
-                rep = lambda m, a = 'a': (
-                    f'\\langle {m[1] or a}_0'
-                    ', ... ,'
-                    f'{m[1] or a}_n\\rangle'
-                ),
-                classes = ('tuple', 'ntuple'),
-                nodecls = docnodes.math,
-            ),
-            r'^(w)([0-9]+)$': dict(
-                rep = r'\1_\2',
-                classes = ('modal', 'world'),
-                nodecls = docnodes.math,
-            ),
-        },
-    ),
-    generic = dict(
-        # Math symbol replace.
-        math_symbols = {
-            r'<': re.escape('\\langle '),
-            r'>': re.escape('\\rangle'),
-        }
-    ),
-)
 
 class Helper:
 
@@ -205,10 +140,10 @@ class Helper:
 
         if opts['metawrite_roles']:
             instcheck(opts['metawrite_roles'], tuple)
+            inst = MetawriteRole()
+            app.add_role('moo', inst)
             for name in opts['metawrite_roles']:
-                app.add_role(name, helper.role_metawrite)
-
-        # app.add_role('ss', Lexwrite(parser = helper.parser, lw = helper.lwhtml))
+                app.add_role(name, inst)
 
         return helper
 
@@ -445,7 +380,7 @@ class Helper:
 
             # regex: rolename
             rolemap = {
-                Metawrite['patterns']['prefixed']: opts['metawrite_roles'][0]
+                MetawriteRole.patterns['prefixed']: opts['metawrite_roles'][0]
             }
             defns = tuple(
                 (r'(?<!`)' + pat, f':{name}:`\\1`')
@@ -599,139 +534,6 @@ class Helper:
 
         return decorator(instcheck(func, Callable))
 
-    # @sphinxrole
-    # @closure
-    # def role_lexwrite():
-
-    #     _ctypes = dict(
-    #         valued = {
-    #             LexType.Operator,
-    #             LexType.Quantifier,
-    #             Predicate.System
-    #         }
-    #     )
-    #     _ctypes['nosent'] = _ctypes['valued'] | {
-    #         LexType.Constant,
-    #         LexType.Variable,
-    #         LexType.Predicate,
-    #     }
-
-    #     def role(self: Helper, /, *, text: str, **_):
-
-    #         classes = ['lexitem']
-
-    #         item = None
-    #         match = re.match(r'^(.)([0-9]*)$', text)
-
-    #         if match:
-    #             char, sub = match.groups()
-    #             table = self.parser.table
-    #             ctype = table.type(char)
-    #             if ctype in _ctypes['nosent']:
-    #                 # Non-sentence items.
-    #                 sub = int(sub) if len(sub) else 0
-    #                 if ctype in _ctypes['valued']:
-    #                     item = table.value(char)
-    #                 elif ctype is LexType.Predicate:
-    #                     preds = self.opts['preds']
-    #                     item = preds.get((table.value(char), sub))
-    #                 else:
-    #                     item = ctype.cls(table.value(char), sub)
-
-    #         if item is None:
-    #             # Parse as sentence.
-    #             item = self.parser(text)
-
-    #         classes.append(item.TYPE.name.lower())
-    #         rend = htmlun(self.lwhtml(item))
-
-    #         return docnodes.inline(text = rend, classes = classes)
-
-    #     return role
-
-    @sphinxrole
-    @closure
-    def role_metawrite():
-
-        # '\\mathcal{R}'
-
-        def role(self: Helper, /, *, text: str, **_):
-
-            classes = ['metawrite']
-
-            match = re.match(Metawrite['patterns']['prefixed_role'], text)
-
-            if not match:
-
-                # Try rewrite.
-                mode = 'rewrite'
-                for pat, info in Metawrite['modes'][mode].items():
-                    rend, num = re.subn(pat, info['rep'], text)
-                    if num:
-                        classes.extend(info['classes'])
-                        nodecls = info['nodecls']
-                        break
-                else:
-                    # Generic math symbols.
-                    mode = 'math_symbols'
-                    nodecls = docnodes.math
-                    if 'w' in text:
-                        classes.append('modal')
-                    if '<' in text and '>' in text:
-                        classes.append('tuple')
-                    rend = text
-                    for pat, rep in Metawrite['generic'][mode].items():
-                        rend = re.sub(pat, rep, rend)
-                    logger.info((text,rend))
-
-                classes.append(mode)
-                return nodecls(text = rend, classes = classes)
-
-            matchd = match.groupdict()
-            mode: str = Metawrite['prefixes'][matchd['prefix']]
-            value: str = matchd['value']
-            moded: dict = Metawrite['modes'][mode]
-
-            classes.append(mode)
-
-            if mode == 'rewrite':
-                for pat, info in moded.items():
-                    rend, num = re.subn(pat, info['rep'], value)
-                    if num:
-                        break
-                else:
-                    logger.error(f'No {mode} match for {repr(value)}')
-                classes.extend(info['classes'])
-                nodecls = info['nodecls']
-                return nodecls(text = rend, classes = classes)
-
-            if mode == 'truth_value':
-                rend = value
-                nodecls = moded['nodecls']
-                return nodecls(text = rend, classes = classes)
-
-            if mode == 'logic_name':
-
-                for pat, addcls in moded['match'].items():
-                    m = re.match(pat, value)
-                    if not m:
-                        continue
-                    md = m.groupdict()
-                    classes.extend(addcls)
-                    nodecls_map: dict = moded['nodecls_map']
-                    return [
-                        nodecls(text = md[key], classes = classes + [key])
-                        for key, nodecls in nodecls_map.items()
-                        if key in md
-                    ]
-                
-                rend = value
-                nodecls = moded['nodecls']
-                return nodecls(text = rend, classes = classes)
-
-            raise NotImplementedError(mode)
-
-        return role
 
     ## Dispatcher
 
@@ -773,7 +575,6 @@ class Helper:
 
         return run
 
-from itertools import chain
 
 def rawblock(lines: list[str], indent: str|int = None) -> list[str]:
     'Make a raw html block from the lines. Returns a new list of lines.'

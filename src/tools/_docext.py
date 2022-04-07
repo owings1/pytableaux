@@ -149,3 +149,146 @@ class LexwriteRole(BaseRole):
         rend = htmlun(self.lwhtml(item))
 
         return nodes.inline(text = rend, classes = classes)
+
+class MetawriteRole(BaseRole):
+
+    _defaults = MapProxy(dict(
+
+    ))
+
+    modes = dict(
+        logic_name = dict(
+            match = {
+                r'^(?:(?P<main>B|G|K|L|Ł|P|RM)(?P<down>3))$' : ('subber',),
+                r'^(?:(?P<main>B)(?P<up>3)(?P<down>E))$'  : ('subsup',),
+                r'^(?:(?P<main>K)(?P<up>3)(?P<down>WQ?))$': ('subsup',),
+                # r'^(?P<name>(?P<main>B|K)(?P<up>3)(?P<down>E|WQ?))$': 'subsup',
+                #{'B3E', 'K3W', 'K3WQ'},
+                # r'^(B|K)3E|3(?P<down>WQ?)$': 'subsup',
+            },
+            nodecls = nodes.inline,
+            nodecls_map = dict(
+                main= nodes.inline,
+                up  = nodes.superscript,
+                down= nodes.subscript
+            ),
+        ),
+        truth_value = dict(
+            nodecls = nodes.strong,
+        ),
+        # Regex rewrite.
+        rewrite = {
+            r'^(?:([a-zA-Z])-)?ntuple$': dict(
+                rep = lambda m, a = 'a': (
+                    f'\\langle {m[1] or a}_0'
+                    ', ... ,'
+                    f'{m[1] or a}_n\\rangle'
+                ),
+                classes = ('tuple', 'ntuple'),
+                nodecls = nodes.math,
+            ),
+            r'^(w)([0-9]+)$': dict(
+                rep = r'\1_\2',
+                classes = ('modal', 'world'),
+                nodecls = nodes.math,
+            ),
+        },
+    )
+    generic = dict(
+        # Math symbol replace.
+        math_symbols = {
+            r'<': re.escape('\\langle '),
+            r'>': re.escape('\\rangle'),
+        }
+    )
+    prefixes = {
+        'L': 'logic_name',
+        'V': 'truth_value',
+        '!': 'rewrite',
+    }
+    patterns = dict(
+        prefixed = r'(?P<raw>(?P<prefix>[%s]){(?P<value>.*?)})' % (
+            re.escape(''.join(prefixes.keys()))
+        ),
+    )
+    patterns.update(
+        prefixed_role = '^%s$' % patterns['prefixed']
+    )
+
+    def __init__(self, **opts):
+        opts = dict(self._defaults) | opts
+
+    def role(self):
+        text = self.text
+
+        classes = ['metawrite']
+
+        match = re.match(self.patterns['prefixed_role'], text)
+
+        if not match:
+
+            # Try rewrite.
+            mode = 'rewrite'
+            for pat, info in self.modes[mode].items():
+                rend, num = re.subn(pat, info['rep'], text)
+                if num:
+                    classes.extend(info['classes'])
+                    nodecls = info['nodecls']
+                    break
+            else:
+                # Generic math symbols.
+                mode = 'math_symbols'
+                nodecls = nodes.math
+                if 'w' in text:
+                    classes.append('modal')
+                if '<' in text and '>' in text:
+                    classes.append('tuple')
+                rend = text
+                for pat, rep in self.generic[mode].items():
+                    rend = re.sub(pat, rep, rend)
+                logger.info((text,rend))
+
+            classes.append(mode)
+            return nodecls(text = rend, classes = classes)
+
+        matchd = match.groupdict()
+        mode: str = self.prefixes[matchd['prefix']]
+        value: str = matchd['value']
+        moded: dict = self.modes[mode]
+
+        classes.append(mode)
+
+        if mode == 'rewrite':
+            for pat, info in moded.items():
+                rend, num = re.subn(pat, info['rep'], value)
+                if num:
+                    break
+            else:
+                logger.error(f'No {mode} match for {repr(value)}')
+            classes.extend(info['classes'])
+            nodecls = info['nodecls']
+            return nodecls(text = rend, classes = classes)
+
+        if mode == 'truth_value':
+            rend = value
+            nodecls = moded['nodecls']
+            return nodecls(text = rend, classes = classes)
+
+        if mode == 'logic_name':
+
+            for pat, addcls in moded['match'].items():
+                m = re.match(pat, value)
+                if not m:
+                    continue
+                md = m.groupdict()
+                classes.extend(addcls)
+                nodecls_map: dict = moded['nodecls_map']
+                return [
+                    nodecls(text = md[key], classes = classes + [key])
+                    for key, nodecls in nodecls_map.items()
+                    if key in md
+                ]
+            
+            rend = value
+            nodecls = moded['nodecls']
+            return nodecls(text = rend, classes = classes)
