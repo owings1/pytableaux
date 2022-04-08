@@ -26,7 +26,7 @@ from errors import instcheck
 from lexicals import (
     LexWriter,
     Notation,
-    Operator,
+    # Operator,
     Parser,
     RenderSet,
     # Sentence,
@@ -99,19 +99,11 @@ class Helper:
             helper.sphinx_line_replace_source,
             helper.sphinx_simple_replace_source,
         )
-
-        from tools.doc import directives
-        if opts['includer']:
-            Include = directives.include_directive(app)
-            app.add_directive('include', Include, override = True)
-
-            helper.connect_sphinx(app, 'include-read',
-                helper.sphinx_line_replace_include,
-                helper.sphinx_simple_replace_include,
-            )
-
-        app.add_directive('csv-table', directives.CSVTable, True)
-        app.add_directive('inject', directives.Inject)
+        
+        helper.connect_sphinx(app, 'include-read',
+            helper.sphinx_line_replace_include,
+            helper.sphinx_simple_replace_include,
+        )
 
         return helper
 
@@ -382,12 +374,12 @@ class Helper:
                     re.compile(r'(\s*)//truth_tables//(.*?)//'),
                     truthtable,
                 ),
-                (
-                    '//lexsym_opers_csv//',
-                    re.compile(r'(\s*)//lexsym_opers_csv//'),
-                    opertable
-                    # lambda indent: rstutils.csvlines(docparts.opers_table(), indent)
-                )
+                # (
+                #     '//lexsym_opers_csv//',
+                #     re.compile(r'(\s*)//lexsym_opers_csv//'),
+                #     opertable
+                #     # lambda indent: rstutils.csvlines(docparts.opers_table(), indent)
+                # )
             )
 
             self._line_replace = defns

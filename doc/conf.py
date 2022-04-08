@@ -148,13 +148,9 @@ def setup(app):
 
     from tools.doc import roles
 
-    rolenames = {
-        roles.lexdress   : 's',
-        roles.metadress  : 'm',
-        roles.refplus    : 'lref',
-    }
-    for rolecls, name in rolenames.items():
-        app.add_role(name, rolecls())
+    app.add_role('s', roles.lexdress())
+    app.add_role('m', roles.metadress())
+    app.add_role('lref', roles.lexdress())
 
     from docutil import Helper
     Helper.setup_sphinx(app)

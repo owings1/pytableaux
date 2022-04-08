@@ -73,23 +73,6 @@ class Inject(BaseDirective):
         lines = self.helper.lines_truth_tables(logic)
         return nodes.raw(text='\n'.join(lines), format = 'html')
 
-    csv_names = {'opers_table'}
-
-    def cmd_csv(self, name):
-        raise TypeError('foo')
-        if name not in self.csv_names:
-            raise self.error(f"Invalid table name: '{name}'")
-
-        rows = docparts.opers_table()
-        lines = rstutils.csvlines(rows, indent = 4)
-        print('------cmd_csv')
-        for line in lines:
-            print(repr(line))
-        print('------cmd_csv')
-
-        return nodes.raw(text='\n'.join(lines), format = 'html')
-
-
 class CSVTable(_tables.CSVTable, BaseDirective):
     
     option_spec = _tables.CSVTable.option_spec | dict(
@@ -109,6 +92,7 @@ class CSVTable(_tables.CSVTable, BaseDirective):
         return rstutils.csvlines(rows), '_generator'
 
 class Include(sphinx.directives.other.Include, BaseDirective):
+    "Override include directive that allows the app to modify content via events."
 
     def parse(self, text: str, doc):
         lines = text.split('\n')
@@ -121,24 +105,3 @@ class Include(sphinx.directives.other.Include, BaseDirective):
         super().run()
         return []
 
-def include_directive(app: Sphinx):
-    "Override include directive that allows the app to modify content via events."
-
-    app.add_event('include-read')
-
-    from sphinx.directives.other import Include as BaseInclude
-
-    class Include(BaseInclude):
-
-        def parse(self, text: str, doc):
-            lines = text.split('\n')
-            source = doc.attributes['source']
-            app.emit('include-read', lines)
-            self.state_machine.insert_input(lines, source)
-
-        def run(self):
-            self.options['parser'] = lambda: self
-            super().run()
-            return []
-
-    return Include

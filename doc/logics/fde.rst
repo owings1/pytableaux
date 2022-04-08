@@ -54,7 +54,7 @@ L{FDE} - First Degree Entailment
 
     .. include:: include/truth_table_blurb.rst
 
-    //truth_tables//fde//
+    .. inject:: truth_tables FDE
 
     .. _fde-predication:
 

@@ -34,6 +34,12 @@ def setup(app: Sphinx):
     app.connect('config-inited', _init_app)
     app.connect('build-finished', _remove_app)
 
+    from tools.doc import directives
+    app.add_directive('csv-table', directives.CSVTable, True)
+    app.add_directive('inject', directives.Inject)           
+    app.add_directive('include', directives.Include, override = True)
+    app.add_event('include-read')
+
 def _init_app(app: Sphinx, config: sphinx.config.Config):
     opts = config['pt_options']
     _helpers[app] = Helper(**opts)
