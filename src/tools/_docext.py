@@ -21,56 +21,35 @@
 from __future__ import annotations
 import traceback
 
+from tools.decorators import wraps
+
 __all__ = (
-    'LexwriteRole',
-    'include_directive'
+    'Lexdress',
+    'Metadress',
+    'RefPlus'
+    'include_directive',
 )
 
 import examples
 from lexicals import LexType, LexWriter, Notation, Parser, Predicate
-from tools.abcs import MapProxy, abstract, AbcMeta
+from tools.abcs import F, MapProxy, AbcMeta
 
 from docutils import nodes
 from html import unescape as htmlun
 from sphinx.application import Sphinx
+from sphinx.roles import XRefRole as BaseRefRole
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxRole
 import re
 
 logger = logging.getLogger(__name__)
 
-
-def include_directive(app: Sphinx):
-    "Override include directive that allows the app to modify content via events."
-
-    app.add_event('include-read')
-
-    from sphinx.directives.other import Include as BaseInclude
-
-    class Include(BaseInclude):
-
-        def parse(self, text: str, doc):
-            lines = text.split('\n')
-            source = doc.attributes['source']
-            app.emit('include-read', lines)
-            self.state_machine.insert_input(lines, source)
-
-        def run(self):
-            self.options['parser'] = lambda: self
-            super().run()
-            return []
-
-    return Include
-
-
-class BaseRole(SphinxRole, metaclass = AbcMeta):
-
-    @abstract
-    def role(self): ...
-
-    def run(self):
+def rolemethod(func: F) -> F:
+    # Decorator for role method.
+    @wraps(func)
+    def run(self: BaseRole):
         try:
-            ret = self.role()
+            ret = func(self)
         except:
             logger.error(
                 f"rawtext={repr(self.rawtext)}, "
@@ -80,13 +59,54 @@ class BaseRole(SphinxRole, metaclass = AbcMeta):
             traceback.print_exc()
             raise
         else:
+            # Quote from https://docutils.sourceforge.io/docs/howto/rst-roles.html
+            #
+            # Role functions return a tuple of two values:
+            # 
+            #  - A list of nodes which will be inserted into the document tree
+            #    at the point where the interpreted role was encountered (can be
+            #   an empty list).
+            # 
+            #  - A list of system messages, which will be inserted into the
+            #    document tree immediately after the end of the current block
+            #   (can also be empty).
+            #
             if isinstance(ret, nodes.Node):
+                # Allow a single node.
                 ret = [ret], []
             elif not isinstance(ret, tuple):
+                # Allow just the list of nodes.
                 ret = ret, []
             return ret
+    return run
 
-class LexwriteRole(BaseRole):
+class BaseRole(SphinxRole, metaclass = AbcMeta):
+    pass
+
+
+class RefPlus(BaseRefRole, BaseRole):
+
+    refdomain = 'std'
+    reftype = 'ref'
+    _classes = 'xref', refdomain, f'{refdomain}-{reftype}'
+
+    innernodeclass = nodes.inline
+    fix_parens = False
+    lowercase = True #False
+    warn_dangling = True # False
+
+    def __init__(self, **_) -> None:
+        pass
+
+    @rolemethod
+    def run(self):
+        self.classes = list(self._classes)
+        if self.disabled:
+            return self.create_non_xref_node()
+        else:
+            return self.create_xref_node()
+
+class Lexdress(BaseRole):
 
     _defaults = MapProxy(dict(
         write_notation   = Notation.standard,
@@ -107,7 +127,6 @@ class LexwriteRole(BaseRole):
         LexType.Predicate,
     }
 
-    
     parser: Parser
     lwhtml: LexWriter
 
@@ -116,7 +135,8 @@ class LexwriteRole(BaseRole):
         self.parser = Parser(opts['parse_notation'], opts['preds'])
         self.lwhtml = LexWriter(opts['write_notation'], 'html')
 
-    def role(self):
+    @rolemethod
+    def run(self):
 
         text = self.text
 
@@ -150,21 +170,21 @@ class LexwriteRole(BaseRole):
 
         return nodes.inline(text = rend, classes = classes)
 
-class MetawriteRole(BaseRole):
+class Metadress(BaseRole):
 
-    _defaults = MapProxy(dict(
 
-    ))
 
+    prefixes = {
+        'L': 'logic_name',
+        'V': 'truth_value',
+        '!': 'rewrite',
+    }
     modes = dict(
         logic_name = dict(
             match = {
                 r'^(?:(?P<main>B|G|K|L|Ł|P|RM)(?P<down>3))$' : ('subber',),
                 r'^(?:(?P<main>B)(?P<up>3)(?P<down>E))$'  : ('subsup',),
                 r'^(?:(?P<main>K)(?P<up>3)(?P<down>WQ?))$': ('subsup',),
-                # r'^(?P<name>(?P<main>B|K)(?P<up>3)(?P<down>E|WQ?))$': 'subsup',
-                #{'B3E', 'K3W', 'K3WQ'},
-                # r'^(B|K)3E|3(?P<down>WQ?)$': 'subsup',
             },
             nodecls = nodes.inline,
             nodecls_map = dict(
@@ -201,11 +221,6 @@ class MetawriteRole(BaseRole):
             r'>': re.escape('\\rangle'),
         }
     )
-    prefixes = {
-        'L': 'logic_name',
-        'V': 'truth_value',
-        '!': 'rewrite',
-    }
     patterns = dict(
         prefixed = r'(?P<raw>(?P<prefix>[%s]){(?P<value>.*?)})' % (
             re.escape(''.join(prefixes.keys()))
@@ -215,41 +230,18 @@ class MetawriteRole(BaseRole):
         prefixed_role = '^%s$' % patterns['prefixed']
     )
 
-    def __init__(self, **opts):
-        opts = dict(self._defaults) | opts
+    def __init__(self, **_):
+        pass
 
-    def role(self):
+    @rolemethod
+    def run(self):
         text = self.text
-
-        classes = ['metawrite']
+        classes = self.classes = ['metawrite']
 
         match = re.match(self.patterns['prefixed_role'], text)
 
         if not match:
-
-            # Try rewrite.
-            mode = 'rewrite'
-            for pat, info in self.modes[mode].items():
-                rend, num = re.subn(pat, info['rep'], text)
-                if num:
-                    classes.extend(info['classes'])
-                    nodecls = info['nodecls']
-                    break
-            else:
-                # Generic math symbols.
-                mode = 'math_symbols'
-                nodecls = nodes.math
-                if 'w' in text:
-                    classes.append('modal')
-                if '<' in text and '>' in text:
-                    classes.append('tuple')
-                rend = text
-                for pat, rep in self.generic[mode].items():
-                    rend = re.sub(pat, rep, rend)
-                logger.info((text,rend))
-
-            classes.append(mode)
-            return nodecls(text = rend, classes = classes)
+            return self.unhinted()
 
         matchd = match.groupdict()
         mode: str = self.prefixes[matchd['prefix']]
@@ -288,7 +280,56 @@ class MetawriteRole(BaseRole):
                     for key, nodecls in nodecls_map.items()
                     if key in md
                 ]
-            
+
             rend = value
             nodecls = moded['nodecls']
             return nodecls(text = rend, classes = classes)
+
+    def unhinted(self):
+        text = self.text
+        classes = self.classes
+        # Try rewrite.
+        mode = 'rewrite'
+        for pat, info in self.modes[mode].items():
+            rend, num = re.subn(pat, info['rep'], text)
+            if num:
+                classes.extend(info['classes'])
+                nodecls = info['nodecls']
+                break
+        else:
+            # Generic math symbols.
+            mode = 'math_symbols'
+            nodecls = nodes.math
+            if 'w' in text:
+                classes.append('modal')
+            if '<' in text and '>' in text:
+                classes.append('tuple')
+            rend = text
+            for pat, rep in self.generic[mode].items():
+                rend = re.sub(pat, rep, rend)
+            # logger.info((text,rend))
+
+        classes.append(mode)
+        return nodecls(text = rend, classes = classes)
+
+def include_directive(app: Sphinx):
+    "Override include directive that allows the app to modify content via events."
+
+    app.add_event('include-read')
+
+    from sphinx.directives.other import Include as BaseInclude
+
+    class Include(BaseInclude):
+
+        def parse(self, text: str, doc):
+            lines = text.split('\n')
+            source = doc.attributes['source']
+            app.emit('include-read', lines)
+            self.state_machine.insert_input(lines, source)
+
+        def run(self):
+            self.options['parser'] = lambda: self
+            super().run()
+            return []
+
+    return Include

@@ -25,40 +25,39 @@ __all__ = 'Helper',
 from errors import instcheck
 import examples
 from lexicals import (
-    LexType,
     LexWriter,
     Notation,
     Operator,
     Parser,
     ParseTable,
-    Predicate,
     RenderSet,
     # Sentence,
 )
 from models import BaseModel
-from proof.helpers import EllipsisExampleHelper
 from proof.tableaux import (
     ClosingRule,
     Rule,
-    Tableau,
-    TableauxSystem as TabSys,
 )
-from tools._docext import include_directive, LexwriteRole, MetawriteRole
+from tools._docext import (
+    Lexdress,
+    Metadress,
+    RefPlus,
+    include_directive, 
+)
 from tools import _docinspect
 from tools.abcs import F, MapProxy
-from tools.decorators import closure, overload, wraps
+from tools.decorators import closure
 from tools.misc import get_logic
 
 from collections import defaultdict
-from docutils import nodes as docnodes
+import csv
 from html import unescape as htmlun
-from inspect import getsource
 import os
 import re
 from sphinx.application import Sphinx
 from sphinx.util import logging
 import traceback
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 # Python domain:
 #    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain
@@ -76,18 +75,6 @@ from typing import Any, Callable
 #    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
 
-# From: https://docutils.sourceforge.io/docs/howto/rst-roles.html
-#
-# > Role functions return a tuple of two values:
-# >
-# > - A list of nodes which will be inserted into the document tree at the
-# >   point where the interpreted role was encountered (can be an empty
-# >   list).
-# >
-# > - A list of system messages, which will be inserted into the document tree
-# >   immediately after the end of the current block (can also be empty).
-_RoleRet = tuple[list[docnodes.Node], list[str]]
-
 logger = logging.getLogger(__name__)
 
 class Helper:
@@ -101,9 +88,10 @@ class Helper:
         write_notation   = Notation.standard,
         parse_notation   = Notation.standard,
         preds            = examples.preds,
-        lexwrite_roles   = ('s',),
-        metawrite_roles  = ('m',),
-        new_include      = True,
+        lexdress_roles   = ('s',),
+        metadress_roles  = ('m',),
+        refplus_roles    = ('lref',),
+        includer      = True,
     ))
 
     @staticmethod
@@ -123,7 +111,7 @@ class Helper:
             helper.sphinx_simple_replace_source,
         )
 
-        if opts['new_include']:
+        if opts['includer']:
             Include = include_directive(app)
             app.add_directive('include', Include, override = True)
 
@@ -132,18 +120,16 @@ class Helper:
                 helper.sphinx_simple_replace_include,
             )
 
-        if opts['lexwrite_roles']:
-            instcheck(opts['lexwrite_roles'], tuple)
-            inst = LexwriteRole(**opts)
-            for name in opts['lexwrite_roles']:
-                app.add_role(name, inst)
-
-        if opts['metawrite_roles']:
-            instcheck(opts['metawrite_roles'], tuple)
-            inst = MetawriteRole()
-            app.add_role('moo', inst)
-            for name in opts['metawrite_roles']:
-                app.add_role(name, inst)
+        for key, rolecls in dict(
+            lexdress_roles = Lexdress,
+            metadress_roles = Metadress,
+            refplus_roles = RefPlus,
+        ).items():
+            if opts[key]:
+                instcheck(opts[key], tuple)
+                inst = rolecls(**opts)
+                for name in opts[key]:
+                    app.add_role(name, inst)
 
         return helper
 
@@ -160,8 +146,10 @@ class Helper:
 
         self.opts = opts = dict(self._defaults) | opts
 
-        instcheck(opts['lexwrite_roles'], tuple)
-        instcheck(opts['metawrite_roles'], tuple)
+        if opts['lexdress_roles']:
+            instcheck(opts['lexdress_roles'], tuple)
+        if opts['metadress_roles']:
+            instcheck(opts['metadress_roles'], tuple)
 
         self.jenv = jinja2.Environment(
             loader = jinja2.FileSystemLoader(opts['template_dir']),
@@ -197,6 +185,7 @@ class Helper:
                     )
                 )
             ))
+
         self.pwtrunk = TabWriter('html',
             lw = LexWriter(lwnotn, renderset = rstrunk),
             classes = ('example', 'build-trunk'),
@@ -267,32 +256,34 @@ class Helper:
         lines.append('')
         return indented(lines, indent)
 
-    def lines_opers_table(self, indent: str|int = None):
-        'ReST lines for the Operators table CSV data.'
-        charpol, charstd = (
-            {o: table.char(o.TYPE, o) for o in Operator}
-            for table in (
-                ParseTable.fetch(Notation.polish),
-                ParseTable.fetch(Notation.standard),
-            )
-        )
-        strhtml, strunic = (
-            {o: rset.string(o.TYPE, o) for o in Operator}
-            for rset in (
-                RenderSet.fetch(Notation.standard, 'html'),
-                RenderSet.fetch(Notation.standard, 'unicode'),
-            )
-        )
-        lines = [
-            '"",' * 3                       + '"Render only"',
-            '"Operator", "Polish", "Standard", "Std. HTML", "Std. Unicode"',
-        ]
-        lines.extend(
-            f'"{o}", "``{charpol[o]}``", "``{charstd[o]}``", '
-            f'"{htmlun(strhtml[o])}", "{strunic[o]}"'
-            for o in Operator
-        )
-        return indented(lines, indent)
+    # def lines_opers_table(self, indent: str|int = None) -> list[str]:
+    #     'ReST lines for the Operators table CSV data.'
+    #     return csvlines(opers_table(), indent)
+
+    #     charpol, charstd = (
+    #         {o: table.char(o.TYPE, o) for o in Operator}
+    #         for table in (
+    #             ParseTable.fetch(Notation.polish),
+    #             ParseTable.fetch(Notation.standard),
+    #         )
+    #     )
+    #     strhtml, strunic = (
+    #         {o: rset.string(o.TYPE, o) for o in Operator}
+    #         for rset in (
+    #             RenderSet.fetch(Notation.standard, 'html'),
+    #             RenderSet.fetch(Notation.standard, 'unicode'),
+    #         )
+    #     )
+    #     lines = [
+    #         '"",' * 3                       + '"Render only"',
+    #         '"Operator", "Polish", "Standard", "Std. HTML", "Std. Unicode"',
+    #     ]
+    #     lines.extend(
+    #         f'"{o}", "``{charpol[o]}``", "``{charstd[o]}``", '
+    #         f'"{htmlun(strhtml[o])}", "{strunic[o]}"'
+    #         for o in Operator
+    #     )
+    #     return indented(lines, indent)
 
     ## Sphinx Event Handlers
 
@@ -380,7 +371,7 @@ class Helper:
 
             # regex: rolename
             rolemap = {
-                MetawriteRole.patterns['prefixed']: opts['metawrite_roles'][0]
+                Metadress.patterns['prefixed']: opts['metadress_roles'][0]
             }
             defns = tuple(
                 (r'(?<!`)' + pat, f':{name}:`\\1`')
@@ -429,7 +420,7 @@ class Helper:
                 (
                     '//lexsym_opers_csv//',
                     re.compile(r'(\s*)//lexsym_opers_csv//'),
-                    self.lines_opers_table,
+                    lambda indent: csvlines(opers_table(), indent)
                 )
             )
 
@@ -474,67 +465,6 @@ class Helper:
 
         return common
 
-    ## Custom Sphinx Roles
-
-    @staticmethod
-    @overload
-    def sphinxrole(func: F, /) -> F: ...
-
-    @staticmethod
-    @overload
-    def sphinxrole(*,
-        keyed: bool = True, content: bool = True, options: dict = {},
-    ) -> Callable[[F], F]: ...
-
-    @staticmethod
-    def sphinxrole(func = None, /, **kw):
-        'Decorator/factory for Sphinx role method.'
-
-        def decorator(func: F) -> F:
-
-            @wraps(func)
-            def f(self, name: str, rawtext: str, text: str, lineno: int,
-                inliner, opts: dict = {}, content: list[str] = [], /):
-                kwargs = dict(
-                    name = name, rawtext = rawtext, text = text, lineno = lineno,
-                    inliner = inliner, opts = opts, content = content
-                )
-                try:
-                    ret = func(self, **kwargs)
-                except:
-                    logger.error(
-                        f"{func.__name__}: rawtext={repr(rawtext)}, "
-                        f"content={content}"
-                    )
-                    logger.info('Printing traceback')
-                    traceback.print_exc()
-                    raise
-                else:
-                    if isinstance(ret, docnodes.Node):
-                        ret = [ret], []
-                    elif not isinstance(ret, tuple):
-                        ret = ret, []
-                    return ret
-
-            fopts = dict(content = True, options = {})
-            fopts.update(kw)
-            for name, value in fopts.items():
-                setattr(f, name, value)
-
-            _RoleRet # fail if missing
-            f.__annotations__['return'] = '_RoleRet'
-
-            return f
-
-        if func is None:
-            return decorator
-
-        if len(kw):
-            raise TypeError('Unexpected kwargs with `func` parameter')
-
-        return decorator(instcheck(func, Callable))
-
-
     ## Dispatcher
 
     def _dispatch_sphinx(self, event: str, args: tuple):
@@ -576,13 +506,42 @@ class Helper:
         return run
 
 
+def opers_table() -> list[list[str]]:
+    'Table data for the Operators table.'
+    charpol, charstd = (
+        {o: table.char(o.TYPE, o) for o in Operator}
+        for table in (
+            ParseTable.fetch(Notation.polish),
+            ParseTable.fetch(Notation.standard),
+        )
+    )
+    strhtml, strunic = (
+        {o: rset.string(o.TYPE, o) for o in Operator}
+        for rset in (
+            RenderSet.fetch(Notation.standard, 'html'),
+            RenderSet.fetch(Notation.standard, 'unicode'),
+        )
+    )
+    pre = '``{}``'.format
+    heads = (
+        ['', '', '', 'Render only'],
+        ['Operator', 'Polish', 'Standard', 'Std. HTML', 'Std. Unicode'],
+    )
+    body = [
+        [o.label, pre(charpol[o]), pre(charstd[o]), htmlun(strhtml[o]), strunic[o]]
+        for o in Operator
+    ]
+    rows = list(heads)
+    rows.extend(body)
+    return rows
+
 def rawblock(lines: list[str], indent: str|int = None) -> list[str]:
     'Make a raw html block from the lines. Returns a new list of lines.'
     lines = ['.. raw:: html', '', *indented(lines, 4), '']
     return indented(lines, indent)
 
 
-def indented(lines: list[str], indent: str|int = None) -> list[str]:
+def indented(lines: Iterable[str], indent: str|int = None) -> list[str]:
     'Indent non-empty lines. Indent can be string or number of spaces.'
     if indent is None:
         indent = ''
@@ -593,7 +552,33 @@ def indented(lines: list[str], indent: str|int = None) -> list[str]:
         for line in lines
     ]
 
+def csvlines(
+    rows: list[list[str]], /, indent: str|int = None, quoting = csv.QUOTE_ALL, **kw
+) -> list[str]:
+    lines = []
+    w = csv.writer(_csvshim(lines.append), quoting = quoting, **kw)
+    w.writerows(rows)
+    return indented(lines, indent)
 
+class _csvshim:
+    __slots__ = 'write',
+    def __init__(self, func): self.write = func
+    def __call__(self, v): return self.write(v)
+
+# @closure
+# def enquote():
+
+#     import simplejson as json
+
+#     encplain = json.JSONEncoder().encode
+#     enchtml = json.JSONEncoderForHTML().encode
+
+#     def enquoter(s: str, /, htmlsafe = False) -> str:
+#         instcheck(s, str)
+#         if htmlsafe:
+#             return enchtml(s)
+#         return encplain(s)
+#     return enquoter
 
 # def set_classes(options: dict):
 #     """Set options['classes'] and delete options['class'].
