@@ -44,8 +44,6 @@ if 'Exports' or True:
 
 if 'Imports' or True:
 
-    # No local imports
-
     import abc as _abc
     from collections.abc import Set
     import enum as _enum
@@ -170,8 +168,6 @@ if 'Decorators & Utils' or True:
 
         return cls
 
-    def closure(func: Callable[..., T]) -> T:
-        return func()
 
 if 'Util Classes' or True:
 

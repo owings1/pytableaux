@@ -9,15 +9,6 @@ L{K3} - Strong Kleene Logic
 L{K3} is a three-valued logic (V{T}, V{F}, and V{N}). It can be understood
 as {@FDE} without the V{B} value.
 
-:lref:`FDE <FDE>`
-
-:lref:`FDE`
-
-:ref:`FDE`
-
-:ref:`FDE <FDE>`
-
-
 .. automodule:: logics.k3
 
     Semantics
@@ -40,7 +31,7 @@ as {@FDE} without the V{B} value.
 
     .. include:: include/truth_table_blurb.rst
 
-    //truth_tables//k3//
+    .. inject:: truth_tables k3
 
     .. _k3-predication:
 

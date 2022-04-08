@@ -28,10 +28,11 @@ __all__ = (
 
 if 'Imports' or True:
     from errors import Emsg, instcheck, subclscheck
+    from tools import closure
     from tools.abcs import Abc, T, F
     from tools.callables import preds
     from tools.decorators import (
-        abstract, closure, final, overload, static,
+        abstract, final, overload, static,
         raisr, wraps,
     )
     from tools.events import EventEmitter

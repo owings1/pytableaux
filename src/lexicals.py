@@ -31,7 +31,6 @@ __all__ = (
     'Operator',
     'Quantifier',
     'Parameter',
-    'Parser',
     'Predicate',
     'Predicated',
     'Predicates',
@@ -40,14 +39,14 @@ __all__ = (
     'Sentence',
     'Variable',
 )
-##############################################################
 
 from errors import Emsg, instcheck
 import tools.abcs as abcs
+from tools import closure
 from tools.abcs import abcm, abcf, eauto, T
 from tools.callables import gets
 from tools.decorators import (
-    abstract, closure, final, overload, static,
+    abstract, final, overload, static,
     fixed, lazy, membr, raisr, wraps, NoSetAttr
 )
 from tools.hybrids   import qsetf, qset
@@ -254,7 +253,12 @@ if 'Metas' or True:
                     args = args[1:]
                 else:
                     notn = Notation.default
-                return notn.Parser(*args, **kw)
+                try:
+                    parsercls = notn.Parser
+                except AttributeError:
+                    import parsers
+                    parsercls = notn.Parser
+                return parsercls(*args, **kw)
             return super().__call__(*args, **kw)
 
 @abcm.clsafter
@@ -647,31 +651,44 @@ class Bases:
 
     class CacheNotationData(metaclass = AbcBaseMeta):
 
-        default_fetch_key = 'default'
+        default_fetch_key: ClassVar[str]
         _instances: ClassVar[dict[Notation, dict[str, CnT]]]
 
         __slots__ = EMPTY_SET
 
         @classmethod
-        def load(cls: type[CnT], notn: Notation, key: str, data: Mapping) -> CnT:
+        def load(cls: type[CnT], notn: Notation, key: str, data: Mapping, /) -> CnT:
             instcheck(key, str)
-            idx = cls._instances[notn]
+            try:
+                idx = cls._instances[notn]
+            except KeyError:
+                if not isinstance(notn, Notation):
+                    try:
+                        idx = cls._instances[Notation[notn]]
+                    except KeyError as e:
+                        raise e from None
             if key in idx:
                 raise Emsg.DuplicateKey((notn, key))
             return idx.setdefault(key, cls(data))
 
         @classmethod
-        def fetch(cls: type[CnT], notn: Notation, key: str = None) -> CnT:
+        def fetch(cls: type[CnT], notn: Notation, key: str = None, /) -> CnT:
             if key is None:
                 key = cls.default_fetch_key
             try:
                 return cls._instances[notn][key]
             except KeyError:
-                pass
+                if not isinstance(notn, Notation):
+                    notn = Notation[notn]
+                    try:
+                        return cls._instances[notn][key]
+                    except KeyError:
+                        pass
             return cls.load(notn, key, cls._builtin[notn][key])
 
         @classmethod
         def available(cls, notn: Notation) -> list[str]:
+            notn = Notation(notn)
             return sorted(set(cls._instances[notn]).union(cls._builtin[notn]))
 
         @classmethod
@@ -2082,12 +2099,12 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], Bases.Cac
             tvals[ctype].sort()
 
         # flipped table
-        self.reversed = rev = MapCover(dict(
+        self.reversed = rev = MapProxy(dict(
             map(reversed, ItemsIterator(self))
         ))
 
         # chars for each type in value order, duplicates discarded
-        self.chars = MapCover(dict(
+        self.chars = MapProxy(dict(
             (ctype, seqf(rev[ctype, val] for val in tvals[ctype]))
             for ctype in ctypes
         ))
@@ -2128,7 +2145,6 @@ class RenderSet(Bases.CacheNotationData):
 
     default_fetch_key = 'ascii'
 
-    name: str
     notation: Notation
     charset: str
     renders: Mapping[Any, Callable[..., str]]
@@ -2136,7 +2152,6 @@ class RenderSet(Bases.CacheNotationData):
     data: Mapping[str, Any]
 
     def __init__(self, data: Mapping[str, Any]):
-        self.name = data['name']
         self.notation = notn = Notation(data['notation'])
         self.charset = data['charset']
         self.renders = data.get('renders', {})
@@ -2150,22 +2165,30 @@ class RenderSet(Bases.CacheNotationData):
             return self.renders[ctype](value)
         return self.strings[ctype][value]
 
-    strfor = string
-
 @closure
 def _():
+    from tools.misc import dmerged, dtransform
+    from html import unescape as html_unescape
+
+    def dunesc(d: dict, inplace = False) -> None:
+        return dtransform(html_unescape, d, typeinfo = str, inplace = inplace)
 
     def unisub(sub: int) -> str:
-        # ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'],
+        # ₀₁₂₃₄₅₆₇₈₉
         return ''.join(chr(0x2080 + int(d)) for d in str(sub))
 
+    asciimeta = MapProxy(dict(
+        conseq     = '|-',
+        nonconseq = '|/-',
+    ))
     htmsub = '<sub>%d</sub>'.__mod__
 
-    polasc = dict(
-        name     = 'polish.ascii',
+    data = {notn: {} for notn in Notation}
+
+    data[Notation.polish]['html'] = polhtml = dict(
         notation = Notation.polish,
-        charset  = 'ascii',
-        renders  = {Marking.subscript: str},
+        charset  = 'html',
+        renders  = {Marking.subscript: htmsub},
         strings = {
             LexType.Atomic   : tuple('abcde'),
             LexType.Operator : {
@@ -2196,160 +2219,96 @@ def _():
             Marking.paren_close : (NotImplemented,),
             Marking.whitespace  : (' ',),
             Marking.meta: dict(
-                conseq     = '|-',
-                nonconseq = '|/-',
+                conseq    = '&vdash;',
+                nonconseq = '&nvdash;',
             ),
         },
     )
-    data = {
-        Notation.polish: dict(
-            ascii   = polasc,
-            unicode = polasc | dict(
-                name     = 'polish.unicode',
-                charset  = 'unicode',
-                renders  = {Marking.subscript: unisub},
-                strings  = polasc['strings'] | {
-                    Marking.meta: dict(
-                        conseq    = '⊢',
-                        nonconseq = '⊬',
-                    ),
-                },
+
+    data[Notation.polish]['unicode'] = polunic = dmerged(polhtml, dict(
+        charset  = 'unicode',
+        renders  = {Marking.subscript: unisub},
+        strings  = dunesc(polhtml['strings']),
+    ))
+
+    data[Notation.polish]['ascii'] = dmerged(polunic, dict(
+        charset  = 'ascii',
+        renders  = {Marking.subscript: str},
+        strings  = {Marking.meta: asciimeta},
+    ))
+    data[Notation.standard]['html'] = stdhtml = dict(
+        notation = Notation.standard,
+        charset  = 'html',
+        renders  = {Marking.subscript: htmsub},
+        strings = {
+            LexType.Atomic   : tuple('ABCDE'),
+            LexType.Operator : {
+                Operator.Assertion             : '&#9675;' ,
+                Operator.Negation              : '&not;'   ,
+                Operator.Conjunction           : '&and;'   ,
+                Operator.Disjunction           : '&or;'    ,
+                Operator.MaterialConditional   : '&sup;'   ,
+                Operator.MaterialBiconditional : '&equiv;' ,
+                Operator.Conditional           : '&rarr;'  ,
+                Operator.Biconditional         : '&harr;'  ,
+                Operator.Possibility           : '&#9671;' ,
+                Operator.Necessity             : '&#9723;' ,
+            },
+            LexType.Variable   : tuple('xyzv'),
+            LexType.Constant   : tuple('abcd'),
+            LexType.Quantifier : {
+                Quantifier.Universal   : '&forall;' ,
+                Quantifier.Existential : '&exist;'  ,
+            },
+            (LexType.Predicate, True) : {
+                Predicate.System.Identity.index  : '=',
+                Predicate.System.Existence.index : 'E!',
+                (Operator.Negation, Predicate.System.Identity): '&ne;',
+            },
+            (LexType.Predicate, False) : tuple('FGHO'),
+            Marking.paren_open   : ('(',),
+            Marking.paren_close  : (')',),
+            Marking.whitespace   : (' ',),
+            Marking.meta: dict(
+                conseq    = '&vdash;',
+                nonconseq = '&nvdash;',
             ),
-            html = polasc | dict(
-                name     = 'polish.html',
-                charset  = 'html',
-                renders  = {Marking.subscript: htmsub},
-                strings  = polasc['strings'] | {
-                    Marking.meta: dict(
-                        conseq    = '&vdash;',
-                        nonconseq = '&nvdash;',
-                    ),
-                },
-            ),
-        ),
-        Notation.standard: dict(
-            ascii = dict(
-                name     = 'standard.ascii',
-                notation = Notation.standard,
-                charset  = 'ascii',
-                renders  = {Marking.subscript: str},
-                strings = {
-                    LexType.Atomic : tuple('ABCDE'),
-                    LexType.Operator : {
-                        Operator.Assertion              :  '*',
-                        Operator.Negation               :  '~',
-                        Operator.Conjunction            :  '&',
-                        Operator.Disjunction            :  'V',
-                        Operator.MaterialConditional    :  '>',
-                        Operator.MaterialBiconditional  :  '<',
-                        Operator.Conditional            :  '$',
-                        Operator.Biconditional          :  '%',
-                        Operator.Possibility            :  'P',
-                        Operator.Necessity              :  'N',
-                    },
-                    LexType.Variable : tuple('xyzv'),
-                    LexType.Constant : tuple('abcd'),
-                    LexType.Quantifier : {
-                        Quantifier.Universal   : 'L',
-                        Quantifier.Existential : 'X',
-                    },
-                    (LexType.Predicate, True) : {
-                        Predicate.System.Identity.index  : '=',
-                        Predicate.System.Existence.index : 'E!',
-                        (Operator.Negation, Predicate.System.Identity): '!=',
-                    },
-                    (LexType.Predicate, False) : tuple('FGHO'),
-                    Marking.paren_open      : ('(',),
-                    Marking.paren_close     : (')',),
-                    Marking.whitespace      : (' ',),
-                    Marking.meta: dict(
-                        conseq    = '⊢',
-                        nonconseq = '⊬',
-                    ),
-                },
-            ),
-            unicode = dict(
-                name     = 'standard.unicode',
-                notation = Notation.standard,
-                charset  = 'unicode',
-                renders  = {Marking.subscript: unisub},
-                strings = {
-                    LexType.Atomic   : tuple('ABCDE'),
-                    LexType.Operator : {
-                        Operator.Assertion              : '○',
-                        Operator.Negation               : '¬',
-                        Operator.Conjunction            : '∧',
-                        Operator.Disjunction            : '∨',
-                        Operator.MaterialConditional    : '⊃',
-                        Operator.MaterialBiconditional  : '≡',
-                        Operator.Conditional            : '→',
-                        Operator.Biconditional          : '↔',
-                        Operator.Possibility            : '◇',
-                        Operator.Necessity              : '◻',
-                    },
-                    LexType.Variable   : tuple('xyzv'),
-                    LexType.Constant   : tuple('abcd'),
-                    LexType.Quantifier : {
-                        Quantifier.Universal   : '∀' ,
-                        Quantifier.Existential : '∃' ,
-                    },
-                    (LexType.Predicate, True) : {
-                        Predicate.System.Identity.index  : '=',
-                        Predicate.System.Existence.index : 'E!',
-                        (Operator.Negation, Predicate.System.Identity): '≠',
-                    },
-                    (LexType.Predicate, False) : tuple('FGHO'),
-                    Marking.paren_open  : ('(',),
-                    Marking.paren_close : (')',),
-                    Marking.whitespace  : (' ',),
-                    Marking.meta: dict(
-                        conseq    = '⊢',
-                        nonconseq = '⊬',
-                    ),
-                },
-            ),
-            html = dict(
-                name     = 'standard.html',
-                notation = Notation.standard,
-                charset  = 'html',
-                renders  = {Marking.subscript: htmsub},
-                strings = {
-                    LexType.Atomic   : tuple('ABCDE'),
-                    LexType.Operator : {
-                        Operator.Assertion             : '&#9675;' ,
-                        Operator.Negation              : '&not;'   ,
-                        Operator.Conjunction           : '&and;'   ,
-                        Operator.Disjunction           : '&or;'    ,
-                        Operator.MaterialConditional   : '&sup;'   ,
-                        Operator.MaterialBiconditional : '&equiv;' ,
-                        Operator.Conditional           : '&rarr;'  ,
-                        Operator.Biconditional         : '&harr;'  ,
-                        Operator.Possibility           : '&#9671;' ,
-                        Operator.Necessity             : '&#9723;' ,
-                    },
-                    LexType.Variable   : tuple('xyzv'),
-                    LexType.Constant   : tuple('abcd'),
-                    LexType.Quantifier : {
-                        Quantifier.Universal   : '&forall;' ,
-                        Quantifier.Existential : '&exist;'  ,
-                    },
-                    (LexType.Predicate, True) : {
-                        Predicate.System.Identity.index  : '=',
-                        Predicate.System.Existence.index : 'E!',
-                        (Operator.Negation, Predicate.System.Identity): '&ne;',
-                    },
-                    (LexType.Predicate, False) : tuple('FGHO'),
-                    Marking.paren_open   : ('(',),
-                    Marking.paren_close  : (')',),
-                    Marking.whitespace   : (' ',),
-                    Marking.meta: dict(
-                        conseq    = '&vdash;',
-                        nonconseq = '&nvdash;',
-                    ),
-                },
-            )
-        )
-    }
+        },
+    )
+
+    data[Notation.standard]['unicode'] = stdunic = dmerged(stdhtml, dict(
+        charset  = 'unicode',
+        renders  = {Marking.subscript: unisub},
+        strings  = dunesc(stdhtml['strings']),
+    ))
+
+    data[Notation.standard]['ascii'] = dmerged(stdunic, dict(
+        charset  = 'ascii',
+        renders  = {Marking.subscript: str},
+        strings = {
+            LexType.Operator : {
+                Operator.Assertion              :  '*',
+                Operator.Negation               :  '~',
+                Operator.Conjunction            :  '&',
+                Operator.Disjunction            :  'V',
+                Operator.MaterialConditional    :  '>',
+                Operator.MaterialBiconditional  :  '<',
+                Operator.Conditional            :  '$',
+                Operator.Biconditional          :  '%',
+                Operator.Possibility            :  'P',
+                Operator.Necessity              :  'N',
+            },
+            LexType.Quantifier : {
+                Quantifier.Universal   : 'L',
+                Quantifier.Existential : 'X',
+            },
+            (LexType.Predicate, True) : {
+                (Operator.Negation, Predicate.System.Identity): '!=',
+            },
+            Marking.meta: asciimeta
+        },
+    ))
+
     RenderSet._initcache(Notation, data)
 
 

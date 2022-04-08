@@ -16,75 +16,44 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ------------------
-#
-# pytableaux - docutils/sphins exentions.
+# pytableaux - tools.doc.roles module
 from __future__ import annotations
-import traceback
-
-from tools.decorators import wraps
+from typing import Any
 
 __all__ = (
-    'Lexdress',
-    'Metadress',
-    'RefPlus'
-    'include_directive',
+    'metadress',
+    'lexdress',
+    'refplus',
 )
 
-import examples
-from lexicals import LexType, LexWriter, Notation, Parser, Predicate
-from tools.abcs import F, MapProxy, AbcMeta
+from lexicals import LexType, LexWriter, Parser, Predicate, Predicates
+from tools import F
 
 from docutils import nodes
-from html import unescape as htmlun
-from sphinx.application import Sphinx
-from sphinx.roles import XRefRole as BaseRefRole
+from docutils.parsers.rst import roles as _docroles
+import functools
+import re
+import sphinx.roles
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxRole
-import re
 
 logger = logging.getLogger(__name__)
 
-def rolemethod(func: F) -> F:
-    # Decorator for role method.
-    @wraps(func)
-    def run(self: BaseRole):
-        try:
-            ret = func(self)
-        except:
-            logger.error(
-                f"rawtext={repr(self.rawtext)}, "
-                f"content={self.content}"
-            )
-            logger.info('Printing traceback')
-            traceback.print_exc()
-            raise
-        else:
-            # Quote from https://docutils.sourceforge.io/docs/howto/rst-roles.html
-            #
-            # Role functions return a tuple of two values:
-            # 
-            #  - A list of nodes which will be inserted into the document tree
-            #    at the point where the interpreted role was encountered (can be
-            #   an empty list).
-            # 
-            #  - A list of system messages, which will be inserted into the
-            #    document tree immediately after the end of the current block
-            #   (can also be empty).
-            #
-            if isinstance(ret, nodes.Node):
-                # Allow a single node.
-                ret = [ret], []
-            elif not isinstance(ret, tuple):
-                # Allow just the list of nodes.
-                ret = ret, []
-            return ret
+def rolerun(func: F) -> F:
+    'Decorator for role run method.'
+    @functools.wraps(func)
+    def run(self):
+        ret = func(self)
+        if isinstance(ret, nodes.Node):
+            # Allow a single node.
+            return [ret], []
+        if not isinstance(ret, tuple):
+            # Allow just the list of nodes.
+            return ret, []
+        return ret
     return run
 
-class BaseRole(SphinxRole, metaclass = AbcMeta):
-    pass
-
-
-class RefPlus(BaseRefRole, BaseRole):
+class refplus(sphinx.roles.XRefRole):
 
     refdomain = 'std'
     reftype = 'ref'
@@ -98,7 +67,7 @@ class RefPlus(BaseRefRole, BaseRole):
     def __init__(self, **_) -> None:
         pass
 
-    @rolemethod
+    @rolerun
     def run(self):
         self.classes = list(self._classes)
         if self.disabled:
@@ -106,36 +75,38 @@ class RefPlus(BaseRefRole, BaseRole):
         else:
             return self.create_xref_node()
 
-class Lexdress(BaseRole):
+class lexdress(SphinxRole):
 
-    _defaults = MapProxy(dict(
-        write_notation   = Notation.standard,
-        parse_notation   = Notation.standard,
-        preds            = examples.preds,
-    ))
-
-    _ctypes = dict(
-        valued = {
-            LexType.Operator,
-            LexType.Quantifier,
-            Predicate.System
-        }
-    )
-    _ctypes['nosent'] = _ctypes['valued'] | {
-        LexType.Constant,
-        LexType.Variable,
-        LexType.Predicate,
-    }
+    #: The input notation.
+    pnotn = 'standard'
+    #: The output notation.
+    wnotn = 'standard'
+    #: The parser predicates store.
+    preds = Predicates(Predicate.gen(3))
 
     parser: Parser
-    lwhtml: LexWriter
+    lw: LexWriter
 
-    def __init__(self, **opts):
-        opts = dict(self._defaults) | opts
-        self.parser = Parser(opts['parse_notation'], opts['preds'])
-        self.lwhtml = LexWriter(opts['write_notation'], 'html')
+    def __init__(self, *, wnotn = None, pnotn = None, preds = None):
+        if wnotn is not None:
+            self.wnotn = wnotn
+        if pnotn is not None:
+            self.pnotn = pnotn
+        if preds is not None:
+            self.preds = preds
 
-    @rolemethod
+        self.parser = Parser(self.pnotn, self.preds)
+        self.lw = LexWriter(self.wnotn, 'unicode')
+
+    _ctypes_valued = {
+        LexType.Operator, LexType.Quantifier, Predicate.System
+    }
+    _ctypes_nosent = _ctypes_valued | {
+        LexType.Constant, LexType.Variable, LexType.Predicate,
+    }
+    _re_nosent = re.compile(r'^(.)([0-9]*)$')
+
+    @rolerun
     def run(self):
 
         text = self.text
@@ -143,17 +114,16 @@ class Lexdress(BaseRole):
         classes = ['lexitem']
 
         item = None
-        match = re.match(r'^(.)([0-9]*)$', text)
+        match = self._re_nosent.match(text)
 
         if match:
             char, sub = match.groups()
             table = self.parser.table
             ctype = table.type(char)
-            _ctypes = self._ctypes
-            if ctype in _ctypes['nosent']:
+            if ctype in self._ctypes_nosent:
                 # Non-sentence items.
                 sub = int(sub) if len(sub) else 0
-                if ctype in _ctypes['valued']:
+                if ctype in self._ctypes_valued:
                     item = table.value(char)
                 elif ctype is LexType.Predicate:
                     preds = self.parser.preds
@@ -166,13 +136,13 @@ class Lexdress(BaseRole):
             item = self.parser(text)
 
         classes.append(item.TYPE.name.lower())
-        rend = htmlun(self.lwhtml(item))
+
+        rend = self.lw(item)
 
         return nodes.inline(text = rend, classes = classes)
 
-class Metadress(BaseRole):
 
-
+class metadress(SphinxRole):
 
     prefixes = {
         'L': 'logic_name',
@@ -233,7 +203,7 @@ class Metadress(BaseRole):
     def __init__(self, **_):
         pass
 
-    @rolemethod
+    @rolerun
     def run(self):
         text = self.text
         classes = self.classes = ['metawrite']
@@ -307,29 +277,21 @@ class Metadress(BaseRole):
             rend = text
             for pat, rep in self.generic[mode].items():
                 rend = re.sub(pat, rep, rend)
-            # logger.info((text,rend))
 
         classes.append(mode)
         return nodecls(text = rend, classes = classes)
 
-def include_directive(app: Sphinx):
-    "Override include directive that allows the app to modify content via events."
-
-    app.add_event('include-read')
-
-    from sphinx.directives.other import Include as BaseInclude
-
-    class Include(BaseInclude):
-
-        def parse(self, text: str, doc):
-            lines = text.split('\n')
-            source = doc.attributes['source']
-            app.emit('include-read', lines)
-            self.state_machine.insert_input(lines, source)
-
-        def run(self):
-            self.options['parser'] = lambda: self
-            super().run()
-            return []
-
-    return Include
+def getentry(roleish: SphinxRole|type[SphinxRole]|str) -> tuple[str, Any]|None:
+    'Get loaded role name and instance, by name, instance or type.'
+    if isinstance(roleish, str):
+        inst = _docroles._roles.get(roleish)
+        if inst:
+            return roleish, inst
+        return None
+    if isinstance(roleish, type):
+        roletype = roleish
+    else:
+        roletype = type(roleish)
+    for name, inst in _docroles._roles.items():
+        if type(inst) is roletype:
+            return name, inst

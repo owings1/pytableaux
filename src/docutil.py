@@ -23,13 +23,11 @@ from __future__ import annotations
 __all__ = 'Helper',
 
 from errors import instcheck
-import examples
 from lexicals import (
     LexWriter,
     Notation,
     Operator,
     Parser,
-    ParseTable,
     RenderSet,
     # Sentence,
 )
@@ -38,26 +36,22 @@ from proof.tableaux import (
     ClosingRule,
     Rule,
 )
-from tools._docext import (
-    Lexdress,
-    Metadress,
-    RefPlus,
-    include_directive, 
+from tools import closure
+from tools.doc import (
+    docinspect,
+    docparts,
+    roles,
+    rstutils,
 )
-from tools import _docinspect
-from tools.abcs import F, MapProxy
-from tools.decorators import closure
 from tools.misc import get_logic
 
 from collections import defaultdict
-import csv
-from html import unescape as htmlun
 import os
 import re
 from sphinx.application import Sphinx
 from sphinx.util import logging
 import traceback
-from typing import Any, Callable, Iterable
+from typing import Any, Callable
 
 # Python domain:
 #    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain
@@ -79,20 +73,15 @@ logger = logging.getLogger(__name__)
 
 class Helper:
 
-    _defaults = MapProxy(dict(
-        template_dir     = os.path.abspath(
+    _defaults = dict(
+        template_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), '../doc/templates')
         ),
         truth_table_tmpl = 'truth_table.jinja2',
         truth_tables_rev = True,
-        write_notation   = Notation.standard,
-        parse_notation   = Notation.standard,
-        preds            = examples.preds,
-        lexdress_roles   = ('s',),
-        metadress_roles  = ('m',),
-        refplus_roles    = ('lref',),
-        includer      = True,
-    ))
+        wnotn = 'standard',
+        includer = True,
+    )
 
     @staticmethod
     def setup_sphinx(app: Sphinx, **opts) -> Helper:
@@ -111,8 +100,9 @@ class Helper:
             helper.sphinx_simple_replace_source,
         )
 
+        from tools.doc import directives
         if opts['includer']:
-            Include = include_directive(app)
+            Include = directives.include_directive(app)
             app.add_directive('include', Include, override = True)
 
             helper.connect_sphinx(app, 'include-read',
@@ -120,36 +110,28 @@ class Helper:
                 helper.sphinx_simple_replace_include,
             )
 
-        for key, rolecls in dict(
-            lexdress_roles = Lexdress,
-            metadress_roles = Metadress,
-            refplus_roles = RefPlus,
-        ).items():
-            if opts[key]:
-                instcheck(opts[key], tuple)
-                inst = rolecls(**opts)
-                for name in opts[key]:
-                    app.add_role(name, inst)
+        app.add_directive('csv-table', directives.CSVTable, True)
+        app.add_directive('inject', directives.Inject)
 
         return helper
 
     DIV_CLEAR = '<div class="clear"></div>'
 
     logic_union = '|'.join(
-        sorted(_docinspect.get_logic_names(), key = len, reverse = True)
+        sorted(docinspect.get_logic_names(), key = len, reverse = True)
     )
 
     def __init__(self, **opts):
+        self._listeners: dict[str, list] = defaultdict(list)
+        self._connids = {}
+        self.reconfigure(opts)
+
+    def reconfigure(self, opts: dict):
 
         from proof.writers import TabWriter
         import jinja2
 
         self.opts = opts = dict(self._defaults) | opts
-
-        if opts['lexdress_roles']:
-            instcheck(opts['lexdress_roles'], tuple)
-        if opts['metadress_roles']:
-            instcheck(opts['metadress_roles'], tuple)
 
         self.jenv = jinja2.Environment(
             loader = jinja2.FileSystemLoader(opts['template_dir']),
@@ -157,10 +139,8 @@ class Helper:
             lstrip_blocks = True,
         )
 
-        self.parser = Parser(opts['parse_notation'], opts['preds'])
-
-        lwnotn = Notation(opts['write_notation'])
-        self.lwhtml = LexWriter(lwnotn, 'html')
+        wnotn = Notation(opts['wnotn'])
+        self.lwhtml = LexWriter(wnotn, 'html')
 
         self.pwrule = TabWriter('html',
             lw = self.lwhtml,
@@ -174,11 +154,11 @@ class Helper:
         # Make a RenderSet that renders subscript 2 as n.
         rskey = 'docutil.trunk'
         try:
-            rstrunk = RenderSet.fetch(lwnotn, rskey)
+            rstrunk = RenderSet.fetch(wnotn, rskey)
         except KeyError:
-            rshtml = RenderSet.fetch(lwnotn, 'html')
-            rstrunk = RenderSet.load(lwnotn, rskey, dict(rshtml.data,
-                name = f'{lwnotn.name}.{rskey}',
+            rshtml = RenderSet.fetch(wnotn, 'html')
+            rstrunk = RenderSet.load(wnotn, rskey, dict(rshtml.data,
+                name = f'{wnotn.name}.{rskey}',
                 renders = dict(rshtml.renders,
                     subscript = lambda sub: (
                         '<sub>%s</sub>' % ('n' if sub == 2 else sub)
@@ -187,12 +167,11 @@ class Helper:
             ))
 
         self.pwtrunk = TabWriter('html',
-            lw = LexWriter(lwnotn, renderset = rstrunk),
+            lw = LexWriter(wnotn, renderset = rstrunk),
             classes = ('example', 'build-trunk'),
         )
-
-        self._listeners: dict[str, list] = defaultdict(list)
-        self._connids = {}
+        _simple_replace = None
+        _line_replace   = None
 
     # TODO: generate rule "cheat sheet"
 
@@ -200,20 +179,20 @@ class Helper:
 
     def lines_rule_example(self, rule: Rule|type[Rule], /, logic: Any = None, indent: str|int = None):
         'ReST lines for ``Rule`` example.'
-        tab = _docinspect.rule_example_tableau(rule, logic)
+        tab = docparts.rule_example_tableau(rule, logic)
         rule = tab.rules.get(rule)
         if isinstance(rule, ClosingRule):
             pw = self.pwclosure
         else:
             pw = self.pwrule
         lines = ['Example:', '']
-        lines.extend(rawblock(pw(tab).split('\n')))
-        return indented(lines, indent)
+        lines.extend(rstutils.rawblock(pw(tab).split('\n')))
+        return rstutils.indented(lines, indent)
 
     def lines_trunk_example(self, logic: Any, indent: str|int = None) -> list[str]:
         'ReST lines for ``build_trunk`` example.'
         arg = Parser('polish').argument('b', ('a1', 'a2'))
-        tab = _docinspect.trunk_example_tableau(logic, arg)
+        tab = docparts.trunk_example_tableau(logic, arg)
         pw = self.pwtrunk
         lw = pw.lw
         if lw.charset != 'html':
@@ -224,7 +203,7 @@ class Helper:
         argstr = f'Argument: <i>{pstr}</i> &there4; <i>{lw(arg.conclusion)}</i>'
         lines = argstr.split('\n')
         lines.extend(pw(tab).split('\n'))
-        return indented(rawblock(lines), indent)
+        return rstutils.indented(rstutils.rawblock(lines), indent)
 
     def lines_truth_tables(self, logic: Any, indent: str|int = None) -> list[str]:
         'ReST lines for truth tables of all operators.'
@@ -241,7 +220,8 @@ class Helper:
                 ).split('\n')
         ]
         lines.append(self.DIV_CLEAR)
-        return rawblock(lines, indent)
+        return lines
+        return rstutils.rawblock(lines, indent)
 
     def lines_ruledoc_inherit(self, rule: type[Rule], indent: str|int = None):
         'ReST docstring lines for an "inheriting only" ``Rule`` class.'
@@ -254,36 +234,7 @@ class Helper:
         ]
         lines.extend(map(str.strip, prule.__doc__.split('\n')))
         lines.append('')
-        return indented(lines, indent)
-
-    # def lines_opers_table(self, indent: str|int = None) -> list[str]:
-    #     'ReST lines for the Operators table CSV data.'
-    #     return csvlines(opers_table(), indent)
-
-    #     charpol, charstd = (
-    #         {o: table.char(o.TYPE, o) for o in Operator}
-    #         for table in (
-    #             ParseTable.fetch(Notation.polish),
-    #             ParseTable.fetch(Notation.standard),
-    #         )
-    #     )
-    #     strhtml, strunic = (
-    #         {o: rset.string(o.TYPE, o) for o in Operator}
-    #         for rset in (
-    #             RenderSet.fetch(Notation.standard, 'html'),
-    #             RenderSet.fetch(Notation.standard, 'unicode'),
-    #         )
-    #     )
-    #     lines = [
-    #         '"",' * 3                       + '"Render only"',
-    #         '"Operator", "Polish", "Standard", "Std. HTML", "Std. Unicode"',
-    #     ]
-    #     lines.extend(
-    #         f'"{o}", "``{charpol[o]}``", "``{charstd[o]}``", '
-    #         f'"{htmlun(strhtml[o])}", "{strunic[o]}"'
-    #         for o in Operator
-    #     )
-    #     return indented(lines, indent)
+        return rstutils.indented(lines, indent)
 
     ## Sphinx Event Handlers
 
@@ -369,9 +320,13 @@ class Helper:
 
             opts = self.opts
 
+            
+            # TODO: look this up dynamically through app config.
+            # rolenames: dict[type, str] = opts['rolenames']
             # regex: rolename
+            name, inst = roles.getentry(roles.metadress)
             rolemap = {
-                Metadress.patterns['prefixed']: opts['metadress_roles'][0]
+                roles.metadress.patterns['prefixed']: name#rolenames[roles.metadress]
             }
             defns = tuple(
                 (r'(?<!`)' + pat, f':{name}:`\\1`')
@@ -409,8 +364,18 @@ class Helper:
                 return defns
 
             def truthtable(indent, logic):
-                return self.lines_truth_tables(logic, indent)
+                lines = self.lines_truth_tables(logic)
+                return rstutils.rawblock(lines, indent)
 
+            def opertable(indent):
+                rows = docparts.opers_table()
+                lines = rstutils.csvlines(rows, indent)
+                print('------_line_replace_common indent')
+                for line in lines:
+                    print(repr(line))
+                print('------_line_replace_common')
+                return lines
+    
             defns = (
                 (
                     '//truth_tables//',
@@ -420,7 +385,8 @@ class Helper:
                 (
                     '//lexsym_opers_csv//',
                     re.compile(r'(\s*)//lexsym_opers_csv//'),
-                    lambda indent: csvlines(opers_table(), indent)
+                    opertable
+                    # lambda indent: rstutils.csvlines(docparts.opers_table(), indent)
                 )
             )
 
@@ -484,7 +450,7 @@ class Helper:
     @closure
     def sphinx_obj_lines_append_autodoc():
 
-        from tools._docinspect import (
+        from tools.doc.docinspect import (
             is_concrete_rule,
             is_concrete_build_trunk,
             is_transparent_rule,
@@ -506,64 +472,64 @@ class Helper:
         return run
 
 
-def opers_table() -> list[list[str]]:
-    'Table data for the Operators table.'
-    charpol, charstd = (
-        {o: table.char(o.TYPE, o) for o in Operator}
-        for table in (
-            ParseTable.fetch(Notation.polish),
-            ParseTable.fetch(Notation.standard),
-        )
-    )
-    strhtml, strunic = (
-        {o: rset.string(o.TYPE, o) for o in Operator}
-        for rset in (
-            RenderSet.fetch(Notation.standard, 'html'),
-            RenderSet.fetch(Notation.standard, 'unicode'),
-        )
-    )
-    pre = '``{}``'.format
-    heads = (
-        ['', '', '', 'Render only'],
-        ['Operator', 'Polish', 'Standard', 'Std. HTML', 'Std. Unicode'],
-    )
-    body = [
-        [o.label, pre(charpol[o]), pre(charstd[o]), htmlun(strhtml[o]), strunic[o]]
-        for o in Operator
-    ]
-    rows = list(heads)
-    rows.extend(body)
-    return rows
+# def opers_table() -> list[list[str]]:
+#     'Table data for the Operators table.'
+#     charpol, charstd = (
+#         {o: table.char(o.TYPE, o) for o in Operator}
+#         for table in (
+#             ParseTable.fetch(Notation.polish),
+#             ParseTable.fetch(Notation.standard),
+#         )
+#     )
+#     strhtml, strunic = (
+#         {o: rset.string(o.TYPE, o) for o in Operator}
+#         for rset in (
+#             RenderSet.fetch(Notation.standard, 'html'),
+#             RenderSet.fetch(Notation.standard, 'unicode'),
+#         )
+#     )
+#     pre = '``{}``'.format
+#     heads = (
+#         ['', '', '', 'Render only'],
+#         ['Operator', 'Polish', 'Standard', 'Std. HTML', 'Std. Unicode'],
+#     )
+#     body = [
+#         [o.label, pre(charpol[o]), pre(charstd[o]), htmlun(strhtml[o]), strunic[o]]
+#         for o in Operator
+#     ]
+#     rows = list(heads)
+#     rows.extend(body)
+#     return rows
 
-def rawblock(lines: list[str], indent: str|int = None) -> list[str]:
-    'Make a raw html block from the lines. Returns a new list of lines.'
-    lines = ['.. raw:: html', '', *indented(lines, 4), '']
-    return indented(lines, indent)
+# def rawblock(lines: list[str], indent: str|int = None) -> list[str]:
+#     'Make a raw html block from the lines. Returns a new list of lines.'
+#     lines = ['.. raw:: html', '', *indented(lines, 4), '']
+#     return indented(lines, indent)
 
 
-def indented(lines: Iterable[str], indent: str|int = None) -> list[str]:
-    'Indent non-empty lines. Indent can be string or number of spaces.'
-    if indent is None:
-        indent = ''
-    elif isinstance(indent, int):
-        indent *= ' '
-    return [
-        indent + line if len(line) else line
-        for line in lines
-    ]
+# def indented(lines: Iterable[str], indent: str|int = None) -> list[str]:
+#     'Indent non-empty lines. Indent can be string or number of spaces.'
+#     if indent is None:
+#         indent = ''
+#     elif isinstance(indent, int):
+#         indent *= ' '
+#     return [
+#         indent + line if len(line) else line
+#         for line in lines
+#     ]
 
-def csvlines(
-    rows: list[list[str]], /, indent: str|int = None, quoting = csv.QUOTE_ALL, **kw
-) -> list[str]:
-    lines = []
-    w = csv.writer(_csvshim(lines.append), quoting = quoting, **kw)
-    w.writerows(rows)
-    return indented(lines, indent)
+# def csvlines(
+#     rows: list[list[str]], /, indent: str|int = None, quoting = csv.QUOTE_ALL, **kw
+# ) -> list[str]:
+#     lines = []
+#     w = csv.writer(_csvshim(lines.append), quoting = quoting, **kw)
+#     w.writerows(rows)
+#     return indented(lines, indent)
 
-class _csvshim:
-    __slots__ = 'write',
-    def __init__(self, func): self.write = func
-    def __call__(self, v): return self.write(v)
+# class _csvshim:
+#     __slots__ = 'write',
+#     def __init__(self, func): self.write = func
+#     def __call__(self, v): return self.write(v)
 
 # @closure
 # def enquote():

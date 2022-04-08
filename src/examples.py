@@ -25,7 +25,7 @@ from errors import instcheck
 from lexicals import Argument, Predicate, Predicates
 from parsers import Parser
 
-from tools.abcs import closure
+from tools import closure
 from tools.hybrids import qsetf
 from tools.mappings import MapProxy
 

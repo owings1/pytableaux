@@ -3,8 +3,9 @@ from __future__ import annotations
 __all__ = 'BaseModel', 'Mval'
 
 from errors import instcheck, Emsg
+from tools import closure
 from tools.abcs import Abc, AbcEnum, MapProxy
-from tools.decorators import abstract, closure
+from tools.decorators import abstract
 from tools.hybrids import qsetf
 from tools.sets import setf
 from lexicals import (

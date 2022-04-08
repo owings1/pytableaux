@@ -4,7 +4,7 @@ from __future__ import annotations
 if 'Exports' or True:
     __all__ = (
         # alias decorators
-        'overload', 'abstract', 'final', 'static', 'closure',
+        'overload', 'abstract', 'final', 'static',
         # class-based decorators
         'membr', 'fixed', 'operd', 'wraps',
         'raisr', 'lazy', 'NoSetAttr',
@@ -26,7 +26,6 @@ if 'Imports' or True:
     from tools.abcs import (
         # alias decorators
         abstract,
-        closure,
         final,
         overload,
         static,

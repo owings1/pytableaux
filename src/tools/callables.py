@@ -17,15 +17,11 @@ from tools.decorators import (
     abstract, final, static,
     WRAPPER_ASSIGNMENTS,
 )
-from tools.sets import EMPTY_SET, setf, setm
+from tools.sets import EMPTY_SET, setf
 from tools.hybrids import qsetf
 # tools.mappings not allowed!
 from functools import partial
-from itertools import (
-    filterfalse,
-    starmap,
-    zip_longest,
-)
+from itertools import filterfalse
 import operator as opr
 from typing import (
     Any,
@@ -443,7 +439,7 @@ def predcachetype(
     bases: tuple[type, ...] = (dict,),
 ) -> type[dict[KT, Callable[[T], bool]]]:
     'Returns a dict type that generates and caches predicates.'
-    def missing(self, key, setdefault = dict.setdefault):
+    def missing(self, key, /, *, setdefault = dict.setdefault):
         return setdefault(self, key, outerfn(pred, key))
     n = pred.__name__
     return AbcMeta(

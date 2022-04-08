@@ -14,6 +14,6 @@ Operator Symbols
 .. csv-table::
     :header-rows: 2
     :widths: auto
+    :generator: opers_table
 
-    //lexsym_opers_csv//
 

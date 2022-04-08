@@ -19,9 +19,7 @@
 # pytableaux - errors module
 from __future__ import annotations
 
-# Allowed local imports: tools.abcs
-from tools.abcs import AbcEnum, ExT, T
-
+import enum as _enum
 from typing import Any
 
 # Base Errors
@@ -83,7 +81,8 @@ class DenotationError(ModelValueError):
 def _thru(o): return o
 def _len(o): return o if isinstance(o, int) else len(o)
 
-class Emsg(AbcEnum):
+class Emsg(_enum.Enum):
+# class Emsg(AbcEnum):
 
     InstCheck = (TypeError,
         "Expected instance of '{1}' but got type '{0}'", (type, _thru)
@@ -133,7 +132,7 @@ class Emsg(AbcEnum):
 
     Timeout = TimeoutError, "Timeout of {}ms exceeded", (int,)
 
-    def __init__(self, cls: type[ExT], msg: str = None, fns = None):
+    def __init__(self, cls: type[_ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):
             cls = type(cls[0], cls[1:], {})
         self.cls = cls
@@ -147,7 +146,7 @@ class Emsg(AbcEnum):
     def __call__(self, *args):
         return self._makeas(self.cls, args)
 
-    def _makeas(self, cls: type[ExT], args: tuple) -> ExT:
+    def _makeas(self, cls: type[_ExT], args: tuple) -> _ExT:
         return cls(*self._getargs(args))
 
     def _getargs(self, args: tuple):
@@ -158,17 +157,17 @@ class Emsg(AbcEnum):
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
 
-def instcheck(obj, classinfo: type[T]) -> T:
+def instcheck(obj, classinfo: type[_T]) -> _T:
     if not isinstance(obj, classinfo):
         raise Emsg.InstCheck(obj, classinfo)
     return obj
 
-def subclscheck(cls: type, typeinfo: T) -> T:
+def subclscheck(cls: type, typeinfo: _T) -> _T:
     if not issubclass(cls, typeinfo):
         raise Emsg.SubclsCheck(cls, typeinfo)
     return cls
 
-def notsubclscheck(cls: type[T], typeinfo: type) -> type[T]:
+def notsubclscheck(cls: type[_T], typeinfo: type) -> type[_T]:
     if issubclass(cls, typeinfo):
         raise Emsg.NotSubclsCheck(cls, typeinfo)
     return cls
@@ -178,4 +177,8 @@ def errstr(err: Any) -> str:
         return '%s: %s' % (type(err).__name__, err)
     return str(err)
 
-del(AbcEnum, _len, _thru)
+from typing import TypeVar
+_ExT = TypeVar('_ExT', bound = Exception)
+_T = TypeVar('_T')
+
+del(_len, _thru, TypeVar)

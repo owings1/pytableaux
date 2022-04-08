@@ -3,11 +3,11 @@ from __future__ import annotations
 __all__ = 'Node', 'Branch', 'Target'
 
 from errors import instcheck as instcheck, Emsg
+from tools import closure
 # from tools.abcs import Abc, T
 from tools.callables import preds, cchain
 from tools.decorators import (
     # abstract,
-    closure,
     static,
     # overload,
     # final,

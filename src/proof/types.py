@@ -31,14 +31,13 @@ from errors import (
     # instcheck,
     subclscheck,
 )
-
+from tools import closure
 from tools.abcs import (
     AbcMeta, AbcEnum, FlagEnum, MapProxy,
     eauto,
     abcm,
     abstract,
     overload,
-    closure,
     static,
     T, VT,
 )

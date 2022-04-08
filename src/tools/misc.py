@@ -18,15 +18,77 @@
 #
 # pytableaux - tools.misc module
 from __future__ import annotations
+from typing import Any, Callable, Mapping
 
 __all__ = 'get_logic',
 
-# No local imports
+from tools import closure
 
 from builtins import ModuleNotFoundError
 from importlib import import_module
 from itertools import islice
 from types import ModuleType
+
+def dcopy(a: Mapping, /) -> dict:
+    'Basic dict copy of a mapping, recursive for mapping values.'
+    return {
+        key: dcopy(value)
+            if isinstance(value, Mapping)
+            else value
+        for key, value in a.items()
+    }
+
+def dmerged(a: dict, b: dict, /) -> dict:
+    'Basic dict merge copy, recursive for dict value.'
+    c = {}
+    for key, value in b.items():
+        if isinstance(value, dict):
+            avalue = a.get(key)
+            if isinstance(avalue, dict):
+                c[key] = dmerged(a[key], value)
+            else:
+                c[key] = dcopy(value)
+        else:
+            c[key] = value
+    for key in a:
+        if key not in c:
+            c[key] = a[key]
+    return c
+
+@closure
+def dtransform():
+
+    def _true(_): True
+
+    def api(transformer: Callable[[Any], Any], a: dict, /,
+        typeinfo: type|tuple[type, ...] = dict,
+        inplace = False,
+    ) -> dict:
+
+        if typeinfo is None:
+            pred = _true
+        else:
+            pred = lambda v: isinstance(v, typeinfo)
+        res = runner(transformer, pred, inplace, a)
+        if not inplace:
+            return res
+
+    def runner(f, pred, inplace, a: dict):
+        if inplace:
+            b = a
+        else:
+            b = {}
+        for k, v in a.items():
+            if isinstance(v, dict):
+                b[k] = runner(f, pred, inplace, v)
+            elif pred(v):
+                b[k] = f(v)
+            else:
+                b[k] = v
+        return b
+
+    return api
+
 
 def get_module(ref, package: str = None) -> ModuleType:
 

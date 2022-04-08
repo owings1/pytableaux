@@ -29,7 +29,8 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_order = 1
 
-from tools.abcs import closure, static, T
+from tools import closure
+from tools.abcs import static, T
 from tools.hybrids import qsetf
 from tools.sets import EMPTY_SET
 

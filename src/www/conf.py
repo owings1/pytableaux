@@ -39,8 +39,8 @@ __all__ = (
 import examples
 from lexicals import LexType, Notation, LexWriter
 from parsers import ParseTable
+from tools import closure
 from tools.abcs import AbcEnum
-from tools.decorators import closure
 from tools.misc import get_logic
 
 from cherrypy._cpdispatch import Dispatcher

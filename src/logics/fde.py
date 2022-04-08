@@ -64,7 +64,8 @@ from proof.tableaux import (
     Tableau,
     TableauxSystem as BaseSystem,
 )
-from tools.abcs import closure, static, MapProxy, T
+from tools import closure
+from tools.abcs import static, MapProxy, T
 from tools.sets import setf
 from tools.hybrids import qsetf
 

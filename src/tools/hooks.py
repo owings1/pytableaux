@@ -23,6 +23,7 @@ __all__ = 'hookutil',
 
 # Allowed local imports: errors, tools.abcs
 from errors import Emsg, instcheck
+from tools import closure
 from tools.abcs import (
     ABC_HOOKINFO_ATTR,
     ABC_HOOKUSER_ATTR,
@@ -31,7 +32,6 @@ from tools.abcs import (
     abcf,
     AbcMeta,
     MapProxy,
-    closure,
     overload,
     static,
 )

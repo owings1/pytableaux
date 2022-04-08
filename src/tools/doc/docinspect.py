@@ -17,17 +17,17 @@
 #
 # ------------------
 #
-# pytableaux - documentation class inspection utilities
+# pytableaux - documentation inspection utilities
 from __future__ import annotations
-from lexicals import Argument
 
 __all__ = (
+    'get_logic_names',
     'is_concrete_build_trunk',
     'is_concrete_rule',
     'is_transparent_rule',
 )
 
-from proof.tableaux import ClosingRule, Rule, Tableau, TableauxSystem as TabSys
+from proof.tableaux import ClosingRule, Rule, TableauxSystem as TabSys
 from tools.misc import get_logic
 
 from inspect import getsource
@@ -39,44 +39,13 @@ def get_logic_names(logic_docdir: str = None, suffix: str = '.rst', /) -> set[st
     'Get all logic names with a .rst document in the doc dir.'
     if logic_docdir is None:
         logic_docdir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '../../doc/logics')
+            os.path.join(os.path.dirname(__file__), '../../../doc/logics')
         )
     return set(
         os.path.basename(file).removesuffix(suffix).upper()
         for file in os.listdir(logic_docdir)
         if file.endswith(suffix)
     )
-
-def rule_example_tableau(rule: Rule|type[Rule]|str, /, logic: Any = None, **opts) -> Tableau:
-    "Get a rule's example tableau for documentation."
-    logic = get_logic(logic or rule)
-    tab = Tableau(logic, **opts)
-    rule = tab.rules.get(rule)
-    if isinstance(rule, ClosingRule):
-        # TODO: fix for closure rules
-        pass
-    else:
-        from proof.helpers import EllipsisExampleHelper
-        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
-    b = tab.branch()
-    b.extend(rule.example_nodes())
-    rule.apply(rule.target(b))
-    tab.finish()
-    return tab
-
-def trunk_example_tableau(logic: Any, arg: Argument, /) -> str:
-    "Get an example tableau for a logic's build_trunk for documentation."
-    logic = get_logic(logic)
-    tab = Tableau(logic)
-    # Pluck a rule.
-    rule = tab.rules.groups[1][0]
-    # Inject the helper.
-    from proof.helpers import EllipsisExampleHelper
-    rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
-    # Build trunk.
-    tab.argument = arg
-    tab.finish()
-    return tab
 
 def is_concrete_rule(obj: Any, /, skip = {Rule, ClosingRule}) -> bool:
     return _is_rulecls(obj) and obj not in skip
