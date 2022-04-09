@@ -47,11 +47,11 @@ def get_logic_names(logic_docdir: str = None, suffix: str = '.rst', /) -> set[st
         if file.endswith(suffix)
     )
 
-def is_concrete_rule(obj: Any, /, skip = {Rule, ClosingRule}) -> bool:
-    return _is_rulecls(obj) and obj not in skip
+def is_concrete_rule(obj: Any, /) -> bool:
+    return _is_rulecls(obj) and obj not in (Rule, ClosingRule)
 
-def is_concrete_build_trunk(obj: Any, /, skip = {TabSys.build_trunk}):
-    return TabSys.build_trunk in _methmro(obj) and obj not in skip
+def is_concrete_build_trunk(obj: Any, /,):
+    return TabSys.build_trunk in _methmro(obj) and obj not in {TabSys.build_trunk}
     # return obj is not TabSys.build_trunk and TabSys.build_trunk in _methmro(obj)
 
 def is_transparent_rule(obj: Any) -> bool:

@@ -28,9 +28,11 @@ __all__ = (
 import csv
 from typing import Iterable
 
-def rawblock(lines: list[str], indent: str|int = None) -> list[str]:
+def rawblock(content: list[str]|str, indent: str|int = None) -> list[str]:
     'Make a raw html block from the lines. Returns a new list of lines.'
-    lines = ['.. raw:: html', '', *indented(lines, 4), '']
+    if isinstance(content, str):
+        content = content.splitlines()
+    lines = ['.. raw:: html', '', *indented(content, 4), '']
     return indented(lines, indent)
 
 def indented(lines: Iterable[str], indent: str|int = None) -> list[str]:

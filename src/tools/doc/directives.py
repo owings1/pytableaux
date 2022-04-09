@@ -18,28 +18,25 @@
 # ------------------
 # pytableaux - directives module
 from __future__ import annotations
-from typing import Any
-
-from models import BaseModel
-from tools.misc import get_logic
 
 __all__ = (
     'CSVTable',
     'Include',
     'Inject'
-    # 'include_directive',
 )
 
 from docutils import nodes
 import docutils.parsers.rst.directives.tables as _tables
 from docutils.parsers.rst.directives import unchanged
-from sphinx.application import Sphinx
 import sphinx.directives
 import sphinx.directives.other
 from sphinx.util import logging
+
+from models import BaseModel
 from tools.doc import SphinxEvent
 from tools.doc.extension import gethelper
 from tools.doc import docparts, rstutils
+from tools.misc import get_logic
 
 logger = logging.getLogger(__name__)
 
@@ -73,10 +70,6 @@ class Inject(BaseDirective):
         if isinstance(ret, list):
             return ret
         return [ret]
-
-    # def cmd_truth_tables(self, logic: str):
-    #     lines = self.helper.lines_truth_tables(logic)
-    #     return nodes.raw(text='\n'.join(lines), format = 'html')
 
     def cmd_truth_tables(self, logic: str):
         'Truth tables (raw html) of all operators.'

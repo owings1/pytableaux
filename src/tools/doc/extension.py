@@ -41,7 +41,41 @@ def setup(app: Sphinx):
     app.add_event(SphinxEvent.IncludeRead)
 
 def _init_app(app: Sphinx, config: sphinx.config.Config):
-    _helpers[app] = Helper(**config['pt_options'])
+
+    from tools.doc import processors
+
+    _helpers[app] = helper = Helper(**config['pt_options'])
+
+    def conn(event, *handlers):
+        for handler in handlers:
+            app.connect(event, handler)
+
+    conn('autodoc-process-docstring',
+        processors.RuledocInherit(),
+        processors.RuledocExample(),
+        processors.BuildtrunkExample(),
+        # helper.sphinx_obj_lines_append_autodoc,
+        helper.sphinx_simple_replace_autodoc,
+    )
+
+    conn('source-read', helper.sphinx_simple_replace_source)
+    conn(SphinxEvent.IncludeRead, helper.sphinx_simple_replace_include)
 
 def _remove_app(app, exception):
     del _helpers[app]
+
+
+# Python domain:
+#    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain
+# Autodoc directives:
+#    https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#directives
+# Built-in roles:
+#    https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html
+# Sphinx events:
+#    https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
+# Docutils doctree:
+#    https://docutils.sourceforge.io/docs/ref/doctree.html
+# Font (GPL):
+#    http://www.gust.org.pl/projects/e-foundry/tg-math/download/index_html#Bonum_Math
+# Creating  Directives:
+#    https://docutils.sourceforge.io/docs/howto/rst-directives.html

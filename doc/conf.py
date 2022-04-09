@@ -26,7 +26,6 @@ release = version
 
 del(fixed)
 
-
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -120,7 +119,6 @@ htmlhelp_basename = 'pytableauxdoc'
 add_module_names = False
 
 pt_options = dict(
-    pnotn = 'standard',
     wnotn = 'standard',
     truth_table_tmpl = 'truth_table.jinja2',
     truth_tables_rev = True,
@@ -132,8 +130,6 @@ pt_options = dict(
 def setup(app):
     from sphinx.application import Sphinx
     app: Sphinx = app
-
-    # app.add_config_value('pt_options', {}, 'env', [dict])
 
     if html_theme == 'sphinx_rtd_theme':
         themecss = 'doc.rtd.css'
@@ -152,8 +148,8 @@ def setup(app):
     app.add_role('m', roles.metadress())
     app.add_role('refp', roles.refplus())
 
-    from docutil import Helper
-    Helper.setup_sphinx(app)
+    # from docutil import Helper
+    # Helper.setup_sphinx(app)
 
 if False:
     pass

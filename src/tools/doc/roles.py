@@ -18,7 +18,7 @@
 # ------------------
 # pytableaux - tools.doc.roles module
 from __future__ import annotations
-from typing import Any
+from typing import Any, Callable, Generic, NamedTuple
 
 from tools.doc import docinspect
 
@@ -29,7 +29,7 @@ __all__ = (
 )
 
 from lexicals import LexType, LexWriter, Parser, Predicate, Predicates
-from tools import F
+from tools import T, F
 
 from docutils import nodes
 from docutils.parsers.rst import roles as _docroles
@@ -38,6 +38,7 @@ import re
 import sphinx.roles
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxRole
+from typing import overload, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -343,17 +344,40 @@ class metadress(SphinxRole):
             return node
         return nodecls(text = name, classes = classes)
 
-def getentry(roleish: SphinxRole|type[SphinxRole]|str) -> tuple[str, Any]|None:
+@overload
+def getentry(rolecls: type[T]) -> _RoleItem[T]|None: ...
+@overload
+def getentry(rolefn: F) -> _RoleItem[F]|None: ...
+@overload
+def getentry(roleish: str) -> _RoleItem[__RoleT]|None:...
+
+def getentry(roleish):
     'Get loaded role name and instance, by name, instance or type.'
+    idx: dict = _docroles._roles
     if isinstance(roleish, str):
-        inst = _docroles._roles.get(roleish)
-        if inst:
-            return roleish, inst
-        return None
-    if isinstance(roleish, type):
-        roletype = roleish
+        inst = idx.get(roleish)
+        if inst is None:
+            return None
+        name = roleish
     else:
-        roletype = type(roleish)
-    for name, inst in _docroles._roles.items():
-        if type(inst) is roletype:
-            return name, inst
+        checktype = isinstance(roleish, type)
+        for name, inst in idx.items():
+            if checktype:
+                if type(inst) is roleish:
+                    break
+            elif inst is roleish:
+                break
+        else:
+            return None
+    return _RoleItem(name, inst)
+
+
+class __RoleItem(NamedTuple):
+    name: str
+    inst: Any
+
+class _RoleItem(__RoleItem, Generic[T]):
+    name: str
+    inst: T
+
+__RoleT = Callable[..., tuple[list[nodes.Node], list[nodes.system_message]]]
