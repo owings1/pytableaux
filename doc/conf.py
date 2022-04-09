@@ -31,7 +31,7 @@ del(fixed)
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'tools.doc._extension',
+    'tools.doc.extension',
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',
@@ -150,7 +150,7 @@ def setup(app):
 
     app.add_role('s', roles.lexdress())
     app.add_role('m', roles.metadress())
-    app.add_role('lref', roles.lexdress())
+    app.add_role('refp', roles.refplus())
 
     from docutil import Helper
     Helper.setup_sphinx(app)

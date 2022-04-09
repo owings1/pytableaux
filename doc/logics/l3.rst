@@ -32,7 +32,7 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
     .. include:: include/truth_table_blurb.rst
 
-    //truth_tables//l3//
+    .. inject:: truth_tables L3
 
     .. _l3-consequence:
 

@@ -27,7 +27,7 @@ Gödel 3-valued logic (V{T}, V{F}, and V{N}) with classical-like negation.
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
 
-            //truth_tables//g3//
+            .. inject:: truth_tables G3
 
     Consequence
     -----------

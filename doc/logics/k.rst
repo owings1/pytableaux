@@ -43,7 +43,7 @@ of :ref:`CFOL <CFOL>`, adding the modal operators for possibility and necessity.
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
 
-            .. inject:: truth_values K
+            .. inject:: truth_tables K
 
         .. automethod:: value_of_predicated(sentence)
 

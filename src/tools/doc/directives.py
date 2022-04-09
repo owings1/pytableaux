@@ -18,6 +18,10 @@
 # ------------------
 # pytableaux - directives module
 from __future__ import annotations
+from typing import Any
+
+from models import BaseModel
+from tools.misc import get_logic
 
 __all__ = (
     'CSVTable',
@@ -33,7 +37,8 @@ from sphinx.application import Sphinx
 import sphinx.directives
 import sphinx.directives.other
 from sphinx.util import logging
-from tools.doc._extension import gethelper
+from tools.doc import SphinxEvent
+from tools.doc.extension import gethelper
 from tools.doc import docparts, rstutils
 
 logger = logging.getLogger(__name__)
@@ -69,9 +74,27 @@ class Inject(BaseDirective):
             return ret
         return [ret]
 
-    def cmd_truth_tables(self, logic):
-        lines = self.helper.lines_truth_tables(logic)
-        return nodes.raw(text='\n'.join(lines), format = 'html')
+    # def cmd_truth_tables(self, logic: str):
+    #     lines = self.helper.lines_truth_tables(logic)
+    #     return nodes.raw(text='\n'.join(lines), format = 'html')
+
+    def cmd_truth_tables(self, logic: str):
+        'Truth tables (raw html) of all operators.'
+        m: BaseModel = get_logic(logic).Model()
+        helper = self.helper
+        opts = helper.opts
+        template = opts['truth_table_tmpl']
+        reverse = opts['truth_tables_rev']
+        tables = (
+            m.truth_table(oper, reverse = reverse)
+            for oper in m.truth_functional_operators
+        )
+        renders = (
+            helper.render(template, table = table, lw = helper.lwhtml)
+            for table in tables
+        )
+        content = '\n'.join(renders) + '<div class="clear"></div>'
+        return nodes.raw(text = content, format = 'html')
 
 class CSVTable(_tables.CSVTable, BaseDirective):
     
@@ -97,7 +120,7 @@ class Include(sphinx.directives.other.Include, BaseDirective):
     def parse(self, text: str, doc):
         lines = text.split('\n')
         source = doc.attributes['source']
-        self.env.app.emit('include-read', lines)
+        self.env.app.emit(SphinxEvent.IncludeRead, lines)
         self.state_machine.insert_input(lines, source)
 
     def run(self):

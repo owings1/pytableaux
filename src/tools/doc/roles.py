@@ -20,6 +20,8 @@
 from __future__ import annotations
 from typing import Any
 
+from tools.doc import docinspect
+
 __all__ = (
     'metadress',
     'lexdress',
@@ -67,13 +69,67 @@ class refplus(sphinx.roles.XRefRole):
     def __init__(self, **_) -> None:
         pass
 
+    _logic_union = '|'.join(
+        sorted(docinspect.get_logic_names(), key = len, reverse = True)
+    )
+    patterns = dict(
+        logicref = (
+            r'({@(?P<name>%s)' % _logic_union +
+            r'(?:\s+(?P<sect>[\sa-zA-Z-]+)?(?P<anchor><.*?>)?)?})'
+        )
+    )
+
     @rolerun
     def run(self):
+        def _log():
+            logger.info(
+                f'rawtext={repr(self.rawtext)}, '
+                f'text={repr(self.text)}, '
+                f'title={repr(self.title)}, '
+                f'target={repr(self.target)}'
+            )
+        # _log()
+
+        
         self.classes = list(self._classes)
-        if self.disabled:
-            return self.create_non_xref_node()
+
+        lrmatch = re.match(self.patterns['logicref'], self.text)
+        if lrmatch:
+            self.logicname = lrmatch.group('name')
+            # logger.info('Match!')
+            self._logic_ref(**lrmatch.groupdict())
         else:
-            return self.create_xref_node()
+            self.logicname = None
+            # _log()
+
+        if self.disabled:
+            ret = self.create_non_xref_node()
+        else:
+            ret = self.create_xref_node()
+
+        if lrmatch:
+            ...
+            # logger.info(ret[0][0].astext())
+        return ret
+
+    def _logic_ref(self, *, name: str, sect: str|None, anchor: str|None):
+        # Link to a logic:
+        #   {@K3}        -> K3 <K3>`
+        #   {@FDE Model} -> `FDE Model <fde-model>`
+        if sect is None:
+            self.title = name
+        else:
+            self.title = f'{name} {sect}'.strip()
+        if anchor is None:
+            if sect is None:
+                self.target = name
+            else:
+                self.target = '-'.join(re.split(r'\s+', self.title.lower()))
+        else:
+            self.target = anchor[1:-1]
+        self.text = f'{self.title} <{self.target}>'
+        self.rawtext = f":{self.name}:`{self.text}`"
+        self.classes.append('logicref')
 
 class lexdress(SphinxRole):
 
@@ -211,13 +267,16 @@ class metadress(SphinxRole):
         match = re.match(self.patterns['prefixed_role'], text)
 
         if not match:
-            return self.unhinted()
+            return self._unhinted()
 
         matchd = match.groupdict()
         mode: str = self.prefixes[matchd['prefix']]
         value: str = matchd['value']
-        moded: dict = self.modes[mode]
 
+        if mode == 'logic_name':
+            return self.logicname_node(value)
+
+        moded: dict = self.modes[mode]
         classes.append(mode)
 
         if mode == 'rewrite':
@@ -236,26 +295,8 @@ class metadress(SphinxRole):
             nodecls = moded['nodecls']
             return nodecls(text = rend, classes = classes)
 
-        if mode == 'logic_name':
 
-            for pat, addcls in moded['match'].items():
-                m = re.match(pat, value)
-                if not m:
-                    continue
-                md = m.groupdict()
-                classes.extend(addcls)
-                nodecls_map: dict = moded['nodecls_map']
-                return [
-                    nodecls(text = md[key], classes = classes + [key])
-                    for key, nodecls in nodecls_map.items()
-                    if key in md
-                ]
-
-            rend = value
-            nodecls = moded['nodecls']
-            return nodecls(text = rend, classes = classes)
-
-    def unhinted(self):
+    def _unhinted(self):
         text = self.text
         classes = self.classes
         # Try rewrite.
@@ -280,6 +321,27 @@ class metadress(SphinxRole):
 
         classes.append(mode)
         return nodecls(text = rend, classes = classes)
+
+    @classmethod
+    def logicname_node(cls, name: str):
+        moded = cls.modes['logic_name']
+        classes = ['metawrite', 'logic_name']
+        nodecls = moded['nodecls']
+        for pat, addcls in moded['match'].items():
+            m = re.match(pat, name)
+            if not m:
+                continue
+            md = m.groupdict()
+            classes.extend(addcls)
+            node = nodecls(classes = classes)
+            nodecls_map: dict = moded['nodecls_map']
+            node += [
+                nodecls(text = md[key], classes = [key])
+                for key, nodecls in nodecls_map.items()
+                if key in md
+            ]
+            return node
+        return nodecls(text = name, classes = classes)
 
 def getentry(roleish: SphinxRole|type[SphinxRole]|str) -> tuple[str, Any]|None:
     'Get loaded role name and instance, by name, instance or type.'

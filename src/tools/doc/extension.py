@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from docutil import Helper
-
+from tools.doc import SphinxEvent
 from sphinx.application import Sphinx
 import sphinx.config
 
@@ -38,11 +38,10 @@ def setup(app: Sphinx):
     app.add_directive('csv-table', directives.CSVTable, True)
     app.add_directive('inject', directives.Inject)           
     app.add_directive('include', directives.Include, override = True)
-    app.add_event('include-read')
+    app.add_event(SphinxEvent.IncludeRead)
 
 def _init_app(app: Sphinx, config: sphinx.config.Config):
-    opts = config['pt_options']
-    _helpers[app] = Helper(**opts)
+    _helpers[app] = Helper(**config['pt_options'])
 
 def _remove_app(app, exception):
     del _helpers[app]

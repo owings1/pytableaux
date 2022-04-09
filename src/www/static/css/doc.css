@@ -10,13 +10,15 @@ body {
     vertical-align: sub;
     font-size: 80%;
 }
-.metawrite.subsup.main {
+.logic_name.subsup > .main {
     font-size: 115%;
 }
-sub.metawrite.subsup.down {
+.logic_name.subsup > sub.down {
     bottom: -0.45em;
     margin-left: -0.55em;
 }
+
+
 /* Definitions */
 p.definition,
 p.consequence,
@@ -28,7 +30,7 @@ p.definiens {
     margin-right: 30px;
     background: #e7f2fa;
 }
-p
+/* p */
 p.definition.center {
     text-align: center;
 }

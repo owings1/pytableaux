@@ -42,6 +42,7 @@ from tools.doc import (
     docparts,
     roles,
     rstutils,
+    SphinxEvent,
 )
 from tools.misc import get_logic
 
@@ -91,27 +92,23 @@ class Helper:
 
         helper.connect_sphinx(app, 'autodoc-process-docstring',
             helper.sphinx_obj_lines_append_autodoc,
-            helper.sphinx_line_replace_autodoc,
+            # helper.sphinx_line_replace_autodoc,
             helper.sphinx_simple_replace_autodoc,
         )
 
         helper.connect_sphinx(app, 'source-read',
-            helper.sphinx_line_replace_source,
+            # helper.sphinx_line_replace_source,
             helper.sphinx_simple_replace_source,
         )
         
-        helper.connect_sphinx(app, 'include-read',
-            helper.sphinx_line_replace_include,
+        helper.connect_sphinx(app, SphinxEvent.IncludeRead,
+            # helper.sphinx_line_replace_include,
             helper.sphinx_simple_replace_include,
         )
 
         return helper
 
     DIV_CLEAR = '<div class="clear"></div>'
-
-    logic_union = '|'.join(
-        sorted(docinspect.get_logic_names(), key = len, reverse = True)
-    )
 
     def __init__(self, **opts):
         self._listeners: dict[str, list] = defaultdict(list)
@@ -162,8 +159,11 @@ class Helper:
             lw = LexWriter(wnotn, renderset = rstrunk),
             classes = ('example', 'build-trunk'),
         )
-        _simple_replace = None
-        _line_replace   = None
+        self._simple_replace = None
+        self._line_replace   = None
+
+    def render(self, template: str, *args, **kw) -> str:
+        return self.jenv.get_template(template).render(*args, **kw)
 
     # TODO: generate rule "cheat sheet"
 
@@ -197,23 +197,23 @@ class Helper:
         lines.extend(pw(tab).split('\n'))
         return rstutils.indented(rstutils.rawblock(lines), indent)
 
-    def lines_truth_tables(self, logic: Any, indent: str|int = None) -> list[str]:
-        'ReST lines for truth tables of all operators.'
-        m: BaseModel = get_logic(logic).Model()
-        opts = self.opts
-        render = self.jenv.get_template(opts['truth_table_tmpl']).render
-        reverse = opts['truth_tables_rev']
-        lines = [
-            line
-            for oper in sorted(m.truth_functional_operators)
-                for line in render(
-                    table = m.truth_table(oper, reverse = reverse),
-                    lw = self.lwhtml
-                ).split('\n')
-        ]
-        lines.append(self.DIV_CLEAR)
-        return lines
-        return rstutils.rawblock(lines, indent)
+    # def lines_truth_tables(self, logic: Any, indent: str|int = None) -> list[str]:
+    #     'ReST lines for truth tables of all operators.'
+    #     m: BaseModel = get_logic(logic).Model()
+    #     opts = self.opts
+    #     render = self.jenv.get_template(opts['truth_table_tmpl']).render
+    #     reverse = opts['truth_tables_rev']
+    #     lines = [
+    #         line
+    #         for oper in sorted(m.truth_functional_operators)
+    #             for line in render(
+    #                 table = m.truth_table(oper, reverse = reverse),
+    #                 lw = self.lwhtml
+    #             ).split('\n')
+    #     ]
+    #     lines.append(self.DIV_CLEAR)
+    #     return lines
+    #     return rstutils.rawblock(lines, indent)
 
     def lines_ruledoc_inherit(self, rule: type[Rule], indent: str|int = None):
         'ReST docstring lines for an "inheriting only" ``Rule`` class.'
@@ -261,70 +261,33 @@ class Helper:
         'Regex replace for autodoc event.'
         self._simple_replace_common(lines)
 
-    def sphinx_line_replace_source(self, app: Sphinx, docname: str, lines: list[str]):
-        'Replace a line matching a regex with 1 or more lines in a docstring.'
-        self._line_replace_common(lines, mode = 'source')
+    # def sphinx_line_replace_source(self, app: Sphinx, docname: str, lines: list[str]):
+    #     'Replace a line matching a regex with 1 or more lines in a docstring.'
+    #     self._line_replace_common(lines, mode = 'source')
 
-    def sphinx_line_replace_include(self, app: Sphinx, lines: list[str]):
-        'Regex line replace for custom include-read event.'
-        self._line_replace_common(lines, mode = 'include')
+    # def sphinx_line_replace_include(self, app: Sphinx, lines: list[str]):
+    #     'Regex line replace for custom include-read event.'
+    #     self._line_replace_common(lines, mode = 'include')
 
-    def sphinx_line_replace_autodoc(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
-        'Regex line replace for autodoc event.'
-        self._line_replace_common(lines)
-
-
-    _simple_replace = None
-    _line_replace   = None
+    # def sphinx_line_replace_autodoc(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
+    #     'Regex line replace for autodoc event.'
+    #     self._line_replace_common(lines)
 
     @closure
-    def _simple_replace_common(logic_union = logic_union):
-
-        def logic_ref(match: re.Match):
-            # Link to a logic:
-            #   {@K3}        -> :ref:`K3 <K3>`
-            #   {@FDE Model} -> :ref:`FDE Model <fde-model>`
-            matchd = match.groupdict()
-            name = matchd['name']
-            sect: str|None = matchd['sect']
-            anchor: str|None = matchd['anchor']
-            if sect is None:
-                title = name
-            else:
-                title = f'{name} {sect}'.strip()
-            if anchor is None:
-                if sect is None:
-                    slug = name
-                else:
-                    slug = '-'.join(re.split(r'\s+', title.lower()))
-                anchor = f'<{slug}>'
-            return f":ref:`{title} {anchor}`"
-
-        logic_ref_pat = (
-            r'{@(?P<name>%s)' % logic_union +
-            r'(?:\s+(?P<sect>[\sa-zA-Z-]+)?(?P<anchor><.*?>)?)?}'
-        )
+    def _simple_replace_common():
 
         def getdefns(self: Helper):
             defns = self._simple_replace
             if defns is not None:
                 return defns
 
-            opts = self.opts
-
-            
-            # TODO: look this up dynamically through app config.
-            # rolenames: dict[type, str] = opts['rolenames']
-            # regex: rolename
-            name, inst = roles.getentry(roles.metadress)
-            rolemap = {
-                roles.metadress.patterns['prefixed']: name#rolenames[roles.metadress]
+            rolewrap = {
+                roles.metadress.patterns['prefixed']: roles.getentry(roles.metadress)[0],
+                roles.refplus.patterns['logicref']: roles.getentry(roles.refplus)[0],
             }
             defns = tuple(
-                (r'(?<!`)' + pat, f':{name}:`\\1`')
-                for pat, name in rolemap.items()
-            ) + (
-                (logic_ref_pat, logic_ref),
+                (re.compile(r'(?<!`)' + pat), f':{name}:`\\1`')
+                for pat, name in rolewrap.items()
             )
 
             self._simple_replace = defns
@@ -332,96 +295,96 @@ class Helper:
 
         def common(self: Helper, lines: list[str], mode: str = None):
             defns = getdefns(self)
-            rend = '\n'.join(lines)
+            text = '\n'.join(lines)
             count = 0
             for pat, rep in defns:
-                rend, num = re.subn(pat, rep, rend)
+                text, num = pat.subn(rep, text)
                 count += num
             if count:
                 if mode == 'source':
-                    lines[0]= rend
+                    lines[0]= text
                 else:
                     lines.clear()
-                    lines.extend(rend.split('\n'))
+                    lines.extend(text.split('\n'))
 
         return common
 
-    @closure
-    def _line_replace_common():
+    # @closure
+    # def _line_replace_common():
 
-        def getdefns(self: Helper):
+    #     def getdefns(self: Helper):
 
-            defns = self._line_replace
-            if defns is not None:
-                return defns
+    #         defns = self._line_replace
+    #         if defns is not None:
+    #             return defns
 
-            def truthtable(indent, logic):
-                lines = self.lines_truth_tables(logic)
-                return rstutils.rawblock(lines, indent)
+    #         def truthtable(indent, logic):
+    #             lines = self.lines_truth_tables(logic)
+    #             return rstutils.rawblock(lines, indent)
 
-            def opertable(indent):
-                rows = docparts.opers_table()
-                lines = rstutils.csvlines(rows, indent)
-                print('------_line_replace_common indent')
-                for line in lines:
-                    print(repr(line))
-                print('------_line_replace_common')
-                return lines
+    #         def opertable(indent):
+    #             rows = docparts.opers_table()
+    #             lines = rstutils.csvlines(rows, indent)
+    #             print('------_line_replace_common indent')
+    #             for line in lines:
+    #                 print(repr(line))
+    #             print('------_line_replace_common')
+    #             return lines
     
-            defns = (
-                (
-                    '//truth_tables//',
-                    re.compile(r'(\s*)//truth_tables//(.*?)//'),
-                    truthtable,
-                ),
-                # (
-                #     '//lexsym_opers_csv//',
-                #     re.compile(r'(\s*)//lexsym_opers_csv//'),
-                #     opertable
-                #     # lambda indent: rstutils.csvlines(docparts.opers_table(), indent)
-                # )
-            )
+    #         defns = (
+    #             # (
+    #             #     '//truth_tables//',
+    #             #     re.compile(r'(\s*)//truth_tables//(.*?)//'),
+    #             #     truthtable,
+    #             # ),
+    #             # (
+    #             #     '//lexsym_opers_csv//',
+    #             #     re.compile(r'(\s*)//lexsym_opers_csv//'),
+    #             #     opertable
+    #             #     # lambda indent: rstutils.csvlines(docparts.opers_table(), indent)
+    #             # )
+    #         )
 
-            self._line_replace = defns
-            return defns
+    #         self._line_replace = defns
+    #         return defns
 
-        def common(self: Helper, lines: list[str], mode:str = None):
-            """
-            Replace a line matching a regex with 1 or more lines. Lines could come
-            from autodoc extraction or straight from source. In the latter case,
-            it is important to observe correct indenting for new lines.
+    #     def common(self: Helper, lines: list[str], mode:str = None):
+    #         """
+    #         Replace a line matching a regex with 1 or more lines. Lines could come
+    #         from autodoc extraction or straight from source. In the latter case,
+    #         it is important to observe correct indenting for new lines.
 
-            This matches the first occurrence in a line and replaces that line with
-            the line(s) returned. So these kinds of matches should generally be
-            the only thing on a line.
-            """
-            defns = getdefns(self)
-            if mode == 'source':
-                proclines = lines[0].split('\n')
-            else:
-                proclines = lines
-            i = 0
-            rpl = {}
-            for line in proclines:
-                for indic, regex, func in defns:
-                    if indic in line:
-                        matches = re.findall(regex, line)
-                        if not matches:
-                            raise ValueError(f"Bad expression: {repr(line)}")
-                        match = matches[0]
-                        if isinstance(match, str):
-                            # Corner case of one capture group
-                            match = (match,)
-                        rpl[i] = func(*match)
-                        break
-                i += 1
-            for i in rpl:
-                pos = i + 1
-                proclines[i:pos] = rpl[i]
-            if rpl and mode == 'source':
-                lines[0] = '\n'.join(proclines)
+    #         This matches the first occurrence in a line and replaces that line with
+    #         the line(s) returned. So these kinds of matches should generally be
+    #         the only thing on a line.
+    #         """
+    #         defns = getdefns(self)
+    #         if mode == 'source':
+    #             proclines = lines[0].split('\n')
+    #         else:
+    #             proclines = lines
+    #         i = 0
+    #         rpl = {}
+    #         for line in proclines:
+    #             for indic, regex, func in defns:
+    #                 if indic in line:
+    #                     matches = re.findall(regex, line)
+    #                     if not matches:
+    #                         raise ValueError(f"Bad expression: {repr(line)}")
+    #                     match = matches[0]
+    #                     if isinstance(match, str):
+    #                         # Corner case of one capture group
+    #                         match = (match,)
+    #                     rpl[i] = func(*match)
+    #                     break
+    #             i += 1
+    #         for i in rpl:
+    #             pos = i + 1
+    #             proclines[i:pos] = rpl[i]
+    #         if rpl and mode == 'source':
+    #             lines[0] = '\n'.join(proclines)
 
-        return common
+    #     return common
 
     ## Dispatcher
 

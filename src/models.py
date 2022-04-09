@@ -171,18 +171,10 @@ class BaseModel(Abc):
                 self.is_sentence_opaque(s.lhs)
             )
         )
-        # return isinstance(s, (Atomic, Predicated)) or (
-        #     isinstance(s, Operated) and
-        #     s.operator is Operator.Negation and
-        #     (
-        #         isinstance(s.lhs, (Atomic, Predicated)) or
-        #         self.is_sentence_opaque(s.lhs)
-        #     )
-        # )
 
     def truth_table(self, oper: Operator, / , reverse = False) -> TruthTable:
         oper = Operator(oper)
-        inputs = tuple(product(*repeat(self.Value.seq, oper.arity)))
+        inputs = tuple(product(*repeat(self.Value, oper.arity)))
         if reverse:
             inputs = tuple(reversed(inputs))
         trfunc = self.truth_function
@@ -196,15 +188,21 @@ class BaseModel(Abc):
             Value = self.Value,
         )
 
-    # def truth_tables(self, **kw) -> dict[Operator]:
-    #     tbfunc = self.truth_table
-    #     return {
-    #         oper: tbfunc(oper, **kw)
-    #         for oper in self.truth_functional_operators
-    #     }
-
     def finish(self):
         pass
+
+    @abstract
+    def truth_function(self, oper: Operator, *values: MvalT) -> Mval:
+        if oper not in self.truth_functional_operators:
+            raise ValueError(oper)
+        if len(values) != oper.arity:
+            raise Emsg.WrongLength(values, oper.arity)
+        instcheck(oper, Operator)
+        raise NotImplementedError
+
+    @abstract
+    def read_branch(self, branch: Branch, /):
+        self.finish()
 
     @abstract
     def value_of_existential(self, s: Quantified, /, **kw) -> Mval:
@@ -227,10 +225,6 @@ class BaseModel(Abc):
         raise NotImplementedError
 
     @abstract
-    def read_branch(self, branch: Branch, /):
-        self.finish()
-
-    @abstract
     def set_literal_value(self, s: Sentence, value: MvalT, /):
         instcheck(s, Sentence)
         raise NotImplementedError
@@ -248,15 +242,6 @@ class BaseModel(Abc):
     @abstract
     def set_predicated_value(self, s: Predicated, value: MvalT, /):
         instcheck(s, Predicated)
-        raise NotImplementedError
-
-    @abstract
-    def truth_function(self, oper: Operator, *values: MvalT) -> Mval:
-        if oper not in self.truth_functional_operators:
-            raise ValueError(oper)
-        if len(values) != oper.arity:
-            raise Emsg.WrongLength(values, oper.arity)
-        instcheck(oper, Operator)
         raise NotImplementedError
 
     @abstract

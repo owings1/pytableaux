@@ -18,3 +18,8 @@
 # ------------------
 # pytableaux - tools.doc package
 from __future__ import annotations
+
+import enum
+
+class SphinxEvent(str, enum.Enum):
+    IncludeRead = 'include-read'

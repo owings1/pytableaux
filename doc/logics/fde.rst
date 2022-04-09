@@ -28,10 +28,10 @@ L{FDE} - First Degree Entailment
     - V{N}: neither true nor false
     - V{B}: both true and false
 
+    .. _fde-model:
+
     Model
     -----
-
-    .. _fde-model:
 
     .. autoclass:: Model
 

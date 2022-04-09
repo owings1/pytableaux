@@ -67,12 +67,6 @@ class Model(K3W.Model):
     }
 
     def value_of_operated(self, s: Operated, /, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
-
-        //truth_tables//k3wq//
-        """
         return super().value_of_operated(s, **kw)
 
     def value_of_universal(self, s: Quantified, /, **kw):
@@ -109,10 +103,8 @@ class Model(K3W.Model):
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    K3WQ's Tableaux System inherits directly from the `FDE system`_, employing
+    L{K3WQ}'s Tableaux System inherits directly from L{FDE}
     designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
 
 class TabRules(object):
