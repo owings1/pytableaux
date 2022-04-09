@@ -31,12 +31,17 @@ from docutils.parsers.rst.directives import unchanged
 import sphinx.directives
 import sphinx.directives.other
 from sphinx.util import logging
+from typing import Any
 
-from models import BaseModel
 from tools.doc import SphinxEvent
 from tools.doc.extension import gethelper
 from tools.doc import docparts, rstutils
 from tools.misc import get_logic
+
+import lexicals, parsers
+from models import BaseModel
+from proof.tableaux import Tableau
+from proof.writers import TabWriter
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +49,56 @@ class BaseDirective(sphinx.directives.SphinxDirective):
     @property
     def helper(self):
         return gethelper(self.env.app)
+    arguments: list[str]
+    options: dict[str, Any]
 
+# Creating  Directives:
+#    https://docutils.sourceforge.io/docs/howto/rst-directives.html
+
+def none_or(f):
+    return lambda a: None if a is None else f(a)
+
+class Tableaudoc(BaseDirective):
+    """Tableau directive.
+    
+    Example::
+
+        .. tableau:: CFOL.Conjunction
+
+        .. tableau::
+             :logic: FDE
+             :conclusion: A V B
+             :parser: standard
+    """
+    optional_arguments = 1
+    option_spec = dict(
+        logic = none_or(get_logic),
+        conclusion = unchanged,
+        parser = none_or(parsers.Parser),
+    )
+    def run(self):
+        opts = self.options
+        if len(self.arguments):
+            logic, rulename = self.arguments[0].split('.')
+            logic = get_logic(logic)
+            rule = getattr(logic.TabRules, rulename)
+            tab = docparts.rule_example_tableau(rule)
+        else:
+            try:
+                logic = get_logic(opts['logic'])
+                conc = opts['conclusion']
+            except KeyError as e:
+                raise self.error(f'Missing required option: {e}')
+            parser = opts.get('parser')
+            if parser is None:
+                parser = parsers.Parser(self.helper.opts['pnotn'])
+            rule = None
+        return [nodes.Text(f'rule={rule}, options={repr(opts)}')]
+
+    def pw(self):
+        if issubclass(self.obj, ClosingRule):
+            return self.helper.pwclosure
+        return self.helper.pwrule
 class Inject(BaseDirective):
 
     required_arguments = 1
@@ -80,7 +134,7 @@ class Inject(BaseDirective):
         reverse = opts['truth_tables_rev']
         tables = (
             m.truth_table(oper, reverse = reverse)
-            for oper in m.truth_functional_operators
+            for oper in sorted(m.truth_functional_operators)
         )
         renders = (
             helper.render(template, table = table, lw = helper.lwhtml)
@@ -120,4 +174,7 @@ class Include(sphinx.directives.other.Include, BaseDirective):
         self.options['parser'] = lambda: self
         super().run()
         return []
+
+
+
 

@@ -192,7 +192,7 @@ class App:
             view_version = form_data['v']
         else:
             view_version = 'v2'
-        view = '/'.join((view_version, 'main'))
+        view = f'{view_version}/main'
 
         if 'debug' in form_data and config['is_debug']:
             is_debug = form_data['debug'] not in ('', '0', 'false')
@@ -488,9 +488,7 @@ class App:
                     "format": "html",
                     "notation": "standard",
                     "charset": "html",
-                    "options": {
-                        
-                    }
+                    "options": {}
                 },
                 "build_models": false,
                 "max_steps": null,
@@ -514,7 +512,6 @@ class App:
                     "max_steps" : null
                 },
                 "writer": {
-                    "name": "HTML",
                     "format": "html,
                     "charset": "html",
                     "options": {}
@@ -581,7 +578,7 @@ class App:
             try:
                 onotn = Notation[odata['notation']]
             except KeyError as err:
-                errors[elabel] = "Invalid notation: '%s'" % err
+                errors[elabel] = f"Invalid notation: '{err}'"
             else:
 
                 elabel = 'Output Charset'
@@ -590,9 +587,9 @@ class App:
                         odata['charset'] or WriterClass.default_charsets[onotn]
                     ]
                 except KeyError as err:
-                    errors[elabel] = "Unsupported charset: '%s'" % err
+                    errors[elabel] = f"Unsupported charset: 'err'"
                 else:
-                    tw = WriterClass(lw = lw, **odata['options'])
+                    pw = WriterClass(lw = lw, **odata['options'])
 
         if errors:
             raise RequestDataError(errors)
@@ -616,18 +613,15 @@ class App:
                     conclusion = lw(arg.conclusion),
                 ),
                 valid  = tableau.valid,
-                header = tw.document_header(),
-                footer = tw.document_footer(),
-                body   = tw(tableau),
+                body   = pw(tableau),
                 stats  = tableau.stats,
                 result = tableau.stats['result'],
             ),
-            attachments = tw.attachments(tableau),
+            attachments = pw.attachments(),
             writer = dict(
-                name    = tw.name,
-                format  = tw.format,
+                format  = pw.format,
                 charset = lw.charset,
-                options = tw.opts,
+                options = pw.opts,
             )
         )
         # Return a tuple (resp, tableau, lw) because the web ui needs the
@@ -652,7 +646,7 @@ class App:
         try:
             notn = Notation[adata['notation']]
         except KeyError as err:
-            errors[elabel] = "Invalid parser notation: '%s'" % err
+            errors[elabel] = f"Invalid parser notation: '{err}'"
         else:
             try:
                 preds = cls._parse_preds(adata['predicates'])
@@ -662,7 +656,7 @@ class App:
             parser = notn.Parser(preds)
             premises = []
             for i, premise in enumerate(adata['premises'], start = 1):
-                elabel = 'Premise %d' % i
+                elabel = f'Premise {i}'
                 try:
                     premises.append(parser(premise))
                 except Exception as e:
@@ -688,7 +682,7 @@ class App:
         Coords = Predicate.Coords
         fields = Coords._fields
         for i, specdata in enumerate(pspecs, start = 1):
-            elabel = 'Predicate %d' % i
+            elabel = f'Predicate {i}'
             try:
                 if isinstance(specdata, dict):
                     keys = fields
@@ -704,13 +698,13 @@ class App:
 
     def _get_template(self, view: str) -> Template:
         if '.' not in view:
-            view = '.'.join((view, 'jinja2'))
+            view = f'{view}.jinja2'
         if self.config['is_debug'] or (view not in _TEMPLATE_CACHE):
             _TEMPLATE_CACHE[view] = APP_JENV.get_template(view)
         return _TEMPLATE_CACHE[view]
 
-    def _render(self, view: str, data: dict = {}) -> str:
-        return self._get_template(view).render(data)
+    def _render(self, view: str, *args, **kw) -> str:
+        return self._get_template(view).render(*args, **kw)
 
 #####################
 ## Miscellaneous   ##

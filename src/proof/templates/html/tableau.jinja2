@@ -1,0 +1,19 @@
+{#
+ #  Tableau main template.
+ #}
+{%- from 'macros.jinja2' import sw with context -%}
+{%- if opts.inline_css %}
+<style>
+    {% include 'tableau.css' %}
+</style>
+{%- endif %}
+<div class="{{ wrap_classes|join(' ')|e }}">
+    <div id="tableau_{{ tab.id }}"{#
+    #} class="{{ tab_classes|join(' ')|e }}"{#
+    #} data-step="{{ tab.history|length }}"{#
+    #} data-num-steps="{{ tab.history|length }}"{#
+    #} data-current-width-pct="100">
+        {{ sw(tab.tree) }}
+    </div>
+    <div class="clear"></div>
+</div>

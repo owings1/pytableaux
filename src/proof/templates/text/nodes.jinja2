@@ -1,5 +1,5 @@
-{% macro write_node(node) %}
-{{ lw.write(node.sentence) if node.has('sentence') -}}
+{% macro nw(node) %}
+{{ lw(node.sentence) if node.has('sentence') -}}
 {{ ' w' ~ node.world if node.has('world') -}}
 {{ ' [+]' if node.designated -}}
 {{ ' [-]' if node.designated == False -}}
@@ -10,6 +10,6 @@
 {% endmacro %}
 {{ '-- ' if structure.depth -}}
 {%- for node in structure.nodes -%}
-    {{ write_node(node) }}
+    {{ nw(node) }}
 {%- endfor -%}
 {{ ' .' if structure.children -}}

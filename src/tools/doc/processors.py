@@ -28,6 +28,7 @@ from tools.doc import docinspect, docparts, rstutils
 from tools.doc.extension import gethelper
 from tools.misc import get_logic
 
+from lexicals import Argument, Atomic
 from proof.tableaux import ClosingRule, Rule
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,8 @@ class BuildtrunkExample(AutodocProcessor):
 
     def applies(self):
         return docinspect.is_concrete_build_trunk(self.obj)
+
+    argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
     @property
     def pw(self):

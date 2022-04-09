@@ -35,9 +35,10 @@ def setup(app: Sphinx):
     app.connect('build-finished', _remove_app)
 
     from tools.doc import directives
+    app.add_directive('include', directives.Include, override = True)
     app.add_directive('csv-table', directives.CSVTable, True)
     app.add_directive('inject', directives.Inject)           
-    app.add_directive('include', directives.Include, override = True)
+    app.add_directive('tableau', directives.Tableaudoc)    
     app.add_event(SphinxEvent.IncludeRead)
 
 def _init_app(app: Sphinx, config: sphinx.config.Config):

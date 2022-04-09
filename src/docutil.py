@@ -25,6 +25,8 @@ __all__ = 'Helper',
 from lexicals import (
     LexWriter,
     Notation,
+    Parser,
+    Predicates,
     RenderSet,
 )
 
@@ -48,6 +50,8 @@ class Helper:
         truth_table_tmpl = 'truth_table.jinja2',
         truth_tables_rev = True,
         wnotn = 'standard',
+        pnotn = 'standard',
+        preds = ()
     )
 
     def __init__(self, **opts):
@@ -65,6 +69,9 @@ class Helper:
             trim_blocks = True,
             lstrip_blocks = True,
         )
+
+        self.preds = Predicates(opts['preds'])
+        self.parser = Parser(opts['pnotn'], self.preds)
 
         wnotn = Notation(opts['wnotn'])
         self.lwhtml = LexWriter(wnotn, 'html')

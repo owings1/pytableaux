@@ -1,18 +1,37 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux - tableau writers module
 from __future__ import annotations
 
 __all__ = (
     'TabWriter',
 )
 
-from errors import Emsg, instcheck
-from tools.abcs import abstract, overload, abcf, abcm, AbcMeta, MapProxy, TT
-from tools.misc import cat
+from errors import Emsg
 from lexicals import Argument, LexWriter, Notation
-from proof.tableaux import TabStatKey, TabFlag, Tableau
+from proof.tableaux import Tableau, TreeStruct
+from tools.abcs import abstract, overload, abcf, abcm, AbcMeta, MapProxy, TT
 
-from jinja2 import Environment, FileSystemLoader, Template
-from os import path
-from typing import Any, ClassVar, Mapping
+import jinja2
+import os
+from typing import Any, ClassVar, Collection, Mapping
 
 class TabWriterMeta(AbcMeta):
     def __call__(cls, *args, **kw):
@@ -29,9 +48,13 @@ class TabWriter(metaclass = TabWriterMeta):
     Registry: ClassVar[Mapping[str, type[TabWriter]]]
     DefaultFormat = 'text'
 
+    #: The format registry identifier.
     format: ClassVar[str]
-    name: ClassVar[str]
-    default_charsets: ClassVar[Mapping[Notation, str]]
+    #: Default LexWriter charset for each notation.
+    default_charsets: ClassVar[Mapping[Notation, str]] = MapProxy({
+        notn: notn.default_charset for notn in Notation
+    })
+    #: Default options.
     defaults: Mapping[str, Any] = MapProxy()
 
     lw: LexWriter
@@ -53,27 +76,21 @@ class TabWriter(metaclass = TabWriterMeta):
             if charset is not None:
                 if charset != lw.charset:
                     raise Emsg.ValueConflict(charset, lw.charset)
-            instcheck(lw, LexWriter)
         self.lw = lw
         self.opts = dict(self.defaults) | opts
 
-    def document_header(self):
-        return ''
-
-    def document_footer(self):
-        return ''
-
-    def attachments(self, tableau: Tableau, /) -> Mapping[str, Any]:
+    def attachments(self, /) -> Mapping[str, Any]:
         return {}
 
-    def write(self, tableau: Tableau, /) -> str:
-        return self._write_tableau(tableau)
+    @abstract
+    def write(self, tableau: Tableau, /, **kw) -> str:
+        raise NotImplementedError
 
     __call__ = write
 
-    @abstract
-    def _write_tableau(self, tableau: Tableau, /):
-        raise NotImplementedError
+    def __init_subclass__(subcls: type[TemplateWriter], **kw):
+        super().__init_subclass__(**kw)
+        subcls.__call__ = subcls.write
 
     @classmethod
     @overload
@@ -104,59 +121,39 @@ class TabWriter(metaclass = TabWriterMeta):
             register = classmethod(register),
         )
 
+_templates_base_dir = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'templates'
+)
+
 class TemplateWriter(TabWriter):
 
-    base_dir = path.join(path.dirname(path.abspath(__file__)), 'templates')
-    path_prefix = ''
-    proof_template = 'proof.jinja2'
-    jinja_opts = {}
-    template_dir: str
+    template_dir: ClassVar[str]
+    main_template: ClassVar[str]
+    _jenv: ClassVar[jinja2.Environment]
+    _jinja_opts: ClassVar[Mapping[str, Any]] = MapProxy(dict(
+        trim_blocks   = True,
+        lstrip_blocks = True,
+    ))
 
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        dir = path.join(self.base_dir, self.path_prefix)
-        if getattr(self, 'template_dir', None) is None:
-            self.template_dir = dir
-        jopts = dict(self.jinja_opts)
-        if 'loader' not in jopts:
-            jopts['loader'] = FileSystemLoader(dir)
-        self.jenv = Environment(**jopts)
+    def _render(self, template: str, *args, **kw) -> str:
+        return self._jenv.get_template(template).render(*args, **kw)
 
-    def get_template(self, template: str) -> Template:
-        return self.jenv.get_template(template)
-
-    def render(self, template: str, context: dict = {}) -> str:
-        return self.get_template(template).render(context)
-
-    def get_argstrs(self, arg: Argument, /) -> tuple[tuple[str, ...], str]:
-        if not arg:
-            return (None, None)
-        lw = self.lw
-        return tuple(map(lw, arg.premises)), lw(arg.conclusion)
-
-    def get_context(self, tableau: Tableau, /):
-        premises, conclusion = self.get_argstrs(tableau.argument)
-        return dict(
-            tableau    = tableau,
-            stats      = tableau.stats,
-            logic      = tableau.logic,
-            argument   = tableau.argument,
-            premises   = premises,
-            conclusion = conclusion,
-            lw         = self.lw,
-            opts       = self.opts,
-            TabStatKey = TabStatKey,
-            TabFlag    = TabFlag,
-        )
-
-    def _write_tableau(self, tableau: Tableau, /):
-        return self.render(self.proof_template, self.get_context(tableau))
+    def __init_subclass__(subcls: type[TemplateWriter], **kw):
+        super().__init_subclass__(**kw)
+        if abcm.isabstract(subcls):
+            return
+        if getattr(subcls, '_jenv', None) is None:
+            if 'loader' not in subcls._jinja_opts:
+                jopts = dict(subcls._jinja_opts)
+                if getattr(subcls, 'template_dir', None) is None:
+                    subcls.template_dir = os.path.join(_templates_base_dir, subcls.format)
+                jopts['loader'] = jinja2.FileSystemLoader(subcls.template_dir)
+            subcls._jenv = jinja2.Environment(**jopts)
 
 @TabWriter.register
 class HtmlTabWriter(TemplateWriter):
 
     format = 'html'
-    name = 'HTML'
     default_charsets = {notn: 'html' for notn in Notation}
     defaults = dict(
         classes      = (),
@@ -164,75 +161,85 @@ class HtmlTabWriter(TemplateWriter):
         inline_css   = False,
     )
 
-    path_prefix = 'html'
-    jinja_opts = dict(
-        trim_blocks   = True,
-        lstrip_blocks = True,
-    )
+    def write(self, tab: Tableau, /, classes: Collection[str] = None):
+        opts = self.opts
+        wrap_classes = ['tableau-wrapper']
+        wrap_classes.extend(opts['wrap_classes'])
+        tab_classes = ['tableau']
+        tab_classes.extend(opts['classes'])
+        if classes is not None:
+            tab_classes.extend(classes)
+        return self._render('tableau.jinja2',
+            tab = tab,
+            lw = self.lw,
+            opts = opts,
+            wrap_classes = wrap_classes,
+            tab_classes = tab_classes,
+        )
 
-    def attachments(self, tableau: Tableau, /):
-        # TODO: Cache
-        with open(path.join(self.template_dir, 'static/tableau.css'), 'r') as f:
-            return dict(css = f.read())
+    def attachments(self, /):
+        return dict(
+            css = self._render('static/tableau.css')
+        )
 
     # classes:
     #   wrapper : tableau-wrapper
-    #      tableau : tableau
-    #        structure : structure [, root, has-open, has-closed, leaf, only-branch, closed, open]
-    #          node-segment : node-sement
-    #             vertical-line : vertical-line
-    #             horizontal-line : horizontal-line
-    #                node : node [, ticked]
-    #                   node-props : node-props [, ticked]
-    #                        inline : [sentence, world, designation, designated, undesignated, world1,
-    #                                   world2, access, ellipsis, flag, <flag>]
-    #                   
-    #               
+    #   tableau : tableau
+    #   structure : structure [, root, has-open, has-closed, leaf, only-branch, closed, open]
+    #   node segment : node-sement
+    #   vertical line : vertical-line
+    #   horizontal line : horizontal-line
+    #   node : node [, ticked]
+    #   node props : node-props [, ticked]
+    #   inline : [sentence, world, designation, designated, undesignated,
+    #             world1, world2, access, ellipsis, flag, <flag>]
     #   misc : clear
-    #
-    #
 
 @TabWriter.register
 class TextTabWriter(TemplateWriter):
 
     format = 'text'
-    name = 'Text'
-    default_charsets = {notn: notn.default_charset for notn in Notation}
     defaults = dict(
         summary  = True,
         argument = True,
         heading  = True,
     )
 
-    path_prefix = 'text'
-    jinja_opts = dict(
-        trim_blocks   = True,
-        lstrip_blocks = True,
-    )
-
-    def _write_tableau(self, tableau: Tableau, /):
+    def write(self, tab: Tableau, /):
         strs = []
         opts = self.opts
-        context = self.get_context(tableau)
         if opts['summary']:
-            strs.append(self.render('summary.jinja2', context))
+            premises, conclusion = self._get_argstrs(tab.argument)
+            strs.append(self._render('summary.jinja2',
+                stats      = tab.stats,
+                logic      = tab.logic,
+                argument   = tab.argument,
+                premises   = premises,
+                conclusion = conclusion,
+            ))
         if opts['heading']:
-            strs.append(self.render('heading.jinja2', context))
-        strs.append(self._write_structure(tableau.tree))
+            strs.append(self._render('heading.jinja2',
+                logic = tab.logic,
+            ))
+        template = self._jenv.get_template('nodes.jinja2')
+        strs.append(self._write_structure(tab.tree, template))
         return '\n'.join(strs)
 
-    def _write_structure(self, structure, prefix: str = ''):
-        nodestr = self.render('nodes.jinja2', dict(
-            structure = structure,
-            lw        = self.lw
-        ))
-        lines = [cat(prefix, nodestr)]
-        children = structure['children']
+    def _write_structure(self, structure: TreeStruct, template: jinja2.Template, *, prefix: str = '',):
+        nodestr = template.render(structure = structure, lw = self.lw)
+        lines = [prefix + nodestr]
+        children = structure.children
         prefix += (' ' * (len(nodestr) - 1))
         for c, child in enumerate(children):
             is_last = c == len(children) - 1
-            next_pfx = cat(prefix, ' ' if is_last else '|')
-            lines.append(self._write_structure(child, prefix = next_pfx))
+            next_pfx = prefix + (' ' if is_last else '|')
+            lines.append(self._write_structure(child, template, prefix = next_pfx))
             if not is_last:
                 lines.append(next_pfx)
         return '\n'.join(lines)
+
+    def _get_argstrs(self, arg: Argument, /) -> tuple[tuple[str, ...], str]:
+        if not arg:
+            return (None, None)
+        lw = self.lw
+        return tuple(map(lw, arg.premises)), lw(arg.conclusion)

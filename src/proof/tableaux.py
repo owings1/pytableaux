@@ -1225,7 +1225,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     def __compute_stats(self) -> dict[str, Any]:
         'Compute the stats property after the tableau is finished.'
         try:
-            distinct_nodes = self.tree.root.distinct_nodes
+            distinct_nodes = self.tree.distinct_nodes
         except AttributeError:
             distinct_nodes = None
         timers = self.timers
@@ -1305,7 +1305,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     def _gen_models(self):
         'Build models for the open branches.'
         Model: type[BaseModel] = self.logic.Model
-        argument = self.argument
+        # argument = self.argument
         for branch in self.open:
             self.__check_timeout()
             model = Model()
@@ -1324,7 +1324,6 @@ class Tableau(Sequence[Branch], EventEmitter):
             track['pos'] += 1
 
         s.update(
-            root  = track['root'],
             depth = track['depth'],
             left  = track['pos'],
         )
@@ -1352,7 +1351,9 @@ class Tableau(Sequence[Branch], EventEmitter):
             # branches are equivalent up to this depth.
             node = depth_nodes[0]
             s.nodes.append(node)
-            step_added = branchstat[relbranches[0]][TabStatKey.NODES][node][TabStatKey.STEP_ADDED]
+            nodestat = branchstat[relbranches[0]][TabStatKey.NODES][node]
+            s.ticksteps.append(nodestat[TabStatKey.STEP_TICKED])
+            step_added = nodestat[TabStatKey.STEP_ADDED]
             if s.step is None or step_added < s.step:
                 s.step = step_added
             node_depth += 1
@@ -1373,7 +1374,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         track['pos'] += 1
         s.right = track['pos']
 
-        if s.root is s:
+        if track['root'] is s:
             s.distinct_nodes = track['distinct_nodes']
 
         return s
@@ -1514,10 +1515,12 @@ class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None])
 class TreeStruct(dmapattr):
     'Recursive tree structure representation of a tableau.'
 
-    root: TreeStruct
+    root: bool
     
     #: The nodes on this structure.
     nodes: list[Node]
+    #: The ticked steps list.
+    ticksteps: list[int|None]
     #: The child structures.
     children: list[TreeStruct]
     #: Whether this is a terminal (childless) structure.
@@ -1562,36 +1565,41 @@ class TreeStruct(dmapattr):
     #: The step at which the branch was added.
     branch_step: int
 
-    def __init__(self, values: Mapping = None, /, **kw):
+    # def __init__(self, values: Mapping = None, /, **kw):
+    def __init__(self):
+        # self.root = None
 
         self.nodes = []
+        self.ticksteps = []
         self.children = []
 
-        self.root = None
+        # self.left = None
+        # self.right = None
+        # self.depth = None
+        # self.structure_node_count = 0
+        self.descendant_node_count = 0
+
         self.leaf = False
         self.closed = False
         self.open = False
-        self.left = None
-        self.right = None
-        self.descendant_node_count = 0
-        self.structure_node_count = 0
-        self.depth = None
         self.has_open = False
         self.has_closed = False
         self.closed_step = None
         self.step = None
-        self.width = 0
-        self.balanced_line_width = None
-        self.balanced_line_margin = None
-        self.branch_id = None
-        self.model_id = None
         self.is_only_branch = False
         self.branch_step = None
 
-        if values is not None:
-            self.update(values)
-        if len(kw):
-            self.update(kw)
+        self.width = 0
+        # self.balanced_line_width = None
+        # self.balanced_line_margin = None
+
+        self.branch_id = None
+        self.model_id = None
+
+        # if values is not None:
+        #     self.update(values)
+        # if len(kw):
+        #     self.update(kw)
 
         self.id = id(self)
 
