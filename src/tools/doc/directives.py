@@ -23,7 +23,8 @@ import re
 __all__ = (
     'CSVTable',
     'Include',
-    'Inject'
+    'Inject',
+    'Tableaud',
 )
 
 from collections import ChainMap
@@ -31,8 +32,7 @@ from docutils import nodes
 from docutils.parsers.rst.directives import class_option, unchanged
 from docutils.parsers.rst.roles import set_classes
 from sphinx import directives
-import sphinx.directives.other
-import sphinx.directives.patches
+from sphinx.application import Sphinx
 from sphinx.util import logging
 from typing import Any
 
@@ -41,12 +41,15 @@ from tools.doc.extension import gethelper
 from tools.doc import docparts, rstutils
 from tools.misc import get_logic
 
-import lexicals, parsers
-from models import BaseModel
-from proof import tableaux
-from proof.writers import TabWriter
+import lexicals
+import models
+import parsers
+from proof import tableaux, writers
 
 logger = logging.getLogger(__name__)
+
+# Creating  Directives:
+#    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
 class BaseDirective(directives.SphinxDirective):
     @property
@@ -58,16 +61,12 @@ class BaseDirective(directives.SphinxDirective):
     def set_classes(self):
         set_classes(self.options)
 
-# Creating  Directives:
-#    https://docutils.sourceforge.io/docs/howto/rst-directives.html
-
-
 _re_ws = re.compile(r'\s')
 
 def cleanws(arg):
     return _re_ws.sub('', arg)
 
-class Tableaudoc(BaseDirective):
+class Tableaud(BaseDirective):
     """Tableau directive.
     
     Example::
@@ -133,7 +132,7 @@ class Tableaudoc(BaseDirective):
             except KeyError as e:
                 raise self.error(f'Missing required option: {e}')
 
-        pw = TabWriter('html', ochain['wnotn'], classes = classes)
+        pw = writers.TabWriter('html', ochain['wnotn'], classes = classes)
         return [nodes.raw(format = 'html', text = pw(tab.build()))]
 
 class Inject(BaseDirective):
@@ -157,7 +156,7 @@ class Inject(BaseDirective):
 
     def cmd_truth_tables(self, logic: str):
         'Truth tables (raw html) of all operators.'
-        m: BaseModel = get_logic(logic).Model()
+        m: models.BaseModel = get_logic(logic).Model()
         helper = self.helper
         opts = helper.opts
         template = opts['truth_table_tmpl']
@@ -174,21 +173,23 @@ class Inject(BaseDirective):
         return nodes.raw(text = content, format = 'html')
 
 class CSVTable(directives.patches.CSVTable, BaseDirective):
-    
-    option_spec = directives.patches.CSVTable.option_spec | dict(
-        generator = unchanged,
-    )
     generators = dict(
         opers_table = docparts.opers_table
     )
+    def genopt(arg, /, *, base = generators):
+        if arg in base:
+            return arg
+        raise ValueError(f"Invalid table generator name: '{arg}'")
+
+    option_spec = dict(directives.patches.CSVTable.option_spec,
+        generator = genopt,
+    )
+
     def get_csv_data(self):
         genname = self.options.get('generator')
         if not genname:
             return super().get_csv_data()
-        generator = self.generators.get(genname)
-        if generator is None:
-            raise self.error(f"Invalid table generator name: '{genname}'")
-        rows = generator()
+        rows = self.generators[genname]()
         return rstutils.csvlines(rows), '_generator'
 
 class Include(directives.other.Include, BaseDirective):
@@ -209,5 +210,13 @@ class Include(directives.other.Include, BaseDirective):
         return []
 
 
+del(directives)
 
 
+def setup(app: Sphinx):
+    app.add_event(SphinxEvent.IncludeRead)
+    app.add_directive('include', Include, override = True)
+    app.add_directive('csv-table', CSVTable, override = True)
+    app.add_directive('inject', Inject)  
+    app.add_directive('tableau', Tableaud)
+    

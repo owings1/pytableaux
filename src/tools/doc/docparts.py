@@ -31,14 +31,13 @@ from parsers import ParseTable
 from proof.helpers import EllipsisExampleHelper
 from proof.tableaux import ClosingRule, Rule, Tableau
 from tools.misc import get_logic
-from html import unescape as html_unescape
 from typing import Any
 
-def rule_example_tableau(rule: Rule|type[Rule]|str, /, logic: Any = None, **opts) -> Tableau:
+def rule_example_tableau(rulecls: type[Rule], /, **opts) -> Tableau:
     "Get a rule's example tableau for documentation."
-    logic = get_logic(logic or rule)
+    logic = get_logic(rulecls)
     tab = Tableau(logic, **opts)
-    rule = tab.rules.get(rule)
+    rule = tab.rules.get(rulecls)
     if isinstance(rule, ClosingRule):
         # TODO: fix for closure rules
         pass
@@ -65,6 +64,7 @@ def trunk_example_tableau(logic: Any, arg: Argument, /) -> str:
 
 def opers_table() -> list[list[str]]:
     'Table data for the Operators table.'
+    from html import unescape
     charpol, charstd = (
         {o: table.char(o.TYPE, o) for o in Operator}
         for table in (
@@ -85,7 +85,7 @@ def opers_table() -> list[list[str]]:
         ['Operator', 'Polish', 'Standard', 'Std. HTML', 'Std. Unicode'],
     )
     body = [
-        [o.label, pre(charpol[o]), pre(charstd[o]), html_unescape(strhtml[o]), strunic[o]]
+        [o.label, pre(charpol[o]), pre(charstd[o]), unescape(strhtml[o]), strunic[o]]
         for o in Operator
     ]
     rows = list(heads)

@@ -16,7 +16,7 @@
 #
 # ------------------
 #
-# pytableaux - tools.misc module
+# pytableaux - tools.typing module
 from __future__ import annotations
 from collections.abc import Set
 from typing import Any, Callable, Mapping, ParamSpec, SupportsIndex, TypeVar, overload
