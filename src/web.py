@@ -22,10 +22,10 @@ from __future__ import annotations
 __all__ = ()
 
 from errors import RequestDataError, TimeoutError, errstr
-from tools.abcs import KT, VT
 from tools.mappings import MapCover, MapProxy, dmap
 from tools.misc import get_logic
 from tools.timing import StopWatch
+from tools.typing import KT, VT
 
 import examples, fixed
 import lexicals

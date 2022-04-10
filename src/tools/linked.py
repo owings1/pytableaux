@@ -10,11 +10,11 @@ from errors import (
     Emsg,
     instcheck,
 )
+from tools import abstract
 from tools.abcs import (
     abcm,
     Abc, Copyable, IntEnum,
-    VT,
-    abstract, final, overload, static
+    static
 )
 from tools.hybrids import MutableSequenceSet
 from tools.sequences  import (
@@ -24,9 +24,11 @@ from tools.sequences  import (
     MutableSequenceApi,
 )
 from tools.sets import EMPTY_SET
+from tools.typing import VT
 
 from itertools import filterfalse
 from typing import (
+    final, overload,
     Collection,
     Generic,
     Iterable,

@@ -6,24 +6,23 @@ __all__ = (
 )
 
 from errors import instcheck, subclscheck
+from tools import abstract, MapProxy
 from tools.abcs import (
     AbcMeta,
     Copyable,
     FlagEnum,
-    MapProxy,
-    P, T, KT, RT, F,
 )
 from tools.decorators import (
-    abstract, final, static,
-    WRAPPER_ASSIGNMENTS,
+    static,
 )
 from tools.sets import EMPTY_SET, setf
-from tools.hybrids import qsetf
+from tools.typing import F, KT, P, RT, T
 # tools.mappings not allowed!
-from functools import partial
+from functools import partial, WRAPPER_ASSIGNMENTS
 from itertools import filterfalse
 import operator as opr
 from typing import (
+    final,
     Any,
     Callable,
     Collection,

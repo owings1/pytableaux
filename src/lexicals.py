@@ -42,17 +42,18 @@ __all__ = (
 
 from errors import Emsg, instcheck
 import tools.abcs as abcs
-from tools import closure
-from tools.abcs import abcm, abcf, eauto, T
+from tools import abstract, closure
+from tools.abcs import abcm, abcf, eauto
 from tools.callables import gets
 from tools.decorators import (
-    abstract, final, overload, static,
+    static,
     fixed, lazy, membr, raisr, wraps, NoSetAttr
 )
 from tools.hybrids   import qsetf, qset
 from tools.mappings  import dmap, ItemsIterator, MapCover, MapProxy
 from tools.sequences import SequenceApi, seqf, EMPTY_SEQ
 from tools.sets      import setf, setm, EMPTY_SET
+from tools.typing    import IndexType, T
 
 from collections.abc import Set
 import enum as _enum
@@ -61,6 +62,7 @@ from itertools import chain, repeat
 import operator as opr
 from types import DynamicClassAttribute as DynClsAttr
 from typing import (
+    final, overload,
     Annotated,
     Any,
     Callable,
@@ -93,7 +95,7 @@ if 'Types' or True:
     LexItT = TypeVar('LexItT', bound = 'Bases.LexicalItem')
     SenT   = TypeVar('SenT',   bound = 'Sentence')
 
-    from tools.abcs     import EnumDictType, IndexType
+    from tools.abcs     import EnumDictType
     from tools.mappings import DequeCache as ItemCacheType
 
     class BiCoords(NamedTuple):

@@ -27,27 +27,26 @@ __all__ = (
 )
 
 from errors import (
-    Emsg,
+    # Emsg,
     # instcheck,
     subclscheck,
 )
-from tools import closure
+from tools import abstract, closure
 from tools.abcs import (
     AbcMeta, AbcEnum, FlagEnum, MapProxy,
     eauto,
     abcm,
-    abstract,
-    overload,
     static,
-    T, VT,
 )
 from tools.decorators import membr
 from tools.hybrids import qsetf, EMPTY_QSET
 from tools.mappings import dmap
 from tools.sets import setf, EMPTY_SET
 from tools.timing import StopWatch
+from tools.typing import T, VT
 
 from typing import (
+    overload,
     Any,
     Callable,
     Iterable,

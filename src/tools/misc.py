@@ -20,7 +20,7 @@
 from __future__ import annotations
 from typing import Any, Callable, Mapping
 
-__all__ = 'get_logic',
+__all__ = 'getlogic',
 
 from tools import closure
 
@@ -142,16 +142,16 @@ def get_module(ref, package: str = None) -> ModuleType:
             return ret['mod']
         return _setcache(import_module(cat(pfx, ref)))
 
-def get_logic(ref) -> ModuleType:
+def getlogic(ref) -> ModuleType:
     """
     Get the logic module from the specified reference.
 
     Each of following examples returns the L{FDE} logic module::
 
-        get_logic('fde')
-        get_logic('FDE')
-        get_logic('logics.fde')
-        get_logic(get_logic('FDE'))
+        getlogic('fde')
+        getlogic('FDE')
+        getlogic('logics.fde')
+        getlogic(getlogic('FDE'))
 
 
     :param any ref: The logic reference.
@@ -161,6 +161,7 @@ def get_logic(ref) -> ModuleType:
     :raises TypeError: if no module name can be determined from ``ref``.
     """
     return get_module(ref, package = 'logics')
+get_logic = getlogic
 
 def cat(*args: str) -> str:
     'Concat all argument strings'

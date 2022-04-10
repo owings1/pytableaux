@@ -9,15 +9,9 @@ from errors import (
     DuplicateValueError,
     MissingValueError,
 )
-from tools.abcs import (
-    # abcf,
-    abcm,
-    # MapProxy,
-    # T,
-    # F,
-    VT,
-)
-from tools.decorators import abstract, overload, final
+from tools import abstract
+from tools.abcs import abcm
+from tools.decorators import abstract
 from tools.sequences import (
     slicerange,
     SequenceApi,
@@ -33,6 +27,7 @@ from tools.sets import (
     setm,
     EMPTY_SET,
 )
+from tools.typing import VT
 
 from collections.abc import (
     Collection,
@@ -43,6 +38,7 @@ from itertools import (
     filterfalse
 )
 from typing import (
+    overload, final,
     # Callable,
     Iterable,
     Iterator,

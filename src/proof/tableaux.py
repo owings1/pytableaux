@@ -1603,6 +1603,12 @@ class TreeStruct(dmapattr):
 
         self.id = id(self)
 
+    @classmethod
+    def _from_iterable(cls, it):
+        inst = cls()
+        inst.update(it)
+        return inst
+    _from_mapping = _from_iterable
 # ----------------------------------------------
 
 del(abstract, final, overload, static, locking)

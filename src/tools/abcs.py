@@ -19,6 +19,7 @@
 # pytableaux - tools.abcs module
 from __future__ import annotations
 
+
 if 'Exports' or True:
 
     __all__ = (
@@ -52,10 +53,7 @@ if 'Imports' or True:
     from functools import reduce
     from itertools import chain, islice
     import operator as opr
-    from types import (
-        FunctionType,
-        MappingProxyType as _MapProxy,
-    )
+    from types import FunctionType
     from typing import (
         # exportable imports
         final, overload,
@@ -76,41 +74,43 @@ if 'Imports' or True:
         ParamSpec,
         TypeVar,
     )
+    from tools import abstract, MapProxy
+    from tools.typing import F, RT, T, TT, Self
 
 if 'Type Variables' or True:
 
-    T  = TypeVar('T')
-    T1 = TypeVar('T1')
-    T2 = TypeVar('T2')
+    # T  = TypeVar('T')
+    # T1 = TypeVar('T1')
+    # T2 = TypeVar('T2')
 
-    # Key type
-    KT = TypeVar('KT')
+    # # Key type
+    # KT = TypeVar('KT')
 
-    # Value type
-    VT = TypeVar('VT')
+    # # Value type
+    # VT = TypeVar('VT')
 
-    # Return type
-    RT = TypeVar('RT')
+    # # Return type
+    # RT = TypeVar('RT')
 
-    # Self type
-    Self = TypeVar('Self')
+    # # Self type
+    # Self = TypeVar('Self')
 
-    T_co  = TypeVar('T_co',  covariant = True)
-    KT_co = TypeVar('KT_co', covariant = True)
-    VT_co = TypeVar('VT_co', covariant = True)
-    T_contra = TypeVar('T_contra', contravariant = True)
+    # T_co  = TypeVar('T_co',  covariant = True)
+    # KT_co = TypeVar('KT_co', covariant = True)
+    # VT_co = TypeVar('VT_co', covariant = True)
+    # T_contra = TypeVar('T_contra', contravariant = True)
 
     # Callable bound, use for decorator, etc.
-    F   = TypeVar('F',  bound = Callable[..., Any])
+    # F   = TypeVar('F',  bound = Callable[..., Any])
 
-    # Exception bound
-    ExT = TypeVar('ExT', bound = Exception)
+    # # Exception bound
+    # ExT = TypeVar('ExT', bound = Exception)
 
-    # Type bound, use for class decorator, etc.
-    TT    = TypeVar('TT',    bound = type)
-    TT_co = TypeVar('TT_co', bound = type, covariant = True)
+    # # Type bound, use for class decorator, etc.
+    # TT    = TypeVar('TT',    bound = type)
+    # TT_co = TypeVar('TT_co', bound = type, covariant = True)
 
-    P = ParamSpec('P')
+    # P = ParamSpec('P')
 
     EnT  = TypeVar('EnT',  bound = 'AbcEnum')
     EnT2 = TypeVar('EnT2', bound = 'AbcEnum')
@@ -118,8 +118,8 @@ if 'Type Variables' or True:
     EnFlagT = TypeVar('EnFlagT', bound = 'FlagEnum')
     EnKeyFunc = Callable[['AbcEnum'], Set[Hashable]]
 
-    IndexType = SupportsIndex | slice
-    NotImplType = type(NotImplemented)
+    # IndexType = SupportsIndex | slice
+    # NotImplType = type(NotImplemented)
 
 if 'Decorators & Utils' or True:
 
@@ -131,7 +131,7 @@ if 'Decorators & Utils' or True:
         )
     # Global decorators. Re-exported by decorators module.
 
-    from abc import abstractmethod as abstract
+    # from abc import abstractmethod as abstract
 
     @overload
     def static(cls: TT, /) -> TT: ...
@@ -155,14 +155,10 @@ if 'Decorators & Utils' or True:
                 continue
             setattr(cls, name, staticmethod(member))
 
-        cname = cls.__name__
-        debug = cname =='opercache'
         if '__new__' not in ns:
-            debug and print(cname, '__new__ not in ns')
             cls.__new__ = _thru # type: ignore
 
         if '__init__' not in ns:
-            debug and print(cname, '__init__ not in ns')
             def finit(self): raise TypeError
             cls.__init__ = finit
 
@@ -171,19 +167,19 @@ if 'Decorators & Utils' or True:
 
 if 'Util Classes' or True:
 
-    class MapProxy(Mapping[KT, VT]):
-        'Cast to a proxy if not already.'
-        EMPTY_MAP = _MapProxy({})
+    # class MapProxy(Mapping[KT, VT]):
+    #     'Cast to a proxy if not already.'
+    #     EMPTY_MAP = _MapProxy({})
 
-        def __new__(cls, mapping: Mapping[KT, VT] = None) -> MapProxy[KT, VT]:
+    #     def __new__(cls, mapping: Mapping[KT, VT] = None) -> MapProxy[KT, VT]:
 
-            if mapping is None:
-                return cls.EMPTY_MAP # type: ignore
-            if isinstance(mapping, _MapProxy):
-                return mapping # type: ignore
-            if not isinstance(mapping, Mapping):
-                mapping = dict(mapping)
-            return _MapProxy(mapping) # type: ignore
+    #         if mapping is None:
+    #             return cls.EMPTY_MAP # type: ignore
+    #         if isinstance(mapping, _MapProxy):
+    #             return mapping # type: ignore
+    #         if not isinstance(mapping, Mapping):
+    #             mapping = dict(mapping)
+    #         return _MapProxy(mapping) # type: ignore
 
     class _EnumEntry(NamedTuple):
         'The value of the enum lookup index.'
@@ -817,7 +813,7 @@ if 'Cleanup' or True:
         _enum,
         _EnumEntry,
         TypeVar,
-        ParamSpec,
+        # ParamSpec,
     )
     # fail if deleted
     final

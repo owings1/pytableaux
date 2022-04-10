@@ -41,20 +41,14 @@ from errors import (
     subclscheck,
     Emsg,
 )
-from tools.abcs import (
-    # Abc, abcf,
-    abcm,
-    T,
-    T_co,
-    # T1, T2,
-    KT, VT, P,
-    # Self,
-)
+from tools import abstract
+from tools.abcs import abcm
 from tools.callables import cchain
-from tools.decorators import abstract, final, overload, static, wraps
+from tools.decorators import static, wraps
 from tools.hybrids import qsetf, EMPTY_QSET
 from tools.mappings import MapProxy, dmap
 from tools.sets import EMPTY_SET, setm, setf
+from tools.typing import KT, VT, P, T
 
 from lexicals import Constant, Sentence, Predicated
 from models import BaseModel
@@ -81,6 +75,7 @@ from copy import copy
 # from functools import partial
 # from itertools import chain, filterfalse
 from typing import (
+    final, overload,
     Any,
     Callable,
     # Generic,

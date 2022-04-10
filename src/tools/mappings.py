@@ -34,16 +34,16 @@ __all__ = (
 
 from errors import Emsg, instcheck
 from tools.abcs import (
-    Abc, Copyable, MapProxy, abcf, F, KT, VT, T, #,P, RT
-    NotImplType,
+    Abc, Copyable, MapProxy, abcf
 )
-from tools import closure
+from tools import abstract, closure
 from tools.callables import preds, gets
 from tools.decorators import (
-    abstract, static, final, overload,
+    static, 
     fixed, membr, wraps,
 )
 from tools.sets import EMPTY_SET, setf
+from tools.typing import F, KT, VT, T, MapT, NotImplType, SetT
 
 from collections.abc import (
     Collection,
@@ -55,11 +55,9 @@ from collections.abc import (
 from collections import defaultdict, deque
 from itertools import chain, filterfalse
 from operator import not_, truth
-from typing import Any, Callable, Iterable, TypeVar
+from typing import final, overload, Any, Callable, Iterable, TypeVar
 
-MapT  = TypeVar('MapT',  bound = 'Mapping')
 MapiT = TypeVar('MapiT', bound = 'MappingApi')
-SetT  = TypeVar('SetT',  bound = 'Set')
 
 class MappingApi(Mapping[KT, VT], Copyable):
 

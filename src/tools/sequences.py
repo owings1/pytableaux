@@ -9,19 +9,15 @@ __all__ = (
     'deqseq',
 )
 
-from errors import (
-    Emsg,
-    instcheck,
-)
-from tools.abcs import (
-    Copyable, abcm, abcf,
-    abstract, final, overload,
-    T, VT
-)
+from errors import Emsg, instcheck
+from tools import abstract
+from tools.abcs import Copyable, abcm, abcf
+from tools.typing import VT
 
 from collections import deque
 from itertools import chain, repeat
 from typing import (
+    final, overload,
     Iterable,
     MutableSequence,
     Sequence,

@@ -6,10 +6,10 @@ __all__ = (
     'using',
     'skip',
 )
-from tools.abcs import abcm, F, TT, T, VT
-from tools.decorators import overload
+from tools.abcs import abcm
 from tools.hybrids import qset
 from tools.misc import drepr, get_logic
+from tools.typing import F, TT, T, VT
 from lexicals import (
     Argument, Predicates, Sentence, LexWriter, Notation
 )
@@ -25,6 +25,7 @@ from proof.tableaux import (
 from inspect import isclass, getmembers
 from itertools import chain, filterfalse
 from typing import (
+    overload,
     Callable,
     Collection,
     Iterable,

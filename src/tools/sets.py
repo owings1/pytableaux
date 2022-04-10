@@ -10,12 +10,13 @@ __all__ = (
 )
 
 from errors import instcheck
-from tools.abcs import abcm, Copyable, VT
-from tools.decorators import abstract, final, overload, operd
-
+from tools import abstract
+from tools.abcs import abcm, Copyable
+from tools.decorators import abstract, operd
+from tools.typing import VT
 from collections.abc import Set, MutableSet
 import operator as opr
-from typing import Iterable, TypeVar
+from typing import final, overload, Iterable, TypeVar
 
 EMPTY = ()
 

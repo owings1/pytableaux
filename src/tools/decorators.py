@@ -23,14 +23,10 @@ if 'Imports' or True:
         subclscheck,
     )
 
+    from tools import abstract
     from tools.abcs import (
         # alias decorators
-        abstract,
-        final,
-        overload,
         static,
-        # type vars
-        F, T, P, Self, RT,
         # utils
         abcf,
         abcm,
@@ -38,14 +34,13 @@ if 'Imports' or True:
         Abc,
         MapProxy,
     )
+    from tools.typing import F, T, P, Self, RT
 
     from collections import defaultdict
     from inspect import (
         Signature,
     )
-    from keyword import (
-        iskeyword,
-    )
+    from keyword import iskeyword
     from functools import (
         reduce as _ftreduce,
         # partial as _ftpartial,
@@ -54,6 +49,8 @@ if 'Imports' or True:
     import operator as opr
 
     from typing import (
+        final,
+        overload,
         # Annotations
         Any, Callable, Generic, Iterable, Iterator, Mapping,
         Concatenate,
