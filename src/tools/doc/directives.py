@@ -18,6 +18,7 @@
 # ------------------
 # pytableaux - directives module
 from __future__ import annotations
+import re
 
 __all__ = (
     'CSVTable',
@@ -25,11 +26,13 @@ __all__ = (
     'Inject'
 )
 
+from collections import ChainMap
 from docutils import nodes
-import docutils.parsers.rst.directives.tables as _tables
-from docutils.parsers.rst.directives import unchanged
-import sphinx.directives
+from docutils.parsers.rst.directives import class_option, unchanged
+from docutils.parsers.rst.roles import set_classes
+from sphinx import directives
 import sphinx.directives.other
+import sphinx.directives.patches
 from sphinx.util import logging
 from typing import Any
 
@@ -40,23 +43,29 @@ from tools.misc import get_logic
 
 import lexicals, parsers
 from models import BaseModel
-from proof.tableaux import Tableau
+from proof import tableaux
 from proof.writers import TabWriter
 
 logger = logging.getLogger(__name__)
 
-class BaseDirective(sphinx.directives.SphinxDirective):
+class BaseDirective(directives.SphinxDirective):
     @property
     def helper(self):
         return gethelper(self.env.app)
     arguments: list[str]
     options: dict[str, Any]
 
+    def set_classes(self):
+        set_classes(self.options)
+
 # Creating  Directives:
 #    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
-def none_or(f):
-    return lambda a: None if a is None else f(a)
+
+_re_ws = re.compile(r'\s')
+
+def cleanws(arg):
+    return _re_ws.sub('', arg)
 
 class Tableaudoc(BaseDirective):
     """Tableau directive.
@@ -67,38 +76,66 @@ class Tableaudoc(BaseDirective):
 
         .. tableau::
              :logic: FDE
-             :conclusion: A V B
-             :parser: standard
+             :conclusion: B
+             :premises: A, A > B
     """
+
+    def predsopt(arg: str):
+        return lexicals.Predicates(
+            tuple(map(int, spec.split(':')))
+            for spec in cleanws(arg).split(',')
+        )
+
     optional_arguments = 1
     option_spec = dict(
-        logic = none_or(get_logic),
+        logic = get_logic,
         conclusion = unchanged,
-        parser = none_or(parsers.Parser),
+        premises = re.compile(r',').split,
+        pnotn = lexicals.Notation,
+        preds = predsopt,
+        wnotn = lexicals.Notation,
+        classes = class_option,
     )
+    opts_with_args = {'wnotn', 'classes'}
+
     def run(self):
+
+        self.set_classes()
         opts = self.options
+        ochain = ChainMap(opts, self.helper.opts)
+        classes = opts.get('classes', [])
+
         if len(self.arguments):
-            logic, rulename = self.arguments[0].split('.')
-            logic = get_logic(logic)
-            rule = getattr(logic.TabRules, rulename)
-            tab = docparts.rule_example_tableau(rule)
-        else:
+            badopts = set(opts) - self.opts_with_args
+            if badopts:
+                raise self.error(
+                    f'Option not allowed with arguments: {badopts}')
+
+            rulestr, = self.arguments
             try:
-                logic = get_logic(opts['logic'])
-                conc = opts['conclusion']
+                logic, rulename = rulestr.split('.')
+                logic = get_logic(logic)
+                rule = getattr(logic.TabRules, rulename)
+            except Exception as e:
+                logger.error(e)
+                raise self.error(f'Bad rule argument: {rulestr}')
+
+            classes.extend(('example', 'rule'))
+            if issubclass(rule, tableaux.ClosingRule):
+                classes.append('closure')
+            tab = docparts.rule_example_tableau(rule)
+
+        else:
+            parser = parsers.Parser(ochain['pnotn'], ochain['preds'])
+            try:
+                arg = parser.argument(opts['conclusion'], opts.get('premises'))
+                tab = tableaux.Tableau(opts['logic'], arg)
             except KeyError as e:
                 raise self.error(f'Missing required option: {e}')
-            parser = opts.get('parser')
-            if parser is None:
-                parser = parsers.Parser(self.helper.opts['pnotn'])
-            rule = None
-        return [nodes.Text(f'rule={rule}, options={repr(opts)}')]
 
-    def pw(self):
-        if issubclass(self.obj, ClosingRule):
-            return self.helper.pwclosure
-        return self.helper.pwrule
+        pw = TabWriter('html', ochain['wnotn'], classes = classes)
+        return [nodes.raw(format = 'html', text = pw(tab.build()))]
+
 class Inject(BaseDirective):
 
     required_arguments = 1
@@ -107,14 +144,7 @@ class Inject(BaseDirective):
 
     def run(self):
         classes = []
-        info = dict(
-            arguments = self.arguments,
-            content   = self.content,
-            options   = self.options,
-            block_text = self.block_text,
-        )
 
-        # logger.info(info)
         cmd, *args = self.arguments
         meth = getattr(self, f'cmd_{cmd}', None)
         if meth is None:
@@ -143,9 +173,9 @@ class Inject(BaseDirective):
         content = '\n'.join(renders) + '<div class="clear"></div>'
         return nodes.raw(text = content, format = 'html')
 
-class CSVTable(_tables.CSVTable, BaseDirective):
+class CSVTable(directives.patches.CSVTable, BaseDirective):
     
-    option_spec = _tables.CSVTable.option_spec | dict(
+    option_spec = directives.patches.CSVTable.option_spec | dict(
         generator = unchanged,
     )
     generators = dict(
@@ -161,8 +191,11 @@ class CSVTable(_tables.CSVTable, BaseDirective):
         rows = generator()
         return rstutils.csvlines(rows), '_generator'
 
-class Include(sphinx.directives.other.Include, BaseDirective):
+class Include(directives.other.Include, BaseDirective):
     "Override include directive that allows the app to modify content via events."
+
+    def parser(self):
+        return self
 
     def parse(self, text: str, doc):
         lines = text.split('\n')
@@ -171,7 +204,7 @@ class Include(sphinx.directives.other.Include, BaseDirective):
         self.state_machine.insert_input(lines, source)
 
     def run(self):
-        self.options['parser'] = lambda: self
+        self.options['parser'] = self.parser
         super().run()
         return []
 

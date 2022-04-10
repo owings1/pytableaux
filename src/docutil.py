@@ -22,6 +22,7 @@ from __future__ import annotations
 
 __all__ = 'Helper',
 
+import lexicals
 from lexicals import (
     LexWriter,
     Notation,
@@ -51,7 +52,7 @@ class Helper:
         truth_tables_rev = True,
         wnotn = 'standard',
         pnotn = 'standard',
-        preds = ()
+        preds = lexicals.Predicates(lexicals.Predicate.gen(3))
     )
 
     def __init__(self, **opts):
@@ -70,20 +71,20 @@ class Helper:
             lstrip_blocks = True,
         )
 
-        self.preds = Predicates(opts['preds'])
+        self.preds = opts['preds'] = Predicates(opts['preds'])
         self.parser = Parser(opts['pnotn'], self.preds)
 
         wnotn = Notation(opts['wnotn'])
         self.lwhtml = LexWriter(wnotn, 'html')
 
-        self.pwrule = TabWriter('html',
+        self.pwhtml = TabWriter('html',
             lw = self.lwhtml,
-            classes = ('example', 'rule'),
+            # classes = ('example', 'rule'),
         )
-        self.pwclosure = TabWriter('html',
-            lw = self.lwhtml,
-            classes = ('example', 'rule', 'closure'),
-        )
+        # self.pwclosure = TabWriter('html',
+        #     lw = self.lwhtml,
+        #     classes = ('example', 'rule', 'closure'),
+        # )
 
         # Make a RenderSet that renders subscript 2 as n.
         rskey = 'docutil.trunk'

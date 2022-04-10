@@ -88,16 +88,22 @@ class RuledocExample(AutodocProcessor):
     def applies(self):
         return docinspect.is_concrete_rule(self.obj)
 
-    @property
-    def pw(self):
-        if issubclass(self.obj, ClosingRule):
-            return self.helper.pwclosure
-        return self.helper.pwrule
+    # @property
+    # def pw(self):
+    #     return self.helper.pwhtml
 
     def run(self):
-        tab = docparts.rule_example_tableau(self.obj)
-        self += 'Example:'
-        self.lines.extend(rstutils.rawblock(self.pw(tab)))
+        # classes = ['example', 'rule']
+        # if issubclass(self.obj, ClosingRule):
+        #     classes.append('closure')
+        # tab = docparts.rule_example_tableau(self.obj)
+        logic = get_logic(self.obj)
+        self += f"""
+        Example:
+        
+        .. tableau:: {logic.name}.{self.obj.name}
+        """
+        # self.lines.extend(rstutils.rawblock(self.pw(tab, classes = classes)))
 
 class BuildtrunkExample(AutodocProcessor):
     'Append docstring with html build trunk example.'

@@ -18,9 +18,7 @@
 # ------------------
 # pytableaux - tools.doc.roles module
 from __future__ import annotations
-from typing import Any, Callable, Generic, NamedTuple
 
-from tools.doc import docinspect
 
 __all__ = (
     'metadress',
@@ -28,8 +26,11 @@ __all__ = (
     'refplus',
 )
 
-from lexicals import LexType, LexWriter, Parser, Predicate, Predicates
+import lexicals
+from lexicals import LexType
+import parsers
 from tools import T, F
+from tools.doc import docinspect, extension
 
 from docutils import nodes
 from docutils.parsers.rst import roles as _docroles
@@ -38,7 +39,7 @@ import re
 import sphinx.roles
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxRole
-from typing import overload, TypeVar
+from typing import Any, Callable, Generic, NamedTuple, overload
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,12 @@ def rolerun(func: F) -> F:
         return ret
     return run
 
-class refplus(sphinx.roles.XRefRole):
+class BaseRole(SphinxRole):
+    @property
+    def helper(self):
+        return extension.gethelper(self.env.app)
+
+class refplus(sphinx.roles.XRefRole, BaseRole):
 
     refdomain = 'std'
     reftype = 'ref'
@@ -90,7 +96,6 @@ class refplus(sphinx.roles.XRefRole):
                 f'target={repr(self.target)}'
             )
         # _log()
-
         
         self.classes = list(self._classes)
 
@@ -132,31 +137,40 @@ class refplus(sphinx.roles.XRefRole):
         self.rawtext = f":{self.name}:`{self.text}`"
         self.classes.append('logicref')
 
-class lexdress(SphinxRole):
+class lexdress(BaseRole):
 
-    #: The input notation.
-    pnotn = 'standard'
-    #: The output notation.
-    wnotn = 'standard'
-    #: The parser predicates store.
-    preds = Predicates(Predicate.gen(3))
+    _parser: parsers.Parser = None
+    _lw: lexicals.LexWriter = None
 
-    parser: Parser
-    lw: LexWriter
-
-    def __init__(self, *, wnotn = None, pnotn = None, preds = None):
+    def __init__(self, *, wnotn: str = None, pnotn: str = None, preds:lexicals.Predicates = None):
+        'Override app options with constructor.'
+        from docutil import Helper
+        defaults = Helper._defaults
         if wnotn is not None:
-            self.wnotn = wnotn
-        if pnotn is not None:
-            self.pnotn = pnotn
-        if preds is not None:
-            self.preds = preds
+            self._lw = lexicals.LexWriter(wnotn, 'unicode')
 
-        self.parser = Parser(self.pnotn, self.preds)
-        self.lw = LexWriter(self.wnotn, 'unicode')
+        if pnotn is not None or preds is not None:
+            if pnotn is None:
+                pnotn = defaults['pnotn']
+            if preds is None:
+                preds = defaults['preds']
+            self._parser = parsers.Parser(pnotn, preds)
+
+    @property
+    def parser(self):
+        if self._parser is None:
+            self._parser = self.helper.parser
+        return self._parser
+
+    @property
+    def lw(self):
+        if self._lw is None:
+            wnotn = self.helper.opts['wnotn']
+            self._lw = lexicals.LexWriter(wnotn, 'unicode')
+        return self._lw
 
     _ctypes_valued = {
-        LexType.Operator, LexType.Quantifier, Predicate.System
+        LexType.Operator, LexType.Quantifier, lexicals.Predicate.System
     }
     _ctypes_nosent = _ctypes_valued | {
         LexType.Constant, LexType.Variable, LexType.Predicate,
@@ -198,8 +212,7 @@ class lexdress(SphinxRole):
 
         return nodes.inline(text = rend, classes = classes)
 
-
-class metadress(SphinxRole):
+class metadress(BaseRole):
 
     prefixes = {
         'L': 'logic_name',
@@ -343,6 +356,7 @@ class metadress(SphinxRole):
             ]
             return node
         return nodecls(text = name, classes = classes)
+
 
 @overload
 def getentry(rolecls: type[T]) -> _RoleItem[T]|None: ...
