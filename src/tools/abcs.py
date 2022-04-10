@@ -25,22 +25,13 @@ if 'Exports' or True:
     __all__ = (
         'abcf',
         'abcm',
-
         'AbcMeta',
         'AbcEnumMeta',
-
         'Abc',
         'Copyable',
-
         'AbcEnum',
         'FlagEnum',
         'IntEnum',
-        'MapProxy',
-
-        # 'final',
-        # 'overload',
-        # 'abstract',
-        # 'static',
     )
 
 if 'Imports' or True:
@@ -53,10 +44,8 @@ if 'Imports' or True:
     from functools import reduce
     from itertools import chain, islice
     import operator as opr
-    from types import FunctionType
     from typing import (
-        # exportable imports
-        final, overload,
+        overload,
 
         # Annotations
         Any,
@@ -74,43 +63,10 @@ if 'Imports' or True:
         ParamSpec,
         TypeVar,
     )
-    from tools import abstract, MapProxy
+    from tools import abstract, isdund, MapProxy, static, thru
     from tools.typing import F, RT, T, TT, Self
 
 if 'Type Variables' or True:
-
-    # T  = TypeVar('T')
-    # T1 = TypeVar('T1')
-    # T2 = TypeVar('T2')
-
-    # # Key type
-    # KT = TypeVar('KT')
-
-    # # Value type
-    # VT = TypeVar('VT')
-
-    # # Return type
-    # RT = TypeVar('RT')
-
-    # # Self type
-    # Self = TypeVar('Self')
-
-    # T_co  = TypeVar('T_co',  covariant = True)
-    # KT_co = TypeVar('KT_co', covariant = True)
-    # VT_co = TypeVar('VT_co', covariant = True)
-    # T_contra = TypeVar('T_contra', contravariant = True)
-
-    # Callable bound, use for decorator, etc.
-    # F   = TypeVar('F',  bound = Callable[..., Any])
-
-    # # Exception bound
-    # ExT = TypeVar('ExT', bound = Exception)
-
-    # # Type bound, use for class decorator, etc.
-    # TT    = TypeVar('TT',    bound = type)
-    # TT_co = TypeVar('TT_co', bound = type, covariant = True)
-
-    # P = ParamSpec('P')
 
     EnT  = TypeVar('EnT',  bound = 'AbcEnum')
     EnT2 = TypeVar('EnT2', bound = 'AbcEnum')
@@ -118,68 +74,7 @@ if 'Type Variables' or True:
     EnFlagT = TypeVar('EnFlagT', bound = 'FlagEnum')
     EnKeyFunc = Callable[['AbcEnum'], Set[Hashable]]
 
-    # IndexType = SupportsIndex | slice
-    # NotImplType = type(NotImplemented)
-
-if 'Decorators & Utils' or True:
-
-    def _thru(obj: T) -> T: return obj
-    def _isdund(name):
-        return (
-            len(name) > 4 and name[:2] == name[-2:] == '__' and
-            name[2] != '_' and name[-3] != '_'
-        )
-    # Global decorators. Re-exported by decorators module.
-
-    # from abc import abstractmethod as abstract
-
-    @overload
-    def static(cls: TT, /) -> TT: ...
-
-    @overload
-    def static(meth: Callable[..., T], /) -> staticmethod[T]: ...
-
-    def static(cls, /):
-        'Static class decorator wrapper around staticmethod'
-
-        if not isinstance(cls, type):
-            if isinstance(cls, (classmethod, staticmethod)):
-                return cls
-            # instcheck(cls, Callable)
-            return staticmethod(cls)
-
-        ns = cls.__dict__
-
-        for name, member in ns.items():
-            if _isdund(name) or not isinstance(member, FunctionType):
-                continue
-            setattr(cls, name, staticmethod(member))
-
-        if '__new__' not in ns:
-            cls.__new__ = _thru # type: ignore
-
-        if '__init__' not in ns:
-            def finit(self): raise TypeError
-            cls.__init__ = finit
-
-        return cls
-
-
 if 'Util Classes' or True:
-
-    # class MapProxy(Mapping[KT, VT]):
-    #     'Cast to a proxy if not already.'
-    #     EMPTY_MAP = _MapProxy({})
-
-    #     def __new__(cls, mapping: Mapping[KT, VT] = None) -> MapProxy[KT, VT]:
-
-    #         if mapping is None:
-    #             return cls.EMPTY_MAP # type: ignore
-    #         if isinstance(mapping, _MapProxy):
-    #             return mapping # type: ignore
-    #         if not isinstance(mapping, Mapping):
-    #             mapping = dict(mapping)
-    #         return _MapProxy(mapping) # type: ignore
 
     class _EnumEntry(NamedTuple):
         'The value of the enum lookup index.'
@@ -218,9 +113,7 @@ if 'Constants' or True:
 
     _EMPTY = ()
     _EMPTY_SET = frozenset()
-    # _EMPTY_MAP = MapProxy[Any, Any]()
     _NOARG = object()
-    # _NOGET = object()
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -349,7 +242,7 @@ class abcm:
         oper = opr.or_,
         *,
         initial: T = _NOARG,
-        transform: Callable[[T], RT] = _thru,
+        transform: Callable[[T], RT] = thru,
         **iteropts
     ) -> RT:
         it = abcm.mroiter(subcls, **iteropts)
@@ -560,7 +453,7 @@ class EnumLookup(Mapping[Any, EnumEntry[EnT]],
         ga = object.__getattribute__
         sa = object.__setattr__
 
-        for name in filter(_isdund, self.__slots__):
+        for name in filter(isdund, self.__slots__):
             sa(self, name, ga(source, name))
 
         def pseudo(member):
@@ -816,5 +709,5 @@ if 'Cleanup' or True:
         # ParamSpec,
     )
     # fail if deleted
-    final
+    # final
     eauto

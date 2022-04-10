@@ -41,14 +41,14 @@ from errors import (
     subclscheck,
     Emsg,
 )
-from tools import abstract
+from tools import abstract, static, MapProxy
 from tools.abcs import abcm
 from tools.callables import cchain
-from tools.decorators import static, wraps
+from tools.decorators import wraps
 from tools.hybrids import qsetf, EMPTY_QSET
-from tools.mappings import MapProxy, dmap
+from tools.mappings import dmap
 from tools.sets import EMPTY_SET, setm, setf
-from tools.typing import KT, VT, P, T
+from tools.typing import KT, VT, P, T, TypeInstDict
 
 from lexicals import Constant, Sentence, Predicated
 from models import BaseModel
@@ -69,21 +69,16 @@ from proof.types import (
     RuleEvent,
     RuleHelper,
     TabEvent,
-    TypeInstDict,
 )
 from copy import copy
-# from functools import partial
-# from itertools import chain, filterfalse
 from typing import (
     final, overload,
     Any,
     Callable,
-    # Generic,
     Iterable,
     Iterator,
     Mapping,
     Sequence,
-    # TypeVar,
 )
 
 class AdzHelper:

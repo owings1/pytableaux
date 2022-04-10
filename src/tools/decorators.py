@@ -18,32 +18,16 @@ if 'Imports' or True:
     #  - tools.abcs
     #  - tools.misc
 
-    from errors import (
-        instcheck,
-        subclscheck,
-    )
-
-    from tools import abstract
-    from tools.abcs import (
-        # alias decorators
-        static,
-        # utils
-        abcf,
-        abcm,
-        # bases
-        Abc,
-        MapProxy,
-    )
+    from errors import instcheck, subclscheck
+    from tools import abstract, static, MapProxy
+    from tools.abcs import abcf, abcm, Abc
     from tools.typing import F, T, P, Self, RT
 
     from collections import defaultdict
-    from inspect import (
-        Signature,
-    )
+    from inspect import Signature
     from keyword import iskeyword
     from functools import (
         reduce as _ftreduce,
-        # partial as _ftpartial,
         WRAPPER_ASSIGNMENTS,
     )
     import operator as opr

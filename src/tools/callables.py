@@ -6,14 +6,11 @@ __all__ = (
 )
 
 from errors import instcheck, subclscheck
-from tools import abstract, MapProxy
+from tools import abstract, MapProxy, static
 from tools.abcs import (
     AbcMeta,
     Copyable,
     FlagEnum,
-)
-from tools.decorators import (
-    static,
 )
 from tools.sets import EMPTY_SET, setf
 from tools.typing import F, KT, P, RT, T

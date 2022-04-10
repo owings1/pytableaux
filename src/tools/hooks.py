@@ -23,18 +23,14 @@ __all__ = 'hookutil',
 
 # Allowed local imports: errors, tools.abcs
 from errors import Emsg, instcheck
-from tools import closure
+from tools import closure, static, MapProxy
 from tools.abcs import (
     ABC_HOOKINFO_ATTR,
     ABC_HOOKUSER_ATTR,
-    T,
-    TT,
     abcf,
-    AbcMeta,
-    MapProxy,
-    overload,
-    static,
+    AbcMeta
 )
+from tools.typing import T, TT
 
 from collections import defaultdict
 from collections.abc import Set
@@ -43,6 +39,7 @@ from itertools import filterfalse, repeat
 import operator as opr
 from types import FunctionType
 from typing import (
+    overload,
     Any,
     Callable,
     ClassVar,

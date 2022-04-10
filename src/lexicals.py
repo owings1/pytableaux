@@ -41,12 +41,11 @@ __all__ = (
 )
 
 from errors import Emsg, instcheck
+from tools import abstract, closure, static
 import tools.abcs as abcs
-from tools import abstract, closure
 from tools.abcs import abcm, abcf, eauto
 from tools.callables import gets
 from tools.decorators import (
-    static,
     fixed, lazy, membr, raisr, wraps, NoSetAttr
 )
 from tools.hybrids   import qsetf, qset

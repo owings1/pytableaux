@@ -28,13 +28,10 @@ __all__ = (
 
 if 'Imports' or True:
     from errors import Emsg, instcheck, subclscheck
-    from tools import closure
-    from tools.abcs import Abc, T, F
+    from tools import abstract, closure, static
+    from tools.abcs import Abc
     from tools.callables import preds
-    from tools.decorators import (
-        abstract, final, overload, static,
-        raisr, wraps,
-    )
+    from tools.decorators import raisr, wraps
     from tools.events import EventEmitter
     from tools.hybrids import qset, qsetf, EMPTY_QSET
     from tools.linked import linqset
@@ -49,6 +46,7 @@ if 'Imports' or True:
     )
     from tools.sets import setf, EMPTY_SET
     from tools.timing import StopWatch
+    from tools.typing import T, F, TypeInstDict
 
     from lexicals import Argument, Sentence
     from models import BaseModel
@@ -65,7 +63,6 @@ if 'Imports' or True:
         TabFlag,
         TabStatKey,
         TabTimers,
-        TypeInstDict,
     )
 
     from collections import deque
@@ -73,6 +70,7 @@ if 'Imports' or True:
     import operator as opr
     from types import ModuleType
     from typing import (
+        final, overload,
         Any,
         Callable,
         ClassVar,

@@ -64,10 +64,10 @@ from proof.tableaux import (
     Tableau,
     TableauxSystem as BaseSystem,
 )
-from tools import closure
-from tools.abcs import static, MapProxy, T
+from tools import closure, MapProxy, static
 from tools.sets import setf
 from tools.hybrids import qsetf
+from tools.typing import T
 
 from typing import Any
 

@@ -10,11 +10,10 @@ from errors import (
     Emsg,
     instcheck,
 )
-from tools import abstract
+from tools import abstract, static
 from tools.abcs import (
     abcm,
     Abc, Copyable, IntEnum,
-    static
 )
 from tools.hybrids import MutableSequenceSet
 from tools.sequences  import (

@@ -31,19 +31,18 @@ from errors import (
     # instcheck,
     subclscheck,
 )
-from tools import abstract, closure
+from tools import abstract, closure, static, MapProxy
 from tools.abcs import (
-    AbcMeta, AbcEnum, FlagEnum, MapProxy,
+    AbcMeta, AbcEnum, FlagEnum,
     eauto,
     abcm,
-    static,
 )
 from tools.decorators import membr
 from tools.hybrids import qsetf, EMPTY_QSET
 from tools.mappings import dmap
 from tools.sets import setf, EMPTY_SET
 from tools.timing import StopWatch
-from tools.typing import T, VT
+from tools.typing import T, VT, TypeInstDict
 
 from typing import (
     overload,
@@ -214,27 +213,9 @@ class TabTimers(NamedTuple):
     tree   : StopWatch
     models : StopWatch
 
-    @static
+    @staticmethod
     def create(it = (False,) * 4):
         return TabTimers._make(map(StopWatch, it))
-
-
-if 'Stub Types' or True:
-
-    class TypeInstDict(
-        dict[type[VT], VT],
-        metaclass = type('TidMeta', (type,), dict(__call__ = dict))
-    ):
-        @overload
-        def __getitem__(self, key: type[T]) -> T: ...
-        @overload
-        def get(self, key: type[T], default = None) -> T|None: ...
-        @overload
-        def copy(self: T) -> T: ...
-        @overload
-        def setdefault(self, key: type[T], value: Any) -> T:...
-        @overload
-        def pop(self, key: type[T]) -> T:...
 
 if 'Util Functions' or True:
 

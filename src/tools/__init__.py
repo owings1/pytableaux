@@ -1,13 +1,46 @@
 from __future__ import annotations
 
-from types import MappingProxyType as _MapProxy
-from typing import Any, Callable, Mapping
-from tools.typing import KT, T, VT
+from types import FunctionType, MappingProxyType as _MapProxy
+from typing import Any, Callable, Mapping, overload
+from tools.typing import KT, T, TT, VT
 
 from abc import abstractmethod as abstract
 
+def thru(obj: T) -> T:
+    return obj
+
 def closure(func: Callable[..., T]) -> T:
     return func()
+
+@overload
+def static(cls: TT, /) -> TT: ...
+
+@overload
+def static(meth: Callable[..., T], /) -> staticmethod[T]: ...
+
+def static(cls, /):
+    'Static class decorator wrapper around staticmethod'
+
+    if not isinstance(cls, type):
+        if isinstance(cls, (classmethod, staticmethod)):
+            return cls
+        return staticmethod(cls)
+
+    ns = cls.__dict__
+
+    for name, member in ns.items():
+        if isdund(name) or not isinstance(member, FunctionType):
+            continue
+        setattr(cls, name, staticmethod(member))
+
+    if '__new__' not in ns:
+        cls.__new__ = thru # type: ignore
+
+    if '__init__' not in ns:
+        def finit(self): raise TypeError
+        cls.__init__ = finit
+
+    return cls
 
 class MapProxy(Mapping[KT, VT]):
     'Cast to a proxy if not already.'
@@ -23,5 +56,8 @@ class MapProxy(Mapping[KT, VT]):
             mapping = dict(mapping)
         return _MapProxy(mapping) # type: ignore
 
-
-
+def isdund(name):
+    return (
+        len(name) > 4 and name[:2] == name[-2:] == '__' and
+        name[2] != '_' and name[-3] != '_'
+    )

@@ -29,8 +29,7 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_order = 1
 
-from tools import closure
-from tools.abcs import static, T
+from tools import closure, static
 from tools.hybrids import qsetf
 from tools.sets import EMPTY_SET
 
@@ -62,8 +61,6 @@ from proof.helpers import (
     FilterHelper, NodeCount, WorldIndex,
 )
 from errors import DenotationError, ModelValueError, instcheck
-
-import operator as opr
 
 
 Identity  = Predicates.System.Identity

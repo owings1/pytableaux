@@ -3,16 +3,9 @@ from __future__ import annotations
 __all__ = 'Node', 'Branch', 'Target'
 
 from errors import instcheck as instcheck, Emsg
-from tools import closure
-# from tools.abcs import Abc, T
+from tools import closure, static
 from tools.callables import preds, cchain
-from tools.decorators import (
-    # abstract,
-    static,
-    # overload,
-    # final,
-    lazy, operd, raisr
-)
+from tools.decorators import lazy, operd, raisr
 from tools.events import EventEmitter
 from tools.hybrids import qset
 from tools.mappings import (
@@ -22,34 +15,23 @@ from tools.mappings import (
     MappingApi,
     MapCover
 ) 
-from tools.sequences import (
-    SequenceApi,
-    # SequenceCover,
-)
-from tools.sets import EMPTY_SET, setf#, SetCover
+from tools.sequences import SequenceApi
+from tools.sets import EMPTY_SET, setf
 from lexicals import Constant, Sentence
 
 from proof.types import BranchEvent
 
 from collections.abc import Set
 from functools import partial
-from itertools import (
-    chain,
-    filterfalse,
-    # starmap,
-)
+from itertools import chain, filterfalse
 import operator as opr
 from typing import (
     Any,
-    # Callable,
-    # Generic,
     Iterable,
     Iterator,
     Mapping,
     NamedTuple,
-    # Sequence,
     SupportsIndex,
-    # TypeVar,
 )
 
 class Node(MappingApi):
@@ -125,7 +107,7 @@ class Node(MappingApi):
 
     id = property(operd(id)())
 
-    @static
+    @staticmethod
     @closure
 
     def __mapinit():

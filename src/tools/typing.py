@@ -19,7 +19,7 @@
 # pytableaux - tools.misc module
 from __future__ import annotations
 from collections.abc import Set
-from typing import Any, Callable, Mapping, ParamSpec, SupportsIndex, TypeVar
+from typing import Any, Callable, Mapping, ParamSpec, SupportsIndex, TypeVar, overload
 
 T = TypeVar('T')
 T1 = TypeVar('T1')
@@ -30,6 +30,9 @@ KT = TypeVar('KT')
 VT = TypeVar('VT')
 # Return type
 RT = TypeVar('RT')
+# Comparer
+LHS = TypeVar('LHS')
+RHS = TypeVar('RHS')
 # Callable bound, use for decorator, etc.
 F = TypeVar('F',  bound = Callable[..., Any])
 P = ParamSpec('P')
@@ -51,3 +54,15 @@ NotImplType = type(NotImplemented)
 MapT  = TypeVar('MapT',  bound = 'Mapping')
 SetT  = TypeVar('SetT',  bound = 'Set')
 
+class TypeInstDict(dict[type[VT], VT],
+    metaclass = type('TidMeta', (type,), dict(__call__ = dict))):
+    @overload
+    def __getitem__(self, key: type[T]) -> T: ...
+    @overload
+    def get(self, key: type[T], default = None) -> T|None: ...
+    @overload
+    def copy(self: T) -> T: ...
+    @overload
+    def setdefault(self, key: type[T], value: Any) -> T:...
+    @overload
+    def pop(self, key: type[T]) -> T:...

@@ -5,9 +5,11 @@ __all__ = (
     'NodeFilter',
     'NodeFilters',
 )
-from tools.abcs import Abc, abstract, static
+from tools import abstract, static
+from tools.abcs import Abc
 from tools.callables import Caller, gets
 from tools.sets import EMPTY_SET
+from tools.typing import LHS, RHS
 
 from lexicals import (
     Operator,
@@ -16,10 +18,7 @@ from lexicals import (
     Quantified,
     Sentence,
 )
-from proof.common import (
-    Access,
-    Node,
-)
+from proof.common import Access, Node
 
 import operator as opr
 from typing import (
@@ -27,13 +26,9 @@ from typing import (
     Callable,
     Generic,
     Mapping,
-    TypeVar
 )
 
 # TODO: fix generic types on Comparer, Filters
-
-LHS = TypeVar('LHS')
-RHS = TypeVar('RHS')
 
 class Comparer(Generic[LHS, RHS], Abc):
 

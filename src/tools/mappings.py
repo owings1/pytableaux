@@ -34,12 +34,11 @@ __all__ = (
 
 from errors import Emsg, instcheck
 from tools.abcs import (
-    Abc, Copyable, MapProxy, abcf
+    Abc, Copyable, abcf, MapProxy
 )
-from tools import abstract, closure
+from tools import abstract, closure, static
 from tools.callables import preds, gets
 from tools.decorators import (
-    static, 
     fixed, membr, wraps,
 )
 from tools.sets import EMPTY_SET, setf
