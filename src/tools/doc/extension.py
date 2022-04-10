@@ -24,10 +24,10 @@ from tools.doc import SphinxEvent
 from sphinx.application import Sphinx
 import sphinx.config
 
-_helpers  = {}
+# _helpers  = {}
 
-def gethelper(app: Sphinx) -> Helper:
-    return _helpers[app]
+# def gethelper(app: Sphinx) -> Helper:
+#     return _helpers[app]
 
 def setup(app: Sphinx):
     app.add_config_value('pt_options', {}, 'env', [dict])
@@ -44,7 +44,7 @@ def setup(app: Sphinx):
 
 def _init_app(app: Sphinx, config: sphinx.config.Config):
 
-    from tools.doc import processors
+    from tools.doc import processors, _helpers
 
     _helpers[app] = helper = Helper(**config['pt_options'])
 
@@ -52,10 +52,12 @@ def _init_app(app: Sphinx, config: sphinx.config.Config):
         for handler in handlers:
             app.connect(event, handler)
 
+    from tools.doc import processors
+    processors.setup(app)
     conn('autodoc-process-docstring',
-        processors.RuledocInherit(),
-        processors.RuledocExample(),
-        processors.BuildtrunkExample(),
+        # processors.RuledocInherit(),
+        # processors.RuledocExample(),
+        # processors.BuildtrunkExample(),
         # helper.sphinx_obj_lines_append_autodoc,
         helper.sphinx_simple_replace_autodoc,
     )
@@ -63,7 +65,8 @@ def _init_app(app: Sphinx, config: sphinx.config.Config):
     conn('source-read', helper.sphinx_simple_replace_source)
     conn(SphinxEvent.IncludeRead, helper.sphinx_simple_replace_include)
 
-def _remove_app(app, exception):
+def _remove_app(app: Sphinx, exception):
+    from tools.doc import _helpers
     del _helpers[app]
 
 

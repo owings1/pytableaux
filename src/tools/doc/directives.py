@@ -18,7 +18,6 @@
 # ------------------
 # pytableaux - directives module
 from __future__ import annotations
-import re
 
 __all__ = (
     'CSVTable',
@@ -29,19 +28,21 @@ __all__ = (
 
 from collections import ChainMap
 from docutils import nodes
-from docutils.parsers.rst.directives import class_option, unchanged
-from docutils.parsers.rst.roles import set_classes
+from docutils.parsers.rst.directives import class_option, flag, unchanged
+import re
 from sphinx import directives
-from sphinx.application import Sphinx
 from sphinx.util import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
+
 
 from tools.doc import SphinxEvent
-from tools.doc.extension import gethelper
-from tools.doc import docparts, rstutils
-from tools.misc import get_logic
+from tools.doc import BaseDirective, docparts, rstutils
+# from tools.misc import get_logic
 
 import lexicals
+import logics
 import models
 import parsers
 from proof import tableaux, writers
@@ -51,15 +52,7 @@ logger = logging.getLogger(__name__)
 # Creating  Directives:
 #    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
-class BaseDirective(directives.SphinxDirective):
-    @property
-    def helper(self):
-        return gethelper(self.env.app)
-    arguments: list[str]
-    options: dict[str, Any]
 
-    def set_classes(self):
-        set_classes(self.options)
 
 _re_ws = re.compile(r'\s')
 
@@ -87,7 +80,7 @@ class Tableaud(BaseDirective):
 
     optional_arguments = 1
     option_spec = dict(
-        logic = get_logic,
+        logic = logics.getlogic,
         conclusion = unchanged,
         premises = re.compile(r',').split,
         pnotn = lexicals.Notation,
@@ -95,14 +88,14 @@ class Tableaud(BaseDirective):
         wnotn = lexicals.Notation,
         classes = class_option,
     )
+
     opts_with_args = {'wnotn', 'classes'}
 
     def run(self):
 
-        self.set_classes()
         opts = self.options
         ochain = ChainMap(opts, self.helper.opts)
-        classes = opts.get('classes', [])
+        classes = self.set_classes()
 
         if len(self.arguments):
             badopts = set(opts) - self.opts_with_args
@@ -113,7 +106,7 @@ class Tableaud(BaseDirective):
             rulestr, = self.arguments
             try:
                 logic, rulename = rulestr.split('.')
-                logic = get_logic(logic)
+                logic = logics.getlogic(logic)
                 rule = getattr(logic.TabRules, rulename)
             except Exception as e:
                 logger.error(e)
@@ -135,15 +128,51 @@ class Tableaud(BaseDirective):
         pw = writers.TabWriter('html', ochain['wnotn'], classes = classes)
         return [nodes.raw(format = 'html', text = pw(tab.build()))]
 
+class TruthTable(BaseDirective):
+    required_arguments = 1
+    option_spec = dict(
+        template = unchanged,
+        noreverse = flag,
+        noclear = flag,
+        classes = class_option,
+    )
+    def run(self):
+        classes = self.set_classes()
+        opts = self.options
+        helper = self.helper
+        hopts = helper.opts
+        argstr, = self.arguments
+        try:
+            logic, oper = argstr.split('.')
+            logic = logics.getlogic(logic)
+            oper = lexicals.Operator(oper)
+        except Exception as e:
+            logger.error(e)
+            raise self.error(f'Bad operator argument: {argstr}')
+        template = opts.get('template', hopts['truth_table_tmpl'])
+        noreverse = opts.get('noreverse', not hopts['truth_tables_rev'])
+        noclear = opts.get('noclear', False)
+        m: models.BaseModel = logic.Model()
+        table = m.truth_table(oper, reverse = not noreverse)
+        content = helper.render(template,
+            table = table, lw = helper.lwhtml, classes = classes
+        )
+        if not noclear:
+            content += '<div class="clear"></div>'
+        logger.info(opts)
+        return [nodes.raw(text = content, format = 'html')]
+
 class Inject(BaseDirective):
 
     required_arguments = 1
     optional_arguments = 1
     has_content = True
-
+    option_spec = dict(
+        classes = class_option
+        
+    )
     def run(self):
-        classes = []
-
+        self.set_classes()
         cmd, *args = self.arguments
         meth = getattr(self, f'cmd_{cmd}', None)
         if meth is None:
@@ -156,7 +185,7 @@ class Inject(BaseDirective):
 
     def cmd_truth_tables(self, logic: str):
         'Truth tables (raw html) of all operators.'
-        m: models.BaseModel = get_logic(logic).Model()
+        m: models.BaseModel = logics.getlogic(logic).Model()
         helper = self.helper
         opts = helper.opts
         template = opts['truth_table_tmpl']
@@ -215,8 +244,9 @@ del(directives)
 
 def setup(app: Sphinx):
     app.add_event(SphinxEvent.IncludeRead)
-    app.add_directive('include', Include, override = True)
+    app.add_directive('include',   Include, override = True)
     app.add_directive('csv-table', CSVTable, override = True)
-    app.add_directive('inject', Inject)  
+    app.add_directive('inject',  Inject)  
     app.add_directive('tableau', Tableaud)
+    app.add_directive('truth-table', TruthTable)
     

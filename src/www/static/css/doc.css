@@ -96,10 +96,10 @@ p.definiendum {
 .truth-table th.operator-symbol {
     font-weight: bold;
 }
-.truth-table th.value-header.row {
+table.truth-table tr > th.value-header.row {
     border-bottom: 1px solid black;
 }
-.truth-table th.value-header.column {
+table.truth-table tr >th.value-header.column {
     text-align: right;
     border-right: 1px solid black;
 }

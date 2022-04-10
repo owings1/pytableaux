@@ -19,27 +19,22 @@
 # pytableaux - tools.doc.roles module
 from __future__ import annotations
 
-
-__all__ = (
-    'metadress',
-    'lexdress',
-    'refplus',
-)
+__all__ = ('lexdress', 'metadress', 'refplus',)
 
 import lexicals
 from lexicals import LexType
 import parsers
-from tools import T, F
-from tools.doc import docinspect, extension
+from tools.doc import BaseRole, docinspect
+from tools.typing import F
 
 from docutils import nodes
-from docutils.parsers.rst import roles as _docroles
 import functools
 import re
 import sphinx.roles
 from sphinx.util import logging
-from sphinx.util.docutils import SphinxRole
-from typing import Any, Callable, Generic, NamedTuple, overload
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    ...
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +51,6 @@ def rolerun(func: F) -> F:
             return ret, []
         return ret
     return run
-
-class BaseRole(SphinxRole):
-    @property
-    def helper(self):
-        return extension.gethelper(self.env.app)
 
 class refplus(sphinx.roles.XRefRole, BaseRole):
 
@@ -159,7 +149,8 @@ class lexdress(BaseRole):
     @property
     def parser(self):
         if self._parser is None:
-            self._parser = self.helper.parser
+            opts = self.helper.opts
+            self._parser = parsers.Parser(opts['pnotn'], opts['preds'])
         return self._parser
 
     @property
@@ -356,42 +347,3 @@ class metadress(BaseRole):
             ]
             return node
         return nodecls(text = name, classes = classes)
-
-
-@overload
-def getentry(rolecls: type[T]) -> _RoleItem[T]|None: ...
-@overload
-def getentry(rolefn: F) -> _RoleItem[F]|None: ...
-@overload
-def getentry(roleish: str) -> _RoleItem[__RoleT]|None:...
-
-def getentry(roleish):
-    'Get loaded role name and instance, by name, instance or type.'
-    idx: dict = _docroles._roles
-    if isinstance(roleish, str):
-        inst = idx.get(roleish)
-        if inst is None:
-            return None
-        name = roleish
-    else:
-        checktype = isinstance(roleish, type)
-        for name, inst in idx.items():
-            if checktype:
-                if type(inst) is roleish:
-                    break
-            elif inst is roleish:
-                break
-        else:
-            return None
-    return _RoleItem(name, inst)
-
-
-class __RoleItem(NamedTuple):
-    name: str
-    inst: Any
-
-class _RoleItem(__RoleItem, Generic[T]):
-    name: str
-    inst: T
-
-__RoleT = Callable[..., tuple[list[nodes.Node], list[nodes.system_message]]]

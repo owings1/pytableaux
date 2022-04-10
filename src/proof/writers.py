@@ -86,6 +86,9 @@ class TabWriter(metaclass = TabWriterMeta):
     def write(self, tableau: Tableau, /, **kw) -> str:
         raise NotImplementedError
 
+    @overload
+    def __call__(self, tableau: Tableau, /, **kw) -> str:...
+
     __call__ = write
 
     def __init_subclass__(subcls: type[TemplateWriter], **kw):

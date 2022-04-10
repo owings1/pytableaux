@@ -30,10 +30,7 @@ from lexicals import (
     Predicates,
     RenderSet,
 )
-
 from tools import closure
-from tools.doc import roles
-
 import os
 import re
 from sphinx.application import Sphinx
@@ -71,8 +68,8 @@ class Helper:
             lstrip_blocks = True,
         )
 
-        self.preds = opts['preds'] = Predicates(opts['preds'])
-        self.parser = Parser(opts['pnotn'], self.preds)
+        opts['preds'] = Predicates(opts['preds'])
+        self.parser = Parser(opts['pnotn'], opts['preds'])
 
         wnotn = Notation(opts['wnotn'])
         self.lwhtml = LexWriter(wnotn, 'html')
@@ -81,10 +78,6 @@ class Helper:
             lw = self.lwhtml,
             # classes = ('example', 'rule'),
         )
-        # self.pwclosure = TabWriter('html',
-        #     lw = self.lwhtml,
-        #     classes = ('example', 'rule', 'closure'),
-        # )
 
         # Make a RenderSet that renders subscript 2 as n.
         rskey = 'docutil.trunk'
@@ -133,15 +126,16 @@ class Helper:
             if defns is not None:
                 return defns
 
+            from tools.doc import roles, role_name
             rolewrap = {
                 roles.metadress: ['prefixed'],
                 roles.refplus  : ['logicref'],
             }
             defns = []
             for rolecls, patnames in rolewrap.items():
-                entry = roles.getentry(rolecls)
-                if entry is not None:
-                    rep = f':{entry.name}:'r'`\1`'
+                name = role_name(rolecls)
+                if name is not None:
+                    rep = f':{name}:'r'`\1`'
                     for patname in patnames:
                         pat = rolecls.patterns[patname]
                         pat = re.compile(r'(?<!`)' + rolecls.patterns[patname])

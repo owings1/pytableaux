@@ -19,7 +19,7 @@ def static(cls: TT, /) -> TT: ...
 def static(meth: Callable[..., T], /) -> staticmethod[T]: ...
 
 def static(cls, /):
-    'Static class decorator wrapper around staticmethod'
+    'Static class decorator, and wrapper around staticmethod'
 
     if not isinstance(cls, type):
         if isinstance(cls, (classmethod, staticmethod)):
@@ -56,7 +56,7 @@ class MapProxy(Mapping[KT, VT]):
             mapping = dict(mapping)
         return _MapProxy(mapping) # type: ignore
 
-def isdund(name):
+def isdund(name: str) -> bool:
     return (
         len(name) > 4 and name[:2] == name[-2:] == '__' and
         name[2] != '_' and name[-3] != '_'

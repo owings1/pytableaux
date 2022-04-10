@@ -19,52 +19,23 @@
 # pytableaux - sphinx processors
 from __future__ import annotations
 
-from sphinx.application import Sphinx
-from sphinx.util import docstrings, logging
-from typing import Any
+__all__ = (
+    'BuildtrunkExample',
+    'RuledocExample',
+    'RuledocInherit',
+)
 
-from tools.abcs import abstract
-from tools.doc import docinspect, docparts, rstutils
-from tools.doc.extension import gethelper
-from tools.misc import get_logic
+from sphinx.util import logging
+from typing import Any, TYPE_CHECKING
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
+    from proof.tableaux import Rule
 
+from tools.doc import docinspect, docparts, rstutils, AutodocProcessor
+from logics import getlogic
 from lexicals import Argument, Atomic
-from proof.tableaux import ClosingRule, Rule
 
 logger = logging.getLogger(__name__)
-
-class Processor:
-
-    app: Sphinx
-
-    @property
-    def helper(self):
-        return gethelper(self.app)
-
-    @abstract
-    def run(self):
-        raise NotImplementedError
-
-class AutodocProcessor(Processor):
-
-    def applies(self):
-        return True
-
-    def __call__(self, app: Sphinx, what: str, name: str, obj: Any, options: dict, lines: list[str]):
-        self.app = app
-        self.what = what
-        self.name = name
-        self.obj = obj
-        self.options = options
-        self.lines = lines
-        if self.applies():
-            self.run()
-
-    def __iadd__(self, other: str|list[str]):
-        if not isinstance(other, str):
-            other = '\n'.join(other)
-        self.lines.extend(docstrings.prepare_docstring(other))
-        return self
 
 class RuledocInherit(AutodocProcessor):
     'Create docstring lines for an "inheriting only" ``Rule`` class.'
@@ -73,9 +44,8 @@ class RuledocInherit(AutodocProcessor):
         return docinspect.is_transparent_rule(self.obj)
 
     def run(self):
-        
         base: type[Rule] = self.obj.mro()[1]
-        logic = get_logic(base)
+        logic = getlogic(base)
         self += (
             f'*This rule is the same as* :class:`{logic.name} {base.name} '
             f'<{base.__module__}.{base.__qualname__}>`'
@@ -88,16 +58,8 @@ class RuledocExample(AutodocProcessor):
     def applies(self):
         return docinspect.is_concrete_rule(self.obj)
 
-    # @property
-    # def pw(self):
-    #     return self.helper.pwhtml
-
     def run(self):
-        # classes = ['example', 'rule']
-        # if issubclass(self.obj, ClosingRule):
-        #     classes.append('closure')
-        # tab = docparts.rule_example_tableau(self.obj)
-        logic = get_logic(self.obj)
+        logic = getlogic(self.obj)
         self += f"""
         Example:
         
@@ -121,14 +83,8 @@ class BuildtrunkExample(AutodocProcessor):
     def lw(self):
         return self.pw.lw
 
-    def __init__(self):
-        from lexicals import Argument, Atomic
-        self.argument = Argument(
-            Atomic(1, 0), (Atomic(0, 1), Atomic(0, 2))
-        )
-
     def run(self):
-        logic = get_logic(self.obj)
+        logic = getlogic(self.obj)
         arg = self.argument
         tab = docparts.trunk_example_tableau(logic, arg)
         self += 'Example:'
@@ -141,3 +97,14 @@ class BuildtrunkExample(AutodocProcessor):
         pstr = '</i> ... <i>'.join(map(self.lw, arg.premises))
         argstr = f'Argument: <i>{pstr}</i> &there4; <i>{self.lw(arg.conclusion)}</i>'
         return argstr
+
+def setup(app: Sphinx):
+    def conn(event, *handlers):
+        for handler in handlers:
+            app.connect(event, handler)
+
+    conn('autodoc-process-docstring',
+        RuledocInherit(),
+        RuledocExample(),
+        BuildtrunkExample(),
+    )
