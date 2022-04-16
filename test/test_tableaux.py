@@ -3,7 +3,6 @@ from __future__ import annotations
 from errors import *
 from tools.abcs import MapProxy
 from tools.callables import calls, gets
-from tools.misc import get_logic
 
 from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
 

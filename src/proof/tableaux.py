@@ -36,7 +36,7 @@ if 'Imports' or True:
     from tools.hybrids import qset, qsetf, EMPTY_QSET
     from tools.linked import linqset
     from tools.mappings import dmap, dmapattr, MapCover, MapProxy
-    from tools.misc import get_logic, orepr
+    from tools.misc import orepr
     from tools.sequences import (
         absindex,
         SequenceApi,
@@ -49,6 +49,7 @@ if 'Imports' or True:
     from tools.typing import T, F, TypeInstDict
 
     from lexicals import Argument, Sentence
+    from logics import getlogic
     from models import BaseModel
 
     from proof.common import Branch, Node, Target
@@ -865,7 +866,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     def logic(self, logic: LogicRef):
         'Setter for ``logic``. Assumes building has not started.'
         self.__check_not_started()
-        self.__logic = get_logic(logic)
+        self.__logic = getlogic(logic)
         self.rules.clear()
         self.System.add_rules(self.logic, self.rules)
         if self.argument is not None:

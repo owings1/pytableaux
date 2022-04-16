@@ -30,12 +30,12 @@ from lexicals import Argument, Operator, RenderSet
 from parsers import ParseTable
 from proof.helpers import EllipsisExampleHelper
 from proof.tableaux import ClosingRule, Rule, Tableau
-from tools.misc import get_logic
+from logics import getlogic
 from typing import Any
 
 def rule_example_tableau(rulecls: type[Rule], /, **opts) -> Tableau:
     "Get a rule's example tableau for documentation."
-    logic = get_logic(rulecls)
+    logic = getlogic(rulecls)
     tab = Tableau(logic, **opts)
     rule = tab.rules.get(rulecls)
     if isinstance(rule, ClosingRule):
@@ -51,7 +51,7 @@ def rule_example_tableau(rulecls: type[Rule], /, **opts) -> Tableau:
 
 def trunk_example_tableau(logic: Any, arg: Argument, /) -> str:
     "Get an example tableau for a logic's build_trunk for documentation."
-    logic = get_logic(logic)
+    logic = getlogic(logic)
     tab = Tableau(logic)
     # Pluck a rule.
     rule = tab.rules.groups[1][0]

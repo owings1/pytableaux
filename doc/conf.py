@@ -142,15 +142,6 @@ def setup(app):
     app.add_css_file(f'css/{themecss}')
     app.add_css_file('tableau.css')
 
-    from tools.doc import roles
-
-    app.add_role('s', roles.lexdress())
-    app.add_role('m', roles.metadress())
-    app.add_role('refp', roles.refplus())
-
-    # from docutil import Helper
-    # Helper.setup_sphinx(app)
-
 if False:
     pass
     # -------------------------------------------------------------------

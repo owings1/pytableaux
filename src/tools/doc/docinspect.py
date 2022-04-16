@@ -28,7 +28,7 @@ __all__ = (
 )
 
 from proof.tableaux import ClosingRule, Rule, TableauxSystem as TabSys
-from tools.misc import get_logic
+from logics import getlogic
 
 from inspect import getsource
 import re
@@ -112,7 +112,7 @@ def _rule_is_grouped(rule: type[Rule], logic: Any) -> bool:
     if not _is_rulecls(rule):
         return False
     try:
-        logic = get_logic(logic)
+        logic = getlogic(logic)
     except:
         return False
     tabrules = logic.TabRules

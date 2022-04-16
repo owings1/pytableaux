@@ -23,7 +23,7 @@ __all__ = ()
 
 from errors import RequestDataError, TimeoutError, errstr
 from tools.mappings import MapCover, MapProxy, dmap
-from tools.misc import get_logic
+from logics import getlogic
 from tools.timing import StopWatch
 from tools.typing import KT, VT
 
@@ -561,7 +561,7 @@ class App:
 
         elabel = 'Logic'
         try:
-            logic = get_logic(body['logic'])
+            logic = getlogic(body['logic'])
         except Exception as err:
             errors[elabel] = errstr(err)
         else:

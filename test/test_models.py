@@ -1,11 +1,11 @@
 from models import BaseModel
 from lexicals import Operator
-from tools.misc import get_logic
+from logics import getlogic
 from errors import *
 from pytest import raises
 
 def test_truth_table_cpl_negation():
-    m: BaseModel = get_logic('cpl').Model()
+    m: BaseModel = getlogic('cpl').Model()
     tbl = m.truth_table(Operator.Negation)
     assert len(tbl.inputs) == 2
     assert len(tbl.outputs) == 2
@@ -13,16 +13,16 @@ def test_truth_table_cpl_negation():
     assert tbl.outputs[0] == 'T'
 
 def test_truth_tables_cpl():
-    m: BaseModel = get_logic('cpl').Model()
+    m: BaseModel = getlogic('cpl').Model()
     tbl = m.truth_table(Operator.Negation)
     assert tbl.outputs[0] == 'T'
 
 def test_get_logic_cpl_case_insensitive():
-    assert get_logic('cpl') == get_logic('CPL')
+    assert getlogic('cpl') == getlogic('CPL')
 
 def test_get_logic_none_bad_argument():
     with raises(TypeError):
-        get_logic(None)
+        getlogic(None)
 
 class TestModel(object):
 

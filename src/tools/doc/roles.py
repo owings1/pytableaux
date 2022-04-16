@@ -24,7 +24,7 @@ __all__ = ('lexdress', 'metadress', 'refplus',)
 import lexicals
 from lexicals import LexType
 import parsers
-from tools.doc import BaseRole, docinspect
+from tools.doc import BaseRole, docinspect, Helper
 from tools.typing import F
 
 from docutils import nodes
@@ -34,7 +34,7 @@ import sphinx.roles
 from sphinx.util import logging
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    ...
+    from sphinx.application import Sphinx
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,6 @@ class lexdress(BaseRole):
 
     def __init__(self, *, wnotn: str = None, pnotn: str = None, preds:lexicals.Predicates = None):
         'Override app options with constructor.'
-        from docutil import Helper
         defaults = Helper._defaults
         if wnotn is not None:
             self._lw = lexicals.LexWriter(wnotn, 'unicode')
@@ -347,3 +346,8 @@ class metadress(BaseRole):
             ]
             return node
         return nodecls(text = name, classes = classes)
+
+def setup(app: Sphinx):
+    app.add_role('s', lexdress())
+    app.add_role('m', metadress())
+    app.add_role('refp', refplus())

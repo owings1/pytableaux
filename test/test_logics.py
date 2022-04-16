@@ -19,7 +19,7 @@
 # pytableaux - logics test cases
 from pytest import raises
 from errors import *
-from tools.misc import get_logic
+from logics import getlogic
 from tools.timing import StopWatch
 from lexicals import Predicate, Constant, Variable, Operator, Quantifier, \
     Quantifier as Quant, Operator as Oper, \
@@ -1159,7 +1159,7 @@ class TestMH(BaseSuite):
 @using(logic = 'NH')
 class TestNH(BaseSuite):
 
-    logic = get_logic('NH')
+    logic = getlogic('NH')
 
     def test_valid_hnh_ax1(self):
         self.valid_tab('UaUba')
@@ -2034,7 +2034,7 @@ class TestCFOL(BaseSuite):
 @using(logic = 'D')
 class TestD(BaseSuite):
 
-    logic = get_logic('D')
+    logic = getlogic('D')
 
     def test_valid_long_serial_max_steps_50(self):
         self.valid_tab('MMMMMa', 'LLLLLa', max_steps = 50)
@@ -2123,7 +2123,7 @@ class TestT(BaseSuite):
 @using(logic = 'S4')
 class TestS4(BaseSuite):
 
-    logic = get_logic('S4')
+    logic = getlogic('S4')
 
     def test_valid_s4_material_inf_1(self):
         self.valid_tab('S4 Material Inference 1')
@@ -2184,7 +2184,7 @@ class TestS4(BaseSuite):
 @using(logic = 'S5')
 class TestS5(BaseSuite):
 
-    logic = get_logic('S5')
+    logic = getlogic('S5')
 
     def test_valid_s4_cond_inf_2(self):
         self.valid_tab('S4 Conditional Inference 2')

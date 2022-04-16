@@ -8,7 +8,7 @@ __all__ = (
 )
 from tools.abcs import abcm
 from tools.hybrids import qset
-from tools.misc import drepr, get_logic
+from logics import drepr, getlogic
 from tools.typing import F, TT, T, VT
 from lexicals import (
     Argument, Predicates, Sentence, LexWriter, Notation
@@ -158,20 +158,20 @@ class BaseSuite:
 
     preds: Predicates = examples.preds
     notn = Notation.polish
-    logic = get_logic('CFOL')
+    logic = getlogic('CFOL')
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
     lw = LexWriter(Notation.standard)
 
     @classmethod
     def dynamic(cls, attr, val):
         if attr == 'logic':
-            val = get_logic(val)
+            val = getlogic(val)
             cls.logic = val
             for member in clsmbrsrecurse(cls):
                 member.logic = val
 
     def set_logic(self, logic):
-        self.logic = get_logic(logic)
+        self.logic = getlogic(logic)
 
     def crparser(self, *args, **kw):
         for val in args:

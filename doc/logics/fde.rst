@@ -8,6 +8,31 @@ L{FDE} - First Degree Entailment
 
 ------------------------
 
+Here is ``ConjunctionDesignated``:
+
+.. tableau:: FDE.ConjunctionDesignated
+
+Here is another:
+
+.. tableau::
+  :logic: FDE
+  :conclusion: A V B
+  :premises: A, ~B
+  :pnotn: standard
+  :wnotn: polish
+
+Here is a truth table:
+
+.. truth-table:: FDE.Conjunction
+
+Here is another:
+
+.. truth-table:: K3.Conditional
+  :noreverse:
+  :noclear:
+
+That's it!
+
 .. automodule:: logics.fde
 
     .. _fde-semantics:

@@ -24,6 +24,7 @@ __all__ = (
     'Include',
     'Inject',
     'Tableaud',
+    'TruthTable',
 )
 
 from collections import ChainMap
@@ -39,7 +40,6 @@ if TYPE_CHECKING:
 
 from tools.doc import SphinxEvent
 from tools.doc import BaseDirective, docparts, rstutils
-# from tools.misc import get_logic
 
 import lexicals
 import logics
@@ -150,8 +150,8 @@ class TruthTable(BaseDirective):
             logger.error(e)
             raise self.error(f'Bad operator argument: {argstr}')
         template = opts.get('template', hopts['truth_table_tmpl'])
-        noreverse = opts.get('noreverse', not hopts['truth_tables_rev'])
-        noclear = opts.get('noclear', False)
+        noreverse = 'noreverse' in opts or not hopts['truth_tables_rev']
+        noclear = 'noclear' in opts
         m: models.BaseModel = logic.Model()
         table = m.truth_table(oper, reverse = not noreverse)
         content = helper.render(template,
@@ -159,7 +159,6 @@ class TruthTable(BaseDirective):
         )
         if not noclear:
             content += '<div class="clear"></div>'
-        logger.info(opts)
         return [nodes.raw(text = content, format = 'html')]
 
 class Inject(BaseDirective):

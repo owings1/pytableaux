@@ -22,16 +22,25 @@ from __future__ import annotations
 from docutils.parsers.rst.roles import _roles
 from docutils.parsers.rst.roles import set_classes
 import enum
+import os
+import re
 import sphinx.directives
-from sphinx.util import docstrings
+from sphinx.util import docstrings, logging
 from sphinx.util.docutils import SphinxRole
 from sphinx.util.typing import RoleFunction
 from typing import Any, Generic, NamedTuple, overload, TYPE_CHECKING
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
-    from docutil import Helper
 
-from tools import abstract
+import lexicals
+from lexicals import (
+    LexWriter,
+    Notation,
+    Parser,
+    Predicates,
+    RenderSet,
+)
+from tools import abstract, closure
 from tools.typing import T
 
 _helpers  = {}
@@ -132,3 +141,127 @@ class __RoleItem(NamedTuple):
 class _RoleItem(__RoleItem, Generic[T]):
     name: str
     inst: T
+
+
+logger = logging.getLogger(__name__)
+
+class Helper:
+
+    _defaults = dict(
+        template_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '../doc/templates')
+        ),
+        truth_table_tmpl = 'truth_table.jinja2',
+        truth_tables_rev = True,
+        wnotn = 'standard',
+        pnotn = 'standard',
+        preds = lexicals.Predicates(lexicals.Predicate.gen(3))
+    )
+
+    def __init__(self, **opts):
+        self.reconfigure(opts)
+
+    def reconfigure(self, opts: dict):
+
+        from proof.writers import TabWriter
+        import jinja2
+
+        self.opts = opts = dict(self._defaults) | opts
+
+        self.jenv = jinja2.Environment(
+            loader = jinja2.FileSystemLoader(opts['template_dir']),
+            trim_blocks = True,
+            lstrip_blocks = True,
+        )
+
+        opts['preds'] = Predicates(opts['preds'])
+        self.parser = Parser(opts['pnotn'], opts['preds'])
+
+        wnotn = Notation(opts['wnotn'])
+        self.lwhtml = LexWriter(wnotn, 'html')
+
+        self.pwhtml = TabWriter('html',
+            lw = self.lwhtml,
+            # classes = ('example', 'rule'),
+        )
+
+        # Make a RenderSet that renders subscript 2 as n.
+        rskey = 'docutil.trunk'
+        try:
+            rstrunk = RenderSet.fetch(wnotn, rskey)
+        except KeyError:
+            rshtml = RenderSet.fetch(wnotn, 'html')
+            rstrunk = RenderSet.load(wnotn, rskey, dict(rshtml.data,
+                name = f'{wnotn.name}.{rskey}',
+                renders = dict(rshtml.renders,
+                    subscript = lambda sub: (
+                        '<sub>%s</sub>' % ('n' if sub == 2 else sub)
+                    )
+                )
+            ))
+
+        self.pwtrunk = TabWriter('html',
+            lw = LexWriter(wnotn, renderset = rstrunk),
+            classes = ('example', 'build-trunk'),
+        )
+        self._simple_replace = None
+        self._line_replace   = None
+
+    def render(self, template: str, *args, **kw) -> str:
+        return self.jenv.get_template(template).render(*args, **kw)
+
+    # See https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
+
+    def sphinx_simple_replace_source(self, app: Sphinx, docname: str, lines: list[str]):
+        'Regex replace in a docstring using ``re.sub()``.'
+        self._simple_replace_common(lines, mode = 'source')
+
+    def sphinx_simple_replace_include(self, app: Sphinx, lines: list[str]):
+        'Regex replace for custom include-read event.'
+        self._simple_replace_common(lines, mode = 'include')
+
+    def sphinx_simple_replace_autodoc(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
+        'Regex replace for autodoc event.'
+        self._simple_replace_common(lines)
+
+    @closure
+    def _simple_replace_common():
+
+        def getdefns(self: Helper):
+            defns = self._simple_replace
+            if defns is not None:
+                return defns
+
+            from tools.doc import roles, role_name
+            rolewrap = {
+                roles.metadress: ['prefixed'],
+                roles.refplus  : ['logicref'],
+            }
+            defns = []
+            for rolecls, patnames in rolewrap.items():
+                name = role_name(rolecls)
+                if name is not None:
+                    rep = f':{name}:'r'`\1`'
+                    for patname in patnames:
+                        pat = rolecls.patterns[patname]
+                        pat = re.compile(r'(?<!`)' + rolecls.patterns[patname])
+                        defns.append((pat, rep))
+
+            self._simple_replace = defns
+            return defns
+
+        def common(self: Helper, lines: list[str], mode: str = None):
+            defns = getdefns(self)
+            text = '\n'.join(lines)
+            count = 0
+            for pat, rep in defns:
+                text, num = pat.subn(rep, text)
+                count += num
+            if count:
+                if mode == 'source':
+                    lines[0]= text
+                else:
+                    lines.clear()
+                    lines.extend(text.split('\n'))
+
+        return common

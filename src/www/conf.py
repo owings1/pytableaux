@@ -41,7 +41,7 @@ from lexicals import LexType, Notation, LexWriter
 from parsers import ParseTable
 from tools import closure
 from tools.abcs import AbcEnum
-from tools.misc import get_logic
+from logics import getlogic
 
 from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, FileSystemLoader
@@ -68,7 +68,7 @@ _PATHS = dict(
 
 # Enabled logics.
 APP_LOGICS = {
-    k: get_logic(k) for k in (
+    k: getlogic(k) for k in (
         'cpl',
         'cfol',
         'fde',
@@ -427,7 +427,7 @@ del(
     _getoptval,
     _get_common_charsets,
     _static_path,
-    get_logic,
+    getlogic,
     closure,
 
     _AppDispatcher,

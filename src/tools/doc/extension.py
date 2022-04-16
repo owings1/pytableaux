@@ -19,28 +19,19 @@
 # pytableaux - sphinx extension
 from __future__ import annotations
 
-from docutil import Helper
-from tools.doc import SphinxEvent
+from tools.doc import Helper, SphinxEvent
 from sphinx.application import Sphinx
 import sphinx.config
 
-# _helpers  = {}
-
-# def gethelper(app: Sphinx) -> Helper:
-#     return _helpers[app]
 
 def setup(app: Sphinx):
     app.add_config_value('pt_options', {}, 'env', [dict])
     app.connect('config-inited', _init_app)
     app.connect('build-finished', _remove_app)
 
-    from tools.doc import directives
-    # app.add_directive('include', directives.Include, override = True)
-    # app.add_directive('csv-table', directives.CSVTable, True)
-    # app.add_directive('inject', directives.Inject)           
-    # app.add_directive('tableau', directives.Tableaudoc)
+    from tools.doc import directives, roles
     directives.setup(app)
-    # app.add_event(SphinxEvent.IncludeRead)
+    roles.setup(app)
 
 def _init_app(app: Sphinx, config: sphinx.config.Config):
 
@@ -55,10 +46,6 @@ def _init_app(app: Sphinx, config: sphinx.config.Config):
     from tools.doc import processors
     processors.setup(app)
     conn('autodoc-process-docstring',
-        # processors.RuledocInherit(),
-        # processors.RuledocExample(),
-        # processors.BuildtrunkExample(),
-        # helper.sphinx_obj_lines_append_autodoc,
         helper.sphinx_simple_replace_autodoc,
     )
 
