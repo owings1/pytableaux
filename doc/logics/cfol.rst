@@ -28,7 +28,7 @@ Universal (:s:`L`) and Existential (:s:`X`).
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
 
-            .. inject:: truth_tables cfol
+            .. truth-tables:: cfol
 
         .. method:: value_of_existential(sentence)
 

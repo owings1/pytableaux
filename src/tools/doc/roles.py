@@ -134,7 +134,7 @@ class lexdress(BaseRole):
 
     def __init__(self, *, wnotn: str = None, pnotn: str = None, preds:lexicals.Predicates = None):
         'Override app options with constructor.'
-        defaults = Helper._defaults
+        defaults = Helper.defaults
         if wnotn is not None:
             self._lw = lexicals.LexWriter(wnotn, 'unicode')
 
@@ -211,7 +211,7 @@ class metadress(BaseRole):
     }
     modes = dict(
         logic_name = dict(
-            match = {
+            match_map = {
                 r'^(?:(?P<main>B|G|K|L|Ł|P|RM)(?P<down>3))$' : ('subber',),
                 r'^(?:(?P<main>B)(?P<up>3)(?P<down>E))$'  : ('subsup',),
                 r'^(?:(?P<main>K)(?P<up>3)(?P<down>WQ?))$': ('subsup',),
@@ -242,8 +242,30 @@ class metadress(BaseRole):
                 classes = ('modal', 'world'),
                 nodecls = nodes.math,
             ),
+            r'^(\|-|conseq)$': dict(
+                rep = '⊢',
+                classes = ('conseq',),
+                nodecls = nodes.inline,
+            ),
+            r'^(\|(/|!)-|non?-?conseq)$': dict(
+                rep = '⊬',
+                classes = ('non-conseq',),
+                nodecls = nodes.inline,
+            ),
+            r'^(\|\?-|conseq[q|Q|?])$' : dict(
+                static = True,
+                nodes = [
+                    nodes.inline(
+                        '', '',
+                        nodes.inline(text = '⊢', classes = ['conseq']),
+                        nodes.superscript(text = '?'),
+                        classes = ['metawrite', 'conseqq',],
+                    )
+                ]
+            )
         },
     )
+
     generic = dict(
         # Math symbol replace.
         math_symbols = {
@@ -285,9 +307,13 @@ class metadress(BaseRole):
 
         if mode == 'rewrite':
             for pat, info in moded.items():
-                rend, num = re.subn(pat, info['rep'], value)
-                if num:
-                    break
+                if info.get('static'):
+                    if re.match(pat, value):
+                        return info['nodes']
+                else:
+                    rend, num = re.subn(pat, info['rep'], value)
+                    if num:
+                        break
             else:
                 logger.error(f'No {mode} match for {repr(value)}')
             classes.extend(info['classes'])
@@ -306,11 +332,15 @@ class metadress(BaseRole):
         # Try rewrite.
         mode = 'rewrite'
         for pat, info in self.modes[mode].items():
-            rend, num = re.subn(pat, info['rep'], text)
-            if num:
-                classes.extend(info['classes'])
-                nodecls = info['nodecls']
-                break
+            if info.get('static'):
+                if re.match(pat, text):
+                    return info['nodes']
+            else:
+                rend, num = re.subn(pat, info['rep'], text)
+                if num:
+                    classes.extend(info['classes'])
+                    nodecls = info['nodecls']
+                    break
         else:
             # Generic math symbols.
             mode = 'math_symbols'
@@ -331,7 +361,7 @@ class metadress(BaseRole):
         moded = cls.modes['logic_name']
         classes = ['metawrite', 'logic_name']
         nodecls = moded['nodecls']
-        for pat, addcls in moded['match'].items():
+        for pat, addcls in moded['match_map'].items():
             m = re.match(pat, name)
             if not m:
                 continue
@@ -346,6 +376,7 @@ class metadress(BaseRole):
             ]
             return node
         return nodecls(text = name, classes = classes)
+        
 
 def setup(app: Sphinx):
     app.add_role('s', lexdress())

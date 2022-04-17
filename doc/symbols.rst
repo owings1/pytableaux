@@ -1,4 +1,4 @@
-.. include:: /include/note-doc-stub.rst
+.. include:: /_inc/note-doc-stub.rsti
 
 *********************
 Lexical Symbol Tables

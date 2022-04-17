@@ -40,7 +40,7 @@
     width: 16px;
     height: 16px;
     background-size: 16px 16px;
-    background-image: url(../img/inspected-black.svg);
+    background-image: url(../img-v1/inspected-black.svg);
 }
 .tableau .structure.leaf > .node-segment::after {
     display: inline-block;
@@ -85,7 +85,7 @@
 }
 .proof-controls .collapser-wrapper.positioned-left .controls-heading.collapsed::before,
 .proof-controls .collapser-wrapper.positioned-right .controls-heading.collapsed::after {
-    background-image: url(../img/controls.svg);
+    background-image: url(../img-v1/controls.svg);
 }
 .proof-controls .controls-contents .ui-accordion-header {
     margin: 0;
@@ -194,11 +194,11 @@
 }
 .proof-output .collapser-wrapper.positioned-left .collapser-heading.uncollapsed::after,
 .proof-output .collapser-wrapper.positioned-right .collapser-heading.collapsed::before {
-    background-image: url(../img/double-left-arrow.svg);
+    background-image: url(../img-v1/double-left-arrow.svg);
 }
 .proof-output .collapser-wrapper.positioned-left .collapser-heading.collapsed::after,
 .proof-output .collapser-wrapper.positioned-right .collapser-heading.uncollapsed::before {
-    background-image: url(../img/double-right-arrow.svg);
+    background-image: url(../img-v1/double-right-arrow.svg);
 }
 .proof-output .collapser-wrapper.positioned-left .collapser-heading.collapsed::after {
     margin-left: 5px;
@@ -213,7 +213,7 @@
 /* Models */
 .models-output .collapser-wrapper.positioned-left .collapser-heading.collapsed::before,
 .models-output .collapser-wrapper.positioned-right .collapser-heading.collapsed::after {
-    background-image: url(../img/open-book.svg);
+    background-image: url(../img-v1/open-book.svg);
 }
 .models-output {
     z-index: 1;

@@ -19,85 +19,83 @@
 # pytableaux - tools.doc package
 from __future__ import annotations
 
-from docutils.parsers.rst.roles import _roles
-from docutils.parsers.rst.roles import set_classes
+__all__ = ()
+
+from docutils.parsers.rst.roles import _roles, set_classes
 import enum
 import os
 import re
 import sphinx.directives
 from sphinx.util import docstrings, logging
 from sphinx.util.docutils import SphinxRole
-from sphinx.util.typing import RoleFunction
-from typing import Any, Generic, NamedTuple, overload, TYPE_CHECKING
+from typing import (Any, ClassVar, Generic, Mapping, NamedTuple,
+                    overload, TYPE_CHECKING)
+
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
+    import sphinx.config
+    from sphinx.util.typing import RoleFunction
 
-import lexicals
-from lexicals import (
-    LexWriter,
-    Notation,
-    Parser,
-    Predicates,
-    RenderSet,
-)
-from tools import abstract, closure
+from tools import abstract, closure, MapProxy
 from tools.typing import T
 
-_helpers  = {}
-def gethelper(app: Sphinx) -> Helper:
+logger = logging.getLogger(__name__)
+
+_helpers: Mapping[Sphinx, Helper] = None
+"The Shinx application ``Helper`` instances."
+
+PT_CONFKEY = 'pt_options'
+"The Sphinx config key for helper options."
+
+@closure
+def app_setup():
+
+    global _helpers
+
+    helpers: dict[Sphinx, Helper]  = {}
+    _helpers = MapProxy(helpers)
+
+    def setup(app: Sphinx):
+        'Setup the Sphinx application.'
+
+        app.add_config_value(PT_CONFKEY, {}, 'env', [dict])
+
+        from tools.doc import directives, processors, roles
+        directives.setup(app)
+        processors.setup(app)
+        roles.setup(app)
+
+        app.connect('config-inited', init)
+        app.connect('build-finished', finish)
+
+    def init(app: Sphinx, config: sphinx.config.Config):
+
+        if app in helpers:
+            raise ValueError(f"app already initialized.")
+
+        import itertools
+
+        opts = dict(config[PT_CONFKEY])
+
+        # Add app templates_path to search path.
+        opts['templates_path'] = [
+            os.path.join(app.srcdir, tp)
+            for tp in itertools.chain(
+                opts.get('templates_path', ()),
+                config['templates_path'],
+            )
+        ]
+
+        helpers[app] = Helper(**opts)
+
+    def finish(app: Sphinx, exception: Exception|None):
+        del helpers[app]
+
+    return setup
+
+def app_helper(app: Sphinx) -> Helper:
+    'Get the helper instance from the Sphinx app instance'
     return _helpers[app]
-
-class SphinxEvent(str, enum.Enum):
-    IncludeRead = 'include-read'
-
-class BaseRole(SphinxRole):
-    @property
-    def helper(self):
-        return gethelper(self.env.app)
-
-class BaseDirective(sphinx.directives.SphinxDirective):
-    @property
-    def helper(self):
-        return gethelper(self.env.app)
-    arguments: list[str]
-    options: dict[str, Any]
-
-    def set_classes(self):
-        set_classes(self.options)
-        return self.options.get('classes', [])
-
-class Processor:
-
-    app: Sphinx
-
-    @property
-    def helper(self) -> Helper:
-        return gethelper(self.app)
-
-    @abstract
-    def run(self):
-        raise NotImplementedError
-
-class AutodocProcessor(Processor):
-
-    def applies(self):
-        return True
-
-    def __call__(self, app: Sphinx, what: str, name: str, obj: Any, options: dict, lines: list[str]):
-        self.app = app
-        self.what = what
-        self.name = name
-        self.obj = obj
-        self.options = options
-        self.lines = lines
-        if self.applies():
-            self.run()
-
-    def __iadd__(self, other: str|list[str]):
-        if not isinstance(other, str):
-            other = '\n'.join(other)
-        self.lines.extend(docstrings.prepare_docstring(other))
-        return self
 
 @overload
 def role_entry(rolecls: type[T]) -> _RoleItem[T]|None: ...
@@ -129,33 +127,22 @@ def role_entry(roleish):
     return _RoleItem(name, inst)
 
 def role_instance(roleish: type[T]) -> T|None:
+    'Get loaded role instance, by name, instance or type.'
     return role_entry(roleish).inst
 
 def role_name(roleish: type|RoleFunction) -> str|None:
+    'Get loaded role name, by name, instance or type.'
     return role_entry(roleish).name
-
-class __RoleItem(NamedTuple):
-    name: str
-    inst: Any
-
-class _RoleItem(__RoleItem, Generic[T]):
-    name: str
-    inst: T
-
-
-logger = logging.getLogger(__name__)
 
 class Helper:
 
-    _defaults = dict(
-        template_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '../doc/templates')
-        ),
-        truth_table_tmpl = 'truth_table.jinja2',
-        truth_tables_rev = True,
+    defaults = dict(
+        templates_path = (),
         wnotn = 'standard',
         pnotn = 'standard',
-        preds = lexicals.Predicates(lexicals.Predicate.gen(3))
+        preds = ((0,0,1), (1,0,1), (2,0,1)),
+        truth_table_template = 'truth_table.jinja2',
+        truth_table_reverse = True,
     )
 
     def __init__(self, **opts):
@@ -163,35 +150,29 @@ class Helper:
 
     def reconfigure(self, opts: dict):
 
-        from proof.writers import TabWriter
         import jinja2
+        import lexicals
+        import proof.writers
 
-        self.opts = opts = dict(self._defaults) | opts
+        self.opts = opts = dict(self.defaults) | opts
 
         self.jenv = jinja2.Environment(
-            loader = jinja2.FileSystemLoader(opts['template_dir']),
+            loader = jinja2.FileSystemLoader(opts['templates_path']),
             trim_blocks = True,
             lstrip_blocks = True,
         )
 
-        opts['preds'] = Predicates(opts['preds'])
-        self.parser = Parser(opts['pnotn'], opts['preds'])
+        opts['preds'] = lexicals.Predicates(opts['preds'])
 
-        wnotn = Notation(opts['wnotn'])
-        self.lwhtml = LexWriter(wnotn, 'html')
+        wnotn = lexicals.Notation(opts['wnotn'])
 
-        self.pwhtml = TabWriter('html',
-            lw = self.lwhtml,
-            # classes = ('example', 'rule'),
-        )
-
-        # Make a RenderSet that renders subscript 2 as n.
-        rskey = 'docutil.trunk'
+        # Make a RenderSet that renders subscript 2 as 'n'.
+        rskey = f'{type(self).__qualname__}.trunk'
         try:
-            rstrunk = RenderSet.fetch(wnotn, rskey)
+            rstrunk = lexicals.RenderSet.fetch(wnotn, rskey)
         except KeyError:
-            rshtml = RenderSet.fetch(wnotn, 'html')
-            rstrunk = RenderSet.load(wnotn, rskey, dict(rshtml.data,
+            rshtml = lexicals.RenderSet.fetch(wnotn, 'html')
+            rstrunk = lexicals.RenderSet.load(wnotn, rskey, dict(rshtml.data,
                 name = f'{wnotn.name}.{rskey}',
                 renders = dict(rshtml.renders,
                     subscript = lambda sub: (
@@ -200,68 +181,115 @@ class Helper:
                 )
             ))
 
-        self.pwtrunk = TabWriter('html',
-            lw = LexWriter(wnotn, renderset = rstrunk),
+        self.pwtrunk = proof.writers.TabWriter('html',
+            lw = lexicals.LexWriter(wnotn, renderset = rstrunk),
             classes = ('example', 'build-trunk'),
         )
-        self._simple_replace = None
-        self._line_replace   = None
 
     def render(self, template: str, *args, **kw) -> str:
+        "Render a jinja2 template from the template path."
         return self.jenv.get_template(template).render(*args, **kw)
+
+class SphinxEvent(str, enum.Enum):
+
+    IncludeRead = 'include-read'
+
+class BaseRole(SphinxRole):
+
+    patterns: ClassVar[dict[str, str|re.Pattern]] = {}
+
+    @property
+    def helper(self):
+        return app_helper(self.env.app)
+
+class BaseDirective(sphinx.directives.SphinxDirective):
+
+    @property
+    def helper(self):
+        return app_helper(self.env.app)
+
+    arguments: list[str]
+    options: dict[str, Any]
+
+    def set_classes(self) -> list[str]:
+        set_classes(self.options)
+        return self.options.get('classes', [])
+
+class Processor:
+
+    app: Sphinx
+
+    @property
+    def helper(self) -> Helper:
+        return app_helper(self.app)
+
+    @abstract
+    def run(self) -> None:
+        raise NotImplementedError
+
+class AutodocProcessor(Processor):
+
+    def applies(self):
+        return True
+
+    def __call__(self, app: Sphinx, what: str, name: str, obj: Any, options: dict, lines: list[str]):
+        self.app = app
+        self.what = what
+        self.name = name
+        self.obj = obj
+        self.options = options
+        self.lines = lines
+        if self.applies():
+            self.run()
+
+    def __iadd__(self, other: str|list[str]):
+        if not isinstance(other, str):
+            other = '\n'.join(other)
+        self.lines.extend(docstrings.prepare_docstring(other))
+        return self
+
+class ReplaceProcessor(Processor):
+
+    event: str
+    mode: str
+    lines: list[str]
+    args: tuple[Any, ...]
 
     # See https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
-    def sphinx_simple_replace_source(self, app: Sphinx, docname: str, lines: list[str]):
-        'Regex replace in a docstring using ``re.sub()``.'
-        self._simple_replace_common(lines, mode = 'source')
+    @overload
+    def __call__(self, app: Sphinx, docname: str, lines: list[str]):
+        'Regex replace for source-read event.'
 
-    def sphinx_simple_replace_include(self, app: Sphinx, lines: list[str]):
+    @overload
+    def __call__(self, app: Sphinx, lines: list[str]):
         'Regex replace for custom include-read event.'
-        self._simple_replace_common(lines, mode = 'include')
 
-    def sphinx_simple_replace_autodoc(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
+    @overload
+    def __call__(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
         'Regex replace for autodoc event.'
-        self._simple_replace_common(lines)
 
-    @closure
-    def _simple_replace_common():
+    def __call__(self, *args):
+        if len(args) == 2:
+            self.event = SphinxEvent.IncludeRead
+            self.mode = 'include'
+        elif len(args) == 3:
+            self.event = 'source-read'
+            self.mode = 'source'
+        elif len(args) == 6:
+            self.event = 'autodoc-process-docstring'
+            self.mode = 'autodoc'
+        else:
+            raise TypeError(f"Unknown event with {len(args)} args")
+        self.app = args[0]
+        self.lines = args[-1]
+        self.args = args
+        self.run()
 
-        def getdefns(self: Helper):
-            defns = self._simple_replace
-            if defns is not None:
-                return defns
+class __RoleItem(NamedTuple):
+    name: str
+    inst: Any
 
-            from tools.doc import roles, role_name
-            rolewrap = {
-                roles.metadress: ['prefixed'],
-                roles.refplus  : ['logicref'],
-            }
-            defns = []
-            for rolecls, patnames in rolewrap.items():
-                name = role_name(rolecls)
-                if name is not None:
-                    rep = f':{name}:'r'`\1`'
-                    for patname in patnames:
-                        pat = rolecls.patterns[patname]
-                        pat = re.compile(r'(?<!`)' + rolecls.patterns[patname])
-                        defns.append((pat, rep))
-
-            self._simple_replace = defns
-            return defns
-
-        def common(self: Helper, lines: list[str], mode: str = None):
-            defns = getdefns(self)
-            text = '\n'.join(lines)
-            count = 0
-            for pat, rep in defns:
-                text, num = pat.subn(rep, text)
-                count += num
-            if count:
-                if mode == 'source':
-                    lines[0]= text
-                else:
-                    lines.clear()
-                    lines.extend(text.split('\n'))
-
-        return common
+class _RoleItem(__RoleItem, Generic[T]):
+    name: str
+    inst: T

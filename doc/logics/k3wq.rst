@@ -30,7 +30,7 @@ rules for the quantifiers, given the behavior of those operators in {@K3W}.
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
 
-            .. inject:: truth_tables K3WQ
+            .. truth-tables:: K3WQ
 
         .. automethod:: value_of_existential(sentence)
 

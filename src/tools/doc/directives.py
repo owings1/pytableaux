@@ -22,30 +22,30 @@ from __future__ import annotations
 __all__ = (
     'CSVTable',
     'Include',
-    'Inject',
     'Tableaud',
     'TruthTable',
+    'TruthTables',
 )
 
 from collections import ChainMap
 from docutils import nodes
-from docutils.parsers.rst.directives import class_option, flag, unchanged
+from docutils.parsers.rst.directives import class_option, unchanged
 import re
-from sphinx import directives
+import sphinx.directives.other
+import sphinx.directives.patches
 from sphinx.util import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-
-from tools.doc import SphinxEvent
-from tools.doc import BaseDirective, docparts, rstutils
-
+import examples
 import lexicals
 import logics
 import models
 import parsers
 from proof import tableaux, writers
+from tools.doc import BaseDirective, SphinxEvent, docparts, rstutils
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +53,37 @@ logger = logging.getLogger(__name__)
 #    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
 
+re_space = re.compile(r'\s')
+re_comma = re.compile(r',')
+divclear_rawhtml = '<div class="clear"></div>'
 
-_re_ws = re.compile(r'\s')
+def cleanws(arg: str, /) -> str:
+    "Option spec to remove all whitespace."
+    return re_space.sub('', arg)
 
-def cleanws(arg):
-    return _re_ws.sub('', arg)
+def predsopt(arg: str, /) -> lexicals.Predicates:
+    "Option spec for list of predicate specs."
+    return lexicals.Predicates(
+        tuple(map(int, spec.split(':')))
+        for spec in re_comma.split(cleanws(arg))
+    )
+
+def opersopt(arg: str, /) -> tuple[lexicals.Operator, ...]:
+    return tuple(map(lexicals.Operator,
+        (s.strip() for s in re_comma.split(arg))
+    ))
+
+def boolopt(arg: str, /) -> bool:
+    if arg:
+        arg = arg.strip()
+    else:
+        arg = 'on'
+    arg = arg.lower()
+    if arg in ('true', 'yes', 'on'):
+        return True
+    if arg in ('false', 'no', 'off'):
+        return False
+    raise ValueError(f"Invalid boolean value: '{arg}'")
 
 class Tableaud(BaseDirective):
     """Tableau directive.
@@ -68,21 +94,21 @@ class Tableaud(BaseDirective):
 
         .. tableau::
              :logic: FDE
+             :example: Modus Ponens
+
+        .. tableau::
+             :logic: FDE
              :conclusion: B
              :premises: A, A > B
     """
 
-    def predsopt(arg: str):
-        return lexicals.Predicates(
-            tuple(map(int, spec.split(':')))
-            for spec in cleanws(arg).split(',')
-        )
-
     optional_arguments = 1
+
     option_spec = dict(
         logic = logics.getlogic,
+        example = examples.argument,
         conclusion = unchanged,
-        premises = re.compile(r',').split,
+        premises = re_comma.split,
         pnotn = lexicals.Notation,
         preds = predsopt,
         wnotn = lexicals.Notation,
@@ -93,9 +119,9 @@ class Tableaud(BaseDirective):
 
     def run(self):
 
+        classes = self.set_classes()
         opts = self.options
         ochain = ChainMap(opts, self.helper.opts)
-        classes = self.set_classes()
 
         if len(self.arguments):
             badopts = set(opts) - self.opts_with_args
@@ -120,7 +146,12 @@ class Tableaud(BaseDirective):
         else:
             parser = parsers.Parser(ochain['pnotn'], ochain['preds'])
             try:
-                arg = parser.argument(opts['conclusion'], opts.get('premises'))
+                if 'example' in opts:
+                    arg = opts['example']
+                    if 'conclusion' in opts:
+                        raise self.error(f"'conclusion' not allowed with 'example'")
+                else:
+                    arg = parser.argument(opts['conclusion'], opts.get('premises'))
                 tab = tableaux.Tableau(opts['logic'], arg)
             except KeyError as e:
                 raise self.error(f'Missing required option: {e}')
@@ -129,123 +160,149 @@ class Tableaud(BaseDirective):
         return [nodes.raw(format = 'html', text = pw(tab.build()))]
 
 class TruthTable(BaseDirective):
+    'Truth table (raw html).'
+
+    #: <Logic>.<Operator>
     required_arguments = 1
+
     option_spec = dict(
+        wnotn = lexicals.Notation,
         template = unchanged,
-        noreverse = flag,
-        noclear = flag,
+        reverse = boolopt,
+        clear = boolopt,
         classes = class_option,
     )
+
     def run(self):
+
         classes = self.set_classes()
         opts = self.options
         helper = self.helper
         hopts = helper.opts
+        ochain = ChainMap(opts, hopts)
+
         argstr, = self.arguments
         try:
             logic, oper = argstr.split('.')
             logic = logics.getlogic(logic)
+            model: models.BaseModel = logic.Model()
             oper = lexicals.Operator(oper)
         except Exception as e:
             logger.error(e)
             raise self.error(f'Bad operator argument: {argstr}')
-        template = opts.get('template', hopts['truth_table_tmpl'])
-        noreverse = 'noreverse' in opts or not hopts['truth_tables_rev']
-        noclear = 'noclear' in opts
-        m: models.BaseModel = logic.Model()
-        table = m.truth_table(oper, reverse = not noreverse)
-        content = helper.render(template,
-            table = table, lw = helper.lwhtml, classes = classes
-        )
-        if not noclear:
-            content += '<div class="clear"></div>'
-        return [nodes.raw(text = content, format = 'html')]
 
-class Inject(BaseDirective):
+        lw = lexicals.LexWriter(ochain['wnotn'], 'html')
 
+        template = opts.get('template', hopts['truth_table_template'])
+        reverse = opts.get('reverse', hopts['truth_table_reverse'])
+        clear = opts.get('clear', True)
+
+        table = model.truth_table(oper, reverse = reverse)
+        context = dict(table = table, lw = lw, classes = classes)
+        content = helper.render(template, context)
+        if clear:
+            content += divclear_rawhtml
+
+        return [nodes.raw(format = 'html', text = content)]
+
+class TruthTables(BaseDirective):
+    'Truth tables (raw html) of all operators.'
+
+    #: Logic
     required_arguments = 1
-    optional_arguments = 1
-    has_content = True
-    option_spec = dict(
-        classes = class_option
-        
-    )
-    def run(self):
-        self.set_classes()
-        cmd, *args = self.arguments
-        meth = getattr(self, f'cmd_{cmd}', None)
-        if meth is None:
-            raise self.error(f"Invalid command: '{cmd}'")
-        self.cmdargs = args
-        ret = meth(*args)
-        if isinstance(ret, list):
-            return ret
-        return [ret]
 
-    def cmd_truth_tables(self, logic: str):
-        'Truth tables (raw html) of all operators.'
-        m: models.BaseModel = logics.getlogic(logic).Model()
+    option_spec = dict(
+        operators = opersopt,
+        wnotn = lexicals.Notation,
+        template = unchanged,
+        reverse = boolopt,
+        clear = boolopt,
+        classes = class_option,
+    )
+
+    def run(self):
+
+        classes = self.set_classes()
         helper = self.helper
         opts = helper.opts
-        template = opts['truth_table_tmpl']
-        reverse = opts['truth_tables_rev']
+        hopts = helper.opts
+        ochain = ChainMap(opts, hopts)
+
+        logic = logics.getlogic(self.arguments[0])
+        model: models.BaseModel = logic.Model()
+        opers = opts.get('operators')
+        if opers is None:
+            opers = sorted(model.truth_functional_operators)
+
+        lw = lexicals.LexWriter(ochain['wnotn'], 'html')
+
+        template = opts.get('template', hopts['truth_table_template'])
+        reverse = opts.get('reverse', hopts['truth_table_reverse'])
+        clear = opts.get('clear', True)
+
         tables = (
-            m.truth_table(oper, reverse = reverse)
-            for oper in sorted(m.truth_functional_operators)
+            model.truth_table(oper, reverse = reverse)
+            for oper in opers
         )
+        context = dict(lw = lw, classes = classes)
         renders = (
-            helper.render(template, table = table, lw = helper.lwhtml)
+            helper.render(template, context, table = table)
             for table in tables
         )
-        content = '\n'.join(renders) + '<div class="clear"></div>'
-        return nodes.raw(text = content, format = 'html')
+        content = '\n'.join(renders)
+        if clear:
+            content += divclear_rawhtml
 
-class CSVTable(directives.patches.CSVTable, BaseDirective):
+        return [nodes.raw(format = 'html', text = content)]
+
+class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
+    "Override csv-table to allow generator function."
+
     generators = dict(
         opers_table = docparts.opers_table
     )
-    def genopt(arg, /, *, base = generators):
-        if arg in base:
-            return arg
-        raise ValueError(f"Invalid table generator name: '{arg}'")
 
-    option_spec = dict(directives.patches.CSVTable.option_spec,
-        generator = genopt,
+    def generator_opt(arg: str):
+        try:
+            return CSVTable.generators[arg]
+        except KeyError:
+            raise ValueError(f"Invalid CSVTable generator name: '{arg}'")
+
+    option_spec = dict(sphinx.directives.patches.CSVTable.option_spec,
+        generator = generator_opt,
     )
 
     def get_csv_data(self):
-        genname = self.options.get('generator')
-        if not genname:
+        # Override docutils.parsers.rst.directives.CSVTable.get_csv_data()
+        generator = self.options.get('generator')
+        if generator is None:
             return super().get_csv_data()
-        rows = self.generators[genname]()
-        return rstutils.csvlines(rows), '_generator'
+        rows = generator()
+        source = '_generator'
+        return rstutils.csvlines(rows), source
 
-class Include(directives.other.Include, BaseDirective):
+class Include(sphinx.directives.other.Include, BaseDirective):
     "Override include directive that allows the app to modify content via events."
 
-    def parser(self):
-        return self
-
     def parse(self, text: str, doc):
-        lines = text.split('\n')
+        lines = text.splitlines()
         source = doc.attributes['source']
         self.env.app.emit(SphinxEvent.IncludeRead, lines)
         self.state_machine.insert_input(lines, source)
 
     def run(self):
-        self.options['parser'] = self.parser
+        self.options['parser'] = self.faux_parser
         super().run()
         return []
 
-
-del(directives)
-
+    def faux_parser(self):
+        return self
 
 def setup(app: Sphinx):
     app.add_event(SphinxEvent.IncludeRead)
     app.add_directive('include',   Include, override = True)
     app.add_directive('csv-table', CSVTable, override = True)
-    app.add_directive('inject',  Inject)  
     app.add_directive('tableau', Tableaud)
     app.add_directive('truth-table', TruthTable)
+    app.add_directive('truth-tables', TruthTables)
     

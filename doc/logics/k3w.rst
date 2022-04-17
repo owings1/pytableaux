@@ -35,7 +35,7 @@ these values is:
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
 
-            .. inject:: truth_tables k3w
+            .. truth-tables:: k3w
 
             Note that, for the binary connectives, if either operand has the value V{N},
             then the whole sentence has the value V{N}. To (re-)quote a Chinese proverb,

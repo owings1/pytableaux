@@ -1,4 +1,4 @@
-.. include:: /include/attn-doc-freewheel.rst
+.. include:: /_inc/attn-doc-freewheel.rsti
 
 *************
 Errors Module

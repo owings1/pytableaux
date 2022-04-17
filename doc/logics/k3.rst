@@ -31,7 +31,7 @@ as {@FDE} without the V{B} value.
 
     .. include:: include/truth_table_blurb.rst
 
-    .. inject:: truth_tables k3
+    .. truth-tables:: k3
 
     .. _k3-predication:
 

@@ -23,17 +23,20 @@ __all__ = (
     'BuildtrunkExample',
     'RuledocExample',
     'RuledocInherit',
+    'GlobalReplace',
 )
 
+import re
 from sphinx.util import logging
-from typing import Any, TYPE_CHECKING
+from typing import Any, overload, TYPE_CHECKING
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
     from proof.tableaux import Rule
 
-from tools.doc import docinspect, docparts, rstutils, AutodocProcessor
 from logics import getlogic
 from lexicals import Argument, Atomic
+from tools.doc import (docinspect, docparts, rstutils, AutodocProcessor,
+                       ReplaceProcessor, SphinxEvent)
 
 logger = logging.getLogger(__name__)
 
@@ -98,13 +101,60 @@ class BuildtrunkExample(AutodocProcessor):
         argstr = f'Argument: <i>{pstr}</i> &there4; <i>{self.lw(arg.conclusion)}</i>'
         return argstr
 
-def setup(app: Sphinx):
-    def conn(event, *handlers):
-        for handler in handlers:
-            app.connect(event, handler)
+class RolewrapReplace(ReplaceProcessor):
 
-    conn('autodoc-process-docstring',
-        RuledocInherit(),
-        RuledocExample(),
-        BuildtrunkExample(),
+    def run(self):
+        text = '\n'.join(self.lines)
+        count = 0
+        for pat, rep in self.defns:
+            text, num = pat.subn(rep, text)
+            count += num
+        if count:
+            if self.mode == 'source':
+                self.lines[0]= text
+            else:
+                self.lines.clear()
+                self.lines.extend(text.split('\n'))
+
+    _defns: list[tuple[re.Pattern, str]] = None
+
+    @property
+    def defns(self):
+        defns = self._defns
+        if defns is not None:
+            return defns
+
+        from tools.doc import roles, role_name
+        rolewrap = {
+            roles.metadress: ['prefixed'],
+            roles.refplus  : ['logicref'],
+        }
+        defns = []
+        for rolecls, patnames in rolewrap.items():
+            name = role_name(rolecls)
+            if name is not None:
+                rep = f':{name}:'r'`\1`'
+                for patname in patnames:
+                    pat = rolecls.patterns[patname]
+                    pat = re.compile(r'(?<!`)' + rolecls.patterns[patname])
+                    defns.append((pat, rep))
+
+        self._defns = defns
+        return defns
+
+def setup(app: Sphinx):
+
+    app.setup_extension('sphinx.ext.autodoc')
+
+    app.connect('autodoc-process-docstring', RuledocInherit())
+    app.connect('autodoc-process-docstring', RuledocExample())
+    app.connect('autodoc-process-docstring', BuildtrunkExample())
+
+    replacers = (
+        RolewrapReplace(),
     )
+
+    for inst in replacers:
+        app.connect(SphinxEvent.IncludeRead, inst)
+        app.connect('source-read', inst)
+        app.connect('autodoc-process-docstring', inst)

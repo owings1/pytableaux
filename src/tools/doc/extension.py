@@ -18,44 +18,13 @@
 # ------------------
 # pytableaux - sphinx extension
 from __future__ import annotations
-
-from tools.doc import Helper, SphinxEvent
-from sphinx.application import Sphinx
-import sphinx.config
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 def setup(app: Sphinx):
-    app.add_config_value('pt_options', {}, 'env', [dict])
-    app.connect('config-inited', _init_app)
-    app.connect('build-finished', _remove_app)
-
-    from tools.doc import directives, roles
-    directives.setup(app)
-    roles.setup(app)
-
-def _init_app(app: Sphinx, config: sphinx.config.Config):
-
-    from tools.doc import processors, _helpers
-
-    _helpers[app] = helper = Helper(**config['pt_options'])
-
-    def conn(event, *handlers):
-        for handler in handlers:
-            app.connect(event, handler)
-
-    from tools.doc import processors
-    processors.setup(app)
-    conn('autodoc-process-docstring',
-        helper.sphinx_simple_replace_autodoc,
-    )
-
-    conn('source-read', helper.sphinx_simple_replace_source)
-    conn(SphinxEvent.IncludeRead, helper.sphinx_simple_replace_include)
-
-def _remove_app(app: Sphinx, exception):
-    from tools.doc import _helpers
-    del _helpers[app]
-
+    import tools.doc
+    tools.doc.app_setup(app)
 
 # Python domain:
 #    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain

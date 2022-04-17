@@ -5,33 +5,9 @@ L{FDE} - First Degree Entailment
 ***************************************
 
 .. contents:: :local:
+  :depth: 2
 
 ------------------------
-
-Here is ``ConjunctionDesignated``:
-
-.. tableau:: FDE.ConjunctionDesignated
-
-Here is another:
-
-.. tableau::
-  :logic: FDE
-  :conclusion: A V B
-  :premises: A, ~B
-  :pnotn: standard
-  :wnotn: polish
-
-Here is a truth table:
-
-.. truth-table:: FDE.Conjunction
-
-Here is another:
-
-.. truth-table:: K3.Conditional
-  :noreverse:
-  :noclear:
-
-That's it!
 
 .. automodule:: logics.fde
 
@@ -79,27 +55,27 @@ That's it!
 
     .. include:: include/truth_table_blurb.rst
 
-    .. inject:: truth_tables FDE
+    .. truth-tables:: FDE
 
     .. _fde-predication:
 
     Predication
     -----------
 
-    A sentence with *n*-ary predicate :math:`P` over parameters !{ntuple}
+    A sentence with *n*-ary predicate :m:`P` over parameters !{ntuple}
     has the value:
 
-    * V{T} iff !{ntuple} is in the *extension* of :math:`P` and
-      not in the *anti-extension* of :math:`P`.
+    * V{T} iff !{ntuple} is in the *extension* of :m:`P` and
+      not in the *anti-extension* of :m:`P`.
 
-    * V{F} iff !{ntuple} is in the *anti-extension* of :math:`P`
-      and not in the *extension* of :math:`P`.
+    * V{F} iff !{ntuple} is in the *anti-extension* of :m:`P`
+      and not in the *extension* of :m:`P`.
 
     * V{B} iff !{ntuple} is in *both* the extension and anti-extension
-      of :math:`P`.
+      of :m:`P`.
 
     * V{N} iff !{ntuple} is in *neither* in the extension nor the 
-      anti-extension of :math:`P`.
+      anti-extension of :m:`P`.
 
     Note, for L{FDE}, there is no *exclusivity* nor *exhaustion* constraint on a
     predicate's extension and anti-extension. This means that !{ntuple} could
@@ -157,11 +133,11 @@ That's it!
     Some notable features of L{FDE} include:
 
     * No logical truths. The means that the Law of Excluded Middle :s:`A V ~A`, and the
-      Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as Conditional Identity
+      Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as :term:`Conditional Identity`
       :s:`A $ A`.
   
-    * Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical
-      validities.
+    * Failure of :term:`Modus Ponens`, :term:`Modus Tollens`, :term:`Disjunctive Syllogism`,
+      and other Classical validities.
 
     * DeMorgan laws are valid, as well as Conditional Contraction (:s:`A $ (A $ B)`
       implies :s:`A $ B`).

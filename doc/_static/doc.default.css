@@ -2,10 +2,10 @@
 
 /* Reset some background colors */ 
 /* .truth-table th:is(.value-header, .operator-symbol, .blank) { */
-.truth-table th {
+table.truth-table th {
     background-color: inherit;
 }
-.truth-table th.operator-name {
+table.truth-table th.operator-name {
     background-color: #ede;
 }
 

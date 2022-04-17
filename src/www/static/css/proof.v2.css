@@ -60,13 +60,15 @@
     color: #e808ff;
 }
 /* Selected branch indicator, at the leaf. Only show if controls or models options are enabled */
-.tableau.with-controls .structure.leaf.inspected > .node-segment::after {
+
+/* .tableau.with-controls .structure.leaf.inspected > .node-segment::after {
     width: 16px;
     height: 16px;
     background-size: 16px 16px;
-    background-image: url(/static/img/inspected-black.svg);
+    background-image: url(/static/img-v1/inspected-black.svg);
     content: "";
-}
+} */
+
 .tableau-controls .valid,
 .tableau-models .model .is-countermodel.yes {
     color: green;
@@ -259,10 +261,7 @@
     margin-bottom: 10px;
 } */
 /* Models */
-/* .tableau-models .collapser-wrapper.positioned-left .collapser-heading.collapsed::before,
-.tableau-models .collapser-wrapper.positioned-right .collapser-heading.collapsed::after {
-    background-image: url(../img/open-book.svg);
-}
+/*
 .tableau-models {
     z-index: 1;
 }

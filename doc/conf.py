@@ -9,8 +9,11 @@
 from __future__ import annotations
 import os
 import sys
-sys.path.insert(1, '../src')
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
+sys.path.insert(1, '../src')
 
 import fixed
 
@@ -23,8 +26,6 @@ copyright = fixed.copyright
 version = fixed.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
-
-del(fixed)
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -65,12 +66,6 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 html_theme_options = {}
 
-if html_theme == 'sphinx_rtd_theme':
-    # https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html
-    html_theme_options.update(
-        # style_external_links = True,
-    )
-
 # Smartquote
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes
 # https://docutils.sourceforge.io/docs/user/smartquotes.html
@@ -84,26 +79,30 @@ html_show_sphinx = False
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
 html_static_path = [
-    # 'res',
-    '../src/www/static',
+    '_static',
     '../src/proof/templates/html/static',
+    # 'res',
+    # '../src/www/static',
 ]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = [
     '_build',
-    '*.jinja2',
+    # '*.jinja2',
     '**/include/*',
-    'css/fonts/**',
-    '**/*.js',
-    'css/proof.*.css',
-    'jquery-ui',
-    'css/app.*.css',
+    # 'css/fonts/**',
+    # '**/*.js',
+    # 'css/proof.*.css',
+    # # 'jquery-ui',
+    # 'css/app.*.css',
+    # 'ui-base',
+    # 'ui-controls',
 ]
 
+
 # Add any paths that contain templates here, relative to this directory.
-#templates_path = ['_templates']
+templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -120,26 +119,27 @@ add_module_names = False
 
 pt_options = dict(
     wnotn = 'standard',
-    truth_table_tmpl = 'truth_table.jinja2',
-    truth_tables_rev = True,
+    truth_table_template = 'truth_table.jinja2',
+    truth_table_reverse = True,
     template_dir = os.path.abspath(
         os.path.join(os.path.dirname(__file__), 'templates')
     )
 )
 
-def setup(app):
-    from sphinx.application import Sphinx
-    app: Sphinx = app
+if html_theme == 'sphinx_rtd_theme':
+    # https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html
+    html_theme_options.update(
+        # style_external_links = True,
+    )
+    themecss = 'doc.rtd.css'
+    exclude_patterns.append('doc.default.css')
+else:
+    themecss = 'doc.default.css'
+    exclude_patterns.append('doc.rtd.css')
 
-    if html_theme == 'sphinx_rtd_theme':
-        themecss = 'doc.rtd.css'
-    elif html_theme == 'default':
-        themecss = 'doc.default.css'
-    else:
-        raise ValueError(html_theme)
-
-    app.add_css_file('css/doc.css')
-    app.add_css_file(f'css/{themecss}')
+def setup(app: Sphinx):
+    app.add_css_file('doc.css')
+    app.add_css_file(themecss)
     app.add_css_file('tableau.css')
 
 if False:
