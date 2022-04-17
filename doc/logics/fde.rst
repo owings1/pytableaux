@@ -24,10 +24,10 @@ L{FDE} - First Degree Entailment
     L{FDE} is a 4-valued logic (V{T}, V{F}, V{N} and V{B}). One common reading
     of these values is:
 
-    - V{T}: just true
     - V{F}: just false
     - V{N}: neither true nor false
     - V{B}: both true and false
+    - V{T}: just true
 
     .. _fde-model:
 

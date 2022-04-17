@@ -85,6 +85,15 @@ def boolopt(arg: str, /) -> bool:
         return False
     raise ValueError(f"Invalid boolean value: '{arg}'")
 
+class Clear(BaseDirective):
+    option_spec = dict(
+        classes = class_option,
+    )
+    def run(self):
+        classes = self.set_classes()
+        classes.append('clear')
+        return [nodes.container(classes = classes)]
+
 class Tableaud(BaseDirective):
     """Tableau directive.
     
@@ -302,6 +311,7 @@ def setup(app: Sphinx):
     app.add_event(SphinxEvent.IncludeRead)
     app.add_directive('include',   Include, override = True)
     app.add_directive('csv-table', CSVTable, override = True)
+    app.add_directive('clear', Clear)
     app.add_directive('tableau', Tableaud)
     app.add_directive('truth-table', TruthTable)
     app.add_directive('truth-tables', TruthTables)

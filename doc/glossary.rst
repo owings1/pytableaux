@@ -8,41 +8,42 @@ Glossary
 
 .. glossary::
 
-    conditional identity
-        :s:`B` !{|-} :s:`A $ A`
+  conditional identity
+    :s:`B` !{|-} :s:`A $ A`
 
-    DeMorgan laws
-        . . .
+  DeMorgan laws
+    . . .
 
-    Disjunctive Syllogism
-        :s:`A V B`, :s:`~B` !{|?-} :s:`A`
+  disjunctive syllogism
+    :s:`A V B`, :s:`~B` !{|?-} :s:`A`
 
-    exclusitivity constraint
-        . . .
-    
-    exhaustion constraint
-        . . .
+  exclusitivity constraint
+    . . .
+  
+  exhaustion constraint
+    . . .
 
-    extension
-        a logic is an extension of another ...
+  extension of
+    A logic :m:`L'` is an extension of logic :m:`L` iff everything valid in
+    :m:`L` is valid in :m:`L'`.
 
-    Law of Excluded Middle
-        :s:`B` !{conseq} :s:`A V ~A`
+  law of excluded middle
+    :s:`B` !{conseq} :s:`A V ~A`
 
-    Law of Non-Contradiction
-        :s:`A & ~A` !{|-} :s:`B`
+  law of non-contradiction
+    :s:`A & ~A` !{|-} :s:`B`
 
-    logical consequence
-        . . .
+  logical consequence
+    . . .
 
-    logical truth
-        . . . 
+  logical truth
+    . . . 
 
-    truth-functional
-        . . .
+  truth-functional operator
+    . . .
 
-    Modus Ponens
-        :s:`A $ B`, :s:`A` !{|-} :s:`B`
+  modus ponens
+    :s:`A $ B`, :s:`A` !{|-} :s:`B`
 
-    Modus Tollens
-        :s:`A $ B`, :s:`~B` !{|-} :s:`A`
+  modus tollens
+    :s:`A $ B`, :s:`~B` !{|-} :s:`A`

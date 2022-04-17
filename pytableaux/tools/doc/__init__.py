@@ -21,31 +21,32 @@ from __future__ import annotations
 
 __all__ = ()
 
-from docutils.parsers.rst.roles import _roles, set_classes
 import enum
-import os
+import itertools
+import os.path
 import re
+import shutil
+from typing import (TYPE_CHECKING, Any, ClassVar, Generic, Mapping, NamedTuple,
+                    Optional, overload)
+
+import jinja2
 import sphinx.directives
+from docutils.parsers.rst.roles import _roles, set_classes
+from pytableaux.errors import instcheck
+from pytableaux.tools import MapProxy, abstract, closure
+from pytableaux.tools.typing import T
 from sphinx.util import docstrings, logging
 from sphinx.util.docutils import SphinxRole
-from typing import (Any, ClassVar, Generic, Mapping, NamedTuple,
-                    overload, TYPE_CHECKING)
 
 if TYPE_CHECKING:
-    from sphinx.application import Sphinx
     import sphinx.config
+    from sphinx.application import Sphinx
     from sphinx.util.typing import RoleFunction
-
-from pytableaux.tools import abstract, closure, MapProxy
-from pytableaux.tools.typing import T
 
 logger = logging.getLogger(__name__)
 
 _helpers: Mapping[Sphinx, Helper] = None
 "The Shinx application ``Helper`` instances."
-
-PT_CONFKEY = 'pt_options'
-"The Sphinx config key for helper options."
 
 @closure
 def app_setup():
@@ -58,7 +59,8 @@ def app_setup():
     def setup(app: Sphinx):
         'Setup the Sphinx application.'
 
-        app.add_config_value(PT_CONFKEY, {}, 'env', [dict])
+        app.add_config_value(ConfKey.options, {}, 'env', [dict])
+        app.add_config_value(ConfKey.htmlcopy, [], 'env', [list[HtmlCopyEntry]])
 
         from pytableaux.tools.doc import directives, processors, roles
         directives.setup(app)
@@ -73,9 +75,10 @@ def app_setup():
         if app in helpers:
             raise ValueError(f"app already initialized.")
 
-        import itertools
+        for entry in config[ConfKey.htmlcopy]:
+            validate_copy_entry(entry)
 
-        opts = dict(config[PT_CONFKEY])
+        opts = dict(config[ConfKey.options])
 
         # Add app templates_path to search path.
         opts['templates_path'] = [
@@ -89,22 +92,49 @@ def app_setup():
         helpers[app] = Helper(**opts)
 
     def finish(app: Sphinx, exception: Exception|None):
+
+        if app.builder.format == 'html':
+            for entry in app.config[ConfKey.htmlcopy]:
+                do_copy_entry(app, entry)
+
         del helpers[app]
 
     return setup
+
+def validate_copy_entry(entry: HtmlCopyEntry):
+    instcheck(entry, (list, tuple))
+    src, dest = entry[0:2]
+    eopts = entry[2] if len(entry) > 2 else {}
+    instcheck(src, str)
+    instcheck(dest, str)
+    instcheck(eopts, dict)
+
+def do_copy_entry(app: Sphinx, entry: HtmlCopyEntry):
+    src = os.path.join(app.srcdir, entry[0])
+    dest = os.path.join(app.outdir, entry[1])
+    eopts = dict(entry[2]) if len(entry) > 2 else {}
+    ignore = eopts.get('ignore')
+    if ignore is not None:
+        if not callable(ignore):
+            if isinstance(ignore, str):
+                ignore = ignore,
+            eopts['ignore'] = shutil.ignore_patterns(*ignore)
+
+    # logger.info(f'{src} -> {dest}, **{eopts}')
+    shutil.copytree(src, dest, **eopts)
 
 def app_helper(app: Sphinx) -> Helper:
     'Get the helper instance from the Sphinx app instance'
     return _helpers[app]
 
 @overload
-def role_entry(rolecls: type[T]) -> _RoleItem[T]|None: ...
+def role_entry(rolecls: type[T]) -> RoleItem[T]|None: ...
 
 @overload
-def role_entry(rolefn: RoleFunction) -> _RoleItem[RoleFunction]|None: ...
+def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
 
 @overload
-def role_entry(roleish: str) -> _RoleItem[RoleFunction]|None:...
+def role_entry(roleish: str) -> RoleItem[RoleFunction]|None:...
 
 def role_entry(roleish):
     'Get loaded role name and instance, by name, instance or type.'
@@ -124,7 +154,7 @@ def role_entry(roleish):
                 break
         else:
             return None
-    return _RoleItem(name, inst)
+    return RoleItem(name, inst)
 
 def role_instance(roleish: type[T]) -> T|None:
     'Get loaded role instance, by name, instance or type.'
@@ -137,12 +167,12 @@ def role_name(roleish: type|RoleFunction) -> str|None:
 class Helper:
 
     defaults = dict(
-        templates_path = (),
         wnotn = 'standard',
         pnotn = 'standard',
         preds = ((0,0,1), (1,0,1), (2,0,1)),
         truth_table_template = 'truth_table.jinja2',
         truth_table_reverse = True,
+        templates_path = (),
     )
 
     def __init__(self, **opts):
@@ -150,7 +180,6 @@ class Helper:
 
     def reconfigure(self, opts: dict):
 
-        import jinja2
         from pytableaux import lexicals
         from pytableaux.proof import writers
 
@@ -194,6 +223,15 @@ class SphinxEvent(str, enum.Enum):
     'Custom Sphinx event names.'
 
     IncludeRead = 'include-read'
+
+class ConfKey(str, enum.Enum):
+    'Custom config keys.'
+
+    options = 'pt_options'
+    "The config key for helper options."
+
+    htmlcopy = 'pt_htmlcopy'
+    "The config key for html copy actions."
 
 class BaseRole(SphinxRole):
 
@@ -287,10 +325,12 @@ class ReplaceProcessor(Processor):
         self.args = args
         self.run()
 
-class __RoleItem(NamedTuple):
-    name: str
+class RoleItem(NamedTuple):
+    name: Any
     inst: Any
 
-class _RoleItem(__RoleItem, Generic[T]):
+class RoleItem(RoleItem, Generic[T]):
     name: str
     inst: T
+
+HtmlCopyEntry = tuple[str, str, Optional[dict]]

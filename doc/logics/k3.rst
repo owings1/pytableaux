@@ -31,7 +31,7 @@ as {@FDE} without the V{B} value.
 
     .. include:: include/truth_table_blurb.rst
 
-    .. truth-tables:: k3
+    .. truth-tables:: K3
 
     .. _k3-predication:
 
@@ -46,11 +46,11 @@ as {@FDE} without the V{B} value.
 
     Note, unlike L{FDE}, there is an *exclusivity constraint*
     on a predicate's extension/anti-extension. This means that !{ntuple}
-    cannot be in *both* the extension and the anti-extension of :math:`P`.
+    cannot be in *both* the extension and the anti-extension of :m:`P`.
 
     Like L{FDE}, there is no *exhaustion constraint*: there are
     permissible L{K3} models where some tuple !{ntuple} is in *neither*
-    the extension nor the anti-extension of some predicate :math:`P`.
+    the extension nor the anti-extension of some predicate :m:`P`.
 
     .. _k3-quantification:
 
@@ -103,10 +103,10 @@ as {@FDE} without the V{B} value.
 
     Some notable features of L{K3} include:
 
-    * Everything valid in L{FDE} is valid in L{K3}.
+    * L{K3} is an :term:`extension of` L{FDE}.
 
-    * Like L{FDE}, the Law of Excluded Middle, and Conditional
-      Identity :s:`(A $ A)` fail.
+    * Like L{FDE}, the :term:`Law of Excluded Middle`, and
+      :term:`Conditional Identity` fail.
 
-    * Some cassical validities, such as *Modus Ponens*, *Modus Tollens*,
-      *Disjunctive Syllogism*, and *DeMorgan* laws, are valid.
+    * Some cassical validities are valid, such as :term:`Modus Ponens`,
+      :term:`Modus Tollens`, :term:`Disjunctive Syllogism`, and :term:`DeMorgan laws`.

@@ -116,6 +116,7 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
             self.title = name
         else:
             self.title = f'{name} {sect}'.strip()
+        self.has_explicit_title = True
         if anchor is None:
             if sect is None:
                 self.target = name
@@ -125,6 +126,17 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
             self.target = anchor[1:-1]
         self.text = f'{self.title} <{self.target}>'
         self.rawtext = f":{self.name}:`{self.text}`"
+        if False:
+            logger.info(
+                f'name={repr(name)}, '
+                f'sect={repr(sect)}, '
+                f'anchor={repr(anchor)}, '
+                f'self.title={repr(self.title)}, '
+                f'self.target={repr(self.target)}, '
+                f'self.text={repr(self.text)}, '
+                f'self.rawtext={repr(self.rawtext)}, '
+            )
+        
         self.classes.append('logicref')
 
 class lexdress(BaseRole):
@@ -242,17 +254,22 @@ class metadress(BaseRole):
                 classes = ('modal', 'world'),
                 nodecls = nodes.math,
             ),
-            r'^(\|-|conseq)$': dict(
+            r"^(L'*?)$": dict(
+                rep = r'\1',
+                classes = ('big-l'),
+                nodecls = nodes.inline,
+            ),
+            r'^(\|-|conseq|impl(ies)?)$': dict(
                 rep = '⊢',
                 classes = ('conseq',),
                 nodecls = nodes.inline,
             ),
-            r'^(\|(/|!)-|non?-?conseq)$': dict(
+            r'^(\|(/|!)-|no(n|t)?-?(conseq|impl(ies)?))$': dict(
                 rep = '⊬',
                 classes = ('non-conseq',),
                 nodecls = nodes.inline,
             ),
-            r'^(\|\?-|conseq[q|Q|?])$' : dict(
+            r'^(\|\?-|(conseq|impl(ies)?)\?)$' : dict(
                 static = True,
                 nodes = [
                     nodes.inline(

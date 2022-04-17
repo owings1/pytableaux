@@ -7,13 +7,17 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 from __future__ import annotations
-import os
+import os.path
 import sys
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-sys.path.insert(1, '..')
+addpath = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..')
+)
+if addpath not in sys.path:
+    sys.path.insert(1, addpath)
 
 from pytableaux import fixed
 
@@ -66,6 +70,12 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 html_theme_options = {}
 
+if html_theme == 'sphinx_rtd_theme':
+    # https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html
+    html_theme_options.update(
+        # style_external_links = True,
+    )
+
 # Smartquote
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes
 # https://docutils.sourceforge.io/docs/user/smartquotes.html
@@ -79,9 +89,7 @@ html_show_sphinx = False
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = [
     '_static',
-    '../pytableaux/proof/templates/html/static',
-    # 'res',
-    # '../pytableaux/www/static',
+    f'{fixed.package_dir}/proof/templates/html/static',
 ]
 
 # List of patterns, relative to source directory, that match files and
@@ -90,7 +98,6 @@ exclude_patterns = [
     '_build',
     '**/include/*',
 ]
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -109,26 +116,33 @@ htmlhelp_basename = 'pytableauxdoc'
 add_module_names = False
 
 pt_options = dict(
-    wnotn = 'standard',
-    truth_table_template = 'truth_table.jinja2',
-    truth_table_reverse = True,
+
 )
 
-if html_theme == 'sphinx_rtd_theme':
-    # https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html
-    html_theme_options.update(
-        # style_external_links = True,
-    )
-    themecss = 'doc.rtd.css'
-    exclude_patterns.append('doc.default.css')
-else:
-    themecss = 'doc.default.css'
-    exclude_patterns.append('doc.rtd.css')
+pt_htmlcopy = [
+    (
+        f'{fixed.package_dir}/web/static/css/fonts/charmonman',
+        '_static/fonts/charmonman',
+    ),
+]
+
+cssflag = {
+    'doc.css'         : True,
+    'doc.default.css' : html_theme == 'default',
+    'doc.rtd.css'     : html_theme == 'sphinx_rtd_theme',
+    'tableau.css'     : True,
+}
+
+exclude_patterns.extend(
+    file
+    for file, flag in cssflag.items()
+        if not flag
+)
 
 def setup(app: Sphinx):
-    app.add_css_file('doc.css')
-    app.add_css_file(themecss)
-    app.add_css_file('tableau.css')
+    for file, flag in cssflag.items():
+        if flag:
+            app.add_css_file(file)
 
 if False:
     pass

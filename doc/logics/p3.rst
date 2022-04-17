@@ -18,9 +18,7 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
 
 .. contents:: :local:
 
-.. raw:: html
-
-    <div style="clear:both"></div>
+.. clear::
 
 .. automodule:: pytableaux.logics.p3
 

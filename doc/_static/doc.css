@@ -1,5 +1,22 @@
+/* fonts */
+@font-face {
+    font-family: "Charmonman";
+    font-weight: normal;
+    src: url("fonts/charmonman/Charmonman-Regular.ttf") format("truetype");
+}
+@font-face {
+    font-family: "Charmonman"; 
+    font-weight: bold;
+    src: url("fonts/charmonman/Charmonman-Bold.ttf") format("truetype");
+}
+
+/* font-family */
+.big-l {
+    font-family: Charmonman;
+}
+
 /* font-size */
-.truth-table th.operator-name {
+table.truth-table th.operator-name {
     font-size: 90%;
 }
 body {
