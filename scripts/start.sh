@@ -3,6 +3,6 @@ set -e
 dir_="$(dirname "$0")"
 cd "$dir_/.."
 
-cd src
+cd pytableaux
 
 python3 -m web

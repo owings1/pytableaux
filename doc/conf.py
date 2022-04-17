@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-sys.path.insert(1, '../src')
+sys.path.insert(1, '../pytableaux')
 
 import fixed
 
@@ -80,7 +80,7 @@ html_show_sphinx = False
 #html_static_path = ['_static']
 html_static_path = [
     '_static',
-    '../src/proof/templates/html/static',
+    '../pytableaux/proof/templates/html/static',
     # 'res',
     # '../src/www/static',
 ]
