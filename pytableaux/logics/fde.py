@@ -35,9 +35,9 @@ class Meta:
         'first-order',
     )
 
-from errors import ModelValueError
-import lexicals
-from lexicals import (
+from pytableaux.errors import ModelValueError
+from pytableaux import lexicals
+from pytableaux.lexicals import (
     Argument,
     Atomic,
     Constant,
@@ -49,8 +49,8 @@ from lexicals import (
     Operator as Oper,
     Sentence,
 )
-from models import BaseModel, Mval
-from proof.baserules import (
+from pytableaux.models import BaseModel, Mval
+from pytableaux.proof.baserules import (
     BaseClosureRule,
     ExtendedQuantifierRule,
     GetNodeTargetsRule,
@@ -58,16 +58,16 @@ from proof.baserules import (
     OperatedSentenceRule,
     QuantifiedSentenceRule,
 )
-from proof.common import Branch, Node, Target
-from proof.filters import NodeFilters
-from proof.tableaux import (
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.filters import NodeFilters
+from pytableaux.proof.tableaux import (
     Tableau,
     TableauxSystem as BaseSystem,
 )
-from tools import closure, MapProxy, static
-from tools.sets import setf
-from tools.hybrids import qsetf
-from tools.typing import T
+from pytableaux.tools import closure, MapProxy, static
+from pytableaux.tools.sets import setf
+from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.typing import T
 
 from typing import Any
 

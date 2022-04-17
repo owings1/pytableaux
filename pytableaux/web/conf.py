@@ -36,12 +36,12 @@ __all__ = (
     'parser_nups',
 )
 
-import examples
-from lexicals import LexType, Notation, LexWriter
-from parsers import ParseTable
-from tools import closure
-from tools.abcs import AbcEnum
-from logics import getlogic
+from pytableaux import examples
+from pytableaux.lexicals import LexType, Notation, LexWriter
+from pytableaux.parsers import ParseTable
+from pytableaux.tools import closure
+from pytableaux.tools.abcs import AbcEnum
+from pytableaux.logics import getlogic
 
 from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, FileSystemLoader

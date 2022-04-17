@@ -28,10 +28,10 @@ class Meta:
     tags = 'many-valued', 'glutty', 'non-modal', 'first-order'
     category_order = 130
 
-from lexicals import Operator as Oper
-from proof.common import Node
-from logics import fde as FDE, lp as LP
-from logics.fde import adds, group, sdnode
+from pytableaux.lexicals import Operator as Oper
+from pytableaux.proof.common import Node
+from pytableaux.logics import fde as FDE, lp as LP
+from pytableaux.logics.fde import adds, group, sdnode
 
 class Model(LP.Model):
     """

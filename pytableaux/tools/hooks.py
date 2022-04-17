@@ -22,15 +22,15 @@ from __future__ import annotations
 __all__ = 'hookutil',
 
 # Allowed local imports: errors, tools.abcs
-from errors import Emsg, instcheck
-from tools import closure, static, MapProxy
-from tools.abcs import (
+from pytableaux.errors import Emsg, instcheck
+from pytableaux.tools import closure, static, MapProxy
+from pytableaux.tools.abcs import (
     ABC_HOOKINFO_ATTR,
     ABC_HOOKUSER_ATTR,
     abcf,
     AbcMeta
 )
-from tools.typing import T, TT
+from pytableaux.tools.typing import T, TT
 
 from collections import defaultdict
 from collections.abc import Set

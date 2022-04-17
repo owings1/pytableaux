@@ -28,10 +28,10 @@ class Meta:
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_order = 50
 
-from lexicals import Operator as Oper
-from proof.common import Branch, Node
-from logics import k3 as K3, k3w as K3W, fde as FDE
-from logics.fde import adds, group, sdnode
+from pytableaux.lexicals import Operator as Oper
+from pytableaux.proof.common import Branch, Node
+from pytableaux.logics import k3 as K3, k3w as K3W, fde as FDE
+from pytableaux.logics.fde import adds, group, sdnode
 
 def gap(v):
     return min(v, 1 - v)

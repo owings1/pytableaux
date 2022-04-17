@@ -26,11 +26,11 @@ __all__ = (
     'trunk_example_tableau',
 )
 
-from lexicals import Argument, Operator, RenderSet
-from parsers import ParseTable
-from proof.helpers import EllipsisExampleHelper
-from proof.tableaux import ClosingRule, Rule, Tableau
-from logics import getlogic
+from pytableaux.lexicals import Argument, Operator, RenderSet
+from pytableaux.parsers import ParseTable
+from pytableaux.proof.helpers import EllipsisExampleHelper
+from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
+from pytableaux.logics import getlogic
 from typing import Any
 
 def rule_example_tableau(rulecls: type[Rule], /, **opts) -> Tableau:

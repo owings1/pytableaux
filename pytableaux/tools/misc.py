@@ -22,7 +22,7 @@ from typing import Any, Callable, Mapping
 
 __all__ = ()
 
-from tools import closure
+from pytableaux.tools import closure
 
 from itertools import islice
 from types import ModuleType
@@ -207,7 +207,7 @@ def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
             return '<%s %s>' % (oname, dstr)
         return '<%s>' % oname
     except Exception as e:
-        from errors import errstr
+        from pytableaux.errors import errstr
         return '<%s !ERR: %s !>' % (oname, errstr(e))
 
 def wraprepr(obj, inner, **kw) -> str:

@@ -28,10 +28,10 @@ class Meta(object):
     tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
     category_order = 40
 
-from proof.common import Branch, Node
-from lexicals import Quantifier, Quantified, Operated
-from . import fde as FDE, k3w as K3W, k3 as K3
-from logics.fde import adds, group, sdnode
+from pytableaux.proof.common import Branch, Node
+from pytableaux.lexicals import Quantifier, Quantified, Operated
+from pytableaux.logics import fde as FDE, k3w as K3W, k3 as K3
+from pytableaux.logics.fde import adds, group, sdnode
 
 class Model(K3W.Model):
     """

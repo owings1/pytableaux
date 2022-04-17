@@ -19,12 +19,12 @@
 # pytableaux - writers test cases
 import pytest
 
-from lexicals import Atomic, Predicates, LexWriter
-from parsers import Parser
-from errors import *
-from proof.tableaux import Tableau
-from proof.writers import TabWriter
-import examples
+from pytableaux.lexicals import Atomic, Predicates, LexWriter
+from pytableaux.parsers import Parser
+from pytableaux.errors import *
+from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof.writers import TabWriter
+from pytableaux import examples
 
 # Sentence Writers
 

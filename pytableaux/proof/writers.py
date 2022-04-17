@@ -24,14 +24,16 @@ __all__ = (
     'TabWriter',
 )
 
-from errors import Emsg
-from lexicals import Argument, LexWriter, Notation
-from proof.tableaux import Tableau, TreeStruct
-from tools.abcs import abstract, overload, abcf, abcm, AbcMeta, MapProxy, TT
+from pytableaux.errors import Emsg
+from pytableaux.lexicals import Argument, LexWriter, Notation
+from pytableaux.proof.tableaux import Tableau, TreeStruct
+from pytableaux.tools import abstract, MapProxy
+from pytableaux.tools.typing import TT
+from pytableaux.tools.abcs import abcf, abcm, AbcMeta
 
 import jinja2
 import os
-from typing import Any, ClassVar, Collection, Mapping
+from typing import Any, ClassVar, Collection, Mapping, overload
 
 class TabWriterMeta(AbcMeta):
     def __call__(cls, *args, **kw):

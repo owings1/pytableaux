@@ -28,11 +28,11 @@ class Meta(object):
     tags = ['bivalent', 'non-modal']
     category_order = 1
 
-from tools.abcs import Abc, abcf
-from lexicals import Sentence, Quantified, Operated, Argument
-from proof.common import Branch, Node
-from proof.tableaux import Tableau
-from . import k as K
+from pytableaux.tools.abcs import Abc, abcf
+from pytableaux.lexicals import Sentence, Quantified, Operated, Argument
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.tableaux import Tableau
+from pytableaux.logics import k as K
 
 class Model(K.Model):
     """
@@ -86,7 +86,7 @@ class TabRules(Abc):
     @abcf.after
     def clearmodal(cls):
         'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from proof.types import demodalize_rules
+        from pytableaux.proof.types import demodalize_rules
         from itertools import chain
         demodalize_rules(chain(
             cls.closure_rules,

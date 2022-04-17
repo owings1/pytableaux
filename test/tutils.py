@@ -6,19 +6,19 @@ __all__ = (
     'using',
     'skip',
 )
-from tools.abcs import abcm
-from tools.hybrids import qset
-from tools.misc import drepr
-from logics import getlogic
-from tools.typing import F, TT, T
-from lexicals import (
+from pytableaux.tools.abcs import abcm
+from pytableaux.tools.hybrids import qset
+from pytableaux.tools.misc import drepr
+from pytableaux.logics import getlogic
+from pytableaux.tools.typing import F, TT, T
+from pytableaux.lexicals import (
     Argument, Predicates, Sentence, LexWriter, Notation
 )
-from models import BaseModel
-from parsers import Parser
-import examples
-from proof.common import Branch, Node
-from proof.tableaux import (
+from pytableaux.models import BaseModel
+from pytableaux.parsers import Parser
+from pytableaux import examples
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.tableaux import (
     Tableau, Rule, ClosingRule,
     RuleT,
 )

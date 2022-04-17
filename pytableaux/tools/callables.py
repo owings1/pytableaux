@@ -5,15 +5,15 @@ __all__ = (
     'cchain', 'preds',
 )
 
-from errors import instcheck, subclscheck
-from tools import abstract, MapProxy, static
-from tools.abcs import (
+from pytableaux.errors import instcheck, subclscheck
+from pytableaux.tools import abstract, MapProxy, static
+from pytableaux.tools.abcs import (
     AbcMeta,
     Copyable,
     FlagEnum,
 )
-from tools.sets import EMPTY_SET, setf
-from tools.typing import F, KT, P, RT, T
+from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.typing import F, KT, P, RT, T
 # tools.mappings not allowed!
 from functools import partial, WRAPPER_ASSIGNMENTS
 from itertools import filterfalse
@@ -230,7 +230,7 @@ class Caller(Callable[..., RT], Copyable):
         return list(self.attrnames())
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self, dict(self.attritems()))
 
     def __init_subclass__(subcls: type[CallT], **kw):

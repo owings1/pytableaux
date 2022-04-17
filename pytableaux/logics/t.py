@@ -28,12 +28,12 @@ class Meta:
     tags = ['bivalent', 'modal', 'first-order']
     category_order = 3
 
-from lexicals import Atomic
-from proof.baserules import adds, group
-from proof.common import Access, Branch, Node
-from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from logics import k as K
-from logics.k import swnode
+from pytableaux.lexicals import Atomic
+from pytableaux.proof.baserules import adds, group
+from pytableaux.proof.common import Access, Branch, Node
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.logics import k as K
+from pytableaux.logics.k import swnode
 
 class Model(K.Model):
     """

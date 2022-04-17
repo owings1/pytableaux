@@ -19,7 +19,7 @@
 # pytableaux - Classical First-Order Logic
 from __future__ import annotations
 
-from tools.abcs import Abc, abcf
+from pytableaux.tools.abcs import Abc, abcf
 
 name = 'CFOL'
 
@@ -30,8 +30,8 @@ class Meta:
     tags = ['bivalent', 'non-modal', 'first-order']
     category_order = 2
 
-from lexicals import Sentence, Quantified
-from logics import k as K, cpl as CPL
+from pytableaux.lexicals import Sentence, Quantified
+from pytableaux.logics import k as K, cpl as CPL
 
 class Model(CPL.Model):
     """
@@ -60,7 +60,7 @@ class TabRules(Abc):
     @abcf.after
     def clearmodal(cls):
         'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from proof.types import demodalize_rules
+        from pytableaux.proof.types import demodalize_rules
         from itertools import chain
         demodalize_rules(chain(
             cls.closure_rules,

@@ -33,11 +33,11 @@ class Meta:
         'first-order',
     )
 
-from logics import fde as FDE
-from models import Mval
-from proof.baserules import BaseClosureRule
-from proof.common import Branch, Node, Target
-from tools.hybrids import qsetf
+from pytableaux.logics import fde as FDE
+from pytableaux.models import Mval
+from pytableaux.proof.baserules import BaseClosureRule
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.tools.hybrids import qsetf
 
 class Model(FDE.Model):
     """
@@ -91,8 +91,8 @@ class TabRules:
 
         @staticmethod
         def example_nodes():
-            from lexicals import Atomic
-            from logics.fde import sdnode
+            from pytableaux.lexicals import Atomic
+            from pytableaux.logics.fde import sdnode
             s = Atomic.first()
             return sdnode(s, False), sdnode(~s, False)
 

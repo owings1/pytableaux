@@ -18,9 +18,10 @@
 #
 # pytableaux - parsers test cases
 from pytest import raises
-from errors import ParseError
-from lexicals import Predicate, LexType, Predicates
-from parsers import Parser
+
+from pytableaux.errors import ParseError
+from pytableaux.lexicals import Predicate, LexType, Predicates
+from pytableaux.parsers import Parser
 
 preds = Predicates(Predicate.gen(3))
 std = Parser('standard', preds)

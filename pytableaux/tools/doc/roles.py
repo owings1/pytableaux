@@ -21,11 +21,11 @@ from __future__ import annotations
 
 __all__ = ('lexdress', 'metadress', 'refplus',)
 
-import lexicals
-from lexicals import LexType
-import parsers
-from tools.doc import BaseRole, docinspect, Helper
-from tools.typing import F
+from pytableaux import lexicals
+from pytableaux.lexicals import LexType
+from pytableaux import parsers
+from pytableaux.tools.doc import BaseRole, docinspect, Helper
+from pytableaux.tools.typing import F
 
 from docutils import nodes
 import functools

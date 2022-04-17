@@ -3,6 +3,4 @@ set -e
 dir_="$(dirname "$0")"
 cd "$dir_/.."
 
-cd pytableaux
-
-python3 -m web
+python3 -m pytableaux.web

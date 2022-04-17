@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+__all__ = (
+    'abstract',
+    'closure',
+    'isdund',
+    'MapProxy',
+    'static',
+)
+
 from types import FunctionType, MappingProxyType as _MapProxy
-from typing import Any, Callable, Mapping, overload
-from tools.typing import KT, T, TT, VT
+from typing import Callable, Mapping, overload
+from pytableaux.tools.typing import KT, T, TT, VT
 
 from abc import abstractmethod as abstract
 

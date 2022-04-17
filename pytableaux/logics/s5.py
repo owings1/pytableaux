@@ -29,10 +29,10 @@ class Meta:
     category = 'Bivalent Modal'
     category_order = 5
 
-from proof.baserules import adds, group
-from proof.common import Access, Branch, Node
-from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from . import k as K, t as T, s4 as S4
+from pytableaux.proof.baserules import adds, group
+from pytableaux.proof.common import Access, Branch, Node
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.logics import k as K, t as T, s4 as S4
 
 # TODO:
 # Some problematic arguments for S5:

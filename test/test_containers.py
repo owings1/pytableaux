@@ -3,18 +3,17 @@ from itertools import filterfalse
 import operator as opr
 from pytest import raises
 
-from errors import *
-from lexicals import *
+from pytableaux.errors import *
+from pytableaux.lexicals import *
 
-from tools.abcs import *
-from tools.events import EventsListeners, Listeners
-from tools.hybrids import *
-from tools.linked import *
-from tools.mappings import *
-from tools.sequences import *
-from tools.sets import *
-
-from tools.abcs import T
+from pytableaux.tools.abcs import *
+from pytableaux.tools.events import EventsListeners, Listeners
+from pytableaux.tools.hybrids import *
+from pytableaux.tools.linked import *
+from pytableaux.tools.mappings import *
+from pytableaux.tools.sequences import *
+from pytableaux.tools.sets import *
+from pytableaux.tools.typing import T
 
 
 from collections import deque
@@ -234,10 +233,10 @@ class TestMappingApi(BaseSuite):
 
     def test_subclasses(self):
         # Ensure modules are loaded
-        from parsers import ParseTable
-        from proof.common import Target
-        from proof.helpers import BranchCache
-        from proof.tableaux import TreeStruct
+        from pytableaux.parsers import ParseTable
+        from pytableaux.proof.common import Target
+        from pytableaux.proof.helpers import BranchCache
+        from pytableaux.proof.tableaux import TreeStruct
 
         rule = self.rule_tab('Conjunction').rule
 

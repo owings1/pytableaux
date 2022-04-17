@@ -19,9 +19,9 @@
 # pytableaux - lexicals module tests
 # import pytest
 
-from errors import *
-from lexicals import *
-from tools.sets import EMPTY_SET
+from pytableaux.errors import *
+from pytableaux.lexicals import *
+from pytableaux.tools.sets import EMPTY_SET
 
 try:
     from test.tutils import BaseSuite, skip

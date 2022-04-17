@@ -35,10 +35,10 @@ class Meta:
     )
 
 
-from lexicals import Operator as Oper
-from proof.common import Branch, Node
-from logics import fde as FDE, l3 as L3, k3 as K3
-from logics.fde import adds, group, sdnode
+from pytableaux.lexicals import Operator as Oper
+from pytableaux.proof.common import Branch, Node
+from pytableaux.logics import fde as FDE, l3 as L3, k3 as K3
+from pytableaux.logics.fde import adds, group, sdnode
 
 class Model(L3.Model):
     """

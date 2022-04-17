@@ -29,14 +29,14 @@ __all__ = (
     'StandardParser',
 )
 
-from errors import (
+from pytableaux.errors import (
     Emsg,
     ParseError,
     BoundVariableError,
     UnboundVariableError,
     IllegalStateError,
 )
-from lexicals import (
+from pytableaux.lexicals import (
     BiCoords,
     Operator as Oper, Quantifier,
     Predicate, Parameter, Constant, Variable,
@@ -44,8 +44,8 @@ from lexicals import (
     LexType, Predicates, Argument, Marking, Notation,
     Parser, ParseTable, ParseTableKey,
 )
-from tools.decorators import abstract, overload, raisr
-from tools.sets import setf, EMPTY_SET
+from pytableaux.tools.decorators import abstract, overload, raisr
+from pytableaux.tools.sets import setf, EMPTY_SET
 
 from collections.abc import Set
 

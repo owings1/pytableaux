@@ -21,13 +21,14 @@ from __future__ import annotations
 
 __all__ = 'arguments', 'argument', 'tabiter'
 
-from errors import instcheck
-from lexicals import Argument, Predicate, Predicates
-from parsers import Parser
-
-from tools import closure
-from tools.hybrids import qsetf
-from tools.mappings import MapProxy
+import re
+from pytableaux.errors import instcheck
+from pytableaux.lexicals import Argument, Predicate, Predicates
+from pytableaux.parsers import Parser
+from pytableaux.tools import closure
+from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.mappings import MapProxy
+from pytableaux.tools.sets import EMPTY_SET
 
 _args = MapProxy({
     'Addition'                         : (('a',), 'Aab'),
@@ -182,9 +183,6 @@ def argument():
 
     args = _args
 
-    from tools.sets import EMPTY_SET
-    import re
-
     for name in args:
         index.update({
             k.lower(): name for k in (
@@ -235,7 +233,7 @@ def tabiter():
     ))
 
     def gettab(*args, build = True, **opts):
-        from proof.tableaux import Tableau
+        from pytableaux.proof.tableaux import Tableau
         tab = Tableau(*args, **opts)
         if build:
             tab.build()

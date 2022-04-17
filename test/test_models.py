@@ -1,8 +1,9 @@
-from models import BaseModel
-from lexicals import Operator
-from logics import getlogic
-from errors import *
 from pytest import raises
+
+from pytableaux.errors import *
+from pytableaux.models import BaseModel
+from pytableaux.lexicals import Operator
+from pytableaux.logics import getlogic
 
 def test_truth_table_cpl_negation():
     m: BaseModel = getlogic('cpl').Model()

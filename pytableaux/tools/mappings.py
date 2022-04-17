@@ -32,17 +32,17 @@ __all__ = (
     'KeySetAttr',
 )
 
-from errors import Emsg, instcheck
-from tools.abcs import (
+from pytableaux.errors import Emsg, instcheck
+from pytableaux.tools.abcs import (
     Abc, Copyable, abcf, MapProxy
 )
-from tools import abstract, closure, static
-from tools.callables import preds, gets
-from tools.decorators import (
+from pytableaux.tools import abstract, closure, static
+from pytableaux.tools.callables import preds, gets
+from pytableaux.tools.decorators import (
     fixed, membr, wraps,
 )
-from tools.sets import EMPTY_SET, setf
-from tools.typing import F, KT, VT, T, MapT, NotImplType, SetT
+from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.typing import F, KT, VT, T, MapT, NotImplType, SetT
 
 from collections.abc import (
     Collection,
@@ -374,7 +374,7 @@ class DequeCache(Collection[VT], Abc):
 
     def __new__(cls, Vtype: type, maxlen = 10):
 
-        from errors import notsubclscheck
+        from pytableaux.errors import notsubclscheck
         notsubclscheck(Vtype, (int, slice))
         instcheck(Vtype, type)
 

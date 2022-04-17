@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-sys.path.insert(1, '../pytableaux')
+sys.path.insert(1, '..')
 
-import fixed
+from pytableaux import fixed
 
 copyright = fixed.copyright
 # The version info for the project you're documenting, acts as replacement for
@@ -31,7 +31,7 @@ release = version
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'tools.doc.extension',
+    'pytableaux.tools.doc.extension',
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',

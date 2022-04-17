@@ -63,8 +63,8 @@ if 'Imports' or True:
         ParamSpec,
         TypeVar,
     )
-    from tools import abstract, isdund, MapProxy, static, thru
-    from tools.typing import F, RT, T, TT, Self
+    from pytableaux.tools import abstract, isdund, MapProxy, static, thru
+    from pytableaux.tools.typing import F, RT, T, TT, Self
 
 if 'Type Variables' or True:
 
@@ -134,7 +134,7 @@ class AbcMeta(_abc.ABCMeta):
         abcm.nsinit(ns, bases, skipflags = skipflags)
         Class = super().__new__(cls, clsname, bases, ns, **kw)
         if not skiphooks:
-            from tools.hooks import hookutil
+            from pytableaux.tools.hooks import hookutil
             hookutil.init_user(Class, hooks)
         abcm.clsafter(Class, ns, skipflags = skipflags)
         if not skiphooks:
@@ -151,7 +151,7 @@ class AbcMeta(_abc.ABCMeta):
             impl = value.setdefault(cls, {})
             for name in hooks:
                 if name in impl:
-                    from errors import Emsg
+                    from pytableaux.errors import Emsg
                     raise TypeError from Emsg.DuplicateKey(name)
                 impl[name] = func
             return func
@@ -288,7 +288,7 @@ class abcm:
 
     @staticmethod
     def hookinfo(Class: type):
-        from tools.hooks import hookutil
+        from pytableaux.tools.hooks import hookutil
         return hookutil.provider_info(Class)
         # return HookInfo(Class)
 
@@ -513,10 +513,10 @@ class EnumLookup(Mapping[Any, EnumEntry[EnT]],
     def _check_pseudo(cls, pseudo: AbcEnum, ecls: type[AbcEnum], /):
         check = ecls._value2member_map_[pseudo.value]
         if check is not pseudo:
-            from errors import Emsg
+            from pytableaux.errors import Emsg
             raise TypeError from Emsg.ValueConflict(pseudo, check)
         if pseudo.name is not None:
-            from errors import Emsg
+            from pytableaux.errors import Emsg
             raise TypeError from Emsg.WrongValue(pseudo.name, None)
         return cls._pseudo_keys(pseudo), EnumEntry(pseudo, None, None)
 
@@ -531,11 +531,11 @@ class EnumLookup(Mapping[Any, EnumEntry[EnT]],
         return {member.name, (member.name,), member, member.value}
 
     def __setattr__(self, name, value, /):
-        from errors import Emsg
+        from pytableaux.errors import Emsg
         raise Emsg.ReadOnlyAttr(name, self)
 
     def __delattr__(self, name, /):
-        from errors import Emsg
+        from pytableaux.errors import Emsg
         raise Emsg.ReadOnlyAttr(name, self)
 
     def __repr__(self):

@@ -18,10 +18,10 @@ if 'Imports' or True:
     #  - tools.abcs
     #  - tools.misc
 
-    from errors import instcheck, subclscheck
-    from tools import abstract, static, MapProxy
-    from tools.abcs import abcf, abcm, Abc
-    from tools.typing import F, T, P, Self, RT
+    from pytableaux.errors import instcheck, subclscheck
+    from pytableaux.tools import abstract, static, MapProxy
+    from pytableaux.tools.abcs import abcf, abcm, Abc
+    from pytableaux.tools.typing import F, T, P, Self, RT
 
     from collections import defaultdict
     from inspect import Signature

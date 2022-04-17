@@ -1,25 +1,22 @@
 from __future__ import annotations
 
-from errors import *
-from tools.abcs import MapProxy
-from tools.callables import calls, gets
-
-from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
-
-from proof.tableaux import (
-    Rule, TableauxSystem as TabSys, Tableau,
-    ClosingRule, RuleT
-)
-from proof.filters import Filters, NodeFilters
-from proof.helpers import AdzHelper, FilterHelper, MaxConsts
-from proof.common import Branch, Node, Target
-from proof.types import TabEvent, TabStatKey, TabFlag
-import examples
-
 import time
+
+from pytableaux import examples
+from pytableaux.errors import *
+from pytableaux.lexicals import Atomic, Constant, Predicated
+from pytableaux.logics.k import DefaultNodeRule as DefaultKRule
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.filters import Filters, NodeFilters
+from pytableaux.proof.helpers import FilterHelper, MaxConsts
+from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
+from pytableaux.proof.tableaux import TableauxSystem as TabSys
+from pytableaux.proof.types import TabEvent, TabFlag, TabStatKey
+from pytableaux.tools.abcs import MapProxy
+from pytableaux.tools.callables import gets
 from pytest import raises
 
-from .tutils import BaseSuite, using, skip
+from .tutils import BaseSuite, skip, using
 
 
 def mock_sleep_5ms():
@@ -386,9 +383,6 @@ class TestFilters(BaseSuite):
         f.rget = gets.key()
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
-
-
-from logics.k import DefaultNodeRule as DefaultKRule
 
 @using(logic = 'K')
 class Test_K_DefaultNodeFilterRule(BaseSuite):

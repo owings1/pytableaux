@@ -17,20 +17,20 @@
 # ------------------
 #
 # pytableaux - logics test cases
+from enum import Enum
 from pytest import raises
-from errors import *
-from logics import getlogic
-from tools.timing import StopWatch
-from lexicals import Predicate, Constant, Variable, Operator, Quantifier, \
+
+from .tutils import BaseSuite, larg, using, skip
+
+from pytableaux.errors import *
+from pytableaux.logics import getlogic
+from pytableaux.lexicals import Predicate, Constant, Variable, Quantifier, \
     Quantifier as Quant, Operator as Oper, \
     Sentence, Atomic, Predicated, Quantified, Operated, \
-    Predicates, Argument
-from proof.tableaux import Tableau, Rule
-from proof.common import Branch, Node
-from models import BaseModel
-from .tutils import BaseSuite, larg, using, skip
-from enum import Enum
-from logics import k as K, fde as FDE
+    Predicates
+from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof.common import Branch, Node
+
 Existential = Quantifier.Existential
 Universal = Quantifier.Universal
 Identity = Predicates.System.Identity
@@ -2055,7 +2055,7 @@ class TestD(BaseSuite):
         self.rule_eg('Serial')
 
     def test_rule_Serial_not_applies_to_branch_empty(self):
-        from logics import d as D
+        from pytableaux.logics import d as D
         tab = self.tab()
         rule = tab.rules.get(D.TabRules.Serial)
         assert not rule.target(tab.branch())

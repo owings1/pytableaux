@@ -29,20 +29,20 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_order = 1
 
-from tools import closure, static
-from tools.hybrids import qsetf
-from tools.sets import EMPTY_SET
+from pytableaux.tools import closure, static
+from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.sets import EMPTY_SET
 
-from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
+from pytableaux.lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
-from models import BaseModel, Mval
+from pytableaux.models import BaseModel, Mval
 
-from proof.common import Access
-from proof.tableaux import (
+from pytableaux.proof.common import Access
+from pytableaux.proof.tableaux import (
     TableauxSystem as BaseSystem,
     Tableau,
 )
-from proof.baserules import (
+from pytableaux.proof.baserules import (
     BaseClosureRule,
     BaseNodeRule,
     GetNodeTargetsRule,
@@ -53,14 +53,14 @@ from proof.baserules import (
     QuantifiedSentenceRule,
     group, adds,
 )
-from proof.common import Access, Branch, Node, Target
-from proof.filters import NodeFilters
-from proof.helpers import (
+from pytableaux.proof.common import Access, Branch, Node, Target
+from pytableaux.proof.filters import NodeFilters
+from pytableaux.proof.helpers import (
     NodesWorlds, AplSentCount,
     MaxWorlds, PredNodes, QuitFlag, AdzHelper,
     FilterHelper, NodeCount, WorldIndex,
 )
-from errors import DenotationError, ModelValueError, instcheck
+from pytableaux.errors import DenotationError, ModelValueError, instcheck
 
 
 Identity  = Predicates.System.Identity
@@ -111,7 +111,7 @@ class Model(BaseModel):
     @staticmethod
     @closure
     def truth_function(Value = Value):
-        from logics import fde as FDE
+        from pytableaux.logics import fde as FDE
         model = FDE.Model()
         model.Value = Value
         return model.truth_function

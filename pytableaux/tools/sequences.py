@@ -9,10 +9,10 @@ __all__ = (
     'deqseq',
 )
 
-from errors import Emsg, instcheck
-from tools import abstract
-from tools.abcs import Copyable, abcm, abcf
-from tools.typing import VT
+from pytableaux.errors import Emsg, instcheck
+from pytableaux.tools import abstract
+from pytableaux.tools.abcs import Copyable, abcm, abcf
+from pytableaux.tools.typing import VT
 
 from collections import deque
 from itertools import chain, repeat
@@ -152,7 +152,7 @@ class SequenceCover(SequenceApi[VT]):
         return self
 
     def __repr__(self):
-        from tools.misc import wraprepr
+        from pytableaux.tools.misc import wraprepr
         return wraprepr(self, list(self))  
 
     @classmethod

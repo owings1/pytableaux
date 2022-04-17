@@ -19,8 +19,8 @@ __all__ = (
     'group', 'adds'
 )
 
-from tools.abcs import abstract, overload, abcf, T
-from lexicals import (
+from pytableaux.tools.abcs import abstract, overload, abcf, T
+from pytableaux.lexicals import (
     Constant,
     Operated,
     Operator,
@@ -30,9 +30,9 @@ from lexicals import (
     Quantifier,
     Sentence,
 )
-from proof.common import Branch, Node, Target
-from proof.filters import NodeFilters
-from proof.helpers import (
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.filters import NodeFilters
+from pytableaux.proof.helpers import (
     AdzHelper,
     BranchTarget,
     FilterHelper,
@@ -42,7 +42,7 @@ from proof.helpers import (
     PredNodes,
     QuitFlag,
 )
-from proof.tableaux import ClosingRule, Rule
+from pytableaux.proof.tableaux import ClosingRule, Rule
 FIRST_CONST_SET = frozenset({Constant.first()})
 
 

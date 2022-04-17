@@ -2,24 +2,24 @@ from __future__ import annotations
 
 __all__ = 'Node', 'Branch', 'Target'
 
-from errors import instcheck as instcheck, Emsg
-from tools import closure, static
-from tools.callables import preds, cchain
-from tools.decorators import lazy, operd, raisr
-from tools.events import EventEmitter
-from tools.hybrids import qset
-from tools.mappings import (
+from pytableaux.errors import instcheck as instcheck, Emsg
+from pytableaux.tools import closure
+from pytableaux.tools.callables import preds, cchain
+from pytableaux.tools.decorators import lazy, operd, raisr
+from pytableaux.tools.events import EventEmitter
+from pytableaux.tools.hybrids import qset
+from pytableaux.tools.mappings import (
     dmap,
     dmapattr,
     ItemsIterator,
     MappingApi,
     MapCover
 ) 
-from tools.sequences import SequenceApi
-from tools.sets import EMPTY_SET, setf
-from lexicals import Constant, Sentence
+from pytableaux.tools.sequences import SequenceApi
+from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.lexicals import Constant, Sentence
 
-from proof.types import BranchEvent
+from pytableaux.proof.types import BranchEvent
 
 from collections.abc import Set
 from functools import partial
@@ -145,7 +145,7 @@ class Node(MappingApi):
         return dmap
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self, id = self.id, props = dict(self))
 
 class Access(NamedTuple):
@@ -499,7 +499,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         # return node in self.__nodeset
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self, 
             id     = self.id,
             nodes  = len(self),
@@ -569,7 +569,7 @@ class Target(dmapattr[str, Any]):
         return list(self._names())
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self, dict(ItemsIterator(self._names(), vget = self.get)))
 
     def _names(self, /, *, redcr = partial(cchain.reduce_filter, __slots__),

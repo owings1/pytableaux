@@ -27,8 +27,8 @@ __all__ = (
     'is_transparent_rule',
 )
 
-from proof.tableaux import ClosingRule, Rule, TableauxSystem as TabSys
-from logics import getlogic
+from pytableaux.proof.tableaux import ClosingRule, Rule, TableauxSystem as TabSys
+from pytableaux.logics import getlogic
 
 from inspect import getsource
 import re

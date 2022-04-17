@@ -33,12 +33,12 @@ class Meta:
         'first-order',
     )
 
-from logics import fde as FDE
-from models import Mval
-from proof.baserules import BaseClosureRule
-from proof.common import Branch, Node, Target
-from tools.hybrids import qsetf
-from tools.sets import setf
+from pytableaux.logics import fde as FDE
+from pytableaux.models import Mval
+from pytableaux.proof.baserules import BaseClosureRule
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.sets import setf
 
 class Model(FDE.Model):
     """A L{K3} model is like an {@FDE model} without the V{B} value."""
@@ -96,8 +96,8 @@ class TabRules:
 
         @staticmethod
         def example_nodes():
-            from lexicals import Atomic
-            from logics.fde import sdnode
+            from pytableaux.lexicals import Atomic
+            from pytableaux.logics.fde import sdnode
             a = Atomic.first()
             return sdnode(a, True), sdnode(~a, True)
 

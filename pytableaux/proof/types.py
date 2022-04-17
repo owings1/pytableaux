@@ -26,23 +26,23 @@ __all__ = (
     'TabEvent',
 )
 
-from errors import (
+from pytableaux.errors import (
     # Emsg,
     # instcheck,
     subclscheck,
 )
-from tools import abstract, closure, static, MapProxy
-from tools.abcs import (
+from pytableaux.tools import abstract, closure, static, MapProxy
+from pytableaux.tools.abcs import (
     AbcMeta, AbcEnum, FlagEnum,
     eauto,
     abcm,
 )
-from tools.decorators import membr
-from tools.hybrids import qsetf, EMPTY_QSET
-from tools.mappings import dmap
-from tools.sets import setf, EMPTY_SET
-from tools.timing import StopWatch
-from tools.typing import T, VT, TypeInstDict
+from pytableaux.tools.decorators import membr
+from pytableaux.tools.hybrids import qsetf, EMPTY_QSET
+from pytableaux.tools.mappings import dmap
+from pytableaux.tools.sets import setf, EMPTY_SET
+from pytableaux.tools.timing import StopWatch
+from pytableaux.tools.typing import T, VT, TypeInstDict
 
 from typing import (
     overload,
@@ -221,7 +221,7 @@ if 'Util Functions' or True:
 
     def demodalize_rules(Rules: Iterable[type]):
         'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from proof.filters import NodeFilters
+        from pytableaux.proof.filters import NodeFilters
         filtersattr = RuleAttr.NodeFilters
         rmfilters = {NodeFilters.Modal}
         for rulecls in Rules:

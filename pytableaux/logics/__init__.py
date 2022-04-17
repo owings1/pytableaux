@@ -19,9 +19,12 @@
 #
 # pytableaux - logics package
 from __future__ import annotations
+
+__all__ = 'getlogic',
+
 from importlib import import_module
 from types import ModuleType
-from tools import closure
+
 _lookup = {}
 
 def getlogic(ref) -> ModuleType:

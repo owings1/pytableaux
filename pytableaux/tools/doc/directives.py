@@ -39,13 +39,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-import examples
-import lexicals
-import logics
-import models
-import parsers
-from proof import tableaux, writers
-from tools.doc import BaseDirective, SphinxEvent, docparts, rstutils
+from pytableaux import examples
+from pytableaux import lexicals
+from pytableaux import logics
+from pytableaux import models
+from pytableaux import parsers
+from pytableaux.proof import tableaux, writers
+from pytableaux.tools.doc import BaseDirective, SphinxEvent, docparts, rstutils
 
 logger = logging.getLogger(__name__)
 

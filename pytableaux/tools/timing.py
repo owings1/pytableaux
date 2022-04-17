@@ -2,7 +2,7 @@ from __future__ import annotations
 
 __all__ = 'StopWatch', 'Counter'
 
-from errors import IllegalStateError
+from pytableaux.errors import IllegalStateError
 
 from time import time as _time
 from typing import Iterator, TypeVar
@@ -93,7 +93,7 @@ class StopWatch(TimingCommon):
         )
 
     def __repr__(self):
-        from tools.misc import wraprepr
+        from pytableaux.tools.misc import wraprepr
         return wraprepr(self, self.elapsed())
 
     def __float__(self):

@@ -21,15 +21,24 @@ from __future__ import annotations
 
 __all__ = ()
 
-from errors import RequestDataError, TimeoutError, errstr
-from tools.mappings import MapCover, MapProxy, dmap
-from logics import getlogic
-from tools.timing import StopWatch
-from tools.typing import KT, VT
+# print(f'__init__.py, __name__={__name__}, __package__={__package__}')
+# if __name__ == 'web' and __package__ == 'web':
+#     import os.path, sys
+#     addpath = os.path.abspath(
+#         os.path.join(os.path.dirname(__file__), '..', '..')
+#     )
+#     if addpath not in sys.path:
+#         sys.path.insert(1, addpath)
+#     del(os, sys, addpath)
 
-import examples, fixed
-import lexicals
-from lexicals import (
+from pytableaux.errors import RequestDataError, TimeoutError, errstr
+from pytableaux.tools.mappings import MapCover, MapProxy, dmap
+from pytableaux.logics import getlogic
+from pytableaux.tools.timing import StopWatch
+from pytableaux.tools.typing import KT, VT
+
+from pytableaux import examples, fixed, lexicals
+from pytableaux.lexicals import (
     Argument,
     LexType,
     LexWriter,
@@ -37,12 +46,12 @@ from lexicals import (
     Predicate,
     Predicates,
 )
-from parsers import ParseTable
-from proof.tableaux import Tableau
-from proof.writers import TabWriter
+from pytableaux.parsers import ParseTable
+from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof.writers import TabWriter
 
-from web.mailroom import Mailroom
-from web.conf import (
+from pytableaux.web.mailroom import Mailroom
+from pytableaux.web.conf import (
     APP_ENVCONF,
     APP_JENV,
     APP_LOGICS,

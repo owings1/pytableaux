@@ -28,10 +28,10 @@ class Meta:
     tags = ['bivalent', 'modal', 'first-order']
     category_order = 4
 
-from proof.common import Access, Branch, Node, Target
-from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from logics import k as K, t as T
-from logics.k import anode, adds, group
+from pytableaux.proof.common import Access, Branch, Node, Target
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.logics import k as K, t as T
+from pytableaux.logics.k import anode, adds, group
 from typing import Generator
 
 class Model(T.Model):

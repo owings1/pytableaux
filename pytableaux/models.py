@@ -2,13 +2,12 @@ from __future__ import annotations
 
 __all__ = 'BaseModel', 'Mval'
 
-from errors import instcheck, Emsg
-from tools import closure
-from tools.abcs import Abc, AbcEnum, MapProxy
-from tools.decorators import abstract
-from tools.hybrids import qsetf
-from tools.sets import setf
-from lexicals import (
+from pytableaux.errors import instcheck, Emsg
+from pytableaux.tools import closure
+from pytableaux.tools.abcs import Abc, AbcEnum
+from pytableaux.tools.decorators import abstract
+from pytableaux.tools.sets import setf
+from pytableaux.lexicals import (
     Argument,
     Atomic,
     LexType,
@@ -19,7 +18,7 @@ from lexicals import (
     Quantifier,
     Sentence,
 )
-from proof.common import Branch
+from pytableaux.proof.common import Branch
 
 from dataclasses import dataclass
 from itertools import (

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 __all__ = 'EventEmitter', 'EventsListeners',
 
-from errors import instcheck
-from tools.abcs import Abc, Copyable, abcf, F
-from tools.decorators import raisr, wraps
-from tools.linked import linqset
-from tools.mappings import (
+from pytableaux.errors import instcheck
+from pytableaux.tools.abcs import Abc, Copyable, abcf, F
+from pytableaux.tools.decorators import raisr, wraps
+from pytableaux.tools.linked import linqset
+from pytableaux.tools.mappings import (
     dmap #, ItemsIterator, MutableMappingApi
 )
 
@@ -71,7 +71,7 @@ class Listener(Callable, Abc):
         return hash(self.cb)
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self,
             event = self.event,
             once = self.once,
@@ -117,7 +117,7 @@ class Listeners(linqset[Listener]):
         return count
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self,
             event = self.event,
             listeners = len(self),
@@ -207,7 +207,7 @@ class EventsListeners(dmap[EventId, Listeners]):
     update = dmap._setitem_update
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self,
             events = len(self),
             listeners = sum(map(len, self.values())),

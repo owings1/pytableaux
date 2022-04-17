@@ -17,10 +17,16 @@
 # ------------------
 #
 # pytableaux - Web App SMTP Mailroom
-import re, smtplib, ssl, threading, time, traceback
+import re
+import smtplib
+import ssl
+import threading
+import time
+import traceback
 from collections import deque
-from web.conf import logger, REGEX_EMAIL
-from errors import ConfigError, IllegalStateError
+
+from pytableaux.errors import ConfigError, IllegalStateError
+from pytableaux.web.conf import REGEX_EMAIL, logger
 
 def is_valid_email(value):
     return re.fullmatch(REGEX_EMAIL, value)

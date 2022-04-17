@@ -23,8 +23,8 @@ if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
 def setup(app: Sphinx):
-    import tools.doc
-    tools.doc.app_setup(app)
+    from pytableaux.tools import doc
+    doc.app_setup(app)
 
 # Python domain:
 #    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain

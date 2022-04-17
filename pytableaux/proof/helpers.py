@@ -36,35 +36,35 @@ __all__ = (
     'MaxWorlds',
 
 )
-from errors import (
+from pytableaux.errors import (
     instcheck,
     subclscheck,
     Emsg,
 )
-from tools import abstract, static, MapProxy
-from tools.abcs import abcm
-from tools.callables import cchain
-from tools.decorators import wraps
-from tools.hybrids import qsetf, EMPTY_QSET
-from tools.mappings import dmap
-from tools.sets import EMPTY_SET, setm, setf
-from tools.typing import KT, VT, P, T, TypeInstDict
+from pytableaux.tools import abstract, static, MapProxy
+from pytableaux.tools.abcs import abcm
+from pytableaux.tools.callables import cchain
+from pytableaux.tools.decorators import wraps
+from pytableaux.tools.hybrids import qsetf, EMPTY_QSET
+from pytableaux.tools.mappings import dmap
+from pytableaux.tools.sets import EMPTY_SET, setm, setf
+from pytableaux.tools.typing import KT, VT, P, T, TypeInstDict
 
-from lexicals import Constant, Sentence, Predicated
-from models import BaseModel
-from proof.common import (
+from pytableaux.lexicals import Constant, Sentence, Predicated
+from pytableaux.models import BaseModel
+from pytableaux.proof.common import (
     Access,
     Branch,
     Node,
     Target,
 )
-from proof.filters import NodeFilter
-from proof.tableaux import (
+from pytableaux.proof.filters import NodeFilter
+from pytableaux.proof.tableaux import (
     ClosingRule,
     Rule,
     Tableau,
 )
-from proof.types import (
+from pytableaux.proof.types import (
     RuleAttr,
     RuleEvent,
     RuleHelper,
@@ -158,7 +158,7 @@ class BranchCache(dmap[Branch, T], RuleHelper):
         return id(self)
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self, self._reprdict())
 
     def _reprdict(self):

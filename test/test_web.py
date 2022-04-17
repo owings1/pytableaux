@@ -17,13 +17,13 @@
 # ------------------
 #
 # pytableaux - web server test cases
-import pytest
-
-import web
 import cherrypy
-import simplejson as json
 from cherrypy.test import helper
+import pytest
+import simplejson as json
 from urllib.parse import urlencode
+
+from pytableaux import web
 def test_instantiate():
     app = web.App()
 

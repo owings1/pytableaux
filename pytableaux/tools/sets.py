@@ -9,11 +9,11 @@ __all__ = (
     'EMPTY_SET',
 )
 
-from errors import instcheck
-from tools import abstract
-from tools.abcs import abcm, Copyable
-from tools.decorators import abstract, operd
-from tools.typing import VT
+from pytableaux.errors import instcheck
+from pytableaux.tools import abstract
+from pytableaux.tools.abcs import abcm, Copyable
+from pytableaux.tools.decorators import abstract, operd
+from pytableaux.tools.typing import VT
 from collections.abc import Set, MutableSet
 import operator as opr
 from typing import final, overload, Iterable, TypeVar

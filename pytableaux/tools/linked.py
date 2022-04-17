@@ -6,24 +6,24 @@ __all__ = (
     'linqset',
 )
 
-from errors import (
+from pytableaux.errors import (
     Emsg,
     instcheck,
 )
-from tools import abstract, static
-from tools.abcs import (
+from pytableaux.tools import abstract, static
+from pytableaux.tools.abcs import (
     abcm,
     Abc, Copyable, IntEnum,
 )
-from tools.hybrids import MutableSequenceSet
-from tools.sequences  import (
+from pytableaux.tools.hybrids import MutableSequenceSet
+from pytableaux.tools.sequences  import (
     absindex,
     slicerange,
     SequenceApi,
     MutableSequenceApi,
 )
-from tools.sets import EMPTY_SET
-from tools.typing import VT
+from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools.typing import VT
 
 from itertools import filterfalse
 from typing import (

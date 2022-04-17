@@ -5,20 +5,20 @@ __all__ = (
     'NodeFilter',
     'NodeFilters',
 )
-from tools import abstract, static
-from tools.abcs import Abc
-from tools.callables import Caller, gets
-from tools.sets import EMPTY_SET
-from tools.typing import LHS, RHS
+from pytableaux.tools import abstract, static
+from pytableaux.tools.abcs import Abc
+from pytableaux.tools.callables import Caller, gets
+from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools.typing import LHS, RHS
 
-from lexicals import (
+from pytableaux.lexicals import (
     Operator,
     Operated,
     Predicated,
     Quantified,
     Sentence,
 )
-from proof.common import Access, Node
+from pytableaux.proof.common import Access, Node
 
 import operator as opr
 from typing import (
@@ -38,7 +38,7 @@ class Comparer(Generic[LHS, RHS], Abc):
         self.lhs = lhs
 
     def __repr__(self):
-        from tools.misc import orepr
+        from pytableaux.tools.misc import orepr
         return orepr(self, lhs = self._lhsrepr(self.lhs))
 
     def _lhsrepr(self, lhs) -> str:

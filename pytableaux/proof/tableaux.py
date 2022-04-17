@@ -27,33 +27,33 @@ __all__ = (
 )
 
 if 'Imports' or True:
-    from errors import Emsg, instcheck, subclscheck
-    from tools import abstract, closure, static
-    from tools.abcs import Abc
-    from tools.callables import preds
-    from tools.decorators import raisr, wraps
-    from tools.events import EventEmitter
-    from tools.hybrids import qset, qsetf, EMPTY_QSET
-    from tools.linked import linqset
-    from tools.mappings import dmap, dmapattr, MapCover, MapProxy
-    from tools.misc import orepr
-    from tools.sequences import (
+    from pytableaux.errors import Emsg, instcheck, subclscheck
+    from pytableaux.tools import abstract, closure, static
+    from pytableaux.tools.abcs import Abc
+    from pytableaux.tools.callables import preds
+    from pytableaux.tools.decorators import raisr, wraps
+    from pytableaux.tools.events import EventEmitter
+    from pytableaux.tools.hybrids import qset, qsetf, EMPTY_QSET
+    from pytableaux.tools.linked import linqset
+    from pytableaux.tools.mappings import dmap, dmapattr, MapCover, MapProxy
+    from pytableaux.tools.misc import orepr
+    from pytableaux.tools.sequences import (
         absindex,
         SequenceApi,
         SequenceCover,
         seqf,
         seqm,
     )
-    from tools.sets import setf, EMPTY_SET
-    from tools.timing import StopWatch
-    from tools.typing import T, F, TypeInstDict
+    from pytableaux.tools.sets import setf, EMPTY_SET
+    from pytableaux.tools.timing import StopWatch
+    from pytableaux.tools.typing import T, F, TypeInstDict
 
-    from lexicals import Argument, Sentence
-    from logics import getlogic
-    from models import BaseModel
+    from pytableaux.lexicals import Argument, Sentence
+    from pytableaux.logics import getlogic
+    from pytableaux.models import BaseModel
 
-    from proof.common import Branch, Node, Target
-    from proof.types import (
+    from pytableaux.proof.common import Branch, Node, Target
+    from pytableaux.proof.types import (
         BranchEvent,
         NodeStat,
         RuleEvent,

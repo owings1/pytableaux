@@ -36,8 +36,8 @@ if TYPE_CHECKING:
     import sphinx.config
     from sphinx.util.typing import RoleFunction
 
-from tools import abstract, closure, MapProxy
-from tools.typing import T
+from pytableaux.tools import abstract, closure, MapProxy
+from pytableaux.tools.typing import T
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ def app_setup():
 
         app.add_config_value(PT_CONFKEY, {}, 'env', [dict])
 
-        from tools.doc import directives, processors, roles
+        from pytableaux.tools.doc import directives, processors, roles
         directives.setup(app)
         processors.setup(app)
         roles.setup(app)
@@ -151,8 +151,8 @@ class Helper:
     def reconfigure(self, opts: dict):
 
         import jinja2
-        import lexicals
-        import proof.writers
+        from pytableaux import lexicals
+        from pytableaux.proof import writers
 
         self.opts = opts = dict(self.defaults) | opts
 
@@ -181,7 +181,7 @@ class Helper:
                 )
             ))
 
-        self.pwtrunk = proof.writers.TabWriter('html',
+        self.pwtrunk = writers.TabWriter('html',
             lw = lexicals.LexWriter(wnotn, renderset = rstrunk),
             classes = ('example', 'build-trunk'),
         )

@@ -40,19 +40,19 @@ __all__ = (
     'Variable',
 )
 
-from errors import Emsg, instcheck
-from tools import abstract, closure, static
-import tools.abcs as abcs
-from tools.abcs import abcm, abcf, eauto
-from tools.callables import gets
-from tools.decorators import (
+from pytableaux.errors import Emsg, instcheck
+from pytableaux.tools import abstract, closure, static
+import pytableaux.tools.abcs as abcs
+from pytableaux.tools.abcs import abcm, abcf, eauto
+from pytableaux.tools.callables import gets
+from pytableaux.tools.decorators import (
     fixed, lazy, membr, raisr, wraps, NoSetAttr
 )
-from tools.hybrids   import qsetf, qset
-from tools.mappings  import dmap, ItemsIterator, MapCover, MapProxy
-from tools.sequences import SequenceApi, seqf, EMPTY_SEQ
-from tools.sets      import setf, setm, EMPTY_SET
-from tools.typing    import IndexType, T
+from pytableaux.tools.hybrids   import qsetf, qset
+from pytableaux.tools.mappings  import dmap, ItemsIterator, MapCover, MapProxy
+from pytableaux.tools.sequences import SequenceApi, seqf, EMPTY_SEQ
+from pytableaux.tools.sets      import setf, setm, EMPTY_SET
+from pytableaux.tools.typing    import IndexType, T
 
 from collections.abc import Set
 import enum as _enum
@@ -94,8 +94,8 @@ if 'Types' or True:
     LexItT = TypeVar('LexItT', bound = 'Bases.LexicalItem')
     SenT   = TypeVar('SenT',   bound = 'Sentence')
 
-    from tools.abcs     import EnumDictType
-    from tools.mappings import DequeCache as ItemCacheType
+    from pytableaux.tools.abcs     import EnumDictType
+    from pytableaux.tools.mappings import DequeCache as ItemCacheType
 
     class BiCoords(NamedTuple):
         index     : int
@@ -257,7 +257,7 @@ if 'Metas' or True:
                 try:
                     parsercls = notn.Parser
                 except AttributeError:
-                    import parsers
+                    import pytableaux.parsers
                     parsercls = notn.Parser
                 return parsercls(*args, **kw)
             return super().__call__(*args, **kw)
@@ -2168,7 +2168,7 @@ class RenderSet(Bases.CacheNotationData):
 
 @closure
 def _():
-    from tools.misc import dmerged, dtransform
+    from pytableaux.tools.misc import dmerged, dtransform
     from html import unescape as html_unescape
 
     def dunesc(d: dict, inplace = False) -> None:
