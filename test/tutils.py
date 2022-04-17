@@ -8,8 +8,9 @@ __all__ = (
 )
 from tools.abcs import abcm
 from tools.hybrids import qset
-from logics import drepr, getlogic
-from tools.typing import F, TT, T, VT
+from tools.misc import drepr
+from logics import getlogic
+from tools.typing import F, TT, T
 from lexicals import (
     Argument, Predicates, Sentence, LexWriter, Notation
 )

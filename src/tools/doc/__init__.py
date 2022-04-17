@@ -191,6 +191,7 @@ class Helper:
         return self.jenv.get_template(template).render(*args, **kw)
 
 class SphinxEvent(str, enum.Enum):
+    'Custom Sphinx event names.'
 
     IncludeRead = 'include-read'
 

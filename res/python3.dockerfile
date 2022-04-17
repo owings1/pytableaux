@@ -8,7 +8,7 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/app/.loca
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup -h /app
 
 # Required packages
-RUN apk add --no-cache --update python3 curl py3-pip python3-dev build-base 
+RUN apk add --no-cache --update bash python3 curl py3-pip python3-dev build-base 
 
 USER appuser
 RUN pip3 install --upgrade pip && \
@@ -23,4 +23,5 @@ RUN cd doc && make clean html
 
 HEALTHCHECK CMD ["curl", "--fail", "-I", "http://localhost:8080"]
 
-CMD ["python3", "src/web.py"]
+CMD ["bash", "scripts/start.sh"]
+# CMD ["python3", "src/web.py"]

@@ -41,8 +41,8 @@ from parsers import ParseTable
 from proof.tableaux import Tableau
 from proof.writers import TabWriter
 
-from www.mailroom import Mailroom
-from www.conf import (
+from web.mailroom import Mailroom
+from web.conf import (
     APP_ENVCONF,
     APP_JENV,
     APP_LOGICS,

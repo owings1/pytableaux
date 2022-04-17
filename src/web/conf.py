@@ -56,14 +56,14 @@ def _app_path(*args,
     return os.path.join(_appdir, *args)
 
 def _static_path(*args):
-    return _app_path('www/static', *args)
+    return _app_path('web/static', *args)
 
 _PATHS = dict(
     favicon_file   = _static_path('img/favicon-60x60.png'),
     robotstxt_file = _static_path('robots.txt'),
     static_dir     = _static_path(),
     doc_static_dir = _app_path('..', 'doc/_build/html'),
-    view_path      = _app_path('www/views'),
+    view_path      = _app_path('web/views'),
 )
 
 # Enabled logics.
