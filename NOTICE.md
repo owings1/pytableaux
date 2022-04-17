@@ -46,17 +46,18 @@
 -------------------------------------------------------------------------------
 -->
 
-| Component             | Version                | License          |
-|:----------------------|----------------------- | -----------------|
-| [charmonman font](#7aa0) | [8590fc4a][7aa0-tre] | [OFL 1.1][7aa0-lic] |
-| [jquery      ](#8fb8) | [ 3.6.0    ][8fb8-tre] | [MIT][8fb8-lic]  |
-| [jquery-ui   ](#4e0f) | [ 1.12.1   ][4e0f-tre] | [MIT][4e0f-lic]  |
-| [json-viewer ](#2cdb) | [ 2cdbde04 ][2cdb-tre] | [MIT][2cdb-lic]  |
+| Component                | Version                | License             |
+|:-------------------------|------------------------|---------------------|
+| [charmonman font](#7aa0) | [ 8590fc4a ][7aa0-tre] | [OFL 1.1][7aa0-lic] |
+| [jquery      ](#8fb8)    | [ 3.6.0    ][8fb8-tre] | [MIT    ][8fb8-lic] |
+| [jquery-ui   ](#4e0f)    | [ 1.12.1   ][4e0f-tre] | [MIT    ][4e0f-lic] |
+| [json-viewer ](#2cdb)    | [ 2cdbde04 ][2cdb-tre] | [MIT    ][2cdb-lic] |
 <!--
 | [ ](#)  | [  ][-tre] | [MIT][-lic]  |
 | [ ](#)  | [  ][-tre] | [MIT][-lic]  |
 | [ ](#)  | [  ][-tre] | [MIT][-lic]  |
 -->
+
 -------------------------------------------------------------------------------
 
 <a name="#7aa0"></a>
