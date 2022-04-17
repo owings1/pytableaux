@@ -32,14 +32,15 @@ or later is required.
     1. Download the source, for example::
 
         git clone https://github.com/owings1/pytableaux
+        cd pytableaux
     
     2. Install dependencies::
 
-        pip install future jinja2 cherrypy prometheus_client simplejson
+        python3 -m pip install --upgrade future jinja2 cherrypy prometheus_client simplejson
 
     3. Launch the web interface, for example::
 
-        python src/web.py
+        python3 -m pytableaux.web
 
     4. Then access http://localhost:8080
 
@@ -48,9 +49,9 @@ Quick Start
 
 The following is an example for building a proof in {@CPL} for Modus Ponens::
 
-    from parsers import Parser
-    from proof.tableaux import Tableau
-    from proof.writers import TabWriter
+    from pytableaux.parsers import Parser
+    from pytableaux.proof.tableaux import Tableau
+    from pytableaux.proof.writers import TabWriter
 
     # Create an argument
     argument = Parser('polish').argument('b', ('Uab', 'a'))

@@ -9,14 +9,14 @@ Universal (:s:`L`) and Existential (:s:`X`).
 
 .. contents:: :local:
 
-.. automodule:: logics.cfol
+.. automodule:: pytableaux.logics.cfol
 
     Semantics
     =========
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.cfol::Model.Value()
+        .. autoclass:: pytableaux.logics.cfol::Model.Value()
             :members: F, T
             :undoc-members:
             :noindex:

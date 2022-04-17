@@ -8,14 +8,14 @@ Gödel 3-valued logic (V{T}, V{F}, and V{N}) with classical-like negation.
 
 .. contents:: :local:
 
-.. automodule:: logics.g3
+.. automodule:: pytableaux.logics.g3
 
     Semantics
     =========
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.g3::Model.Value()
+        .. autoclass:: pytableaux.logics.g3::Model.Value()
             :members: F, N, T
             :undoc-members:
             :noindex:

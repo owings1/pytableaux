@@ -27,7 +27,7 @@
 
   #### Paths
 
-  - [/src/]()
+  - [/pytableaux/]()
 
   </details>
 
@@ -81,7 +81,7 @@
 
   #### Paths
 
-  - [/src/web/static/js/jquery-3.6.0.min.js](/src/web/static/js/jquery-3.6.0.min.js)
+  - [/pytableaux/web/static/js/jquery-3.6.0.min.js](/pytableaux/web/static/js/jquery-3.6.0.min.js)
 
   </details>
 
@@ -141,9 +141,9 @@
 
   #### Paths
 
-  - [/src/web/static/js/jquery-ui.min.js](/src/web/static/js/jquery-ui.min.js)
-  - [/src/web/static/ui-base](/src/web/static/ui-base)
-  - [/src/web/static/ui-controls](/src/web/static/ui-controls)
+  - [/pytableaux/web/static/js/jquery-ui.min.js](/pytableaux/web/static/js/jquery-ui.min.js)
+  - [/pytableaux/web/static/ui-base](/pytableaux/web/static/ui-base)
+  - [/pytableaux/web/static/ui-controls](/pytableaux/web/static/ui-controls)
 
   </details>
 
@@ -203,7 +203,7 @@
 
   #### Paths
 
-  - [/src/web/static/json-viewer](/src/web/static/json-viewer)
+  - [/pytableaux/web/static/json-viewer](/pytableaux/web/static/json-viewer)
 
   #### Modifications
 

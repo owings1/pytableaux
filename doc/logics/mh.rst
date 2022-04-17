@@ -6,14 +6,14 @@ MH - Paracomplete Hybrid Logic
 
 .. contents:: :local:
 
-.. automodule:: logics.mh
+.. automodule:: pytableaux.logics.mh
 
     Semantics
     =========
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.mh::Model.Value()
+        .. autoclass:: pytableaux.logics.mh::Model.Value()
             :members: F, N, T
             :undoc-members:
 

@@ -24,4 +24,3 @@ RUN cd doc && make clean html
 HEALTHCHECK CMD ["curl", "--fail", "-I", "http://localhost:8080"]
 
 CMD ["bash", "scripts/start.sh"]
-# CMD ["python3", "src/web.py"]

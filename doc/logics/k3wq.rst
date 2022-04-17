@@ -10,7 +10,7 @@ rules for the quantifiers, given the behavior of those operators in {@K3W}.
 
 .. contents:: :local:
 
-.. automodule:: logics.k3wq
+.. automodule:: pytableaux.logics.k3wq
 
     Semantics
     =========
@@ -19,7 +19,7 @@ rules for the quantifiers, given the behavior of those operators in {@K3W}.
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.k3wq::Model.Value()
+        .. autoclass:: pytableaux.logics.k3wq::Model.Value()
             :members: F, N, T
             :undoc-members:
 

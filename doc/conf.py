@@ -77,27 +77,18 @@ html_show_sphinx = False
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
 html_static_path = [
     '_static',
     '../pytableaux/proof/templates/html/static',
     # 'res',
-    # '../src/www/static',
+    # '../pytableaux/www/static',
 ]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = [
     '_build',
-    # '*.jinja2',
     '**/include/*',
-    # 'css/fonts/**',
-    # '**/*.js',
-    # 'css/proof.*.css',
-    # # 'jquery-ui',
-    # 'css/app.*.css',
-    # 'ui-base',
-    # 'ui-controls',
 ]
 
 
@@ -121,9 +112,6 @@ pt_options = dict(
     wnotn = 'standard',
     truth_table_template = 'truth_table.jinja2',
     truth_table_reverse = True,
-    template_dir = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), 'templates')
-    )
 )
 
 if html_theme == 'sphinx_rtd_theme':

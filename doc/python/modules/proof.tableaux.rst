@@ -6,7 +6,7 @@ Tableaux Module
 
 .. contents:: :local:
 
-.. automodule:: proof.tableaux
+.. automodule:: pytableaux.proof.tableaux
 
     .. autoclass:: Tableau
 

@@ -8,14 +8,14 @@ Normal modal logic with reflexive and transitive access relation.
 
 .. contents:: :local:
 
-.. automodule:: logics.s4
+.. automodule:: pytableaux.logics.s4
 
     Semantics
     =========
 
     An S4 model uses :ref:`K Frames <k-frame>` to hold information about each world.
 
-    .. autoclass:: logics.k.Frame
+    .. autoclass:: pytableaux.logics.k.Frame
         :noindex:
 
         .. autoattribute:: world
@@ -31,7 +31,7 @@ Normal modal logic with reflexive and transitive access relation.
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.s4::Model.Value()
+        .. autoclass:: pytableaux.logics.s4::Model.Value()
             :members: F, T
             :undoc-members:
 

@@ -6,7 +6,7 @@ Lexicals Module
 
 .. contents:: :local:
 
-.. automodule:: lexicals
+.. automodule:: pytableaux.lexicals
 
     Parsing & Writing
     =================

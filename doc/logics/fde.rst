@@ -9,7 +9,7 @@ L{FDE} - First Degree Entailment
 
 ------------------------
 
-.. automodule:: logics.fde
+.. automodule:: pytableaux.logics.fde
 
     .. _fde-semantics:
 
@@ -36,7 +36,7 @@ L{FDE} - First Degree Entailment
 
     .. autoclass:: Model
 
-      .. autoclass:: logics.fde::Model.Value()
+      .. autoclass:: pytableaux.logics.fde::Model.Value()
           :members: F, N, B, T
           :undoc-members:
 

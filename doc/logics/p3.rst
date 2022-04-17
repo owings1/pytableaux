@@ -22,7 +22,7 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
 
     <div style="clear:both"></div>
 
-.. automodule:: logics.p3
+.. automodule:: pytableaux.logics.p3
 
     Semantics
     =========
@@ -31,7 +31,7 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.p3::Model.Value()
+        .. autoclass:: pytableaux.logics.p3::Model.Value()
             :members: F, N, T
             :undoc-members:
 

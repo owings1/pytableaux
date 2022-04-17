@@ -9,7 +9,7 @@ L{LP} is a 3-valued logic (V{T}, V{F}, and V{B}). It can be understood as
 
 .. contents:: :local:
 
-.. automodule:: logics.lp
+.. automodule:: pytableaux.logics.lp
 
     Semantics
     =========
@@ -21,7 +21,7 @@ L{LP} is a 3-valued logic (V{T}, V{F}, and V{B}). It can be understood as
 
     .. autoclass:: Model
 
-      .. autoclass:: logics.lp::Model.Value()
+      .. autoclass:: pytableaux.logics.lp::Model.Value()
           :members: F, B, T
           :undoc-members:
 

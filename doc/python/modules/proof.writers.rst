@@ -6,6 +6,6 @@ Proof Writers Module
 
 .. contents:: :local:
 
-.. automodule:: proof.writers
+.. automodule:: pytableaux.proof.writers
 
     .. autoclass:: TabWriter

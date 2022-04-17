@@ -9,7 +9,7 @@ L{K3} - Strong Kleene Logic
 L{K3} is a three-valued logic (V{T}, V{F}, and V{N}). It can be understood
 as {@FDE} without the V{B} value.
 
-.. automodule:: logics.k3
+.. automodule:: pytableaux.logics.k3
 
     Semantics
     =========
@@ -18,7 +18,7 @@ as {@FDE} without the V{B} value.
 
     .. autoclass:: Model
 
-      .. autoclass:: logics.k3::Model.Value()
+      .. autoclass:: pytableaux.logics.k3::Model.Value()
           :members: F, N, T
           :undoc-members:
 

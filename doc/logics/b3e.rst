@@ -10,7 +10,7 @@ always results in a classical value (V{T} or V{F}).
 
 .. contents:: :local:
 
-.. automodule:: logics.b3e
+.. automodule:: pytableaux.logics.b3e
 
     Semantics
     =========
@@ -19,7 +19,7 @@ always results in a classical value (V{T} or V{F}).
 
     .. autoclass:: Model
 
-      .. autoclass:: logics.b3e::Model.Value()
+      .. autoclass:: pytableaux.logics.b3e::Model.Value()
           :members: F, N, T
           :undoc-members:
           :noindex:

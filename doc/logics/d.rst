@@ -10,14 +10,14 @@ a world *w'* such that *w* accesses *w'*.
 
 .. contents:: :local:
 
-.. automodule:: logics.d
+.. automodule:: pytableaux.logics.d
 
     Semantics
     =========
 
     A D model uses :ref:`K Frames <k-frame>` to hold information about each world.
 
-    .. autoclass:: logics.k.Frame
+    .. autoclass:: pytableaux.logics.k.Frame
         :noindex:
 
         .. autoattribute:: world
@@ -31,7 +31,7 @@ a world *w'* such that *w* accesses *w'*.
 
     .. class:: Model
 
-        .. autoclass:: logics.d::Model.Value()
+        .. autoclass:: pytableaux.logics.d::Model.Value()
             :members: F, T
             :undoc-members:
 

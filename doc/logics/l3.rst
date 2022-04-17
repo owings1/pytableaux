@@ -10,7 +10,7 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
 .. contents:: :local:
 
-.. automodule:: logics.l3
+.. automodule:: pytableaux.logics.l3
 
     Semantics
     =========
@@ -19,7 +19,7 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.l3::Model.Value()
+        .. autoclass:: pytableaux.logics.l3::Model.Value()
             :members: F, N, T
             :undoc-members:
 

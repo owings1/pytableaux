@@ -6,5 +6,5 @@ Errors Module
 
 .. contents:: :local:
 
-.. automodule:: errors
+.. automodule:: pytableaux.errors
     :members:

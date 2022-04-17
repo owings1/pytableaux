@@ -6,7 +6,7 @@ Parsers Module
 
 .. contents:: :local:
 
-.. automodule:: parsers
+.. automodule:: pytableaux.parsers
 
     .. autoclass:: BaseParser
 

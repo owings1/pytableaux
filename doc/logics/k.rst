@@ -9,7 +9,7 @@ of :ref:`CFOL <CFOL>`, adding the modal operators for possibility and necessity.
 
 .. contents:: :local:
 
-.. automodule:: logics.k
+.. automodule:: pytableaux.logics.k
 
     Semantics
     =========
@@ -32,7 +32,7 @@ of :ref:`CFOL <CFOL>`, adding the modal operators for possibility and necessity.
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.k::Model.Value()
+        .. autoclass:: pytableaux.logics.k::Model.Value()
             :members: F, T
             :undoc-members:
 

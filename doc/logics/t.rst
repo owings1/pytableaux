@@ -10,14 +10,14 @@ accessibility relation, which states that for every world *w*,
 
 .. contents:: :local:
 
-.. automodule:: logics.t
+.. automodule:: pytableaux.logics.t
 
     Semantics
     =========
 
     A T model uses :ref:`K Frames <k-frame>` to hold information about each world.
 
-    .. autoclass:: logics.k.Frame
+    .. autoclass:: pytableaux.logics.k.Frame
         :noindex:
 
         .. autoattribute:: world
@@ -31,7 +31,7 @@ accessibility relation, which states that for every world *w*,
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.t::Model.Value()
+        .. autoclass:: pytableaux.logics.t::Model.Value()
             :members: F, T
             :undoc-members:
 

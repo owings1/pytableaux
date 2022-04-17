@@ -6,7 +6,7 @@ Proof Common Module
 
 .. contents:: :local:
 
-.. automodule:: proof.common
+.. automodule:: pytableaux.proof.common
 
     .. autoclass:: Branch
 

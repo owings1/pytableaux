@@ -10,7 +10,7 @@ respectively.
 
 .. contents:: :local:
 
-.. automodule:: logics.cpl
+.. automodule:: pytableaux.logics.cpl
 
     Semantics
     =========
@@ -19,7 +19,7 @@ respectively.
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.cpl::Model.Value()
+        .. autoclass:: pytableaux.logics.cpl::Model.Value()
             :members: F, T
             :undoc-members:
             :noindex:

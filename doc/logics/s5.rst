@@ -8,14 +8,14 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
 
 .. contents:: :local:
 
-.. automodule:: logics.s5
+.. automodule:: pytableaux.logics.s5
 
     Semantics
     =========
 
     An S5 model uses :ref:`K Frames <k-frame>` to hold information about each world.
 
-    .. autoclass:: logics.k.Frame
+    .. autoclass:: pytableaux.logics.k.Frame
         :noindex:
 
         .. autoattribute:: world
@@ -29,7 +29,7 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.s5::Model.Value()
+        .. autoclass:: pytableaux.logics.s5::Model.Value()
             :members: F, T
             :undoc-members:
 

@@ -6,14 +6,14 @@ NH - Paraconsistent Hybrid Logic
 
 .. contents:: :local:
 
-.. automodule:: logics.nh
+.. automodule:: pytableaux.logics.nh
 
     Semantics
     =========
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.nh::Model.Value()
+        .. autoclass:: pytableaux.logics.nh::Model.Value()
             :members: F, B, T
             :undoc-members:
 

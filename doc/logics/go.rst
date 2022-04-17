@@ -9,14 +9,14 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 
 .. contents:: :local:
 
-.. automodule:: logics.go
+.. automodule:: pytableaux.logics.go
 
     Semantics
     =========
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.go::Model.Value()
+        .. autoclass:: pytableaux.logics.go::Model.Value()
             :members: F, N, T
             :undoc-members:
 

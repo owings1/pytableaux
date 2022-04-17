@@ -9,7 +9,7 @@ It is similar to {@LP}, with a different conditional operator.
 
 .. contents:: :local:
 
-.. automodule:: logics.rm3
+.. automodule:: pytableaux.logics.rm3
 
     Semantics
     =========
@@ -18,7 +18,7 @@ It is similar to {@LP}, with a different conditional operator.
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.rm3::Model.Value()
+        .. autoclass:: pytableaux.logics.rm3::Model.Value()
             :members: F, B, T
             :undoc-members:
 

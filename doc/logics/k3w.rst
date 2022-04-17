@@ -15,7 +15,7 @@ these values is:
 
 .. contents:: :local:
 
-.. automodule:: logics.k3w
+.. automodule:: pytableaux.logics.k3w
 
     Semantics
     =========
@@ -24,7 +24,7 @@ these values is:
 
     .. autoclass:: Model
 
-        .. autoclass:: logics.k3w::Model.Value()
+        .. autoclass:: pytableaux.logics.k3w::Model.Value()
             :members: F, N, T
             :undoc-members:
 
