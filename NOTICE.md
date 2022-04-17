@@ -81,7 +81,7 @@
 
   #### Paths
 
-  - [/src/www/static/js/jquery-3.6.0.min.js](/src/www/static/js/jquery-3.6.0.min.js)
+  - [/src/web/static/js/jquery-3.6.0.min.js](/src/web/static/js/jquery-3.6.0.min.js)
 
   </details>
 
@@ -141,9 +141,9 @@
 
   #### Paths
 
-  - [/src/www/static/js/jquery-ui.min.js](/src/www/static/js/jquery-ui.min.js)
-  - [/src/www/static/ui-base](/src/www/static/ui-base)
-  - [/src/www/static/ui-controls](/src/www/static/ui-controls)
+  - [/src/web/static/js/jquery-ui.min.js](/src/web/static/js/jquery-ui.min.js)
+  - [/src/web/static/ui-base](/src/web/static/ui-base)
+  - [/src/web/static/ui-controls](/src/web/static/ui-controls)
 
   </details>
 
@@ -203,7 +203,7 @@
 
   #### Paths
 
-  - [/src/www/static/json-viewer](/src/www/static/json-viewer)
+  - [/src/web/static/json-viewer](/src/web/static/json-viewer)
 
   #### Modifications
 
