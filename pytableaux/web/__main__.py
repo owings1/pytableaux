@@ -24,8 +24,6 @@ from __future__ import annotations
 
 __all__ = ()
 
-# import prometheus_client as prom
-# import cherrypy as chpy
 import os.path
 import sys
 
@@ -33,16 +31,6 @@ def start():
 
     from pytableaux.web.application import WebApp
     WebApp().start()
-
-    # metrics_port = web.APP_ENVCONF['metrics_port']
-
-    # web.mailroom.start()
-
-    # web.logger.info(f'Starting metrics on port {metrics_port}')
-    # prom.start_http_server(metrics_port)
-
-    # chpy.config.update(web.cp_global_config)
-    # chpy.quickstart(web.App(), '/', web.cp_config)
 
 if  __name__ == '__main__':
 

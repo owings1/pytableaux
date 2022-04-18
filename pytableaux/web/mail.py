@@ -16,13 +16,15 @@
 from __future__ import annotations
 
 """
-    pytableaux.web.mailroom
+    pytableaux.web.mail
     --------------------------
 
 """
 
 __all__ = ('Mailroom',)
 
+import smtplib
+import ssl
 import threading
 import time
 from collections import deque
@@ -34,8 +36,6 @@ from pytableaux.tools.mappings import MapCover
 
 if TYPE_CHECKING:
     import logging
-    import smtplib
-    import ssl
 
 class Mailroom:
 
@@ -47,9 +47,6 @@ class Mailroom:
 
     loaded: bool
     "Whether the config has been loaded, include TLS, etc.."
-
-    started: bool
-    "Whether the background thread is running."
 
     should_stop: bool
     "Flag to signal background thread to exit."
@@ -77,7 +74,6 @@ class Mailroom:
         self.failqueue = deque()
 
         self.loaded = False
-        self.started = False
         self.should_stop = False
         self.last_was_success = True
 
@@ -115,8 +111,8 @@ class Mailroom:
 
     def start(self):
         "Start the mailroom background thread."
-        if self.started:
-            raise IllegalStateError("Background thread already started")
+        if self.running:
+            raise IllegalStateError("Background thread already running")
         if not self.loaded:
             self._load()
         if not self.enabled:
@@ -125,6 +121,15 @@ class Mailroom:
         self._thread = threading.Thread(target = self._loop)
         self._thread.daemon = True
         self._thread.start()
+
+    def stop(self, timeout: float = None):
+        if not self.running:
+            raise IllegalStateError("Background thread not running")
+        self.should_stop = True
+        self._thread.join(timeout = timeout)
+        if timeout is not None and self.running:
+            raise RuntimeError('Failed to stop background thread')
+        self.logger.info('Background thread stopped')
 
     def enqueue(self, from_addr: str, to_addrs: Sequence[str], msg: str):
         "Add a message to the queue."
@@ -138,8 +143,8 @@ class Mailroom:
             if not web.is_valid_email(addr):
                 raise ValueError(f"Invalid to_addr: {addr}")
         instcheck(msg, str)
-        if not self.started:
-            self.logger.warn("Background thread not started, enqueuing anyway")
+        if not self.running:
+            self.logger.warn("Background thread not running, enqueuing anyway")
         job = dict(from_addr = from_addr, to_addrs = to_addrs, msg = msg)
         self.queue.append(job)
 
@@ -156,7 +161,6 @@ class Mailroom:
         self.loaded = True
 
     def _load_tlsconfig(self):
-        import ssl
         config = self.config
         logger = self.logger
         self.tlscontext = ssl.SSLContext()
@@ -170,12 +174,11 @@ class Mailroom:
 
     def _loop(self):
 
-        if self.started:
+        if self.running:
             raise IllegalStateError('Background thread already running')
         if not self.enabled:
             raise ConfigError('SMTP not configured, cannot start thread.')
 
-        self.started = True
         logger = self.logger
         config = self.config
 
@@ -187,7 +190,6 @@ class Mailroom:
                     logger.warn(self._dump_queue())
                 except Exception as e:
                     logger.error(e)
-            self.started = False
 
         def requeue():
             "Put all failed messages back in the queue."
@@ -295,7 +297,6 @@ class Mailroom:
             self.last_was_success = False
 
     def _connect(self) -> smtplib.SMTP:
-        import smtplib
         config = self.config
         logger = self.logger
         host = config['smtp_host']

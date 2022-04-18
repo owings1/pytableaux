@@ -43,7 +43,7 @@ from pytableaux.tools.decorators import wraps
 from pytableaux.tools.mappings import MapCover, MapProxy, dmap
 from pytableaux.tools.timing import StopWatch
 from pytableaux.tools.typing import T
-from pytableaux.web.mailroom import Mailroom
+from pytableaux.web.mail import Mailroom
 
 if TYPE_CHECKING:
     from cherrypy._cprequest import Request, Response

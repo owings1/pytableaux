@@ -55,7 +55,8 @@ Bivalent Modal
 Python **3.10.1** or later is required.
 
 ```bash
-pip3 install future jinja2 cherrypy prometheus_client simplejson
+python3 -m pip install --upgrade \
+    future jinja2 cherrypy prometheus_client simplejson
 ```
 
 For system-level dependencies, refer to [res/python3.dockerfile][dockerfile].
@@ -65,7 +66,8 @@ For system-level dependencies, refer to [res/python3.dockerfile][dockerfile].
 Test dependencies:
 
 ```bash
-pip3 install pytest coverage
+python3 -m pip install --upgrade \
+    pytest coverage
 ```
 
 Run tests:
@@ -77,8 +79,10 @@ python3 -m pytest test
 Doc dependencies:
 
 ```bash
-pip3 install Sphinx sphinx_rtd_theme
+python3 -m pip install --upgrade \
+    Sphinx sphinx_rtd_theme
 ```
+<!-- optional: python-Levenshtein -->
 
 Build docs:
 
@@ -94,16 +98,21 @@ docker build -f res/python3.dockerfile .
 
 ## Contributing
 
-You can file any issues on [github][issues], or contact me directly at [doug@dougowings.net][mailto].
+You can file any issues on [github][issues], or contact me directly [via email][mailto].
 
 ## Copyright & License
 
+<!-- [copyright-begin] -->
 Copyright (C) 2014-2022 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
+<!-- [copyright-end] -->
 
 [site]: http://logic.dougowings.net
 [doc]: http://logic.dougowings.net/doc/
-[license]: https://www.gnu.org/licenses/agpl-3.0.en.html
 [dockerhub]: https://hub.docker.com/r/owings1/pytableaux/
-[issues]: https://github.com/owings1/pytableaux/issues
 [dockerfile]: res/python3.dockerfile
+
+<!-- [refs-begin] -->
+[license]: https://www.gnu.org/licenses/agpl-3.0.en.html
+[issues]: https://github.com/owings1/pytableaux/issues
 [mailto]: mailto:doug@dougowings.net
+<!-- [refs-end] -->

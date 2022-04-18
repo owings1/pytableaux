@@ -14,25 +14,28 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-# pytableaux - tools.doc.roles module
 from __future__ import annotations
+
+"""
+    tools.doc.roles
+    ---------------
+
+"""
 
 __all__ = ('lexdress', 'metadress', 'refplus',)
 
-from pytableaux import lexicals
-from pytableaux.lexicals import LexType
-from pytableaux import parsers
-from pytableaux.tools.doc import BaseRole, docinspect, Helper
-from pytableaux.tools.typing import F
-
-from docutils import nodes
 import functools
 import re
-import sphinx.roles
-from sphinx.util import logging
 from typing import TYPE_CHECKING
+
+import sphinx.roles
+from docutils import nodes
+from pytableaux import lexicals, parsers
+from pytableaux.lexicals import LexType
+from pytableaux.tools.doc import BaseRole, Helper, docinspect
+from pytableaux.tools.typing import F
+from sphinx.util import logging
+
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
@@ -256,7 +259,7 @@ class metadress(BaseRole):
             ),
             r"^(L'*?)$": dict(
                 rep = r'\1',
-                classes = ('big-l'),
+                classes = ('big-l',),
                 nodecls = nodes.inline,
             ),
             r'^(\|-|conseq|impl(ies)?)$': dict(
