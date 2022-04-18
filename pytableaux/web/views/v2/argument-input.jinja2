@@ -54,11 +54,12 @@
 <div class="select-logic panebox">
     <div class="heading" for="selected_logic">Logic</div>
     <select name="logic" id="selected_logic">
-        {% for category in logic_categories -%}
+        {% for category, group in logic_categories.items() -%}
             <optgroup label="{{ category|e }}">
-                {% for key in logic_categories[category] -%}
-                    <option value="{{ key|e }}" {{- helper.select_opt(form_data, 'logic', key) }}>
-                        {{- logics[key].name|e -}}
+                {% for logic in group -%}
+                    {%- set namelc = logic.name.lower() -%}
+                    <option value="{{ namelc|e }}" {{- helper.select_opt(form_data, 'logic', namelc) }}>
+                        {{- logic.name|e -}}
                     </option>
                 {% endfor %}
             </optgroup>

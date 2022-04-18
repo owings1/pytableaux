@@ -7,7 +7,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 from __future__ import annotations
-import os.path
+import os
 import sys
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -19,17 +19,21 @@ addpath = os.path.abspath(
 if addpath not in sys.path:
     sys.path.insert(1, addpath)
 
-from pytableaux import fixed
+from pytableaux import package
 
-copyright = fixed.copyright
+# General information about the project.
+project = package.name
+
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = fixed.__version__
+version = package.version.short
 # The full version, including alpha/beta/rc tags.
-release = version
+release = package.version.full
+
+copyright = package.copyright
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -51,19 +55,17 @@ autodoc_member_order = 'bysource'
 intersphinx_mapping = dict(
     python = (
         'https://docs.python.org/3',
-        None,
+        # local cache of https://docs.python.org/3/objects.inv
+        os.environ.get('ISPX_PY3_OBJINV'),
     )
 )
-
-# General information about the project.
-project = 'pytableaux'
 
 # Others tried: material, xcode
 pygments_style = 'colorful'
 
-# html_theme = 'default'
 # https://github.com/readthedocs/sphinx_rtd_theme
 html_theme = 'sphinx_rtd_theme'
+html_theme = 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -89,7 +91,7 @@ html_show_sphinx = False
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = [
     '_static',
-    f'{fixed.package_dir}/proof/templates/html/static',
+    f'{package.root}/proof/templates/html/static',
 ]
 
 # List of patterns, relative to source directory, that match files and
@@ -121,7 +123,7 @@ pt_options = dict(
 
 pt_htmlcopy = [
     (
-        f'{fixed.package_dir}/web/static/css/fonts/charmonman',
+        f'{package.root}/web/static/css/fonts/charmonman',
         '_static/fonts/charmonman',
     ),
 ]

@@ -3,19 +3,28 @@ from __future__ import annotations
 __all__ = (
     'abstract',
     'closure',
-    'isdund',
     'MapProxy',
     'static',
 )
 
+import keyword
 from types import FunctionType, MappingProxyType as _MapProxy
-from typing import Callable, Mapping, overload
+from typing import Any, Callable, Literal, Mapping, overload
 from pytableaux.tools.typing import KT, T, TT, VT
 
 from abc import abstractmethod as abstract
 
 def thru(obj: T) -> T:
+    'Return the argument.'
     return obj
+
+def true(obj: Any) -> Literal[True]:
+    'Always returns ``True``.'
+    return True
+
+def false(obj: Any) -> Literal[False]:
+    'Always returns ``False``.'
+    return False
 
 def closure(func: Callable[..., T]) -> T:
     return func()
@@ -68,4 +77,12 @@ def isdund(name: str) -> bool:
     return (
         len(name) > 4 and name[:2] == name[-2:] == '__' and
         name[2] != '_' and name[-3] != '_'
+    )
+
+def isattrstr(obj: Any) -> bool:
+    "Whether ``obj`` is a non-keyworkd identifier string."
+    return (
+        isinstance(obj, str) and
+        obj.isidentifier() and
+        not keyword.iskeyword(obj)
     )

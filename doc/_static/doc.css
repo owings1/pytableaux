@@ -13,14 +13,12 @@
 /* font-family */
 .big-l {
     font-family: Charmonman;
+    font-weight: bold;
 }
 
 /* font-size */
 table.truth-table th.operator-name {
     font-size: 90%;
-}
-body {
-    font-size: 95%;
 }
 p.definiens .lexitem,
 p.definiens .metawrite,
@@ -44,7 +42,7 @@ p.definiens {
 }
 
 /* font-weight */
-table.truth-table th.operator-name {
+table.truth-table > thead > tr > th.operator-name {
     font-weight: normal;
 }
 table.truth-table th.value-header,
@@ -119,10 +117,6 @@ p.definiendum {
 }
 
 /* border */
-table.truth-table {
-    border: 2px solid gray;
-    border-collapse: collapse;
-}
 table.truth-table tr > th.value-header.row,
 table.truth-table th.operator-symbol.arity-1 {
     border-bottom: 1px solid black;
@@ -132,16 +126,13 @@ table.truth-table tr >th.value-header.column {
 }
 
 /* padding */
+table.truth-table td {
+    padding: 10px;
+}
 p.definition,
 p.consequence,
 p.definiens {
     padding: 12px;
-}
-table.truth-table th {
-    padding: 8px;
-}
-table.truth-table td {
-    padding: 10px;
 }
 p.definiendum {
     padding: 6px 12px;
@@ -156,12 +147,3 @@ p.definiens {
 p.definiendum {
     background: #6ab0de85;
 }
-
-
-
-
-
-/* .subscript {
-    vertical-align: sub;
-    font-size: 80%;
-} */

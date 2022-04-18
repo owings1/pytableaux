@@ -17,15 +17,19 @@
 # ------------------
 #
 # pytableaux - web server test cases
-import cherrypy
-from cherrypy.test import helper
-import pytest
-import simplejson as json
 from urllib.parse import urlencode
 
+import cherrypy
+import pytest
+import simplejson as json
+from cherrypy.test import helper
 from pytableaux import web
+from pytableaux.errors import *
+from pytableaux.web.application import WebApp
+
+
 def test_instantiate():
-    app = web.App()
+    app = WebApp()
 
 # see https://docs.cherrypy.org/en/latest/tutorials.html#tutorial-12-using-pytest-and-code-coverage
 class AppTest(helper.CPWebCase):
@@ -52,7 +56,7 @@ class AppTest(helper.CPWebCase):
 
     @staticmethod
     def setup_server():
-        cherrypy.tree.mount(web.App(), '/', {})
+        cherrypy.tree.mount(WebApp(), '/', {})
 
     def test_index_get(self):
         self.getPage('/')
@@ -90,7 +94,7 @@ class AppTest(helper.CPWebCase):
         assert 'correct the following errors' in res
 
     def test_api_parse_1(self):
-        app = web.App()
+        app = WebApp()
         body = {
             'notation': 'polish',
             'input'   : 'Fm',
@@ -107,7 +111,7 @@ class AppTest(helper.CPWebCase):
         assert res['type'] in ('Predicated',)
 
     def test_api_parse_2(self):
-        app = web.App()
+        app = WebApp()
         body = {
             'input': 'a'
         }
@@ -115,36 +119,36 @@ class AppTest(helper.CPWebCase):
         assert res['type'] in ('Atomic',)
 
     def test_api_parse_invalid_notation(self):
-        app = web.App()
+        app = WebApp()
         body = {
             'notation': 'nonexistent',
             'input': 'a'
         }
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_parse(body)
             assert 'Notation' in exc_info.value.errors
 
     def test_api_parse_missing_input(self):
-        app = web.App()
+        app = WebApp()
         body = {}
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_parse(body)
             assert 'Sentence' in exc_info.value.errors
 
     def test_api_parse_bad_predicate_data(self):
-        app = web.App()
+        app = WebApp()
         body = {
             'input': 'a',
             'predicates': [
                 {'arity': 'asdf'}
             ]
         }
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_parse(body)
             assert 'Predicate 1' in exc_info.value.errors
 
     def test_api_prove_cpl_addition(self):
-        app = web.App()
+        app = WebApp()
         body = {
             'argument': {
                 'premises': ['a'],
@@ -156,32 +160,32 @@ class AppTest(helper.CPWebCase):
         assert res[0]['tableau']['valid']
 
     def test_api_errors_various(self):
-        app = web.App()
-        with pytest.raises(web.RequestDataError) as exc_info:
+        app = WebApp()
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'logic': 'bunky'})
             assert 'Logic' in exc_info.value.errors
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'output': {'charset': 'bunky'}})
             assert 'Symbol Set' in exc_info.value.errors
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'output': {'notation': 'bunky'}})
             assert 'Output notation' in exc_info.value.errors
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'output': {'format': 'bunky'}})
             assert 'Output format' in exc_info.value.errors
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'max_steps': 'bunky'})
             assert 'Max steps' in exc_info.value.errors
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'argument': {'notation': 'bunky'}})
             assert 'Notation' in exc_info.value.errors
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'argument': {'predicates': [{'arity': 'bunky'}]}})
             assert 'Predicate 1' in exc_info.value.errors
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'argument': {'premises': ['bunky']}})
             assert 'Premise 1' in exc_info.value.errors
-        with pytest.raises(web.RequestDataError) as exc_info:
+        with pytest.raises(RequestDataError) as exc_info:
             app.api_prove({'argument': {'conclusion': 'bunky'}})
             assert 'Conclusion' in exc_info.value.errors
 

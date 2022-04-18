@@ -13,713 +13,82 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Web Application
 from __future__ import annotations
+
+
+"""
+    pytableaux.web
+    --------------
+
+"""
 
 __all__ = ()
 
-# print(f'__init__.py, __name__={__name__}, __package__={__package__}')
-# if __name__ == 'web' and __package__ == 'web':
-#     import os.path, sys
-#     addpath = os.path.abspath(
-#         os.path.join(os.path.dirname(__file__), '..', '..')
-#     )
-#     if addpath not in sys.path:
-#         sys.path.insert(1, addpath)
-#     del(os, sys, addpath)
+import logging
+import os
+import re
+from typing import TYPE_CHECKING, Any, Mapping
 
-from pytableaux.errors import RequestDataError, TimeoutError, errstr
-from pytableaux.tools.mappings import MapCover, MapProxy, dmap
-from pytableaux.logics import getlogic
-from pytableaux.tools.timing import StopWatch
+import simplejson as json
+from pytableaux import package
+from pytableaux.errors import RequestDataError
+from pytableaux.tools import closure
+from pytableaux.tools.mappings import ItemMapEnum
 from pytableaux.tools.typing import KT, VT
 
-from pytableaux import examples, fixed, lexicals
-from pytableaux.lexicals import (
-    Argument,
-    LexType,
-    LexWriter,
-    Notation,
-    Predicate,
-    Predicates,
-)
-from pytableaux.parsers import ParseTable
-from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.writers import TabWriter
+if TYPE_CHECKING:
+    from cherrypy._cprequest import Request
 
-from pytableaux.web.mailroom import Mailroom
-from pytableaux.web.conf import (
-    APP_ENVCONF,
-    APP_JENV,
-    APP_LOGICS,
-    REGEX_EMAIL,
+re_email = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
+'Email regex.'
 
-    logger,
-    Metric,
-    cp_config,
-    cp_global_config,
+re_boolyes = re.compile(r'^(true|yes|1)$', re.I)
+'Regex for string boolean `yes`.'
 
-    example_args,
-    output_charsets,
-    logic_categories,
-    parser_nups,
-)
+def get_logic_keys() -> list[str]:
+    "List available logic module names."
+    return [
+        'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
+        'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't',
+    ]
 
-import cherrypy as chpy
-from cherrypy._cprequest import Request, Response
-from datetime import datetime
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from jinja2 import Template
-import mimetypes
-import prometheus_client as prom
-import re
-import simplejson as json
-from simplejson import JSONEncoderForHTML
-# import traceback
-from typing import Any, Mapping, Sequence
-
-_LW_CACHE = {
-    notn: {
-        charset: LexWriter(notn, charset)
-        for charset in notn.charsets
-    }
-    for notn in Notation 
-}
-
-mailroom = Mailroom(APP_ENVCONF)
-
-#####################
-## Input Defaults  ##
-#####################
-api_defaults = MapCover(dict(
-    input_notation  = 'polish',
-    output_notation = 'polish',
-    output_format   = 'html',
-))
-form_defaults = MapCover(dict(
-    input_notation  = 'standard',
-    output_format   = 'html',
-    output_notation = 'standard',
-    output_charset  = 'html',
-    show_controls   = True,
-    build_models    = True,
-    color_open      = True,
-    rank_optimizations  = True,
-    group_optimizations = True,
-))
-
-
-#################
-## View Data   ##
-#################
-base_view_data = MapCover(dict(
-
-    logics              = APP_LOGICS,
-
-    lexicals            = lexicals,
-    LexType             = LexType,
-    Notation            = Notation,
-    ParseTable           = ParseTable,
-    Json                = json,
-
-    example_args        = example_args,
-    form_defaults       = form_defaults,
-    output_formats      = TabWriter.Registry.keys(),
-    output_charsets     = output_charsets,
-    logic_categories    = logic_categories,
-
-    lwh                 = _LW_CACHE[Notation.standard]['html'],
-    view_version        = 'v2',
-))
-
-
-###################
-## Webapp        ##
-###################
-_APP_DATA = MapCover(dict(
-    example_args   = example_args,
-    example_preds  = tuple(p.spec for p in examples.preds),
-    nups           = parser_nups,
-))
-_APP_JSON = json.dumps(
-    dict(_APP_DATA),
-    indent = 2 * APP_ENVCONF['is_debug'],
-    cls = JSONEncoderForHTML
-)
-_STATIC = {
-    'js/appdata.json': _APP_JSON.encode('utf-8'),
-    'js/appdata.js': (';window.AppData = ' + _APP_JSON + ';').encode('utf-8')
-}
-
-_EMPTY = ()
-_EMPTY_MAP = MapProxy()
-_TEMPLATE_CACHE: dict[str, Template] = {}
-
-class App:
-
-    config = dict(APP_ENVCONF,
-        copyright   = fixed.copyright,
-        issues_href = fixed.issues_href,
-        source_href = fixed.source_href,
-        version     = fixed.version,
+def get_logger(name: str|Any, conf: Mapping[str, Any] = None) -> logging.Logger:
+    "Get a logger and configure it for web format."
+    if not isinstance(name, str):
+        if not isinstance(name, type):
+            name = type(name)
+        name = name.__qualname__
+    logger = logging.Logger(name)
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter(
+        # Similar to cherrypy's format for consistency.
+        '[%(asctime)s] %(name)s.%(levelname)s %(message)s',
+        datefmt = '%d/%b/%Y:%H:%M:%S',
     )
-
-    @chpy.expose
-    def static(self, *respath, **req_data):
-        req: Request = chpy.request
-        res: Response = chpy.response
-        resource = '/'.join(respath)
-        try:
-            content = _STATIC[resource]
-        except KeyError:
-            raise chpy.NotFound()
-        if req.method != 'GET':
-            raise chpy.HTTPError(405)
-        res.headers['Content-Type'] = mimetypes.guess_type(resource)[0]
-        return content
-
-    @chpy.expose
-    def index(self, **req_data):
-
-        req: Request = chpy.request
-
-        errors = {}
-        warns  = {}
-        debugs = []
-
-        view_data = dict(base_view_data)
-
-        config = self.config
-
-        form_data = fix_uri_req_data(req_data)
-
-        if form_data.get('v') in ('v1', 'v2'):
-            view_version = form_data['v']
-        else:
-            view_version = 'v2'
-        view = f'{view_version}/main'
-
-        if 'debug' in form_data and config['is_debug']:
-            is_debug = form_data['debug'] not in ('', '0', 'false')
-        else:
-            is_debug = config['is_debug']
-
-        api_data = resp_data = None
-        is_proof = is_controls = is_models = is_color = False
-        selected_tab = 'input'
-
-        if req.method == 'POST':
-            try:
-                try:
-                    api_data = json.loads(form_data['api-json'])
-                except Exception as err:
-                    raise RequestDataError({'api-data': errstr(err)})
-                resp_data, tableau, lw = self.api_prove(api_data)
-            except RequestDataError as err:
-                errors.update(err.errors)
-            except TimeoutError as err: # pragma: no cover
-                errors['Tableau'] = errstr(err)
-            else:
-                is_proof = True
-                if resp_data['writer']['format'] == 'html':
-                    is_controls = bool(form_data.get('show_controls'))
-                    is_models = bool(
-                        form_data.get('build_models') and
-                        tableau.invalid
-                    )
-                    is_color = bool(form_data.get('color_open'))
-                    selected_tab = 'view'
-                else:
-                    selected_tab = 'stats'
-                view_data.update(
-                    tableau = tableau,
-                    lw      = lw,
-                )
-        else:
-            form_data = dict(form_defaults)
-
-        if errors:
-            view_data['errors'] = errors
-
-        page_data = dict(
-            is_debug     = is_debug,
-            is_proof     = is_proof,
-            is_controls  = is_controls,
-            is_models    = is_models,
-            is_color     = is_color,
-            selected_tab = selected_tab,
-        )
-
-        if is_debug:
-            debugs.extend(dict(
-                req_data  = req_data,
-                form_data = form_data,
-                api_data  = api_data,
-                resp_data = resp_data and debug_resp_data(resp_data),
-                page_data = page_data,
-            ).items())
-            view_data['debugs'] = debugs
-
-        view_data.update(page_data,
-            page_json = json.dumps(
-                page_data,
-                indent = 2 * is_debug,
-                cls = JSONEncoderForHTML
-            ),
-            config       = self.config,
-            view_version = view_version,
-            form_data    = form_data,
-            resp_data    = resp_data,
-            warns        = warns,
-        )
-
-        return self._render(view, view_data)
-
-    @chpy.expose
-    def feedback(self, **form_data) -> str:
-
-        config = self.config
-        if not (config['feedback_enabled'] and config['smtp_host']):
-            raise chpy.NotFound()
-
-        req: Request = chpy.request
-
-        errors = {}
-        warns  = {}
-        debugs = []
-
-        view = 'feedback'
-        view_data = dict(base_view_data,
-            form_data = form_data
-        )
-
-        is_submitted = False
-        is_debug = config['is_debug']
-
-        if req.method == 'POST':
-
-            try:
-                validate_feedback_form(form_data)
-            except RequestDataError as err:
-                errors.update(err.errors)
-            else:
-                date = datetime.now()
-                view_data.update(
-                    date    = str(date),
-                    ip      = get_remote_ip(req),
-                    headers = req.headers,
-                )
-                fromaddr = config['feedback_from_address']
-                toaddr = config['feedback_to_address']
-                msg = MIMEMultipart('alternative')
-                msg['To'] = toaddr
-                msg['From'] = '%s Feedback <%s>' % (config['app_name'], fromaddr)
-                msg['Subject'] = 'Feedback from %s' % form_data['name']
-                msg_txt = self._render('feedback-email.txt', view_data)
-                msg_html = self._render('feedback-email', view_data)
-                msg.attach(MIMEText(msg_txt, 'plain'))
-                msg.attach(MIMEText(msg_html, 'html'))
-                mailroom.enqueue(fromaddr, (toaddr,), msg.as_string())
-                is_submitted = True
-
-        else:
-            if not mailroom.last_was_success:
-                warns['Mailroom'] = (
-                    'The most recent email was unsuccessful. '
-                    'You might want to send an email instead.'
-                )
-
-        page_data = dict(
-            is_debug     = is_debug,
-            is_submitted = is_submitted,
-        )
-
-        if is_debug:
-            debugs.extend(dict(
-                form_data = form_data,
-            ).items())
-            view_data['debugs'] = debugs
-
-        view_data.update(page_data,
-            page_json = json.dumps(
-                page_data,
-                indent = 2 * is_debug,
-                cls = JSONEncoderForHTML
-            ),
-            config       = self.config,
-            errors       = errors,
-            warns        = warns,
-        )
-
-        return self._render(view, view_data)
-
-    @chpy.expose
-    @chpy.tools.json_in()
-    @chpy.tools.json_out()
-    def api(self, action: str = None) -> dict[str, Any]:
-
-        req: Request = chpy.request
-        res: Response = chpy.response
-
-        if req.method == 'POST':
-            try:
-                result = None
-                if action == 'parse':
-                    result = self.api_parse(req.json)
-                elif action == 'prove':
-                    result, *_ = self.api_prove(req.json)
-                if result:
-                    return dict(
-                        status  = 200,
-                        message = 'OK',
-                        result  = result,
-                    )
-            except TimeoutError as err: # pragma: no cover
-                res.status = 408
-                return dict(
-                    status  = 408,
-                    message = errstr(err),
-                    error   = type(err).__name__,
-                )
-            except RequestDataError as err:
-                res.status = 400
-                return dict(
-                    status  = 400,
-                    message = 'Request data errors',
-                    error   = type(err).__name__,
-                    errors  = err.errors,
-                )
-            except Exception as err: # pragma: no cover
-                res.status = 500
-                return dict(
-                    status  = 500,
-                    message = errstr(err),
-                    error   = type(err).__name__,
-                )
-                #traceback.print_exc()
-        res.status = 404
-        return dict(message = 'Not found', status = 404)
-
-    def api_parse(self, body: Mapping) -> dict[str, Any]:
-        """
-        Example request body::
-
-            {
-               "notation": "polish",
-               "input": "Fm",
-               "predicates" : [
-                  {
-                     "index": 0,
-                     "subscript": 0,
-                     "arity": 1
-                  }
-               ]
-            }
-
-        Example success result::
-
-            {
-               "type": "Predicated",
-               "rendered": {
-                    "standard": {
-                        "ascii": "Fa",
-                        "unicode": "Fa",
-                        "html": "Fa"
-                    },
-                    "polish": {
-                        "ascii": "Fm",
-                        "unicode": "Fm",
-                        "html": "Fm"
-                    }
-                }
-            }
-        """
-        errors = {}
-
-        # defaults
-        body = dict(
-            notation   = api_defaults['input_notation'],
-            predicates = _EMPTY,
-            input      = '',
-        ) | body
-
-        try:
-            preds = self._parse_preds(body['predicates'])
-        except RequestDataError as err:
-            errors.update(err.errors)
-            preds = None
-
-        elabel = 'Notation'
-        try:
-            notn = Notation[body['notation']]
-        except KeyError as err:
-            errors[elabel] = "Invalid notation: '%s'" % err
-
-        if not errors:
-            parser = notn.Parser(preds)
-            elabel = 'Input'
-            try:
-                sentence = parser(body['input'])
-            except Exception as err:
-                errors[elabel] = errstr(err)
-
-        if errors:
-            raise RequestDataError(errors)
-
-        return dict(
-            type     = sentence.TYPE.name,
-            rendered = {
-                notn.name: {
-                    charset: lw(sentence)
-                    for charset, lw in lwmap.items()
-                }
-                for notn, lwmap in _LW_CACHE.items()
-            },
-        )
-
-    def api_prove(self, body: Mapping[str, Any]) -> tuple[dict, Tableau, LexWriter]:
-        """
-        Example request body::
-
-            {
-                "logic": "FDE",
-                "argument": {
-                    "conclusion": "Fm",
-                    "premises": ["KFmFn"],
-                    "notation": "polish",
-                    "predicates": [ [0, 0, 1] ]
-                },
-                "output": {
-                    "format": "html",
-                    "notation": "standard",
-                    "charset": "html",
-                    "options": {}
-                },
-                "build_models": false,
-                "max_steps": null,
-                "rank_optimizations": true,
-                "group_optimizations": true
-            }
-
-        Example success result::
-
-            {
-                "tableau": {
-                    "logic": "FDE",
-                    "argument": {
-                        "premises": ["Fa &and; Fb"],
-                        "conclusion": "Fb"
-                    },
-                    "valid": true,
-                    "body": "...html...",
-                    "header": "...",
-                    "footer": "...",
-                    "max_steps" : null
-                },
-                "writer": {
-                    "format": "html,
-                    "charset": "html",
-                    "options": {}
-                },
-            }
-        """
-        config = self.config
-        errors = {}
-
-        body = dmap(
-            logic        = None,
-            argument     = _EMPTY_MAP,
-            build_models = False,
-            max_steps    = None,
-            rank_optimizations  = True,
-            group_optimizations = True,
-        ) | body
-
-        odata = dmap(
-            notation = api_defaults['output_notation'],
-            format   = api_defaults['output_format'],
-            charset  = None,
-            options  = {},
-        ) | body.get('output', _EMPTY_MAP)
-
-        odata['options']['debug'] = config['is_debug']
-
-        if body['max_steps'] is not None:
-            elabel = 'Max steps'
-            try:
-                body['max_steps'] = int(body['max_steps'])
-            except ValueError as err:
-                errors[elabel] = "Invalid int value: %s" % err
-
-        tableau_opts = dict(
-            is_rank_optim   = bool(body['rank_optimizations']),
-            is_group_optim  = bool(body['group_optimizations']),
-            is_build_models = bool(body['build_models']),
-            max_steps       = body['max_steps'],
-            build_timeout   = config['maxtimeout'],
-        )
-
-        try:
-            arg = self._parse_argument(body['argument'])
-        except RequestDataError as err:
-            errors.update(err.errors)
-
-        elabel = 'Logic'
-        try:
-            logic = getlogic(body['logic'])
-        except Exception as err:
-            errors[elabel] = errstr(err)
-        else:
-            logicname: str = logic.name
-
-        elabel = 'Output Format'
-        try:
-            WriterClass = TabWriter.Registry[odata['format']]
-        except KeyError:
-            errors[elabel] = "Invalid writer: '%s'" % odata['format']
-        else:
-
-            elabel = 'Output Notation'
-            try:
-                onotn = Notation[odata['notation']]
-            except KeyError as err:
-                errors[elabel] = f"Invalid notation: '{err}'"
-            else:
-
-                elabel = 'Output Charset'
-                try:
-                    lw = _LW_CACHE[onotn][
-                        odata['charset'] or WriterClass.default_charsets[onotn]
-                    ]
-                except KeyError as err:
-                    errors[elabel] = f"Unsupported charset: 'err'"
-                else:
-                    pw = WriterClass(lw = lw, **odata['options'])
-
-        if errors:
-            raise RequestDataError(errors)
-
-        with StopWatch() as timer:
-            Metric.proofs_inprogress_count(logicname).inc()
-            tableau = Tableau(logic, arg, **tableau_opts)
-
-            try:
-                tableau.build()
-                Metric.proofs_completed_count(logicname, tableau.stats['result'])
-            finally:
-                Metric.proofs_inprogress_count(logicname).dec()
-                Metric.proofs_execution_time(logicname).observe(timer.elapsed_secs())
-
-        resp_data = dict(
-            tableau = dict(
-                logic = logicname,
-                argument = dict(
-                    premises   = tuple(map(lw, arg.premises)),
-                    conclusion = lw(arg.conclusion),
-                ),
-                valid  = tableau.valid,
-                body   = pw(tableau),
-                stats  = tableau.stats,
-                result = tableau.stats['result'],
-            ),
-            attachments = pw.attachments(),
-            writer = dict(
-                format  = pw.format,
-                charset = lw.charset,
-                options = pw.opts,
-            )
-        )
-        # Return a tuple (resp, tableau, lw) because the web ui needs the
-        # tableau object to write the controls.
-        return resp_data, tableau, lw
-
-    @classmethod
-    def _parse_argument(cls, adata: Mapping[str, Any]) -> Argument:
-
-        errors = {}
-        adata = dict(adata)
-
-        # defaults
-        if 'notation' not in adata:
-            adata['notation'] = api_defaults['input_notation']
-        if 'predicates' not in adata:
-            adata['predicates'] = []
-        if 'premises' not in adata:
-            adata['premises'] = []
-
-        elabel = 'Notation'
-        try:
-            notn = Notation[adata['notation']]
-        except KeyError as err:
-            errors[elabel] = f"Invalid parser notation: '{err}'"
-        else:
-            try:
-                preds = cls._parse_preds(adata['predicates'])
-            except RequestDataError as err:
-                errors.update(err.errors)
-                preds = None
-            parser = notn.Parser(preds)
-            premises = []
-            for i, premise in enumerate(adata['premises'], start = 1):
-                elabel = f'Premise {i}'
-                try:
-                    premises.append(parser(premise))
-                except Exception as e:
-                    premises.append(None)
-                    errors[elabel] = errstr(e)
-            elabel = 'Conclusion'
-            try:
-                conclusion = parser(adata['conclusion'])
-            except Exception as e:
-                errors[elabel] = errstr(e)
-
-        if errors:
-            raise RequestDataError(errors)
-
-        return Argument(conclusion, premises)
-
-    @staticmethod
-    def _parse_preds(pspecs: Sequence[Mapping|Sequence]) -> Predicates|None:
-        if not len(pspecs):
-            return None
-        errors = {}
-        preds = Predicates()
-        Coords = Predicate.Coords
-        fields = Coords._fields
-        for i, specdata in enumerate(pspecs, start = 1):
-            elabel = f'Predicate {i}'
-            try:
-                if isinstance(specdata, dict):
-                    keys = fields
-                else:
-                    keys = range(len(fields))
-                coords = Coords(*map(specdata.__getitem__, keys))
-                preds.add(coords)
-            except Exception as e:
-                errors[elabel] = errstr(e)
-        if errors:
-            raise RequestDataError(errors)
-        return preds
-
-    def _get_template(self, view: str) -> Template:
-        if '.' not in view:
-            view = f'{view}.jinja2'
-        if self.config['is_debug'] or (view not in _TEMPLATE_CACHE):
-            _TEMPLATE_CACHE[view] = APP_JENV.get_template(view)
-        return _TEMPLATE_CACHE[view]
-
-    def _render(self, view: str, *args, **kw) -> str:
-        return self._get_template(view).render(*args, **kw)
-
-#####################
-## Miscellaneous   ##
-#####################
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    if conf is not None:
+        set_conf_loglevel(logger, conf)
+    return logger
+
+def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]):
+    "Update a logger's loglevel based on the config."
+    if conf['is_debug']:
+        logger.setLevel(10)
+        logger.info(f'Setting debug loglevel {logger.getEffectiveLevel()}')
+        return
+
+    leveluc = conf['loglevel'].upper()
+
+    if not hasattr(logging, leveluc):
+        logger.warn(f"Ignoring invalid loglevel '{leveluc}'")
+        leveluc = ConfigValue.loglevel['default'].upper()
+
+    levelnum = getattr(logging, leveluc)
+    logger.setLevel(levelnum)
 
 def fix_uri_req_data(form_data: dict[str, VT]) -> dict[str, VT]:
+    "Transform param names ending in ``'[]'`` to lists."
     form_data = dict(form_data)
     for param in form_data:
         if param.endswith('[]'):
@@ -728,6 +97,7 @@ def fix_uri_req_data(form_data: dict[str, VT]) -> dict[str, VT]:
     return form_data
 
 def debug_resp_data(resp_data: dict[KT, VT]) -> dict[KT, VT]:
+    "Trim data for debug logging."
     result = dict(resp_data)
     if 'tableau' in result and 'body' in result['tableau']:
         if len(result['tableau']['body']) > 255:
@@ -737,10 +107,16 @@ def debug_resp_data(resp_data: dict[KT, VT]) -> dict[KT, VT]:
             )
     return result
 
+def tojson(*args, cls = json.JSONEncoderForHTML, **kw):
+    "Wrapper for ``json.dumps`` with html safe encoder."
+    return json.dumps(*args, cls = cls, **kw)
+
 def is_valid_email(value: str) -> bool:
-    return re.fullmatch(REGEX_EMAIL, value) is not None
+    "Whether a string is a valid email address."
+    return re_email.fullmatch(value) is not None
 
 def validate_feedback_form(form_data: dict[str, str]) -> None:
+    "Validate `name`, `email`, and `message` keys."
     errors = {}
     if not is_valid_email(form_data['email']):
         errors['Email'] = 'Invalid email address'
@@ -755,18 +131,158 @@ def get_remote_ip(req: Request) -> str:
     # TODO: use proxy forward header
     return req.remote.ip
 
+def sbool(arg: str, /):
+    "Cast string to boolean, leans toward ``False``."
+    return bool(re_boolyes.match(arg))
 
-#############
-## Main    ##
-#############
+class ConfigValue(ItemMapEnum):
 
-def main(): # pragma: no cover
-    app = App()
-    logger.info('Staring metrics on port %d' % APP_ENVCONF['metrics_port'])
-    mailroom.start()
-    prom.start_http_server(APP_ENVCONF['metrics_port'])
-    chpy.config.update(cp_global_config)
-    chpy.quickstart(app, '/', cp_config)
+    app_name = dict(
+        default = package.name,
+        envvar  = 'PT_APPNAME',
+        type    = str,
+    )
+    host = dict(
+        default = '127.0.0.1',
+        envvar  = 'PT_HOST',
+        type    = str,
+    )
+    port = dict(
+        default = 8080,
+        envvar  = 'PT_PORT',
+        type    = int,
+    )
+    metrics_port = dict(
+        default = 8181,
+        envvar  = 'PT_METRICS_PORT',
+        type    = int,
+    )
+    is_debug = dict(
+        default = False,
+        envvar  = ('PT_DEBUG', 'DEBUG'),
+        type    = sbool,
+    )
+    loglevel = dict(
+        default = 'info',
+        envvar  = ('PT_LOGLEVEL', 'LOGLEVEL'),
+        type    = str,
+    )
+    maxtimeout = dict(
+        default = 30000,
+        envvar  = 'PT_MAXTIMEOUT',
+        type    = int,
+    )
+    google_analytics_id = dict(
+        default = None,
+        envvar  = 'PT_GOOGLE_ANALYTICS_ID',
+        type    = str,
+    )
+    feedback_enabled = dict(
+        default = False,
+        envvar  = 'PT_FEEDBACK',
+        type    = sbool,
+    )
+    feedback_to_address = dict(
+        default = None,
+        envvar  = 'PT_FEEDBACK_TOADDRESS',
+        type    = str,
+    )
+    feedback_from_address = dict(
+        default = None,
+        envvar  = 'PT_FEEDBACK_FROMADDRESS',
+        type    = str,
+    )
+    smtp_host = dict(
+        default = None,
+        envvar  = ('PT_SMTP_HOST', 'SMTP_HOST'),
+        type    = str,
+    )
+    smtp_port = dict(
+        default = 587,
+        envvar  = ('PT_SMTP_PORT', 'SMTP_PORT'),
+        type    = int,
+    )
+    smtp_helo = dict(
+        default = None,
+        envvar  = ('PT_SMTP_HELO', 'SMTP_HELO'),
+        type    = str,
+    )
+    smtp_starttls = dict(
+        default = True,
+        envvar  = ('PT_SMTP_STARTTLS', 'SMTP_STARTTLS'),
+        type    = sbool,
+    )
+    smtp_tlscertfile = dict(
+        default = None,
+        envvar  = ('PT_SMTP_TLSCERTFILE', 'SMTP_TLSCERTFILE'),
+        type    = str,
+    )
+    smtp_tlskeyfile = dict(
+        default = None,
+        envvar  = ('PT_SMTP_TLSKEYFILE', 'SMTP_TLSKEYFILE'),
+        type    = str,
+    )
+    smtp_tlskeypass = dict(
+        default = None,
+        envvar  = ('PT_SMTP_TLSKEYPASS', 'SMTP_TLSKEYPASS'),
+        type    = str,
+    )
+    smtp_username = dict(
+        default = None,
+        envvar  = ('PT_SMTP_USERNAME', 'SMTP_USERNAME'),
+        type    = str,
+    )
+    smtp_password = dict(
+        default = None,
+        envvar  = ('PT_SMTP_PASSWORD', 'SMTP_PASSWORD'),
+        type    = str,
+    )
+    mailroom_interval = dict(
+        default = 5,
+        envvar  = 'PT_MAILROOM_INTERVAL',
+        type    = int,
+        min     = 1,
+    )
+    mailroom_requeue_interval = dict(
+        default = 3600,
+        envvar  = 'PT_MAILROOM_REQUEUEINTERVAL',
+        type    = int,
+        min     = 60,
+    )
 
-if  __name__ == '__main__': # pragma: no cover
-    main()
+    def __init__(self, m):
+        if type(m['envvar']) is str:
+            m['envvar'] = m['envvar'],
+        super().__init__(m)
+
+    @closure
+    def resolve():
+        logger = get_logger(__name__)
+
+        def resolve(self: ConfigValue, env: Mapping[str, Any]):
+            "Resolve a config value against ``env``."
+            for varname in self['envvar']:
+                if varname in env:
+                    v = env[varname]
+                    break
+            else:
+                return self['default']
+
+            v = self['type'](v)
+
+            if 'min' in self and v < self['min']:
+                v = self['min']
+                logger.warn(f'Using min value of {v} for option {self.name}')
+
+            if 'max' in self and v > self['max']:
+                v = self['max']
+                logger.warn(f'Using max value of {v} for option {self.name}')
+
+            return v
+
+        return resolve
+
+    @classmethod
+    def env_config(cls, env: Mapping[str, Any] = os.environ) -> dict[str, Any]:
+        "Return a config dict resolve against ``env``."
+        return {defn.name: defn.resolve(env) for defn in cls}

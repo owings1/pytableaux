@@ -1743,16 +1743,28 @@ class Notation(Bases.Enum):
     'Notation (polish/standard) enum class.'
 
     default: ClassVar[Notation]
+    "The default notation."
 
     @abcf.after
     def _(cls): cls.default = cls.polish
 
     charsets         : setm[str]
+    "All render charsets for the notation's writer classes."
+
     default_charset  : str
+    "The render charset of the notation's default writer."
+
     writers          : setm[type[LexWriter]]
+    "All writer classes for the notation."
+
     DefaultWriter    : type[LexWriter]
+    "The notations's default writer class."
+
     rendersets       : setm[RenderSet]
+    "All RenderSets of the notation."
+
     Parser           : type[Parser]
+    "The notation's parser class."
 
     polish   = eauto(), 'unicode'
     standard = eauto(), 'unicode'
@@ -1769,6 +1781,18 @@ class Notation(Bases.Enum):
         'writers', 'DefaultWriter',
         'rendersets', 'charsets', 'default_charset',
     )
+
+    @classmethod
+    def get_common_charsets(cls):
+        "Get charsets common to all notations."
+        charsets: set[str] = set(
+            charset
+            for notn in Notation
+                for charset in notn.charsets
+        )
+        for notn in Notation:
+            charsets = charsets.intersection(notn.charsets)
+        return sorted(charsets)
 
     def __setattr__(self, name, value, /, *, sa2 = _enum.Enum.__setattr__):
         if name == 'Parser' and not hasattr(self, name):

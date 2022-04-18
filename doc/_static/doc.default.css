@@ -1,7 +1,12 @@
 /* Truth Tables */
-
+table.truth-table {
+    border: 2px solid gray;
+    border-collapse: collapse;
+}
+table.truth-table th {
+    padding: 8px;
+}
 /* Reset some background colors */ 
-/* .truth-table th:is(.value-header, .operator-symbol, .blank) { */
 table.truth-table th {
     background-color: inherit;
 }

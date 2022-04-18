@@ -13,208 +13,313 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Web App SMTP Mailroom
-import re
-import smtplib
-import ssl
+from __future__ import annotations
+
+"""
+    pytableaux.web.mailroom
+    --------------------------
+
+"""
+
+__all__ = ('Mailroom',)
+
 import threading
 import time
-import traceback
 from collections import deque
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
-from pytableaux.errors import ConfigError, IllegalStateError
-from pytableaux.web.conf import REGEX_EMAIL, logger
+from pytableaux import web
+from pytableaux.errors import ConfigError, IllegalStateError, instcheck
+from pytableaux.tools.mappings import MapCover
 
-def is_valid_email(value):
-    return re.fullmatch(REGEX_EMAIL, value)
+if TYPE_CHECKING:
+    import logging
+    import smtplib
+    import ssl
 
-class Mailroom(object):
+class Mailroom:
 
-    def __init__(self, opts):
-        self.opts = opts
-        self.loaded = False
-        self.enabled = bool(opts['smtp_host'])
+    config: Mapping[str, Any]
+    "Instance config."
+
+    logger: logging.Logger
+    "Logger instance."
+
+    loaded: bool
+    "Whether the config has been loaded, include TLS, etc.."
+
+    started: bool
+    "Whether the background thread is running."
+
+    should_stop: bool
+    "Flag to signal background thread to exit."
+
+    last_was_success: bool
+    "Whether the last email attempt was successful."
+
+    queue: deque
+    "The main message job queue."
+
+    failqueue: deque
+    "The queue of message jobs that have failed."
+
+    tlscontext: ssl.SSLContext|None
+    "TLS config context."
+
+    _thread: threading.Thread
+
+    def __init__(self, config: Mapping[str, Any]):
+
+        self.config = MapCover(config)
+        self.logger = web.get_logger(self, self.config)
+
         self.queue = deque()
         self.failqueue = deque()
+
+        self.loaded = False
         self.started = False
         self.should_stop = False
         self.last_was_success = True
-        
-    def reload(self):
-        opts = self.opts
-        self.enabled = bool(opts['smtp_host'])
+
+        self.tlscontext = None
+        self._thread = None
+
+        # Validate email addresses in config if applicable.
+        if self.enabled and config['feedback_enabled']:
+            for key in ('feedback_to_address', 'feedback_from_address'):
+                addr = config[key]
+                if not addr:
+                    raise ConfigError(f"Feedback enabled but '{key}' not set")
+                if not web.is_valid_email(addr):
+                    raise ConfigError(f"Invalid email for '{key}': '{addr}'")
+
+    @property
+    def enabled(self):
+        "Whether SMTP is enabled in the config."
+        return bool(self.config['smtp_host'])
+
+    @property
+    def tls_enabled(self):
+        "Whether TLS is enabled in the config."
+        return bool(self.config['smtp_starttls'])
+
+    @property
+    def auth_enabled(self):
+        "Whether SMTP authentication enabled in the config."
+        return bool(self.config['smtp_username'])
+
+    @property
+    def running(self):
+        "Whether the background thread is running."
+        return self._thread is not None and self._thread.is_alive()
+
+    def start(self):
+        "Start the mailroom background thread."
+        if self.started:
+            raise IllegalStateError("Background thread already started")
+        if not self.loaded:
+            self._load()
         if not self.enabled:
-            logger.warn('SMTP not enabled, not starting mailroom')
+            return
+        self.should_stop = False
+        self._thread = threading.Thread(target = self._loop)
+        self._thread.daemon = True
+        self._thread.start()
+
+    def enqueue(self, from_addr: str, to_addrs: Sequence[str], msg: str):
+        "Add a message to the queue."
+        if not self.enabled:
+            raise ConfigError('SMTP not configured, cannot enqueue message')
+        if not web.is_valid_email(from_addr):
+            raise ValueError(f"Invalid from_addr: {from_addr}")
+        if not len(to_addrs):
+            raise ValueError(f"to_addrs cannot be empty")
+        for addr in to_addrs:
+            if not web.is_valid_email(addr):
+                raise ValueError(f"Invalid to_addr: {addr}")
+        instcheck(msg, str)
+        if not self.started:
+            self.logger.warn("Background thread not started, enqueuing anyway")
+        job = dict(from_addr = from_addr, to_addrs = to_addrs, msg = msg)
+        self.queue.append(job)
+
+    def _load(self):
+        logger = self.logger
+        if not self.enabled:
+            logger.warn('SMTP not configured, Mailroom is disabled.')
             return
         logger.info('Intializing SMTP settings')
-        if opts['feedback_enabled']:
-            if not opts['feedback_to_address']:
-                raise ConfigError(
-                    'Feedback is enabled but to address is not set'
-                )
-            if not opts['feedback_from_address']:
-                raise ConfigError(
-                    'Feedback is enabled but from address is not set'
-                )
-            if not is_valid_email(opts['feedback_to_address']):
-                raise ConfigError(
-                    'Invalid feedback to address: {0}'.format(
-                        str(opts['feedback_to_address'])
-                    )
-                )
-            if not is_valid_email(opts['feedback_from_address']):
-                raise ConfigError(
-                    'Invalid feedback from address: {0}'.format(
-                        str(opts['feedback_from_address'])
-                    )
-                )
-        if opts['smtp_starttls']:
-            self.tlscontext = ssl.SSLContext()
-            if opts['smtp_tlscertfile']:
-                logger.info('Loading TLS client certificate for SMTP')
-                self.tlscontext.load_cert_chain(
-                    opts['smtp_tlscertfile'],
-                    keyfile = opts['smtp_tlskeyfile'],
-                    password = opts['smtp_tlskeypass'],
-                )
+        if self.tls_enabled:
+            self._load_tlsconfig()
         else:
             logger.warn('TLS disabled for SMTP, messages will NOT be encrypted')
         self.loaded = True
 
-    def start(self):
-        if not self.loaded:
-            self.reload()
-        if not self.enabled:
-            return
-        self.should_stop = False
-        self._thread = threading.Thread(target = self.runner)
-        self._thread.daemon = True
-        self._thread.start()
-
-    def enqueue(self, from_addr, to_addrs, msg):
-        if not self.enabled:
-            raise ConfigError('SMTP not configured, cannot enqueue message')
-        self.queue.append({
-            'from_addr' : from_addr,
-            'to_addrs'  : to_addrs,
-            'msg'       : msg,
-        })
-
-    def runner(self):
-        if not self.enabled:
-            raise ConfigError('SMTP not configured, cannot start Mailroom.')
-        if self.started:
-            raise IllegalStateError('Mailroom already running')
-        self.started = True
-        interval = self.opts['mailroom_interval']
-        requeue_interval = self.opts['mailroom_requeue_interval']
-        logger.info(
-            'Starting SMTP Mailroom with interval {0}s, requeue {1}s'.format(
-                str(interval), str(requeue_interval)
+    def _load_tlsconfig(self):
+        import ssl
+        config = self.config
+        logger = self.logger
+        self.tlscontext = ssl.SSLContext()
+        if config['smtp_tlscertfile']:
+            logger.info('Loading TLS client certificate for SMTP')
+            self.tlscontext.load_cert_chain(
+                config['smtp_tlscertfile'],
+                keyfile = config['smtp_tlskeyfile'],
+                password = config['smtp_tlskeypass'],
             )
+
+    def _loop(self):
+
+        if self.started:
+            raise IllegalStateError('Background thread already running')
+        if not self.enabled:
+            raise ConfigError('SMTP not configured, cannot start thread.')
+
+        self.started = True
+        logger = self.logger
+        config = self.config
+
+        def quit():
+            logger.info('Received quit signal, stopping')
+            if self.queue:
+                logger.warn(f'Dumping {len(self.queue)} unprocessed messages')
+                try:
+                    logger.warn(self._dump_queue())
+                except Exception as e:
+                    logger.error(e)
+            self.started = False
+
+        def requeue():
+            "Put all failed messages back in the queue."
+            fq = self.failqueue
+            logger.info(f'Requeuing {len(fq)} failed messages')
+            self.queue.extend(fq)
+            fq.clear()
+
+        interval = config['mailroom_interval']
+        rq_interval = config['mailroom_requeue_interval']
+
+        logger.info(
+            f'Starting interval {interval}s, requeue {rq_interval}s'
         )
-        qi = 0
-        rqi = 0
+
+        # TODO: Use a stopwatch instead of just counting ticks.
+
+        # Ticks since main queue checked.
+        tick = 0
+        # Ticks since failqueue checked.
+        rq_tick = 0
+
         while True:
-            if rqi >= requeue_interval:
-                if self.failqueue:
-                    logger.info(
-                        'Requeuing {0} previously failed messages'.format(
-                            str(len(self.failqueue))
-                        )
-                    )
-                    self.queue.extend(self.failqueue)
-                    self.failqueue.clear()
-                rqi = 0
-            if qi >= interval:
-                self._mailproc()
-                qi = 0
-            while qi < interval:
+
+            if rq_tick >= rq_interval:
+                if len(self.failqueue):
+                    requeue()
+                rq_tick = 0
+
+            if tick >= interval:
+                if len(self.queue):
+                    self._mailproc()
+                tick = 0
+
+            while tick < interval:
                 time.sleep(1)
                 if self.should_stop:
-                    logger.info('Mailroom received quit signal, stopping')
-                    if self.queue:
-                        logger.warn(
-                            'Dumping {0} unprocessed messages'.format(str(len(self.queue)))
-                        )
-                        try:
-                            logger.warn('\n'.join(['\n', *[str(job['msg']) for job in self.queue]]))
-                        except Exception as e:
-                            logger.error(str(e))
-                    self.started = False
+                    quit()
                     return
-                qi += 1
-                rqi += 1
+                tick += 1
+                rq_tick += 1
 
     def _mailproc(self):
-        if not self.queue:
+
+        logger = self.logger
+
+        if not len(self.queue):
+            logger.error('No mail to process.')
             return
-        opts = self.opts
-        logger.info(
-            'Connecting to SMTP server {0}:{1}'.format(
-                opts['smtp_host'], str(opts['smtp_port'])
-            )
-        )
-        smtp = None
-        total = len(self.queue)
-        requeue = []
+
+        requeue = deque()
+        tried = sent = failed = 0
+
         try:
             try:
-                smtp = smtplib.SMTP(
-                    host = opts['smtp_host'],
-                    port = opts['smtp_port'],
-                    local_hostname = opts['smtp_helo'],
-                )
-                smtp.ehlo()
-                if opts['smtp_starttls']:
-                    logger.info('Starting SMTP TLS session')
-                    resp = smtp.starttls(context = self.tlscontext)
-                    logger.debug('Starttls response: {0}'.format(str(resp)))
-                else:
-                    logger.warn('TLS disabled, not encrypting email')
-                if (opts['smtp_username']):
-                    logger.debug(
-                        'Logging into SMTP server with {0}'.format(
-                            opts['smtp_username']
-                        )
-                    )
-                    smtp.login(opts['smtp_username'], opts['smtp_password'])
+                smtp = self._connect()
             except:
+                smtp = None
+                # All messages fail on connection fail.
                 requeue.extend(self.queue)
                 self.queue.clear()
                 raise
-            i = 0
-            while self.queue:
-                job = self.queue.popleft()
-                try:
-                    logger.info(
-                        'Sending message {0} of {1}'.format(
-                            str(i + 1), str(total)
+            else:
+                while len(self.queue):
+                    job = self.queue.popleft()
+                    tried += 1
+                    total = len(self.queue) + tried
+                    try:
+                        logger.info(f'Sending message {tried} of {total}')
+                        smtp.sendmail(**job)
+                    except Exception as err:
+                        failed += 1
+                        logger.error(
+                            f'Sendmail failed with error: {err}',
+                            exc_info = err, stack_info = True
                         )
-                    )
-                    smtp.sendmail(**job)
-                except Exception as merr:
-                    traceback.print_exc()
-                    logger.error(
-                        'Sendmail failed with error: {0}'.format(str(merr))
-                    )
-                    requeue.append(job)
-                i += 1
-            logger.info('Disconnecting from SMTP server')
-            smtp.quit()
+                        requeue.append(job)
+                    else:
+                        sent += 1
+
         except Exception as err:
-            logger.error('SMTP failed with error {0}'.format(str(err)))
-            if smtp:
+            logger.error(
+                f'SMTP failed with error: {err}',
+                exc_info = err, stack_info = True
+            )
+
+        finally:
+            if smtp is not None:
+                logger.info('Disconnecting from SMTP server')
                 try:
                     smtp.quit()
                 except Exception as err:
-                    logger.warn('Failed to quit SMTP connection: {0}'.format(str(err)))
-        if requeue:
-            logger.info('Requeuing {0} failed messages'.format(len(requeue)))
+                    logger.warn(
+                        f'Failed to quit SMTP connection: {err}',
+                        exc_info = err, stack_info = True
+                    )
+
+        if len(requeue):
+            logger.info(f'Requeuing {len(requeue)} failed messages')
             self.failqueue.extend(requeue)
-            if len(requeue) == total:
-                # All messages failed.
-                self.last_was_success = False
+
+        if sent > 0:
+            self.last_was_success = True
+        elif tried > 0:
+            self.last_was_success = False
+
+    def _connect(self) -> smtplib.SMTP:
+        import smtplib
+        config = self.config
+        logger = self.logger
+        host = config['smtp_host']
+        port = config['smtp_port']
+        logger.info(f'Connecting to SMTP server {host}:{port}')
+        smtp = smtplib.SMTP(host, port, config['smtp_helo'])
+        smtp.ehlo()
+        if self.tls_enabled:
+            logger.info('Starting SMTP TLS session')
+            resp = smtp.starttls(context = self.tlscontext)
+            logger.debug(f'Starttls response: {resp}')
+        else:
+            logger.warn('TLS disabled, not encrypting email')
+        if self.auth_enabled:
+            username = config['smtp_username']
+            password = config['smtp_password']
+            logger.debug(f'Logging into SMTP with user {username}')
+            smtp.login(username, password)
+        return smtp
+
+    def _dump_queue(self):
+        return '\n'.join(
+            [
+                '\n',
+                *[str(job['msg']) for job in self.queue]
+            ]
+        )
