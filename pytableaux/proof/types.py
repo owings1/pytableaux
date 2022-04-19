@@ -25,7 +25,7 @@ __all__ = (
     'RuleHelper',
     'TabEvent',
 )
-
+from enum import auto as eauto
 from pytableaux.errors import (
     # Emsg,
     # instcheck,
@@ -34,7 +34,6 @@ from pytableaux.errors import (
 from pytableaux.tools import abstract, closure, static, MapProxy
 from pytableaux.tools.abcs import (
     AbcMeta, AbcEnum, FlagEnum,
-    eauto,
     abcm,
 )
 from pytableaux.tools.decorators import membr
@@ -42,7 +41,6 @@ from pytableaux.tools.hybrids import qsetf, EMPTY_QSET
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import setf, EMPTY_SET
 from pytableaux.tools.timing import StopWatch
-from pytableaux.tools.typing import T, VT, TypeInstDict
 
 from typing import (
     overload,

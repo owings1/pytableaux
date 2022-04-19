@@ -19,6 +19,8 @@
 # pytableaux - errors module
 from __future__ import annotations
 
+# No local imports!
+
 import enum as _enum
 from typing import Any
 

@@ -12,7 +12,7 @@ from pytableaux.proof.helpers import FilterHelper, MaxConsts
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
 from pytableaux.proof.tableaux import TableauxSystem as TabSys
 from pytableaux.proof.types import TabEvent, TabFlag, TabStatKey
-from pytableaux.tools.abcs import MapProxy
+from pytableaux.tools import MapProxy
 from pytableaux.tools.callables import gets
 from pytest import raises
 

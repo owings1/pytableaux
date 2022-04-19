@@ -13,49 +13,101 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - tools.typing module
+"""
+    pytableaux.tools.typing
+    -----------------------
+"""
 from __future__ import annotations
+
+import enum as _enum
 from collections.abc import Set
 from typing import Any, Callable, Mapping, ParamSpec, SupportsIndex, TypeVar, overload
 
+#==========================+
+#  Type variables          |
+#==========================+
+
 T = TypeVar('T')
+"Generic, any type"
+
 T1 = TypeVar('T1')
+"Generic, any type"
+
 T2 = TypeVar('T2')
-# Key type
+"Generic, any type"
+
 KT = TypeVar('KT')
-# Value type
+"Generic, key type"
+
 VT = TypeVar('VT')
-# Return type
+"Generic, value type"
+
 RT = TypeVar('RT')
-# Comparer
+"Generic, return type"
+
 LHS = TypeVar('LHS')
+"Generic, left compare"
+
 RHS = TypeVar('RHS')
-# Callable bound, use for decorator, etc.
-F = TypeVar('F',  bound = Callable[..., Any])
-P = ParamSpec('P')
-# Self type
+"Generic, right compare"
+
 Self = TypeVar('Self')
+"Generic, self"
 
-T_co  = TypeVar('T_co',  covariant = True)
+T_co = TypeVar('T_co', covariant = True)
+"Covariant, any type"
+
 KT_co = TypeVar('KT_co', covariant = True)
-VT_co = TypeVar('VT_co', covariant = True)
-T_contra = TypeVar('T_contra', contravariant = True)
-# Exception bound
-ExT = TypeVar('ExT', bound = Exception)
-# Type bound, use for class decorator, etc.
-TT    = TypeVar('TT',    bound = type)
-TT_co = TypeVar('TT_co', bound = type, covariant = True)
-IndexType = SupportsIndex | slice
-NotImplType = type(NotImplemented)
+"Covariant, key type"
 
-MapT  = TypeVar('MapT',  bound = 'Mapping')
-SetT  = TypeVar('SetT',  bound = 'Set')
+VT_co = TypeVar('VT_co', covariant = True)
+"Covariant, value type"
+
+T_contra = TypeVar('T_contra', contravariant = True)
+"Contravariant, any type"
+
+F = TypeVar('F', bound = Callable[..., Any])
+"Callable bound, decorator"
+
+TT = TypeVar('TT',    bound = type)
+"Type bound, class decorator"
+
+TT_co = TypeVar('TT_co', bound = type, covariant = True)
+"Type bound, covariant"
+
+ExT = TypeVar('ExT', bound = Exception)
+"Exception bound"
+
+MapT = TypeVar('MapT', bound = Mapping)
+"Mapping bound"
+
+SetT = TypeVar('SetT', bound = Set)
+"Set bound"
+
+EnumT = TypeVar('EnumT', bound = _enum.Enum)
+"Enum bound"
+
+P = ParamSpec('P')
+"Param spec"
+
+#==========================+
+#  Type aliases            |
+#==========================+
+
+IndexType = SupportsIndex | slice
+"Integer or slice type"
+
+NotImplType = type(NotImplemented)
+"NotImplemented type"
+
+#==========================+
+#  Stub classes            |
+#==========================+
 
 class TypeInstDict(dict[type[VT], VT],
-    metaclass = type('TidMeta', (type,), dict(__call__ = dict))):
+    metaclass = type('TidMeta', (type,), dict(__call__ = dict))
+):
+    'Stub type for mapping of ``type[T]`` -> ``T``.'
     @overload
     def __getitem__(self, key: type[T]) -> T: ...
     @overload
@@ -66,3 +118,11 @@ class TypeInstDict(dict[type[VT], VT],
     def setdefault(self, key: type[T], value: Any) -> T:...
     @overload
     def pop(self, key: type[T]) -> T:...
+
+class EnumDictType(_enum._EnumDict):
+    'Stub type for annotation reference.'
+    _member_names: list[str]
+    _last_values : list[object]
+    _ignore      : list[str]
+    _auto_called : bool
+    _cls_name    : str

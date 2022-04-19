@@ -13,21 +13,25 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - example arguments
 from __future__ import annotations
+
+"""
+    pytableaux.examples
+    -------------------
+
+    Example arguments
+"""
 
 __all__ = 'arguments', 'argument', 'tabiter'
 
+import itertools
 import re
+
 from pytableaux.errors import instcheck
 from pytableaux.lexicals import Argument, Predicate, Predicates
 from pytableaux.parsers import Parser
-from pytableaux.tools import closure
+from pytableaux.tools import MapProxy, closure
 from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.mappings import MapProxy
 from pytableaux.tools.sets import EMPTY_SET
 
 _args = MapProxy({
@@ -239,12 +243,10 @@ def tabiter():
             tab.build()
         return tab
 
-    from itertools import chain
-
     def tabiter(*logics, build = True, **opts):
         if not len(logics):
             logics = logic_names
-        return chain.from_iterable(
+        return itertools.chain.from_iterable(
             (
                 gettab(logic, argument(title), build = build, **opts)
                 for title in titles

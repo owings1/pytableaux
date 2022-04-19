@@ -1,40 +1,48 @@
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+
+"""
+    pytableaux.proof.common
+    -----------------------
+
+"""
 
 __all__ = 'Node', 'Branch', 'Target'
 
-from pytableaux.errors import instcheck as instcheck, Emsg
-from pytableaux.tools import closure
-from pytableaux.tools.callables import preds, cchain
-from pytableaux.tools.decorators import lazy, operd, raisr
-from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import (
-    dmap,
-    dmapattr,
-    ItemsIterator,
-    MappingApi,
-    MapCover
-) 
-from pytableaux.tools.sequences import SequenceApi
-from pytableaux.tools.sets import EMPTY_SET, setf
-from pytableaux.lexicals import Constant, Sentence
-
-from pytableaux.proof.types import BranchEvent
-
+import operator as opr
 from collections.abc import Set
 from functools import partial
 from itertools import chain, filterfalse
-import operator as opr
-from typing import (
-    Any,
-    Iterable,
-    Iterator,
-    Mapping,
-    NamedTuple,
-    SupportsIndex,
-)
+from typing import Any, Iterable, Iterator, Mapping, NamedTuple, SupportsIndex
 
-class Node(MappingApi):
+from pytableaux import lexicals, tools
+from pytableaux.errors import Emsg, instcheck
+from pytableaux.proof.types import BranchEvent
+from pytableaux.tools.callables import cchain, preds
+from pytableaux.tools.decorators import lazy, operd, raisr
+from pytableaux.tools.events import EventEmitter
+from pytableaux.tools.hybrids import qset
+from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap, dmapattr
+from pytableaux.tools.sequences import SequenceApi
+from pytableaux.tools.sets import EMPTY_SET, setf
+
+_node_defaults = MapCover(world = None, designated = None)
+
+class Node(MapCover):
     'A tableau node.'
 
     __slots__ = (
@@ -43,16 +51,19 @@ class Node(MappingApi):
     )
 
     def __new__(cls, arg = None, /):
-        if type(arg) is cls: return arg
+        if type(arg) is cls:
+            return arg
         return object.__new__(cls)
 
     def __init__(self, mapping: Mapping = None, /):
         if self is mapping:
             return
-        self.__mapinit(dmap(mapping or EMPTY_SET), self)
+        self._init_cover(dict(mapping or EMPTY_SET), self)
 
     def copy(self):
-        return self.__mapinit(self, object.__new__(type(self)))
+        inst = object.__new__(type(self))
+        self._init_cover(self, inst)
+        return inst
 
     @property
     def is_closure(self) -> bool:
@@ -100,7 +111,7 @@ class Node(MappingApi):
                 return False
         return True
 
-    __bool__    = preds.true
+    __bool__    = tools.true
     __eq__      = operd(opr.is_)
     __hash__    = operd(id)
     __delattr__ = raisr(AttributeError)
@@ -108,27 +119,18 @@ class Node(MappingApi):
     id = property(operd(id)())
 
     @staticmethod
-    @closure
-
-    def __mapinit():
-        items = tuple(dict(
-            __len__  = '__len__',
-            __iter__ = '__iter__',
-            _getitem_orig_ = '__getitem__',
-            __reversed__   = '__reversed__',
+    @tools.closure
+    def _init_cover():
+        forig = MapCover._init_cover
+        items = tuple((
+            dmap(forig.__kwdefaults__['items']) - {'__getitem__'} |
+            {'_getitem_orig_': '__getitem__'}
         ).items())
-        sa = object.__setattr__
-        ga = object.__getattribute__
-        def mapinit(src: Mapping, dest: Node, /,):
-            'Copy the Mapping methods from the source.'
-            for name, lookup in items:
-                sa(dest, name, ga(src, lookup))
-            return dest
-        return mapinit
+        def init(src: Mapping, dest: Any, /, *, items = items):
+            return forig(src, dest, items = items)
+        return init
 
-    def __getitem__(self, key, /, *,
-        getdefault = MapCover(world = None, designated = None).__getitem__
-    ):
+    def __getitem__(self, key, /, *, getdefault = _node_defaults.__getitem__):
         try:
             return self._getitem_orig_(key)
         except KeyError:
@@ -177,7 +179,17 @@ class Access(NamedTuple):
 class Branch(SequenceApi[Node], EventEmitter):
     'A tableau branch.'
 
-    def __init__(self, parent: Branch = None, /):
+    __closed  : bool
+    __nodes   : qset[Node]
+    __ticked  : set[Node]
+    __worlds    : set[int]
+    __nextworld : int
+    __constants : set[lexicals.Constant]
+    __nextconst : lexicals.Constant
+
+    __pidx      : dict[str, dict[Any, set[Node]]]
+
+    def __init__(self, parent: Branch = None, /, *, nextconst = lexicals.Constant.first()):
 
         self.__init_parent(parent)
 
@@ -187,16 +199,14 @@ class Branch(SequenceApi[Node], EventEmitter):
 
         self.__closed = False
 
-        # self.__nodes   : list[Node] = []
-        self.__nodes   : qset[Node] = qset()
-        # self.__nodeset : set[Node] = set()
-        self.__ticked  : set[Node] = set()
+        self.__nodes   = qset()
+        self.__ticked  = set()
 
-        self.__worlds    : set[int] = set()
-        self.__nextworld : int = 0
-        self.__constants : set[Constant] = set()
-        self.__nextconst : Constant = Constant.first()
-        self.__pidx      : dict[str, dict[Any, set[Node]]]= dict(
+        self.__worlds    = set()
+        self.__nextworld = 0
+        self.__constants = set()
+        self.__nextconst = nextconst
+        self.__pidx      = dict(
             sentence   = {},
             designated = {},
             world      = {},
@@ -323,8 +333,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         """
         node = Node(node)
         self.__nodes.append(node)
-        # self.__nodeset.add(node)
-        s: Sentence = node.get('sentence')
+        s: lexicals.Sentence = node.get('sentence')
         if s:
             cons = s.constants
             if cons:
@@ -354,10 +363,11 @@ class Branch(SequenceApi[Node], EventEmitter):
 
     def tick(self, *nodes: Node):
         'Tick a node for the branch.'
+        event = BranchEvent.AFTER_NODE_TICK
         for node in filterfalse(self.is_ticked, nodes):
             self.__ticked.add(node)
             node.ticked = True
-            self.emit(BranchEvent.AFTER_NODE_TICK, node, self)
+            self.emit(event, node, self)
 
     def close(self):
         'Close the branch. Returns self.'
@@ -385,7 +395,6 @@ class Branch(SequenceApi[Node], EventEmitter):
         b.__closed = self.__closed
 
         b.__nodes   = self.__nodes.copy()
-        # b.__nodeset = self.__nodeset.copy()
         b.__ticked  = self.__ticked.copy()
 
         b.__worlds    = self.__worlds.copy()
@@ -409,18 +418,18 @@ class Branch(SequenceApi[Node], EventEmitter):
     #     # return self._views.constants(self.__constants)
     #     return self.__constants
 
-    def new_constant(self):
+    def new_constant(self, /, *, firstconst = lexicals.Constant.first()) -> lexicals.Constant:
         'Return a new constant that does not appear on the branch.'
         if not self.__constants:
-            return Constant.first()
-        maxidx = Constant.TYPE.maxi
+            return firstconst
+        maxidx = firstconst.TYPE.maxi
         coordset = setf(c.coords for c in self.__constants)
         index = sub = 0
         while (index, sub) in coordset:
             index += 1
             if index > maxidx:
                 index, sub = 0, sub + 1
-        return Constant((index, sub))
+        return lexicals.Constant((index, sub))
 
     def __init_parent(self, parent: Branch | None):
         if hasattr(self, '_Branch__parent'):
@@ -490,13 +499,12 @@ class Branch(SequenceApi[Node], EventEmitter):
 
     __hash__ = operd(id)
     __eq__   = operd(opr.is_)
-    __bool__ = preds.true
+    __bool__ = tools.true
 
     id = property(operd(id)())
 
     def __contains__(self, node):
         return node in self.__nodes
-        # return node in self.__nodeset
 
     def __repr__(self):
         from pytableaux.tools.misc import orepr
@@ -523,8 +531,8 @@ class Target(dmapattr[str, Any]):
     world1 : int
     world2 : int
     flag   : str
-    sentence   : Sentence
-    constant   : Constant
+    sentence   : lexicals.Sentence
+    constant   : lexicals.Constant
     designated : bool
 
     __slots__ = setf({
@@ -552,18 +560,19 @@ class Target(dmapattr[str, Any]):
     # For dmapattr
     _keyattr_ok = __slots__.__contains__
 
-    def __setitem__(self, key: str, value, /, *, ok = _keyattr_ok):
-        if ok(key):
-            if key in self and self[key] != value:
+    def __setitem__(self, key: str, value, /, *, isattrkey = _keyattr_ok):
+        if isattrkey(key):
+            if self.get(key, value) != value:
+            # if key in self and self[key] != value:
                 raise Emsg.ValueConflictFor(key, value, self[key])
-        elif not preds.isattrstr(key):
+        elif not tools.isattrstr(key):
             instcheck(key, str)
             raise Emsg.BadAttrName(key)
         super().__setitem__(key, value)
 
     __delitem__ = raisr(TypeError)
     __delattr__ = raisr(AttributeError)
-    __bool__    = preds.true
+    __bool__    = tools.true
 
     def __dir__(self):
         return list(self._names())
@@ -572,10 +581,9 @@ class Target(dmapattr[str, Any]):
         from pytableaux.tools.misc import orepr
         return orepr(self, dict(ItemsIterator(self._names(), vget = self.get)))
 
-    def _names(self, /, *, redcr = partial(cchain.reduce_filter, __slots__),
-        pred = preds.notnone
-    ):
-        return redcr(self.get, pred)
+    def _names(self) -> Iterator[str]:
+        get = self.get
+        return (name for name in self.__slots__ if get(name) is not None)
 
 
 del(EventEmitter, lazy, operd)

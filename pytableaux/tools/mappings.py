@@ -41,7 +41,7 @@ from typing import Any, Callable, Iterable, TypeVar, final, overload
 
 from pytableaux import tools
 from pytableaux.errors import Emsg, instcheck
-from pytableaux.tools import MapProxy, abcs, abstract, closure, static
+from pytableaux.tools import MapProxy, abcs, abstract, closure
 from pytableaux.tools.decorators import fixed, membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.typing import KT, VT, F, MapT, NotImplType, SetT, T
@@ -186,12 +186,14 @@ class MapCover(MappingApi[KT, VT]):
                 raise TypeError('Expected mapping or kwargs, not both.')
         self._init_cover(mapping, self)
 
-    @static
+    @staticmethod
     def _init_cover(src: Mapping, dest: Any, /, *,
-        names = __slots__, ga = object.__getattribute__, sa = object.__setattr__
+        items = tuple(zip(__slots__, __slots__)),
+        ga = object.__getattribute__,
+        sa = object.__setattr__
     ):
-        for name in names:
-            sa(dest, name, ga(src, name))
+        for destname, srcname in items:
+            sa(dest, destname, ga(src, srcname))
 
     __slots__ = frozenset(__slots__)
 
@@ -539,7 +541,7 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
     def __next__(self) -> tuple[KT, VT]:
         return self._gen_.__next__()
 
-    @static
+    @staticmethod
     def _gen1(getkeys, vget, kpred, vpred, koper, voper):
         for k in getkeys():
             if koper(kpred(k)):
@@ -547,7 +549,7 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
                 if voper(vpred(v)):
                     yield k, v
 
-    @static
+    @staticmethod
     def _gen2(items, kpred, vpred, koper, voper):
         for k, v in items:
             if koper(kpred(k)) and voper(vpred(v)):
@@ -715,7 +717,8 @@ if 'Operators Cache' or True:
 
 
 del(
-    abstract, closure, final, overload, static,
+    abstract, closure, final, overload,
+    # static,
     fixed, membr, wraps,
     # preds,
     #gets,

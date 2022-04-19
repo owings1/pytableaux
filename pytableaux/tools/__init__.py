@@ -14,13 +14,12 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.tools
+----------------
+
+"""
 from __future__ import annotations
-
-"""
-    pytableaux.tools
-    ----------------
-
-"""
 
 __all__ = (
     'abstract',
@@ -31,25 +30,13 @@ __all__ = (
 
 import keyword
 from abc import abstractmethod as abstract
-from types import FunctionType
-from types import MappingProxyType as _MapProxy
+from types import FunctionType, MappingProxyType as _MapProxy
 from typing import Any, Callable, Literal, Mapping, overload
 
 from pytableaux.tools.typing import KT, TT, VT, T
 
-def thru(obj: T) -> T:
-    'Return the argument.'
-    return obj
-
-def true(obj: Any) -> Literal[True]:
-    'Always returns ``True``.'
-    return True
-
-def false(obj: Any) -> Literal[False]:
-    'Always returns ``False``.'
-    return False
-
 def closure(func: Callable[..., T]) -> T:
+    'Closure decorator calls the argument and returns its return value.'
     return func()
 
 @overload
@@ -96,14 +83,31 @@ class MapProxy(Mapping[KT, VT]):
             mapping = dict(mapping)
         return _MapProxy(mapping) # type: ignore
 
+def thru(obj: T) -> T:
+    'Return the argument.'
+    return obj
+
+def true(obj: Any) -> Literal[True]:
+    'Always returns ``True``.'
+    return True
+
+def false(obj: Any) -> Literal[False]:
+    'Always returns ``False``.'
+    return False
+
+def key0(obj: Any) -> Any:
+    'Get key/subscript ``0``.'
+    return obj[0]
+
 def isdund(name: str) -> bool:
+    'Whether the string is a dunder name string.'
     return (
         len(name) > 4 and name[:2] == name[-2:] == '__' and
         name[2] != '_' and name[-3] != '_'
     )
 
 def isattrstr(obj: Any) -> bool:
-    "Whether ``obj`` is a non-keyworkd identifier string."
+    "Whether ``obj`` is a non-keyword identifier string."
     return (
         isinstance(obj, str) and
         obj.isidentifier() and

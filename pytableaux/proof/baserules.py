@@ -1,5 +1,25 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.proof.baserules
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
-from typing import Generator, Iterable
 
 __all__ = (
     'Rule',
@@ -16,33 +36,24 @@ __all__ = (
     'NarrowQuantifierRule',
     'ExtendedQuantifierRule',
 
-    'group', 'adds'
+    'adds',
+    'group',
 )
 
-from pytableaux.tools.abcs import abstract, overload, abcf, T
-from pytableaux.lexicals import (
-    Constant,
-    Operated,
-    Operator,
-    Predicate,
-    Predicated,
-    Quantified,
-    Quantifier,
-    Sentence,
-)
+from typing import Generator, Iterable, overload
+
+from pytableaux.lexicals import (Constant, Operated, Operator, Predicate,
+                                 Predicated, Quantified, Quantifier, Sentence)
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import NodeFilters
-from pytableaux.proof.helpers import (
-    AdzHelper,
-    BranchTarget,
-    FilterHelper,
-    MaxConsts,
-    NodeConsts,
-    NodeCount,
-    PredNodes,
-    QuitFlag,
-)
+from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
+                                      MaxConsts, NodeConsts, NodeCount,
+                                      PredNodes, QuitFlag)
 from pytableaux.proof.tableaux import ClosingRule, Rule
+from pytableaux.tools import abstract
+from pytableaux.tools.abcs import abcf
+from pytableaux.tools.typing import T
+
 FIRST_CONST_SET = frozenset({Constant.first()})
 
 

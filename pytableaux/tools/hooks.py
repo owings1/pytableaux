@@ -14,41 +14,31 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-# pytableaux - tools.hooks module
+"""
+pytableaux.tools.hooks
+^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 __all__ = 'hookutil',
 
-# Allowed local imports: errors, tools.abcs
-from pytableaux.errors import Emsg, instcheck
-from pytableaux.tools import closure, static, MapProxy
-from pytableaux.tools.abcs import (
-    ABC_HOOKINFO_ATTR,
-    ABC_HOOKUSER_ATTR,
-    abcf,
-    AbcMeta
-)
-from pytableaux.tools.typing import T, TT
-
+import operator as opr
 from collections import defaultdict
 from collections.abc import Set
-from functools import wraps
+import functools
 from itertools import filterfalse, repeat
-import operator as opr
 from types import FunctionType
-from typing import (
-    overload,
-    Any,
-    Callable,
-    ClassVar,
-    Collection,
-    Iterator,
-    Literal,
-    Mapping,
-    TypedDict,
-)
+from typing import (Any, Callable, ClassVar, Collection, Iterator, Literal,
+                    Mapping, TypedDict, overload)
+
+# Allowed local imports: errors, tools, tools.abcs, tools.typing
+from pytableaux import tools
+from pytableaux.errors import Emsg, instcheck
+from pytableaux.tools import MapProxy, closure
+from pytableaux.tools.abcs import AbcMeta, Astr, abcf
+from pytableaux.tools.typing import TT, T
+
 
 class HookProvider(Mapping[str, tuple[str, ...]], metaclass = AbcMeta, skiphooks = True):
     'Mapping view and query API for hook provider.'
@@ -193,7 +183,7 @@ class HookProvider(Mapping[str, tuple[str, ...]], metaclass = AbcMeta, skiphooks
 
             oper = getattr(opr, opername)
 
-            @wraps(oper)
+            @functools.wraps(oper)
 
             def f(self, other, /, *, oper: Callable[[T, T], T] = oper, set_oper = set_opers.get(opername)):
                 if type(other) is not cls:
@@ -207,7 +197,7 @@ class HookProvider(Mapping[str, tuple[str, ...]], metaclass = AbcMeta, skiphooks
             setattr(cls, opername, f)
 
 
-@static
+@tools.static
 class hookutil(metaclass = AbcMeta, skiphooks = True):
 
     #******  API
@@ -246,9 +236,9 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
 
         def provider():
 
-            ATTR = ABC_HOOKINFO_ATTR
+            ATTR = Astr.hookinfo#ABC_HOOKINFO_ATTR
 
-            @wraps(ns.pop('init_provider'))
+            @functools.wraps(ns.pop('init_provider'))
 
             def init(provider: type, initial: Mapping = None,/):
                 if provider in providers:
@@ -311,7 +301,7 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
 
             connect : Callable[..., dict[str, list[_Conn]]] = ns.pop('connect')
 
-            @wraps(ns.pop('init_user'))
+            @functools.wraps(ns.pop('init_user'))
 
             def init(user: type, initial: Mapping = None,/):
                 if user in users:
@@ -330,7 +320,9 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
                         })
                 return user
 
-            def build(user: type, initial: Mapping|None, /, *, ATTR: str = ABC_HOOKUSER_ATTR) -> dict[type, MapProxy[str, Callable]]:
+            def build(user: type, initial: Mapping|None, /, *, ATTR: str = Astr.hookuser,
+            #ABC_HOOKUSER_ATTR
+            ) -> dict[type, MapProxy[str, Callable]]:
 
                 builder: dict[type, dict[str, Callable]] = defaultdict(dict)
 
@@ -366,8 +358,8 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
         #******  Update Namespace
 
         ns.update(
-            init_provider = static(provider),
-            init_user     = static(user),
+            init_provider = staticmethod(provider),
+            init_user     = staticmethod(user),
         )
 
         #******  Populate HookProvider attributes
@@ -459,7 +451,7 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
                 'kwdefaults', 'annotations', 'dict', 'doc'
             ),
             FATTRS_DEL : tuple[str, ...]  = (
-                ABC_HOOKINFO_ATTR,
+                Astr.hookinfo
             ),
             NOGET: object = object(),
         ) -> FunctionType:
@@ -507,8 +499,6 @@ _UsersTable = dict[type, _UserInfo]
 _ConnsTable = dict[type, dict[type, _HookConns]]
 
 del(
-    closure, static, overload, wraps,
+    closure, overload,
     opr,
-    ABC_HOOKINFO_ATTR,
-    ABC_HOOKUSER_ATTR,
 )

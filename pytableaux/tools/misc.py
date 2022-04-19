@@ -169,43 +169,47 @@ def wrparens(*args: str, parens='()') -> str:
     'Concat all argument strings and wrap in parentheses'
     return cat(parens[0], ''.join(args), parens[-1])
 
-def drepr(d: dict, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
+def drepr(d: dict, /, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
     lw = drepr.lw
-    pairs = (
-        cat(str(k), vj, valrepr(v, lw = lw))
+    istr = j.join(
+        f'{k}{vj}{valrepr(v, lw = lw)}'
         for k,v in islice(d.items(), limit)
     )
-    istr = j.join(pairs)
-    if paren:
-        return wrparens(istr)
+    assert not paren
+    # if paren:
+    #     return wrparens(istr)
     return istr
 # For testing, set this to a LexWriter instance.
 drepr.lw = None
 
-def valrepr(v, lw = drepr.lw, **opts) -> str:
-    if isinstance(v, str): return v
-    if isinstance(v, type): return v.__name__
-    if isinstance(v, ModuleType):
-        if v.__name__.startswith('logics.'):
-            return getattr(v, 'name', v.__name__)
-    try: return lw(v)
-    except TypeError: pass
-    return v.__repr__()
+def valrepr(v, /, lw = None) -> str:
+    if isinstance(v, str):
+        return v
+    if isinstance(v, type):
+        return v.__name__
+    if isinstance(v, ModuleType) and 'logics.' in v.__name__:
+        return getattr(v, 'name', v.__name__)
+    if lw is None:
+        lw = drepr.lw
+    if lw is not None and lw.canwrite(v):
+        return lw(v)
+    # try:
+    #     return lw(v)
+    # except TypeError:
+    #     pass
+    return repr(v)
 
-def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
-    d = _d if _d is not None else kw
-    if isinstance(obj, str):
-        oname = obj
-    else:
-        try: oname = type(obj).__qualname__
-        except AttributeError: oname = type(obj).__name__
-    if _ is not None: oname = cat(oname, '.', valrepr(_))
+def orepr(obj, d: dict = None, /, **kw) -> str:
+    if d is None:
+        d = kw
+    elif len(kw):
+        d = dict(d, **kw)
+    oname = type(obj).__qualname__
     try:
-        if callable(d): d = d()
         dstr = drepr(d, j = ' ', vj = ':', paren = False)
         if dstr:
-            return '<%s %s>' % (oname, dstr)
-        return '<%s>' % oname
+            return f'<{oname} {dstr}>'
+        return f'<{oname}>'
     except Exception as e:
         from pytableaux.errors import errstr
         return '<%s !ERR: %s !>' % (oname, errstr(e))
