@@ -115,3 +115,9 @@ class package:
     'Base package directory.'
 
     __slots__ = ()
+
+
+from pytableaux import errors
+from pytableaux.tools import abcs
+errors.Emsg = abcs.ebcm.rebase(errors.Emsg, errors.EmsgBase, abcs.Ebc)
+del(errors.EmsgBase)

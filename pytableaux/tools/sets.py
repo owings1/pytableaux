@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.tools.sets
+^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 __all__ = (
@@ -9,20 +30,20 @@ __all__ = (
     'EMPTY_SET',
 )
 
-from pytableaux.errors import instcheck
-from pytableaux.tools import abstract
-from pytableaux.tools.abcs import abcm, Copyable
-from pytableaux.tools.decorators import abstract, operd
-from pytableaux.tools.typing import VT
-from collections.abc import Set, MutableSet
 import operator as opr
-from typing import final, overload, Iterable, TypeVar
+from collections.abc import MutableSet, Set
+from typing import Iterable, TypeVar, final, overload
+
+from pytableaux.errors import instcheck
+from pytableaux.tools import abcs
+from pytableaux.tools.decorators import operd
+from pytableaux.tools.typing import VT
 
 EMPTY = ()
 
 SetApiT = TypeVar('SetApiT', bound = 'SetApi')
 
-class SetApi(Set[VT], Copyable):
+class SetApi(Set[VT], abcs.Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
 
     __slots__ = EMPTY
@@ -109,7 +130,6 @@ class setf(SetApi[VT], frozenset[VT]):
     __contains__ = frozenset.__contains__
 
 EMPTY_SET = setf()
-abcm._frozenset = setf
 
 class setm(MutableSetApi[VT], set[VT]):
     'MutableSetApi wrapper around built-in set.'
@@ -144,7 +164,10 @@ class SetCover(SetApi[VT]):
 
 
 del(
-    abstract, final, overload,
-    opr, operd, Copyable, EMPTY,
+    final, overload,
+    opr, operd, EMPTY,
     TypeVar,
 )
+
+# Back patch
+abcs.abcm._frozenset = setf

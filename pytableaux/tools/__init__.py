@@ -113,3 +113,4 @@ def isattrstr(obj: Any) -> bool:
         obj.isidentifier() and
         not keyword.iskeyword(obj)
     )
+

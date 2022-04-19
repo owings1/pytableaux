@@ -33,7 +33,7 @@ from pytableaux.errors import (
 )
 from pytableaux.tools import abstract, closure, static, MapProxy
 from pytableaux.tools.abcs import (
-    AbcMeta, AbcEnum, FlagEnum,
+    AbcMeta, Ebc, FlagEnum,
     abcm,
 )
 from pytableaux.tools.decorators import membr
@@ -53,7 +53,7 @@ from typing import (
 
 #******  Branch Enum
 
-class BranchEvent(AbcEnum):
+class BranchEvent(Ebc):
     'Branch events.'
     AFTER_BRANCH_CLOSE = eauto()
     AFTER_NODE_ADD     = eauto()
@@ -61,13 +61,13 @@ class BranchEvent(AbcEnum):
 
 #******  Helper Enum
 
-class HelperAttr(str, AbcEnum):
+class HelperAttr(str, Ebc):
     'Special ``RuleHelper`` class attribute names.'
     InitRuleCls = '__init_ruleclass__'
 
 #******  Rule Enum
 
-class RuleAttr(str, AbcEnum):
+class RuleAttr(str, Ebc):
     'Special ``Rule`` class attribute names.'
     Helpers     = 'Helpers'
     Timers      = 'Timers'
@@ -77,7 +77,7 @@ class RuleAttr(str, AbcEnum):
     Name        = 'name'
     IgnoreTicked = 'ignore_ticked'
 
-class RuleEvent(AbcEnum):
+class RuleEvent(Ebc):
     'Rule events.'
     BEFORE_APPLY = eauto()
     AFTER_APPLY  = eauto()
@@ -91,7 +91,7 @@ class RuleFlag(FlagEnum):
 
 #******  Tableau Enum
 
-class TabEvent(AbcEnum):
+class TabEvent(Ebc):
     'Tableau events.'
     AFTER_BRANCH_ADD    = eauto()
     AFTER_BRANCH_CLOSE  = eauto()
@@ -100,7 +100,7 @@ class TabEvent(AbcEnum):
     AFTER_TRUNK_BUILD   = eauto()
     BEFORE_TRUNK_BUILD  = eauto()
 
-class TabStatKey(AbcEnum):
+class TabStatKey(Ebc):
     'Tableau ``stat()`` keys.'
     FLAGS       = eauto()
     STEP_ADDED  = eauto()

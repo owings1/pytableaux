@@ -14,12 +14,16 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-# pytableaux - errors module
+"""
+pytableaux.errors
+^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 # No local imports!
+
+# __all__ defined at the bottom.
 
 import enum as _enum
 from typing import Any
@@ -84,7 +88,6 @@ def _thru(o): return o
 def _len(o): return o if isinstance(o, int) else len(o)
 
 class Emsg(_enum.Enum):
-# class Emsg(AbcEnum):
 
     InstCheck = (TypeError,
         "Expected instance of '{1}' but got type '{0}'", (type, _thru)
@@ -134,6 +137,32 @@ class Emsg(_enum.Enum):
 
     Timeout = TimeoutError, "Timeout of {}ms exceeded", (int,)
 
+
+class check:
+
+    @staticmethod
+    def inst(obj, classinfo: type[_T]) -> _T:
+        if not isinstance(obj, classinfo):
+            raise Emsg.InstCheck(obj, classinfo)
+        return obj
+
+    @staticmethod
+    def subcls(cls: type, typeinfo: _T) -> _T:
+        if not issubclass(cls, typeinfo):
+            raise Emsg.SubclsCheck(cls, typeinfo)
+        return cls
+
+instcheck = check.inst
+subclscheck = check.subcls
+
+def errstr(err: Any) -> str:
+    if isinstance(err, Exception):
+        return f'{type(err).__name__}: {err}'
+    return str(err)
+
+# Some external assembly required.
+
+class EmsgBase:
     def __init__(self, cls: type[_ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):
             cls = type(cls[0], cls[1:], {})
@@ -159,28 +188,14 @@ class Emsg(_enum.Enum):
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
 
-def instcheck(obj, classinfo: type[_T]) -> _T:
-    if not isinstance(obj, classinfo):
-        raise Emsg.InstCheck(obj, classinfo)
-    return obj
+__all__ = 'check', 'Emsg', 'instcheck', 'subclscheck', 'errstr', *(
+    name for name, value in locals().items()
+    if isinstance(value, type) and issubclass(value, Exception)
+)
 
-def subclscheck(cls: type, typeinfo: _T) -> _T:
-    if not issubclass(cls, typeinfo):
-        raise Emsg.SubclsCheck(cls, typeinfo)
-    return cls
-
-def notsubclscheck(cls: type[_T], typeinfo: type) -> type[_T]:
-    if issubclass(cls, typeinfo):
-        raise Emsg.NotSubclsCheck(cls, typeinfo)
-    return cls
-
-def errstr(err: Any) -> str:
-    if isinstance(err, Exception):
-        return '%s: %s' % (type(err).__name__, err)
-    return str(err)
 
 from typing import TypeVar
 _ExT = TypeVar('_ExT', bound = Exception)
 _T = TypeVar('_T')
 
-del(_len, _thru, TypeVar)
+# del(_len, _thru, TypeVar)

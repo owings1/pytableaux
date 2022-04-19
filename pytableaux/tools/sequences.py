@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.tools.sequences
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 __all__ = (
@@ -9,22 +30,14 @@ __all__ = (
     'deqseq',
 )
 
-from pytableaux.errors import Emsg, instcheck
-from pytableaux.tools import abstract
-from pytableaux.tools.abcs import Copyable, abcm, abcf
-from pytableaux.tools.typing import VT
-
 from collections import deque
 from itertools import chain, repeat
-from typing import (
-    final, overload,
-    Iterable,
-    MutableSequence,
-    Sequence,
-    Sized,
-    SupportsIndex,
-    TypeVar,
-)
+from typing import (Iterable, MutableSequence, Sequence, Sized, SupportsIndex,
+                    TypeVar, final, overload)
+
+from pytableaux.errors import Emsg, check
+from pytableaux.tools import abcs, abstract
+from pytableaux.tools.typing import VT
 
 EMPTY = ()
 NOARG = object()
@@ -32,7 +45,8 @@ NOARG = object()
 def absindex(seqlen: int, index: SupportsIndex, /, strict = True) -> int:
     'Normalize to positive/absolute index.'
     if not isinstance(index, int):
-        index = int(instcheck(index, SupportsIndex))
+        check.inst(index, SupportsIndex)
+        index = int(index)
     if index < 0:
         index = seqlen + index
     if strict and (index >= seqlen or index < 0):
@@ -49,7 +63,7 @@ def slicerange(seqlen: int, slice_: slice, values: Sized, /, strict = True) -> r
             raise Emsg.MismatchExtSliceSize(values, range_)
     return range_
 
-class SequenceApi(Sequence[VT], Copyable):
+class SequenceApi(Sequence[VT], abcs.Copyable):
     "Extension of collections.abc.Sequence and built-in sequence (tuple)."
 
     __slots__ = EMPTY
@@ -121,42 +135,71 @@ class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
 
 class SequenceCover(SequenceApi[VT]):
 
-    __slots__ = '__seq',
+    __slots__ = {
+        '__len__', '__getitem__', '__contains__', '__iter__',
+        '__reversed__', 'count', 'index',
+    }
 
-    def __init__(self, sequence: Sequence[VT]):
-        self.__seq = sequence
+    def __new__(cls, seq: Sequence[VT], /, *,
+        required = __slots__.difference({'__reversed__'}),
+        optional = __slots__.intersection({'__reversed__'})
+    ):
+        check.inst(seq, Sequence)
 
-    def __len__(self):
-        return len(self.__seq)
+        inst = object.__new__(cls)
+        for name in required:
+            setattr(inst, name, getattr(seq, name))
+        for name in optional:
+            value = getattr(seq, name, NOARG)
+            if value is not NOARG:
+                setattr(inst, name, value)
+        inst.__srctype = type(seq)
+        # inst.__len__      = seq.__len__
+        # inst.__getitem__  = seq.__getitem__
 
-    def __getitem__(self, index):
-        return self.__seq[index]
+        return inst
+    __slots__ = frozenset(__slots__).union(('__srctype',))
+    __srctype: type[Sequence]
 
-    def __contains__(self, value):
-        return value in self.__seq
+    # __slots__ = '__seq',
 
-    def __iter__(self):
-        return iter(self.__seq)
+    # def __init__(self, sequence: Sequence[VT]):
+    #     self.__seq = sequence
 
-    def __reversed__(self):
-        return reversed(self.__seq)
+    # def __len__(self):
+    #     return len(self.__seq)
 
-    def count(self, value):
-        return self.__seq.count(value)
+    # def __getitem__(self, index):
+    #     return self.__seq[index]
 
-    def index(self, *args):
-        return self.__seq.index(*args)
+    # def __contains__(self, value):
+    #     return value in self.__seq
+
+    # def __iter__(self):
+    #     return iter(self.__seq)
+
+    # def __reversed__(self):
+    #     return reversed(self.__seq)
+
+    # def count(self, value):
+    #     return self.__seq.count(value)
+
+    # def index(self, *args):
+    #     return self.__seq.index(*args)
 
     def copy(self):
         'Immutable copy, returns self.'
         return self
 
     def __repr__(self):
-        from pytableaux.tools.misc import wraprepr
-        return wraprepr(self, list(self))  
+        return f'{type(self).__name__}({list(self)})'
+        # from pytableaux.tools.misc import wraprepr
+        # return wraprepr(self, list(self))  
 
     @classmethod
     def _from_iterable(cls, it):
+        if isinstance(it, cls):
+            return it
         if isinstance(it, Sequence):
             return cls(it)
         return cls(tuple(it))
@@ -179,7 +222,7 @@ class seqf(tuple[VT, ...], SequenceApi[VT]):
     def __radd__(self, other: list[VT]) -> list[VT]: ...
     @overload
     def __radd__(self, other: deque[VT]) -> deque[VT]: ...
-    @abcf.temp
+    @abcs.abcf.temp
     @overload
     def __radd__(self, other: seqf[VT]) -> seqf[VT]: ...
 
@@ -252,4 +295,4 @@ SequenceApi.register(tuple)
 MutableSequenceApi.register(list)
 # MutableSequenceApi.register(deque)
 
-del(Copyable, abcf, abcm, abstract, final, overload)
+del(abstract, final, overload)

@@ -87,80 +87,6 @@ def dtransform():
 
     return api
 
-
-# def get_module(ref, package: str = None) -> ModuleType:
-
-#     cache = get_module.__dict__
-#     keys = set()
-#     ret = {'mod': None}
-
-#     def _checkref(ref):
-#         if ref is None: return
-#         key = (package, ref)
-#         try: return bool(_setcache(cache[key]))
-#         except KeyError: keys.add(key)
-#         return False
-
-#     def _setcache(val):
-#         for key in keys:
-#             cache[key] = val
-#         ret['mod'] = val
-#         return val
-
-#     if hasattr(ref, '__module__'):
-#         if _checkref(ref.__module__):
-#             return ret['mod']
-#         ref = import_module(ref.__module__)
-
-#     if isinstance(ref, ModuleType):
-#         if _checkref(ref.__name__):
-#             return ret['mod']
-#         if package is not None and package != getattr(ref, '__package__', None):
-#             raise ModuleNotFoundError(
-#                 "Module '{0}' not in package '{1}'".format(ref.__name__, package)
-#             )
-#         return _setcache(ref)
-
-#     if not isinstance(ref, str):
-#         raise TypeError("ref must be string or module, or have __module__ attribute")
-
-#     ref = ref.lower()
-#     if _checkref(ref):
-#         return ret['mod']
-#     if package is None:
-#         return _setcache(import_module(ref))
-#     pfx = cat(package, '.')
-#     try:
-#         return _setcache(import_module(cat(pfx, ref)))
-#     except ModuleNotFoundError:
-#         if not ref.startswith(pfx):
-#             raise
-#         ref = ref[len(pfx):]
-#         if _checkref(ref):
-#             return ret['mod']
-#         return _setcache(import_module(cat(pfx, ref)))
-
-# def getlogic(ref) -> ModuleType:
-#     """
-#     Get the logic module from the specified reference.
-
-#     Each of following examples returns the L{FDE} logic module::
-
-#         getlogic('fde')
-#         getlogic('FDE')
-#         getlogic('logics.fde')
-#         getlogic(getlogic('FDE'))
-
-
-#     :param any ref: The logic reference.
-#     :return: The logic module.
-#     :rtype: module
-#     :raises ModuleNotFoundError: if the logic is not found.
-#     :raises TypeError: if no module name can be determined from ``ref``.
-#     """
-#     return get_module(ref, package = 'logics')
-# get_logic = getlogic
-
 def cat(*args: str) -> str:
     'Concat all argument strings'
     return ''.join(args)
@@ -218,4 +144,3 @@ def wraprepr(obj, inner, **kw) -> str:
     if not isinstance(obj, str):
         obj = type(obj).__name__
     return cat(obj, wrparens(inner.__repr__(), **kw))
-

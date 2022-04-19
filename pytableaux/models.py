@@ -25,7 +25,7 @@ __all__ = 'BaseModel', 'Mval'
 
 from pytableaux.errors import instcheck, Emsg
 from pytableaux.tools import closure
-from pytableaux.tools.abcs import Abc, AbcEnum
+from pytableaux.tools.abcs import Abc, Ebc
 from pytableaux.tools.decorators import abstract
 from pytableaux.tools.sets import setf
 from pytableaux.lexicals import (
@@ -53,7 +53,7 @@ from typing import (
     Mapping,
 )
 
-class Mval(AbcEnum):
+class Mval(Ebc):
 
     __slots__ = 'name', 'label', 'num',
 

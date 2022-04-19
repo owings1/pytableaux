@@ -26,10 +26,10 @@ __all__ = (
     'abcf',
     'abcm',
     'AbcMeta',
-    'AbcEnumMeta',
+    'EnumMeta',
     'Abc',
     'Copyable',
-    'AbcEnum',
+    'Ebc',
     'FlagEnum',
     'IntEnum',
 )
@@ -44,8 +44,8 @@ from typing import (Annotated, Any, Callable, Collection, Hashable, Iterable,
                     Iterator, Mapping, Sequence, SupportsIndex, TypeVar,
                     overload)
 
-from pytableaux import tools
-from pytableaux.errors import Emsg, instcheck, subclscheck
+from pytableaux import errors, tools
+from pytableaux.errors import check
 from pytableaux.tools.typing import RT, TT, EnumDictType, EnumT, F, Self, T
 
 KeysFunc = Callable[[Any], Set[Hashable]]
@@ -62,7 +62,7 @@ class Eset(frozenset, _enum.Enum):
     clean_methods = hook_methods
 
 @tools.static
-class enbm:
+class ebcm:
     'Static Enum meta utils.'
 
     @staticmethod
@@ -101,44 +101,47 @@ class enbm:
         return isinstance(obj, type) and issubclass(obj, _enum.Enum)
 
     @staticmethod
-    def rebase(oldcls: type[EnumT], *bases: type, **kw) -> type[EnumT]:
+    def rebase(oldcls: type[EnumT], *bases: type, metaclass = None, **kw) -> type[EnumT]:
         'Rebase an enum class with the same member data.'
         # Get metaclass.
-        # Explicit metaclass keyword?
-        metaclass = kw.pop('metaclass', None)
         if metaclass is None:
             # Try the metaclass of the last enum class in the new bases.
-            it = filter(enbm.is_enumcls, reversed(bases))
+            it = filter(ebcm.is_enumcls, reversed(bases))
             try:
                 metaclass = type(next(it))
             except StopIteration:
                 # Fall back on the old metaclass.
                 metaclass = type(oldcls)
         # Validate metaclass.
-        metaclass = subclscheck(instcheck(metaclass, type), _enum.EnumMeta)
+        metaclass = check.subcls(check.inst(metaclass, type), _enum.EnumMeta)
         # New bases.
         if not len(bases):
             # If no new bases passed, try the last enum class of the old bases.
-            it = filter(enbm.is_enumcls, reversed(oldcls.__bases__))
+            it = filter(ebcm.is_enumcls, reversed(oldcls.__bases__))
             bases = list(it)[0:1]
             if not len(bases):
                 # Fall back on built-in Enum.
                 bases = _enum.Enum,
         # Reuse old non-enum bases.
         bases = tuple(itertools.chain(
-            itertools.filterfalse(enbm.is_enumcls, oldcls.__bases__),
+            itertools.filterfalse(ebcm.is_enumcls, oldcls.__bases__),
             bases
         ))
-        # Prepare class namespace.
-        ns = instcheck(metaclass.__prepare__(clsname, bases, **kw), dict)
-        # Add member data from old class. Use _member_map_ to include aliases.
-        for mname, m in oldcls._member_map_.items():
-            # Use __setitem__, not update, else EnumDict won't work.
-            ns[mname] = m._value_
         # Class name.
         clsname = oldcls.__name__
-        # Create class.
-        return metaclass(clsname, bases, ns, **kw)
+        try:
+            # Prepare class namespace.
+            ns = check.inst(metaclass.__prepare__(clsname, bases, **kw), dict)
+            # Add member data from old class. Use _member_map_ to include aliases.
+            for mname, m in oldcls._member_map_.items():
+                # Use __setitem__, not update, else EnumDict won't work.
+                ns[mname] = m._value_
+            # Create class.
+            return metaclass(clsname, bases, ns, **kw)
+        except TypeError:
+            for _ in (clsname, bases, kw):
+                print(_)
+            raise
 
 class EnumLookup(Mapping[Any, EnumT]):
     'Enum member lookup index.'
@@ -259,9 +262,9 @@ class EnumLookup(Mapping[Any, EnumT]):
         "Verify a pseudo member, returning index keys."
         check = Owner._value2member_map_[pseudo._value_]
         if check is not pseudo:
-            raise TypeError from Emsg.ValueConflict(pseudo, check)
+            raise TypeError from errors.Emsg.ValueConflict(pseudo, check)
         if pseudo._name_ is not None:
-            raise TypeError from Emsg.WrongValue(pseudo._name_, None)
+            raise TypeError from errors.Emsg.WrongValue(pseudo._name_, None)
         return cls._pseudo_keys(pseudo)
 
     @staticmethod
@@ -275,10 +278,10 @@ class EnumLookup(Mapping[Any, EnumT]):
         return {member._name_, (member._name_,), member, member._value_}
 
     def __setattr__(self, name, value, /):
-        raise Emsg.ReadOnlyAttr(name, self)
+        raise errors.Emsg.ReadOnlyAttr(name, self)
 
     def __delattr__(self, name, /):
-        raise Emsg.ReadOnlyAttr(name, self)
+        raise errors.Emsg.ReadOnlyAttr(name, self)
 
     def __repr__(self):
         return repr(dict(self))
@@ -292,19 +295,19 @@ class EnumLookup(Mapping[Any, EnumT]):
 #       Enum Meta
 #_____________________________________________________________________________
 
-EnT  = TypeVar('EnT',  bound = 'AbcEnum')
-EnT2 = TypeVar('EnT2', bound = 'AbcEnum')
+EbcT  = TypeVar('EbcT',  bound = 'Ebc')
+EbcT2 = TypeVar('EbcT2', bound = 'Ebc')
 
-class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
+class EnumMeta(_enum.EnumMeta, type[EbcT2]):
     'General-purpose base Metaclass for all Enum classes.'
 
     #******  Class Instance Variables
 
-    seq     : Sequence[EnT2]
-    _lookup : EnumLookup[EnT2]
+    seq     : Sequence[EbcT2]
+    _lookup : EnumLookup[EbcT2]
 
     _member_names_ : Sequence[str]
-    _member_map_   : Mapping[str, EnT2]
+    _member_map_   : Mapping[str, EbcT2]
 
     #******  Class Creation
 
@@ -341,10 +344,10 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
             return Class
 
         # Store the fixed member sequence. Necessary for iterating.
-        Class.seq = enbm.buildseq(Class)
+        Class.seq = ebcm.buildseq(Class)
 
         # Performance tweaks.
-        enbm.fix_name_value(Class)
+        ebcm.fix_name_value(Class)
 
         # Init hook to process members before index is created.
         Class._on_init(Class)
@@ -356,17 +359,17 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
         Class._after_init()
 
         # Cleanup.
-        enbm.clean_methods(Class)
+        ebcm.clean_methods(Class)
 
         return Class
 
     #******  Subclass Init Hooks
 
-    def _member_keys(cls, member: AbcEnum,/) -> Set[Hashable]:
+    def _member_keys(cls, member: Ebc,/) -> Set[Hashable]:
         'Init hook to get the index lookup keys for a member.'
         return Eset.Empty
 
-    def _on_init(cls, subcls: type[EnT]|AbcEnumMeta,/):
+    def _on_init(cls, subcls: type[EbcT]|EnumMeta,/):
         '''Init hook after all members have been initialized, before index
         is created. **NB:** Skips abstract classes.'''
         pass
@@ -377,7 +380,7 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
 
     #******  Class Call
 
-    def __call__(cls: type[EnT]|AbcEnumMeta[EnT2], value: Any, names = None, **kw) -> EnT:
+    def __call__(cls: type[EbcT]|EnumMeta[EbcT2], value: Any, names = None, **kw) -> EbcT:
         if names is not None:
             return super().__call__(value, names, **kw)
         try:
@@ -391,7 +394,7 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
 
     #******  Mapping(ish) Behavior
 
-    def get(cls: type[EnT]|AbcEnumMeta[EnT2], key: Any, default: Any = NOARG, /) -> EnT|EnT2:
+    def get(cls: type[EbcT]|EnumMeta[EbcT2], key: Any, default: Any = NOARG, /) -> EbcT|EbcT2:
         """Get a member by an indexed reference key.
 
         Args:
@@ -411,7 +414,7 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
                 raise
             return default
 
-    def __getitem__(cls: type[EnT]|AbcEnumMeta[EnT2], key: Any, /) -> EnT|EnT2:
+    def __getitem__(cls: type[EbcT]|EnumMeta[EbcT2], key: Any, /) -> EbcT|EbcT2:
         return cls._lookup[key]
 
     def __contains__(cls, key: Any, /):
@@ -419,10 +422,10 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
 
     #******  Sequence(ish) Behavior
 
-    def __iter__(cls: type[EnT]|AbcEnumMeta[EnT2]) -> Iterator[EnT|EnT2]:
+    def __iter__(cls: type[EbcT]|EnumMeta[EbcT2]) -> Iterator[EbcT|EbcT2]:
         return iter(cls.seq)
 
-    def __reversed__(cls: type[EnT]|AbcEnumMeta[EnT2]) -> Iterator[EnT|EnT2]:
+    def __reversed__(cls: type[EbcT]|EnumMeta[EbcT2]) -> Iterator[EbcT|EbcT2]:
         return reversed(cls.seq)
 
     #******  Misc Behaviors
@@ -440,19 +443,19 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
 
     @property
     @overload
-    def seq(self: type[EnT]) -> Sequence[EnT]: ...
+    def seq(self: type[EbcT]) -> Sequence[EbcT]: ...
     del(seq)
 
 #=============================================================================
 #_____________________________________________________________________________
 #
-#       Enum Support Classes
+#       Ebc Support Classes
 #
 #           skipflags = True
 #           skipabcm = True
 #_____________________________________________________________________________
 
-class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta, skipflags = True, skipabcm = True):
+class Ebc(_enum.Enum, metaclass = EnumMeta, skipflags = True, skipabcm = True):
 
     __slots__ = Eset.Empty
 
@@ -467,17 +470,17 @@ class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta, skipflags = True, skipabcm = 
         return self
 
     @classmethod
-    def _on_init(cls: AbcEnumMeta, subcls: type[AbcEnum]):
+    def _on_init(cls: EnumMeta, subcls: type[Ebc]):
         'Propagate hook up to metaclass.'
         type(cls)._on_init(cls, subcls)
 
     @classmethod
-    def _member_keys(cls: AbcEnumMeta, member: AbcEnum):
+    def _member_keys(cls: EnumMeta, member: Ebc):
         'Propagate hook up to metaclass.'
         return type(cls)._member_keys(cls, member)
 
     @classmethod
-    def _after_init(cls: AbcEnumMeta):
+    def _after_init(cls: EnumMeta):
         'Propagate hook up to metaclass.'
         type(cls)._after_init(cls)
 
@@ -488,13 +491,13 @@ class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta, skipflags = True, skipabcm = 
         except AttributeError:
             return f'<{clsname}.?ERR?>'
 
-class Astr(str, AbcEnum, skipflags = True, skipabcm = True):
+class Astr(str, Ebc, skipflags = True, skipabcm = True):
 
     flag     = '_abc_flag'
     hookuser = '_abc_hook_user'
     hookinfo = '_abc_hook_info'
 
-class FlagEnum(_enum.Flag, AbcEnum, skipflags = True, skipabcm = True):
+class FlagEnum(_enum.Flag, Ebc, skipflags = True, skipabcm = True):
 
     name  : str|None
     value : int
@@ -718,7 +721,7 @@ class AbcMeta(_abc.ABCMeta):
             impl = value.setdefault(cls, {})
             for name in hooks:
                 if name in impl:
-                    raise TypeError from Emsg.DuplicateKey(name)
+                    raise TypeError from errors.Emsg.DuplicateKey(name)
                 impl[name] = func
             return func
         return decorator
@@ -759,7 +762,7 @@ class Copyable(Abc, skiphooks = True):
 #       Enum Base Classes
 #_____________________________________________________________________________
 
-class IntEnum(int, AbcEnum):
+class IntEnum(int, Ebc):
     __slots__ = Eset.Empty
     # NB: "nonempty __slots__ not supported for subtype of 'IntEnum'"
     pass
@@ -775,4 +778,4 @@ class IntFlag(int, FlagEnum):
 #       Rebases
 #_____________________________________________________________________________
 
-Eset = enbm.rebase(Eset, AbcEnum)
+Eset = ebcm.rebase(Eset, Ebc)

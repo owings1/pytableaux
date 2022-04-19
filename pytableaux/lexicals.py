@@ -152,13 +152,13 @@ if 'Metas' or True:
         __delattr__ = raisr(AttributeError)
         __setattr__ = nosetattr(abcs.AbcMeta)
 
-    class EnumCommonMeta(abcs.AbcEnumMeta):
+    class EnumCommonMeta(abcs.EnumMeta):
         'Common Enum meta base class for lexicals module.'
 
         _readonly : bool
 
         __delattr__ = raisr(AttributeError)
-        __setattr__ = nosetattr(abcs.AbcEnumMeta)
+        __setattr__ = nosetattr(abcs.EnumMeta)
 
     class LexicalItemMeta(AbcCommonMeta):
         """Meta base class for ``LexicalItem`` (non-Enum) classes, such as
@@ -272,13 +272,13 @@ if 'Metas' or True:
                 return parsercls(*args, **kw)
             return super().__call__(*args, **kw)
 
-class EnumCommon(abcs.AbcEnum, metaclass = EnumCommonMeta):
+class EnumCommon(abcs.Ebc, metaclass = EnumCommonMeta):
     'Common Enum base class for lexicals module.'
 
     __slots__   = 'value', '_value_', '_name_', '__objclass__'
 
     __delattr__ = raisr(AttributeError)
-    __setattr__ = nosetattr(abcs.AbcEnum, cls = True)
+    __setattr__ = nosetattr(abcs.Ebc, cls = True)
 
 @abcm.clsafter
 class Lexical:
@@ -587,7 +587,7 @@ class LexicalEnum(Lexical, EnumCommon, lexcopy = True):
 
     @classmethod
     def _member_keys(cls, member: LexicalEnum):
-        """``AbcEnumMeta`` hook.
+        """``EnumMeta`` hook.
         
         Add any values in ``.strings`` as keys for the member index.
         """
@@ -595,7 +595,7 @@ class LexicalEnum(Lexical, EnumCommon, lexcopy = True):
 
     @classmethod
     def _on_init(cls, subcls: type[LexicalEnum]):
-        """``AbcEnumMeta`` hook.
+        """``EnumMeta`` hook.
         
         Store the sequence index of each member to ``.index``.
         """
@@ -1621,7 +1621,7 @@ class LexType(EnumCommon):
 
     @classmethod
     def _after_init(cls):
-        """``AbcEnumMeta`` hook.
+        """``EnumMeta`` hook.
         
         - build classes list
         - write ``sort_tuple`` and ``hash``
@@ -1637,7 +1637,7 @@ class LexType(EnumCommon):
 
     @classmethod
     def _member_keys(cls, member: LexType):
-        """``AbcEnumMeta`` hook.
+        """``EnumMeta`` hook.
         
         Add the class object to the member lookup keys.
         """

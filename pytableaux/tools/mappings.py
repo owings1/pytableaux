@@ -14,9 +14,11 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-# pytableaux - mappings module
+"""
+pytableaux.tools.mappings
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 __all__ = (
@@ -40,7 +42,7 @@ from operator import not_, truth
 from typing import Any, Callable, Iterable, TypeVar, final, overload
 
 from pytableaux import tools
-from pytableaux.errors import Emsg, instcheck
+from pytableaux.errors import Emsg, check
 from pytableaux.tools import MapProxy, abcs, abstract, closure
 from pytableaux.tools.decorators import fixed, membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
@@ -181,7 +183,7 @@ class MapCover(MappingApi[KT, VT]):
     def __init__(self, mapping: Mapping[KT, VT] = None, /, **kwmap):
         if mapping is None: mapping = kwmap
         else:
-            instcheck(mapping, Mapping)
+            check.inst(mapping, Mapping)
             if len(kwmap):
                 raise TypeError('Expected mapping or kwargs, not both.')
         self._init_cover(mapping, self)
@@ -345,7 +347,7 @@ class KeySetAttr(abcs.Abc):
 class dmapattr(KeySetAttr, dmap[KT, VT]):
     __slots__ = EMPTY_SET
 
-class ItemMapEnum(abcs.AbcEnum):
+class ItemMapEnum(abcs.Ebc):
     """Fixed mapping enum based on item tuples.
 
     If a member value is defined as a mapping, the member's ``_value_`` attribute
@@ -387,7 +389,7 @@ class ItemMapEnum(abcs.AbcEnum):
     keys = MappingApi.keys
     items = MappingApi.items
     values = MappingApi.values
-    iget = MappingApi.get # get() is not allowed for AbcEnum
+    iget = MappingApi.get # get() is not allowed for Ebc
 
     _asdict = MappingApi._asdict
 
@@ -445,9 +447,9 @@ class DequeCache(Collection[VT], abcs.Abc):
 
     def __new__(cls, Vtype: type, maxlen = 10):
 
-        from pytableaux.errors import notsubclscheck
-        notsubclscheck(Vtype, (int, slice))
-        instcheck(Vtype, type)
+        check.inst(Vtype, type)
+        if issubclass(Vtype, (int, slice)):
+            raise TypeError(f'subclass of (int, slice) unexpected: {Vtype}')
 
         idx      : dict[Any, VT] = {}
         idxproxy : Mapping[Any, VT] = MapProxy(idx)
@@ -484,7 +486,7 @@ class DequeCache(Collection[VT], abcs.Abc):
                 return idx[key]
 
             def __setitem__(self, key, item: VT):
-                instcheck(item, Vtype)
+                check.inst(item, Vtype)
                 if item in self:
                     item = self[item]
                 else:
