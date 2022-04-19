@@ -15,109 +15,66 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+"""
+pytableaux
+----------
 
 """
-    pytableaux
-    ----------
 
-"""
-
-__all__ = ('package',)
-
-import dataclasses
-import os.path
-import typing
-
-__version__ = 2, 0, 0, 'alpha'
-'Version tuple (major, minor, patch, release).'
-
-__year__ = 2022
-'Last updated year, for copyright end date.'
-
-__docformat__ = 'reStructuredText'
-
-class SemVer(typing.NamedTuple):
-    'Version tuple info.'
-
-    major: int
-    'Major version number.'
-
-    minor: int
-    'Minor version number.'
-
-    patch: int
-    'Patch version number.'
-
-    release: str
-    'Release tag'
-
-    @property
-    def short(self):
-        "Short version, e.g. ``'1.2'``"
-        return f'{self.major}.{self.minor}'
-
-    @property
-    def display(self):
-        "Display version, e.g. ``'1.2.3'``"
-        return f'{self.short}.{self.patch}'
-
-    @property
-    def full(self):
-        "Full version, e.g. ``'1.2.3-alpha'``"
-        return f'{self.display}-{self.release}'
-
-def sdata(c: type):
-    'Singleton dataclass instance factory.'
-    return typing.cast(c, dataclasses.dataclass(init = False)(c)())
-
-@sdata
-class package:
-    'Package info.'
-
-    name: str = 'pytableaux'
-
-    version: SemVer = SemVer(*__version__)
-
-    author     : object
-    license    : object
-    repository : object
-    issues     : object
-
-    @sdata
-    class author:
-        name  : str = 'Doug Owings'
-        email : str = 'doug@dougowings.net'
-
-    @sdata
-    class license:
-        id    : str = 'AGPL-3.0-or-later'
-        title : str = 'GNU Affero General Public License v3.0 or later'
-        url   : str = 'https://www.gnu.org/licenses/agpl-3.0.en.html'
-
-    @sdata
-    class repository:
-        type : str = 'git'
-        url  : str = 'https://github.com/owings1/pytableaux'
-
-    @sdata
-    class issues:
-        url: str = 'https://github.com/owings1/pytableaux/issues'
-
-    year: int = __year__
-    'Last updated year'
-
-    copyright: str = (
-        f'2014-{year}, {author.name}. Released under the {license.title}'
-    )
-    'Project copyright string.'
-
-    root: str = os.path.dirname(os.path.abspath(__file__))
-    'Base package directory.'
-
-    __slots__ = ()
+__docformat__ = 'google'
+__all__ = (
+    'errors',
+    'examples',
+    'lexicals',
+    'logics',
+    'models',
+    'package',
+    'parsers',
+    'proof',
+    'tools',
+)
 
 
 from pytableaux import errors
+from pytableaux._package_info import package
 from pytableaux.tools import abcs
+
 errors.Emsg = abcs.ebcm.rebase(errors.Emsg, errors.EmsgBase, abcs.Ebc)
 del(errors.EmsgBase)
+
+
+import pytableaux.tools.typing
+import pytableaux.tools.hooks
+# operd, NoSetAttr, lazy, membr, raisr, wraps
+import pytableaux.tools.decorators
+import pytableaux.tools.sets
+
+# Back patch
+abcs.abcm._frozenset = pytableaux.tools.sets.setf
+
+import pytableaux.tools.timing
+import pytableaux.tools.misc
+import pytableaux.tools.mappings
+import pytableaux.tools.sequences
+import pytableaux.tools.hybrids
+import pytableaux.tools.linked
+import pytableaux.tools.callables
+
+import pytableaux.lexicals
+import pytableaux.parsers
+import pytableaux.examples
+import pytableaux.models
+
+import pytableaux.proof.types
+import pytableaux.proof.common
+import pytableaux.proof.filters
+import pytableaux.proof.tableaux
+import pytableaux.proof.baserules
+import pytableaux.proof.helpers
+import pytableaux.proof.writers
+
+from pytableaux import (
+    examples, lexicals, logics, models, parsers, proof, tools
+)
+
+from pytableaux.tools.sets import EMPTY_SET

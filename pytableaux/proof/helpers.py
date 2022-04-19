@@ -34,52 +34,28 @@ __all__ = (
     'MaxConsts',
     'NodeConsts',
     'MaxWorlds',
+)
 
-)
-from pytableaux.errors import (
-    instcheck,
-    subclscheck,
-    Emsg,
-)
-from pytableaux.tools import abstract, static, MapProxy
+from copy import copy
+import functools
+from typing import (Any, Callable, Iterable, Iterator, Mapping, Sequence,
+                    final, overload)
+
+from pytableaux.errors import Emsg, check
+from pytableaux.lexicals import Constant, Predicated, Sentence
+from pytableaux.models import BaseModel
+from pytableaux.proof.common import Access, Branch, Node, Target
+from pytableaux.proof.filters import NodeFilter
+from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
+from pytableaux.proof.types import RuleAttr, RuleEvent, RuleHelper, TabEvent
+from pytableaux.tools import MapProxy, abstract
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.callables import cchain
-from pytableaux.tools.decorators import wraps
-from pytableaux.tools.hybrids import qsetf, EMPTY_QSET
+from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
-from pytableaux.tools.sets import EMPTY_SET, setm, setf
+from pytableaux.tools.sets import EMPTY_SET, setf, setm
 from pytableaux.tools.typing import KT, VT, P, T, TypeInstDict
 
-from pytableaux.lexicals import Constant, Sentence, Predicated
-from pytableaux.models import BaseModel
-from pytableaux.proof.common import (
-    Access,
-    Branch,
-    Node,
-    Target,
-)
-from pytableaux.proof.filters import NodeFilter
-from pytableaux.proof.tableaux import (
-    ClosingRule,
-    Rule,
-    Tableau,
-)
-from pytableaux.proof.types import (
-    RuleAttr,
-    RuleEvent,
-    RuleHelper,
-    TabEvent,
-)
-from copy import copy
-from typing import (
-    final, overload,
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-)
 
 class AdzHelper:
 
@@ -516,7 +492,7 @@ class FilterHelper(FilterNodeCache):
         )
         if values:
             for Filter in values:
-                subclscheck(instcheck(Filter, type), NodeFilter)
+                check.subcls(check.inst(Filter, type), NodeFilter)
         else:
             if not abcm.isabstract(rulecls):
                 import warnings
@@ -541,7 +517,7 @@ class FilterHelper(FilterNodeCache):
         Returns a flat list of targets.
         """
         fiter_targets = _targets_from_nodes_iter(fget_node_targets)
-        @wraps(fiter_targets)
+        @functools.wraps(fiter_targets)
         def get_targets_filtered(rule: Rule, branch: Branch):
             helper = rule.helpers[cls]
             helper.gc()
@@ -888,7 +864,7 @@ class EllipsisExampleHelper:
         branch.add(self.mynode)
 
 def _targets_from_nodes_iter(fget_node_targets: Callable[P, Any]) -> Callable[P, Iterator[Target]]:
-    @wraps(fget_node_targets)
+    @functools.wraps(fget_node_targets)
     def targets_iter(rule: Rule, nodes: Iterable[Node], branch: Branch):
         for node in nodes:
             results = fget_node_targets(rule, node, branch)
@@ -899,7 +875,7 @@ def _targets_from_nodes_iter(fget_node_targets: Callable[P, Any]) -> Callable[P,
                 # Single target result.
                 yield Target(results, rule = rule, branch = branch, node = node)
                 continue
-            instcheck(results, (Sequence, Iterator))
+            check.inst(results, (Sequence, Iterator))
             # Multiple targets result.
             for res in filter(bool, results):
                 # assert isinstance(res, Mapping)
@@ -908,4 +884,4 @@ def _targets_from_nodes_iter(fget_node_targets: Callable[P, Any]) -> Callable[P,
 
     return targets_iter
 
-del(abstract, final, overload, static)
+del(abstract, final, overload)

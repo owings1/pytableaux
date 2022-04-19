@@ -16,9 +16,14 @@
 #
 # ------------------
 #
-# pytableaux - proof.tableaux module
+"""
+pytableaux.proof.tableaux
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
+__docformat__ = 'google'
 __all__ = (
     'ClosingRule',
     'Rule',
@@ -26,86 +31,58 @@ __all__ = (
     'TableauxSystem',
 )
 
-if 'Imports' or True:
-    from pytableaux.errors import Emsg, instcheck, subclscheck
-    from pytableaux.tools import abstract, closure, static
-    from pytableaux.tools.abcs import Abc
-    from pytableaux.tools.callables import preds
-    from pytableaux.tools.decorators import raisr, wraps
-    from pytableaux.tools.events import EventEmitter
-    from pytableaux.tools.hybrids import qset, qsetf, EMPTY_QSET
-    from pytableaux.tools.linked import linqset
-    from pytableaux.tools.mappings import dmap, dmapattr, MapCover, MapProxy
-    from pytableaux.tools.misc import orepr
-    from pytableaux.tools.sequences import (
-        absindex,
-        SequenceApi,
-        SequenceCover,
-        seqf,
-        seqm,
-    )
-    from pytableaux.tools.sets import setf, EMPTY_SET
-    from pytableaux.tools.timing import StopWatch
-    from pytableaux.tools.typing import T, F, TypeInstDict
+import functools
+import operator as opr
+from collections import deque
+from collections.abc import Set
+from types import ModuleType
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
+                    Iterable, Iterator, Mapping, NamedTuple, Sequence,
+                    SupportsIndex, TypeVar, final, overload)
 
-    from pytableaux.lexicals import Argument, Sentence
-    from pytableaux.logics import getlogic
-    from pytableaux.models import BaseModel
+from pytableaux.errors import Emsg, check
+from pytableaux.lexicals import Argument, Sentence
+from pytableaux.logics import getlogic
+from pytableaux.models import BaseModel
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.types import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
+                                    RuleHelper, RuleMeta, TabEvent, TabFlag,
+                                    TabStatKey, TabTimers)
+from pytableaux.tools import abstract, closure, static
+from pytableaux.tools.abcs import Abc
+from pytableaux.tools.callables import preds
+from pytableaux.tools.decorators import raisr
+from pytableaux.tools.events import EventEmitter
+from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
+from pytableaux.tools.linked import linqset
+from pytableaux.tools.mappings import MapCover, MapProxy, dmap, dmapattr
+from pytableaux.tools.misc import orepr
+from pytableaux.tools.sequences import (SequenceApi, SequenceCover, absindex,
+                                        seqf, seqm)
+from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.timing import StopWatch
 
-    from pytableaux.proof.common import Branch, Node, Target
-    from pytableaux.proof.types import (
-        BranchEvent,
-        NodeStat,
-        RuleEvent,
-        RuleFlag,
-        RuleHelper,
-        RuleMeta,
-        TabEvent,
-        TabFlag,
-        TabStatKey,
-        TabTimers,
-    )
+if TYPE_CHECKING:
+    from pytableaux.logics import LogicLookupKey
+    from pytableaux.tools.typing import F, T, TypeInstDict
 
-    from collections import deque
-    from collections.abc import Set
-    import operator as opr
-    from types import ModuleType
-    from typing import (
-        final, overload,
-        Any,
-        Callable,
-        ClassVar,
-        Collection,
-        # Generic,
-        Iterable,
-        Iterator,
-        Mapping,
-        # MutableSequence,
-        NamedTuple,
-        Sequence,
-        SupportsIndex,
-        TypeVar,
-    )
 
-if 'Type Vars' or True:
-    LogicRef = ModuleType | str
-    RuleT = TypeVar('RuleT', bound = 'Rule')
+RuleT = TypeVar('RuleT', bound = 'Rule')
 
-if 'Constants' or True:
-    NOARG = object()
-    NOGET = object()
+NOARG = object()
+NOGET = object()
 
-if 'Util Functions' or True:
-    def locking(method: F) -> F:
-        'Decorator for locking TabRules methods after Tableau is started.'
-        @wraps(method)
-        def f(self: TabRules, *args, **kw):
-            try:
-                if self._root._locked:
-                    raise Emsg.IllegalState('locked')
-            except AttributeError: pass
-            return method(self, *args, **kw)
-        return f
+
+def locking(method: F) -> F:
+    'Decorator for locking TabRules methods after Tableau is started.'
+    @functools.wraps(method)
+    def f(self: TabRules, *args, **kw):
+        try:
+            if self._root._locked:
+                raise Emsg.IllegalState('locked')
+        except AttributeError: pass
+        return method(self, *args, **kw)
+    return f
 
 # ----------------------------------------------
 
@@ -326,7 +303,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         - `min_candidate_score`
         - `max_candidate_score`
 
-        :param targets: The list of targets.
+        Args:
+            targets: The list of targets.
         """
         is_rank_optim = self.opts['is_rank_optim']
         if is_rank_optim:
@@ -367,7 +345,8 @@ class ClosingRule(Rule):
     @abstract
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch) -> bool:
         """For calculating a target's closure score. This default
-        implementation delegates to the abstract ``node_will_close_branch()``."""
+        implementation delegates to the abstract ``node_will_close_branch()``.
+        """
         raise NotImplementedError
 
 # ----------------------------------------------
@@ -477,12 +456,13 @@ class TabRules(SequenceApi[Rule]):
         idx: Mapping[str, Rule], ref: str|RuleT|type[RuleT], default = NOARG, /
     ) -> RuleT:
         '''Retrieve a rule instance from the given index, by name, type,
-        or instance of same type.'''
+        or instance of same type.
+        '''
         try:
             if isinstance(ref, str):
                 return idx[ref]
             if isinstance(ref, type):
-                rule = idx[subclscheck(ref, Rule).__name__]
+                rule = idx[check.subcls(ref, Rule).__name__]
                 if ref is type(rule): return rule
                 raise KeyError
             if isinstance(ref, Rule):
@@ -539,7 +519,7 @@ class RuleGroup(SequenceApi[Rule]):
           errors.IllegalStateError: If locked.
         """
         root = self._root
-        name = subclscheck(value, Rule).__name__
+        name = check.subcls(value, Rule).__name__
         root._checkname(name)
         rule = value(root._tab, **root._tab.opts)
         self._seq.append(rule)
@@ -677,12 +657,12 @@ class RuleGroups(SequenceApi[RuleGroup]):
         return len(self._seq)
 
     def __getitem__(self, index: SupportsIndex) -> RuleGroup:
-        return self._seq[instcheck(index, SupportsIndex)]
+        return self._seq[check.inst(index, SupportsIndex)]
 
     def __contains__(self, item: str|RuleGroup):
         if isinstance(item, str):
             return item in self._root._groupindex
-        instcheck(item (str, RuleGroup))
+        check.inst(item (str, RuleGroup))
         for check in self:
             if item is check: return True
         return False
@@ -789,7 +769,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         max_steps       = None,
     ))
 
-    def __init__(self, logic: LogicRef = None, argument: Argument = None, /, **opts):
+    def __init__(self, logic: LogicLookupKey = None, argument: Argument = None, /, **opts):
 
         # Events init
         super().__init__(*TabEvent)
@@ -863,7 +843,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.__build_trunk()
 
     @logic.setter
-    def logic(self, logic: LogicRef):
+    def logic(self, logic: LogicLookupKey):
         'Setter for ``logic``. Assumes building has not started.'
         self.__check_not_started()
         self.__logic = getlogic(logic)
@@ -931,9 +911,12 @@ class Tableau(Sequence[Branch], EventEmitter):
         .. next step, and, if non-empty, applies the rule and appends the entry
         .. to the history.
 
-        :return: The history entry, or ``None`` if just finished, or ``False``
-          if previously finished.
-        :raises errors.IllegalStateError: if the trunk is not built.
+        Returns:
+            The history entry, or ``None`` if just finished, or ``False``
+            if previously finished.
+        
+        Raises:
+            errors.IllegalStateError: if the trunk is not built.
         """
         if TabFlag.FINISHED in self.__flag:
             return False
@@ -954,8 +937,11 @@ class Tableau(Sequence[Branch], EventEmitter):
     def branch(self, /, parent: Branch = None) -> Branch:
         """Create a new branch on the tableau, as a copy of ``parent``, if given.
 
-        :param Branch parent: The parent branch, if any.
-        :return: The new branch.
+        Args:
+            parent: The parent branch, if any.
+
+        Returns:
+            The new branch.
         """
         if parent is None:
             branch = Branch()
@@ -967,8 +953,11 @@ class Tableau(Sequence[Branch], EventEmitter):
     def add(self, /, branch: Branch) -> Tableau:
         """Add a new branch to the tableau. Returns self.
 
-        :param Branch branch: The branch to add.
-        :return: self
+        Args:
+            branch: The branch to add.
+
+        Returns:
+            self
         """
         index = len(self)
         if not branch.closed:
@@ -1001,7 +990,8 @@ class Tableau(Sequence[Branch], EventEmitter):
         method *is* safe to call multiple times. If the tableau is already
         finished, it will be a no-op.
 
-        :return: self
+        Returns:
+            self
         """
         if TabFlag.FINISHED in self.__flag:
             return self
@@ -1022,8 +1012,11 @@ class Tableau(Sequence[Branch], EventEmitter):
         """Caching method for the logic's ``TableauxSystem.branching_complexity()``
         method. If the tableau has no logic, then ``0`` is returned.
 
-        :param node: The node to evaluate.
-        :return: The branching complexity.
+        Args:
+            node: The node to evaluate.
+        
+        Returns:
+            int: The branching complexity.
         """
         # TODO: Consider potential optimization using hash equivalence for nodes,
         #       to avoid redundant calculations. Perhaps the TableauxSystem should
@@ -1156,7 +1149,8 @@ class Tableau(Sequence[Branch], EventEmitter):
         collected and passed to ``__select_optim_group_application()`` to
         compute the scores and select the winner.
 
-        :return: A (rule, target) pair, or ``None``.
+        Returns:
+            A (rule, target) pair, or ``None``.
         """
         is_group_optim = self.opts['is_group_optim']
         results = deque(maxlen = len(group) if is_group_optim else 0)
@@ -1191,8 +1185,11 @@ class Tableau(Sequence[Branch], EventEmitter):
         - `min_group_score`    : int
         - `is_group_optim`     : True
 
-        :param list results: A list/tuple of (Rule, dict) pairs.
-        :return: The highest scoring element.
+        Args:
+            results: A list/tuple of (Rule, dict) pairs.
+        
+        Returns:
+            The highest scoring element.
         """
         group_scores = tuple(rule.group_score(target) for rule, target in results)
         max_group_score = max(group_scores)
@@ -1212,7 +1209,8 @@ class Tableau(Sequence[Branch], EventEmitter):
         method of ``TableauxSystem``. This is called automatically when the
         tableau has non-empty ``argument`` and ``logic`` properties.
 
-        :raises errors.IllegalStateError: if the trunk is already built.
+        Raises:
+            errors.IllegalStateError: if the trunk is already built.
         """
         self.__check_not_started()
         with self.timers.trunk:

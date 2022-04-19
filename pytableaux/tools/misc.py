@@ -119,10 +119,6 @@ def valrepr(v, /, lw = None) -> str:
         lw = drepr.lw
     if lw is not None and lw.canwrite(v):
         return lw(v)
-    # try:
-    #     return lw(v)
-    # except TypeError:
-    #     pass
     return repr(v)
 
 def orepr(obj, d: dict = None, /, **kw) -> str:
@@ -137,8 +133,7 @@ def orepr(obj, d: dict = None, /, **kw) -> str:
             return f'<{oname} {dstr}>'
         return f'<{oname}>'
     except Exception as e:
-        from pytableaux.errors import errstr
-        return '<%s !ERR: %s !>' % (oname, errstr(e))
+        return f'<{oname} !ERR: {repr(e)} !>'
 
 def wraprepr(obj, inner, **kw) -> str:
     if not isinstance(obj, str):

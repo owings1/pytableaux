@@ -26,15 +26,15 @@ __all__ = (
     'MutableSetApi',
     'setf',
     'setm',
-    'SetCover',
+    'SetView',
     'EMPTY_SET',
 )
 
 import operator as opr
 from collections.abc import MutableSet, Set
-from typing import Iterable, TypeVar, final, overload
+from typing import Iterable, TypeVar, overload
 
-from pytableaux.errors import instcheck
+from pytableaux.errors import check
 from pytableaux.tools import abcs
 from pytableaux.tools.decorators import operd
 from pytableaux.tools.typing import VT
@@ -143,13 +143,13 @@ class setm(MutableSetApi[VT], set[VT]):
     add     = set.add
     discard = set.discard
 
-class SetCover(SetApi[VT]):
+class SetView(SetApi[VT]):
     'SetApi cover.'
 
     __slots__ = setf(SetApi.__abstractmethods__)
 
     def __new__(cls, set_: Set[VT], /,):
-        instcheck(set_, Set)
+        check.inst(set_, Set)
 
         inst = object.__new__(cls)
         inst.__len__      = set_.__len__
@@ -158,16 +158,20 @@ class SetCover(SetApi[VT]):
 
         return inst
 
+    def __repr__(self):
+        prefix = type(self).__name__
+        if len(self):
+            return f'{prefix}{set(self)}'
+        return f'{prefix}''{}'
+
     @classmethod
     def _from_iterable(cls, it: Iterable[VT]):
         return cls(setf(it))
 
 
 del(
-    final, overload,
+    overload,
     opr, operd, EMPTY,
     TypeVar,
 )
 
-# Back patch
-abcs.abcm._frozenset = setf

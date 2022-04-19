@@ -320,9 +320,7 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
                         })
                 return user
 
-            def build(user: type, initial: Mapping|None, /, *, ATTR: str = Astr.hookuser,
-            #ABC_HOOKUSER_ATTR
-            ) -> dict[type, MapProxy[str, Callable]]:
+            def build(user: type, initial: Mapping|None, /, *, ATTR: str = Astr.hookuser,) -> dict[type, MapProxy[str, Callable]]:
 
                 builder: dict[type, dict[str, Callable]] = defaultdict(dict)
 

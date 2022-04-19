@@ -21,6 +21,7 @@ pytableaux.tools
 """
 from __future__ import annotations
 
+__docformat__ = 'google'
 __all__ = (
     'abstract',
     'closure',
@@ -105,6 +106,10 @@ def isdund(name: str) -> bool:
         len(name) > 4 and name[:2] == name[-2:] == '__' and
         name[2] != '_' and name[-3] != '_'
     )
+
+def isint(obj: Any) -> bool:
+    'Whether the argument is an ``int`` instance'
+    return isinstance(obj, int)
 
 def isattrstr(obj: Any) -> bool:
     "Whether ``obj`` is a non-keyword identifier string."

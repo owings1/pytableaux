@@ -13,15 +13,14 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.web
+^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
-
-"""
-    pytableaux.web
-    --------------
-
-"""
-
+__docformat__ = 'google'
 __all__ = ()
 
 import logging
@@ -30,9 +29,7 @@ import re
 from typing import TYPE_CHECKING, Any, Mapping
 
 import simplejson as json
-from pytableaux import package
-from pytableaux.errors import RequestDataError
-from pytableaux.tools import closure
+from pytableaux import errors, logics, package, tools
 from pytableaux.tools.mappings import ItemMapEnum
 from pytableaux.tools.typing import KT, VT
 
@@ -47,10 +44,11 @@ re_boolyes = re.compile(r'^(true|yes|1)$', re.I)
 
 def get_logic_keys() -> list[str]:
     "List available logic module names."
-    return [
-        'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
-        'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't',
-    ]
+    return list(logics.__all__)
+    # return [
+    #     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
+    #     'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't',
+    # ]
 
 def get_logger(name: str|Any, conf: Mapping[str, Any] = None) -> logging.Logger:
     "Get a logger and configure it for web format."
@@ -117,21 +115,24 @@ def is_valid_email(value: str) -> bool:
 
 def validate_feedback_form(form_data: dict[str, str]) -> None:
     "Validate `name`, `email`, and `message` keys."
-    errors = {}
+    errs = {}
     if not is_valid_email(form_data['email']):
-        errors['Email'] = 'Invalid email address'
+        errs['Email'] = 'Invalid email address'
     if not len(form_data['name']):
-        errors['Name'] = 'Please enter your name'
+        errs['Name'] = 'Please enter your name'
     if not len(form_data['message']):
-        errors['Message'] = 'Please enter a message'
-    if errors:
-        raise RequestDataError(errors)
+        errs['Message'] = 'Please enter a message'
+    if errs:
+        raise errors.RequestDataError(errs)
 
 def get_remote_ip(req: Request) -> str:
     # TODO: use proxy forward header
     return req.remote.ip
 
-def sbool(arg: str, /):
+def errstr(err: Exception) -> str:
+    return f'{type(err).__name__}: {err}'
+
+def sbool(arg: str, /) -> bool:
     "Cast string to boolean, leans toward ``False``."
     return bool(re_boolyes.match(arg))
 
@@ -255,7 +256,7 @@ class ConfigValue(ItemMapEnum):
             m['envvar'] = m['envvar'],
         super().__init__(m)
 
-    @closure
+    @tools.closure
     def resolve():
         logger = get_logger(__name__)
 

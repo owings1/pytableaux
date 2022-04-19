@@ -13,16 +13,16 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.web.application
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
-
-"""
-    pytableaux.web.application
-    --------------------------
-
-"""
 
 __all__ = ('WebApp',)
 
+import functools
 import logging
 import mimetypes
 import os.path
@@ -36,17 +36,16 @@ import jinja2
 import prometheus_client as prom
 import simplejson as json
 from pytableaux import examples, lexicals, logics, package, parsers, web
-from pytableaux.errors import RequestDataError, TimeoutError, errstr
+from pytableaux.errors import RequestDataError, TimeoutError
 from pytableaux.proof import tableaux, writers
 from pytableaux.tools.abcs import Abc, abcf
-from pytableaux.tools.decorators import wraps
 from pytableaux.tools.mappings import MapCover, MapProxy, dmap
 from pytableaux.tools.timing import StopWatch
-from pytableaux.tools.typing import T
 from pytableaux.web.mail import Mailroom
 
 if TYPE_CHECKING:
     from cherrypy._cprequest import Request, Response
+    from pytableaux.tools.typing import T
 
 EMPTY = ()
 EMPTY_MAP = MapProxy()
@@ -292,12 +291,12 @@ class WebApp:
                 try:
                     api_data = json.loads(form_data['api-json'])
                 except Exception as err:
-                    raise RequestDataError({'api-data': errstr(err)})
+                    raise RequestDataError({'api-data': web.errstr(err)})
                 resp_data, tableau, lw = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
             except TimeoutError as err: # pragma: no cover
-                errors['Tableau'] = errstr(err)
+                errors['Tableau'] = web.errstr(err)
             else:
                 is_proof = True
                 if resp_data['writer']['format'] == 'html':
@@ -453,7 +452,7 @@ class WebApp:
                 res.status = 408
                 return dict(
                     status  = 408,
-                    message = errstr(err),
+                    message = web.errstr(err),
                     error   = type(err).__name__,
                 )
             except RequestDataError as err:
@@ -468,7 +467,7 @@ class WebApp:
                 res.status = 500
                 return dict(
                     status  = 500,
-                    message = errstr(err),
+                    message = web.errstr(err),
                     error   = type(err).__name__,
                 )
                 #traceback.print_exc()
@@ -536,7 +535,7 @@ class WebApp:
             try:
                 sentence = parser(body['input'])
             except Exception as err:
-                errors[elabel] = errstr(err)
+                errors[elabel] = web.errstr(err)
 
         if errors:
             raise RequestDataError(errors)
@@ -643,7 +642,7 @@ class WebApp:
         try:
             logic = logics.getlogic(body['logic'])
         except Exception as err:
-            errors[elabel] = errstr(err)
+            errors[elabel] = web.errstr(err)
         else:
             logicname: str = logic.name
 
@@ -742,12 +741,12 @@ class WebApp:
                     premises.append(parser(premise))
                 except Exception as e:
                     premises.append(None)
-                    errors[elabel] = errstr(e)
+                    errors[elabel] = web.errstr(e)
             elabel = 'Conclusion'
             try:
                 conclusion = parser(adata['conclusion'])
             except Exception as e:
-                errors[elabel] = errstr(e)
+                errors[elabel] = web.errstr(e)
 
         if errors:
             raise RequestDataError(errors)
@@ -772,7 +771,7 @@ class WebApp:
                 coords = Coords(*map(specdata.__getitem__, keys))
                 preds.add(coords)
             except Exception as e:
-                errors[elabel] = errstr(e)
+                errors[elabel] = web.errstr(e)
         if errors:
             raise RequestDataError(errors)
         return preds
@@ -820,7 +819,7 @@ class AppMetrics(MapCover[str, prom.metrics_core.Metric|prom.metrics.MetricWrapp
     @abcf.temp
     def mwrap(fn: Callable[..., T]) -> Callable[..., T]:
         key = fn.__name__
-        @wraps(fn)
+        @functools.wraps(fn)
         def f(self: AppMetrics, *labels):
             return self[key].labels(self.config['app_name'], *labels)
         desc, tags = fn()

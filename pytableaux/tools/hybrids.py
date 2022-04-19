@@ -2,51 +2,20 @@ from __future__ import annotations
 
 __all__ = 'SequenceSet', 'MutableSequenceSet', 'qsetf', 'qset', 'EMPTY_QSET',
 
-from pytableaux.errors import (
-    instcheck,
-    # subclscheck,
-    Emsg,
-    DuplicateValueError,
-    MissingValueError,
-)
+from collections.abc import Collection  # Set,
+from itertools import filterfalse  # chain,
+from typing import (Iterable,  # Callable,; Mapping,; MutableSequence,
+                    Iterator, SupportsIndex, TypeVar, final, overload)
+
+from pytableaux.errors import (DuplicateValueError, Emsg,  # subclscheck,
+                               MissingValueError, instcheck)
 from pytableaux.tools import abstract
 from pytableaux.tools.abcs import abcm
-from pytableaux.tools.decorators import abstract
-from pytableaux.tools.sequences import (
-    slicerange,
-    SequenceApi,
-    MutableSequenceApi,
-    seqf,
-    seqm,
-    EMPTY_SEQ,
-)
-from pytableaux.tools.sets import (
-    SetApi,
-    MutableSetApi,
-    setf,
-    setm,
-    EMPTY_SET,
-)
+from pytableaux.tools.sequences import (EMPTY_SEQ, MutableSequenceApi,
+                                        SequenceApi, seqf, seqm, slicerange)
+from pytableaux.tools.sets import EMPTY_SET, MutableSetApi, SetApi, setf, setm
 from pytableaux.tools.typing import VT
 
-from collections.abc import (
-    Collection,
-    # Set,
-)
-from itertools import (
-    # chain,
-    filterfalse
-)
-from typing import (
-    overload, final,
-    # Callable,
-    Iterable,
-    Iterator,
-    # Mapping,
-    # MutableSequence,
-    SupportsIndex,
-    TypeVar
-)
 
 class SequenceSet(SequenceApi[VT], SetApi[VT]):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'

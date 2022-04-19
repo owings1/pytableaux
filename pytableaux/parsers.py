@@ -14,9 +14,11 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-# pytableaux - parsers module
+"""
+pytableaux.parsers
+^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 __all__ = (
@@ -29,25 +31,19 @@ __all__ = (
     'StandardParser',
 )
 
-from pytableaux.errors import (
-    Emsg,
-    ParseError,
-    BoundVariableError,
-    UnboundVariableError,
-    IllegalStateError,
-)
-from pytableaux.lexicals import (
-    BiCoords,
-    Operator as Oper, Quantifier,
-    Predicate, Parameter, Constant, Variable,
-    Sentence, Atomic, Predicated, Quantified, Operated,
-    LexType, Predicates, Argument, Marking, Notation,
-    Parser, ParseTable, ParseTableKey,
-)
-from pytableaux.tools.decorators import abstract, overload, raisr
-from pytableaux.tools.sets import setf, EMPTY_SET
-
 from collections.abc import Set
+from typing import overload
+
+from pytableaux.errors import (BoundVariableError, IllegalStateError,
+                               ParseError, UnboundVariableError)
+from pytableaux.lexicals import (Atomic, BiCoords, Constant, LexType,
+                                 Marking, Notation, Operated)
+from pytableaux.lexicals import Operator as Oper
+from pytableaux.lexicals import (Parameter, Parser, ParseTable, ParseTableKey,
+                                 Predicate, Predicated, Predicates, Quantified,
+                                 Quantifier, Sentence, Variable)
+from pytableaux.tools import abstract
+from pytableaux.tools.sets import EMPTY_SET, setf
 
 NOARG = object()
 
@@ -151,8 +147,6 @@ class ParseContext:
         else:
             pfx = f'Unexpected {ctype} symbol'
         msg = f"{pfx} '{char}' at position {self.pos}"
-        # if len(exp):
-        #     msg += ', expecting %s.' % ', '.join(map(str, exp))
         return msg
 
 _PRED_CTYPES = setf({LexType.Predicate, Predicate.System})
@@ -184,8 +178,12 @@ class BaseParser(Parser):
         this method, and delegate to ``super()`` for the default implementation
         when appropriate.
 
-        :rtype: lexicals.Sentence
-        :raises errors.ParseError:
+        Returns:
+            The sentence
+
+        Raises:
+            errors.ParseError:
+
         :meta private:
         """
         ctype = context.assert_current_in(_BASE_CTYPES)
@@ -240,7 +238,7 @@ class BaseParser(Parser):
             return self.preds.get(self._read_coords(context))
         except KeyError:
             raise ParseError(
-                "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)
+                f"Undefined predicate symbol '{pchar}' at position {cpos}"
             )
 
     def _read_params(self, context: ParseContext, num: int) -> tuple[Parameter, ...]:
@@ -276,7 +274,8 @@ class BaseParser(Parser):
         character is not a digit, or we are after last, then the subscript is
         ``0```. Otherwise, all consecutive digit characters are read
         (whitespace allowed), and then converted to an integer, which is then
-        returned."""
+        returned.
+        """
         # TODO: use better list, e.g. linked.
         digits = []
         while context.current() and self.table.type(context.current()) == Marking.digit:
@@ -291,7 +290,8 @@ class BaseParser(Parser):
         which must be in the list of characters given. `index` is the list index in
         the symbol set. This is a generic way to read user predicates,
         atomics, variables, constants, etc. Note, this will not work for
-        system predicates, because they have string keys in the symbols set."""
+        system predicates, because they have string keys in the symbols set.
+        """
         index = self.table.value(context.current())
         context.advance()
         return BiCoords(index, self._read_subscript(context))
@@ -301,7 +301,8 @@ class BaseParser(Parser):
             raise AttributeError(name)
         super().__setattr__(name, value)
 
-    __delattr__ = raisr(AttributeError)
+    def __delattr__(self, name):
+        raise AttributeError(name)
 
 class PolishParser(BaseParser, primary = True):
 

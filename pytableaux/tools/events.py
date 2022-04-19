@@ -2,17 +2,16 @@ from __future__ import annotations
 
 __all__ = 'EventEmitter', 'EventsListeners',
 
+from enum import Enum
+from itertools import filterfalse  # , chain, starmap
+from typing import Callable, Mapping, Sequence
+
 from pytableaux.errors import instcheck
-from pytableaux.tools.abcs import Abc, Copyable, abcf, F
+from pytableaux.tools.abcs import Abc, Copyable, F, abcf
 from pytableaux.tools.decorators import raisr, wraps
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import (
-    dmap #, ItemsIterator, MutableMappingApi
-)
-
-from enum import Enum
-from itertools import filterfalse #, chain, starmap
-from typing import Callable, Mapping, Sequence
+from pytableaux.tools.mappings import \
+    dmap  # , ItemsIterator, MutableMappingApi
 
 EventId = str | int | Enum
 

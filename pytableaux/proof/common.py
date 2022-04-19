@@ -13,26 +13,24 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.proof.common
+^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
-"""
-    pytableaux.proof.common
-    -----------------------
-
-"""
 
 __all__ = 'Node', 'Branch', 'Target'
 
 import operator as opr
 from collections.abc import Set
-from functools import partial
 from itertools import chain, filterfalse
 from typing import Any, Iterable, Iterator, Mapping, NamedTuple, SupportsIndex
 
 from pytableaux import lexicals, tools
-from pytableaux.errors import Emsg, instcheck
+from pytableaux.errors import Emsg, check
 from pytableaux.proof.types import BranchEvent
-from pytableaux.tools.callables import cchain, preds
 from pytableaux.tools.decorators import lazy, operd, raisr
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
@@ -78,7 +76,7 @@ class Node(MapCover):
         return self.has('world1', 'world2')
 
     @lazy.prop
-    def worlds(self, /, filtpred = preds.instanceof[int]) -> setf[int]:
+    def worlds(self, /, filtpred = tools.isint) -> setf[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
@@ -566,7 +564,7 @@ class Target(dmapattr[str, Any]):
             # if key in self and self[key] != value:
                 raise Emsg.ValueConflictFor(key, value, self[key])
         elif not tools.isattrstr(key):
-            instcheck(key, str)
+            check.inst(key, str)
             raise Emsg.BadAttrName(key)
         super().__setitem__(key, value)
 

@@ -193,8 +193,6 @@ class SequenceCover(SequenceApi[VT]):
 
     def __repr__(self):
         return f'{type(self).__name__}({list(self)})'
-        # from pytableaux.tools.misc import wraprepr
-        # return wraprepr(self, list(self))  
 
     @classmethod
     def _from_iterable(cls, it):

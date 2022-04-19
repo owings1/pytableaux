@@ -132,6 +132,7 @@ class BaseSentenceRule(BaseNodeRule):
 class PredicatedSentenceRule(BaseSentenceRule):
 
     Helpers = PredNodes,
+
     @abcf.temp
     @overload
     def sentence(self, node: Node, /) -> Predicated:...

@@ -1,48 +1,31 @@
 
 from __future__ import annotations
 
-if 'Exports' or True:
-    __all__ = (
-        # alias decorators
-        'overload', 'abstract', 'final', 'static',
-        # class-based decorators
-        'membr', 'fixed', 'operd', 'wraps',
-        'raisr', 'lazy', 'NoSetAttr',
-    )
+__all__ = (
+    'membr', 'fixed', 'operd', 'wraps',
+    'raisr', 'lazy', 'NoSetAttr',
+)
 
-if 'Imports' or True:
+# Allowed local imports:
 
-    # Allowed local imports:
+#  - errors
+#  - tools.abcs
+#  - tools.misc
 
-    #  - errors
-    #  - tools.abcs
-    #  - tools.misc
+import operator as opr
+from collections import defaultdict
+from functools import WRAPPER_ASSIGNMENTS
+from functools import reduce as _ftreduce
+from inspect import Signature
+from keyword import iskeyword
+from types import DynamicClassAttribute as dynca
+from typing import (Any, Callable, Concatenate, Generic,
+                    Iterable, Iterator, Mapping, TypeVar, overload)
 
-    from pytableaux.errors import instcheck, subclscheck
-    from pytableaux.tools import abstract, static, MapProxy
-    from pytableaux.tools.abcs import abcf, abcm, Abc
-    from pytableaux.tools.typing import F, T, P, Self, RT
-
-    from collections import defaultdict
-    from inspect import Signature
-    from keyword import iskeyword
-    from functools import (
-        reduce as _ftreduce,
-        WRAPPER_ASSIGNMENTS,
-    )
-    import operator as opr
-
-    from typing import (
-        final,
-        overload,
-        # Annotations
-        Any, Callable, Generic, Iterable, Iterator, Mapping,
-        Concatenate,
-        TypeVar,
-    )
-    from types import (
-        DynamicClassAttribute,
-    )
+from pytableaux.errors import check
+from pytableaux.tools import MapProxy, abstract, static
+from pytableaux.tools.abcs import Abc, abcf, abcm
+from pytableaux.tools.typing import RT, F, P, Self, T
 
 if 'Utils' or True:
 
@@ -72,7 +55,7 @@ if 'Utils' or True:
         return obj
 
     def _attrstrcheck(name: str):
-        instcheck(name, str)
+        check.inst(name, str)
         if iskeyword(name):
             raise TypeError('%s is a keyword' % name)
         if not name.isidentifier():
@@ -87,7 +70,7 @@ if 'Utils' or True:
         return f
 
     def _checkcallable(obj):
-        return instcheck(obj, Callable)
+        return check.inst(obj, Callable)
 
     def _checkcallable2(obj):
         if isinstance(obj, str):
@@ -118,7 +101,7 @@ if 'Base Classes' or True:
 
         @owner.setter
         def owner(self, value):
-            self.__owner = instcheck(value, type)
+            self.__owner = check.inst(value, type)
             try: self._update_qualname()
             except AttributeError: pass
 
@@ -206,64 +189,65 @@ class membr(Member[T], Generic[T, RT]):
         return f # type: ignore
 
 MbrT = TypeVar('MbrT', bound = membr)
-@static
-class fixed:
 
-    class value(Member):
+# @static
+# class fixed:
 
-        __slots__ = 'value', 'doc', 'annot'
+#     class value(Member):
 
-        @overload
-        def __new__(cls, value: T, /, *args, **kw) -> Callable[..., T]: ...
-        def __new__(cls, *args, **kw):
-            inst = super().__new__(cls)
-            inst._init(*args, **kw)
-            return inst
+#         __slots__ = 'value', 'doc', 'annot'
 
-        def _init(self, value, /, doc = None):
-            self.value = value
-            self.doc = doc
-            # TODO: eval'able annotations
-            self.annot = {
-                'return': 'None' if value is None else type(value).__name__
-            }
+#         @overload
+#         def __new__(cls, value: T, /, *args, **kw) -> Callable[..., T]: ...
+#         def __new__(cls, *args, **kw):
+#             inst = super().__new__(cls)
+#             inst._init(*args, **kw)
+#             return inst
 
-        def __call__(self, info = None):
-            value = self.value
-            wrapper = wraps(info)
-            wrapper.update(
-                __doc__ = self.doc,
-                __annotations__ = self.annot,
-            )
-            def func(*args, **kw):
-                return value
-            return wrapper(func)
+#         def _init(self, value, /, doc = None):
+#             self.value = value
+#             self.doc = doc
+#             # TODO: eval'able annotations
+#             self.annot = {
+#                 'return': 'None' if value is None else type(value).__name__
+#             }
 
-        def sethook(self, owner, name):
-            func = self(self)
-            # func.__module__ = owner.__module__
-            setattr(owner, name, func)
+#         def __call__(self, info = None):
+#             value = self.value
+#             wrapper = wraps(info)
+#             wrapper.update(
+#                 __doc__ = self.doc,
+#                 __annotations__ = self.annot,
+#             )
+#             def func(*args, **kw):
+#                 return value
+#             return wrapper(func)
 
-    class prop(value):
+#         def sethook(self, owner, name):
+#             func = self(self)
+#             # func.__module__ = owner.__module__
+#             setattr(owner, name, func)
 
-        __slots__ = EMPTY
+#     class prop(value):
 
-        @overload
-        def __new__(cls, value: T) -> _property[Self, T]: ...
-        def __new__(cls, *args, **kw):
-            return super().__new__(cls, *args, **kw)
+#         __slots__ = EMPTY
 
-        def __call__(self, info = None):
-            return property(super().__call__(info), doc = self.doc)
+#         @overload
+#         def __new__(cls, value: T) -> _property[Self, T]: ...
+#         def __new__(cls, *args, **kw):
+#             return super().__new__(cls, *args, **kw)
 
-    class dynca(prop):
+#         def __call__(self, info = None):
+#             return property(super().__call__(info), doc = self.doc)
 
-        __slots__ = EMPTY
+#     class dynca(prop):
 
-        def __call__(self, info = None):
-            return DynamicClassAttribute(
-                super(fixed.prop, self).__call__(info), doc = self.doc
-            )
+#         __slots__ = EMPTY
+
+#         def __call__(self, info = None):
+#             return dynca(
+#                 super(fixed.prop, self).__call__(info), doc = self.doc
+#             )
 
 @static
 class operd:
@@ -371,8 +355,8 @@ class operd:
                 if errs == (None,): self.errs = _noexcept,
                 else: self.errs = errs
                 for ecls in self.errs:
-                    instcheck(ecls, type)
-                    subclscheck(ecls, Exception)
+                    check.inst(ecls, type)
+                    check.subcls(ecls, Exception)
             else:
                 self.errs = AttributeError, TypeError
 
@@ -473,7 +457,7 @@ class raisr(Member):
     __slots__ = 'errtype', 'eargs', 'ekw'
 
     def __init__(self, errtype: type[Exception], *eargs, **ekw):
-        self.errtype = subclscheck(errtype, Exception)
+        self.errtype = check.subcls(errtype, Exception)
         self.eargs = eargs
         self.ekw = ekw
 
@@ -524,10 +508,10 @@ class lazy:
 
         def _init(self, key = None, method = None, /):
             if key is not None:
-                instcheck(key, str)
+                check.inst(key, str)
             self.key = key
             if method is not None:
-                instcheck(method, Callable)
+                check.inst(method, Callable)
             self.method = method
 
         def _blankinit(self):
@@ -564,7 +548,7 @@ class lazy:
         __slots__ = EMPTY
 
         def __call__(self, method: Callable[[Self], T]) -> _property[Self, T]:
-            return DynamicClassAttribute(
+            return dynca(
                 lazy.get.__call__(self, method), doc = method.__doc__
             )
 

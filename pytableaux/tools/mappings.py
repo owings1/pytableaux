@@ -39,12 +39,12 @@ from collections import defaultdict, deque
 from collections.abc import Collection, Iterator, Mapping, MutableMapping, Set
 from itertools import chain, filterfalse
 from operator import not_, truth
-from typing import Any, Callable, Iterable, TypeVar, final, overload
+from typing import Any, Callable, Iterable, TypeVar, overload
 
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import MapProxy, abcs, abstract, closure
-from pytableaux.tools.decorators import fixed, membr, wraps
+from pytableaux.tools.decorators import membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.typing import KT, VT, F, MapT, NotImplType, SetT, T
 
@@ -629,11 +629,19 @@ if 'Operators Cache' or True:
             self[othrtype] = ResolverFactory[res_create, get_res_iter]
             return res
 
-        def reject(self: _FuncCache, othrtype: type[Iterable], /, *,
-            FNOTIMPL: Callable[..., NotImplType] = fixed.value(NotImplemented)()
-        ):
-            self[othrtype] = FNOTIMPL
-            return NotImplemented
+        @closure
+        def reject():
+
+            def FNOTIMPL(*args, **kw):
+                return NotImplemented
+
+            def reject(self: _FuncCache, othrtype: type[Iterable], /, *,
+                FNOTIMPL: Callable[..., NotImplType] = FNOTIMPL
+            ):
+                self[othrtype] = FNOTIMPL
+                return NotImplemented
+
+            return reject
 
     class _TypeFuncsCache(dict[str, _FuncCache]):
 
@@ -719,11 +727,8 @@ if 'Operators Cache' or True:
 
 
 del(
-    abstract, closure, final, overload,
-    # static,
-    fixed, membr, wraps,
-    # preds,
-    #gets,
+    abstract, closure, overload,
+    membr, wraps,
     _checklimit, _ResolverFactory,
     # _CacheResolversType, _FuncCache, _TypeFuncsCache, _OperFuncsCache,
 )

@@ -124,6 +124,9 @@ class Emsg(_enum.Enum):
     )
     BadAttrName = ValueError, "Invalid attribute identifier: '{}'", (str,)
 
+    NotLogicsPackage = ValueError, "{0} not a registered logics package", 1
+    BadLogicModule = ValueError, "{0} not a value logic module", 1
+
     MissingAttribute = MissingAttributeError,
     AttributeConflict = AttributeConflictError,
 
@@ -155,11 +158,6 @@ class check:
 instcheck = check.inst
 subclscheck = check.subcls
 
-def errstr(err: Any) -> str:
-    if isinstance(err, Exception):
-        return f'{type(err).__name__}: {err}'
-    return str(err)
-
 # Some external assembly required.
 
 class EmsgBase:
@@ -188,7 +186,7 @@ class EmsgBase:
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
 
-__all__ = 'check', 'Emsg', 'instcheck', 'subclscheck', 'errstr', *(
+__all__ = 'check', 'Emsg', 'instcheck', 'subclscheck', *(
     name for name, value in locals().items()
     if isinstance(value, type) and issubclass(value, Exception)
 )
