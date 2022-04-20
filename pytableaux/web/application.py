@@ -22,8 +22,6 @@ from __future__ import annotations
 
 __all__ = ('WebApp',)
 
-import functools
-import logging
 import mimetypes
 import os.path
 from datetime import datetime
@@ -47,6 +45,7 @@ from pytableaux.web.util import AppMetrics, tojson, fix_uri_req_data
 
 if TYPE_CHECKING:
     from cherrypy._cprequest import Request, Response
+    import logging
 
 EMPTY = ()
 EMPTY_MAP = MapProxy()
@@ -166,9 +165,12 @@ class WebApp(EventEmitter):
                     (notn, lexicals.LexWriter(notn, charset = 'ascii'))
                     for notn in lexicals.Notation
                 )
-            } | {'@Predicates': sorted(set(
-                p.spec for s in arg for p in s.predicates
-            ))})
+            } | {
+                '@Predicates': (
+                    arg.predicates(sort=True) -
+                    lexicals.Predicate.System
+                ).specs()
+            })
             for arg in examples.arguments()
         })
 

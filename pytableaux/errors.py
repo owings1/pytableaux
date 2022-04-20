@@ -98,6 +98,9 @@ class Emsg(_enum.Enum):
     NotSubclsCheck = (TypeError,
         "Unexpected type '{0}', subclass of '{1}'", 2
     )
+    CantJsonify = (TypeError,
+        "Object of type {0} is not JSON serializable", (type,)
+    )
 
     ReadOnlyAttr = (AttributeError,
         "'{1.__name__}' object attribute '{0}' is read-only", (str, type)

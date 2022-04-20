@@ -24,12 +24,14 @@ __docformat__ = 'google'
 __all__ = ('tojson',)
 
 import functools
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
-import simplejson as json
 import prometheus_client.metrics as pm
 import prometheus_client.metrics_core as pmc
+import simplejson as json
 from prometheus_client.registry import CollectorRegistry
+from pytableaux import lexicals
+from pytableaux.errors import Emsg
 from pytableaux.tools import abcs, mappings, typing
 
 if TYPE_CHECKING:
@@ -95,6 +97,33 @@ class AppMetrics(mappings.MapCover[str, pmc.Metric|pm.MetricWrapperBase], abcs.A
 
 # ------------------------------------------------------------------
 
+def json_default(obj: Any):
+
+    if isinstance(obj, lexicals.Lexical):
+        return obj.ident
+
+    if isinstance(obj, Mapping):
+        if callable(getattr(obj, '_asdict', None)):
+            return obj._asdict()
+        return dict(obj)
+
+    if isinstance(obj, Sequence):
+        return list(obj)
+
+    raise Emsg.CantJsonify(obj)
+
+tojson_defaults = dict(
+    cls = json.JSONEncoderForHTML,
+    namedtuple_as_object = False,
+    for_json = True,
+    default = json_default,
+)
+def tojson(*args, **kw):
+    "Wrapper for ``json.dumps`` with html safe encoder and other defaults."
+    return json.dumps(*args, **{**tojson_defaults, **kw})
+
+# ------------------------------------------------------------------
+
 def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]:
     "Transform param names ending in ``'[]'`` to lists."
     form_data = dict(form_data)
@@ -104,6 +133,4 @@ def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]:
                 form_data[param] = [form_data[param]]
     return form_data
 
-def tojson(*args, cls = json.JSONEncoderForHTML, **kw):
-    "Wrapper for ``json.dumps`` with html safe encoder."
-    return json.dumps(*args, cls = cls, **kw)
+

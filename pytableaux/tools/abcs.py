@@ -565,6 +565,9 @@ class abcf(FlagEnum, skipflags = True, skipabcm = True):
 class abcm:
     'Static Abc meta util functions.'
 
+    @tools.classalias(abcf)
+    class f: pass
+
     _frozenset: type[frozenset] = frozenset
 
     @staticmethod
@@ -729,6 +732,7 @@ class AbcMeta(_abc.ABCMeta):
                 impl[name] = func
             return func
         return decorator
+
 
 #=============================================================================
 #_____________________________________________________________________________

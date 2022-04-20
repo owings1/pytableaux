@@ -46,7 +46,6 @@ __all__ = (
 import enum
 import operator as opr
 from collections.abc import Set
-from functools import partial
 from itertools import chain, repeat
 from types import DynamicClassAttribute as dynca
 from typing import (Annotated, Any, Callable, ClassVar, Iterable, Iterator,
@@ -56,25 +55,21 @@ from typing import (Annotated, Any, Callable, ClassVar, Iterable, Iterator,
 import pytableaux.tools.abcs as abcs
 import pytableaux.tools.misc
 from pytableaux import tools
-from pytableaux.errors import Emsg, instcheck
-from pytableaux.tools import MapProxy, abstract, closure
-from pytableaux.tools.abcs import EnumDictType, abcf, abcm
+from pytableaux.errors import Emsg, check
+from pytableaux.tools import MapProxy
+from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import NoSetAttr, lazy, membr, raisr, wraps
 from pytableaux.tools.hybrids import qset, qsetf
 from pytableaux.tools.mappings import DequeCache, ItemsIterator, MapCover, dmap
 from pytableaux.tools.sequences import EMPTY_SEQ, SequenceApi, seqf
 from pytableaux.tools.sets import EMPTY_SET, setf, setm
-from pytableaux.tools.typing import IndexType, T
+from pytableaux.tools.typing import EnumDictType, IndexType, T
 
 NOARG = object()
 EMPTY_IT = iter(EMPTY_SEQ)
 ITEM_CACHE_SIZE = 10000
 
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
-
-@overload
-def sorttmap(it: Iterable[Lexical]) -> Iterator[tuple[int, ...]]: ...
-sorttmap = partial(map, opr.attrgetter('sort_tuple'))
 
 if 'Types' or True:
     TbsT   = TypeVar('TbsT',   bound = 'TableStore')
@@ -145,7 +140,10 @@ if 'Types' or True:
 if 'Metas' or True:
 
     class AbcCommonMeta(abcs.AbcMeta):
-        'Common Abc meta base class for lexicals module.'
+        """Common metaclass for lexical/parser classes. The nosetattr member is
+        shared among these classes and is activated after the modules are fully
+        initialized.
+        """
 
         _readonly : bool
     
@@ -153,7 +151,7 @@ if 'Metas' or True:
         __setattr__ = nosetattr(abcs.AbcMeta)
 
     class EnumCommonMeta(abcs.EnumMeta):
-        'Common Enum meta base class for lexicals module.'
+        'Common Enum metaclass for lexicals module.'
 
         _readonly : bool
 
@@ -189,7 +187,15 @@ if 'Metas' or True:
                 # Try arg as ident tuple (clsname, spec)
                 clsname, spec = spec[0]
                 lextypecls = LexType(clsname).cls
-                if not issubclass(lextypecls, cls):
+                # Don't, for example, create a Predicate
+                # from a Sentence class.
+                if not issubclass(lextypecls, cls) and (
+                    # With the exception for Enum classes,
+                    # if we are invoking the LexicalItem
+                    # class directly.
+                    cls is not LexicalItem or
+                    not issubclass(lextypecls, LexicalEnum
+                )):
                     raise TypeError(lextypecls, cls)
                 # Try cache
                 try: return cache[clsname, spec]
@@ -223,7 +229,7 @@ if 'Metas' or True:
                 return notn.DefaultWriter(*args, **kw)
             return super().__call__(*args, **kw)
 
-        @closure
+        @tools.closure
         def _sys():
 
             def checkcls(cls):
@@ -247,7 +253,7 @@ if 'Metas' or True:
             def fset(cls, lw: LexWriter|None):
                 checkcls(cls)
                 if lw is not None:
-                    instcheck(lw, LexWriter)
+                    check.inst(lw, LexWriter)
                 syslws['unset'] = None
                 syslws['set'] = lw
                 pytableaux.tools.misc.drepr.lw = lw
@@ -287,7 +293,7 @@ class Lexical:
     __slots__ = EMPTY_SET
 
     TYPE: ClassVar[LexType]
-    "``LexType`` enum instance."
+    "``LexType`` enum instance for concrete classes."
 
     spec: tuple
     """The arguments roughly needed to construct, given that we know the
@@ -326,7 +332,7 @@ class Lexical:
         return hash((type(item).__name__, item.sort_tuple))
 
     @staticmethod
-    @closure
+    @tools.closure
     def orderitems():
 
         def cmpgen(a: Lexical, b: Lexical, /):
@@ -345,14 +351,14 @@ class Lexical:
             Args:
                 inst: The first ``Lexical`` instance.
                 other: The second ``Lexical`` instance.
-            
+
             Returns:
                 int: The relative order of ``inst`` and ``other``. The return value
-                will be:
-                
-                    - < ``0`` if ``inst`` is 'less than' (ordered before) ``other``.
-                    - > ``0`` if ``inst`` is 'greater than' (ordered after) ``other``.
-                    - ``0`` if ``inst`` is equal to ``other``.
+                   will be either:
+
+                   - Less than 0 if `inst` is less than (ordered before) `other`.
+                   - Greater than > 0 if `inst` is greater than (ordered after) `other`.
+                   - Equal to 0 if `inst` is equal to `other`.
 
             Raises:
                 TypeError: if an argument is not an instance of ``Lexical`` with
@@ -370,7 +376,7 @@ class Lexical:
 
     #******   Equality & Ordering
 
-    @abcf.temp
+    @abcm.f.temp
     @membr.defer
     def ordr(member: membr):
         oper: IcmpFunc = getattr(opr, member.name)
@@ -392,12 +398,12 @@ class Lexical:
     @classmethod
     def gen(cls: type[LexT], stop: SupportsIndex, /, first: LexT = None, **nextkw) -> Iterator[LexT]:
         """Generate items of the type, using ``first()`` and ``next()`` methods.
-        
+
         Args:
             stop: The number at which to stop generating. If ``None``, never stop.
             first: The first item. If ``None``, starts with ``cls.first()``.
             **nextkw: Parameters to pass to each call to ``.next()``.
-        
+
         Returns:
             The generator instance.
         """
@@ -412,7 +418,7 @@ class Lexical:
         if first is None:
             item = cls.first()
         else:
-            item = instcheck(first, cls)
+            item = check.inst(first, cls)
         i = 0
         try:
             while i < stop:
@@ -423,12 +429,12 @@ class Lexical:
             pass
 
     @classmethod
-    @abstract
+    @tools.abstract
     def first(cls: type[LexT]) -> LexT:
         "Get the canonically first item of the type."
         raise NotImplementedError
 
-    @abstract
+    @tools.abstract
     def next(self: LexT, **kw) -> LexT:
         "Get the canonically next item of the type."
         raise NotImplementedError
@@ -454,6 +460,9 @@ class Lexical:
         except AttributeError:
             return f'<{type(self).__name__}: ERR>'
 
+    def __forjson__(self, **kw):
+        return self.ident
+
     def __init__(self):
         raise TypeError(self)
 
@@ -468,7 +477,7 @@ class Lexical:
         lexcopy = False, skipnames = {'__init_subclass__'}, **kw
     ):
         """Subclass init hook.
-        
+
         With `lexcopy` = ``True``, copy the class members to the next class,
         since our protection is limited without metaclass flexibility.
         Only applies if this class is in the bases of the subclass.
@@ -616,7 +625,7 @@ class LexicalItem(Lexical, metaclass = LexicalItemMeta, lexcopy = True):
     def hash(self):
         return self.hashitem(self)
 
-    @abstract
+    @tools.abstract
     def __init__(self): ...
 
     #******  Behaviors
@@ -669,7 +678,7 @@ class CoordsItem(LexicalItem):
     @lazy.prop
     def sort_tuple(self) -> tuple[int, ...]:
         return self.TYPE.rank, *self.coords.sorting()
-        
+
     #******  Item Generation
 
     @classmethod
@@ -708,7 +717,7 @@ class CoordsItem(LexicalItem):
             coords[0] if len(coords) == 1 else coords
         )
         for field, value in zip(coords._fields, coords):
-            setattr(self, field, instcheck(value, int))
+            setattr(self, field, check.inst(value, int))
         try:
             if coords.index > self.TYPE.maxi:
                 raise ValueError('%d > %d' % (coords.index, self.TYPE.maxi))
@@ -726,7 +735,7 @@ class TableStore(metaclass = AbcCommonMeta):
 
     @classmethod
     def load(cls: type[TbsT], notn: Notation, key: str, data: Mapping, /) -> TbsT:
-        instcheck(key, str)
+        check.inst(key, str)
         notn = Notation[notn]
         idx = cls._instances[notn]
         if key in idx:
@@ -999,7 +1008,7 @@ class Predicate(CoordsItem):
         if name is not None:
             if len(self.System) and name in self.System:
                 raise ValueError('System predicate: %s' % name)
-            instcheck(name, (tuple, str))
+            check.inst(name, (tuple, str))
         self.bicoords = BiCoords(self.index, self.subscript)
 
     #******  System Predicate enum
@@ -1030,7 +1039,7 @@ class Predicate(CoordsItem):
         if self.is_system: return __class__.System
         raise AttributeError('__objclass__')
 
-    @abcf.temp
+    @abcm.f.temp
     def sysset(prop: T) -> T:
         name = prop.fget.__name__
         @wraps(prop.fget)
@@ -1117,7 +1126,7 @@ class Sentence(LexicalItem):
         o.libname: o for o in Operator.seq if o.libname is not None
     }
 
-    @abcf.temp
+    @abcm.f.temp
     @membr.defer
     def libopers1(member: membr, opmap: dict[str, Operator] = opmap):
         oper = opmap[member.name]
@@ -1126,7 +1135,7 @@ class Sentence(LexicalItem):
             return Operated(oper, self)
         return f
 
-    @abcf.temp
+    @abcm.f.temp
     @membr.defer
     def libopers2(member: membr, opmap: dict[str, Operator] = opmap):
         oper = opmap[member.name]
@@ -1205,8 +1214,11 @@ class Predicated(Sentence, Sequence[Parameter]):
 
     @lazy.prop
     def sort_tuple(self: Predicated) -> tuple[int, ...]:
-        return self.TYPE.rank, *chain.from_iterable(
-            sorttmap((self.predicate, *self.params))
+        return (
+            self.TYPE.rank,
+            *self.predicate.sort_tuple,
+            *(n for param in self
+                    for n in param.sort_tuple)
         )
 
     @lazy.prop
@@ -1442,8 +1454,11 @@ class Operated(Sentence, Sequence[Sentence]):
 
     @lazy.prop
     def sort_tuple(self: Operated) -> tuple[int, ...]:
-        return self.TYPE.rank, *chain.from_iterable(
-            sorttmap((self.operator, *self))
+        return (
+            self.TYPE.rank,
+            *self.operator.sort_tuple,
+            *(n for s in self
+                    for n in s.sort_tuple)
         )
 
     @lazy.prop
@@ -1582,7 +1597,7 @@ class LexType(EnumCommon):
     def __call__(self, *args, **kw) -> Lexical:
         return self.cls(*args, **kw)
 
-    @abcf.temp
+    @abcm.f.temp
     @membr.defer
     def ordr(member: membr):
         oper: IcmpFunc = getattr(opr, member.name)
@@ -1653,9 +1668,21 @@ class Predicates(qset[Predicate], metaclass = AbcCommonMeta,
     _lookup: dmap[PredsItemRef, Predicate]
     __slots__ = '_lookup',
 
-    def __init__(self, values: Iterable[PredsItemSpec] = None, /):
+    def __init__(self, values: Iterable[PredsItemSpec] = None, /, *,
+        sort = False, key = None, reverse = False):
+        """Create a new store from an iterable of predicate objects
+        or specs
+        
+        Args:
+            values: Iterable of predicates or specs.
+            sort: Whether to sort. Default is ``False``.
+            key: Optional sort key.
+            reverse: Whether to reverse sort.
+        """
         self._lookup = dmap()
         super().__init__(values)
+        if sort:
+            self.sort(key = key, reverse = reverse)
 
     def get(self, ref: PredsItemRef, default = NOARG, /) -> Predicate:
         """Get a predicate by any reference. Also searches system predicates.
@@ -1677,7 +1704,10 @@ class Predicates(qset[Predicate], metaclass = AbcCommonMeta,
             if default is NOARG: raise
             return default
 
-    @abcf.temp
+    def specs(self):
+        return tuple(p.spec for p in self)
+
+    @abcm.f.temp
     @qset.hook('done')
     def after_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
         'Implement after change (done) hook. Update lookup index.'
@@ -1728,7 +1758,7 @@ class Predicates(qset[Predicate], metaclass = AbcCommonMeta,
                 setattr(Predicate, pred.name, pred)
             Predicate.System = cls
 
-        @abcf.before
+        @abcm.f.before
         def expand(ns: EnumDictType, bases, **kw):
             'Inject members from annotations in Predicate.System class.'
             annots = abcm.annotated_attrs(Predicate.System)
@@ -1756,10 +1786,10 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
         )
         self.premises = seqf(self.seq[1:])
         if title is not None:
-            instcheck(title, str)
+            check.inst(title, str)
         self.title = title
 
-    __slots__ = 'seq', 'title', 'premises', '_hash'
+    __slots__ = 'seq', 'title', 'premises', '_hash', 
 
     sentences: seqf[Sentence]
     premises: seqf[Sentence]
@@ -1772,14 +1802,25 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     def hash(self) -> int:
         return hash(tuple(self))
 
+    def predicates(self, **kw):
+        """Return the predicates occuring in the argument.
+        
+        Args:
+            **kw: sort keywords to pass to ``Predicates`` constructor.
+        
+        Returns:
+            ``Predicates`` instance.
+        """
+        return Predicates((p for s in self for p in s.predicates), **kw)
+
     #******  Equality & Ordering
 
     # Two arguments are considered equal just when their conclusions are
     # equal, and their premises are equal (and in the same order). The
     # title is not considered in equality.
 
-    @abcf.temp
-    @closure
+    @abcm.f.temp
+    @tools.closure
     def ordr():
 
         sorder = Sentence.orderitems
@@ -1859,6 +1900,12 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
 
     #******  Other
 
+    def __forjson__(self, **_):
+        return dict(
+            conclusion = self.conclusion,
+            premises = self.premises
+        )
+
     def __repr__(self):
         if self.title:
             desc = repr(self.title)
@@ -1895,7 +1942,7 @@ class Notation(EnumCommon):
     default: ClassVar[Notation]
     "The default notation."
 
-    @abcf.after
+    @abcm.f.after
     def _(cls): cls.default = cls.polish
 
     charsets         : setm[str]
@@ -1979,7 +2026,7 @@ class Parser(metaclass = ParserMeta):
             opts = dict(self._defaults)
         self.opts = opts
 
-    @abstract
+    @tools.abstract
     def parse(self, input: str) -> Sentence:
         """Parse a sentence from an input string.
 
@@ -2143,7 +2190,7 @@ class BaseLexWriter(LexWriter):
         LexType.Operated   : '_write_operated',
     }
 
-    @abstract
+    @tools.abstract
     def _write_operated(self, item: Operated) -> str: ...
 
     def _strfor(self, *args, **kw) -> str:
@@ -2365,7 +2412,7 @@ class RenderSet(TableStore):
             return self.renders[ctype](value)
         return self.strings[ctype][value]
 
-@closure
+@tools.closure
 def _():
 
     # Initialize lexical writer RenderSet table store.
@@ -2519,7 +2566,7 @@ def _():
 
 ##############################################################
 
-@closure
+@tools.closure
 def _():
     for cls in (EnumCommon, LexicalItem, Predicates, Argument, Lexical):
         cls._readonly = True
@@ -2527,8 +2574,10 @@ def _():
 
 del(
     _,
-    abstract, closure, overload, final,
+    overload, final,
     NoSetAttr, lazy, membr, raisr, wraps,
     nosetattr,
-    abcf, enum,
+    enum,
 )
+
+

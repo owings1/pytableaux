@@ -57,10 +57,10 @@ class SetApi(Set[VT], abcs.Copyable):
     @overload
     def __xor__(self:SetApiT, other) -> SetApiT: ...
 
-    __or__  = Set.__or__
-    __and__ = Set.__and__
-    __sub__ = Set.__sub__
-    __xor__ = Set.__xor__
+    __or__  = Set[VT].__or__
+    __and__ = Set[VT].__and__
+    __sub__ = Set[VT].__sub__
+    __xor__ = Set[VT].__xor__
 
     red = operd.reduce.template(freturn = '_from_iterable')
     app = operd.apply
