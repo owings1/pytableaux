@@ -62,45 +62,24 @@ import pytableaux.tools.callables
 
 import pytableaux.lexicals
 import pytableaux.parsers
-
-from pytableaux.lang import _repr
-
+import pytableaux.lang._repr
 
 @tools.closure
 def _():
 
-
-    kw = dict()
-    
-    
-
-
-    _repr.setup([
-        pytableaux.lexicals.Lexical,
-        pytableaux.lexicals.LexicalItem,
-        pytableaux.lexicals.LexicalEnum,
-    ])
-
-
-    lexicals.Notation.default = lexicals.Notation.standard
-
-
-    for C in (
-        pytableaux.lexicals.EnumCommon,
-        pytableaux.lexicals.LexicalItem,
-        pytableaux.lexicals.Predicates,
-        pytableaux.lexicals.Argument,
-        pytableaux.lexicals.Lexical
+    from pytableaux import lexicals
+    for c in (
+        lexicals.EnumCommon,
+        lexicals.LexicalItem,
+        lexicals.Predicates,
+        lexicals.Argument,
+        lexicals.Lexical,
     ):
 
-        C._readonly = True
-        pytableaux.lexicals.nosetattr.enabled = True
+        c._readonly = True
+    lexicals.nosetattr.enabled = True
 
-    del(pytableaux.lexicals.nosetattr,)
-
-
-
-del(_)
+    del(lexicals.nosetattr,)
 
 # --------------------------------------------
 

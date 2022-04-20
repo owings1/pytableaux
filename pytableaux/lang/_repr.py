@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import reprlib
 
-
+from pytableaux.lexicals import LexType, LexWriter, Lexical, LexicalEnum, LexicalItem, Predicate
+from pytableaux.tools import closure, MapProxy
 
 class LangRepr(reprlib.Repr):
 
@@ -24,69 +25,72 @@ class LangRepr3(LangRepr):
     pass
 
 
-_mode = 1
-reg = {
-    1: LangRepr1(),
-    2: LangRepr2(),
-    3: LangRepr3()
-}
-
-bkup = {
-
-}
-
-def _extrepr(x):
-    return reg[_mode].repr(x)
-
-def setup(clss):
-    for C in clss:
-        bkup[C] = C.__repr__
-        ...
-        # C.__repr__ = _extrepr
-
-
-__all__ = ()
-
-
-"""
-Lexical
-
-
+@closure
+def _setup():
+    conf = dict(
+        mode = 1,
+        lw = LexWriter('standard', 'unicode')
+    )
 
     def __repr__(self):
         try:
-            return f'<{self.TYPE.role}: {str(self)}>'
+            return f'<{self.TYPE.role}: {self}>'
         except AttributeError:
-            return f'<{type(self).__name__}: ERR>'
+            return object.__repr__(self)
 
-
-LexicalsItem
-
-    def __str__(self, /, *, mode = 1):
-        'Write the item with the system ``LexWriter``.'
+    def __str__item(self):
+        mode = conf['mode']
+        lw = conf['lw']
+        if mode == 1:
+            return lw(self)
         if mode == 2:
-            return 'testmode2'
-        try:
-            return LexWriter._sys(self)
-        except NameError:
-            try:
-                return str(self.ident)
-            except AttributeError as err:
-                return f'{type(self).__name__}({err})'
+            return lw(self)
+        if mode == 3:
+            return f'~~ {lw(self)} ~~'
+        return object.__repr__(self)
+
+    def __str__enum(self):
+        mode = conf['mode']
+        if mode == 1:
+            return self.name
+        return __str__item(self)
+
+    def __str__pred(self):
+        if self.is_system:
+            return __str__enum(self)
+        return __str__item(self)
+
+    Lexical.__repr__ = __repr__
+    LexicalItem.__str__ = __str__item
+    LexicalEnum.__str__ = __str__enum
+    Predicate.__str__ = __str__pred
+
+    reg = {
+        1: LangRepr1(),
+        2: LangRepr2(),
+        3: LangRepr3(),
+    }
+    _ = MapProxy(conf)
+
+__all__ = ()
+
+# C.__repr__ = _extrepr
+# def _extrepr(x):
+#     return reg[_mode].repr(x)
+# bkup = {}
+# bkup[C] = C.__repr__
+
+def pr():
+    items = [Predicate.System.Identity]
+    items.extend(c.first() for c in LexType.classes)
+    for item in items:
+        print(f'type = {item.TYPE.name}')
+        print(f'str  = {str(item)}')
+        print(f'repr = {repr(item)}')
+        print('')
 
 
-LexicalEnum:
-
-
-    def __str__(self):
-        'Returns the name.'
-        return self.name
-
-
-Predicate
-
-    def __str__(self):
-        return str(self.name) if self.is_system else super().__str__()
+"""
 
 
 LexType

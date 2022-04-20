@@ -72,9 +72,6 @@ NOARG = object()
 EMPTY_IT = iter(EMPTY_SEQ)
 ITEM_CACHE_SIZE = 10000
 
-nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
-
-
 TbsT   = TypeVar('TbsT',   bound = 'TableStore')
 "TypeVar bound to `TableStore`."
 
@@ -95,8 +92,9 @@ IcmpFunc  = Callable[[int, int], bool]
 
 SpecType = tuple[int|str|tuple, ...]
 "Tuple with integers, strings, or such nested tuples."
-IdentType = tuple[str, tuple]
 
+IdentType = tuple[str, SpecType]
+"Tuple of (classname, spec)"
 
 ParameterSpec  = BiCoords
 ParameterIdent = tuple[str, BiCoords]
@@ -124,159 +122,156 @@ OperatedSpec   = tuple[str, OperandsSpec]
 
 ##############################################################
 
-if 'Metas' or True:
+nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
+raiseae = raisr(AttributeError)
 
-    class AbcCommonMeta(abcs.AbcMeta):
-        """Common metaclass for lexical/parser classes. The nosetattr member is
-        shared among these classes and is activated after the modules are fully
-        initialized.
-        """
+class AbcCommonMeta(abcs.AbcMeta):
+    """Common metaclass for lang classes. The nosetattr member is
+    shared among these classes and is activated after the modules are fully
+    initialized.
+    """
+    _readonly : bool
+    __delattr__ = raiseae
+    __setattr__ = nosetattr(abcs.AbcMeta)
 
-        _readonly : bool
-    
-        __delattr__ = raisr(AttributeError)
-        __setattr__ = nosetattr(abcs.AbcMeta)
+class EnumCommonMeta(abcs.EnumMeta):
+    'Common Enum metaclass for lang classes.'
+    _readonly : bool
+    __delattr__ = raiseae
+    __setattr__ = nosetattr(abcs.EnumMeta)
 
-    class EnumCommonMeta(abcs.EnumMeta):
-        'Common Enum metaclass for lexicals module.'
+class LexicalItemMeta(AbcCommonMeta):
+    """Common metaclass for non-Enum lexicals.
+    """
 
-        _readonly : bool
+    Cache: ClassVar[DequeCache]
 
-        __delattr__ = raisr(AttributeError)
-        __setattr__ = nosetattr(abcs.EnumMeta)
-
-    class LexicalItemMeta(AbcCommonMeta):
-        """Meta base class for ``LexicalItem`` (non-Enum) classes, such as
-        ``Constant``, ``Predicate``, ``Sentence``, etc.).
-        """
-
-        Cache: ClassVar[DequeCache]
-
-        def __call__(cls, *spec):
-            if len(spec) == 1:
-                if isinstance(spec[0], cls):
-                    # Passthrough
-                    return spec[0]
-                if isinstance(spec[0], str):
-                    if cls is Predicate:
-                        # System Predicate string
-                        return Predicate.System(spec[0])
-            # cache = LexicalItem.Cache
-            cache = __class__.Cache
-            # Invoked class name.
-            clsname = cls.__name__
+    def __call__(cls, *spec):
+        if len(spec) == 1:
+            if isinstance(spec[0], cls):
+                # Passthrough
+                return spec[0]
+            if isinstance(spec[0], str):
+                if cls is Predicate:
+                    # System Predicate string
+                    return Predicate.System(spec[0])
+        # cache = LexicalItem.Cache
+        cache = __class__.Cache
+        # Invoked class name.
+        clsname = cls.__name__
+        # Try cache
+        try: return cache[clsname, spec]
+        except KeyError: pass
+        # Construct
+        try: inst = super().__call__(*spec)
+        except TypeError:
+            if cls in LexType or len(spec) != 1: raise
+            # Try arg as ident tuple (clsname, spec)
+            clsname, spec = spec[0]
+            lextypecls = LexType(clsname).cls
+            # Don't, for example, create a Predicate
+            # from a Sentence class.
+            if not issubclass(lextypecls, cls) and (
+                # With the exception for Enum classes,
+                # if we are invoking the LexicalItem
+                # class directly.
+                cls is not LexicalItem or
+                not issubclass(lextypecls, LexicalEnum
+            )):
+                raise TypeError(lextypecls, cls)
             # Try cache
             try: return cache[clsname, spec]
             except KeyError: pass
             # Construct
-            try: inst = super().__call__(*spec)
-            except TypeError:
-                if cls in LexType or len(spec) != 1: raise
-                # Try arg as ident tuple (clsname, spec)
-                clsname, spec = spec[0]
-                lextypecls = LexType(clsname).cls
-                # Don't, for example, create a Predicate
-                # from a Sentence class.
-                if not issubclass(lextypecls, cls) and (
-                    # With the exception for Enum classes,
-                    # if we are invoking the LexicalItem
-                    # class directly.
-                    cls is not LexicalItem or
-                    not issubclass(lextypecls, LexicalEnum
-                )):
-                    raise TypeError(lextypecls, cls)
-                # Try cache
-                try: return cache[clsname, spec]
-                except KeyError: pass
-                # Construct
-                inst = lextypecls(*spec)
-            # Try cache, store in cache.
-            try: inst = cache[inst.ident]
-            except KeyError: cache[inst.ident] = inst
-            cache[clsname, spec] = inst
-            return inst
+            inst = lextypecls(*spec)
+        # Try cache, store in cache.
+        try: inst = cache[inst.ident]
+        except KeyError: cache[inst.ident] = inst
+        cache[clsname, spec] = inst
+        return inst
 
-    class ArgumentMeta(AbcCommonMeta):
-        'Argument Metaclass.'
+class ArgumentMeta(AbcCommonMeta):
+    'Argument Metaclass.'
 
-        def __call__(cls, *args, **kw):
-            if len(args) == 1 and not len(kw) and isinstance(args[0], cls):
-                return args[0]
-            return super().__call__(*args, **kw)
+    def __call__(cls, *args, **kw):
+        if len(args) == 1 and not len(kw) and isinstance(args[0], cls):
+            return args[0]
+        return super().__call__(*args, **kw)
 
-    class LexWriterMeta(AbcCommonMeta):
-        'LexWriter Metaclass.'
+class LexWriterMeta(AbcCommonMeta):
+    'LexWriter Metaclass.'
 
-        def __call__(cls, *args, **kw):
-            if cls is LexWriter:
-                if args:
-                    notn = Notation(args[0])
-                    args = args[1:]
-                else:
-                    notn = Notation.default
-                return notn.DefaultWriter(*args, **kw)
-            return super().__call__(*args, **kw)
+    def __call__(cls, *args, **kw):
+        if cls is LexWriter:
+            if args:
+                notn = Notation(args[0])
+                args = args[1:]
+            else:
+                notn = Notation.default
+            return notn.DefaultWriter(*args, **kw)
+        return super().__call__(*args, **kw)
 
-        @tools.closure
-        def _sys():
+    @tools.closure
+    def _sys():
 
-            def checkcls(cls):
-                try:
-                    if cls is not LexWriter:
-                        raise AttributeError
-                except NameError:
+        def checkcls(cls):
+            try:
+                if cls is not LexWriter:
                     raise AttributeError
+            except NameError:
+                raise AttributeError
 
-            syslws = dict(set = None, unset = None)
+        syslws = dict(set = None, unset = None)
 
-            def fget(cls) -> LexWriter:
-                'The system instance for representing.'
-                checkcls(cls)
-                print(syslws)
-                if syslws['set'] is not None:
-                    return syslws['set']
-                if syslws['unset'] is None:
-                    syslws['unset'] = LexWriter()
-                return syslws['unset']
+        def fget(cls) -> LexWriter:
+            'The system instance for representing.'
+            checkcls(cls)
+            # print(syslws)
+            if syslws['set'] is not None:
+                return syslws['set']
+            if syslws['unset'] is None:
+                syslws['unset'] = LexWriter()
+            return syslws['unset']
 
-            def fset(cls, lw: LexWriter|None):
-                checkcls(cls)
-                print('SET', syslws)
-                if lw is not None:
-                    check.inst(lw, LexWriter)
-                syslws['unset'] = None
-                syslws['set'] = lw
-                pytableaux.tools.misc.drepr.lw = lw
+        def fset(cls, lw: LexWriter|None):
+            checkcls(cls)
+            # print('SET', syslws)
+            if lw is not None:
+                check.inst(lw, LexWriter)
+            syslws['unset'] = None
+            syslws['set'] = lw
+            pytableaux.tools.misc.drepr.lw = lw
 
-            def fdel(cls):
-                syslws.pop('unset')
+        def fdel(cls):
+            syslws.pop('unset')
 
-            return dynca(fget, fset, fdel, doc = fget.__doc__)
+        return dynca(fget, fset, fdel, doc = fget.__doc__)
 
-    class ParserMeta(AbcCommonMeta):
-        'Parser Metaclass.'
+class ParserMeta(AbcCommonMeta):
+    'Parser Metaclass.'
 
-        def __call__(cls, *args, **kw):
-            if cls is Parser:
-                if args:
-                    notn = Notation(args[0])
-                    args = args[1:]
-                else:
-                    notn = Notation.default
-                try:
-                    parsercls = notn.Parser
-                except AttributeError:
-                    import pytableaux.parsers
-                    parsercls = notn.Parser
-                return parsercls(*args, **kw)
-            return super().__call__(*args, **kw)
+    def __call__(cls, *args, **kw):
+        if cls is Parser:
+            if args:
+                notn = Notation(args[0])
+                args = args[1:]
+            else:
+                notn = Notation.default
+            try:
+                parsercls = notn.Parser
+            except AttributeError:
+                raise
+                # import pytableaux.parsers
+                # parsercls = notn.Parser
+            return parsercls(*args, **kw)
+        return super().__call__(*args, **kw)
 
 class EnumCommon(abcs.Ebc, metaclass = EnumCommonMeta):
-    'Common Enum base class for lexicals module.'
+    'Common Enum base class for lang classes.'
 
     __slots__   = 'value', '_value_', '_name_', '__objclass__'
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.Ebc, cls = True)
 
 @abcm.clsafter
@@ -448,12 +443,6 @@ class Lexical:
         'Return True.'
         return True
 
-    def __repr__(self):
-        try:
-            return f'<{self.TYPE.role}: {str(self)}>'
-        except AttributeError:
-            return f'<{type(self).__name__}: ERR>'
-
     def __forjson__(self, **kw):
         return self.ident
 
@@ -462,7 +451,7 @@ class Lexical:
 
     #******  Attribute Access
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = raiseae
     __setattr__ = nosetattr(object, cls = LexicalItemMeta)
 
     #******  Subclass Init
@@ -568,25 +557,6 @@ class LexicalEnum(Lexical, EnumCommon, lexcopy = True):
             i = 0
         return seq[i]
 
-    #******  Other Behaviors
-
-    def __str__(self, /, *, _ = dict(mode = 1, lw = None)):
-        'Returns the name.'
-        mode = _['mode']
-        if mode == 1:
-            return self.name
-        try:
-            lw = _['lw'] or LexWriter._sys
-        except NameError:
-            return self.name
-        if mode == 2:
-            return lw(self)
-        if mode == 3:
-            return f'~~ {lw(self)} ~~'
-        return self.name
-        
-        
-
     #******  Instance Init
 
     def __init__(self, order: int, label: str, /):
@@ -600,6 +570,7 @@ class LexicalEnum(Lexical, EnumCommon, lexcopy = True):
         #     build until LexType init.
         # self.sort_tuple = <self.TYPE.rank>, self.order
         # self.hash = self.hashitem(self)
+        pass
 
     @classmethod
     def _member_keys(cls, member: LexicalEnum):
@@ -635,29 +606,9 @@ class LexicalItem(Lexical, metaclass = LexicalItemMeta, lexcopy = True):
     @tools.abstract
     def __init__(self): ...
 
-    #******  Behaviors
-
-    def __str__(self, /, *, _ = dict(mode = 1, lw = None)):
-        'Write the item with the system ``LexWriter``.'
-        mode = _['mode']
-        try:
-            lw = _['lw'] or LexWriter._sys
-        except NameError:
-            try:
-                return str(self.ident)
-            except AttributeError as err:
-                return f'{type(self).__name__}({err})'
-        if mode == 1:
-            return lw(self)
-        if mode == 2:
-            return f'~~ {lw(self)} ~~'
-        if mode == 3:
-            return str(reversed(lw(self)))
-        return lw(self)
-
     #******  Attribute Access
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = raiseae
 
     def __setattr__(self, name, value):
         if getattr(self, name, value) is not value:
@@ -727,6 +678,7 @@ class CoordsItem(LexicalItem):
     @overload
     def __init__(self, coords: Iterable[int], /):...
 
+    @tools.abstract
     def __init__(self, *coords):
         self.coords = self.spec = coords = self.Coords._make(
             coords[0] if len(coords) == 1 else coords
@@ -736,10 +688,10 @@ class CoordsItem(LexicalItem):
         try:
             if coords.index > self.TYPE.maxi:
                 raise ValueError('%d > %d' % (coords.index, self.TYPE.maxi))
-            if coords.subscript < 0:
-                raise ValueError('%d < %d' % (coords.subscript, 0))
         except AttributeError:
-            raise TypeError(self) from None
+            raise TypeError(f'Abstract: {type(self)}') from None
+        if coords.subscript < 0:
+            raise ValueError('subscript %d < %d' % (coords.subscript, 0))
 
 class TableStore(metaclass = AbcCommonMeta):
 
@@ -975,19 +927,6 @@ class Predicate(CoordsItem):
         'Apply the predicate to parameters to make a predicated sentence.'
         return Predicated(self, *spec)
 
-    def __str__(self, /, *, _ = dict(mode = 1, lw = None)):
-        mode = _['mode']
-        try:
-            lw = _['lw'] or LexWriter._sys
-        except:
-            pass
-        else:
-            if mode == 2:
-                return lw(self)
-            if mode == 3:
-                return f'~~ {lw(self)} ~~'
-        return str(self.name) if self.is_system else super().__str__()
-
     #******  Item Generation
 
     def next(self) -> Predicate:
@@ -1187,6 +1126,7 @@ class Sentence(LexicalItem):
     # lshift   << -- biconditional/materialbiconditional?
     # neg      - -- negative?
     # pos      + -- assertion?
+    pass
 
 OperCallArg = Iterable[Sentence] | Sentence | OperandsSpec
 QuantifiedItem = Quantifier | Variable | Sentence
@@ -1602,7 +1542,7 @@ class LexType(EnumCommon):
     "The category class, such as ``Sentence`` for ``Atomic``."
 
     role: str
-    "The category class name, such as ``'Sentence'`` for ``Atomic``."
+    "The category class name, such as ``'Sentence'`` for ``'Atomic'``."
 
     maxi: int | None
     "For coordinate classes, the maximum index."
@@ -1654,9 +1594,9 @@ class LexType(EnumCommon):
         self.cls.TYPE = self
 
     def __repr__(self, /):
-        name = __class__.__name__
+        name = type(self).__name__
         try:
-            return f'<{name}.{self.cls}>'
+            return f'<{name}.{self.cls.__name__}>'
         except AttributeError:
             return f'<{name} ?ERR?>'
 
@@ -1664,12 +1604,13 @@ class LexType(EnumCommon):
     def _after_init(cls):
         """``EnumMeta`` hook.
         
-        - build classes list
-        - write ``sort_tuple`` and ``hash``
-        - build defered enum lookup
+        - Build `.classes` list.
+        - For enum classes Operator & Quantifier:
+            - write ``sort_tuple`` and ``hash``
+            - build defered enum lookup
         """
         super()._after_init()
-        cls.classes = qsetf((m.cls for m in cls.seq))
+        cls.classes = qsetf(m.cls for m in cls.seq)
         for encls in (Operator, Quantifier):
             for member in encls.seq:
                 member.sort_tuple = member.TYPE.rank, member.order
@@ -1944,7 +1885,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
             raise AttributeError(attr)
         super().__setattr__(attr, value)
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = raiseae
 
 ##############################################################
 #                                                            #
@@ -2411,7 +2352,7 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
             raise AttributeError(name)
         super().__setattr__(name, value)
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = raiseae
 
 class RenderSet(TableStore):
     'Lexical writer table data class.'
@@ -2445,7 +2386,7 @@ def _():
 
     from html import unescape as html_unescape
 
-    from pytableaux.tools.misc import dmerged, drepr, dtransform
+    from pytableaux.tools.misc import dmerged, dtransform
 
     def dunesc(d: dict, inplace = False) -> None:
         return dtransform(html_unescape, d, typeinfo = str, inplace = inplace)
@@ -2588,7 +2529,8 @@ def _():
     ))
 
     RenderSet._initcache(Notation, data)
-    # LexWriter._sys = LexWriter._sys
+
+    pass
 
 ##############################################################
 
