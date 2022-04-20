@@ -27,6 +27,8 @@ __all__ = (
     'Atomic',
     'Constant',
     'Lexical',
+    'LexicalEnum',
+    'LexicalItem',
     'LexType',
     'LexWriter',
     'Notation',
@@ -55,6 +57,7 @@ from typing import (Annotated, Any, Callable, ClassVar, Iterable, Iterator,
 import pytableaux.tools.abcs as abcs
 import pytableaux.tools.misc
 from pytableaux import tools
+from pytableaux.lang._aux import BiCoords, TriCoords
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import MapProxy
 from pytableaux.tools.abcs import abcm
@@ -71,69 +74,53 @@ ITEM_CACHE_SIZE = 10000
 
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
 
-if 'Types' or True:
-    TbsT   = TypeVar('TbsT',   bound = 'TableStore')
-    CrdT   = TypeVar('CrdT',   bound = 'CoordsItem')
-    LexT   = TypeVar('LexT',   bound = 'Lexical')
-    LexItT = TypeVar('LexItT', bound = 'LexicalItem')
-    SenT   = TypeVar('SenT',   bound = 'Sentence')
 
-    class BiCoords(NamedTuple):
-        index     : int
-        subscript : int
-    
-        class Sorting(NamedTuple):
-            subscript : int
-            index     : int
+TbsT   = TypeVar('TbsT',   bound = 'TableStore')
+"TypeVar bound to `TableStore`."
 
-        def sorting(self) -> BiCoords.Sorting:
-            return self.Sorting(self.subscript, self.index)
+CrdT   = TypeVar('CrdT',   bound = 'CoordsItem')
+"TypeVar bound to `CoordsItem`."
 
-        first = (0, 0)
+LexT   = TypeVar('LexT',   bound = 'Lexical')
+"TypeVar bound to `Lexical`."
 
-    class TriCoords(NamedTuple):
-        index     : int
-        subscript : int
-        arity     : int
+LexItT = TypeVar('LexItT', bound = 'LexicalItem')
+"TypeVar bound to `LexicalItem`."
 
-        class Sorting(NamedTuple):
-            subscript : int
-            index     : int
-            arity     : int
+SenT   = TypeVar('SenT',   bound = 'Sentence')
+"TypeVar bound to `Sentence`."
 
-        def sorting(self) -> TriCoords.Sorting:
-            return self.Sorting(self.subscript, self.index, self.arity)
+IcmpFunc  = Callable[[int, int], bool]
+"Function that compares two ints and returns a boolean value, e.g. `>` or `<`."
 
-        first = (0, 0, 1)
+SpecType = tuple[int|str|tuple, ...]
+"Tuple with integers, strings, or such nested tuples."
+IdentType = tuple[str, tuple]
 
-    BiCoords.first = BiCoords._make(BiCoords.first)
-    TriCoords.first = TriCoords._make(TriCoords.first)
 
-    IcmpFunc  = Callable[[int, int], bool]
-    IdentType = tuple[str, tuple]
+ParameterSpec  = BiCoords
+ParameterIdent = tuple[str, BiCoords]
 
-    ParameterSpec  = BiCoords
-    ParameterIdent = tuple[str, BiCoords]
+QuantifierSpec = tuple[str]
+OperatorSpec   = tuple[str]
 
-    QuantifierSpec = tuple[str]
-    OperatorSpec   = tuple[str]
+PredicateSpec = TriCoords
+PredicateRef  = tuple[int, ...] | str
 
-    PredicateSpec = TriCoords
-    PredicateRef  = tuple[int, ...] | str
+AtomicSpec     = BiCoords
+PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
+QuantifiedSpec = tuple[str, BiCoords, IdentType]
+OperandsSpec   = tuple[IdentType, ...]
+OperatedSpec   = tuple[str, OperandsSpec]
 
-    AtomicSpec     = BiCoords
-    PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
-    QuantifiedSpec = tuple[str, BiCoords, IdentType]
-    OperandsSpec   = tuple[IdentType, ...]
-    OperatedSpec   = tuple[str, OperandsSpec]
+# Deferred
 
-    # Deferred
-    OperCallArg    : type[Iterable[Sentence] | Sentence | OperandsSpec]
-    PredsItemRef   : type[PredicateRef  | Predicate] = PredicateRef
-    PredsItemSpec  : type[PredicateSpec | Predicate] = PredicateSpec
-    QuantifiedItem : type[Quantifier | Variable | Sentence]
-    # ParseTableValue = int|Lexical
-    # ParseTableKey   = LexType|Marking|type[Predicate.System]
+# OperCallArg     = Iterable[Sentence] | Sentence | OperandsSpec
+# PredsItemRef    = PredicateRef  | Predicate
+# PredsItemSpec   = PredicateSpec | Predicate
+# QuantifiedItem  = Quantifier | Variable | Sentence
+# ParseTableValue = int|Lexical
+# ParseTableKey   = LexType|Marking|type[Predicate.System]
 
 ##############################################################
 
@@ -176,6 +163,7 @@ if 'Metas' or True:
                         return Predicate.System(spec[0])
             # cache = LexicalItem.Cache
             cache = __class__.Cache
+            # Invoked class name.
             clsname = cls.__name__
             # Try cache
             try: return cache[clsname, spec]
@@ -244,6 +232,7 @@ if 'Metas' or True:
             def fget(cls) -> LexWriter:
                 'The system instance for representing.'
                 checkcls(cls)
+                print(syslws)
                 if syslws['set'] is not None:
                     return syslws['set']
                 if syslws['unset'] is None:
@@ -252,13 +241,17 @@ if 'Metas' or True:
 
             def fset(cls, lw: LexWriter|None):
                 checkcls(cls)
+                print('SET', syslws)
                 if lw is not None:
                     check.inst(lw, LexWriter)
                 syslws['unset'] = None
                 syslws['set'] = lw
                 pytableaux.tools.misc.drepr.lw = lw
 
-            return dynca(fget, fset, doc = fget.__doc__)
+            def fdel(cls):
+                syslws.pop('unset')
+
+            return dynca(fget, fset, fdel, doc = fget.__doc__)
 
     class ParserMeta(AbcCommonMeta):
         'Parser Metaclass.'
@@ -312,7 +305,8 @@ class Lexical:
     (no strings). This is also used in hashing, so equal objects should
     have equal sort_tuples.
 
-    **NB**: The first value must be the lexical rank of the type.
+    **NB**: The first value must be the lexical rank of the type as specified
+    in the `LexType` enum class.
     """
 
     hash: int
@@ -576,9 +570,22 @@ class LexicalEnum(Lexical, EnumCommon, lexcopy = True):
 
     #******  Other Behaviors
 
-    def __str__(self):
+    def __str__(self, /, *, _ = dict(mode = 1, lw = None)):
         'Returns the name.'
+        mode = _['mode']
+        if mode == 1:
+            return self.name
+        try:
+            lw = _['lw'] or LexWriter._sys
+        except NameError:
+            return self.name
+        if mode == 2:
+            return lw(self)
+        if mode == 3:
+            return f'~~ {lw(self)} ~~'
         return self.name
+        
+        
 
     #******  Instance Init
 
@@ -630,15 +637,23 @@ class LexicalItem(Lexical, metaclass = LexicalItemMeta, lexcopy = True):
 
     #******  Behaviors
 
-    def __str__(self):
+    def __str__(self, /, *, _ = dict(mode = 1, lw = None)):
         'Write the item with the system ``LexWriter``.'
+        mode = _['mode']
         try:
-            return LexWriter._sys(self)
+            lw = _['lw'] or LexWriter._sys
         except NameError:
             try:
                 return str(self.ident)
             except AttributeError as err:
                 return f'{type(self).__name__}({err})'
+        if mode == 1:
+            return lw(self)
+        if mode == 2:
+            return f'~~ {lw(self)} ~~'
+        if mode == 3:
+            return str(reversed(lw(self)))
+        return lw(self)
 
     #******  Attribute Access
 
@@ -960,7 +975,17 @@ class Predicate(CoordsItem):
         'Apply the predicate to parameters to make a predicated sentence.'
         return Predicated(self, *spec)
 
-    def __str__(self):
+    def __str__(self, /, *, _ = dict(mode = 1, lw = None)):
+        mode = _['mode']
+        try:
+            lw = _['lw'] or LexWriter._sys
+        except:
+            pass
+        else:
+            if mode == 2:
+                return lw(self)
+            if mode == 3:
+                return f'~~ {lw(self)} ~~'
         return str(self.name) if self.is_system else super().__str__()
 
     #******  Item Generation
@@ -1053,8 +1078,8 @@ class Predicate(CoordsItem):
     _name_  = sysset(_name_)
     __objclass__ = sysset(__objclass__)
 
-PredsItemSpec |= Predicate
-PredsItemRef  |= Predicate
+PredsItemSpec = PredicateSpec | Predicate
+PredsItemRef  = PredicateRef  | Predicate
 
 ##############################################################
 
@@ -1372,10 +1397,10 @@ class Quantified(Sentence, Sequence[QuantifiedItem]):
         """Returns the first quantified sentence.
         
         Args:
-            q: The ``Quantifier``, default is the first quantifier.
+            q (Quantifier): The Quantifier, default is the first quantifier.
 
         Returns:
-            Then sentence instance.
+            Sentence: Then sentence instance.
         """
         v = Variable.first()
         return cls(q, v, Predicate.first()(v))
@@ -1543,6 +1568,7 @@ class Operated(Sentence, Sequence[Sentence]):
 
     @overload
     def __getitem__(self, i: SupportsIndex,/) -> Sentence:...
+
     @overload
     def __getitem__(self, s: slice,/) -> tuple[Sentence, ...]:...
 
@@ -1630,9 +1656,9 @@ class LexType(EnumCommon):
     def __repr__(self, /):
         name = __class__.__name__
         try:
-            return '<%s.%s>' % (name, self.cls)
+            return f'<{name}.{self.cls}>'
         except AttributeError:
-            return '<%s ?ERR?>' % name
+            return f'<{name} ?ERR?>'
 
     @classmethod
     def _after_init(cls):
@@ -1669,7 +1695,7 @@ class Predicates(qset[Predicate], metaclass = AbcCommonMeta,
     __slots__ = '_lookup',
 
     def __init__(self, values: Iterable[PredsItemSpec] = None, /, *,
-        sort = False, key = None, reverse = False):
+        sort: bool = False, key = None, reverse: bool = False):
         """Create a new store from an iterable of predicate objects
         or specs
         
@@ -2562,21 +2588,21 @@ def _():
     ))
 
     RenderSet._initcache(Notation, data)
-    LexWriter._sys = LexWriter._sys
+    # LexWriter._sys = LexWriter._sys
 
 ##############################################################
 
-@tools.closure
-def _():
-    for cls in (EnumCommon, LexicalItem, Predicates, Argument, Lexical):
-        cls._readonly = True
-    nosetattr.enabled = True
+# @tools.closure
+# def _():
+#     for cls in (EnumCommon, LexicalItem, Predicates, Argument, Lexical):
+#         cls._readonly = True
+#     nosetattr.enabled = True
 
 del(
     _,
     overload, final,
     NoSetAttr, lazy, membr, raisr, wraps,
-    nosetattr,
+    # nosetattr,
     enum,
 )
 

@@ -25,6 +25,7 @@ import simplejson as json
 from cherrypy.test import helper
 from pytableaux import web
 from pytableaux.errors import *
+from pytableaux.web import util
 from pytableaux.web.application import WebApp
 
 
@@ -226,5 +227,5 @@ class AppTest(helper.CPWebCase):
         form_data = {
             'test[]': 'a'
         }
-        res = web.fix_uri_req_data(form_data)
+        res = util.fix_uri_req_data(form_data)
         assert isinstance(res['test[]'], list)

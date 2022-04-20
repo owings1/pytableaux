@@ -15,6 +15,9 @@
     font-family: Charmonman;
     font-weight: bold;
 }
+table.lex-eg-table tr > td:last-child {
+    font-family: SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,Courier,monospace
+}
 
 /* font-size */
 table.truth-table th.operator-name {
@@ -65,9 +68,18 @@ table.truth-table th.operator-symbol.arity-2 {
     text-align: right;
 }
 
+/* white-space */
+table.lex-eg-table tr > td:last-child {
+    white-space: pre;
+}
 /* display */
 p.definiendum {
     display: block;
+}
+table.flex-last tr > td:last-child,
+table.lex-eg-table tr > td:last-child {
+    display: flex;
+    min-width: max-content;
 }
 
 /* float */

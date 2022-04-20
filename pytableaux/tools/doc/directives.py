@@ -268,7 +268,10 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     "Override csv-table to allow generator function."
 
     generators = dict(
-        opers_table = docparts.opers_table
+        opers_table       = [docparts.opers_table],
+        lexspec_eg_table  = [docparts.lex_eg_table, 'spec'],
+        lexident_eg_table = [docparts.lex_eg_table, 'ident'],
+        lexsorttuple_eg_table = [docparts.lex_eg_table, 'sort_tuple'],
     )
 
     def generator_opt(arg: str):
@@ -279,14 +282,23 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
 
     option_spec = dict(sphinx.directives.patches.CSVTable.option_spec,
         generator = generator_opt,
+        classes = class_option,
     )
+    option_spec.pop('class', None)
+
+    def run(self):
+        classes = self.set_classes()
+        res = super().run()
+        res[0]['classes'].extend(classes)
+        return res
 
     def get_csv_data(self):
         # Override docutils.parsers.rst.directives.CSVTable.get_csv_data()
-        generator = self.options.get('generator')
-        if generator is None:
+        entry = self.options.get('generator')
+        if entry is None:
             return super().get_csv_data()
-        rows = generator()
+        generator, *args = entry
+        rows = generator(*args, self.options)
         source = '_generator'
         return rstutils.csvlines(rows), source
 

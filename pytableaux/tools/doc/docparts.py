@@ -14,10 +14,11 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - misc doc elements
+"""
+pytableaux.tools.doc.docparts
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 __all__ = (
@@ -25,13 +26,16 @@ __all__ = (
     'rule_example_tableau',
     'trunk_example_tableau',
 )
+import reprlib
+from typing import Any
 
-from pytableaux.lexicals import Argument, Operator, RenderSet
+from pytableaux import lexicals
+from pytableaux.lexicals import Argument, LexType, Operator, RenderSet
+from pytableaux.logics import registry
 from pytableaux.parsers import ParseTable
 from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
-from pytableaux.logics import registry
-from typing import Any
+
 
 def rule_example_tableau(rulecls: type[Rule], /, **opts) -> Tableau:
     "Get a rule's example tableau for documentation."
@@ -62,9 +66,18 @@ def trunk_example_tableau(logic: Any, arg: Argument, /) -> str:
     tab.finish()
     return tab
 
-def opers_table() -> list[list[str]]:
+pre = '``{}``'.format
+
+TableData = list[list[str]]
+
+def opers_table(opts: dict = {}) -> TableData:
     'Table data for the Operators table.'
-    from html import unescape
+
+    from html import unescape, escape
+
+    # Build outputs into maps
+
+    # Parser tables
     charpol, charstd = (
         {o: table.char(o.TYPE, o) for o in Operator}
         for table in (
@@ -72,6 +85,7 @@ def opers_table() -> list[list[str]]:
             ParseTable.fetch('standard'),
         )
     )
+    # Render tables
     strhtml, strunic = (
         {o: rset.string(o.TYPE, o) for o in Operator}
         for rset in (
@@ -79,15 +93,108 @@ def opers_table() -> list[list[str]]:
             RenderSet.fetch('standard', 'unicode'),
         )
     )
-    pre = '``{}``'.format
-    heads = (
-        ['', '', '', 'Render only'],
-        ['Operator', 'Polish', 'Standard', 'Std. HTML', 'Std. Unicode'],
-    )
-    body = [
-        [o.label, pre(charpol[o]), pre(charstd[o]), unescape(strhtml[o]), strunic[o]]
+
+    # ordered symbol lookups
+    #        0            1           2            3
+    #      polish.ascii  std.ascii, std.unicode, std.html
+    maps = [charpol,     charstd,    strunic,      strhtml]
+    # raw symbol table outputs
+    rawrows = [
+        [m[o] for m in maps]
         for o in Operator
     ]
+    # formatted symbol cells
+    symbolrows = [
+        [
+            pre(r[0]),
+            pre(r[1]),
+            r[2],
+            f'{unescape(r[3])} / {escape(r[3])}'
+        ]
+        for r in rawrows
+    ]
+    
+    heads = [
+
+        ['', 'Notation',   'Polish', 'Standard',   'Standard',   'Standard'],
+        ['', 'Charset',    'ascii',  'ascii'  ,    'unicode'   ,   'html' ],
+        ['', 'Can parse',      'Y',    'Y',          'N'      ,     'M'     ],
+
+    ]
+    cols = len(heads[0])
+
+    operrow = ['Operator'] + [''] * (cols - 1)
+
+
+    # table layour
+    body = [
+        [o.label ,'' , r[0], r[1], r[2], r[3]]
+
+        for o, r in zip(
+            Operator, symbolrows
+        )
+    ]
+
+    spacerrow = [''] * cols
+
+    rows = list(heads)
+
+    rows.append(spacerrow)
+    rows.append(operrow)
+    rows.append(spacerrow)
+
+    rows.extend(body)
+
+    return rows
+
+class SpecRepr(reprlib.Repr):
+
+    def repr_TriCoords(self, obj, level):
+        return self.repr(tuple(obj))
+    repr_BiCoords = repr_TriCoords
+
+
+def lex_eg_table(choice = 'spec', opts: dict = {}) -> TableData:
+
+    def egitem(lexcls: type[lexicals.Lexical]):
+        return lexcls.first()
+
+    egitems = [egitem(lexcls) for lexcls in LexType.classes]
+    lw = lexicals.LexWriter('standard', 'unicode')
+
+    srepr = SpecRepr().repr
+
+    # header row data
+    hdata = dict(
+        spec        = 'spec',
+        ident       = 'ident',
+        sort_tuple  = 'sort_tuple',
+        hash        = 'hash'
+    )
+    # row data for python repr
+    rdata = [
+        [item, type(item),
+        dict(
+            spec       = srepr(item.spec),
+            ident      = srepr(item.ident),
+            sort_tuple = srepr(item.sort_tuple),
+            hash       = srepr(item.hash)
+        )]
+        for item in egitems
+    ]
+
+    
+    # table with one 'attribute' column
+    heads = [
+        # one header row
+        ['Type', 'Item', hdata[choice]]
+    ]
+    body = [
+        [lexcls.__name__, lw(item), row[choice]]
+        for item, lexcls, row in rdata
+    ]
+
     rows = list(heads)
     rows.extend(body)
+
     return rows

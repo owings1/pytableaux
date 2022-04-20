@@ -46,15 +46,15 @@ def indented(lines: Iterable[str], indent: str|int = None) -> list[str]:
         for line in lines
     ]
 
-def csvlines(rows: list[list[str]], /, indent: str|int = None, quoting = csv.QUOTE_ALL, **kw) -> list[str]:
+def csvlines(rows: list[list[str]], /, quoting = csv.QUOTE_ALL, **kw) -> list[str]:
     'Format rows as CSV lines.'
     lines = []
     w = csv.writer(_csvshim(lines.append), quoting = quoting, **kw)
     w.writerows(rows)
-    return indented(lines, indent)
+    return lines
 
 class _csvshim:
-    'Many any function into  a ``write()`` method.'
+    'Make any function into  a ``write()`` method.'
     __slots__ = 'write',
     def __init__(self, func):
         self.write = func
