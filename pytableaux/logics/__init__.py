@@ -19,8 +19,8 @@ pytableaux.logics
 ^^^^^^^^^^^^^^^^^
 
 """
-
 from __future__ import annotations
+
 
 __docformat__ = 'google'
 __all__ = (
@@ -33,65 +33,87 @@ import sys
 from collections import defaultdict
 from importlib import import_module
 from types import ModuleType
-from typing import (Any, Callable, ClassVar, Collection, Iterable, Mapping,
-                    Protocol, Set, overload)
+from typing import Callable, ClassVar, Collection, Iterable, Mapping, overload
 
 from pytableaux import models
 from pytableaux.errors import Emsg, check
 from pytableaux.proof import tableaux
-from pytableaux.tools import MapProxy, abcs, closure, hybrids, mappings
-from pytableaux.tools.sets import EMPTY_SET, SetView
+from pytableaux.tools import abcs, closure, hybrids, mappings
+from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools.typing import HasModuleAttr
 
 
-class Registry(abcs.Abc):
-
-    packages: hybrids.qset[str]
-    "Packages that contain logic modules."
-
-    modules: Set[str]
-    "``module.__name__`` value set."
-
-    index: Mapping[LogicLookupKey, str]
-    """Mapping to ``module.__name__`` for all of the following keys:
-    
-    - Full ``module.__name__``
-    - local ID (lowercase last part of ``module.__name__``)
-    - The module's ``.name`` attribute
-    - Module object
+class Registry(mappings.Mapping[str, 'LogicModule']):
+    """Logic module registry.
     """
 
-    __slots__ = 'packages', 'modules', 'index', 'add_logic', 'remove_logic'
+    packages: hybrids.qset[str]
+    "Packages containing logic modules to load from."
 
-    def __init__(self):
-        modules = set()
-        index = RegIndex()
+    modules: hybrids.QsetView[str]
+    "The set of loaded module names."
 
+    index: Mapping[LogicLookupKey, str]
+    """Mapping to ``module.__name__`` for each of its keys. See ``.get()``."""
+
+    __slots__ = 'packages', 'modules', 'index', 'add_logic', 'remove_logic', 
+
+    def __init__(self, *, source: Registry = None):
+        
         self.packages = hybrids.qset()
-        self.modules = SetView(modules)
-        self.index = MapProxy(index)
+        modules = hybrids.qset()
+        index = self.Index()
 
-        def add_logic(logic: LogicModule):
+        if source is not None:
+            check.inst(source, Registry)
+            self.packages.update(source.packages)
+            modules.update(source.modules)
+            index.update(source.index)
+
+        self.modules = hybrids.QsetView(modules)
+        self.index = mappings.MapProxy(index)
+
+        def add(logic: LogicModule):
             modname = logic.__name__
             index.update(
-                zip(self._index_keys(logic), itertools.repeat(modname))
+                zip(self._module_keys(logic), itertools.repeat(modname))
             )
             modules.add(modname)
 
-        def remove_logic(logic: LogicModule):
-            self.index -= self._index_keys(logic)
-            self.modules.discard(logic.__name__)
+        def remove(logic: LogicModule):
+            for key in self._module_keys(logic):
+                index.pop(key, None)
+            modules.discard(logic.__name__)
 
-        self.add_logic = add_logic
-        self.remove_logic = remove_logic
+        self.add_logic = add
+        self.remove_logic = remove
 
-    @overload
-    def add_logic(self, logic: LogicModule):...
-    @overload
-    def remove_logic(self, logic: LogicModule):...
-    del(add_logic, remove_logic)
+    def copy(self):
+        return type(self)(source = self)
 
-    def get(self, key: LogicLookupKey) -> LogicModule:
+    __copy__ = copy
+
+    def clear(self):
+        for logic in set(self.values()):
+            self.remove_logic(logic)
+
+    def get(self, key: LogicLookupKey, /) -> LogicModule:
         """Get a logic from the registry, importing if needed.
+
+        Args:
+            key: One of the following:
+
+                - Full ``module.__name__``
+                - local ID (lowercase last part of ``module.__name__``)
+                - The module's ``.name`` attribute
+                - Module object
+        
+        Returns:
+            The logic module
+        
+        Raises:
+            ValueError: if not found.
+            TypeError: on bad key argument.
         """
         try:
             modname = self.index[key]
@@ -103,48 +125,93 @@ class Registry(abcs.Abc):
         check.inst(key, LogicLookupKey)
 
         if isinstance(key, ModuleType):
-            moduleobj = key
-            if moduleobj.__package__ not in self.packages:
-                raise Emsg.NotLogicsPackage(moduleobj.__package__)
+            module = key
+            if module.__package__ not in self.packages:
+                raise Emsg.NotLogicsPackage(module.__package__)
         else:
 
             if '.' in key:
-                pkgstr = key.split('.')[0:-1]
+                pkgstr = '.'.join(key.split('.')[0:-1])
                 if pkgstr not in self.packages:
                     raise Emsg.NotLogicsPackage(pkgstr)
                 searchit = key,
             else:
-                searchit = (f'{pkgname}.{key}' for pkgname in self.packages)
+                keylc = key.lower()
+                searchit = itertools.chain(
+                    (f'{pkgname}.{keylc}' for pkgname in self.packages),
+                    (f'{pkgname}.{key}' for pkgname in self.packages),
+                )
 
             tried = []
             for srchname in searchit:
                 tried.append(srchname)
                 try:
-                    moduleobj = import_module(srchname)
+                    module = import_module(srchname)
                 except ModuleNotFoundError:
                     continue
                 break
             else:
                 raise ModuleNotFoundError(f'tried: {tried}')
 
-        if not isinstance(moduleobj, LogicModule):
-            raise Emsg.BadLogicModule(moduleobj.__name__)
+        if not isinstance(module, LogicModule):
+            raise Emsg.BadLogicModule(module.__name__)
 
-        self.add_logic(moduleobj)
-        return moduleobj
+        self.add_logic(module)
+        return module
 
-    def sync(self):
-        """Sync all registry packages by calling ``.sync_package()``.
+    __call__ = get
+
+    def locate(self, ref: LogicLocatorRef, /) -> LogicModule:
+        """Like ``.get()`` but also searches the ``__module__`` attribute of
+        classes, methods, and functions to locate the logic in which it was defined.
+
+        Args:
+            ref: A ``key`` accepted by ``.get()``, or a class, method, or function
+                defined in a logic module.
+        
+        Returns:
+            The logic module
+        
+        Raises:
+            ValueError: if not found.
+            TypeError: on bad key argument.
         """
-        added = set()
+        check.inst(ref, LogicLocatorRef)
+        if isinstance(ref, LogicLookupKey):
+            return self.get(ref)
+        return self.get(ref.__module__.lower())
+
+    @overload
+    def add_logic(self, logic: LogicModule):...
+    @overload
+    def remove_logic(self, logic: LogicModule):...
+    del(add_logic, remove_logic)
+
+    def sync_all(self) -> dict[str, set[str]|None]:
+        """Sync all registry packages by calling ``.sync_package()``.
+
+        Returns:
+            Dict of each package name to its ``sync_package()`` result.
+        """
+        added = {}
         for pkgname in self.packages:
-            added.update(self.sync_package(pkgname))
+            added[pkgname] = self.sync_package(pkgname)
         return added
 
-    def sync_package(self, pkgname: str) -> set[str]:
+    def sync_package(self, pkgname: str, /) -> set[str]|None:
         """Attempt to find and add any logics that are already loaded (imported)
         but not in the registry. Tries the package's ``__all__`` and ``__dict__``
         attributes.
+
+        Args:
+            pkgname: The package name. Must be in ``registry.packages``.
+        
+        Returns:
+            The module names added to the registry, or ``None`` if the package
+            module has not been loaded.
+        
+        Raises:
+            ValueError: if ``pkgname`` is not in the registry packages.
         """
         if pkgname not in self.packages:
             raise Emsg.NotLogicsPackage(pkgname)
@@ -153,8 +220,6 @@ class Registry(abcs.Abc):
             return
 
         fmt = f'{pkgname}''.%s'.__mod__
-
-        tosync = set()
 
         it1 = (modname
             for modname in map(fmt, (val
@@ -172,7 +237,6 @@ class Registry(abcs.Abc):
                 # And is a logic
                 and isinstance(sys.modules[modname], LogicModule)
         )
-        tosync.update(it1)
 
         it2 = (fmt(name)
             # In the package dict
@@ -184,19 +248,18 @@ class Registry(abcs.Abc):
                 # And is a logic
                 and isinstance(val, LogicModule)
         )
-        tosync.update(it2)
 
-        synced = set()
-        for modname in tosync:
+        added = set()
+        for modname in itertools.chain(it1, it2):#tosync:
             module = sys.modules[modname]
             if module.__package__ != pkgmod.__name__:
                 raise Emsg.NotLogicsPackage(pkgmod.__name__)
             if not isinstance(module, LogicModule):
                 raise Emsg.BadLogicModule(module.__name__) 
             self.add_logic(module)
-            synced.add(module)
+            added.add(modname)
 
-        return synced
+        return added
 
     def import_all(self):
         """Import all logics for all registry packages. See ``.import_package()``.
@@ -204,9 +267,12 @@ class Registry(abcs.Abc):
         for pkgname in self.packages:
             self.import_package(pkgname)
 
-    def import_package(self, pkgname: str):
+    def import_package(self, pkgname: str, /):
         """Import all logic modules for a package. Uses the ``__all__`` attribute
         to list the logic names.
+
+        Raises:
+            ValueError: if ``pkgname`` is not in the registry packages.
         """
         if pkgname not in self.packages:
             raise Emsg.NotLogicsPackage(pkgname)
@@ -218,27 +284,122 @@ class Registry(abcs.Abc):
                 if isinstance(module, LogicModule):
                     self.get(module)
 
-    def _index_keys(self, logic: LogicModule) -> set[str|ModuleType]:
+    def grouped(self, keys: Iterable[LogicLookupKey], /, *,
+        sort: bool = True, key: Callable = None, reverse: bool = False,
+    ) -> dict[str, list[LogicModule]]:
+        """Group logics by category.
+
+        Args:
+            keys: Iterable of keys accepted by ``.get()``.
+            sort: Whether to sort each group. Default ``True``.
+            key: The sort key for the groups. Default is ``.Meta.category_order``.
+            reverse: Whether to reverse sort each group.
+
+        Returns:
+            A dict from each category name to the list of logic modules.
+
+        Raises:
+            ValueError: if any not found.
+        """
+        groups: dict[str, list[ModuleType]] = defaultdict(list)
+        for logic in map(self.get, keys):
+            groups[logic.Meta.category].append(logic)
+        if not sort:
+            return dict(groups)
+        if key is None:
+            key = key_category_order
+        for group in groups.values():
+            group.sort(key = key, reverse = reverse)
         return {
-            logic,
-            logic.name,
-            logic.__name__,
-            logic.__name__.split('.')[-1].lower(),
+            category: groups[category]
+            for category in sorted(groups)
         }
 
-class LogicMeta(abcs.AbcMeta):
+    @staticmethod
+    def _module_keys(logic: LogicModule, /) -> tuple[LogicModule, str, str, str]:
+        """Get the index keys for a logic module.
+
+        Args:
+            LogicModule: The logic module.
+        
+        Returns:
+            The tuple with the keys, as sepcified in ``.get()``.
+        """
+        return (
+            logic, logic.name, logic.__name__,
+            logic.__name__.split('.')[-1].lower(),
+        )
+
+    def __contains__(self, key: LogicLookupKey):
+        return key in self.index
+
+    def __getitem__(self, key: LogicLookupKey):
+        modname = self.index[key]
+        try:
+            return sys.modules[modname]
+        except KeyError:
+            raise RuntimeError
+
+    def __iter__(self):
+        yield from self.modules
+
+    def __reversed__(self):
+        return reversed(self.modules)
+
+    def __len__(self):
+        return len(self.modules)
+
+    def __repr__(self):
+        names = (v.name for v in self.values())
+        return f'{type(self).__name__}@{id(self)}{repr(list(names))}'
+
+    class Index(mappings.dmap):
+        """Registry index."""
+
+        __slots__ = EMPTY_SET
+
+        def __setitem__(self, key, value):
+            if key in self:
+                raise Emsg.DuplicateKey(key)
+            super().__setitem__(key, value)
+
+        def update(self, mapping = None, **kw):
+            'Check all keys before updating.'
+            if mapping is None:
+                upd = kw
+            elif len(kw):
+                upd = dict(mapping, **kw)
+            else:
+                upd = dict(mapping)
+            for key in upd:
+                if key in self:
+                    raise Emsg.DuplicateKey(key)
+            super().update(upd)
+
+
+def key_category_order(logic: LogicModule) -> int:
+    "Returns the category order from the logic, e.g. for sorting."
+    return logic.Meta.category_order
+
+class LogicTypeMeta(abcs.AbcMeta):
+    """Metaclass for ``LogicType`` for implementing ``isinstance()`` checks on
+    modules.
+    """
 
     _modcache = set()
 
     def __instancecheck__(self, obj):
-        if obj in self._modcache:
-            return True
+        try:
+            if obj in self._modcache:
+                return True
+        except TypeError:
+            return False
         result, err = self.is_logic(obj)
         if result:
             self._modcache.add(obj)
         else:
             pass
-            print(err)
+            # print(err)
         return result
 
     @closure
@@ -263,28 +424,8 @@ class LogicMeta(abcs.AbcMeta):
             return True, None
         return geterr
 
-class RegIndex(mappings.dmap):
-    __slots__ = EMPTY_SET
-
-    def __setitem__(self, key, value):
-        if key in self:
-            raise Emsg.DuplicateKey(key)
-        super().__setitem__(key, value)
-
-    def update(self, mapping = None, **kw):
-        'Check all keys before updating.'
-        if mapping is None:
-            upd = kw
-        elif len(kw):
-            upd = dict(mapping, **kw)
-        else:
-            upd = dict(mapping)
-        for key in upd:
-            if key in self:
-                raise Emsg.DuplicateKey(key)
-        super().update(upd)
-
-class LogicType(metaclass = LogicMeta):
+class LogicType(metaclass = LogicTypeMeta):
+    "Stub class definition for a logic interface."
     name: str
     class Meta:
         category: str
@@ -293,139 +434,24 @@ class LogicType(metaclass = LogicMeta):
         tags: Collection[str]   
     TableauxSystem: ClassVar[type[tableaux.TableauxSystem]]
     Model: ClassVar[type[models.BaseModel]]
-    TabRules: ClassVar[type]
+    class TabRules:
+        closure_rules: ClassVar[tuple[type[tableaux.Rule], ...]]
+        rule_groups: ClassVar[
+            tuple[
+                tuple[type[tableaux.Rule], ...], ...
+            ]
+        ]
 
 LogicModule = LogicType | ModuleType
+"Logic module alias for type hinting."
 
 LogicLookupKey = ModuleType | str
-"""Logic registry key. Either the module object, ``module.__name__``,
-``module.name``, identifier.
-"""
+"""Logic registry key. Module or string. See ``Registry.get()``."""
 
+LogicLocatorRef = LogicLookupKey | HasModuleAttr
+"""Either a logic registry key (string/module), or class, method, or function."""
 
 registry = Registry()
+"The default built-in registry"
+
 registry.packages.add(__package__)
-
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-
-
-class SupportsModule(Protocol):
-    __module__: str
-
-LogicId = ModuleType | str
-LogicRef = LogicId | SupportsModule
-
-
-_lookup: Mapping[LogicId, ModuleType]
-"Index of loaded logics."
-
-@closure
-def getlogic():
-
-    global _lookup
-    lookup: dict[LogicId, ModuleType] = {}
-    _lookup = MapProxy(lookup)
-
-    from pytableaux import logics as myself
-
-    def add_to_index(logic, key):
-        idx = lookup
-        keys = dict(
-            name = logic.name,
-            name_lower = logic.name.lower(),
-            key = key,
-        )
-        from pprint import pp
-        pp(keys)
-        for k in keys.values():
-            idx[k] = logic
-        setattr(myself, logic.name, logic)
-        return logic
-
-    def get(ref: LogicRef) -> ModuleType:
-        """Get the logic module from the specified reference.
-
-        Each of following examples returns the L{FDE} logic module::
-
-            getlogic('fde')
-            getlogic('FDE')
-            getlogic('logics.fde')
-            getlogic(getlogic('FDE'))
-
-        Args:
-            ref: The logic reference.
-        
-        Returns:
-            The logic module.
-
-        Raises:
-            ValueError: if the module is not a logic.
-            ModuleNotFoundError: if the module is not found.
-            TypeError: if no module name can be determined from ``ref``.
-        """
-        idx = _lookup
-        try:
-            return idx[ref]
-        except KeyError:
-            pass
-        try:
-            return idx[ref.__module__.lower()]
-        except AttributeError:
-            pass
-        except KeyError:
-            ref = import_module(ref.__module__)
-        if isinstance(ref, ModuleType):
-            if ref.__package__ != __package__ or ref.__name__ == __name__:
-                raise ValueError(f'{ref} is not a logic module')
-            key = ref.__name__.lower()
-            try:
-                logic = idx[key]
-            except KeyError:
-                pass
-            else:
-                if logic is not ref:
-                    raise ValueError(f'{ref} does not match stored {logic}')
-
-            return add_to_index(ref, key)
-
-        if not isinstance(ref, str):
-            raise TypeError("ref must be string or module, or have __module__ attribute")
-        key = ref.lower()
-        try:
-            logic = idx[key]
-        except KeyError:
-            pass
-        else:
-            return logic
-        if key == __name__:
-            raise ValueError(f'{ref} is not a logic module')
-        if '.' not in key:
-            key = f'{__name__}.{key}'
-        elif not key.startswith(__name__ + '.'):
-            raise ValueError(f'{key} is not in package {__package__}')
-        cand = import_module(key)
-        if cand.__package__ != __package__:
-            raise ValueError(f'{cand} is not in package {__package__}')
-
-        return add_to_index(cand, key)
-
-    return get
-
-def key_category_order(logic: ModuleType) -> int:
-    "Returns the category order from the logic, e.g. for sorting."
-    return logic.Meta.category_order
-
-def group_logics(logics: Iterable[LogicId], /, *,
-    sort: bool = True,
-    reverse: bool = False,
-    key: Callable[[ModuleType], Any] = key_category_order,
-) -> dict[str, list[ModuleType]]:
-    "Group logics by category."
-    groups: dict[str, list[ModuleType]] = defaultdict(list)
-    for logic in map(getlogic, logics):
-        groups[logic.Meta.category].append(logic)
-    if sort:
-        for group in groups.values():
-            group.sort(key = key, reverse = reverse)
-    return dict(groups)

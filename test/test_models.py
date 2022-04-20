@@ -3,10 +3,10 @@ from pytest import raises
 from pytableaux.errors import *
 from pytableaux.models import BaseModel
 from pytableaux.lexicals import Operator
-from pytableaux.logics import getlogic
+from pytableaux.logics import registry
 
 def test_truth_table_cpl_negation():
-    m: BaseModel = getlogic('cpl').Model()
+    m: BaseModel = registry('cpl').Model()
     tbl = m.truth_table(Operator.Negation)
     assert len(tbl.inputs) == 2
     assert len(tbl.outputs) == 2
@@ -14,16 +14,16 @@ def test_truth_table_cpl_negation():
     assert tbl.outputs[0] == 'T'
 
 def test_truth_tables_cpl():
-    m: BaseModel = getlogic('cpl').Model()
+    m: BaseModel = registry('cpl').Model()
     tbl = m.truth_table(Operator.Negation)
     assert tbl.outputs[0] == 'T'
 
 def test_get_logic_cpl_case_insensitive():
-    assert getlogic('cpl') == getlogic('CPL')
+    assert registry('cpl') == registry('CPL')
 
 def test_get_logic_none_bad_argument():
     with raises(TypeError):
-        getlogic(None)
+        registry(None)
 
 class TestModel(object):
 

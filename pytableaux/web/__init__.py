@@ -20,35 +20,28 @@ pytableaux.web
 """
 from __future__ import annotations
 
+
 __docformat__ = 'google'
 __all__ = ()
 
 import logging
-import os
 import re
 from typing import TYPE_CHECKING, Any, Mapping
 
-import simplejson as json
-from pytableaux import errors, logics, package, tools
+from pytableaux import package, tools
+from pytableaux.tools.abcs import Ebc, eauto
 from pytableaux.tools.mappings import ItemMapEnum
-from pytableaux.tools.typing import KT, VT
 
 if TYPE_CHECKING:
-    from cherrypy._cprequest import Request
+    pass
 
-re_email = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
-'Email regex.'
+from pytableaux.web import util
+from pytableaux.web.mail import Mailroom
+import pytableaux.web.util
+import pytableaux.web.mail
 
-re_boolyes = re.compile(r'^(true|yes|1)$', re.I)
-'Regex for string boolean `yes`.'
-
-def get_logic_keys() -> list[str]:
-    "List available logic module names."
-    return list(logics.__all__)
-    # return [
-    #     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
-    #     'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't',
-    # ]
+class Wevent(Ebc):
+    before_dispatch = eauto()
 
 def get_logger(name: str|Any, conf: Mapping[str, Any] = None) -> logging.Logger:
     "Get a logger and configure it for web format."
@@ -80,63 +73,19 @@ def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]):
 
     if not hasattr(logging, leveluc):
         logger.warn(f"Ignoring invalid loglevel '{leveluc}'")
-        leveluc = ConfigValue.loglevel['default'].upper()
+        leveluc = EnvConfig.loglevel['default'].upper()
 
     levelnum = getattr(logging, leveluc)
     logger.setLevel(levelnum)
 
-def fix_uri_req_data(form_data: dict[str, VT]) -> dict[str, VT]:
-    "Transform param names ending in ``'[]'`` to lists."
-    form_data = dict(form_data)
-    for param in form_data:
-        if param.endswith('[]'):
-            if isinstance(form_data[param], str):
-                form_data[param] = [form_data[param]]
-    return form_data
-
-def debug_resp_data(resp_data: dict[KT, VT]) -> dict[KT, VT]:
-    "Trim data for debug logging."
-    result = dict(resp_data)
-    if 'tableau' in result and 'body' in result['tableau']:
-        if len(result['tableau']['body']) > 255:
-            result['tableau'] = dict(result['tableau'])
-            result['tableau']['body'] = '{0}...'.format(
-                result['tableau']['body'][0:255]
-            )
-    return result
-
-def tojson(*args, cls = json.JSONEncoderForHTML, **kw):
-    "Wrapper for ``json.dumps`` with html safe encoder."
-    return json.dumps(*args, cls = cls, **kw)
-
-def is_valid_email(value: str) -> bool:
-    "Whether a string is a valid email address."
-    return re_email.fullmatch(value) is not None
-
-def validate_feedback_form(form_data: dict[str, str]) -> None:
-    "Validate `name`, `email`, and `message` keys."
-    errs = {}
-    if not is_valid_email(form_data['email']):
-        errs['Email'] = 'Invalid email address'
-    if not len(form_data['name']):
-        errs['Name'] = 'Please enter your name'
-    if not len(form_data['message']):
-        errs['Message'] = 'Please enter a message'
-    if errs:
-        raise errors.RequestDataError(errs)
-
-def get_remote_ip(req: Request) -> str:
-    # TODO: use proxy forward header
-    return req.remote.ip
-
-def errstr(err: Exception) -> str:
-    return f'{type(err).__name__}: {err}'
+re_boolyes = re.compile(r'^(true|yes|1)$', re.I)
+'Regex for string boolean `yes`.'
 
 def sbool(arg: str, /) -> bool:
     "Cast string to boolean, leans toward ``False``."
     return bool(re_boolyes.match(arg))
 
-class ConfigValue(ItemMapEnum):
+class EnvConfig(ItemMapEnum):
 
     app_name = dict(
         default = package.name,
@@ -258,10 +207,11 @@ class ConfigValue(ItemMapEnum):
 
     @tools.closure
     def resolve():
-        logger = get_logger(__name__)
 
-        def resolve(self: ConfigValue, env: Mapping[str, Any]):
+        def resolve(self: EnvConfig, env: Mapping[str, Any], /, *, logger = None):
             "Resolve a config value against ``env``."
+            if logger is None:
+                logger = get_logger(__class__.__qualname__)
             for varname in self['envvar']:
                 if varname in env:
                     v = env[varname]
@@ -273,17 +223,21 @@ class ConfigValue(ItemMapEnum):
 
             if 'min' in self and v < self['min']:
                 v = self['min']
-                logger.warn(f'Using min value of {v} for option {self.name}')
+                logger.warning(f'Using min value of {v} for option {self.name}')
 
             if 'max' in self and v > self['max']:
                 v = self['max']
-                logger.warn(f'Using max value of {v} for option {self.name}')
+                logger.warning(f'Using max value of {v} for option {self.name}')
 
             return v
 
         return resolve
 
     @classmethod
-    def env_config(cls, env: Mapping[str, Any] = os.environ) -> dict[str, Any]:
+    def env_config(cls, env: Mapping[str, Any] = None) -> dict[str, Any]:
         "Return a config dict resolve against ``env``."
+        if env is None:
+            import os
+            env = os.environ
+        logger = get_logger(__name__)
         return {defn.name: defn.resolve(env) for defn in cls}

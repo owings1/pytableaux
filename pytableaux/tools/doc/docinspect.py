@@ -28,7 +28,7 @@ __all__ = (
 )
 
 from pytableaux.proof.tableaux import ClosingRule, Rule, TableauxSystem as TabSys
-from pytableaux.logics import getlogic
+from pytableaux.logics import registry, LogicLocatorRef
 
 from inspect import getsource
 import re
@@ -107,12 +107,12 @@ def _is_nocode(obj: Any) -> bool:
         return False
     return True
 
-def _rule_is_grouped(rule: type[Rule], logic: Any) -> bool:
+def _rule_is_grouped(rule: type[Rule], logic: LogicLocatorRef) -> bool:
     'Whether the rule class is grouped in the TabRules of the given logic.'
     if not _is_rulecls(rule):
         return False
     try:
-        logic = getlogic(logic)
+        logic = registry.locate(logic)
     except:
         return False
     tabrules = logic.TabRules
@@ -125,7 +125,8 @@ def _rule_is_grouped(rule: type[Rule], logic: Any) -> bool:
 
 def _rule_is_self_grouped(rule: type[Rule]) -> bool:
     'Whether the Rule class is grouped in the TabRules of its own logic.'
-    return _rule_is_grouped(rule, rule)
+    logic = registry.locate(rule)
+    return _rule_is_grouped(rule, logic)
 
 def _rule_is_parent_grouped(rule: type[Rule]) -> bool:
     "Whether the Rule class's parent is grouped in its own logic."

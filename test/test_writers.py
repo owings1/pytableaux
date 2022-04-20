@@ -140,22 +140,16 @@ class TestPolish(object):
 
 # Proof writers
 
-def example_proof(logic, name, is_build=True):
-    arg = examples.argument(name)
-    proof = Tableau(logic, arg)
-    if is_build:
-        proof.build()
-    return proof
-
 class TestHtml(object):
 
     def test_write_no_arg(self):
-        proof = Tableau('FDE')
-        proof.build()
-        res = htm.write(proof)
+        tab = Tableau('FDE')
+        tab.build()
+        res = htm.write(tab)
 
     def test_write_std_fde_1(self):
-        proof = example_proof('fde', 'Addition')
-        res = htm.write(proof)
+        arg = examples.argument('Addition')
+        tab = Tableau('fde', arg).build()
+        htm(tab)
 
     

@@ -23,7 +23,7 @@ from pytest import raises
 from .tutils import BaseSuite, larg, using, skip
 
 from pytableaux.errors import *
-from pytableaux.logics import getlogic
+from pytableaux.logics import registry
 from pytableaux.lexicals import Predicate, Constant, Variable, Quantifier, \
     Quantifier as Quant, Operator as Oper, \
     Sentence, Atomic, Predicated, Quantified, Operated, \
@@ -1159,7 +1159,7 @@ class TestMH(BaseSuite):
 @using(logic = 'NH')
 class TestNH(BaseSuite):
 
-    logic = getlogic('NH')
+    logic = registry('NH')
 
     def test_valid_hnh_ax1(self):
         self.valid_tab('UaUba')
@@ -2034,7 +2034,7 @@ class TestCFOL(BaseSuite):
 @using(logic = 'D')
 class TestD(BaseSuite):
 
-    logic = getlogic('D')
+    logic = registry('D')
 
     def test_valid_long_serial_max_steps_50(self):
         self.valid_tab('MMMMMa', 'LLLLLa', max_steps = 50)
@@ -2123,7 +2123,7 @@ class TestT(BaseSuite):
 @using(logic = 'S4')
 class TestS4(BaseSuite):
 
-    logic = getlogic('S4')
+    logic = registry('S4')
 
     def test_valid_s4_material_inf_1(self):
         self.valid_tab('S4 Material Inference 1')
@@ -2184,7 +2184,7 @@ class TestS4(BaseSuite):
 @using(logic = 'S5')
 class TestS5(BaseSuite):
 
-    logic = getlogic('S5')
+    logic = registry('S5')
 
     def test_valid_s4_cond_inf_2(self):
         self.valid_tab('S4 Conditional Inference 2')

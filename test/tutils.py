@@ -6,10 +6,11 @@ __all__ = (
     'using',
     'skip',
 )
+from pytableaux import lexicals
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.misc import drepr
-from pytableaux.logics import getlogic
+from pytableaux.logics import registry
 from pytableaux.tools.typing import F, TT, T
 from pytableaux.lexicals import (
     Argument, Predicates, Sentence, LexWriter, Notation
@@ -157,22 +158,22 @@ class ArgModels(NamedTuple):
 @dynattrs('logic')
 class BaseSuite:
 
-    preds: Predicates = examples.preds
+    preds = Predicates(lexicals.Predicate.gen(3))
     notn = Notation.polish
-    logic = getlogic('CFOL')
+    logic = registry('CFOL')
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
     lw = LexWriter(Notation.standard)
 
     @classmethod
     def dynamic(cls, attr, val):
         if attr == 'logic':
-            val = getlogic(val)
+            val = registry(val)
             cls.logic = val
             for member in clsmbrsrecurse(cls):
                 member.logic = val
 
     def set_logic(self, logic):
-        self.logic = getlogic(logic)
+        self.logic = registry(logic)
 
     def crparser(self, *args, **kw):
         for val in args:

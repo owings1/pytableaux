@@ -13,28 +13,21 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.examples
+^^^^^^^^^^^^^^^^^^^
+
+Example arguments
+"""
+
 from __future__ import annotations
-
-"""
-    pytableaux.examples
-    -------------------
-
-    Example arguments
-"""
 
 __all__ = 'arguments', 'argument', 'tabiter'
 
-import itertools
-import re
 
-from pytableaux.errors import instcheck
-from pytableaux.lexicals import Argument, Predicate, Predicates
-from pytableaux.parsers import Parser
-from pytableaux.tools import MapProxy, closure
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.sets import EMPTY_SET
+from pytableaux import lexicals, tools
 
-_args = MapProxy({
+_args = tools.MapProxy({
     'Addition'                         : (('a',), 'Aab'),
     'Affirming a Disjunct 1'           : (('Aab', 'a'), 'b'),
     'Affirming a Disjunct 2'           : (('Aab', 'a'), 'Nb'),
@@ -134,7 +127,7 @@ _args = MapProxy({
     'Universal from Existential'       : (('SxFx',), 'VxFx'),
 })
 
-_aliases = MapProxy({
+_aliases = tools.MapProxy({
     'Triviality 1': ('TRIV', 'TRIV1'),
     'Triviality 2': ('TRIV2',),
     'Law of Excluded Middle': ('LEM',),
@@ -175,11 +168,11 @@ _aliases = MapProxy({
     'S5 Material Inference 1': ('S5', 'S51', 'RST'),
 })
 
-_titles = qsetf(sorted(_args.keys()))
+_titles = tuple(sorted(_args))
 
-preds = Predicates(Predicate.gen(3))
+preds = lexicals.Predicates(((0,0,1), (1,0,1), (2,0,1)))
 
-@closure
+@tools.closure
 def argument():
 
     index = {}
@@ -191,17 +184,18 @@ def argument():
         index.update({
             k.lower(): name for k in (
                 name,
-                re.sub(' ','', name),
-                *_aliases.get(name, EMPTY_SET),
+                name.replace(' ', ''),
+                *_aliases.get(name, ''),
             )
         })
 
-    parsearg = Parser('polish', preds).argument
+    parsearg = lexicals.Parser('polish', preds).argument
 
-    def argument(key: str|Argument) -> Argument:
-        if isinstance(key, Argument):
+    def argument(key: str|lexicals.Argument) -> lexicals.Argument:
+        if isinstance(key, lexicals.Argument):
             return key
-        instcheck(key, str)
+        if not isinstance(key, str):
+            raise TypeError(key)
         title = index[key.lower()]
         if title not in cache:
             info = args[title]
@@ -215,55 +209,59 @@ def argument():
 
     return argument
 
-@closure
+@tools.closure
 def arguments():
 
     titles = _titles
 
-    def arguments(*keys: str|Argument) -> tuple[Argument, ...]:
+    def arguments(*keys: str|lexicals.Argument) -> tuple[lexicals.Argument, ...]:
         if not len(keys):
             keys = titles
         return tuple(map(argument, keys))
 
     return arguments
 
-@closure
+@tools.closure
 def tabiter():
 
     titles = _titles
-    logic_names = qsetf((
-        'CPL', 'CFOL', 'FDE', 'K3', 'K3W', 'K3WQ', 'B3E', 'GO', 'MH',
-        'L3', 'G3', 'P3', 'LP', 'NH', 'RM3', 'K', 'D', 'T', 'S4', 'S5',
-    ))
+    # logic_names = qsetf((
+    #     'CPL', 'CFOL', 'FDE', 'K3', 'K3W', 'K3WQ', 'B3E', 'GO', 'MH',
+    #     'L3', 'G3', 'P3', 'LP', 'NH', 'RM3', 'K', 'D', 'T', 'S4', 'S5',
+    # ))
 
-    def gettab(*args, build = True, **opts):
-        from pytableaux.proof.tableaux import Tableau
-        tab = Tableau(*args, **opts)
-        if build:
-            tab.build()
-        return tab
+    # def gettab(*args, build = True, **opts):
+    #     from pytableaux.proof.tableaux import Tableau
+    #     tab = Tableau(*args, **opts)
+    #     if build:
+    #         tab.build()
+    #     return tab
 
     def tabiter(*logics, build = True, **opts):
         if not len(logics):
-            logics = logic_names
-        return itertools.chain.from_iterable(
-            (
-                gettab(logic, argument(title), build = build, **opts)
-                for title in titles
-            )
-            for logic in logics
-        )
+            import pytableaux.logics
+            logics = pytableaux.logics.__all__
+        from pytableaux.proof.tableaux import Tableau
+        for logic in logics:
+            for title in titles:
+                tab = Tableau(logic, argument(title), **opts)
+                if build:
+                    tab.build()
+                yield tab
+
+        # return itertools.chain.from_iterable(
+        #     (
+        #         gettab(logic, argument(title), build = build, **opts)
+        #         for title in titles
+        #     )
+        #     for logic in logics
+        # )
 
     return tabiter
 
 del(
+    tools,
     _aliases,
     _args,
     _titles,
-    closure,
-    MapProxy,
-    Parser,
-    Predicate,
-    Predicates,
-    qsetf,
 )

@@ -42,7 +42,7 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lexicals import Argument, Sentence
-from pytableaux.logics import getlogic
+from pytableaux.logics import registry
 from pytableaux.models import BaseModel
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.types import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
@@ -846,7 +846,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     def logic(self, logic: LogicLookupKey):
         'Setter for ``logic``. Assumes building has not started.'
         self.__check_not_started()
-        self.__logic = getlogic(logic)
+        self.__logic = registry(logic)
         self.rules.clear()
         self.System.add_rules(self.logic, self.rules)
         if self.argument is not None:

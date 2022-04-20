@@ -61,9 +61,13 @@ class Eset(frozenset, _enum.Enum):
     hook_methods  = {'_member_keys', '_on_init', '_after_init'}
     clean_methods = hook_methods
 
+@tools.classalias(_enum.auto)
+class eauto:...
+
 @tools.static
 class ebcm:
     'Static Enum meta utils.'
+  
 
     @staticmethod
     def fix_name_value(Class: type[EnumT], /) -> type[EnumT]:

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-__all__ = 'SequenceSet', 'MutableSequenceSet', 'qsetf', 'qset', 'EMPTY_QSET',
+__all__ = (
+    'SequenceSet', 'MutableSequenceSet', 'qsetf', 'qset', 'QsetView', 'EMPTY_QSET',
+)
 
-from collections.abc import Collection  # Set,
-from itertools import filterfalse  # chain,
-from typing import (Iterable,  # Callable,; Mapping,; MutableSequence,
-                    Iterator, SupportsIndex, TypeVar, final, overload)
+from collections.abc import Collection
+from itertools import filterfalse
+from typing import Iterable, Iterator, SupportsIndex, TypeVar, final, overload
 
-from pytableaux.errors import (DuplicateValueError, Emsg,  # subclscheck,
-                               MissingValueError, instcheck)
+from pytableaux.errors import (DuplicateValueError, Emsg, MissingValueError,
+                               check)
 from pytableaux.tools import abstract
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.sequences import (EMPTY_SEQ, MutableSequenceApi,
@@ -100,9 +101,48 @@ class qsetf(SequenceSet[VT]):
 
 EMPTY_QSET = qsetf()
 
+class QsetView(SequenceSet[VT]):
+    """SequenceSet view.
+    """
+
+    __slots__ = ('__len__', '__contains__', '__getitem__', '__iter__', '__reversed__')
+
+    def __new__(cls, base: SequenceSet[VT], /,):
+
+        check.inst(base, SequenceSet)
+
+        inst = object.__new__(cls)
+        inst.__len__ = base.__len__
+        inst.__iter__ = base.__iter__
+        inst.__getitem__ = base.__getitem__
+        inst.__contains__ = base.__contains__
+        inst.__reversed__ = base.__reversed__
+
+        return inst
+
+    def copy(self):
+        'Immutable copy, returns self.'
+        return self
+
+    def __repr__(self):
+        prefix = type(self).__name__
+        if len(self):
+            return f'{prefix}{list(self)}'
+        return f'{prefix}''{}'
+
+    @classmethod
+    def _from_iterable(cls, it):
+        if isinstance(it, cls):
+            return it
+        if isinstance(it, SequenceSet):
+            return cls(it)
+        return cls(qsetf(it))
+
 class MutableSequenceSet(SequenceSet[VT], MutableSequenceApi[VT], MutableSetApi[VT]):
     """Mutable sequence set (ordered set) interface.
-    Sequence methods such as ``append`` raise ``DuplicateValueError``."""
+
+    Sequence methods such as ``append`` raise ``DuplicateValueError``.
+    """
 
     __slots__ = EMPTY_SET
 
@@ -244,7 +284,7 @@ class qset(MutableSequenceSet[VT]):
             if cast is not None:
                 value = tuple(map(cast, value))
             else:
-                instcheck(value, Collection)
+                check.inst(value, Collection)
             self.__setitem_slice__(key, value)
             return
 
@@ -328,9 +368,6 @@ class qset(MutableSequenceSet[VT]):
 
 
 SeqSetT = TypeVar('SeqSetT', bound = SequenceSet)
-
-# SeqSetHookT = TypeVar('SeqSetHookT', bound = SequenceSetHooks)
-# MutSeqSetT  = TypeVar('MutSeqSetT',  bound = MutableSequenceSet)
 
 del(
     abstract, overload, final,

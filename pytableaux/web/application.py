@@ -29,7 +29,7 @@ import os.path
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping, Sequence
 
 import cherrypy as chpy
 import jinja2
@@ -38,19 +38,20 @@ import simplejson as json
 from pytableaux import examples, lexicals, logics, package, parsers, web
 from pytableaux.errors import RequestDataError, TimeoutError
 from pytableaux.proof import tableaux, writers
-from pytableaux.tools.abcs import Abc, abcf
+from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.mappings import MapCover, MapProxy, dmap
 from pytableaux.tools.timing import StopWatch
-from pytableaux.web.mail import Mailroom
+from pytableaux.web import Wevent
+from pytableaux.web.mail import Mailroom, validate_feedback_form
+from pytableaux.web.util import AppMetrics, tojson, fix_uri_req_data
 
 if TYPE_CHECKING:
     from cherrypy._cprequest import Request, Response
-    from pytableaux.tools.typing import T
 
 EMPTY = ()
 EMPTY_MAP = MapProxy()
 
-class WebApp:
+class WebApp(EventEmitter):
 
     view_versions: ClassVar[frozenset[str]] = frozenset({'v1', 'v2'})
     "Available index view versions."
@@ -59,7 +60,7 @@ class WebApp:
     "Instance config."
 
     static_res: dict[str, bytes]
-    "Compiled static resources."
+    "Compiled in-memory static resources."
 
     metrics: AppMetrics
     "Prometheus metrics helper."
@@ -119,7 +120,7 @@ class WebApp:
             },
         })
 
-        cls.config_defaults = MapCover(dict(web.ConfigValue.env_config(),
+        cls.config_defaults = MapCover(dict(web.EnvConfig.env_config(),
             copyright   = package.copyright,
             issues_href = package.issues.url,
             source_href = package.repository.url,
@@ -165,7 +166,9 @@ class WebApp:
                     (notn, lexicals.LexWriter(notn, charset = 'ascii'))
                     for notn in lexicals.Notation
                 )
-            })
+            } | {'@Predicates': sorted(set(
+                p.spec for s in arg for p in s.predicates
+            ))})
             for arg in examples.arguments()
         })
 
@@ -180,7 +183,7 @@ class WebApp:
             },
         ))
 
-        logics_map = {key: logics.getlogic(key) for key in web.get_logic_keys()}
+        logics_map = {key: logics.registry(key) for key in logics.__all__}
 
         cls.view_data_defaults = MapCover(dict(
 
@@ -195,7 +198,7 @@ class WebApp:
             form_defaults  = cls.form_defaults,
             output_formats = writers.TabWriter.Registry.keys(),
             output_charsets  = lexicals.Notation.get_common_charsets(),
-            logic_categories = logics.group_logics(logics_map),
+            logic_categories = logics.registry.grouped(logics_map),
 
             lwh = cls.lw_cache[lexicals.Notation.standard]['html'],
         ))
@@ -203,6 +206,9 @@ class WebApp:
         cls.is_class_setup = True
 
     def __init__(self, opts: Mapping[str, Any] = None, **kw):
+
+        super().__init__(*Wevent)
+        
         self.setup_class_data()
         config = self.config = dict(self.config_defaults)
         if opts is not None:
@@ -218,13 +224,22 @@ class WebApp:
         self.jenv = jinja2.Environment(
             loader = jinja2.FileSystemLoader(config['view_path'])
         )
-        app_json = web.tojson(self.jsapp_data, indent = 2 * config['is_debug'])
+        app_json = tojson(self.jsapp_data, indent = 2 * config['is_debug'])
         self.static_res = {
             'js/appdata.json': app_json.encode('utf-8'),
             'js/appdata.js': f';window.AppData = {app_json};'.encode('utf-8')
         }
         self.base_view_data = dict(self.view_data_defaults)
         self.mailroom = Mailroom(config)
+
+        self.init_events()
+
+    def init_events(self):
+        EventEmitter.__init__(self, *Wevent)
+        m = self.metrics
+        self.on(Wevent.before_dispatch,
+            lambda path: m.app_requests_count(path).inc()
+        )
 
     def start(self):
         config = self.config
@@ -269,7 +284,7 @@ class WebApp:
 
         view_data = dict(self.base_view_data)
 
-        form_data = web.fix_uri_req_data(req_data)
+        form_data = fix_uri_req_data(req_data)
 
         view_version = form_data.get('v')
         if view_version not in self.view_versions:
@@ -291,12 +306,12 @@ class WebApp:
                 try:
                     api_data = json.loads(form_data['api-json'])
                 except Exception as err:
-                    raise RequestDataError({'api-data': web.errstr(err)})
+                    raise RequestDataError({'api-data': errstr(err)})
                 resp_data, tableau, lw = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
             except TimeoutError as err: # pragma: no cover
-                errors['Tableau'] = web.errstr(err)
+                errors['Tableau'] = errstr(err)
             else:
                 is_proof = True
                 if resp_data['writer']['format'] == 'html':
@@ -333,13 +348,13 @@ class WebApp:
                 req_data  = req_data,
                 form_data = form_data,
                 api_data  = api_data,
-                resp_data = resp_data and web.debug_resp_data(resp_data),
+                resp_data = self.trim_resp_debug(resp_data),
                 page_data = page_data,
             ).items())
             view_data['debugs'] = debugs
 
         view_data.update(page_data,
-            page_json = web.tojson(page_data, indent = 2 * is_debug),
+            page_json = tojson(page_data, indent = 2 * is_debug),
             config       = self.config,
             view_version = view_version,
             form_data    = form_data,
@@ -375,14 +390,14 @@ class WebApp:
         if req.method == 'POST':
 
             try:
-                web.validate_feedback_form(form_data)
+                validate_feedback_form(form_data)
             except RequestDataError as err:
                 errors.update(err.errors)
             else:
                 date = datetime.now()
                 view_data.update(
                     date    = str(date),
-                    ip      = web.get_remote_ip(req),
+                    ip      = self.get_remote_ip(req),
                     headers = req.headers,
                 )
                 from_addr = config['feedback_from_address']
@@ -419,7 +434,7 @@ class WebApp:
             view_data['debugs'] = debugs
 
         view_data.update(page_data,
-            page_json = web.tojson(page_data, indent = 2 * is_debug),
+            page_json = tojson(page_data, indent = 2 * is_debug),
             config = config,
             errors = errors,
             warns  = warns,
@@ -430,6 +445,7 @@ class WebApp:
     @chpy.expose
     @chpy.tools.json_in()
     @chpy.tools.json_out()
+
     def api(self, action: str = None) -> dict[str, Any]:
 
         req: Request = chpy.request
@@ -452,7 +468,7 @@ class WebApp:
                 res.status = 408
                 return dict(
                     status  = 408,
-                    message = web.errstr(err),
+                    message = errstr(err),
                     error   = type(err).__name__,
                 )
             except RequestDataError as err:
@@ -467,7 +483,7 @@ class WebApp:
                 res.status = 500
                 return dict(
                     status  = 500,
-                    message = web.errstr(err),
+                    message = errstr(err),
                     error   = type(err).__name__,
                 )
                 #traceback.print_exc()
@@ -476,36 +492,26 @@ class WebApp:
 
     def api_parse(self, body: Mapping) -> dict[str, Any]:
         """
-        Example request body::
+        Request example::
 
             {
-               "notation": "polish",
-               "input": "Fm",
-               "predicates" : [
-                  {
-                     "index": 0,
-                     "subscript": 0,
-                     "arity": 1
-                  }
-               ]
+               notation: "polish",
+               input: "Fm",
+               predicates : [ [0, 0, 1] ]
             }
 
-        Example success result::
+        Response Example::
 
             {
-               "type": "Predicated",
-               "rendered": {
-                    "standard": {
-                        "ascii": "Fa",
-                        "unicode": "Fa",
-                        "html": "Fa"
-                    },
-                    "polish": {
-                        "ascii": "Fm",
-                        "unicode": "Fm",
-                        "html": "Fm"
-                    }
+              type: "Predicated",
+              rendered: {
+                standard: {
+                  ascii: "Fa", unicode: "Fa", html: "Fa"
+                },
+                polish: {
+                  ascii: "Fm", unicode": "Fm", html: "Fm"
                 }
+              }
             }
         """
         errors = {}
@@ -535,7 +541,7 @@ class WebApp:
             try:
                 sentence = parser(body['input'])
             except Exception as err:
-                errors[elabel] = web.errstr(err)
+                errors[elabel] = errstr(err)
 
         if errors:
             raise RequestDataError(errors)
@@ -640,11 +646,9 @@ class WebApp:
 
         elabel = 'Logic'
         try:
-            logic = logics.getlogic(body['logic'])
+            logic = logics.registry(body['logic'])
         except Exception as err:
-            errors[elabel] = web.errstr(err)
-        else:
-            logicname: str = logic.name
+            errors[elabel] = errstr(err)
 
         elabel = 'Output Format'
         try:
@@ -675,19 +679,19 @@ class WebApp:
 
         metrics = self.metrics
         with StopWatch() as timer:
-            metrics.proofs_inprogress_count(logicname).inc()
+            metrics.proofs_inprogress_count(logic.name).inc()
             tableau = tableaux.Tableau(logic, arg, **tableau_opts)
 
             try:
                 tableau.build()
-                metrics.proofs_completed_count(logicname, tableau.stats['result']).inc()
+                metrics.proofs_completed_count(logic.name, tableau.stats['result']).inc()
             finally:
-                metrics.proofs_inprogress_count(logicname).dec()
-                metrics.proofs_execution_time(logicname).observe(timer.elapsed_secs())
+                metrics.proofs_inprogress_count(logic.name).dec()
+                metrics.proofs_execution_time(logic.name).observe(timer.elapsed_secs())
 
         resp_data = dict(
             tableau = dict(
-                logic = logicname,
+                logic = logic.name,
                 argument = dict(
                     premises   = tuple(map(lw, arg.premises)),
                     conclusion = lw(arg.conclusion),
@@ -712,50 +716,59 @@ class WebApp:
     def _parse_argument(cls, adata: Mapping[str, Any]) -> lexicals.Argument:
 
         errors = {}
-        adata = dict(adata)
-
-        # defaults
-        if 'notation' not in adata:
-            adata['notation'] = cls.api_defaults['input_notation']
-        if 'predicates' not in adata:
-            adata['predicates'] = []
-        if 'premises' not in adata:
-            adata['premises'] = []
 
         elabel = 'Notation'
         try:
-            notn = lexicals.Notation[adata['notation']]
+            notn = lexicals.Notation[
+                adata.get('notation') or
+                cls.api_defaults['input_notation']
+            ]
         except KeyError as err:
             errors[elabel] = f"Invalid parser notation: {err}"
         else:
             try:
-                preds = cls._parse_preds(adata['predicates'])
+                preds = cls._parse_preds(adata.get('predicates', EMPTY))
             except RequestDataError as err:
                 errors.update(err.errors)
                 preds = None
             parser = notn.Parser(preds)
             premises = []
-            for i, premise in enumerate(adata['premises'], start = 1):
+            for i, premise in enumerate(adata.get('premises', EMPTY), start = 1):
                 elabel = f'Premise {i}'
                 try:
                     premises.append(parser(premise))
                 except Exception as e:
                     premises.append(None)
-                    errors[elabel] = web.errstr(e)
+                    errors[elabel] = errstr(e)
             elabel = 'Conclusion'
             try:
                 conclusion = parser(adata['conclusion'])
             except Exception as e:
-                errors[elabel] = web.errstr(e)
+                errors[elabel] = errstr(e)
 
         if errors:
             raise RequestDataError(errors)
 
         return lexicals.Argument(conclusion, premises)
 
+    def get_template(self, view: str) -> jinja2.Template:
+        cache = self.template_cache
+        if '.' not in view:
+            view = f'{view}.jinja2'
+        if self.config['is_debug'] or (view not in cache):
+            cache[view] = self.jenv.get_template(view)
+        return cache[view]
+
+    def render(self, view: str, *args, **kw) -> str:
+        return self.get_template(view).render(*args, **kw)
+
+    def get_remote_ip(req: Request) -> str:
+        # TODO: use proxy forward header
+        return req.remote.ip
+
     @staticmethod
-    def _parse_preds(pspecs: Sequence[Mapping|Sequence]) -> lexicals.Predicates|None:
-        if not len(pspecs):
+    def _parse_preds(pspecs: Collection[Mapping|Sequence]) -> lexicals.Predicates|None:
+        if not pspecs:
             return None
         errors = {}
         preds = lexicals.Predicates()
@@ -771,95 +784,42 @@ class WebApp:
                 coords = Coords(*map(specdata.__getitem__, keys))
                 preds.add(coords)
             except Exception as e:
-                errors[elabel] = web.errstr(e)
+                errors[elabel] = errstr(e)
         if errors:
             raise RequestDataError(errors)
         return preds
 
-    def get_template(self, view: str) -> jinja2.Template:
-        cache = self.template_cache
-        if '.' not in view:
-            view = f'{view}.jinja2'
-        if self.config['is_debug'] or (view not in cache):
-            cache[view] = self.jenv.get_template(view)
-        return cache[view]
-
-    def render(self, view: str, *args, **kw) -> str:
-        return self.get_template(view).render(*args, **kw)
-
-class AppMetrics(MapCover[str, prom.metrics_core.Metric|prom.metrics.MetricWrapperBase], Abc):
-
-    config: Mapping[str, Any]
-    registry: Any
-
-    def __init__(self, config: Mapping[str, Any], registry: Any = None, /):
-        self.config = config
-        if registry is None:
-            registry = self._new_registry()
-        self.registry = registry
-        super().__init__(
-            app_requests_count = prom.metrics.Counter(
-                *self.app_requests_count.spec,
-                registry = registry,
-            ),
-            proofs_completed_count = prom.metrics.Counter(
-                *self.proofs_completed_count.spec,
-                registry = registry,
-            ),
-            proofs_inprogress_count = prom.metrics.Gauge(
-                *self.proofs_inprogress_count.spec,
-                registry = registry,
-            ),
-            proofs_execution_time = prom.metrics.Summary(
-                *self.proofs_execution_time.spec,
-                registry = registry,
-            )
-        )
-
-    @abcf.temp
-    def mwrap(fn: Callable[..., T]) -> Callable[..., T]:
-        key = fn.__name__
-        @functools.wraps(fn)
-        def f(self: AppMetrics, *labels):
-            return self[key].labels(self.config['app_name'], *labels)
-        desc, tags = fn()
-        labels = ['app_name', *tags]
-        f.spec = key, desc, labels
-        return f
-
-    @mwrap
-    def app_requests_count() -> prom.metrics.Counter:
-        return 'total app http requests', ['endpoint']
-
-    @mwrap
-    def proofs_completed_count() -> prom.metrics.Counter:
-        return 'total proofs completed', ['logic', 'result']
-
-    @mwrap
-    def proofs_inprogress_count() -> prom.metrics.Gauge:
-        return 'total proofs in progress', ['logic']
-
-    @mwrap
-    def proofs_execution_time() -> prom.metrics.Summary:
-        return 'total proof execution time', ['logic']
-
     @staticmethod
-    def _new_registry(*, auto_describe = True, **kw) -> prom.registry.CollectorRegistry:
-        return prom.registry.CollectorRegistry(
-            auto_describe = auto_describe, **kw
-        )
+    def trim_resp_debug(resp_data: dict) -> dict:
+        "Trim data for debug logging."
+        if not resp_data:
+            return resp_data
+        result = dict(resp_data)
+        if 'tableau' in result and 'body' in result['tableau']:
+            if len(result['tableau']['body']) > 255:
+                result['tableau'] = dict(result['tableau'])
+                result['tableau']['body'] = '{0}...'.format(
+                    result['tableau']['body'][0:255]
+                )
+        return result
 
-    @classmethod
-    def _from_mapping(cls, it: Mapping):
-        inst = cls.__new__(cls)
-        inst.config = {}
-        inst.registry = cls._new_registry()
-        MapCover.__init__(inst, it)
-        return inst
 
 class AppDispatcher(chpy._cpdispatch.Dispatcher):
 
     def __call__(self, path_info: str):
-        webapp: WebApp = chpy.serving.request.app.root
-        webapp.metrics.app_requests_count(path_info).inc()
+        self.before_dispatch(path_info)
         return super().__call__(path_info.split('?')[0])
+
+    def webapp(self) -> WebApp:
+        "Get the WebApp instance from chpy env."
+        return chpy.serving.request.app.root
+
+    def before_dispatch(self, *args):
+        "Forward event to webapp"
+        self.webapp().emit(Wevent.before_dispatch, *args)
+
+
+
+def errstr(err: Exception) -> str:
+    return f'{type(err).__name__}: {err}'
+

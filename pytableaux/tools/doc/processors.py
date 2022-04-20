@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from sphinx.application import Sphinx
     from proof.tableaux import Rule
 
-from pytableaux.logics import getlogic
+from pytableaux.logics import registry
 from pytableaux.lexicals import Argument, Atomic
 from pytableaux.tools.doc import (docinspect, docparts, rstutils, AutodocProcessor,
                        ReplaceProcessor, SphinxEvent)
@@ -48,7 +48,7 @@ class RuledocInherit(AutodocProcessor):
 
     def run(self):
         base: type[Rule] = self.obj.mro()[1]
-        logic = getlogic(base)
+        logic = registry.locate(base)
         self += (
             f'*This rule is the same as* :class:`{logic.name} {base.name} '
             f'<{base.__module__}.{base.__qualname__}>`'
@@ -62,7 +62,7 @@ class RuledocExample(AutodocProcessor):
         return docinspect.is_concrete_rule(self.obj)
 
     def run(self):
-        logic = getlogic(self.obj)
+        logic = registry.locate(self.obj)
         self += f"""
         Example:
         
@@ -87,7 +87,7 @@ class BuildtrunkExample(AutodocProcessor):
         return self.pw.lw
 
     def run(self):
-        logic = getlogic(self.obj)
+        logic = registry.locate(self.obj)
         arg = self.argument
         tab = docparts.trunk_example_tableau(logic, arg)
         self += 'Example:'

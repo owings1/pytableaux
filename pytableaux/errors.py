@@ -137,6 +137,8 @@ class Emsg(_enum.Enum):
     MissingValue = MissingValueError,
 
     IllegalState = IllegalStateError,
+    ThreadRuning = IllegalStateError, "Background thread already running"
+    ThreadStopped = IllegalStateError, "Background thread not running"
 
     Timeout = TimeoutError, "Timeout of {}ms exceeded", (int,)
 

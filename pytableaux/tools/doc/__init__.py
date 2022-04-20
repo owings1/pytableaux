@@ -18,6 +18,7 @@
 # ------------------
 # pytableaux - tools.doc package
 from __future__ import annotations
+import traceback
 
 __all__ = ()
 
@@ -272,14 +273,19 @@ class AutodocProcessor(Processor):
         return True
 
     def __call__(self, app: Sphinx, what: str, name: str, obj: Any, options: dict, lines: list[str]):
-        self.app = app
-        self.what = what
-        self.name = name
-        self.obj = obj
-        self.options = options
-        self.lines = lines
-        if self.applies():
-            self.run()
+        try:
+            self.app = app
+            self.what = what
+            self.name = name
+            self.obj = obj
+            self.options = options
+            self.lines = lines
+            if self.applies():
+                self.run()
+        except Exception as err:
+            logger.error(err)
+            traceback.print_exc()
+            raise
 
     def __iadd__(self, other: str|list[str]):
         if not isinstance(other, str):

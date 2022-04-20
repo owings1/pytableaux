@@ -39,6 +39,10 @@ from pytableaux.tools.typing import KT, TT, VT, T
 def closure(func: Callable[..., T]) -> T:
     'Closure decorator calls the argument and returns its return value.'
     return func()
+def classalias(orig: type[T]):
+    def d(alias: type) -> type[T]:
+        return orig
+    return d
 
 @overload
 def static(cls: TT, /) -> TT: ...

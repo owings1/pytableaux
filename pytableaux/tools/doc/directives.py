@@ -114,7 +114,7 @@ class Tableaud(BaseDirective):
     optional_arguments = 1
 
     option_spec = dict(
-        logic = logics.getlogic,
+        logic = logics.registry,
         example = examples.argument,
         conclusion = unchanged,
         premises = re_comma.split,
@@ -141,7 +141,7 @@ class Tableaud(BaseDirective):
             rulestr, = self.arguments
             try:
                 logic, rulename = rulestr.split('.')
-                logic = logics.getlogic(logic)
+                logic = logics.registry(logic)
                 rule = getattr(logic.TabRules, rulename)
             except Exception as e:
                 logger.error(e)
@@ -193,7 +193,7 @@ class TruthTable(BaseDirective):
         argstr, = self.arguments
         try:
             logic, oper = argstr.split('.')
-            logic = logics.getlogic(logic)
+            logic = logics.registry(logic)
             model: models.BaseModel = logic.Model()
             oper = lexicals.Operator(oper)
         except Exception as e:
@@ -237,7 +237,7 @@ class TruthTables(BaseDirective):
         hopts = helper.opts
         ochain = ChainMap(opts, hopts)
 
-        logic = logics.getlogic(self.arguments[0])
+        logic = logics.registry(self.arguments[0])
         model: models.BaseModel = logic.Model()
         opers = opts.get('operators')
         if opers is None:

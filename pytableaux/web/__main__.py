@@ -17,30 +17,23 @@
 from __future__ import annotations
 
 """
-    pytableaux web server
-    ---------------------
+pytableaux web server
+^^^^^^^^^^^^^^^^^^^^^
 
 """
 
 __all__ = ()
 
-import os.path
-import sys
-
-def start():
-
-    from pytableaux.web.application import WebApp
-    WebApp().start()
-
 if  __name__ == '__main__':
 
-    # print(f'__main__.py, __name__={__name__}, __package__={__package__}')
-
     if '.' not in __package__:
+        import os.path
+        import sys
         addpath = os.path.abspath(
             os.path.join(os.path.dirname(__file__), '..', '..')
         )
         if addpath not in sys.path:
             sys.path.insert(1, addpath)
 
-    start()
+    from pytableaux.web.application import WebApp
+    WebApp().start()
