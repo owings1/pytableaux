@@ -22,7 +22,7 @@ Example arguments
 
 from __future__ import annotations
 
-__all__ = 'arguments', 'argument', 'tabiter'
+__all__ = 'aliases', 'arguments', 'argument', 'data', 'preds', 'tabiter', 'titles'
 
 
 from pytableaux import lexicals, parsers, tools
@@ -178,7 +178,6 @@ def argument():
     index = {}
     cache = {}
 
-
     for name in data:
         index.update({
             k.lower(): name for k in (
@@ -211,8 +210,6 @@ def argument():
 @tools.closure
 def arguments():
 
-    # titles = _titles
-
     def arguments(*keys: str|lexicals.Argument) -> tuple[lexicals.Argument, ...]:
         if not len(keys):
             keys = titles
@@ -223,23 +220,22 @@ def arguments():
 @tools.closure
 def tabiter():
 
-    # titles = _titles
-
     from pytableaux.logics import registry
+    from pytableaux.proof.tableaux import Tableau
 
-    def tabiter(*logics, build = True, shuffle = None, **opts):
+    def tabiter(*logics, build = True, grouparg = False, registry = registry, **opts):
         if not len(logics):
-            logics = registry
-        from pytableaux.proof.tableaux import Tableau
-        for logic in logics:
-            for title in titles:
-                tab = Tableau(logic, argument(title), **opts)
-                if build:
-                    tab.build()
-                yield tab
+            logics = tuple(registry.all())
+        if grouparg:
+            it = ((logic, title) for title in titles for logic in logics)
+        else:
+            it = ((logic, title) for logic in logics for title in titles)
+        for logic, title in it:
+            tab = Tableau(logic, argument(title), **opts)
+            if build:
+                tab.build()
+            yield tab
 
     return tabiter
 
-del(
-    tools,
-)
+del(tools, )

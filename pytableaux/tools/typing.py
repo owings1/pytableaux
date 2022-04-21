@@ -140,21 +140,6 @@ P = ParamSpec('P')
 
 if TYPE_CHECKING:
 
-
-    class LogicType:
-        "Stub class definition for a logic interface."
-        name: str
-        class Meta:
-            category: str
-            description: str
-            category_order: int
-            tags: Collection[str]
-        TableauxSystem: ClassVar[type[TableauxSystem]]
-        Model: ClassVar[type[BaseModel]]
-        class TabRules:
-            closure_rules: ClassVar[tuple[type[Rule], ...]]
-            rule_groups: ClassVar[tuple[ tuple[type[Rule], ...], ... ]]
-
     class TypeInstDict(dict[type[VT], VT],
         metaclass = type('TidMeta', (type,), dict(__call__ = dict))):
         'Stub type for mapping of ``type[T]`` -> ``T``.'

@@ -546,8 +546,6 @@ class FilterHelper(FilterNodeCache):
             return get_targets_filtered
 
         def create(it, r: Rule, b: Branch, n: Node) -> Target:
-            if isinstance(it, Target):
-                print(r)
             return Target(it, rule = r, branch = b, node = n)
 
         def make_targets_iter(node_targets_fn: NodeTargetsFn) -> NodeTargetsGen:
@@ -564,7 +562,7 @@ class FilterHelper(FilterNodeCache):
                     else:
                         # Multiple targets result.
                         check.inst(results, (Sequence, Iterator))
-                        print(type(results), rule.name)
+                        # print(type(results), rule.name)
                         for res in results:# filter(bool, results):
                             # if not(res):
                             #     print(res)

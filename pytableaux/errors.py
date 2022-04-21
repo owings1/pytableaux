@@ -197,6 +197,7 @@ class EmsgBase:
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
 
+
 __all__ = 'check', 'Emsg', 'instcheck', 'subclscheck', *(
     name for name, value in locals().items()
     if isinstance(value, type) and issubclass(value, Exception)

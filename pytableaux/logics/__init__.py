@@ -32,18 +32,20 @@ import sys
 from collections import defaultdict
 from importlib import import_module
 from types import ModuleType
-from typing import TYPE_CHECKING, Callable, Iterable, Mapping, overload
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, overload
 
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import closure, hybrids, mappings
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
-                                     LogicModule, LogicType)
+                                     LogicModule, LogicType, F)
 
+NOARG = object()
 if TYPE_CHECKING:
     pass
 
-class Registry(mappings.Mapping[str, LogicModule]):
+
+class Registry(Mapping[str, LogicModule]):
     """Logic module registry.
     """
 
@@ -63,6 +65,9 @@ class Registry(mappings.Mapping[str, LogicModule]):
         @overload
         def remove(self, logic: LogicModule):
             "Remove a logic  module"
+        @overload
+        def get(self, key: LogicLookupKey, /) -> LogicModule:
+            ...
 
     __slots__ = 'packages', 'modules', 'index', 'add', 'remove', 
 
@@ -82,16 +87,18 @@ class Registry(mappings.Mapping[str, LogicModule]):
         self.index = mappings.MapProxy(index)
 
         def add(logic: LogicModule):
+            check.inst(logic, LogicType)
             modname = logic.__name__
-            index.update(
-                zip(self._module_keys(logic), itertools.repeat(modname))
-            )
-            modules.add(modname)
+            if modname not in modules:
+                index.update(
+                    zip(self._module_keys(logic), itertools.repeat(modname))
+                )
+                modules.add(modname)
 
         def remove(logic: LogicModule):
             modules.remove(logic.__name__)
             for key in self._module_keys(logic):
-                index.pop(key)
+                del(index[key])
 
         self.add = add
         self.remove = remove
@@ -114,7 +121,7 @@ class Registry(mappings.Mapping[str, LogicModule]):
         for logic in set(self.values()):
             self.remove(logic)
 
-    def get(self, key: LogicLookupKey, /) -> LogicModule:
+    def __call__(self, key: LogicLookupKey, /) -> LogicModule:
         """Get a logic from the registry, importing if needed.
 
         Args:
@@ -176,7 +183,7 @@ class Registry(mappings.Mapping[str, LogicModule]):
         self.add(module)
         return module
 
-    __call__ = get
+    get = __call__
 
     def locate(self, ref: LogicLocatorRef, /) -> LogicModule:
         """Like ``.get()`` but also searches the ``__module__`` attribute of
@@ -195,21 +202,31 @@ class Registry(mappings.Mapping[str, LogicModule]):
         """
         check.inst(ref, LogicLocatorRef)
         if isinstance(ref, LogicLookupKey):
-            return self.get(ref)
-        return self.get(ref.__module__.lower())
+            return self(ref)
+        return self(ref.__module__.lower())
 
-    def sync_all(self) -> dict[str, set[str]|None]:
+    def all(self) -> Iterator[str]:
+        for package in self.packages:
+            yield from self._package_all(self._check_package(package))
+
+    def package_all(self, package: str|ModuleType, /) -> Iterator[str]:
+        """List the package's declared logic modules from its ``__all__``
+        attribute.
+        """
+        return self._package_all(self._check_package(package))
+
+    def sync(self) -> set[str]:
         """Sync all registry packages by calling ``.sync_package()``.
 
         Returns:
             Dict of each package name to its ``sync_package()`` result.
         """
-        added = {}
+        added = set()
         for pkgname in self.packages:
-            added[pkgname] = self.sync_package(pkgname)
+            added.update(self.sync_package(pkgname))
         return added
 
-    def sync_package(self, pkgname: str, /) -> set[str]|None:
+    def sync_package(self, package: str|ModuleType, /) -> set[str]:
         """Attempt to find and add any logics that are already loaded (imported)
         but not in the registry. Tries the package's ``__all__`` and ``__dict__``
         attributes.
@@ -218,59 +235,47 @@ class Registry(mappings.Mapping[str, LogicModule]):
             pkgname: The package name. Must be in ``registry.packages``.
         
         Returns:
-            The module names added to the registry, or ``None`` if the package
-            module has not been loaded.
+            The module names added to the registry.
         
         Raises:
             ValueError: if ``pkgname`` is not in the registry packages.
         """
-        if pkgname not in self.packages:
-            raise Emsg.NotLogicsPackage(pkgname)
-        pkgmod = sys.modules.get(pkgname)
-        if pkgmod is None:
-            return
-
-        fmt = f'{pkgname}''.%s'.__mod__
-
-        it1 = (modname
-            for modname in map(fmt, (val
-                # In the package's __all__ attribute
-                for val in getattr(pkgmod, '__all__', EMPTY_SET)
-                    # Would be a module of the package (if a module)
-                    if '.' not in val
-                    # Not in the package dict (handled below)
-                    and val not in pkgmod.__dict__
-                ))
-                # Not already in the registry
-                if modname not in self.modules
-                # Is imported
-                and modname in sys.modules
-                # And is a logic
-                and isinstance(sys.modules[modname], LogicType)
-        )
-
-        it2 = (fmt(name)
-            # In the package dict
-            for name, val in pkgmod.__dict__.items()
-                # A module of the package
-                if type(val) is ModuleType and val.__package__ == pkgname
-                # Not already in the registry
-                and val.__name__ not in self.modules
-                # And is a logic
-                and isinstance(val, LogicType)
-        )
-
         added = set()
-        for modname in itertools.chain(it1, it2):#tosync:
-            module = sys.modules[modname]
-            if module.__package__ != pkgmod.__name__:
-                raise Emsg.NotLogicsPackage(pkgmod.__name__)
-            if not isinstance(module, LogicType):
-                raise Emsg.BadLogicModule(module.__name__) 
-            self.add(module)
-            added.add(modname)
-
+        for modname in self.package_all(package):
+            if modname not in self.modules:
+                logic = sys.modules.get(modname) or import_module(modname)
+                self.add(logic)
+                added.add(logic)
         return added
+
+        # package = self._check_package(package)
+        # # if isinstance(package, ModuleType):
+        # #     package = package.__name__
+        # # if package not in self.packages:
+        # #     raise Emsg.NotLogicsPackage(package)
+        # # pkgmod = sys.modules.get(package)
+        # # if pkgmod is None:
+        # #     return
+
+        # # fmt = f'{package}''.%s'.__mod__
+
+        # it1 = (modname
+        #     for modname in self._package_all(package)
+        #     if
+        #         modname not in self.modules
+        #     and
+        #         modname in sys.modules
+        # )
+        # it = it1
+
+
+        # added = set()
+        # for modname in it:
+        #     module = sys.modules[modname]
+        #     self.add(module)
+        #     added.add(modname)
+
+        # return added
 
     def import_all(self):
         """Import all logics for all registry packages. See ``.import_package()``.
@@ -278,22 +283,17 @@ class Registry(mappings.Mapping[str, LogicModule]):
         for pkgname in self.packages:
             self.import_package(pkgname)
 
-    def import_package(self, pkgname: str, /):
+    def import_package(self, package: str|ModuleType, /):
         """Import all logic modules for a package. Uses the ``__all__`` attribute
         to list the logic names.
 
         Raises:
             ValueError: if ``pkgname`` is not in the registry packages.
         """
-        if pkgname not in self.packages:
-            raise Emsg.NotLogicsPackage(pkgname)
-        pkgmod = import_module(pkgname)
-        for val in getattr(pkgmod, '__all__', EMPTY_SET):
-            modname = f'{pkgname}.{val}'
+        package = self._check_package(package)
+        for modname in self._package_all(package):
             if modname not in self.modules:
-                module = import_module(modname)
-                if isinstance(module, LogicType):
-                    self.get(module)
+                self.add(import_module(modname))
 
     def grouped(self, keys: Iterable[LogicLookupKey], /, *,
         sort: bool = True, key: Callable = None, reverse: bool = False,
@@ -313,7 +313,7 @@ class Registry(mappings.Mapping[str, LogicModule]):
             ValueError: if any not found.
         """
         groups: dict[str, list[ModuleType]] = defaultdict(list)
-        for logic in map(self.get, keys):
+        for logic in map(self, keys):
             groups[logic.Meta.category].append(logic)
         if not sort:
             return dict(groups)
@@ -325,6 +325,15 @@ class Registry(mappings.Mapping[str, LogicModule]):
             category: groups[category]
             for category in sorted(groups)
         }
+
+    def _check_package(self, pkgref: str|ModuleType, /) -> ModuleType:
+        if pkgref in self.packages:
+            return sys.modules.get(pkgref) or import_module(pkgref)
+        if isinstance(pkgref, str):
+            raise Emsg.NotLogicsPackage(pkgref)
+        if check.inst(pkgref, ModuleType).__name__ in self.packages:
+            return pkgref
+        raise Emsg.NotLogicsPackage(pkgref.__name__)
 
     @staticmethod
     def _module_keys(logic: LogicModule, /) -> tuple[LogicModule, str, str, str]:
@@ -340,6 +349,13 @@ class Registry(mappings.Mapping[str, LogicModule]):
             logic, logic.name, logic.__name__,
             logic.__name__.split('.')[-1].lower(),
         )
+        
+    @staticmethod
+    def _package_all(package: ModuleType, /) -> Iterator[str]:
+        fmt = f'{package.__name__}.%s'.__mod__
+        for value in package.__all__:
+            yield fmt(value)
+
 
     def __contains__(self, key: LogicLookupKey):
         return key in self.index
@@ -399,9 +415,7 @@ def instancecheck():
     def validate(obj):
         check.inst(obj, ModuleType)
         check.inst(obj.name, str)
-        check.inst(obj.TableauxSystem, type)
         check.inst(obj.TabRules, type)
-        check.inst(obj.Model, type)
         check.inst(obj.Model, type)
         validate_tabsys(obj.TableauxSystem)
         validate_meta(obj.Meta)

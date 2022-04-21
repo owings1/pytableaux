@@ -25,31 +25,15 @@ __all__ = (
     'RuleHelper',
     'TabEvent',
 )
-from enum import auto as eauto
-from pytableaux.errors import (
-    # Emsg,
-    # instcheck,
-    subclscheck,
-)
-from pytableaux.tools import abstract, closure, static, MapProxy
-from pytableaux.tools.abcs import (
-    AbcMeta, Ebc, FlagEnum,
-    abcm,
-)
-from pytableaux.tools.decorators import membr
-from pytableaux.tools.hybrids import qsetf, EMPTY_QSET
-from pytableaux.tools.mappings import dmap
-from pytableaux.tools.sets import setf, EMPTY_SET
-from pytableaux.tools.timing import StopWatch
+from typing import Any, Callable, Iterable, Mapping, NamedTuple
 
-from typing import (
-    overload,
-    Any,
-    Callable,
-    Iterable,
-    Mapping,
-    NamedTuple,
-)
+from pytableaux.errors import check
+from pytableaux.tools import MapProxy, abstract, closure
+from pytableaux.tools.abcs import AbcMeta, Ebc, FlagEnum, abcm, eauto
+from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
+from pytableaux.tools.mappings import dmap
+from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.timing import StopWatch
 
 #******  Branch Enum
 
@@ -178,13 +162,11 @@ class RuleMeta(AbcMeta):
         setattr(Class, RuleAttr.OptKeys, setf(getattr(Class, RuleAttr.DefaultOpts)))
         setattr(Class, RuleAttr.Name, clsname)
 
-        emptymap = MapProxy()
-
         for Helper in getattr(Class, RuleAttr.Helpers):
-            subclscheck(Helper, RuleHelper)
+            check.subcls(Helper, RuleHelper)
             initrulecls = getattr(Helper, HelperAttr.InitRuleCls, None)
             if initrulecls is not None:
-                initrulecls(Class, **helper.get(Helper, emptymap))
+                initrulecls(Class, **helper.get(Helper, MapProxy.EMPTY_MAP))
 
         return Class
 
@@ -268,6 +250,7 @@ if 'Util Functions' or True:
 
         def check(subcls: type):
 
+            # print(f'check {subcls}')
             check = abcm.check_mrodict(subcls.mro(), *names)
             if check is NotImplemented or check is False:
                 return check
@@ -316,6 +299,6 @@ if 'Util Functions' or True:
         return check
 
 del(
-    abstract, closure, overload, static,
-    eauto, membr,
+    abstract, closure,
+    eauto,
 )

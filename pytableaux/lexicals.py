@@ -49,16 +49,14 @@ import enum
 import operator as opr
 from itertools import chain, repeat
 from types import DynamicClassAttribute as dynca
-from typing import (TYPE_CHECKING, Annotated, Any, ClassVar,
-                    Iterable, Iterator, Literal, Sequence,
-                    SupportsIndex, final, overload)
+from typing import (TYPE_CHECKING, Annotated, Any, ClassVar, Iterable,
+                    Iterator, Literal, Sequence, SupportsIndex, final,
+                    overload)
 
 import pytableaux.tools.misc
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang._aux import *
-
-
 from pytableaux.tools import MapProxy
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import NoSetAttr, lazy, membr, raisr, wraps
