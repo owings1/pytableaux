@@ -43,7 +43,7 @@ from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
 if TYPE_CHECKING:
     pass
 
-class Registry(mappings.Mapping[str, 'LogicModule']):
+class Registry(mappings.Mapping[str, LogicModule]):
     """Logic module registry.
     """
 
@@ -58,9 +58,11 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
 
     if TYPE_CHECKING:
         @overload
-        def add(self, logic: LogicModule):...
+        def add(self, logic: LogicModule):
+            "Add a logic module"
         @overload
-        def remove(self, logic: LogicModule):...
+        def remove(self, logic: LogicModule):
+            "Remove a logic  module"
 
     __slots__ = 'packages', 'modules', 'index', 'add', 'remove', 
 
@@ -95,17 +97,20 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
         self.remove = remove
 
     def discard(self, logic: LogicModule):
+        "Discard a logic  module."
         try:
             self.remove(logic)
         except KeyError:
             pass
 
     def copy(self):
+        "Copy the registry."
         return type(self)(source = self)
 
     __copy__ = copy
 
     def clear(self):
+        "Clear the registry."
         for logic in set(self.values()):
             self.remove(logic)
 
@@ -165,7 +170,7 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
             else:
                 raise ModuleNotFoundError(f'tried: {tried}')
 
-        if not isinstance(module, LogicModule):
+        if not isinstance(module, LogicType):
             raise Emsg.BadLogicModule(module.__name__)
 
         self.add(module)
@@ -241,7 +246,7 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
                 # Is imported
                 and modname in sys.modules
                 # And is a logic
-                and isinstance(sys.modules[modname], LogicModule)
+                and isinstance(sys.modules[modname], LogicType)
         )
 
         it2 = (fmt(name)
@@ -252,7 +257,7 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
                 # Not already in the registry
                 and val.__name__ not in self.modules
                 # And is a logic
-                and isinstance(val, LogicModule)
+                and isinstance(val, LogicType)
         )
 
         added = set()
@@ -260,7 +265,7 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
             module = sys.modules[modname]
             if module.__package__ != pkgmod.__name__:
                 raise Emsg.NotLogicsPackage(pkgmod.__name__)
-            if not isinstance(module, LogicModule):
+            if not isinstance(module, LogicType):
                 raise Emsg.BadLogicModule(module.__name__) 
             self.add(module)
             added.add(modname)
@@ -287,7 +292,7 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
             modname = f'{pkgname}.{val}'
             if modname not in self.modules:
                 module = import_module(modname)
-                if isinstance(module, LogicModule):
+                if isinstance(module, LogicType):
                     self.get(module)
 
     def grouped(self, keys: Iterable[LogicLookupKey], /, *,
@@ -392,7 +397,7 @@ def key_category_order(logic: LogicModule) -> int:
 def instancecheck():
 
     def validate(obj):
-        check.inst(obj, (type, ModuleType))
+        check.inst(obj, ModuleType)
         check.inst(obj.name, str)
         check.inst(obj.TableauxSystem, type)
         check.inst(obj.TabRules, type)

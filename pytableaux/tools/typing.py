@@ -37,35 +37,6 @@ if TYPE_CHECKING:
     from pytableaux.proof.tableaux import Rule, TableauxSystem
     from pytableaux.tools.sets import SetApi
 
-# class LogicTypeMeta(type):
-#     """Metaclass for ``LogicType`` for implementing ``isinstance()`` checks on
-#     modules.
-#     """
-
-#     # _modcache = set()
-#     __call__ = None
-
-#     # def __instancecheck__(self, obj):
-#     #     from pytableaux.logics import validate
-#     #     return validate(obj)
-#         # objid = id(obj)
-#         # if objid in self._modcache:
-#         #     return True
-#         # try:
-#         #     validate(obj)
-#         # except:
-#         #     return False
-#         # else:
-#         #     self._modcache.add(objid)
-#         #     return True
-#         # result, err = validate(obj)
-#         # if result:
-#         #     self._modcache.add(obj)
-#         # else:
-#         #     pass
-#         # return result
-
-
 class LogicType(
     metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None))
 ):
