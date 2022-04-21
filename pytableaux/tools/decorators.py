@@ -1,5 +1,27 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.tools.decorators
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+"""
 from __future__ import annotations
+
+__docformat__ = 'google'
 
 __all__ = (
     'membr', 'fixed', 'operd', 'wraps',
@@ -25,7 +47,7 @@ from typing import (Any, Callable, Concatenate, Generic,
 from pytableaux.errors import check
 from pytableaux.tools import MapProxy, abstract, static
 from pytableaux.tools.abcs import Abc, abcf, abcm
-from pytableaux.tools.typing import RT, F, P, Self, T
+from pytableaux.tools.typing import RT, F, P, Self, T, _property
 
 if 'Utils' or True:
 
@@ -190,65 +212,6 @@ class membr(Member[T], Generic[T, RT]):
 
 MbrT = TypeVar('MbrT', bound = membr)
 
-# @static
-# class fixed:
-
-#     class value(Member):
-
-#         __slots__ = 'value', 'doc', 'annot'
-
-#         @overload
-#         def __new__(cls, value: T, /, *args, **kw) -> Callable[..., T]: ...
-#         def __new__(cls, *args, **kw):
-#             inst = super().__new__(cls)
-#             inst._init(*args, **kw)
-#             return inst
-
-#         def _init(self, value, /, doc = None):
-#             self.value = value
-#             self.doc = doc
-#             # TODO: eval'able annotations
-#             self.annot = {
-#                 'return': 'None' if value is None else type(value).__name__
-#             }
-
-#         def __call__(self, info = None):
-#             value = self.value
-#             wrapper = wraps(info)
-#             wrapper.update(
-#                 __doc__ = self.doc,
-#                 __annotations__ = self.annot,
-#             )
-#             def func(*args, **kw):
-#                 return value
-#             return wrapper(func)
-
-#         def sethook(self, owner, name):
-#             func = self(self)
-#             # func.__module__ = owner.__module__
-#             setattr(owner, name, func)
-
-#     class prop(value):
-
-#         __slots__ = EMPTY
-
-#         @overload
-#         def __new__(cls, value: T) -> _property[Self, T]: ...
-#         def __new__(cls, *args, **kw):
-#             return super().__new__(cls, *args, **kw)
-
-#         def __call__(self, info = None):
-#             return property(super().__call__(info), doc = self.doc)
-
-#     class dynca(prop):
-
-#         __slots__ = EMPTY
-
-#         def __call__(self, info = None):
-#             return dynca(
-#                 super(fixed.prop, self).__call__(info), doc = self.doc
-#             )
-
 @static
 class operd:
 
@@ -295,24 +258,26 @@ class operd:
         return operd.apply(*args, **kw)
 
     class reduce(Base):
-        '''Create a reducing method using functools.reduce to apply
+        """Create a reducing method using functools.reduce to apply
         a single operator/function to an arbitrarily number of arguments.
 
-        :param oper: The operator, or any two-argument function.
+        Args:
 
-        :param info: The original or stub method being replaced, or an
-            object with informational attributes (__name__, __doc__, etc.)
-            to be passed through `wraps`.
+            oper: The operator, or any two-argument function.
 
-        :param freturn: A two-argument function that takes `self` and the
-            end result, e.g. to create a copy of an object, etc. This could
-            be a method-caller, which would invoke the method on the first
-            argument (self). Default is to return the second argument (result).
+            info: The original or stub method being replaced, or an
+                object with informational attributes (`__name__`, `__doc__`, etc.)
+                to be passed through `wraps`.
 
-        :param finit: A single-argument function that takes `self` to seed
-            the initial value. This could be used, for example, to ensure
-            a copy is created in case the number of arguments is 0.
-        '''
+            freturn: A two-argument function that takes `self` and the
+                end result, e.g. to create a copy of an object, etc. This could
+                be a method-caller, which would invoke the method on the first
+                argument (self). Default is to return the second argument (result).
+
+            finit: A single-argument function that takes `self` to seed
+                the initial value. This could be used, for example, to ensure
+                a copy is created in case the number of arguments is 0.
+        """
 
         __slots__ = 'freturn', 'finit'
 
@@ -418,7 +383,7 @@ class wraps(Member):
             self.write(fout)
         return fout
 
-    @static
+    @staticmethod
     def read(data):
         return dict(
             _valfilter((k, _getmixed(data, k)) for k in WRAPPER_ASSIGNMENTS)
@@ -631,7 +596,7 @@ class NoSetAttr(Member):
             return getattr(obj, attr, False)
         return check
 
-    @static
+    @staticmethod
     def _true(*_): return True
 
     def sethook(self, owner, name):
@@ -646,25 +611,3 @@ class NoSetAttr(Member):
         
 del(Abc, TypeVar, EMPTY)
 # ------------------------------
-
-if 'Type stub' or True:
-    # Stub adapted from typing module with added annotations.
-    class _property(property, Generic[Self, T]):
-        fget: Callable[[Self], Any] | None
-        fset: Callable[[Self, Any], None] | None
-        fdel: Callable[[Self], None] | None
-        @overload
-        def __init__(
-            self,
-            fget: Callable[[Self], T] | None = ...,
-            fset: Callable[[Self, Any], None] | None = ...,
-            fdel: Callable[[Self], None] | None = ...,
-            doc: str | None = ...,
-        ) -> None: ...
-        __init__ = NotImplemented
-        def getter(self, __fget: Callable[[Self], T]) -> _property[Self, T]: ...
-        def setter(self, __fset: Callable[[Self, Any], None]) -> _property[Self, T]: ...
-        def deleter(self, __fdel: Callable[[Self], None]) -> _property[Self, T]: ...
-        def __get__(self, __obj: Self, __type: type | None = ...) -> T: ...
-        def __set__(self, __obj: Self, __value: Any) -> None: ...
-        def __delete__(self, __obj: Self) -> None: ...

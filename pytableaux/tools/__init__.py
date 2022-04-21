@@ -27,36 +27,111 @@ __all__ = (
     'closure',
     'MapProxy',
     'static',
+    'classns',
+    'classalias',
 )
 
 import keyword
 from abc import abstractmethod as abstract
 from types import FunctionType, MappingProxyType as _MapProxy
-from typing import Any, Callable, Literal, Mapping, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping
 
 from pytableaux.tools.typing import KT, TT, VT, T
 
 def closure(func: Callable[..., T]) -> T:
     'Closure decorator calls the argument and returns its return value.'
     return func()
+
 def classalias(orig: type[T]):
+    """Decorator factory for class alias for type hinting.
+
+    Usage::
+
+        @classalias(int)
+        class integer: pass
+
+    Args:
+        orig: The reference class.
+    
+    Returns:
+        A decorator that ignores its argument as returns `orig`.
+    """
     def d(alias: type) -> type[T]:
         return orig
     return d
 
-@overload
-def static(cls: TT, /) -> TT: ...
+if TYPE_CHECKING:
+    class classns: pass
 
-@overload
-def static(meth: Callable[..., T], /) -> staticmethod[T]: ...
+@closure
+def classns():
 
-def static(cls, /):
+    ignore = {'__module__', '__qualname__'}
+
+    class nsdict(dict):
+        __slots__ = '_raw',
+        def __init__(self, ns, *args, **kw):
+            self._raw = MapProxy(ns)
+            self.update(ns)
+            for key in ignore:
+                self.pop(key, None)
+            super().__init__(*args, **kw)
+
+    class meta(type):
+        def __new__(cls, clsname, bases, ns, **kw):
+            if setup:
+                return super().__new__(cls, clsname, bases, ns)
+            return nsdict(ns, **kw)
+
+    setup = True
+
+    class classns(metaclass = meta):
+        """A base class that produces a dict of the class body.
+
+        Usage::
+
+            class ns(clasns):
+                def spam(): ...
+        
+        The value of ``ns`` will be::
+
+            {'spam': <function ns.spam>}
+
+        The raw mapping, including `'__module__'` and `'__qualname__'`
+        are stored in ``ns._raw``.
+
+        Additional keyword arguments are added to the dict.
+        """
+        __slots__ = ()
+
+    setup = False
+
+    return classns
+
+class MapProxy(Mapping[KT, VT]):
+    'Cast to a proxy if not already.'
+    EMPTY_MAP = _MapProxy({})
+
+    def __new__(cls, mapping: Mapping[KT, VT] = None,/, **kw) -> MapProxy[KT, VT]:
+
+        if mapping is None:
+            if len(kw):
+                mapping = kw
+            else:
+                return cls.EMPTY_MAP # type: ignore
+        elif not isinstance(mapping, Mapping):
+            mapping = dict(mapping, **kw)
+        elif len(kw):
+            raise TypeError("Cannot specify kwargs and mapping")
+        if isinstance(mapping, _MapProxy):
+            return mapping # type: ignore
+        return _MapProxy(mapping) # type: ignore
+
+def static(cls: TT, /) -> TT:
     'Static class decorator, and wrapper around staticmethod'
 
     if not isinstance(cls, type):
-        if isinstance(cls, (classmethod, staticmethod)):
-            return cls
-        return staticmethod(cls)
+        raise TypeError(cls)
 
     ns = cls.__dict__
 
@@ -69,24 +144,9 @@ def static(cls, /):
         cls.__new__ = thru # type: ignore
 
     if '__init__' not in ns:
-        def finit(self): raise TypeError
-        cls.__init__ = finit
+        cls.__init__ = noinit
 
     return cls
-
-class MapProxy(Mapping[KT, VT]):
-    'Cast to a proxy if not already.'
-    EMPTY_MAP = _MapProxy({})
-
-    def __new__(cls, mapping: Mapping[KT, VT] = None) -> MapProxy[KT, VT]:
-
-        if mapping is None:
-            return cls.EMPTY_MAP # type: ignore
-        if isinstance(mapping, _MapProxy):
-            return mapping # type: ignore
-        if not isinstance(mapping, Mapping):
-            mapping = dict(mapping)
-        return _MapProxy(mapping) # type: ignore
 
 def thru(obj: T) -> T:
     'Return the argument.'
@@ -103,6 +163,10 @@ def false(obj: Any) -> Literal[False]:
 def key0(obj: Any) -> Any:
     'Get key/subscript ``0``.'
     return obj[0]
+
+def noinit(slf: Any = None):
+    'Raise `TypeError`.'
+    raise TypeError
 
 def isdund(name: str) -> bool:
     'Whether the string is a dunder name string.'
@@ -123,3 +187,6 @@ def isattrstr(obj: Any) -> bool:
         not keyword.iskeyword(obj)
     )
 
+def isstr(obj: Any) -> bool:
+    'Whether the argument is an ``str`` instance'
+    return isinstance(obj, str)

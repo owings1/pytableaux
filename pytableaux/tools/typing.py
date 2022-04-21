@@ -20,15 +20,67 @@ pytableaux.tools.typing
 """
 from __future__ import annotations
 
+__all__ = ()
 #==========================+
 #  No local dependencies!  |
 #==========================+
 
 import enum as _enum
 from collections.abc import Set
-from types import FunctionType, MethodType
-from typing import (TYPE_CHECKING, Any, Callable, Mapping, ParamSpec,
-                    SupportsIndex, TypeVar, overload)
+from types import FunctionType, MethodType, ModuleType
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
+                    Generic, Mapping, ParamSpec, SupportsIndex, TypeVar,
+                    overload)
+
+if TYPE_CHECKING:
+    from pytableaux.models import BaseModel
+    from pytableaux.proof.tableaux import Rule, TableauxSystem
+    from pytableaux.tools.sets import SetApi
+
+# class LogicTypeMeta(type):
+#     """Metaclass for ``LogicType`` for implementing ``isinstance()`` checks on
+#     modules.
+#     """
+
+#     # _modcache = set()
+#     __call__ = None
+
+#     # def __instancecheck__(self, obj):
+#     #     from pytableaux.logics import validate
+#     #     return validate(obj)
+#         # objid = id(obj)
+#         # if objid in self._modcache:
+#         #     return True
+#         # try:
+#         #     validate(obj)
+#         # except:
+#         #     return False
+#         # else:
+#         #     self._modcache.add(objid)
+#         #     return True
+#         # result, err = validate(obj)
+#         # if result:
+#         #     self._modcache.add(obj)
+#         # else:
+#         #     pass
+#         # return result
+
+
+class LogicType(
+    metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None))
+):
+    "Stub class definition for a logic interface."
+    name: str
+    class Meta:
+        category: str
+        description: str
+        category_order: int
+        tags: Collection[str]
+    TableauxSystem: ClassVar[type[TableauxSystem]]
+    Model: ClassVar[type[BaseModel]]
+    class TabRules:
+        closure_rules: ClassVar[tuple[type[Rule], ...]]
+        rule_groups: ClassVar[tuple[ tuple[type[Rule], ...], ... ]]
 
 #==================================================+
 #  Type aliases -- used a runtime with isinstance  |
@@ -40,8 +92,17 @@ IndexType = SupportsIndex | slice
 NotImplType = type(NotImplemented)
 "NotImplemented type"
 
+LogicModule = LogicType | ModuleType
+"Logic module alias for type hinting."
+
+LogicLookupKey = ModuleType | str
+"""Logic registry key. Module or string. See ``Registry.get()``."""
+
 HasModuleAttr = MethodType | FunctionType | type
 "Supports the ``__module__`` attribute (class, method, or function."
+
+LogicLocatorRef = LogicLookupKey | HasModuleAttr
+"""Either a logic registry key (string/module), or class, method, or function."""
 
 #==============================================+
 #  Generic aliases -- no 'isinstance' support  |
@@ -93,6 +154,12 @@ SetT = TypeVar('SetT', bound = Set)
 EnumT = TypeVar('EnumT', bound = _enum.Enum)
 "Enum bound"
 
+SetApiT = TypeVar('SetApiT', bound = 'SetApi')
+"Bound to ``SetApi``"
+
+RuleT = TypeVar('RuleT', bound = 'Rule')
+"Bound to ``Rule``"
+
 P = ParamSpec('P')
 "Param spec"
 
@@ -101,6 +168,22 @@ P = ParamSpec('P')
 #==========================+
 
 if TYPE_CHECKING:
+
+
+    class LogicType:
+        "Stub class definition for a logic interface."
+        name: str
+        class Meta:
+            category: str
+            description: str
+            category_order: int
+            tags: Collection[str]
+        TableauxSystem: ClassVar[type[TableauxSystem]]
+        Model: ClassVar[type[BaseModel]]
+        class TabRules:
+            closure_rules: ClassVar[tuple[type[Rule], ...]]
+            rule_groups: ClassVar[tuple[ tuple[type[Rule], ...], ... ]]
+
     class TypeInstDict(dict[type[VT], VT],
         metaclass = type('TidMeta', (type,), dict(__call__ = dict))):
         'Stub type for mapping of ``type[T]`` -> ``T``.'
@@ -122,6 +205,30 @@ if TYPE_CHECKING:
         _ignore      : list[str]
         _auto_called : bool
         _cls_name    : str
+
+    # Stub adapted from typing module with added annotations.
+    class _property(property, Generic[Self, T]):
+        fget: Callable[[Self], Any] | None
+        fset: Callable[[Self, Any], None] | None
+        fdel: Callable[[Self], None] | None
+        @overload
+        def __init__(
+            self,
+            fget: Callable[[Self], T] | None = ...,
+            fset: Callable[[Self, Any], None] | None = ...,
+            fdel: Callable[[Self], None] | None = ...,
+            doc: str | None = ...,
+        ) -> None: ...
+        __init__ = NotImplemented
+        def getter(self, __fget: Callable[[Self], T]) -> _property[Self, T]: ...
+        def setter(self, __fset: Callable[[Self, Any], None]) -> _property[Self, T]: ...
+        def deleter(self, __fdel: Callable[[Self], None]) -> _property[Self, T]: ...
+        def __get__(self, __obj: Self, __type: type | None = ...) -> T: ...
+        def __set__(self, __obj: Self, __value: Any) -> None: ...
+        def __delete__(self, __obj: Self) -> None: ...
+
 else:
     TypeInstDict = dict
     EnumDictType = _enum._EnumDict
+    _property = property
+    

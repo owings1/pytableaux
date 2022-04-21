@@ -21,7 +21,6 @@ pytableaux.logics
 """
 from __future__ import annotations
 
-
 __docformat__ = 'google'
 __all__ = (
     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
@@ -33,15 +32,16 @@ import sys
 from collections import defaultdict
 from importlib import import_module
 from types import ModuleType
-from typing import Callable, ClassVar, Collection, Iterable, Mapping, overload
+from typing import TYPE_CHECKING, Callable, Iterable, Mapping, overload
 
-from pytableaux import models
 from pytableaux.errors import Emsg, check
-from pytableaux.proof import tableaux
-from pytableaux.tools import abcs, closure, hybrids, mappings
+from pytableaux.tools import closure, hybrids, mappings
 from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import HasModuleAttr
+from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
+                                     LogicModule, LogicType)
 
+if TYPE_CHECKING:
+    pass
 
 class Registry(mappings.Mapping[str, 'LogicModule']):
     """Logic module registry.
@@ -56,7 +56,13 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
     index: Mapping[LogicLookupKey, str]
     """Mapping to ``module.__name__`` for each of its keys. See ``.get()``."""
 
-    __slots__ = 'packages', 'modules', 'index', 'add_logic', 'remove_logic', 
+    if TYPE_CHECKING:
+        @overload
+        def add(self, logic: LogicModule):...
+        @overload
+        def remove(self, logic: LogicModule):...
+
+    __slots__ = 'packages', 'modules', 'index', 'add', 'remove', 
 
     def __init__(self, *, source: Registry = None):
         
@@ -81,12 +87,18 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
             modules.add(modname)
 
         def remove(logic: LogicModule):
+            modules.remove(logic.__name__)
             for key in self._module_keys(logic):
-                index.pop(key, None)
-            modules.discard(logic.__name__)
+                index.pop(key)
 
-        self.add_logic = add
-        self.remove_logic = remove
+        self.add = add
+        self.remove = remove
+
+    def discard(self, logic: LogicModule):
+        try:
+            self.remove(logic)
+        except KeyError:
+            pass
 
     def copy(self):
         return type(self)(source = self)
@@ -95,7 +107,7 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
 
     def clear(self):
         for logic in set(self.values()):
-            self.remove_logic(logic)
+            self.remove(logic)
 
     def get(self, key: LogicLookupKey, /) -> LogicModule:
         """Get a logic from the registry, importing if needed.
@@ -156,7 +168,7 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
         if not isinstance(module, LogicModule):
             raise Emsg.BadLogicModule(module.__name__)
 
-        self.add_logic(module)
+        self.add(module)
         return module
 
     __call__ = get
@@ -180,12 +192,6 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
         if isinstance(ref, LogicLookupKey):
             return self.get(ref)
         return self.get(ref.__module__.lower())
-
-    @overload
-    def add_logic(self, logic: LogicModule):...
-    @overload
-    def remove_logic(self, logic: LogicModule):...
-    del(add_logic, remove_logic)
 
     def sync_all(self) -> dict[str, set[str]|None]:
         """Sync all registry packages by calling ``.sync_package()``.
@@ -256,7 +262,7 @@ class Registry(mappings.Mapping[str, 'LogicModule']):
                 raise Emsg.NotLogicsPackage(pkgmod.__name__)
             if not isinstance(module, LogicModule):
                 raise Emsg.BadLogicModule(module.__name__) 
-            self.add_logic(module)
+            self.add(module)
             added.add(modname)
 
         return added
@@ -381,75 +387,48 @@ def key_category_order(logic: LogicModule) -> int:
     "Returns the category order from the logic, e.g. for sorting."
     return logic.Meta.category_order
 
-class LogicTypeMeta(abcs.AbcMeta):
-    """Metaclass for ``LogicType`` for implementing ``isinstance()`` checks on
-    modules.
-    """
 
-    _modcache = set()
+@closure
+def instancecheck():
 
-    def __instancecheck__(self, obj):
-        try:
-            if obj in self._modcache:
-                return True
-        except TypeError:
-            return False
-        result, err = self.is_logic(obj)
-        if result:
-            self._modcache.add(obj)
-        else:
-            pass
-            # print(err)
-        return result
+    def validate(obj):
+        check.inst(obj, (type, ModuleType))
+        check.inst(obj.name, str)
+        check.inst(obj.TableauxSystem, type)
+        check.inst(obj.TabRules, type)
+        check.inst(obj.Model, type)
+        check.inst(obj.Model, type)
+        validate_tabsys(obj.TableauxSystem)
+        validate_meta(obj.Meta)
 
-    @closure
-    def is_logic():
+    def validate_tabsys(tabsys):
+        check.callable(tabsys.build_trunk)
+        check.callable(tabsys.add_rules)
+        check.callable(tabsys.branching_complexity)
 
-        def validate(self, obj):
-            check.inst(obj, (type, ModuleType))
-            check.inst(obj.name, str)
-            check.inst(obj.TableauxSystem, type)
-            check.inst(obj.TabRules, type)
-            check.inst(obj.Model, type)
-            check.subcls(obj.TableauxSystem, tableaux.TableauxSystem)
-            check.subcls(obj.Model, models.BaseModel)
-            for attr in self.Meta.__annotations__.keys():
-                getattr(obj.Meta, attr)
+    def validate_meta(meta):
+        meta.category
+        meta.description
+        meta.category_order
+        meta.tags
 
-        def geterr(self, obj):
+    cache = set()
+
+    def instancecheck(obj):
+        key = id(obj)
+        if key not in cache:
             try:
-                validate(self, obj)
-            except Exception as err:
-                return False, err
-            return True, None
-        return geterr
+                validate(obj)
+            except:
+                return False
+            else:
+                cache.add(key)
+        return True
 
-class LogicType(metaclass = LogicTypeMeta):
-    "Stub class definition for a logic interface."
-    name: str
-    class Meta:
-        category: str
-        description: str
-        category_order: int
-        tags: Collection[str]   
-    TableauxSystem: ClassVar[type[tableaux.TableauxSystem]]
-    Model: ClassVar[type[models.BaseModel]]
-    class TabRules:
-        closure_rules: ClassVar[tuple[type[tableaux.Rule], ...]]
-        rule_groups: ClassVar[
-            tuple[
-                tuple[type[tableaux.Rule], ...], ...
-            ]
-        ]
+    type(LogicType).__instancecheck__ = staticmethod(instancecheck)
 
-LogicModule = LogicType | ModuleType
-"Logic module alias for type hinting."
+    return instancecheck
 
-LogicLookupKey = ModuleType | str
-"""Logic registry key. Module or string. See ``Registry.get()``."""
-
-LogicLocatorRef = LogicLookupKey | HasModuleAttr
-"""Either a logic registry key (string/module), or class, method, or function."""
 
 registry = Registry()
 "The default built-in registry"

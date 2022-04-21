@@ -83,6 +83,7 @@ def _():
 
 # --------------------------------------------
 
+import pytableaux.logics
 import pytableaux.examples
 import pytableaux.models
 

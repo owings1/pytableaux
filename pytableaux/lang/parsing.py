@@ -22,23 +22,21 @@ pytableaux.lang.parsing
 from __future__ import annotations
 
 from collections.abc import Set
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
-                    NamedTuple, Set, TypeVar, overload)
+from typing import (TYPE_CHECKING, Any, ClassVar, Iterable, Mapping, Set,
+                    overload)
 
 from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
 from pytableaux.lang._aux import *
-from pytableaux.lang._aux import ParseTableKey
-from pytableaux.lang.parsing import Parser, ParseTable
 from pytableaux.lexicals import (Argument, Atomic, BiCoords, Constant, LexType,
                                  Marking, Notation, Operated)
 from pytableaux.lexicals import Operator as Oper
 from pytableaux.lexicals import (Parameter, Predicate, Predicated, Predicates,
                                  Quantified, Quantifier, Sentence, Variable)
 from pytableaux.tools import MapProxy, abstract, key0
-from pytableaux.tools.abcs import abcm
-from pytableaux.tools.hybrids import qset, qsetf
-from pytableaux.tools.mappings import DequeCache, ItemsIterator, MapCover, dmap
+from pytableaux.tools.abcs import abcm, Ebc
+from pytableaux.tools.hybrids import qset
+from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap
 from pytableaux.tools.sequences import seqf
 from pytableaux.tools.sets import EMPTY_SET, setf
 
@@ -48,8 +46,107 @@ if TYPE_CHECKING:
     # from pytableaux.lexicals import Quantifier, Variable
 
 __docformat__ = 'google'
-__all__ = ()
+
+__all__ = (
+    'Notation',
+    'Parser',
+    'ParseTable',
+    'PolishParser',
+    'StandardParser',
+)
+
 NOARG = object()
+
+class ParserMeta(LangCommonMeta):
+    'Parser Metaclass.'
+
+    def __call__(cls, *args, **kw):
+        if cls is Parser:
+            if args:
+                notn = Notation(args[0])
+                args = args[1:]
+            else:
+                notn = Notation.default
+            return notn.Parser(*args, **kw)
+        return super().__call__(*args, **kw)
+
+class Parser(metaclass = ParserMeta):
+    'Parser interface and coordinator.'
+
+    __slots__ = 'table', 'preds', 'opts'
+
+    notation: ClassVar[Notation]
+    _defaults: ClassVar[dict[str, Any]] = {}
+    _optkeys: ClassVar[Set[str]] = _defaults.keys()
+
+    table: ParseTable
+    preds: Predicates
+    opts: Mapping[str, Any]
+
+    def __init__(self, preds: Predicates = Predicate.System, /, table: ParseTable|str = None, **opts):
+        if table is None:
+            table = ParseTable.fetch(self.notation)
+        elif isinstance(table, str):
+            table = ParseTable.fetch(self.notation, table)
+        self.table = table
+        self.preds = preds
+
+        if len(opts):
+            opts = dmap(opts)
+            opts &= self._optkeys
+            opts %= self._defaults
+        else:
+            opts = dict(self._defaults)
+        self.opts = opts
+
+    @abstract
+    def parse(self, input: str) -> Sentence:
+        """Parse a sentence from an input string.
+
+        Args:
+            input: The input string.
+        
+        Returns:
+            The parsed sentence.
+
+        Raises:
+            ParseError: if input cannot be parsed.
+        """
+        raise NotImplementedError
+
+    @overload
+    def __call__(self, input: str) -> Sentence: ...
+    __call__ = parse
+
+    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
+        """Parse the input strings and create an argument.
+
+        Args:
+            conclusion: The argument's conclusion.
+            premises: Premise strings, if any.
+            title: An optional title.
+
+        Returns:
+            The argument.
+
+        Raises:
+            ParseError: if input cannot be parsed.
+            TypeError: for bad argument types.
+        """
+        return Argument(
+            self.parse(conclusion),
+            premises and tuple(map(self.parse, premises)),
+            title = title,
+        )
+
+    def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
+        'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
+        super().__init_subclass__(**kw)
+        abcm.merge_mroattr(subcls, '_defaults', supcls = __class__)
+        subcls._optkeys = subcls._defaults.keys()
+        subcls.__call__ = subcls.parse
+        if primary:
+            subcls.notation.Parser = subcls
 
 class ParseContext:
 
@@ -77,65 +174,82 @@ class ParseContext:
     def type(self, char: str, default = NOARG, /) -> ParseTableKey: ...
     del(type)
 
-    def current(self):
+    def current(self) -> str|None:
         'Return the current character, or ``None`` if after last.'
         try:
             return self.input[self.pos]
         except IndexError:
             return None
 
-    def next(self, n: int = 1):
+    def next(self, n: int = 1) -> str|None:
         'Get the nth character after the current, or ``None``.'
         try:
             return self.input[self.pos + n]
         except IndexError:
             return None
 
-    def assert_current(self):
+    def assert_current(self) -> ParseTableKey:
         """
-        :return: Type of current char, e.g. ``'operator'``, or ``None`` if
-          uknown type.
-        :raises errors.ParseError: if after last.
+        Returns:
+            Type of current char, e.g. ``'operator'``, or ``None`` if
+            uknown type.
+
+        Raises:
+            ParseError: if after last.
         """
         if not self.has_current():
             raise ParseError(f'Unexpected end of input at position {self.pos}.')
         return self.type(self.current(), None)
 
-    def assert_current_is(self, ctype: str):
+    def assert_current_is(self, ctype: str) -> None:
         """
-        :param str ctype:
-        :raises errors.ParseError: if after last, unexpected type or unknown symbol.
+        Args:
+            ctype (str): Char type
+
+        Raises
+            ParseError: if after last, unexpected type or unknown symbol.
         """
         if self.assert_current() != ctype:
-            raise ParseError(self._unexp_msg(ctype))
+            raise ParseError(self._unexp_msg())
 
-    def assert_current_in(self, ctypes: Set):
+    def assert_current_in(self, ctypes: Set) -> ParseTableKey:
         ctype = self.assert_current()
         if ctype in ctypes:
             return ctype
-        raise ParseError(self._unexp_msg(*ctypes))
+        raise ParseError(self._unexp_msg())
 
-    def assert_end(self):
+    def assert_end(self) -> None:
         'Raise an error if not after last.'
         if len(self.input) > self.pos:
             raise ParseError(self._unexp_msg())
 
-    def has_next(self, n: int = 1):
+    def has_next(self, n: int = 1) -> bool:
         'Whether there are n-many characters after the current.'
         return len(self.input) > self.pos + n
 
-    def has_current(self):
+    def has_current(self) -> bool:
         'Whether there is a current character.'
         return len(self.input) > self.pos
 
-    def advance(self, n: int = 1):
-        'Advance the current pointer n-many characters, and then eat whitespace.'
+    def advance(self, n: int = 1, /):
+        """Advance the current pointer n-many characters, and then eat whitespace.
+
+        Args:
+            n: The number of characters to advance, default ``1``.
+
+        Returns:
+            self
+        """
         self.pos += n  
         self.chomp()
         return self
 
     def chomp(self):
-        'Proceeed through whitepsace.'
+        """Proceeed through whitepsace.
+        
+        Returns:
+            self
+        """
         try:
             while self.type(self.input[self.pos], None) is Marking.whitespace:
                 self.pos += 1
@@ -143,7 +257,7 @@ class ParseContext:
             pass
         return self
 
-    def _unexp_msg(self, *exp):
+    def _unexp_msg(self) -> str:
         char = self.input[self.pos]
         ctype = self.type(char, None)
         if ctype is None:
@@ -156,6 +270,12 @@ class ParseContext:
 _PRED_CTYPES = setf({LexType.Predicate, Predicate.System})
 _BASE_CTYPES = _PRED_CTYPES | {LexType.Quantifier, LexType.Atomic}
 _PARAM_CTYPES = setf({LexType.Constant, LexType.Variable})
+
+class Ctype(frozenset, Ebc):
+
+    pred = {LexType.Predicate, Predicate.System}
+    base = pred | {LexType.Quantifier, LexType.Atomic}
+    param = {LexType.Constant, LexType.Variable}
 
 class BaseParser(Parser):
 
@@ -172,7 +292,7 @@ class BaseParser(Parser):
             return s
 
     @abstract
-    def _read(self, context: ParseContext) -> Sentence:
+    def _read(self, context: ParseContext, /) -> Sentence:
         """
         Internal entrypoint for reading a sentence. Implementation is recursive.
         This provides the default implementation for prefix notation sentences,
@@ -186,9 +306,7 @@ class BaseParser(Parser):
             The sentence
 
         Raises:
-            errors.ParseError:
-
-        :meta private:
+            ParseError:
         """
         ctype = context.assert_current_in(_BASE_CTYPES)
         if ctype is LexType.Atomic:
@@ -197,16 +315,16 @@ class BaseParser(Parser):
             return self._read_quantified(context)
         return self._read_predicated(context)
 
-    def _read_atomic(self, context: ParseContext) -> Atomic:
+    def _read_atomic(self, context: ParseContext, /) -> Atomic:
         'Read an atomic sentence.'
         return Atomic(self._read_coords(context))
 
-    def _read_predicated(self, context: ParseContext) -> Predicated:
+    def _read_predicated(self, context: ParseContext, /) -> Predicated:
         'Read a predicated sentence.'
         pred = self._read_predicate(context)
         return Predicated(pred, self._read_params(context, pred.arity))
 
-    def _read_quantified(self, context: ParseContext) -> Quantified:
+    def _read_quantified(self, context: ParseContext, /) -> Quantified:
         'Read a quantified sentence.'
         q = self.table.value(context.current())
         context.advance()
@@ -229,7 +347,7 @@ class BaseParser(Parser):
         context.bound_vars.remove(v)
         return Quantified(q, v, s)
 
-    def _read_predicate(self, context: ParseContext) -> Predicate:
+    def _read_predicate(self, context: ParseContext, /) -> Predicate:
         'Read a predicate.'
         pchar = context.current()
         cpos = context.pos
@@ -245,11 +363,11 @@ class BaseParser(Parser):
                 f"Undefined predicate symbol '{pchar}' at position {cpos}"
             )
 
-    def _read_params(self, context: ParseContext, num: int) -> tuple[Parameter, ...]:
+    def _read_params(self, context: ParseContext, num: int, /) -> tuple[Parameter, ...]:
         'Read the given number of parameters.'
         return tuple(self._read_parameter(context) for _ in range(num))
 
-    def _read_parameter(self, context: ParseContext) -> Parameter:
+    def _read_parameter(self, context: ParseContext, /) -> Parameter:
         'Read a single parameter (constant or variable)'
         ctype = context.assert_current_in(_PARAM_CTYPES)
         if ctype is LexType.Constant:
@@ -259,21 +377,19 @@ class BaseParser(Parser):
         if v not in context.bound_vars:
             vchr = self.table.reversed[LexType.Variable, v.index]
             raise UnboundVariableError(
-                "Unbound variable '%s_%d' at position %d." % (
-                    vchr, v.subscript, cpos
-                )
+                f"Unbound variable '{vchr}_{v.subscript}' at position {cpos}"
             )
         return v
 
-    def _read_variable(self, context: ParseContext) -> Variable:
+    def _read_variable(self, context: ParseContext, /) -> Variable:
         'Read a variable.'
         return Variable(self._read_coords(context))
 
-    def _read_constant(self, context: ParseContext) -> Constant:
+    def _read_constant(self, context: ParseContext, /) -> Constant:
         'Read a constant.'
         return Constant(self._read_coords(context))
 
-    def _read_subscript(self, context: ParseContext) -> int:
+    def _read_subscript(self, context: ParseContext, /) -> int:
         """Read the subscript starting from the current character. If the current
         character is not a digit, or we are after last, then the subscript is
         ``0```. Otherwise, all consecutive digit characters are read
@@ -289,7 +405,7 @@ class BaseParser(Parser):
             return 0
         return int(''.join(digits))
 
-    def _read_coords(self, context: ParseContext) -> BiCoords:
+    def _read_coords(self, context: ParseContext, /) -> BiCoords:
         """Read (index, subscript) coords starting from the current character,
         which must be in the list of characters given. `index` is the list index in
         the symbol set. This is a generic way to read user predicates,
@@ -309,12 +425,14 @@ class BaseParser(Parser):
         raise AttributeError(name)
 
 class PolishParser(BaseParser, primary = True):
+    """Polish notation parser.
+    """
 
     __slots__ = EMPTY_SET
 
     notation = Notation.polish
 
-    def _read(self, context: ParseContext) -> Sentence:
+    def _read(self, context: ParseContext, /) -> Sentence:
         ctype = context.assert_current()
         if ctype is LexType.Operator:
             oper: Oper = self.table.value(context.current())
@@ -326,29 +444,31 @@ class PolishParser(BaseParser, primary = True):
         return super()._read(context)
 
 class StandardParser(BaseParser, primary = True):
+    """Standard notation parser.
+    """
 
     __slots__ = EMPTY_SET
 
     notation = Notation.standard
     _defaults = dict(drop_parens = True)
 
-    def parse(self, input) -> Sentence:
+    def parse(self, input_: str, /) -> Sentence:
         # Override to allow dropped outer parens.
         try:
-            return super().parse(input)
+            return super().parse(input_)
         except ParseError:
             if self.opts['drop_parens']:
                 try:
                     return super().parse(''.join((
                         self.table.reversed[Marking.paren_open, 0],
-                        input,
+                        input_,
                         self.table.reversed[Marking.paren_close, 0]
                     )))
                 except ParseError:
                     pass
             raise
 
-    def _read(self, context: ParseContext):
+    def _read(self, context: ParseContext, /):
         ctype = context.assert_current()
         if ctype is LexType.Operator:
             return self.__read_operated(context)
@@ -358,18 +478,18 @@ class StandardParser(BaseParser, primary = True):
             return self.__read_infix_predicated(context)
         return super()._read(context)
 
-    def __read_operated(self, context: ParseContext) -> Operated:
+    def __read_operated(self, context: ParseContext, /) -> Operated:
         oper: Oper = self.table.value(context.current())
         # only unary operators can be prefix operators
         if oper.arity != 1:
             raise ParseError(
                 f"Unexpected non-prefix operator symbol '{context.current()}' "
-                f" at position {context.pos}"
+                f"at position {context.pos}"
             )
         context.advance()
         return Operated(oper, (self._read(context),))
 
-    def __read_infix_predicated(self, context: ParseContext) -> Predicated:
+    def __read_infix_predicated(self, context: ParseContext, /) -> Predicated:
         lhp = self._read_parameter(context)
         context.assert_current_in(_PRED_CTYPES)
         ppos = context.pos
@@ -381,7 +501,7 @@ class StandardParser(BaseParser, primary = True):
             )
         return Predicated(pred, (lhp, *self._read_params(context, arity - 1)))
 
-    def __read_from_paren_open(self, context: ParseContext) -> Operated:
+    def __read_from_paren_open(self, context: ParseContext, /) -> Operated:
         # if we have an open parenthesis, then we demand a binary infix operator sentence.
         # scan ahead to:
         #   - find the corresponding close parenthesis position
@@ -436,6 +556,108 @@ class StandardParser(BaseParser, primary = True):
         # move past the close paren
         context.advance()
         return Operated(oper, (lhs, rhs))
+
+class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStore):
+    'Parser table data class.'
+
+    default_fetch_key = 'default'
+
+    __slots__ = 'reversed', 'chars'
+
+    reversed: Mapping[tuple[ParseTableKey, ParseTableValue], str]
+    "Reversed mapping of item to symbol."
+
+    chars: Mapping[ParseTableKey, seqf[str]]
+    "Grouping of each symbol type to the the symbols."
+
+    def __init__(self, data: Mapping[str, tuple[ParseTableKey, ParseTableValue]], /):
+        """
+        Args:
+            data: The table data.
+        """
+
+        super().__init__(MapProxy(data))
+
+        vals = self.values()
+
+        # list of types
+        ctypes: qset[ParseTableKey] = qset(map(key0, vals))
+
+        tvals: dict[ParseTableKey, qset[ParseTableValue]] = {}
+        for ctype in ctypes:
+            tvals[ctype] = qset()
+        for ctype, value in vals:
+            tvals[ctype].add(value)
+        for ctype in ctypes:
+            tvals[ctype].sort()
+
+        # flipped table
+        self.reversed = rev = MapProxy(dict(
+            map(reversed, ItemsIterator(self))
+        ))
+
+        # chars for each type in value order, duplicates discarded
+        self.chars = MapProxy(dict(
+            (ctype, seqf(rev[ctype, val] for val in tvals[ctype]))
+            for ctype in ctypes
+        ))
+
+    def type(self, char: str, default = NOARG, /) -> ParseTableKey:
+        """Get the item type for the character.
+
+        Args:
+            char: The character symbol.
+            default: The value to return if missing.
+
+        Returns:
+            The symbol type, or ``default`` if provided.
+
+        Raises:
+            KeyError: if symbol not in table and no default passed.
+        """
+        try:
+            return self[char][0]
+        except KeyError:
+            if default is NOARG:
+                raise
+            return NOARG
+
+    def value(self, char: str, /) -> ParseTableValue:
+        """Get the item value for the character.
+
+        Args:
+            char: The character symbol.
+
+        Returns:
+            Table item value, e.g. ``1`` or ``Operator.Negation``.
+
+        Raises:
+            KeyError: if symbol not in table.
+        """
+        return self[char][1]
+
+    def char(self, ctype: ParseTableKey, value: ParseTableValue, /) -> str:
+        """Get the character symbol corresponding to the (ctype, value) item, i.e.
+        perform a reverse lookup.
+
+        Args:
+            ctype: The symbol type, e.g. ``LexType.Variable``, or ``Marking.digit``.
+            value: The item value, e.g. ``1`` or ``Operator.Negation``.
+        
+        Returns:
+            The character symbol.
+        
+        Raises:
+            KeyError: if item not in table.
+        """
+        return self.reversed[ctype, value]
+
+    def __setattr__(self, name, value):
+        if name in self.__slots__ and hasattr(self, name):
+            raise AttributeError(name)
+        super().__setattr__(name, value)
+
+    __delattr__ = raiseae
 
 ParseTable._initcache(Notation, {
     Notation.standard: dict(
@@ -533,171 +755,3 @@ ParseTable._initcache(Notation, {
         },
     ),
 })
-
-
-
-
-class Parser(metaclass = ParserMeta):
-    'Parser interface and coordinator.'
-
-    __slots__ = 'table', 'preds', 'opts'
-
-    notation: ClassVar[Notation]
-    _defaults: ClassVar[dict[str, Any]] = {}
-    _optkeys: ClassVar[Set[str]] = _defaults.keys()
-
-    table: ParseTable
-    preds: Predicates
-    opts: Mapping[str, Any]
-
-    def __init__(self, preds: Predicates = Predicate.System, /, table: ParseTable|str = None, **opts):
-        if table is None:
-            table = ParseTable.fetch(self.notation)
-        elif isinstance(table, str):
-            table = ParseTable.fetch(self.notation, table)
-        self.table = table
-        self.preds = preds
-
-        if len(opts):
-            opts = dmap(opts)
-            opts &= self._optkeys
-            opts %= self._defaults
-        else:
-            opts = dict(self._defaults)
-        self.opts = opts
-
-    @abstract
-    def parse(self, input: str) -> Sentence:
-        """Parse a sentence from an input string.
-
-        Args:
-            input: The input string.
-        
-        Returns:
-            The parsed sentence.
-
-        Raises:
-            errors.ParseError: if input cannot be parsed.
-        """
-        raise NotImplementedError
-
-    @overload
-    def __call__(self, input: str) -> Sentence: ...
-    __call__ = parse
-
-    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
-        """Parse the input strings and create an argument.
-
-        Args:
-            conclusion: The argument's conclusion.
-            premises: Premise strings, if any.
-            title: An optional title.
-
-        Returns:
-            The argument.
-
-        Raises:
-            errors.ParseError: if input cannot be parsed.
-            TypeError: for bad argument types.
-        """
-        return Argument(
-            self.parse(conclusion),
-            premises and tuple(map(self.parse, premises)),
-            title = title,
-        )
-
-    @abcm.f.after
-    def _aux_init(cls):
-        from pytableaux.lang import _aux
-        _aux.Parser = cls
-
-    def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
-        'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
-        super().__init_subclass__(**kw)
-        abcm.merge_mroattr(subcls, '_defaults', supcls = __class__)
-        subcls._optkeys = subcls._defaults.keys()
-        subcls.__call__ = subcls.parse
-        if primary:
-            subcls.notation.Parser = subcls
-
-class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStore):
-    'Parser table data class.'
-
-    default_fetch_key = 'default'
-
-    __slots__ = 'reversed', 'chars'
-
-    reversed: Mapping[tuple[ParseTableKey, ParseTableValue], str]
-    chars: Mapping[ParseTableKey, seqf[str]]
-
-    def __init__(self, data: Mapping[str, tuple[ParseTableKey, ParseTableValue]], /):
-
-        super().__init__(MapProxy(data))
-
-        vals = self.values()
-
-        # list of types
-        ctypes: qset[ParseTableKey] = qset(map(key0, vals))
-
-        tvals: dict[ParseTableKey, qset[ParseTableValue]] = {}
-        for ctype in ctypes:
-            tvals[ctype] = qset()
-        for ctype, value in vals:
-            tvals[ctype].add(value)
-        for ctype in ctypes:
-            tvals[ctype].sort()
-
-        # flipped table
-        self.reversed = rev = MapProxy(dict(
-            map(reversed, ItemsIterator(self))
-        ))
-
-        # chars for each type in value order, duplicates discarded
-        self.chars = MapProxy(dict(
-            (ctype, seqf(rev[ctype, val] for val in tvals[ctype]))
-            for ctype in ctypes
-        ))
-
-    def type(self, char: str, default = NOARG, /) -> ParseTableKey:
-        """Get the item type for the character.
-
-        Args:
-            char: The character symbol.
-            default: The value to return if missing.
-
-        Returns:
-            The symbol type, or ``default`` if provided.
-
-        Raises:
-            KeyError: if symbol not in table and no default passed.
-        """
-        try:
-            return self[char][0]
-        except KeyError:
-            if default is NOARG:
-                raise
-            return NOARG
-
-    def value(self, char: str, /) -> ParseTableValue:
-        """Get the item value for the character.
-
-        Args:
-            char: The character symbol.
-
-        Returns:
-            Table item value, e.g. ``1`` or ``Operator.Negation``.
-
-        Raises:
-            KeyError: if symbol not in table.
-        """
-        return self[char][1]
-
-    def char(self, ctype: ParseTableKey, value: ParseTableValue, /) -> str:
-        return self.reversed[ctype, value]
-
-    def __setattr__(self, name, value):
-        if name in self.__slots__ and hasattr(self, name):
-            raise AttributeError(name)
-        super().__setattr__(name, value)
-
-    __delattr__ = raiseae

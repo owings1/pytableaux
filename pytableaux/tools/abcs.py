@@ -26,7 +26,7 @@ __all__ = (
     'abcf',
     'abcm',
     'AbcMeta',
-    'EnumMeta',
+    'EbcMeta',
     'Abc',
     'Copyable',
     'Ebc',
@@ -105,7 +105,11 @@ class ebcm:
         return isinstance(obj, type) and issubclass(obj, _enum.Enum)
 
     @staticmethod
-    def rebase(oldcls: type[EnumT], *bases: type, metaclass = None, **kw) -> type[EnumT]:
+    def mixins(Class: type[_enum.Enum]) -> tuple[type, ...]:
+        return *itertools.filterfalse(ebcm.is_enumcls, Class.__bases__),
+
+    @staticmethod
+    def rebase(oldcls: type[EnumT], *bases: type, ns: Mapping = None, metaclass: type = None, **kw) -> type[EnumT]:
         'Rebase an enum class with the same member data.'
         # Get metaclass.
         if metaclass is None:
@@ -127,25 +131,20 @@ class ebcm:
                 # Fall back on built-in Enum.
                 bases = _enum.Enum,
         # Reuse old non-enum bases.
-        bases = tuple(itertools.chain(
-            itertools.filterfalse(ebcm.is_enumcls, oldcls.__bases__),
-            bases
-        ))
+        bases = ebcm.mixins(oldcls) + bases
         # Class name.
         clsname = oldcls.__name__
-        try:
-            # Prepare class namespace.
-            ns = check.inst(metaclass.__prepare__(clsname, bases, **kw), dict)
-            # Add member data from old class. Use _member_map_ to include aliases.
-            for mname, m in oldcls._member_map_.items():
-                # Use __setitem__, not update, else EnumDict won't work.
-                ns[mname] = m._value_
-            # Create class.
-            return metaclass(clsname, bases, ns, **kw)
-        except TypeError:
-            for _ in (clsname, bases, kw):
-                print(_)
-            raise
+        # Prepare class dict.
+        cdict = check.inst(metaclass.__prepare__(clsname, bases, **kw), dict)
+        # Add member data from old class. Use _member_map_ to include aliases.
+        for mname, m in oldcls._member_map_.items():
+            # Use __setitem__, not update, else EnumDict won't work.
+            cdict[mname] = m._value_
+        if ns is not None:
+            cdict.update(ns)
+        # Create class.
+        return metaclass(clsname, bases, cdict, **kw)
+
 
 class EnumLookup(Mapping[Any, EnumT]):
     'Enum member lookup index.'
@@ -302,7 +301,7 @@ class EnumLookup(Mapping[Any, EnumT]):
 EbcT  = TypeVar('EbcT',  bound = 'Ebc')
 EbcT2 = TypeVar('EbcT2', bound = 'Ebc')
 
-class EnumMeta(_enum.EnumMeta, type[EbcT2]):
+class EbcMeta(_enum.EnumMeta, type[EbcT2]):
     'General-purpose base Metaclass for all Enum classes.'
 
     #******  Class Instance Variables
@@ -312,6 +311,7 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
 
     _member_names_ : Sequence[str]
     _member_map_   : Mapping[str, EbcT2]
+    _mixin_bases_  : tuple[type, ...]
 
     #******  Class Creation
 
@@ -333,6 +333,8 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
 
         # Create class.
         Class = super().__new__(cls, clsname, bases, ns, **kw)
+        # Store mixin bases
+        Class._mixin_bases_ = ebcm.mixins(Class)
 
         if not skipabcm:
             # Run generic Abc after hooks.
@@ -373,7 +375,7 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
         'Init hook to get the index lookup keys for a member.'
         return Eset.Empty
 
-    def _on_init(cls, subcls: type[EbcT]|EnumMeta,/):
+    def _on_init(cls, subcls: type[EbcT]|EbcMeta,/):
         '''Init hook after all members have been initialized, before index
         is created. **NB:** Skips abstract classes.'''
         pass
@@ -384,7 +386,7 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
 
     #******  Class Call
 
-    def __call__(cls: type[EbcT]|EnumMeta[EbcT2], value: Any, names = None, **kw) -> EbcT:
+    def __call__(cls: type[EbcT]|EbcMeta[EbcT2], value: Any, names = None, **kw) -> EbcT:
         if names is not None:
             return super().__call__(value, names, **kw)
         try:
@@ -398,7 +400,7 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
 
     #******  Mapping(ish) Behavior
 
-    def get(cls: type[EbcT]|EnumMeta[EbcT2], key: Any, default: Any = NOARG, /) -> EbcT|EbcT2:
+    def get(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, default: Any = NOARG, /) -> EbcT|EbcT2:
         """Get a member by an indexed reference key.
 
         Args:
@@ -418,7 +420,7 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
                 raise
             return default
 
-    def __getitem__(cls: type[EbcT]|EnumMeta[EbcT2], key: Any, /) -> EbcT|EbcT2:
+    def __getitem__(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, /) -> EbcT|EbcT2:
         return cls._lookup[key]
 
     def __contains__(cls, key: Any, /):
@@ -426,10 +428,10 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
 
     #******  Sequence(ish) Behavior
 
-    def __iter__(cls: type[EbcT]|EnumMeta[EbcT2]) -> Iterator[EbcT|EbcT2]:
+    def __iter__(cls: type[EbcT]|EbcMeta[EbcT2]) -> Iterator[EbcT|EbcT2]:
         return iter(cls.seq)
 
-    def __reversed__(cls: type[EbcT]|EnumMeta[EbcT2]) -> Iterator[EbcT|EbcT2]:
+    def __reversed__(cls: type[EbcT]|EbcMeta[EbcT2]) -> Iterator[EbcT|EbcT2]:
         return reversed(cls.seq)
 
     #******  Misc Behaviors
@@ -450,6 +452,7 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
     def seq(self: type[EbcT]) -> Sequence[EbcT]: ...
     del(seq)
 
+EnumMeta = EbcMeta
 #=============================================================================
 #_____________________________________________________________________________
 #
@@ -459,7 +462,7 @@ class EnumMeta(_enum.EnumMeta, type[EbcT2]):
 #           skipabcm = True
 #_____________________________________________________________________________
 
-class Ebc(_enum.Enum, metaclass = EnumMeta, skipflags = True, skipabcm = True):
+class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
 
     __slots__ = Eset.Empty
 
@@ -474,24 +477,29 @@ class Ebc(_enum.Enum, metaclass = EnumMeta, skipflags = True, skipabcm = True):
         return self
 
     @classmethod
-    def _on_init(cls: EnumMeta, subcls: type[Ebc]):
+    def _on_init(cls: EbcMeta, subcls: type[Ebc]):
         'Propagate hook up to metaclass.'
         type(cls)._on_init(cls, subcls)
 
     @classmethod
-    def _member_keys(cls: EnumMeta, member: Ebc):
+    def _member_keys(cls: EbcMeta, member: Ebc):
         'Propagate hook up to metaclass.'
         return type(cls)._member_keys(cls, member)
 
     @classmethod
-    def _after_init(cls: EnumMeta):
+    def _after_init(cls: EbcMeta):
         'Propagate hook up to metaclass.'
         type(cls)._after_init(cls)
 
     def __repr__(self):
         clsname = type(self).__name__
+        mixins = getattr(self, '_mixin_bases_', None)
         try:
-            return f'<{clsname}.{self._name_}>'
+            s = f'{clsname}.{self._name_}'
+            if mixins:
+                mfn = mixins[0].__repr__
+                return f'<{s}:{mfn(self._value_)}>'
+            return f'<{s}>'
         except AttributeError:
             return f'<{clsname}.?ERR?>'
 
@@ -732,7 +740,6 @@ class AbcMeta(_abc.ABCMeta):
                 impl[name] = func
             return func
         return decorator
-
 
 #=============================================================================
 #_____________________________________________________________________________

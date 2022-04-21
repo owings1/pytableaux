@@ -26,7 +26,7 @@ from __future__ import annotations
 # __all__ defined at the bottom.
 
 import enum as _enum
-from typing import Any
+from typing import Any, Callable
 
 # Base Errors
 
@@ -130,7 +130,7 @@ class Emsg(_enum.Enum):
     NotLogicsPackage = ValueError, "{0} not a registered logics package", 1
     BadLogicModule = ValueError, "{0} not a value logic module", 1
 
-    MissingAttribute = MissingAttributeError,
+    MissingAttribute = MissingAttributeError, '{}', 1
     AttributeConflict = AttributeConflictError,
 
     MissingKey = MissingKeyError,
@@ -159,6 +159,12 @@ class check:
         if not issubclass(cls, typeinfo):
             raise Emsg.SubclsCheck(cls, typeinfo)
         return cls
+
+    @staticmethod
+    def callable(obj: _T) -> _T:
+        if not callable(obj):
+            raise Emsg.InstCheck(obj, Callable)
+        return obj
 
 instcheck = check.inst
 subclscheck = check.subcls

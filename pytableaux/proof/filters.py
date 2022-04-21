@@ -5,9 +5,8 @@ __all__ = (
     'NodeFilter',
     'NodeFilters',
 )
-from pytableaux.tools import abstract, static
+from pytableaux.tools import abstract, static, thru
 from pytableaux.tools.abcs import Abc
-from pytableaux.tools.callables import Caller, gets
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import LHS, RHS
 
@@ -26,6 +25,7 @@ from typing import (
     Callable,
     Generic,
     Mapping,
+    TYPE_CHECKING,
 )
 
 # TODO: fix generic types on Comparer, Filters
@@ -51,6 +51,16 @@ class Comparer(Generic[LHS, RHS], Abc):
     @abstract
     def example(self) -> RHS: ...
 
+def getattr_safe(obj, name):
+    return getattr(obj, name, None)
+def getkey(obj, name):
+    return obj[name]
+def getkey_safe(obj, name):
+    try:
+        return obj[name]
+    except KeyError:
+        return None
+
 @static
 class Filters:
 
@@ -62,13 +72,14 @@ class Filters:
         attrmap: Mapping[str, str] = {}
 
         #: Attribute getters
-        lget: Callable[[LHS, str], Any] = gets.attr(flag = Caller.SAFE)
-        rget: Callable[[RHS, str], Any] = gets.attr()
+
+        lget: Callable[[LHS, str], Any] = staticmethod(getattr_safe)
+        rget: Callable[[RHS, str], Any] = staticmethod(getattr)
 
         #: Comparison
         fcmp: Callable[[Any, Any], bool] = opr.eq
 
-        def __call__(self, rhs: RHS):
+        def __call__(self, rhs: RHS, /) -> bool:
             for lattr, rattr in self.attrmap.items():
                 val = self.lget(self.lhs, lattr)
                 if val is not None and val != self.rget(rhs, rattr):
@@ -97,9 +108,9 @@ class Filters:
 
         negated: bool|None
 
-        rget: Callable[[RHS], Sentence] = gets.Thru
+        rget: Callable[[RHS], Sentence] = thru
 
-        def __init__(self, lhs: LHS, negated = None):
+        def __init__(self, lhs: LHS, /, negated = None):
             super().__init__(lhs)
             if negated is None:
                 self.negated = getattr(lhs, 'negated', None)
@@ -107,14 +118,14 @@ class Filters:
                 self.negated = negated
             self.applies = any((lhs.operator, lhs.quantifier, lhs.predicate))
 
-        def get(self, rhs: RHS) -> Sentence:
+        def get(self, rhs: RHS, /) -> Sentence|None:
             s = self.rget(rhs)
             if s:
                 if not self.negated: return s
                 if isinstance(s, Operated) and s.operator is Operator.Negation:
                     return s.lhs
 
-        def example(self) -> Sentence:
+        def example(self) -> Sentence|None:
             if not self.applies:
                 return
             lhs = self.lhs
@@ -126,7 +137,7 @@ class Filters:
                 s = s.negate()
             return s
 
-        def __call__(self, rhs: RHS) -> bool:
+        def __call__(self, rhs: RHS, /) -> bool:
             if not self.applies: return True
             s = self.get(rhs)
             if not s: return False
@@ -142,7 +153,7 @@ class Filters:
                     return False
             return True
 
-class NodeFilter(Comparer[LHS, RHS]):
+class NodeFilter(Comparer[LHS, Node]):
 
     @abstract
     def example_node(self) -> dict: ...
@@ -150,36 +161,39 @@ class NodeFilter(Comparer[LHS, RHS]):
 @static
 class NodeFilters(Filters):
 
-    class Sentence(Filters.Sentence, NodeFilter):
+    class Sentence(Filters.Sentence[LHS, Node], NodeFilter[LHS]):
 
         __slots__ = EMPTY_SET
+        rhs_sentence_key = 'sentence'
 
-        rget: Callable[[Node], Sentence] = gets.key('sentence', flag = Caller.SAFE)
+        @classmethod
+        def rget(cls, obj: Node) -> Sentence:
+            return getkey_safe(obj, cls.rhs_sentence_key)
 
-        def example_node(self):
+        def example_node(self) -> dict:
             n = {}
             s = self.example()
             if s: n['sentence'] = s
             return n
 
-    class Designation(Filters.Attr, NodeFilter):
+    class Designation(Filters.Attr[LHS, Node], NodeFilter[LHS]):
 
         __slots__ = EMPTY_SET
 
         attrmap = dict(designation = 'designated')
-        rget: Callable[[Node], bool] = gets.key()
+        rget: Callable[[Node], bool] = staticmethod(getkey)
 
         example_node = Filters.Attr.example
         # def example_node(self):
         #     return self.example()
 
-    class Modal(Filters.Attr, NodeFilter):
+    class Modal(Filters.Attr[LHS, Node], NodeFilter[LHS]):
 
         __slots__ = EMPTY_SET
 
         attrmap = dict(modal = 'is_modal', access = 'is_access')
 
-        def example_node(self):
+        def example_node(self) -> dict:
             n = {}
             attrs = self.example()
             if attrs.get('is_access'):

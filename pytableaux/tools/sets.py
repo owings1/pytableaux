@@ -32,30 +32,44 @@ __all__ = (
 
 import operator as opr
 from collections.abc import MutableSet, Set
-from typing import Iterable, TypeVar, overload
+from typing import TYPE_CHECKING
 
 from pytableaux.errors import check
 from pytableaux.tools import abcs
 from pytableaux.tools.decorators import operd
 from pytableaux.tools.typing import VT
+if TYPE_CHECKING:
+    from typing import Iterable, overload
+    from pytableaux.tools.typing import SetApiT
 
 EMPTY = ()
-
-SetApiT = TypeVar('SetApiT', bound = 'SetApi')
 
 class SetApi(Set[VT], abcs.Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
 
     __slots__ = EMPTY
 
-    @overload
-    def __or__(self:SetApiT, other) -> SetApiT: ...
-    @overload
-    def __and__(self:SetApiT, other) -> SetApiT: ...
-    @overload
-    def __sub__(self:SetApiT, other) -> SetApiT: ...
-    @overload
-    def __xor__(self:SetApiT, other) -> SetApiT: ...
+    if TYPE_CHECKING:
+        @overload
+        def __or__(self:SetApiT, other) -> SetApiT: ...
+        @overload
+        def __and__(self:SetApiT, other) -> SetApiT: ...
+        @overload
+        def __sub__(self:SetApiT, other) -> SetApiT: ...
+        @overload
+        def __xor__(self:SetApiT, other) -> SetApiT: ...
+        @overload
+        def issubset(self, other: Iterable) -> bool: ...
+        @overload
+        def issuperset(self, other: Iterable) -> bool: ...
+        @overload
+        def union(self:SetApiT, *others: Iterable) -> SetApiT: ...
+        @overload
+        def intersection(self:SetApiT, *others: Iterable) -> SetApiT: ...
+        @overload
+        def difference(self:SetApiT, *others: Iterable) -> SetApiT: ...
+        @overload
+        def symmetric_difference(self:SetApiT, other: Iterable) -> SetApiT: ...
 
     __or__  = Set[VT].__or__
     __and__ = Set[VT].__and__
@@ -64,19 +78,6 @@ class SetApi(Set[VT], abcs.Copyable):
 
     red = operd.reduce.template(freturn = '_from_iterable')
     app = operd.apply
-
-    @overload
-    def issubset(self, other: Iterable) -> bool: ...
-    @overload
-    def issuperset(self, other: Iterable) -> bool: ...
-    @overload
-    def union(self:SetApiT, *others: Iterable) -> SetApiT: ...
-    @overload
-    def intersection(self:SetApiT, *others: Iterable) -> SetApiT: ...
-    @overload
-    def difference(self:SetApiT, *others: Iterable) -> SetApiT: ...
-    @overload
-    def symmetric_difference(self:SetApiT, other: Iterable) -> SetApiT: ...
 
     issubset     = app(opr.le,   set.issubset)
     issuperset   = app(opr.ge,   set.issuperset)
@@ -101,14 +102,15 @@ class MutableSetApi(MutableSet[VT], SetApi[VT]):
 
     rep = operd.repeat
 
-    @overload
-    def update(self, *others: Iterable): ...
-    @overload
-    def intersection_update(self, *others: Iterable): ...
-    @overload
-    def difference_update(self, *others: Iterable): ...
-    @overload
-    def symmetric_difference_update(self, other: Iterable): ...
+    if TYPE_CHECKING:
+        @overload
+        def update(self, *others: Iterable): ...
+        @overload
+        def intersection_update(self, *others: Iterable): ...
+        @overload
+        def difference_update(self, *others: Iterable): ...
+        @overload
+        def symmetric_difference_update(self, other: Iterable): ...
 
     update = rep(opr.ior, set.update)
 
@@ -165,13 +167,9 @@ class SetView(SetApi[VT]):
         return f'{prefix}''{}'
 
     @classmethod
-    def _from_iterable(cls, it: Iterable[VT]):
+    def _from_iterable(cls: type[SetApiT], it: Iterable[VT]) -> SetApiT:
         return cls(setf(it))
 
 
-del(
-    overload,
-    opr, operd, EMPTY,
-    TypeVar,
-)
+del(abcs, opr, operd, EMPTY)
 

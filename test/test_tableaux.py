@@ -7,13 +7,12 @@ from pytableaux.errors import *
 from pytableaux.lexicals import Atomic, Constant, Predicated
 from pytableaux.logics.k import DefaultNodeRule as DefaultKRule
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.filters import Filters, NodeFilters
+from pytableaux.proof.filters import Filters, NodeFilters, getkey
 from pytableaux.proof.helpers import FilterHelper, MaxConsts
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
 from pytableaux.proof.tableaux import TableauxSystem as TabSys
 from pytableaux.proof.types import TabEvent, TabFlag, TabStatKey
 from pytableaux.tools import MapProxy
-from pytableaux.tools.callables import gets
 from pytest import raises
 
 from .tutils import BaseSuite, skip, using
@@ -380,7 +379,7 @@ class TestFilters(BaseSuite):
         class AttrFilt(Filters.Attr):
             attrmap = {'testname': 'designated'}
         f = AttrFilt(Lhs())
-        f.rget = gets.key()
+        f.rget = getkey#gets.key()
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
 

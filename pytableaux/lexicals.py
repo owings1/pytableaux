@@ -47,18 +47,15 @@ __all__ = (
 
 import enum
 import operator as opr
-from collections.abc import Set
 from itertools import chain, repeat
 from types import DynamicClassAttribute as dynca
-from typing import (TYPE_CHECKING, Annotated, Any, Callable, ClassVar,
-                    Iterable, Iterator, Literal, Mapping, Sequence,
-                    SupportsIndex, TypeVar, final, overload)
+from typing import (TYPE_CHECKING, Annotated, Any, ClassVar,
+                    Iterable, Iterator, Literal, Sequence,
+                    SupportsIndex, final, overload)
 
-import pytableaux.tools.abcs as abcs
 import pytableaux.tools.misc
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import _aux
 from pytableaux.lang._aux import *
 
 
@@ -66,9 +63,9 @@ from pytableaux.tools import MapProxy
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import NoSetAttr, lazy, membr, raisr, wraps
 from pytableaux.tools.hybrids import qset, qsetf
-from pytableaux.tools.mappings import DequeCache, ItemsIterator, MapCover, dmap
+from pytableaux.tools.mappings import DequeCache, dmap
 from pytableaux.tools.sequences import EMPTY_SEQ, SequenceApi, seqf
-from pytableaux.tools.sets import EMPTY_SET, setf, setm
+from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.typing import EnumDictType, IcmpFunc, IndexType, T
 
 NOARG = object()
@@ -480,7 +477,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
 
     @classmethod
     def _member_keys(cls, member: LexicalEnum):
-        """``EnumMeta`` hook.
+        """``EbcMeta`` hook.
         
         Add any values in ``.strings`` as keys for the member index.
         """
@@ -488,7 +485,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
 
     @classmethod
     def _on_init(cls, subcls: type[LexicalEnum]):
-        """``EnumMeta`` hook.
+        """``EbcMeta`` hook.
         
         Store the sequence index of each member to ``.index``.
         """
@@ -1447,7 +1444,7 @@ class LexType(LangCommonEnum):
 
     @classmethod
     def _after_init(cls):
-        """``EnumMeta`` hook.
+        """``EbcMeta`` hook.
         
         - Build `.classes` list.
         - For enum classes Operator & Quantifier:
@@ -1464,7 +1461,7 @@ class LexType(LangCommonEnum):
 
     @classmethod
     def _member_keys(cls, member: LexType):
-        """``EnumMeta`` hook.
+        """``EbcMeta`` hook.
         
         Add the class object to the member lookup keys.
         """
@@ -1731,88 +1728,6 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
         super().__setattr__(attr, value)
 
     __delattr__ = raiseae
-
-# class Parser(metaclass = ParserMeta):
-#     'Parser interface and coordinator.'
-
-#     __slots__ = 'table', 'preds', 'opts'
-
-#     notation: ClassVar[Notation]
-#     _defaults: ClassVar[dict[str, Any]] = {}
-#     _optkeys: ClassVar[Set[str]] = _defaults.keys()
-
-#     table: ParseTable
-#     preds: Predicates
-#     opts: Mapping[str, Any]
-
-#     def __init__(self, preds: Predicates = Predicate.System, /, table: ParseTable|str = None, **opts):
-#         if table is None:
-#             table = ParseTable.fetch(self.notation)
-#         elif isinstance(table, str):
-#             table = ParseTable.fetch(self.notation, table)
-#         self.table = table
-#         self.preds = preds
-
-#         if len(opts):
-#             opts = dmap(opts)
-#             opts &= self._optkeys
-#             opts %= self._defaults
-#         else:
-#             opts = dict(self._defaults)
-#         self.opts = opts
-
-#     @tools.abstract
-#     def parse(self, input: str) -> Sentence:
-#         """Parse a sentence from an input string.
-
-#         Args:
-#             input: The input string.
-        
-#         Returns:
-#             The parsed sentence.
-
-#         Raises:
-#             errors.ParseError: if input cannot be parsed.
-#         """
-#         raise NotImplementedError
-
-#     @overload
-#     def __call__(self, input: str) -> Sentence: ...
-#     __call__ = parse
-
-#     def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
-#         """Parse the input strings and create an argument.
-
-#         Args:
-#             conclusion: The argument's conclusion.
-#             premises: Premise strings, if any.
-#             title: An optional title.
-
-#         Returns:
-#             The argument.
-
-#         Raises:
-#             errors.ParseError: if input cannot be parsed.
-#             TypeError: for bad argument types.
-#         """
-#         return Argument(
-#             self.parse(conclusion),
-#             premises and tuple(map(self.parse, premises)),
-#             title = title,
-#         )
-
-#     @abcm.f.after
-#     def _aux_init(cls):
-#         _aux.Parser = cls
-
-#     def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
-#         'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
-#         super().__init_subclass__(**kw)
-#         abcm.merge_mroattr(subcls, '_defaults', supcls = __class__)
-#         subcls._optkeys = subcls._defaults.keys()
-#         subcls.__call__ = subcls.parse
-#         if primary:
-#             subcls.notation.Parser = subcls
 
 class LexWriter(metaclass = LexWriterMeta):
     'LexWriter interface and coordinator.'

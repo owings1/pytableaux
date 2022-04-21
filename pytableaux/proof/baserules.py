@@ -52,23 +52,38 @@ from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
 from pytableaux.proof.tableaux import ClosingRule, Rule
 from pytableaux.tools import abstract
 from pytableaux.tools.abcs import abcf
+from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import T
 
 FIRST_CONST_SET = frozenset({Constant.first()})
 
+class NoopRule(Rule):
+    "Rule stub that does not apply."
+    def _get_targets(self, branch: Branch, /) -> None:
+        pass
+    def _apply(self, target: Target, /):
+        pass
+    @staticmethod
+    def example_nodes():
+        "Returns empty set."
+        return EMPTY_SET
 
 class BaseClosureRule(ClosingRule):
 
     Helpers = BranchTarget,
 
-    def _get_targets(self, branch: Branch):
+    def _get_targets(self, branch: Branch) -> tuple[Target]:
+        """Return the cached target from ``BranchTarget`` helper as a
+        singleton, if any.
+        """
         target = self[BranchTarget][branch]
         if target is not None:
             return target,
 
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch):
         """For calculating a target's closure score. This default
-        implementation delegates to the abstract ``node_will_close_branch()``."""
+        implementation delegates to the abstract ``node_will_close_branch()``.
+        """
         for node in nodes:
             if self.node_will_close_branch(node, branch):
                 return True
@@ -77,9 +92,10 @@ class BaseClosureRule(ClosingRule):
     @abstract
     def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
         raise NotImplementedError
+
     @abstract
     def _branch_target_hook(self, node: Node, branch: Branch):
-        'Method for BranchTarget helper.'
+        'Method for ``BranchTarget`` helper.'
         raise NotImplementedError
 
     def group_score(self, target: Target, /):
@@ -98,11 +114,11 @@ class BaseSimpleRule(Rule):
     ticking: bool = True
 
     def _apply(self, target: Target):
-        'Delegates to AdzHelper._apply().'
+        'Delegates to ``AdzHelper._apply()``.'
         self[AdzHelper]._apply(target)
 
     def score_candidate(self, target: Target):
-        'Uses to AdzHelper.closure_score() to score the candidate target.'
+        'Uses to ``AdzHelper.closure_score()`` to score the candidate target.'
         return self[AdzHelper].closure_score(target)
 
 class BaseNodeRule(BaseSimpleRule):
@@ -113,7 +129,7 @@ class BaseNodeRule(BaseSimpleRule):
     ignore_ticked = True
 
     def example_nodes(self):
-        'Delegates to (FilterHelper.example_node(),)'
+        'Delegates to ``(FilterHelper.example_node(),)``'
         return self[FilterHelper].example_node(),
 
 class BaseSentenceRule(BaseNodeRule):
@@ -126,7 +142,7 @@ class BaseSentenceRule(BaseNodeRule):
     predicate  : Predicate |None = None
 
     def sentence(self, node: Node, /) -> Sentence:
-        'Delegates to NodeFilters.Sentence of FilterHelper.'
+        'Delegates to ``NodeFilters.Sentence`` of ``FilterHelper``.'
         return self[FilterHelper].filters[NodeFilters.Sentence].get(node)
 
 class PredicatedSentenceRule(BaseSentenceRule):
@@ -220,14 +236,14 @@ class GetNodeTargetsRule(BaseNodeRule):
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
-        '''Wrapped by @FilterHelper.node_targets and delegates to abstract method
-        _get_node_targets(),'''
+        '''Wrapped by ``@FilterHelper.node_targets`` and delegates to abstract method
+        ``_get_node_targets().``
+        '''
         return self._get_node_targets(node, branch)
 
     @abstract
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError
-
 
 def group(*items: T) -> tuple[T, ...]:
     return items

@@ -27,7 +27,7 @@ __all__ = 'arguments', 'argument', 'tabiter'
 
 from pytableaux import lexicals, parsers, tools
 
-_args = tools.MapProxy({
+data = tools.MapProxy({
     'Addition'                         : (('a',), 'Aab'),
     'Affirming a Disjunct 1'           : (('Aab', 'a'), 'b'),
     'Affirming a Disjunct 2'           : (('Aab', 'a'), 'Nb'),
@@ -127,7 +127,7 @@ _args = tools.MapProxy({
     'Universal from Existential'       : (('SxFx',), 'VxFx'),
 })
 
-_aliases = tools.MapProxy({
+aliases = tools.MapProxy({
     'Triviality 1': ('TRIV', 'TRIV1'),
     'Triviality 2': ('TRIV2',),
     'Law of Excluded Middle': ('LEM',),
@@ -168,7 +168,7 @@ _aliases = tools.MapProxy({
     'S5 Material Inference 1': ('S5', 'S51', 'RST'),
 })
 
-_titles = tuple(sorted(_args))
+titles = tuple(sorted(data))
 
 preds = lexicals.Predicates(((0,0,1), (1,0,1), (2,0,1)))
 
@@ -178,18 +178,17 @@ def argument():
     index = {}
     cache = {}
 
-    args = _args
 
-    for name in args:
+    for name in data:
         index.update({
             k.lower(): name for k in (
                 name,
                 name.replace(' ', ''),
-                *_aliases.get(name, ''),
+                *aliases.get(name, ''),
             )
         })
 
-    parsearg = parsers.Parser('polish', preds).argument
+    parsearg = parsers.Parser('polish', preds.copy()).argument
 
     def argument(key: str|lexicals.Argument) -> lexicals.Argument:
         if isinstance(key, lexicals.Argument):
@@ -198,7 +197,7 @@ def argument():
             raise TypeError(key)
         title = index[key.lower()]
         if title not in cache:
-            info = args[title]
+            info = data[title]
             if isinstance(info, tuple):
                 premises, conclusion = info
             else:
@@ -212,7 +211,7 @@ def argument():
 @tools.closure
 def arguments():
 
-    titles = _titles
+    # titles = _titles
 
     def arguments(*keys: str|lexicals.Argument) -> tuple[lexicals.Argument, ...]:
         if not len(keys):
@@ -224,12 +223,13 @@ def arguments():
 @tools.closure
 def tabiter():
 
-    titles = _titles
+    # titles = _titles
 
-    def tabiter(*logics, build = True, **opts):
+    from pytableaux.logics import registry
+
+    def tabiter(*logics, build = True, shuffle = None, **opts):
         if not len(logics):
-            import pytableaux.logics
-            logics = pytableaux.logics.__all__
+            logics = registry
         from pytableaux.proof.tableaux import Tableau
         for logic in logics:
             for title in titles:
@@ -242,7 +242,4 @@ def tabiter():
 
 del(
     tools,
-    _aliases,
-    _args,
-    _titles,
 )

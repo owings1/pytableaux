@@ -36,10 +36,10 @@ __all__ = (
     'MaxWorlds',
 )
 
-from copy import copy
 import functools
-from typing import (Any, Callable, Iterable, Iterator, Mapping, Sequence,
-                    final, overload)
+from copy import copy
+from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping,
+                    Sequence, final, overload)
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lexicals import Constant, Predicated, Sentence
@@ -48,14 +48,17 @@ from pytableaux.proof.common import Access, Branch, Node, Target
 from pytableaux.proof.filters import NodeFilter
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
 from pytableaux.proof.types import RuleAttr, RuleEvent, RuleHelper, TabEvent
-from pytableaux.tools import MapProxy, abstract
+from pytableaux.tools import MapProxy, abstract, closure
 from pytableaux.tools.abcs import abcm
-from pytableaux.tools.callables import cchain
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setf, setm
 from pytableaux.tools.typing import KT, VT, P, T, TypeInstDict
 
+
+TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
+NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]
+NodeTargetsGen = Callable[[Rule, Iterable[Node], Branch], Iterator[Target]]
 
 class AdzHelper:
 
@@ -371,7 +374,7 @@ class FilterNodeCache(BranchCache[set[Node]]):
     ignore_ticked: bool
 
     @abstract
-    def __call__(self, node: Node, branch: Branch):
+    def __call__(self, node: Node, branch: Branch, /) -> bool:
         'Whether to add the node to the branch set.'
         return False
 
@@ -397,10 +400,11 @@ class FilterNodeCache(BranchCache[set[Node]]):
 
     @classmethod
     def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
+        "``RuleHelper`` init hook. Verify `ignore_ticked` attribute."
         super().__init_ruleclass__(rulecls, **kw)
         if not abcm.isabstract(rulecls):
             if not hasattr(rulecls, RuleAttr.IgnoreTicked):
-                raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked.value)
+                raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked)
 
 class PredNodes(FilterNodeCache):
     'Track all predicated nodes on the branch.'
@@ -416,7 +420,11 @@ class FilterHelper(FilterNodeCache):
     """
     __slots__ = 'filters', '_garbage', 'pred',
 
-    filters: TypeInstDict[NodeFilter]
+    filters: TypeInstDict[NodeFilter[type[Rule]]]
+    "Mapping from ``NodeFilter`` class to instance."
+
+    pred: Callable[[Node], bool]
+    "A single predicate of all filters."
 
     _garbage: setm[tuple[Branch, Node]]
 
@@ -424,8 +432,8 @@ class FilterHelper(FilterNodeCache):
         super().__init__(rule)
         self._garbage = setm()
         self.filters = MapProxy({
-            Filter: Filter(rule) for Filter in
-            getattr(rule, RuleAttr.NodeFilters)
+            Filter: Filter(rule)
+            for Filter in getattr(rule, RuleAttr.NodeFilters)
         })
         self.pred = self.create_pred(self.filters)
 
@@ -439,16 +447,20 @@ class FilterHelper(FilterNodeCache):
             inst.pred = self.create_pred(inst.filters)
         return inst
 
-    def filter(self, node: Node, branch: Branch):
+    def filter(self, node: Node, branch: Branch, /) -> bool:
+        """Whether the node passes the filter."""
         if self.ignore_ticked and branch.is_ticked(node):
             return False
         return self.pred(node)
 
-    @overload
-    def __call__(self, node: Node, branch: Branch) -> bool: ...
+    if TYPE_CHECKING:
+        @overload
+        def __call__(self, node: Node, branch: Branch, /) -> bool: ...
+
     __call__ = filter
 
-    def example_node(self):
+    def example_node(self) -> dict[str, Any]:
+        """Construct an example node based on the filter conditions."""
         node = {}
         for filt in self.filters.values():
             n = filt.example_node()
@@ -456,7 +468,7 @@ class FilterHelper(FilterNodeCache):
                 node.update(n)
         return node
 
-    def release(self, node: Node, branch: Branch):
+    def release(self, node: Node, branch: Branch, /):
         'Mark the node/branch entry for garbage collection.'
         self._garbage.add((branch, node))
 
@@ -479,13 +491,22 @@ class FilterHelper(FilterNodeCache):
         )
 
     @staticmethod
-    def create_pred(filters: Mapping[Any, NodeFilter]):
-        return cchain.forall_collection(filters.values())
+    def create_pred(filters: Mapping[Any, NodeFilter], /) -> Callable[[Node], bool]:
+        """Create a predicate function for all the filters.
+
+        Unlike the ``.filter()``, this does not consider the `ignore_ticked` setting.
+        """
+        funcs = filters.values()
+        def pred(node: Node,/) -> bool:
+            return all(f(node) for f in funcs)
+        return pred
 
     @classmethod
     def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
+        "``RuleHelper`` init hook. Verify and merge the `NodeFilters` attribute."
         super().__init_ruleclass__(rulecls, **kw)
-        values = abcm.merge_mroattr(rulecls, RuleAttr.NodeFilters, supcls = Rule,
+        attr = RuleAttr.NodeFilters
+        values = abcm.merge_mroattr(rulecls, attr, supcls = Rule,
             reverse = False,
             default = EMPTY_QSET,
             transform = qsetf,
@@ -497,34 +518,62 @@ class FilterHelper(FilterNodeCache):
             if not abcm.isabstract(rulecls):
                 import warnings
                 warnings.warn(
-                    "EMPTY '%s' attribute for class '%s'. "
-                    "All nodes will be cached." % (
-                        RuleAttr.NodeFilters.value, rulecls
-                    )
+                    f"EMPTY '{attr}' attribute for {rulecls}. "
+                    "All nodes will be cached."
                 )
 
     @classmethod
-    def node_targets(cls,
-        fget_node_targets: Callable[[Rule, Iterable[Node], Branch], Any],
-    ) -> Callable[[Rule, Branch], Sequence[Target]]:
-        """
-        Method decorator to only iterate through nodes matching the
-        configured FilterHelper filters.
+    @closure
+    def node_targets():
 
-        The rule may return a falsy value for no targets, a single
-        target (non-empty Mapping), an Iterator or a Sequence.
-        
-        Returns a flat list of targets.
-        """
-        fiter_targets = _targets_from_nodes_iter(fget_node_targets)
-        @functools.wraps(fiter_targets)
-        def get_targets_filtered(rule: Rule, branch: Branch):
-            helper = rule.helpers[cls]
-            helper.gc()
-            nodes = helper[branch]
-            return tuple(fiter_targets(rule, nodes, branch))
-        return get_targets_filtered
+        def make_targets_fn(cls: type[FilterHelper], node_targets_fn: NodeTargetsFn) -> TargetsFn:
+            """
+            Method decoratorp to only iterate through nodes matching the
+            configured FilterHelper filters.
 
+            The rule may return a falsy value for no targets, a single
+            target (non-empty Mapping), an Iterator or a Sequence.
+            
+            Returns a flat list of targets.
+            """
+            fiter_targets = make_targets_iter(node_targets_fn)
+            @functools.wraps(fiter_targets)
+            def get_targets_filtered(rule: Rule, branch: Branch):
+                helper = rule[cls]
+                helper.gc()
+                nodes = helper[branch]
+                return tuple(fiter_targets(rule, nodes, branch))
+            return get_targets_filtered
+
+        def create(it, r: Rule, b: Branch, n: Node) -> Target:
+            if isinstance(it, Target):
+                print(r)
+            return Target(it, rule = r, branch = b, node = n)
+
+        def make_targets_iter(node_targets_fn: NodeTargetsFn) -> NodeTargetsGen:
+            @functools.wraps(node_targets_fn)
+            def targets_gen(rule: Rule, nodes: Iterable[Node], branch: Branch):
+                for node in nodes:
+                    results = node_targets_fn(rule, node, branch)
+                    if not results:
+                        # Filter anything falsy.
+                        continue
+                    if isinstance(results, Mapping):
+                        # Single target result.
+                        yield create(results, rule, branch, node)
+                    else:
+                        # Multiple targets result.
+                        check.inst(results, (Sequence, Iterator))
+                        print(type(results), rule.name)
+                        for res in results:# filter(bool, results):
+                            # if not(res):
+                            #     print(res)
+                            # Filter anything falsy.
+                            yield create(res, rule, branch, node)
+
+            return targets_gen
+
+        return make_targets_fn
 
 class NodeConsts(BranchDictCache[Node, set[Constant]]):
     """Track the unapplied constants per branch for each potential node.
@@ -863,25 +912,6 @@ class EllipsisExampleHelper:
         self.applied.add(branch)
         branch.add(self.mynode)
 
-def _targets_from_nodes_iter(fget_node_targets: Callable[P, Any]) -> Callable[P, Iterator[Target]]:
-    @functools.wraps(fget_node_targets)
-    def targets_iter(rule: Rule, nodes: Iterable[Node], branch: Branch):
-        for node in nodes:
-            results = fget_node_targets(rule, node, branch)
-            if not results:
-                # Filter anything falsy.
-                continue
-            if isinstance(results, Mapping):
-                # Single target result.
-                yield Target(results, rule = rule, branch = branch, node = node)
-                continue
-            check.inst(results, (Sequence, Iterator))
-            # Multiple targets result.
-            for res in filter(bool, results):
-                # assert isinstance(res, Mapping)
-                # Filter anything falsy.
-                yield Target(res, rule = rule, branch = branch, node = node)
 
-    return targets_iter
 
 del(abstract, final, overload)

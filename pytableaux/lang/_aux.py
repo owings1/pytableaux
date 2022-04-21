@@ -8,8 +8,6 @@ __all__ = (
     'LangCommonEnumMeta',
     'ArgumentMeta',
 
-    'ParserMeta',
-
     'LangCommonEnum',
 
     'Notation',
@@ -68,11 +66,11 @@ class LangCommonMeta(abcs.AbcMeta):
     __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.AbcMeta)
 
-class LangCommonEnumMeta(abcs.EnumMeta):
+class LangCommonEnumMeta(abcs.EbcMeta):
     'Common Enum metaclass for lang classes.'
     _readonly : bool
     __delattr__ = raiseae
-    __setattr__ = nosetattr(abcs.EnumMeta)
+    __setattr__ = nosetattr(abcs.EbcMeta)
 
 class ArgumentMeta(LangCommonMeta):
     'Argument Metaclass.'
@@ -80,19 +78,6 @@ class ArgumentMeta(LangCommonMeta):
     def __call__(cls, *args, **kw):
         if len(args) == 1 and not len(kw) and isinstance(args[0], cls):
             return args[0]
-        return super().__call__(*args, **kw)
-
-class ParserMeta(LangCommonMeta):
-    'Parser Metaclass.'
-
-    def __call__(cls, *args, **kw):
-        if cls is Parser:
-            if args:
-                notn = Notation(args[0])
-                args = args[1:]
-            else:
-                notn = Notation.default
-            return notn.Parser(*args, **kw)
         return super().__call__(*args, **kw)
 
 #==========================+

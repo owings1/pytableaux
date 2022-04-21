@@ -48,9 +48,8 @@ from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.types import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
                                     RuleHelper, RuleMeta, TabEvent, TabFlag,
                                     TabStatKey, TabTimers)
-from pytableaux.tools import abstract, closure, static
+from pytableaux.tools import abstract, closure, static, isstr
 from pytableaux.tools.abcs import Abc
-from pytableaux.tools.callables import preds
 from pytableaux.tools.decorators import raisr
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
@@ -61,13 +60,14 @@ from pytableaux.tools.sequences import (SequenceApi, SequenceCover, absindex,
                                         seqf, seqm)
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.timing import StopWatch
+from pytableaux.tools.typing import RuleT
 
 if TYPE_CHECKING:
     from pytableaux.logics import LogicLookupKey
     from pytableaux.tools.typing import F, T, TypeInstDict
 
 
-RuleT = TypeVar('RuleT', bound = 'Rule')
+# RuleT = TypeVar('RuleT', bound = 'Rule')
 
 NOARG = object()
 NOGET = object()
@@ -89,7 +89,7 @@ def locking(method: F) -> F:
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
 
-    _defaults = dict(is_rank_optim = True, nolock = False)
+    _defaults: ClassVar[Mapping[str, Any]] = dict(is_rank_optim = True, nolock = False)
     _optkeys: ClassVar[setf[str]]
 
     #: Helper classes.
@@ -182,14 +182,17 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     @abstract
     def _get_targets(self, branch: Branch, /) -> Sequence[Target]|None:
+        "Return targets that the rule should apply to."
         return None
 
     @abstract
     def _apply(self, target: Target, /) -> None:
+        "Apply the rule to a target returned from ``._get_targets()``."
         raise NotImplementedError
 
     @abstract
-    def example_nodes(self) -> Sequence[Mapping]:
+    def example_nodes(self) -> Iterable[Mapping]:
+        "Return example nodes that would trigger the rule."
         raise NotImplementedError
 
     def sentence(self, node: Node, /) -> Sentence|None:
@@ -206,7 +209,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         return 0.0
 
     @final
-    def target(self, branch: Branch) -> Target:
+    def target(self, branch: Branch) -> Target|None:
+        "Get the rule target if it applies."
         with self.timers['search']:
             targets = self._get_targets(branch)
             if targets:
@@ -214,7 +218,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
                 return self.__select_best_target(targets)
 
     @final
-    def apply(self, target: Target):
+    def apply(self, target: Target) -> None:
+        "Apply the rule to a target returned from ``.target()``."
         with self.timers['apply']:
             self.emit(RuleEvent.BEFORE_APPLY, target)
             self._apply(target)
@@ -225,13 +230,17 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         """Create a new branch on the tableau. Convenience for
         ``self.tableau.branch()``.
 
-        :param parent: The parent branch, if any.
-        :return: The new branch.
+        Args:
+            parent: The parent branch, if any.
+
+        Returns:
+            The new branch.
         """
         return self.tableau.branch(parent)
 
     @classmethod
     def test(cls, /, *, noassert = False):
+        """Run a simple test on the rule."""
         tab = Tableau()
         tab.rules.append(cls)
         rule = tab.rules.get(cls)
@@ -647,7 +656,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
     def names(self) -> seqm[str]:
         'List the named groups.'
         return seqm(filter(
-            preds.instanceof[str], (group.name for group in self)
+            isstr, (group.name for group in self)
         ))
 
     def __iter__(self) -> Iterator[RuleGroup]:

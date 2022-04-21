@@ -27,6 +27,37 @@ from pytableaux.tools import closure
 from itertools import islice
 from types import ModuleType
 
+class track:
+    """Track additions change updates to locals.
+    
+    Usage::
+
+        a = 1
+        b = 2
+    
+        with track(locals()) as ns:
+            b = 3
+            c = 4
+    
+    The value of ``ns`` will be ``{'b': 3, 'c': 4}``
+    """
+    __slots__ = 'ref', 'builder'
+    def __init__(self, ref: Mapping):
+        self.ref = ref
+    def __enter__(self):
+        self.builder = dict(self.ref)
+        return self.builder
+    def __exit__(self, typ, vlu, traceback):
+        builder = self.builder
+        diff = {}
+        for key, value in self.ref.items():
+            if builder.get(key, builder) is not value:
+                if value is not builder:
+                    diff[key] = value
+        builder.clear()
+        builder.update(diff)
+
+
 def dcopy(a: Mapping, /) -> dict:
     'Basic dict copy of a mapping, recursive for mapping values.'
     return {
