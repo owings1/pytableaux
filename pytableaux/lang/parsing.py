@@ -29,12 +29,11 @@ from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
 from pytableaux.lang._aux import *
 from pytableaux.lexicals import (Argument, Atomic, BiCoords, Constant, LexType,
-                                 Marking, Notation, Operated)
-from pytableaux.lexicals import Operator as Oper
-from pytableaux.lexicals import (Parameter, Predicate, Predicated, Predicates,
-                                 Quantified, Quantifier, Sentence, Variable)
+                                 Marking, Notation, Operated, Operator,
+                                 Parameter, Predicate, Predicated, Predicates,
+                                 Quantified, Sentence, Variable)
 from pytableaux.tools import MapProxy, abstract, key0
-from pytableaux.tools.abcs import abcm, Ebc
+from pytableaux.tools.abcs import Ebc, abcm
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap
 from pytableaux.tools.sequences import seqf
@@ -267,10 +266,6 @@ class ParseContext:
         msg = f"{pfx} '{char}' at position {self.pos}"
         return msg
 
-_PRED_CTYPES = setf({LexType.Predicate, Predicate.System})
-_BASE_CTYPES = _PRED_CTYPES | {LexType.Quantifier, LexType.Atomic}
-_PARAM_CTYPES = setf({LexType.Constant, LexType.Variable})
-
 class Ctype(frozenset, Ebc):
 
     pred = {LexType.Predicate, Predicate.System}
@@ -308,7 +303,7 @@ class BaseParser(Parser):
         Raises:
             ParseError:
         """
-        ctype = context.assert_current_in(_BASE_CTYPES)
+        ctype = context.assert_current_in(Ctype.base)
         if ctype is LexType.Atomic:
             return self._read_atomic(context)
         if ctype is LexType.Quantifier:
@@ -369,7 +364,7 @@ class BaseParser(Parser):
 
     def _read_parameter(self, context: ParseContext, /) -> Parameter:
         'Read a single parameter (constant or variable)'
-        ctype = context.assert_current_in(_PARAM_CTYPES)
+        ctype = context.assert_current_in(Ctype.param)
         if ctype is LexType.Constant:
             return self._read_constant(context)
         cpos = context.pos
@@ -435,7 +430,7 @@ class PolishParser(BaseParser, primary = True):
     def _read(self, context: ParseContext, /) -> Sentence:
         ctype = context.assert_current()
         if ctype is LexType.Operator:
-            oper: Oper = self.table.value(context.current())
+            oper: Operator = self.table.value(context.current())
             context.advance()
             return Operated(
                 oper,
@@ -479,7 +474,7 @@ class StandardParser(BaseParser, primary = True):
         return super()._read(context)
 
     def __read_operated(self, context: ParseContext, /) -> Operated:
-        oper: Oper = self.table.value(context.current())
+        oper: Operator = self.table.value(context.current())
         # only unary operators can be prefix operators
         if oper.arity != 1:
             raise ParseError(
@@ -491,7 +486,7 @@ class StandardParser(BaseParser, primary = True):
 
     def __read_infix_predicated(self, context: ParseContext, /) -> Predicated:
         lhp = self._read_parameter(context)
-        context.assert_current_in(_PRED_CTYPES)
+        context.assert_current_in(Ctype.pred)
         ppos = context.pos
         pred = self._read_predicate(context)
         arity = pred.arity
@@ -520,7 +515,7 @@ class StandardParser(BaseParser, primary = True):
             elif ptype is Marking.paren_open:
                 depth += 1
             elif ptype is LexType.Operator:
-                peek_oper: Oper = self.table.value(peek)
+                peek_oper: Operator = self.table.value(peek)
                 if peek_oper.arity == 2 and depth == 1:
                     oper_pos = context.pos + length
                     if oper is not None:
@@ -658,100 +653,3 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
         super().__setattr__(name, value)
 
     __delattr__ = raiseae
-
-ParseTable._initcache(Notation, {
-    Notation.standard: dict(
-        default = {
-            'A' : (LexType.Atomic, 0),
-            'B' : (LexType.Atomic, 1),
-            'C' : (LexType.Atomic, 2),
-            'D' : (LexType.Atomic, 3),
-            'E' : (LexType.Atomic, 4),
-            '*' : (LexType.Operator, Oper.Assertion),
-            '~' : (LexType.Operator, Oper.Negation),
-            '&' : (LexType.Operator, Oper.Conjunction),
-            'V' : (LexType.Operator, Oper.Disjunction),
-            '>' : (LexType.Operator, Oper.MaterialConditional),
-            '<' : (LexType.Operator, Oper.MaterialBiconditional),
-            '$' : (LexType.Operator, Oper.Conditional),
-            '%' : (LexType.Operator, Oper.Biconditional),
-            'P' : (LexType.Operator, Oper.Possibility),
-            'N' : (LexType.Operator, Oper.Necessity),
-            'x' : (LexType.Variable, 0),
-            'y' : (LexType.Variable, 1),
-            'z' : (LexType.Variable, 2),
-            'v' : (LexType.Variable, 3),
-            'a' : (LexType.Constant, 0),
-            'b' : (LexType.Constant, 1),
-            'c' : (LexType.Constant, 2),
-            'd' : (LexType.Constant, 3),
-            '=' : (Predicate.System, Predicate.System.Identity),
-            '!' : (Predicate.System, Predicate.System.Existence),
-            'F' : (LexType.Predicate, 0),
-            'G' : (LexType.Predicate, 1),
-            'H' : (LexType.Predicate, 2),
-            'O' : (LexType.Predicate, 3),
-            'L' : (LexType.Quantifier, Quantifier.Universal),
-            'X' : (LexType.Quantifier, Quantifier.Existential),
-            '(' : (Marking.paren_open, 0),
-            ')' : (Marking.paren_close, 0),
-            ' ' : (Marking.whitespace, 0),
-            '0' : (Marking.digit, 0),
-            '1' : (Marking.digit, 1),
-            '2' : (Marking.digit, 2),
-            '3' : (Marking.digit, 3),
-            '4' : (Marking.digit, 4),
-            '5' : (Marking.digit, 5),
-            '6' : (Marking.digit, 6),
-            '7' : (Marking.digit, 7),
-            '8' : (Marking.digit, 8),
-            '9' : (Marking.digit, 9),
-        }
-    ),
-    Notation.polish: dict(
-        default = {
-            'a' : (LexType.Atomic, 0),
-            'b' : (LexType.Atomic, 1),
-            'c' : (LexType.Atomic, 2),
-            'd' : (LexType.Atomic, 3),
-            'e' : (LexType.Atomic, 4),
-            'T' : (LexType.Operator, Oper.Assertion),
-            'N' : (LexType.Operator, Oper.Negation),
-            'K' : (LexType.Operator, Oper.Conjunction),
-            'A' : (LexType.Operator, Oper.Disjunction),
-            'C' : (LexType.Operator, Oper.MaterialConditional),
-            'E' : (LexType.Operator, Oper.MaterialBiconditional),
-            'U' : (LexType.Operator, Oper.Conditional),
-            'B' : (LexType.Operator, Oper.Biconditional),
-            'M' : (LexType.Operator, Oper.Possibility),
-            'L' : (LexType.Operator, Oper.Necessity),
-            'x' : (LexType.Variable, 0),
-            'y' : (LexType.Variable, 1),
-            'z' : (LexType.Variable, 2),
-            'v' : (LexType.Variable, 3),
-            'm' : (LexType.Constant, 0),
-            'n' : (LexType.Constant, 1),
-            'o' : (LexType.Constant, 2),
-            's' : (LexType.Constant, 3),
-            'I' : (Predicate.System, Predicate.System.Identity),
-            'J' : (Predicate.System, Predicate.System.Existence),
-            'F' : (LexType.Predicate, 0),
-            'G' : (LexType.Predicate, 1),
-            'H' : (LexType.Predicate, 2),
-            'O' : (LexType.Predicate, 3),
-            'V' : (LexType.Quantifier, Quantifier.Universal),
-            'S' : (LexType.Quantifier, Quantifier.Existential),
-            ' ' : (Marking.whitespace, 0),
-            '0' : (Marking.digit, 0),
-            '1' : (Marking.digit, 1),
-            '2' : (Marking.digit, 2),
-            '3' : (Marking.digit, 3),
-            '4' : (Marking.digit, 4),
-            '5' : (Marking.digit, 5),
-            '6' : (Marking.digit, 6),
-            '7' : (Marking.digit, 7),
-            '8' : (Marking.digit, 8),
-            '9' : (Marking.digit, 9),
-        },
-    ),
-})

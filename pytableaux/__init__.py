@@ -62,6 +62,16 @@ import pytableaux.tools.callables
 
 import pytableaux.lexicals
 import pytableaux.parsers
+
+@tools.closure
+def _():
+    from pytableaux.lexicals import RenderSet, Notation
+    from pytableaux.parsers import ParseTable
+    from pytableaux.lang import _symdata
+
+    RenderSet._initcache(Notation, _symdata.rendersets())
+    ParseTable._initcache(Notation, _symdata.parsetables())
+
 import pytableaux.lang._repr
 
 @tools.closure
