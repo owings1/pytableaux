@@ -50,15 +50,18 @@ import operator as opr
 from collections.abc import Set
 from itertools import chain, repeat
 from types import DynamicClassAttribute as dynca
-from typing import (Annotated, Any, Callable, ClassVar, Iterable, Iterator,
-                    Literal, Mapping, NamedTuple, Sequence, SupportsIndex,
-                    TypeVar, final, overload)
+from typing import (TYPE_CHECKING, Annotated, Any, Callable, ClassVar,
+                    Iterable, Iterator, Literal, Mapping, Sequence,
+                    SupportsIndex, TypeVar, final, overload)
 
 import pytableaux.tools.abcs as abcs
 import pytableaux.tools.misc
 from pytableaux import tools
-from pytableaux.lang._aux import BiCoords, TriCoords
 from pytableaux.errors import Emsg, check
+from pytableaux.lang import _aux
+from pytableaux.lang._aux import *
+
+
 from pytableaux.tools import MapProxy
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import NoSetAttr, lazy, membr, raisr, wraps
@@ -66,81 +69,19 @@ from pytableaux.tools.hybrids import qset, qsetf
 from pytableaux.tools.mappings import DequeCache, ItemsIterator, MapCover, dmap
 from pytableaux.tools.sequences import EMPTY_SEQ, SequenceApi, seqf
 from pytableaux.tools.sets import EMPTY_SET, setf, setm
-from pytableaux.tools.typing import EnumDictType, IndexType, T
+from pytableaux.tools.typing import EnumDictType, IcmpFunc, IndexType, T
 
 NOARG = object()
 EMPTY_IT = iter(EMPTY_SEQ)
 ITEM_CACHE_SIZE = 10000
 
-TbsT   = TypeVar('TbsT',   bound = 'TableStore')
-"TypeVar bound to `TableStore`."
+if TYPE_CHECKING:
+    pass
 
-CrdT   = TypeVar('CrdT',   bound = 'CoordsItem')
-"TypeVar bound to `CoordsItem`."
-
-LexT   = TypeVar('LexT',   bound = 'Lexical')
-"TypeVar bound to `Lexical`."
-
-LexItT = TypeVar('LexItT', bound = 'LexicalItem')
-"TypeVar bound to `LexicalItem`."
-
-SenT   = TypeVar('SenT',   bound = 'Sentence')
-"TypeVar bound to `Sentence`."
-
-IcmpFunc  = Callable[[int, int], bool]
-"Function that compares two ints and returns a boolean value, e.g. `>` or `<`."
-
-SpecType = tuple[int|str|tuple, ...]
-"Tuple with integers, strings, or such nested tuples."
-
-IdentType = tuple[str, SpecType]
-"Tuple of (classname, spec)"
-
-ParameterSpec  = BiCoords
-ParameterIdent = tuple[str, BiCoords]
-
-QuantifierSpec = tuple[str]
-OperatorSpec   = tuple[str]
-
-PredicateSpec = TriCoords
-PredicateRef  = tuple[int, ...] | str
-
-AtomicSpec     = BiCoords
-PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
-QuantifiedSpec = tuple[str, BiCoords, IdentType]
-OperandsSpec   = tuple[IdentType, ...]
-OperatedSpec   = tuple[str, OperandsSpec]
-
-# Deferred
-
-# OperCallArg     = Iterable[Sentence] | Sentence | OperandsSpec
-# PredsItemRef    = PredicateRef  | Predicate
-# PredsItemSpec   = PredicateSpec | Predicate
-# QuantifiedItem  = Quantifier | Variable | Sentence
-# ParseTableValue = int|Lexical
-# ParseTableKey   = LexType|Marking|type[Predicate.System]
 
 ##############################################################
 
-nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
-raiseae = raisr(AttributeError)
-
-class AbcCommonMeta(abcs.AbcMeta):
-    """Common metaclass for lang classes. The nosetattr member is
-    shared among these classes and is activated after the modules are fully
-    initialized.
-    """
-    _readonly : bool
-    __delattr__ = raiseae
-    __setattr__ = nosetattr(abcs.AbcMeta)
-
-class EnumCommonMeta(abcs.EnumMeta):
-    'Common Enum metaclass for lang classes.'
-    _readonly : bool
-    __delattr__ = raiseae
-    __setattr__ = nosetattr(abcs.EnumMeta)
-
-class LexicalItemMeta(AbcCommonMeta):
+class LexicalItemMeta(LangCommonMeta):
     """Common metaclass for non-Enum lexicals.
     """
 
@@ -190,15 +131,7 @@ class LexicalItemMeta(AbcCommonMeta):
         cache[clsname, spec] = inst
         return inst
 
-class ArgumentMeta(AbcCommonMeta):
-    'Argument Metaclass.'
-
-    def __call__(cls, *args, **kw):
-        if len(args) == 1 and not len(kw) and isinstance(args[0], cls):
-            return args[0]
-        return super().__call__(*args, **kw)
-
-class LexWriterMeta(AbcCommonMeta):
+class LexWriterMeta(LangCommonMeta):
     'LexWriter Metaclass.'
 
     def __call__(cls, *args, **kw):
@@ -246,33 +179,6 @@ class LexWriterMeta(AbcCommonMeta):
             syslws.pop('unset')
 
         return dynca(fget, fset, fdel, doc = fget.__doc__)
-
-class ParserMeta(AbcCommonMeta):
-    'Parser Metaclass.'
-
-    def __call__(cls, *args, **kw):
-        if cls is Parser:
-            if args:
-                notn = Notation(args[0])
-                args = args[1:]
-            else:
-                notn = Notation.default
-            try:
-                parsercls = notn.Parser
-            except AttributeError:
-                raise
-                # import pytableaux.parsers
-                # parsercls = notn.Parser
-            return parsercls(*args, **kw)
-        return super().__call__(*args, **kw)
-
-class EnumCommon(abcs.Ebc, metaclass = EnumCommonMeta):
-    'Common Enum base class for lang classes.'
-
-    __slots__   = 'value', '_value_', '_name_', '__objclass__'
-
-    __delattr__ = raiseae
-    __setattr__ = nosetattr(abcs.Ebc, cls = True)
 
 @abcm.clsafter
 class Lexical:
@@ -487,7 +393,7 @@ class Lexical:
 
 LexicalItemMeta.Cache = DequeCache(Lexical, ITEM_CACHE_SIZE)
 
-class LexicalEnum(Lexical, EnumCommon, lexcopy = True):
+class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
     """Base Enum implementation of Lexical. Subclassed by ``Quantifier``
     and ``Operator`` classes.
     """
@@ -692,61 +598,6 @@ class CoordsItem(LexicalItem):
             raise TypeError(f'Abstract: {type(self)}') from None
         if coords.subscript < 0:
             raise ValueError('subscript %d < %d' % (coords.subscript, 0))
-
-class TableStore(metaclass = AbcCommonMeta):
-
-    default_fetch_key: ClassVar[str]
-    _instances: ClassVar[dict[Notation, dict[str, TbsT]]]
-
-    __slots__ = EMPTY_SET
-
-    @classmethod
-    def load(cls: type[TbsT], notn: Notation, key: str, data: Mapping, /) -> TbsT:
-        check.inst(key, str)
-        notn = Notation[notn]
-        idx = cls._instances[notn]
-        if key in idx:
-            raise Emsg.DuplicateKey((notn, key))
-        return idx.setdefault(key, cls(data))
-
-    @classmethod
-    def fetch(cls: type[TbsT], notn: Notation, key: str = None, /) -> TbsT:
-        if key is None:
-            key = cls.default_fetch_key
-        notn = Notation[notn]
-        idx = cls._instances[notn]
-        try:
-            return idx[key]
-        except KeyError:
-            pass
-        store = cls._builtin[notn]
-        data = store[key]
-        return cls.load(notn, key, data)
-
-    @classmethod
-    def available(cls, notn: Notation) -> list[str]:
-        notn = Notation(notn)
-        idx = cls._instances[notn]
-        store = cls._builtin[notn]
-        return sorted(set(idx).union(store))
-
-    @classmethod
-    def _initcache(cls,
-        notns: Iterable[Notation],
-        builtin: Mapping[Notation, Mapping[str, Mapping]]
-    ):
-        if cls is __class__ or hasattr(cls, '_builtin'):
-            raise TypeError
-        cls._builtin = builtin = MapCover(dict(builtin))
-        notns = set(notns).union(builtin)
-        cls._instances = {notn: {} for notn in notns}
-        # Prefetch
-        for notn in notns:
-            # Default for notation.
-            cls.fetch(notn)
-            # All available.
-            for key in cls.available(notn):
-                cls.fetch(notn, key)
 
 ##############################################################
 
@@ -977,7 +828,7 @@ class Predicate(CoordsItem):
 
     #******  System Predicate enum
 
-    class System(EnumCommon):
+    class System(LangCommonEnum):
         'System predicates enum.'
 
         Existence : Annotated[Predicate, (-2, 0, 1, 'Existence')]
@@ -1016,9 +867,6 @@ class Predicate(CoordsItem):
     _value_ = sysset(_value_)
     _name_  = sysset(_name_)
     __objclass__ = sysset(__objclass__)
-
-PredsItemSpec = PredicateSpec | Predicate
-PredsItemRef  = PredicateRef  | Predicate
 
 ##############################################################
 
@@ -1127,9 +975,6 @@ class Sentence(LexicalItem):
     # neg      - -- negative?
     # pos      + -- assertion?
     pass
-
-OperCallArg = Iterable[Sentence] | Sentence | OperandsSpec
-QuantifiedItem = Quantifier | Variable | Sentence
 
 @final
 class Atomic(CoordsItem, Sentence):
@@ -1524,7 +1369,7 @@ class Operated(Sentence, Sequence[Sentence]):
 ##############################################################
 ##############################################################
 
-class LexType(EnumCommon):
+class LexType(LangCommonEnum):
     'LexType metadata enum class for concrete types.'
 
     classes: ClassVar[qsetf[type[Lexical]]]
@@ -1627,7 +1472,7 @@ class LexType(EnumCommon):
 
 ##############################################################
 
-class Predicates(qset[Predicate], metaclass = AbcCommonMeta,
+class Predicates(qset[Predicate], metaclass = LangCommonMeta,
     hooks = {qset: dict(cast = Predicate)}
 ):
     'Predicate store. An ordered set with a multi-keyed lookup index.'
@@ -1887,160 +1732,87 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
 
     __delattr__ = raiseae
 
-##############################################################
-#                                                            #
-#       LexWriters                                           #
-#                                                            #
-##############################################################
+# class Parser(metaclass = ParserMeta):
+#     'Parser interface and coordinator.'
 
-class Marking(EnumCommon):
-    'Miscellaneous marking/punctuation enum.'
+#     __slots__ = 'table', 'preds', 'opts'
 
-    paren_open  = enum.auto()
-    paren_close = enum.auto()
-    whitespace  = enum.auto()
-    digit       = enum.auto()
-    meta        = enum.auto()
-    subscript   = enum.auto()
+#     notation: ClassVar[Notation]
+#     _defaults: ClassVar[dict[str, Any]] = {}
+#     _optkeys: ClassVar[Set[str]] = _defaults.keys()
 
-class Notation(EnumCommon):
-    'Notation (polish/standard) enum class.'
+#     table: ParseTable
+#     preds: Predicates
+#     opts: Mapping[str, Any]
 
-    default: ClassVar[Notation]
-    "The default notation."
+#     def __init__(self, preds: Predicates = Predicate.System, /, table: ParseTable|str = None, **opts):
+#         if table is None:
+#             table = ParseTable.fetch(self.notation)
+#         elif isinstance(table, str):
+#             table = ParseTable.fetch(self.notation, table)
+#         self.table = table
+#         self.preds = preds
 
-    @abcm.f.after
-    def _(cls): cls.default = cls.polish
+#         if len(opts):
+#             opts = dmap(opts)
+#             opts &= self._optkeys
+#             opts %= self._defaults
+#         else:
+#             opts = dict(self._defaults)
+#         self.opts = opts
 
-    charsets         : setm[str]
-    "All render charsets for the notation's writer classes."
+#     @tools.abstract
+#     def parse(self, input: str) -> Sentence:
+#         """Parse a sentence from an input string.
 
-    default_charset  : str
-    "The render charset of the notation's default writer."
-
-    writers          : setm[type[LexWriter]]
-    "All writer classes for the notation."
-
-    DefaultWriter    : type[LexWriter]
-    "The notations's default writer class."
-
-    rendersets       : setm[RenderSet]
-    "All RenderSets of the notation."
-
-    Parser           : type[Parser]
-    "The notation's parser class."
-
-    polish   = enum.auto(), 'unicode'
-    standard = enum.auto(), 'unicode'
-
-    def __init__(self, num, default_charset: str, /):
-        self.charsets = setm((default_charset,))
-        self.default_charset = default_charset
-        self.writers = setm()
-        self.DefaultWriter = None
-        self.rendersets = setm()
-
-    __slots__ = (
-        'Parser',
-        'writers', 'DefaultWriter',
-        'rendersets', 'charsets', 'default_charset',
-    )
-
-    @classmethod
-    def get_common_charsets(cls):
-        "Get charsets common to all notations."
-        charsets: set[str] = set(
-            charset
-            for notn in Notation
-                for charset in notn.charsets
-        )
-        for notn in Notation:
-            charsets = charsets.intersection(notn.charsets)
-        return sorted(charsets)
-
-    def __setattr__(self, name, value, /, *, sa2 = enum.Enum.__setattr__):
-        if name == 'Parser' and not hasattr(self, name):
-            sa2(self, name, value)
-        else:
-            super().__setattr__(name, value)
-
-class Parser(metaclass = ParserMeta):
-    'Parser interface and coordinator.'
-
-    __slots__ = 'table', 'preds', 'opts'
-
-    notation: ClassVar[Notation]
-    _defaults: ClassVar[dict[str, Any]] = {}
-    _optkeys: ClassVar[Set[str]] = _defaults.keys()
-
-    table: ParseTable
-    preds: Predicates
-    opts: Mapping[str, Any]
-
-    def __init__(self, preds: Predicates = Predicate.System, /, table: ParseTable|str = None, **opts):
-        if table is None:
-            table = ParseTable.fetch(self.notation)
-        elif isinstance(table, str):
-            table = ParseTable.fetch(self.notation, table)
-        self.table = table
-        self.preds = preds
-
-        if len(opts):
-            opts = dmap(opts)
-            opts &= self._optkeys
-            opts %= self._defaults
-        else:
-            opts = dict(self._defaults)
-        self.opts = opts
-
-    @tools.abstract
-    def parse(self, input: str) -> Sentence:
-        """Parse a sentence from an input string.
-
-        Args:
-            input: The input string.
+#         Args:
+#             input: The input string.
         
-        Returns:
-            The parsed sentence.
+#         Returns:
+#             The parsed sentence.
 
-        Raises:
-            errors.ParseError: if input cannot be parsed.
-        """
-        raise NotImplementedError
+#         Raises:
+#             errors.ParseError: if input cannot be parsed.
+#         """
+#         raise NotImplementedError
 
-    @overload
-    def __call__(self, input: str) -> Sentence: ...
-    __call__ = parse
+#     @overload
+#     def __call__(self, input: str) -> Sentence: ...
+#     __call__ = parse
 
-    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
-        """Parse the input strings and create an argument.
+#     def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
+#         """Parse the input strings and create an argument.
 
-        Args:
-            conclusion: The argument's conclusion.
-            premises: Premise strings, if any.
-            title: An optional title.
+#         Args:
+#             conclusion: The argument's conclusion.
+#             premises: Premise strings, if any.
+#             title: An optional title.
 
-        Returns:
-            The argument.
+#         Returns:
+#             The argument.
 
-        Raises:
-            errors.ParseError: if input cannot be parsed.
-            TypeError: for bad argument types.
-        """
-        return Argument(
-            self.parse(conclusion),
-            premises and tuple(map(self.parse, premises)),
-            title = title,
-        )
+#         Raises:
+#             errors.ParseError: if input cannot be parsed.
+#             TypeError: for bad argument types.
+#         """
+#         return Argument(
+#             self.parse(conclusion),
+#             premises and tuple(map(self.parse, premises)),
+#             title = title,
+#         )
 
-    def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
-        'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
-        super().__init_subclass__(**kw)
-        abcm.merge_mroattr(subcls, '_defaults', supcls = __class__)
-        subcls._optkeys = subcls._defaults.keys()
-        subcls.__call__ = subcls.parse
-        if primary:
-            subcls.notation.Parser = subcls
+#     @abcm.f.after
+#     def _aux_init(cls):
+#         _aux.Parser = cls
+
+#     def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
+#         'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
+#         super().__init_subclass__(**kw)
+#         abcm.merge_mroattr(subcls, '_defaults', supcls = __class__)
+#         subcls._optkeys = subcls._defaults.keys()
+#         subcls.__call__ = subcls.parse
+#         if primary:
+#             subcls.notation.Parser = subcls
 
 class LexWriter(metaclass = LexWriterMeta):
     'LexWriter interface and coordinator.'
@@ -2268,116 +2040,6 @@ class StandardLexWriter(BaseLexWriter):
         s2 = Operator.Conjunction(Atomic.gen(2))
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
-
-ParseTableKey   = LexType|Marking|type[Predicate.System]
-ParseTableValue = int|Lexical
-
-class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStore):
-    'Parser table data class.'
-
-    default_fetch_key = 'default'
-
-    __slots__ = 'reversed', 'chars'
-
-    reversed: Mapping[tuple[ParseTableKey, ParseTableValue], str]
-    chars: Mapping[ParseTableKey, seqf[str]]
-
-    def __init__(self, data: Mapping[str, tuple[ParseTableKey, ParseTableValue]], /):
-
-        super().__init__(MapProxy(data))
-
-        vals = self.values()
-
-        # list of types
-        ctypes: qset[ParseTableKey] = qset(map(tools.key0, vals))
-
-        tvals: dict[ParseTableKey, qset[ParseTableValue]] = {}
-        for ctype in ctypes:
-            tvals[ctype] = qset()
-        for ctype, value in vals:
-            tvals[ctype].add(value)
-        for ctype in ctypes:
-            tvals[ctype].sort()
-
-        # flipped table
-        self.reversed = rev = MapProxy(dict(
-            map(reversed, ItemsIterator(self))
-        ))
-
-        # chars for each type in value order, duplicates discarded
-        self.chars = MapProxy(dict(
-            (ctype, seqf(rev[ctype, val] for val in tvals[ctype]))
-            for ctype in ctypes
-        ))
-
-    def type(self, char: str, default = NOARG, /) -> ParseTableKey:
-        """Get the item type for the character.
-
-        Args:
-            char: The character symbol.
-            default: The value to return if missing.
-
-        Returns:
-            The symbol type, or ``default`` if provided.
-
-        Raises:
-            KeyError: if symbol not in table and no default passed.
-        """
-        try:
-            return self[char][0]
-        except KeyError:
-            if default is NOARG:
-                raise
-            return NOARG
-
-    def value(self, char: str, /) -> ParseTableValue:
-        """Get the item value for the character.
-
-        Args:
-            char: The character symbol.
-
-        Returns:
-            Table item value, e.g. ``1`` or ``Operator.Negation``.
-
-        Raises:
-            KeyError: if symbol not in table.
-        """
-        return self[char][1]
-
-    def char(self, ctype: ParseTableKey, value: ParseTableValue, /) -> str:
-        return self.reversed[ctype, value]
-
-    def __setattr__(self, name, value):
-        if name in self.__slots__ and hasattr(self, name):
-            raise AttributeError(name)
-        super().__setattr__(name, value)
-
-    __delattr__ = raiseae
-
-class RenderSet(TableStore):
-    'Lexical writer table data class.'
-
-    default_fetch_key = 'ascii'
-
-    notation: Notation
-    charset: str
-    renders: Mapping[Any, Callable[..., str]]
-    strings: Mapping[Any, str]
-    data: Mapping[str, Any]
-
-    def __init__(self, data: Mapping[str, Any]):
-        self.notation = notn = Notation(data['notation'])
-        self.charset = data['charset']
-        self.renders = data.get('renders', {})
-        self.strings = data.get('strings', {})
-        self.data = data
-        notn.charsets.add(self.charset)
-        notn.rendersets.add(self)
-
-    def string(self, ctype: Any, value: Any) -> str:
-        if ctype in self.renders:
-            return self.renders[ctype](value)
-        return self.strings[ctype][value]
 
 @tools.closure
 def _():

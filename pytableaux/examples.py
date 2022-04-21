@@ -25,7 +25,7 @@ from __future__ import annotations
 __all__ = 'arguments', 'argument', 'tabiter'
 
 
-from pytableaux import lexicals, tools
+from pytableaux import lexicals, parsers, tools
 
 _args = tools.MapProxy({
     'Addition'                         : (('a',), 'Aab'),
@@ -189,7 +189,7 @@ def argument():
             )
         })
 
-    parsearg = lexicals.Parser('polish', preds).argument
+    parsearg = parsers.Parser('polish', preds).argument
 
     def argument(key: str|lexicals.Argument) -> lexicals.Argument:
         if isinstance(key, lexicals.Argument):
@@ -225,17 +225,6 @@ def arguments():
 def tabiter():
 
     titles = _titles
-    # logic_names = qsetf((
-    #     'CPL', 'CFOL', 'FDE', 'K3', 'K3W', 'K3WQ', 'B3E', 'GO', 'MH',
-    #     'L3', 'G3', 'P3', 'LP', 'NH', 'RM3', 'K', 'D', 'T', 'S4', 'S5',
-    # ))
-
-    # def gettab(*args, build = True, **opts):
-    #     from pytableaux.proof.tableaux import Tableau
-    #     tab = Tableau(*args, **opts)
-    #     if build:
-    #         tab.build()
-    #     return tab
 
     def tabiter(*logics, build = True, **opts):
         if not len(logics):
@@ -248,14 +237,6 @@ def tabiter():
                 if build:
                     tab.build()
                 yield tab
-
-        # return itertools.chain.from_iterable(
-        #     (
-        #         gettab(logic, argument(title), build = build, **opts)
-        #         for title in titles
-        #     )
-        #     for logic in logics
-        # )
 
     return tabiter
 

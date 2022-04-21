@@ -15,38 +15,40 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.parsers
-^^^^^^^^^^^^^^^^^^
+pytableaux.lang.parsing
+^^^^^^^^^^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
 
-__all__ = (
-    'BaseParser',
-    'Notation',
-    'ParseContext',
-    'Parser',
-    'ParseTable',
-    'PolishParser',
-    'StandardParser',
-)
-
 from collections.abc import Set
-from typing import overload
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
+                    NamedTuple, Set, TypeVar, overload)
 
 from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
+from pytableaux.lang._aux import *
 from pytableaux.lang._aux import ParseTableKey
 from pytableaux.lang.parsing import Parser, ParseTable
-from pytableaux.lexicals import (Atomic, BiCoords, Constant, LexType,
+from pytableaux.lexicals import (Argument, Atomic, BiCoords, Constant, LexType,
                                  Marking, Notation, Operated)
 from pytableaux.lexicals import Operator as Oper
-from pytableaux.lexicals import (Parameter,
-                                 Predicate, Predicated, Predicates, Quantified,
-                                 Quantifier, Sentence, Variable)
-from pytableaux.tools import abstract
+from pytableaux.lexicals import (Parameter, Predicate, Predicated, Predicates,
+                                 Quantified, Quantifier, Sentence, Variable)
+from pytableaux.tools import MapProxy, abstract, key0
+from pytableaux.tools.abcs import abcm
+from pytableaux.tools.hybrids import qset, qsetf
+from pytableaux.tools.mappings import DequeCache, ItemsIterator, MapCover, dmap
+from pytableaux.tools.sequences import seqf
 from pytableaux.tools.sets import EMPTY_SET, setf
 
+if TYPE_CHECKING:
+    pass
+    # from pytableaux.lang._aux import *
+    # from pytableaux.lexicals import Quantifier, Variable
+
+__docformat__ = 'google'
+__all__ = ()
 NOARG = object()
 
 class ParseContext:
@@ -531,3 +533,171 @@ ParseTable._initcache(Notation, {
         },
     ),
 })
+
+
+
+
+class Parser(metaclass = ParserMeta):
+    'Parser interface and coordinator.'
+
+    __slots__ = 'table', 'preds', 'opts'
+
+    notation: ClassVar[Notation]
+    _defaults: ClassVar[dict[str, Any]] = {}
+    _optkeys: ClassVar[Set[str]] = _defaults.keys()
+
+    table: ParseTable
+    preds: Predicates
+    opts: Mapping[str, Any]
+
+    def __init__(self, preds: Predicates = Predicate.System, /, table: ParseTable|str = None, **opts):
+        if table is None:
+            table = ParseTable.fetch(self.notation)
+        elif isinstance(table, str):
+            table = ParseTable.fetch(self.notation, table)
+        self.table = table
+        self.preds = preds
+
+        if len(opts):
+            opts = dmap(opts)
+            opts &= self._optkeys
+            opts %= self._defaults
+        else:
+            opts = dict(self._defaults)
+        self.opts = opts
+
+    @abstract
+    def parse(self, input: str) -> Sentence:
+        """Parse a sentence from an input string.
+
+        Args:
+            input: The input string.
+        
+        Returns:
+            The parsed sentence.
+
+        Raises:
+            errors.ParseError: if input cannot be parsed.
+        """
+        raise NotImplementedError
+
+    @overload
+    def __call__(self, input: str) -> Sentence: ...
+    __call__ = parse
+
+    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
+        """Parse the input strings and create an argument.
+
+        Args:
+            conclusion: The argument's conclusion.
+            premises: Premise strings, if any.
+            title: An optional title.
+
+        Returns:
+            The argument.
+
+        Raises:
+            errors.ParseError: if input cannot be parsed.
+            TypeError: for bad argument types.
+        """
+        return Argument(
+            self.parse(conclusion),
+            premises and tuple(map(self.parse, premises)),
+            title = title,
+        )
+
+    @abcm.f.after
+    def _aux_init(cls):
+        from pytableaux.lang import _aux
+        _aux.Parser = cls
+
+    def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
+        'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
+        super().__init_subclass__(**kw)
+        abcm.merge_mroattr(subcls, '_defaults', supcls = __class__)
+        subcls._optkeys = subcls._defaults.keys()
+        subcls.__call__ = subcls.parse
+        if primary:
+            subcls.notation.Parser = subcls
+
+class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStore):
+    'Parser table data class.'
+
+    default_fetch_key = 'default'
+
+    __slots__ = 'reversed', 'chars'
+
+    reversed: Mapping[tuple[ParseTableKey, ParseTableValue], str]
+    chars: Mapping[ParseTableKey, seqf[str]]
+
+    def __init__(self, data: Mapping[str, tuple[ParseTableKey, ParseTableValue]], /):
+
+        super().__init__(MapProxy(data))
+
+        vals = self.values()
+
+        # list of types
+        ctypes: qset[ParseTableKey] = qset(map(key0, vals))
+
+        tvals: dict[ParseTableKey, qset[ParseTableValue]] = {}
+        for ctype in ctypes:
+            tvals[ctype] = qset()
+        for ctype, value in vals:
+            tvals[ctype].add(value)
+        for ctype in ctypes:
+            tvals[ctype].sort()
+
+        # flipped table
+        self.reversed = rev = MapProxy(dict(
+            map(reversed, ItemsIterator(self))
+        ))
+
+        # chars for each type in value order, duplicates discarded
+        self.chars = MapProxy(dict(
+            (ctype, seqf(rev[ctype, val] for val in tvals[ctype]))
+            for ctype in ctypes
+        ))
+
+    def type(self, char: str, default = NOARG, /) -> ParseTableKey:
+        """Get the item type for the character.
+
+        Args:
+            char: The character symbol.
+            default: The value to return if missing.
+
+        Returns:
+            The symbol type, or ``default`` if provided.
+
+        Raises:
+            KeyError: if symbol not in table and no default passed.
+        """
+        try:
+            return self[char][0]
+        except KeyError:
+            if default is NOARG:
+                raise
+            return NOARG
+
+    def value(self, char: str, /) -> ParseTableValue:
+        """Get the item value for the character.
+
+        Args:
+            char: The character symbol.
+
+        Returns:
+            Table item value, e.g. ``1`` or ``Operator.Negation``.
+
+        Raises:
+            KeyError: if symbol not in table.
+        """
+        return self[char][1]
+
+    def char(self, ctype: ParseTableKey, value: ParseTableValue, /) -> str:
+        return self.reversed[ctype, value]
+
+    def __setattr__(self, name, value):
+        if name in self.__slots__ and hasattr(self, name):
+            raise AttributeError(name)
+        super().__setattr__(name, value)
+
+    __delattr__ = raiseae

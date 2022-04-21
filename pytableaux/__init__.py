@@ -69,7 +69,7 @@ def _():
 
     from pytableaux import lexicals
     for c in (
-        lexicals.EnumCommon,
+        lexicals.LangCommonEnum,
         lexicals.LexicalItem,
         lexicals.Predicates,
         lexicals.Argument,

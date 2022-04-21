@@ -43,6 +43,13 @@ NotImplType = type(NotImplemented)
 HasModuleAttr = MethodType | FunctionType | type
 "Supports the ``__module__`` attribute (class, method, or function."
 
+#==============================================+
+#  Generic aliases -- no 'isinstance' support  |
+#==============================================+
+
+IcmpFunc = Callable[[int, int], bool]
+"Function that compares two ints and returns a boolean value, e.g. `>` or `<`."
+
 #==========================+
 #  Type variables          |
 #==========================+
