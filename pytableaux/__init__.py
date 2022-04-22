@@ -61,12 +61,17 @@ import pytableaux.tools.linked
 # import pytableaux.tools.callables
 
 import pytableaux.lexicals
+import pytableaux.lang._collect
+import pytableaux.lang._write
 
 @tools.closure
 def _():
+    from pytableaux import lexicals
     from pytableaux.lang._collect import Argument, Predicates
-    pytableaux.lexicals.Argument = Argument
-    pytableaux.lexicals.Predicates = Predicates
+    from pytableaux.lang._write import LexWriter
+    lexicals.Argument = Argument
+    lexicals.Predicates = Predicates
+    lexicals.LexWriter = LexWriter
 
 import pytableaux.parsers
 

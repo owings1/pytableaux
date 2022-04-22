@@ -22,8 +22,7 @@ pytableaux.lang.parsing
 from __future__ import annotations
 
 from collections.abc import Set
-from typing import (TYPE_CHECKING, Any, ClassVar, Iterable, Mapping, Set,
-                    overload)
+from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Mapping, Set
 
 from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
@@ -40,9 +39,7 @@ from pytableaux.tools.sequences import seqf
 from pytableaux.tools.sets import EMPTY_SET
 
 if TYPE_CHECKING:
-    pass
-    # from pytableaux.lang._aux import *
-    # from pytableaux.lexicals import Quantifier, Variable
+    from typing import overload
 
 __docformat__ = 'google'
 
@@ -151,6 +148,10 @@ class Parser(metaclass = ParserMeta):
 
 class ParseContext:
 
+    if TYPE_CHECKING:
+        @overload
+        def type(self, char: str, default = NOARG, /) -> ParseTableKey: ...
+
     __slots__ = 'input', 'type', 'preds', 'is_open', 'pos', 'bound_vars'
 
     def __init__(self, input_: str, table: ParseTable, preds: Predicates, /):
@@ -171,10 +172,6 @@ class ParseContext:
         self.is_open = False
         del(self.pos, self.bound_vars)
 
-    @overload
-    def type(self, char: str, default = NOARG, /) -> ParseTableKey: ...
-    del(type)
-
     def current(self) -> str|None:
         'Return the current character, or ``None`` if after last.'
         try:
@@ -182,7 +179,7 @@ class ParseContext:
         except IndexError:
             return None
 
-    def next(self, n: int = 1) -> str|None:
+    def next(self, n: int = 1,/) -> str|None:
         'Get the nth character after the current, or ``None``.'
         try:
             return self.input[self.pos + n]
@@ -202,7 +199,7 @@ class ParseContext:
             raise ParseError(f'Unexpected end of input at position {self.pos}.')
         return self.type(self.current(), None)
 
-    def assert_current_is(self, ctype: str) -> None:
+    def assert_current_is(self, ctype: str,/) -> None:
         """
         Args:
             ctype (str): Char type
@@ -213,7 +210,7 @@ class ParseContext:
         if self.assert_current() != ctype:
             raise ParseError(self._unexp_msg())
 
-    def assert_current_in(self, ctypes: Set) -> ParseTableKey:
+    def assert_current_in(self, ctypes: Set[str],/) -> ParseTableKey:
         ctype = self.assert_current()
         if ctype in ctypes:
             return ctype
@@ -224,7 +221,7 @@ class ParseContext:
         if len(self.input) > self.pos:
             raise ParseError(self._unexp_msg())
 
-    def has_next(self, n: int = 1) -> bool:
+    def has_next(self, n: int = 1,/) -> bool:
         'Whether there are n-many characters after the current.'
         return len(self.input) > self.pos + n
 

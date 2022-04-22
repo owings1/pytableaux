@@ -1,12 +1,32 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.lang._symdata
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 __all__ = ()
 
-from pytableaux.lang._aux import Notation, Marking
-from pytableaux.lexicals import LexType, Operator, Predicate, Quantifier
-from pytableaux.tools import MapProxy, closure
-
 def parsetables():
+    from pytableaux.lexicals import (LexType, Marking, Notation, Operator,
+                                     Predicate, Quantifier)
+
     data = {
         Notation.standard: dict(
             default = {
@@ -107,10 +127,11 @@ def parsetables():
 
 def rendersets():
 
-    # Initialize lexical writer RenderSet table store.
-
     from html import unescape as html_unescape
 
+    from pytableaux.lexicals import (LexType, Marking, Notation, Operator,
+                                     Predicate, Quantifier)
+    from pytableaux.tools import MapProxy
     from pytableaux.tools.misc import dmerged, dtransform
 
     def dunesc(d: dict, inplace = False) -> None:
@@ -120,10 +141,10 @@ def rendersets():
         # ₀₁₂₃₄₅₆₇₈₉
         return ''.join(chr(0x2080 + int(d)) for d in str(sub))
 
-    asciimeta = MapProxy(dict(
+    asciimeta = MapProxy(
         conseq    = '|-',
         nonconseq = '|/-',
-    ))
+    )
     htmsub = '<sub>%d</sub>'.__mod__
 
     data = {notn: {} for notn in Notation}

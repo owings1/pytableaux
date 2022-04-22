@@ -13,44 +13,26 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.models
+^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
-"""
-    pytableaux.models
-    -----------------
+from dataclasses import dataclass
+from itertools import product, repeat
+from typing import Any, ClassVar, Mapping
 
-"""
-
-__all__ = 'BaseModel', 'Mval'
-
-from pytableaux.errors import instcheck, Emsg
+from pytableaux.errors import Emsg, check
+from pytableaux.lexicals import (Argument, Atomic, LexType, Operated, Operator,
+                                 Predicated, Quantified, Quantifier, Sentence)
+from pytableaux.proof.common import Branch
 from pytableaux.tools import abstract, closure
 from pytableaux.tools.abcs import Abc, Ebc
 from pytableaux.tools.sets import setf
-from pytableaux.lexicals import (
-    Argument,
-    Atomic,
-    LexType,
-    Operated,
-    Operator,
-    Predicated,
-    Quantified,
-    Quantifier,
-    Sentence,
-)
-from pytableaux.proof.common import Branch
 
-from dataclasses import dataclass
-from itertools import (
-    product,
-    repeat,
-    # starmap,
-)
-from typing import (
-    Any,
-    ClassVar,
-    Mapping,
-)
+__all__ = 'BaseModel', 'Mval'
 
 class Mval(Ebc):
 
@@ -96,7 +78,7 @@ class Mval(Ebc):
     def _member_keys(cls, member: Mval):
         return super()._member_keys(member) | {member.label, member.num}
 
-MvalT = Mval | str | float
+MvalId = Mval | str | float
 
 class BaseModel(Abc):
 
@@ -137,7 +119,7 @@ class BaseModel(Abc):
                 return getattr(self, _methmap[s.TYPE])(s, **kw)
             except KeyError:
                 pass
-            instcheck(s, Sentence)
+            check.inst(s, Sentence)
             raise NotImplementedError
         return value_of
 
@@ -150,7 +132,7 @@ class BaseModel(Abc):
             return self.value_of_existential(s, **kw)
         elif q is Quantifier.Universal:
             return self.value_of_universal(s, **kw)
-        instcheck(s, Quantified)
+        check.inst(s, Quantified)
         raise NotImplementedError
 
     def value_of_operated(self, s: Operated, /, **kw) -> Mval:
@@ -166,7 +148,7 @@ class BaseModel(Abc):
             )
         if s.operator in self.modal_operators:
             return self.value_of_modal(s, **kw)
-        instcheck(s, Operated)
+        check.inst(s, Operated)
         raise NotImplementedError
 
     def value_of_modal(self, s: Operated, /, **kw) -> Mval:
@@ -211,12 +193,12 @@ class BaseModel(Abc):
         pass
 
     @abstract
-    def truth_function(self, oper: Operator, *values: MvalT) -> Mval:
+    def truth_function(self, oper: Operator, *values: MvalId) -> Mval:
         if oper not in self.truth_functional_operators:
             raise ValueError(oper)
         if len(values) != oper.arity:
             raise Emsg.WrongLength(values, oper.arity)
-        instcheck(oper, Operator)
+        check.inst(oper, Operator)
         raise NotImplementedError
 
     @abstract
@@ -225,62 +207,62 @@ class BaseModel(Abc):
 
     @abstract
     def value_of_existential(self, s: Quantified, /, **kw) -> Mval:
-        instcheck(s, Quantified)
+        check.inst(s, Quantified)
         raise NotImplementedError
 
     @abstract
     def value_of_universal(self, s: Quantified, /, **kw) -> Mval:
-        instcheck(s, Quantified)
+        check.inst(s, Quantified)
         raise NotImplementedError
 
     @abstract
     def value_of_possibility(self, s: Operated, /, **kw) -> Mval:
-        instcheck(s, Operated)
+        check.inst(s, Operated)
         raise NotImplementedError
 
     @abstract
     def value_of_necessity(self, s: Operated, /, **kw) -> Mval:
-        instcheck(s, Operated)
+        check.inst(s, Operated)
         raise NotImplementedError
 
     @abstract
-    def set_literal_value(self, s: Sentence, value: MvalT, /):
-        instcheck(s, Sentence)
+    def set_literal_value(self, s: Sentence, value: MvalId, /):
+        check.inst(s, Sentence)
         raise NotImplementedError
 
     @abstract
-    def set_opaque_value(self, s: Sentence, value: MvalT, /):
-        instcheck(s, Sentence)
+    def set_opaque_value(self, s: Sentence, value: MvalId, /):
+        check.inst(s, Sentence)
         raise NotImplementedError
 
     @abstract
-    def set_atomic_value(self, s: Atomic, value: MvalT, /):
-        instcheck(s, Atomic)
+    def set_atomic_value(self, s: Atomic, value: MvalId, /):
+        check.inst(s, Atomic)
         raise NotImplementedError
 
     @abstract
-    def set_predicated_value(self, s: Predicated, value: MvalT, /):
-        instcheck(s, Predicated)
+    def set_predicated_value(self, s: Predicated, value: MvalId, /):
+        check.inst(s, Predicated)
         raise NotImplementedError
 
     @abstract
     def value_of_opaque(self, s: Sentence, /) -> Mval:
-        instcheck(s, Sentence)
+        check.inst(s, Sentence)
         raise NotImplementedError
 
     @abstract
     def value_of_atomic(self, s: Atomic, /) -> Mval:
-        instcheck(s, Atomic)
+        check.inst(s, Atomic)
         raise NotImplementedError
 
     @abstract
     def value_of_predicated(self, s: Predicated, /) -> Mval:
-        instcheck(s, Predicated)
+        check.inst(s, Predicated)
         raise NotImplementedError
 
     @abstract
     def is_countermodel_to(self, a: Argument, /) -> bool:
-        instcheck(a, Argument)
+        check.inst(a, Argument)
         raise NotImplementedError
 
     @abstract

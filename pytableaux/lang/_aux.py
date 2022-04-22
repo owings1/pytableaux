@@ -298,7 +298,7 @@ class RenderSet(TableStore):
 
 ParameterSpec  = BiCoords
 
-PredicateSpec = TriCoords
+PredicateSpec  = TriCoords
 
 AtomicSpec     = BiCoords
 
