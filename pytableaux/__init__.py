@@ -36,7 +36,11 @@ __all__ = (
 
 
 from pytableaux import errors
+
 from pytableaux._package_info import package
+_package_info = None
+del(_package_info)
+
 from pytableaux.tools import abcs
 
 errors.Emsg = abcs.ebcm.rebase(errors.Emsg, errors.EmsgBase, abcs.Ebc)
@@ -59,13 +63,12 @@ import pytableaux.tools.sequences
 import pytableaux.tools.hybrids
 import pytableaux.tools.linked
 
-import pytableaux.lexicals
+import pytableaux.lexicals as lexicals
 import pytableaux.lang._collect
 import pytableaux.lang._write
 
 @tools.closure
 def _():
-    from pytableaux import lexicals
     from pytableaux.lang._collect import Argument, Predicates
     from pytableaux.lang._write import LexWriter
     lexicals.Argument = Argument
@@ -88,7 +91,6 @@ import pytableaux.lang._repr
 @tools.closure
 def _():
 
-    from pytableaux import lexicals
     for c in (
         lexicals.LangCommonEnum,
         lexicals.LexicalItem,
