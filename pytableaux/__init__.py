@@ -61,6 +61,13 @@ import pytableaux.tools.linked
 # import pytableaux.tools.callables
 
 import pytableaux.lexicals
+
+@tools.closure
+def _():
+    from pytableaux.lang._collect import Argument, Predicates
+    pytableaux.lexicals.Argument = Argument
+    pytableaux.lexicals.Predicates = Predicates
+
 import pytableaux.parsers
 
 @tools.closure

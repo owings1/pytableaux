@@ -1,0 +1,283 @@
+from __future__ import annotations
+
+import operator as opr
+from itertools import repeat
+from typing import Any, Iterable, SupportsIndex, overload
+
+from pytableaux.errors import Emsg, check
+from pytableaux.lang._aux import (ArgumentMeta, LangCommonMeta, PredsItemRef,
+                                  PredsItemSpec, raiseae)
+from pytableaux.lexicals import LexicalItem, Predicate, Sentence
+from pytableaux.tools import closure
+from pytableaux.tools.abcs import abcm
+from pytableaux.tools.decorators import lazy, membr, wraps
+from pytableaux.tools.hybrids import qset
+from pytableaux.tools.mappings import dmap
+from pytableaux.tools.sequences import SequenceApi, seqf
+from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools.typing import EnumDictType, IcmpFunc, IndexType
+
+__all__ = 'Argument', 'Predicates'
+
+NOARG = object()
+EMPTY_IT = iter(EMPTY_SET)
+
+class Predicates(qset[Predicate], metaclass = LangCommonMeta,
+    hooks = {qset: dict(cast = Predicate)}
+):
+    'Predicate store. An ordered set with a multi-keyed lookup index.'
+
+    _lookup: dmap[PredsItemRef, Predicate]
+    __slots__ = '_lookup',
+
+    def __init__(self, values: Iterable[PredsItemSpec] = None, /, *,
+        sort: bool = False, key = None, reverse: bool = False):
+        """Create a new store from an iterable of predicate objects
+        or specs
+        
+        Args:
+            values: Iterable of predicates or specs.
+            sort: Whether to sort. Default is ``False``.
+            key: Optional sort key.
+            reverse: Whether to reverse sort.
+        """
+        self._lookup = dmap()
+        super().__init__(values)
+        if sort:
+            self.sort(key = key, reverse = reverse)
+
+    def get(self, ref: PredsItemRef, default = NOARG, /) -> Predicate:
+        """Get a predicate by any reference. Also searches system predicates.
+
+        Args:
+            ref: Predicate reference. See ``Predicate.ref``.
+            default: Value to return if not found.
+
+        Returns:
+            The Predicate instance.
+
+        Raises:
+            KeyError: if missing and no default specified.
+        """
+        try: return self._lookup[ref]
+        except KeyError:
+            try: return self.System[ref]
+            except KeyError: pass
+            if default is NOARG: raise
+            return default
+
+    def specs(self):
+        return tuple(p.spec for p in self)
+
+    @abcm.f.temp
+    @qset.hook('done')
+    def after_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
+        'Implement after change (done) hook. Update lookup index.'
+        for pred in leaving or EMPTY_IT:
+            self._lookup -= pred.refkeys
+        for pred in arriving or EMPTY_IT:
+            # Is there a distinct predicate that matches any lookup keys,
+            # viz. BiCoords or name, that does not equal pred, e.g. arity
+            # mismatch.
+            for other in filter(None, map(self._lookup.get, pred.refkeys)):
+                if other != pred:
+                    raise Emsg.ValueConflictFor(pred, pred.coords, other.coords)
+            self._lookup |= zip(pred.refkeys, repeat(pred))
+
+    #******  Override qset
+
+    def clear(self):
+        super().clear()
+        self._lookup.clear()
+
+    def __contains__(self, ref, /):
+        return ref in self._lookup
+
+    def copy(self):
+        inst = super().copy()
+        inst._lookup = self._lookup.copy()
+        return inst
+
+    #******  System Enum
+
+    class System(Predicate.System):
+        'System Predicates enum container class.'
+
+        def __new__(cls, *spec):
+            'Set the Enum value to the predicate instance.'
+            return LexicalItem.__new__(Predicate)
+
+        @classmethod
+        def _member_keys(cls, pred: Predicate):
+            'Enum lookup index init hook. Add all predicate keys.'
+            return super()._member_keys(pred) | pred.refkeys
+
+        @classmethod
+        def _after_init(cls):
+            'Enum after init hook. Set Predicate class attributes.'
+            super()._after_init()
+            for pred in cls.seq:
+                setattr(Predicate, pred.name, pred)
+            Predicate.System = cls
+
+        @abcm.f.before
+        def expand(ns: EnumDictType, bases, **kw):
+            'Inject members from annotations in Predicate.System class.'
+            annots = abcm.annotated_attrs(Predicate.System)
+            members = {
+                name: spec for name, (vtype, spec)
+                in annots.items() if vtype is Predicate
+            }
+            ns |= members
+            ns._member_names += members.keys()
+
+class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
+    """Argument class.
+    
+    A container of sentences with sequence and full ordering implementation.
+    """
+
+    def __init__(self,
+        conclusion: Sentence,
+        premises: Iterable[Sentence] = None,
+        title: str = None
+    ):
+        self.seq = seqf(
+            (Sentence(conclusion),) if premises is None
+            else map(Sentence, (conclusion, *premises))
+        )
+        self.premises = seqf(self.seq[1:])
+        if title is not None:
+            check.inst(title, str)
+        self.title = title
+
+    __slots__ = 'seq', 'title', 'premises', '_hash', 
+
+    sentences: seqf[Sentence]
+    premises: seqf[Sentence]
+
+    @property
+    def conclusion(self) -> Sentence:
+        return self.seq[0]
+
+    @lazy.prop
+    def hash(self) -> int:
+        return hash(tuple(self))
+
+    def predicates(self, **kw):
+        """Return the predicates occuring in the argument.
+        
+        Args:
+            **kw: sort keywords to pass to ``Predicates`` constructor.
+        
+        Returns:
+            ``Predicates`` instance.
+        """
+        return Predicates((p for s in self for p in s.predicates), **kw)
+
+    #******  Equality & Ordering
+
+    # Two arguments are considered equal just when their conclusions are
+    # equal, and their premises are equal (and in the same order). The
+    # title is not considered in equality.
+
+    @abcm.f.temp
+    @closure
+    def ordr():
+
+        sorder = Sentence.orderitems
+
+        def cmpgen(a: Argument, b: Argument, /,):
+            if a is b:
+                yield 0 ; return
+            yield bool(a.conclusion) - bool(b.conclusion)
+            yield len(a) - len(b)
+            yield from (sorder(sa, sb) for sa, sb in zip(a, b))
+
+        @membr.defer
+        def ordr(member: membr):
+            oper: IcmpFunc = getattr(opr, member.name)
+            @wraps(oper)
+            def f(self: Argument, other: Any, /):
+                if not isinstance(other, Argument):
+                    return NotImplemented
+                for cmp in cmpgen(self, other):
+                    if cmp:
+                        break
+                else:
+                    cmp = 0
+                return oper(cmp, 0)
+            return f
+
+        return ordr
+
+    __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr() # type: ignore
+
+    def __hash__(self):
+        return self.hash
+
+    #******  Sequence Behavior
+
+    def __len__(self):
+        return len(self.seq)
+
+    @overload
+    def __getitem__(self, s: slice, /) -> seqf[Sentence]: ...
+
+    @overload
+    def __getitem__(self, i: SupportsIndex, /) -> Sentence: ...
+
+    def __getitem__(self, index: IndexType, /):
+        if isinstance(index, slice):
+            return seqf(self.seq[index])
+        return self.seq[index]
+
+    @classmethod
+    def _concat_res_type(cls, othrtype: type[Iterable], /):
+        if issubclass(othrtype, Sentence):
+            # Protect against adding an Operated sentence, which counts
+            # as a sequence of sentences. It would add just the operands
+            # but not the sentence.
+            return NotImplemented
+        return super()._concat_res_type(othrtype)
+
+    @classmethod
+    def _rconcat_res_type(cls, othrtype: type[Iterable], /):
+        if issubclass(othrtype, Sentence):
+            return NotImplemented
+        if othrtype is tuple or othrtype is list:
+            return othrtype
+        return seqf
+
+    @classmethod
+    def _from_iterable(cls, it):
+        '''Build an argument from an non-empty iterable using the first element
+        as the conclusion, and the others as the premises.'''
+        it = iter(it)
+        try:
+            conc = next(it)
+        except StopIteration:
+            raise TypeError('empty iterable') from None
+        return cls(conc, it)
+
+    #******  Other
+
+    def __forjson__(self, **_):
+        return dict(
+            conclusion = self.conclusion,
+            premises = self.premises
+        )
+
+    def __repr__(self):
+        if self.title:
+            desc = repr(self.title)
+        else:
+            desc = f'len({len(self)})'
+        return f'<{type(self).__name__}:{desc}>'
+
+    def __setattr__(self, attr, value):
+        if hasattr(self, attr):
+            raise AttributeError(attr)
+        super().__setattr__(attr, value)
+
+    __delattr__ = raiseae
