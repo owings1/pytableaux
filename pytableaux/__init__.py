@@ -58,7 +58,7 @@ import pytableaux.tools.mappings
 import pytableaux.tools.sequences
 import pytableaux.tools.hybrids
 import pytableaux.tools.linked
-import pytableaux.tools.callables
+# import pytableaux.tools.callables
 
 import pytableaux.lexicals
 import pytableaux.parsers

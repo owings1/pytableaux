@@ -72,15 +72,15 @@ class Test_FDE(BaseSuite):
             @larg(Oper.Negation)
             def test_Negation(self, o):
                 assert self.logic.name == 'FDE'
-                self.rule_eg('Double%s%s' % (o, Designated))
-                self.rule_eg('Double%s%s' % (o, Undesignated))
+                self.rule_eg('DoubleNegationDesignated')
+                self.rule_eg('DoubleNegationUndesignated')
 
             @larg(Oper.Assertion)
             def test_Assertion(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, des))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
                 # ¬ ○ A  ⊢  ¬ A
                 Oper.Negation(Oper.Assertion(A))
                 Oper.Negation(A)
@@ -89,10 +89,10 @@ class Test_FDE(BaseSuite):
 
             @larg(Oper.Conjunction)
             def test_Conjunction(self, o):
-                rtd = self.rule_eg('%s%s' % (o, Designated))
-                rtu = self.rule_eg('%s%s' % (o, Undesignated))
-                rtnd = self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                rtnu = self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                rtd = self.rule_eg(f'{o.name}Designated')
+                rtu = self.rule_eg(f'{o.name}Undesignated')
+                rtnd = self.rule_eg(f'{o.name}NegatedDesignated')
+                rtnu = self.rule_eg(f'{o.name}NegatedUndesignated')
 
                 self.invalid_tab('LNC')
 
@@ -103,41 +103,41 @@ class Test_FDE(BaseSuite):
 
             @larg(Oper.Disjunction)
             def test_Disjunction(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
                 self.valid_tab('Addition')
                 self.invalid_tab('LEM')
 
             @larg(Oper.MaterialConditional)
             def test_MaterialConditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.MaterialBiconditional)
             def test_MaterialBiconditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
                 self.invalid_tab('Material Biconditional Elimination 3')
 
             @larg(Oper.Conditional)
             def test_Conditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.Biconditional)
             def test_Biconditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, des))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             class Test_Arguments(BaseSuite):
 
@@ -151,10 +151,10 @@ class Test_FDE(BaseSuite):
 
             @larg(Quant.Existential)
             def test_Existential(self, q):
-                rtd = self.rule_eg('%s%s' % (q, Designated))
-                rtu = self.rule_eg('%s%s' % (q, Undesignated))
-                rtnd = self.rule_eg('%s%s%s' % (q, Negated, Designated))
-                rtnu = self.rule_eg('%s%s%s' % (q, Negated, Undesignated))
+                rtd = self.rule_eg(f'{q.name}Designated')
+                rtu = self.rule_eg(f'{q.name}Undesignated')
+                rtnd = self.rule_eg(f'{q.name}NegatedDesignated')
+                rtnu = self.rule_eg(f'{q.name}NegatedUndesignated')
 
                 b = rtu[1][0]
                 assert b.has(
@@ -163,10 +163,10 @@ class Test_FDE(BaseSuite):
 
             @larg(Quant.Universal)
             def test_Universal(self, q):
-                self.rule_eg('%s%s' % (q, Designated))
-                self.rule_eg('%s%s' % (q, Undesignated))
-                self.rule_eg('%s%s%s' % (q, Negated, Designated))
-                self.rule_eg('%s%s%s' % (q, Negated, Undesignated))
+                self.rule_eg(f'{q.name}Designated')
+                self.rule_eg(f'{q.name}Undesignated')
+                self.rule_eg(f'{q.name}NegatedDesignated')
+                self.rule_eg(f'{q.name}NegatedUndesignated')
 
             def test_arguments(self):
                 self.valid_tab('Quantifier Interdefinability 4')
@@ -412,59 +412,59 @@ class TestK3(BaseSuite):
             @larg(Oper.Negation)
             def test_Negation(self, o):
                 assert self.logic.name == 'K3'
-                self.rule_eg('Double%s%s' % (o, Designated))
-                self.rule_eg('Double%s%s' % (o, Undesignated))
+                self.rule_eg('DoubleNegationDesignated')
+                self.rule_eg('DoubleNegationUndesignated')
 
             @larg(Oper.Assertion)
             def test_Assertion(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, des))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.Conjunction)
             def test_Conjunction(self, o):
-                rtd = self.rule_eg('%s%s' % (o, Designated))
-                rtu = self.rule_eg('%s%s' % (o, Undesignated))
-                rtnd = self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                rtnu = self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                rtd = self.rule_eg(f'{o.name}Designated')
+                rtu = self.rule_eg(f'{o.name}Undesignated')
+                rtnd = self.rule_eg(f'{o.name}NegatedDesignated')
+                rtnu = self.rule_eg(f'{o.name}NegatedUndesignated')
                 self.valid_tab('LNC')
 
             @larg(Oper.Disjunction)
             def test_Disjunction(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
                 self.invalid_tab('LEM')
 
             @larg(Oper.MaterialConditional)
             def test_MaterialConditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.MaterialBiconditional)
             def test_MaterialBiconditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.Conditional)
             def test_Conditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.Biconditional)
             def test_Biconditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, des))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
                 self.valid_tab('Biconditional Elimination 1')
 
             class Test_Arguments(BaseSuite):
@@ -490,59 +490,59 @@ class TestK3W(BaseSuite):
             @larg(Oper.Negation)
             def test_Negation(self, o):
                 assert self.logic.name == 'K3W'
-                self.rule_eg('Double%s%s' % (o, Designated))
-                self.rule_eg('Double%s%s' % (o, Undesignated))
+                self.rule_eg('DoubleNegationDesignated')
+                self.rule_eg('DoubleNegationUndesignated')
 
             @larg(Oper.Assertion)
             def test_Assertion(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, des))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.Conjunction)
             def test_Conjunction(self, o):
-                rtd = self.rule_eg('%s%s' % (o, Designated))
-                rtu = self.rule_eg('%s%s' % (o, Undesignated))
-                rtnd = self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                rtnu = self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
                 self.valid_tab('LNC')
 
             @larg(Oper.Disjunction)
             def test_Disjunction(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
                 self.invalid_tab('LEM')
 
             @larg(Oper.MaterialConditional)
             def test_MaterialConditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.MaterialBiconditional)
             def test_MaterialBiconditional(self, o):
-                rtd = self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.Conditional)
             def test_Conditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             @larg(Oper.Biconditional)
             def test_Biconditional(self, o):
-                self.rule_eg('%s%s' % (o, Designated))
-                self.rule_eg('%s%s' % (o, Undesignated))
-                self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                self.rule_eg(f'{o.name}Designated')
+                self.rule_eg(f'{o.name}Undesignated')
+                self.rule_eg(f'{o.name}NegatedDesignated')
+                self.rule_eg(f'{o.name}NegatedUndesignated')
 
             def test_arguments(self):
 
@@ -1228,8 +1228,8 @@ class TestP3(BaseSuite):
             @larg(Oper.Negation)
             def test_Negation(self, o):
                 assert self.logic.name == 'P3'
-                rtd = self.rule_eg('Double%s%s' % (o, Designated))
-                rtu = self.rule_eg('Double%s%s' % (o, Undesignated))
+                rtd = self.rule_eg('Double%s%s' % (o.name, Designated))
+                rtu = self.rule_eg('Double%s%s' % (o.name, Undesignated))
 
                 rule, tab = rtd
                 assert tab[0].has_all((
@@ -1239,26 +1239,26 @@ class TestP3(BaseSuite):
 
             @larg(Oper.Conjunction)
             def test_Conjunction(self, o):
-                rtd = self.rule_eg('%s%s' % (o, Designated))
-                rtu = self.rule_eg('%s%s' % (o, Undesignated))
-                rtnd = self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                rtnu = self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                rtd = self.rule_eg('%s%s' % (o.name, Designated))
+                rtu = self.rule_eg('%s%s' % (o.name, Undesignated))
+                rtnd = self.rule_eg('%s%s%s' % (o.name, Negated, Designated))
+                rtnu = self.rule_eg('%s%s%s' % (o.name, Negated, Undesignated))
 
             @larg(Oper.MaterialConditional)
             def test_MaterialConditional(self, o):
-                rtd = self.rule_eg('%s%s' % (o, Designated))
-                rtu = self.rule_eg('%s%s' % (o, Undesignated))
-                rtnd = self.rule_eg('%s%s%s' % (o, Negated, Designated))
-                rtnu = self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                rtd = self.rule_eg('%s%s' % (o.name, Designated))
+                rtu = self.rule_eg('%s%s' % (o.name, Undesignated))
+                rtnd = self.rule_eg('%s%s%s' % (o.name, Negated, Designated))
+                rtnu = self.rule_eg('%s%s%s' % (o.name, Negated, Undesignated))
     
         class Test_Quantifiers(BaseSuite):
 
             @larg(Quant.Universal)
             def test_Universal(self, q):
-                self.rule_eg('%s%s' % (q, Designated))
-                self.rule_eg('%s%s' % (q, Undesignated))
-                self.rule_eg('%s%s%s' % (q, Negated, Designated))
-                self.rule_eg('%s%s%s' % (q, Negated, Undesignated))
+                self.rule_eg('%s%s' % (q.name, Designated))
+                self.rule_eg('%s%s' % (q.name, Undesignated))
+                self.rule_eg('%s%s%s' % (q.name, Negated, Designated))
+                self.rule_eg('%s%s%s' % (q.name, Negated, Undesignated))
 
         class Test_Arguments(BaseSuite):
 

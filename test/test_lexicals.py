@@ -341,12 +341,16 @@ class TestSentence(BaseSuite):
                 Operated(Operator.Negation, (A, A))
 
         def test_operators(self):
-            s = self.p('KAMVxJxNbTNNImn')
-            ops = s.operators
-            assert len(ops) == 7
-            assert ','.join(map(str, ops)) == (
-                'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
+            assert self.p('KAMVxJxNbTNNImn').operators == (
+                Operator.Conjunction,
+                Operator.Disjunction,
+                Operator.Possibility,
+                Operator.Negation,
+                Operator.Assertion,
+                Operator.Negation,
+                Operator.Negation,
             )
+
 
 class TestGenericApi(BaseSuite):
 

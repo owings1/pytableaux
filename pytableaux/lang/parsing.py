@@ -37,7 +37,7 @@ from pytableaux.tools.abcs import Ebc, abcm
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap
 from pytableaux.tools.sequences import seqf
-from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.sets import EMPTY_SET
 
 if TYPE_CHECKING:
     pass
@@ -113,8 +113,10 @@ class Parser(metaclass = ParserMeta):
         """
         raise NotImplementedError
 
-    @overload
-    def __call__(self, input: str) -> Sentence: ...
+    if TYPE_CHECKING:
+        @overload
+        def __call__(self, input: str) -> Sentence: ...
+
     __call__ = parse
 
     def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:

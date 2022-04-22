@@ -61,16 +61,16 @@ def _setup():
         return __str__item(self)
 
     Lexical.__repr__ = __repr__
+    Predicate.__str__ = __str__pred
     LexicalItem.__str__ = __str__item
     LexicalEnum.__str__ = __str__enum
-    Predicate.__str__ = __str__pred
 
     reg = {
         1: LangRepr1(),
         2: LangRepr2(),
         3: LangRepr3(),
     }
-    _ = MapProxy(conf)
+    # _ = MapProxy(conf)
 
 __all__ = ()
 
@@ -91,6 +91,8 @@ def pr():
 
 
 """
+
+from tabulate import tabulate; from pytableaux.lexicals import * ; rows = [(item, item.spec) for item in (member.cls.first() for member in LexType)]
 
 
 LexType
