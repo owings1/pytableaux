@@ -424,85 +424,52 @@ class ItemMapEnum(abcs.Ebc):
 
 class DequeCache(Collection[VT], abcs.Abc):
 
-    __slots__ = EMPTY_SET
+    __slots__ = (
+        '__len__', '__getitem__',
+        '__reversed__',
+        '__setitem__', '__iter__', '__contains__',
+        'clear', '_maxlen',
+    )
 
-    maxlen: int
-    idx: int
-    rev: Mapping[Any, VT]
+    @property
+    def maxlen(self) -> int:
+        return self._maxlen
 
-    @abstract
-    def clear(self): ...
+    def __init__(self, maxlen = 10):
 
-    @abstract
-    def __len__(self): ...
+        idx  : dict[Any, VT] = {}
+        rev  : dict[VT, set] = {}
+        deck : deque[VT] = deque(maxlen = maxlen)
 
-    @abstract
-    def __getitem__(self, key) -> VT: ...
+        self._maxlen = maxlen
 
-    @abstract
-    def __reversed__(self) -> Iterator[VT]: ...
+        self.__len__ = deck.__len__
+        self.__iter__ = deck.__iter__
+        self.__reversed__ = deck.__reversed__
+        self.__contains__ = rev.__contains__
+        self.__getitem__ = idx.__getitem__
 
-    @abstract
-    def __setitem__(self, key, item: VT): ...
+        def clear():
+            idx.clear()
+            rev.clear()
+            deck.clear()
 
-    def __new__(cls, Vtype: type, maxlen = 10):
+        def setitem(key, item: VT):
+            if item in self:
+                item = self[item]
+            else:
+                if len(self) == self.maxlen:
+                    old = deck.popleft()
+                    for k in rev.pop(old): del(idx[k])
+                idx[item] = item
+                rev[item] = {item}
+                deck.append(item)
+            idx[key] = item
+            rev[item].add(key)
 
-        check.inst(Vtype, type)
-        if issubclass(Vtype, (int, slice)):
-            raise TypeError(f'subclass of (int, slice) unexpected: {Vtype}')
+        self.clear = clear
+        self.__setitem__ = setitem
 
-        idx      : dict[Any, VT] = {}
-        idxproxy : Mapping[Any, VT] = MapProxy(idx)
-
-        rev      : dict[VT, set] = {}
-        revproxy : Mapping[VT, set] = MapProxy(rev)
-
-        deck     : deque[VT] = deque(maxlen = maxlen)
-
-        class Api(DequeCache[VT]):
-
-            __slots__ = EMPTY_SET
-
-            maxlen = property(lambda _: deck.maxlen)
-            idx = property(lambda _: idxproxy)
-            rev = property(lambda _: revproxy)
-
-            def clear(self):
-                for d in (idx, rev, deck): d.clear()
-
-            def __len__(self):
-                return len(deck)
-
-            def __iter__(self) -> Iterator[VT]:
-                return iter(deck)
-
-            def __reversed__(self) -> Iterator[VT]:
-                return reversed(deck)
-
-            def __contains__(self, item: VT):
-                return item in rev
-
-            def __getitem__(self, key) -> VT:
-                return idx[key]
-
-            def __setitem__(self, key, item: VT):
-                check.inst(item, Vtype)
-                if item in self:
-                    item = self[item]
-                else:
-                    if len(deck) == deck.maxlen:
-                        old = deck.popleft()
-                        for k in rev.pop(old): del(idx[k])
-                    idx[item] = item
-                    rev[item] = {item}
-                    deck.append(item)
-                idx[key] = item
-                rev[item].add(key)
-
-            __new__  = object.__new__
-
-        Api.__qualname__ = 'DequeCache.Api'
-        return Api()
 
 class ItemsIterator(Iterator[tuple[KT, VT]]):
     'Mapping items iterator.'

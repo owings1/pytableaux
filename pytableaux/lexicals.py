@@ -73,14 +73,13 @@ ITEM_CACHE_SIZE = 10000
 if TYPE_CHECKING:
     pass
 
-
 ##############################################################
 
 class LexicalItemMeta(LangCommonMeta):
     """Common metaclass for non-Enum lexicals.
     """
 
-    Cache: ClassVar[DequeCache]
+    Cache: ClassVar[DequeCache] = DequeCache(maxlen = ITEM_CACHE_SIZE)
 
     def __call__(cls, *spec):
         if len(spec) == 1:
@@ -112,8 +111,8 @@ class LexicalItemMeta(LangCommonMeta):
                 # if we are invoking the LexicalItem
                 # class directly.
                 cls is not LexicalItem or
-                not issubclass(lextypecls, LexicalEnum
-            )):
+                not issubclass(lextypecls, LexicalEnum)
+            ):
                 raise TypeError(lextypecls, cls)
             # Try cache
             try: return cache[clsname, spec]
@@ -385,8 +384,6 @@ class Lexical:
         for name, value in src.items():
             if isinstance(value, ftypes):
                 setattr(subcls, name, value)
-
-LexicalItemMeta.Cache = DequeCache(Lexical, ITEM_CACHE_SIZE)
 
 class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
     """Base Enum implementation of Lexical. Subclassed by ``Quantifier``
