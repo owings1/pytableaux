@@ -197,7 +197,7 @@ class NodeFilters(Filters):
             n = {}
             attrs = self.example()
             if attrs.get('is_access'):
-                n.update(Access(0, 1).todict())
+                n.update(Access(0, 1)._asdict())
             elif attrs.get('is_modal'):
                 n['world'] = 0
             return n

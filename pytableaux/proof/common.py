@@ -19,6 +19,7 @@ pytableaux.proof.common
 
 """
 from __future__ import annotations
+from collections import defaultdict
 
 
 __all__ = 'Node', 'Branch', 'Target'
@@ -69,19 +70,19 @@ class Node(MapCover):
 
     @lazy.prop
     def is_modal(self) -> bool:
-        return self.has_any('world', 'world1', 'world2', 'worlds')
+        return self.any('world', 'world1', 'world2', 'worlds')
 
     @lazy.prop
     def is_access(self) -> bool:
         return self.has('world1', 'world2')
 
     @lazy.prop
-    def worlds(self, /, filtpred = tools.isint) -> setf[int]:
+    def worlds(self) -> setf[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
         """
-        return setf(filter(filtpred,
+        return setf(filter(tools.isint,
             chain(self.get('worlds', EMPTY_SET),
             map(self.get, ('world', 'world1', 'world2'))),
         ))
@@ -93,7 +94,7 @@ class Node(MapCover):
                 return False
         return True
 
-    def has_any(self, *names: str):
+    def any(self, *names: str):
         """
         Whether the node has a non-``None`` property of any of the given names.
         """
@@ -102,7 +103,7 @@ class Node(MapCover):
                 return True
         return False
 
-    def has_props(self, props: Mapping):
+    def meets(self, props: Mapping):
         'Whether the node properties match all those give in ``props``.'
         for prop in props:
             if prop not in self or props[prop] != self[prop]:
@@ -114,7 +115,9 @@ class Node(MapCover):
     __hash__    = operd(id)
     __delattr__ = raisr(AttributeError)
 
-    id = property(operd(id)())
+    @property
+    def id(self) -> int:
+        return id(self)
 
     @staticmethod
     @tools.closure
@@ -141,7 +144,7 @@ class Node(MapCover):
 
     @classmethod
     def _oper_res_type(cls, other_type):
-        'Always produce a plain dict on math operations.'
+        'Always produce a ``dmap`` on math operations.'
         return dmap
 
     def __repr__(self):
@@ -165,11 +168,8 @@ class Access(NamedTuple):
     def fornode(cls, node: Mapping) -> Access:
         return cls._make(map(node.__getitem__, cls._fields))
 
-    def todict(self) -> dict[str, int]:
-        return self._asdict()
-
     def tonode(self) -> Node:
-        return Node(self.todict())
+        return Node(self._asdict())
 
     def reverse(self) -> Access:
         return self._make(reversed(self))
@@ -185,13 +185,13 @@ class Branch(SequenceApi[Node], EventEmitter):
     __constants : set[lexicals.Constant]
     __nextconst : lexicals.Constant
 
-    __pidx      : dict[str, dict[Any, set[Node]]]
+    __index: Branch.Index
 
     def __init__(self, parent: Branch = None, /, *, nextconst = lexicals.Constant.first()):
 
         self.__init_parent(parent)
 
-        super().__init__(*BranchEvent)
+        EventEmitter.__init__(self, *BranchEvent)
 
         # Make sure properties are copied if needed in copy()
 
@@ -204,14 +204,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         self.__nextworld = 0
         self.__constants = set()
         self.__nextconst = nextconst
-        self.__pidx      = dict(
-            sentence   = {},
-            designated = {},
-            world      = {},
-            world1     = {},
-            world2     = {},
-            w1Rw2      = {},
-        )
+        self.__index = self.Index()
 
     @property
     def parent(self) -> Branch:
@@ -268,62 +261,57 @@ class Branch(SequenceApi[Node], EventEmitter):
         Check whether there is a node on the branch that matches the given properties,
         optionally filtered by ticked status.
         """
-        return self.find(props) is not None
+        for _ in self.search(props, limit = 1):
+            return True
+        return False
 
-    def has_any(self, props_list: Iterable[Mapping], /) -> bool:
+    def any(self, props_list: Iterable[Mapping], /) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``True``
         when the first match is found.
         """
         for props in props_list:
-            if self.has(props):
+            for _ in self.search(props, limit = 1):
                 return True
         return False
 
-    def has_all(self, props_list: Iterable[Mapping], /) -> bool:
+    def all(self, props_list: Iterable[Mapping], /) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``False``
         when the first non-match is found.
         """
         for props in props_list:
-            if not self.has(props):
+            for _ in self.search(props, limit = 1):
+                break
+            else:
                 return False
         return True
 
-    def find(self, props: Mapping, /) -> Node:
+    def find(self, props: Mapping, /) -> Node|None:
         """
         Find the first node on the branch that matches the given properties, optionally
         filtered by ticked status. Returns ``None`` if not found.
         """
-        results = self.search_nodes(props, limit = 1)
-        if results:
-            return results[0]
-        return None
+        for node in self.search(props, limit = 1):
+            return node
 
-    def find_all(self, props: Mapping, /) -> list[Node]:
+    def search(self, props: Mapping, /, limit: int = None) -> Iterator[Node]:
         """
-        Find all the nodes on the branch that match the given properties, optionally
-        filtered by ticked status. Returns a list.
-        """
-        return self.search_nodes(props)
+        Search the nodes on the branch that match the given properties, up to the
+        limit, if given.
 
-    def search_nodes(self, props: Mapping, /, limit: int = None) -> list[Node]:
+        Returns:
+            A generator.
         """
-        Find all the nodes on the branch that match the given properties, optionally
-        filtered by ticked status, up to the limit, if given. Returns a list.
-        """
-        results = []
-        best_haystack = self.__select_index(props)
-        if not best_haystack:
-            return results
-        for node in best_haystack:
-            if limit != None and len(results) >= limit:
-                break
-            if node.has_props(props):
-                results.append(node)
-        return results
+        n = 0
+        for node in self.__index.select(props, self):
+            if limit is not None and n >= limit:
+                return
+            if node.meets(props):
+                n += 1
+                yield node
 
-    def append(self, node: Mapping, /):
+    def append(self, node: Mapping, /) -> Branch:
         """
         Append a node (Node object or dict of props). Returns self.
         """
@@ -345,13 +333,13 @@ class Branch(SequenceApi[Node], EventEmitter):
             self.__worlds.update(node.worlds)
 
         # Add to index *before* after_node_add event
-        self.__add_to_index(node)
+        self.__index.add(node)
         self.emit(BranchEvent.AFTER_NODE_ADD, node, self)
         return self
 
     add = append
 
-    def extend(self, nodes: Iterable[Mapping], /):
+    def extend(self, nodes: Iterable[Mapping], /) -> Branch:
         'Add multiple nodes. Returns self.'
         for node in nodes:
             self.append(node)
@@ -365,7 +353,7 @@ class Branch(SequenceApi[Node], EventEmitter):
             node.ticked = True
             self.emit(event, node, self)
 
-    def close(self):
+    def close(self) -> Branch:
         'Close the branch. Returns self.'
         if not self.closed:
             self.__closed = True
@@ -379,14 +367,23 @@ class Branch(SequenceApi[Node], EventEmitter):
 
     def copy(self, parent: Branch = None, events: bool = False) -> Branch:
         """
-        Return a copy of the branch. Event listeners are *not* copied.
-        Parent is not copied, but can be explicitly set.
+        Return a copy of the branch.
+        
+        Args:
+            parent: The branch to set as the new branch's parent.
+            events: Whether to copy event listeners, default ``False``.
+        
+        Returns:
+            The new branch.
         """
         cls = type(self)
         b = cls.__new__(cls)
         b.__init_parent(parent)
 
-        b.events = self.events.copy() if events else self.events.barecopy()
+        if events:
+            b.events = self.events.copy()
+        else:
+            b.events = self.events.barecopy()
         
         b.__closed = self.__closed
 
@@ -397,15 +394,12 @@ class Branch(SequenceApi[Node], EventEmitter):
         b.__nextworld = self.__nextworld
         b.__constants = self.__constants.copy()
         b.__nextconst = self.__nextconst
-        b.__pidx = {
-            prop : {
-                key : self.__pidx[prop][key].copy()
-                for key in self.__pidx[prop]
-            }
-            for prop in self.__pidx
-        }
-        try: b.__model = self.__model
-        except AttributeError: pass
+        b.__index = self.__index.copy()
+
+        try:
+            b.__model = self.__model
+        except AttributeError:
+            pass
 
         return b
 
@@ -433,53 +427,11 @@ class Branch(SequenceApi[Node], EventEmitter):
         if parent is not None:
             if parent is self:
                 raise ValueError('A branch cannot be its own parent')
-            if not isinstance(parent, Branch):
-                raise TypeError(parent)
+            check.inst(parent, Branch)
             self.__origin = parent.origin
         else:
             self.__origin = self
         self.__parent = parent
-
-    def __add_to_index(self, node: Node, /):
-        for prop in self.__pidx:
-            val = None
-            found = False
-            if prop == 'w1Rw2':
-                if node.has('world1', 'world2'):
-                    val = (node['world1'], node['world2'])
-                    found = True
-            elif prop in node:
-                val = node[prop]
-                found = True
-            if found:
-                if val not in self.__pidx[prop]:
-                    self.__pidx[prop][val] = set()
-                self.__pidx[prop][val].add(node)
-
-    def __select_index(self, props: Mapping, /) -> Collection[Node]:
-        best_index = None
-        for prop in self.__pidx:
-            val = None
-            found = False
-            if prop == 'w1Rw2':
-                if 'world1' in props and 'world2' in props:
-                    val = (props['world1'], props['world2'])
-                    found = True
-            elif prop in props:
-                val = props[prop]
-                found = True
-            if found:
-                if val not in self.__pidx[prop]:
-                    return False
-                index = self.__pidx[prop][val]
-                if best_index is None or len(index) < len(best_index):
-                    best_index = index
-                # we could do no better
-                if len(best_index) == 1:
-                    break
-        if not best_index:
-            best_index = self
-        return best_index
 
     def __getitem__(self, key: SupportsIndex) -> Node:
         return self.__nodes[key]
@@ -494,7 +446,9 @@ class Branch(SequenceApi[Node], EventEmitter):
     __eq__   = operd(opr.is_)
     __bool__ = tools.true
 
-    id = property(operd(id)())
+    @property
+    def id(self):
+        return id(self)
 
     def __contains__(self, node):
         return node in self.__nodes
@@ -513,6 +467,67 @@ class Branch(SequenceApi[Node], EventEmitter):
         b = cls()
         b.extend(nodes)
         return b
+
+    class Index(dict[str, dict[Any, set[Node]]]):
+
+        __slots__ = EMPTY_SET
+
+        def __init__(self):
+            self.update(
+                sentence   = defaultdict(set),
+                designated = defaultdict(set),
+                world      = defaultdict(set),
+                world1     = defaultdict(set),
+                world2     = defaultdict(set),
+                w1Rw2      = defaultdict(set),
+            )
+
+        def add(self, node: Node):
+            for prop in self:
+                value = None
+                found = False
+                if prop == 'w1Rw2':
+                    if node.get('world1') is not None and node.get('world2') is not None:
+                        value = (node['world1'], node['world2'])
+                        found = True
+                elif prop in node:
+                    value = node[prop]
+                    found = True
+                if found:
+                    self[prop][value].add(node)
+
+        def copy(self) -> Branch.Index:
+            inst = type(self)()
+            for prop, index in self.items():
+                for value, nodes in index.items():
+                    inst[prop][value].update(nodes)
+            return inst
+        __copy__ = copy
+
+        def select(self, props: Mapping, default: Collection[Node], /) -> Collection[Node]:
+            best = None
+            for prop in self:
+                value = None
+                found = False
+                if prop == 'w1Rw2':
+                    if 'world1' in props and 'world2' in props:
+                        value = (props['world1'], props['world2'])
+                        found = True
+                elif prop in props:
+                    value = props[prop]
+                    found = True
+                if found:
+                    if value not in self[prop]:
+                        return EMPTY_SET
+                    nodes = self[prop][value]
+                    if best is None or len(nodes) < len(best):
+                        best = nodes
+                    # we could do no better
+                    if len(best) == 1:
+                        break
+            if best is None:
+                best = default
+            return best
 
 class Target(dmapattr[str, Any]):
 
@@ -579,4 +594,4 @@ class Target(dmapattr[str, Any]):
         return (name for name in self.__slots__ if get(name) is not None)
 
 
-del(EventEmitter, lazy, operd)
+del(lazy, operd)

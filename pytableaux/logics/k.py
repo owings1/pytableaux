@@ -742,7 +742,7 @@ def swnode(s: Sentence, w: int|None):
 
 def anode(w1: int, w2: int):
     'Make an Access node dict.'
-    return Access(w1, w2).todict()
+    return Access(w1, w2)._asdict()
 
 @static
 class TabRules:
@@ -1150,7 +1150,7 @@ class TabRules:
             w1 = node['world']
             w2 = branch.next_world
             return dict(sentence = si) | adds(
-                group(swnode(si, w2), Access(w1, w2).todict())
+                group(swnode(si, w2), Access(w1, w2)._asdict())
             )
 
         def score_candidate(self, target: Target):
@@ -1273,7 +1273,7 @@ class TabRules:
         def example_nodes(self):
             s = Operated.first(self.operator)
             a = Access(0, 1)
-            return swnode(s, a.w1), a.todict()
+            return swnode(s, a.w1), a._asdict()
 
     class NecessityNegated(PossibilityNegated):
         """

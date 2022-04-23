@@ -84,7 +84,7 @@ class TabRules:
             for w in node.worlds:
                 access = Access(w, w)
                 if not self[WorldIndex].has(branch, access):
-                    return adds(group(access.todict()), world = w)
+                    return adds(group(access._asdict()), world = w)
 
         @staticmethod
         def example_nodes():

@@ -883,11 +883,11 @@ class EllipsisExampleHelper:
     def __after_node_add(self, node: Node, branch: Branch):
         if self.applied:
             return
-        if node.has_props(self.mynode) or node.is_closure:
+        if node.meets(self.mynode) or node.is_closure:
             return
         if self.istrunk:
             self.__addnode(branch)
-        elif self.closenodes and node.has_props(self.closenodes[-1]):
+        elif self.closenodes and node.meets(self.closenodes[-1]):
             self.closenodes.pop()
             if len(self.closenodes) == 1:
                 self.__addnode(branch)

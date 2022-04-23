@@ -219,7 +219,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
                 for c in constants
             )
             if len(unapplied) > 0
-            or not branch.has_all(nodes)
+            or not branch.all(nodes)
         )
 
     @abstract

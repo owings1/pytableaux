@@ -90,12 +90,12 @@ class TabRules:
             access = Access.fornode(node).reverse()
 
             if not self[WorldIndex].has(branch, access):
-                anode = access.todict()
+                anode = access._asdict()
                 return adds(group(anode), **anode)
 
         @staticmethod
         def example_nodes():
-            return Access(0, 1).todict(),
+            return Access(0, 1)._asdict(),
 
     closure_rules = K.TabRules.closure_rules
 

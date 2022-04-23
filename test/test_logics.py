@@ -1232,7 +1232,7 @@ class TestP3(BaseSuite):
                 rtu = self.rule_eg('Double%s%s' % (o.name, Undesignated))
 
                 rule, tab = rtd
-                assert tab[0].has_all((
+                assert tab[0].all((
                     {'sentence': self.p('a'),  'designated': False},
                     {'sentence': self.p('Na'), 'designated': False},
                 ))

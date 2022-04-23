@@ -147,14 +147,14 @@ class TestBranch:
         s1, s2, s3 = Atomic.gen(3)
         b.extend([{sen: s1}, {sen: s2}, {sen: s3}])
         check = [{sen: s1, sen: s2}]
-        assert b.has_all(check)
+        assert b.all(check)
 
     def test_has_all_false_1(self):
         b = Branch()
         s1, s2, s3 = Atomic.gen(3)
         b.extend([{sen: s1}, {sen: s3}])
         check = [{sen: s1, sen: s2}]
-        assert not b.has_all(check)
+        assert not b.all(check)
 
     def test_branch_has_world1(self):
         proof = Tableau()
@@ -196,7 +196,7 @@ class TestBranch:
     def test_select_index_non_indexed_prop(self):
         branch = Branch()
         branch.add({'foo': 'bar'})
-        idx = branch._Branch__select_index({'foo': 'bar'})
+        idx = branch._Branch__index.select({'foo': 'bar'}, branch)
         assert list(idx) == list(branch)
 
     def test_select_index_access(self):
@@ -204,7 +204,7 @@ class TestBranch:
             {'world1': 0, 'world2': 1},
             {'foo': 'bar'},
         ))
-        idx = b._Branch__select_index({'world1': 0, 'world2': 1})
+        idx = b._Branch__index.select({'world1': 0, 'world2': 1}, b)
         assert set(idx) == {b[0]}
 
     def test_close_adds_flag_node(self):
