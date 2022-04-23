@@ -4,8 +4,7 @@
 
 .. automodule:: pytableaux.lang.lex
 
-    Vocabulary
-    ==========
+    .. autoclass:: LexType
 
     .. autoclass:: Lexical
 
@@ -20,9 +19,6 @@
     .. autoclass:: Predicate
 
     .. autoclass:: Sentence
-
-    Sentence Types
-    --------------
 
     .. autoclass:: Atomic
 

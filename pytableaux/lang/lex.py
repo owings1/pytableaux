@@ -54,7 +54,7 @@ from typing import (TYPE_CHECKING, Annotated, Any, ClassVar, Iterable,
 
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang._aux import *
+from pytableaux.lang import *
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import lazy, membr, wraps
 from pytableaux.tools.hybrids import qsetf
@@ -67,8 +67,6 @@ ITEM_CACHE_SIZE = 10000
 
 if TYPE_CHECKING:
     from typing import overload
-    from pytableaux.lang.collect import Argument, Predicates
-    from pytableaux.lang.writing import LexWriter
 
 ##############################################################
 

@@ -27,7 +27,7 @@ from typing import Any, ClassVar, TYPE_CHECKING
 
 import pytableaux.tools.misc
 from pytableaux.errors import Emsg, check
-from pytableaux.lang._aux import LangCommonMeta, Marking, Notation, RenderSet
+from pytableaux.lang import LangCommonMeta, Marking, Notation, RenderSet
 from pytableaux.lang.lex import (Atomic, Constant, CoordsItem, Lexical,
                                  LexType, Operated, Operator, Predicate,
                                  Predicated, Quantified)

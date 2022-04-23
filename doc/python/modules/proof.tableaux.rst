@@ -1,9 +1,5 @@
 .. include:: /_inc/attn-doc-freewheel.rsti
 
-***************
-Tableaux Module
-***************
-
 .. contents:: :local:
 
 .. automodule:: pytableaux.proof.tableaux

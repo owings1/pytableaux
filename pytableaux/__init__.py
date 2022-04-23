@@ -74,7 +74,7 @@ import pytableaux.parsers
 
 @tools.closure
 def _():
-    from pytableaux.lang._aux import RenderSet, Notation
+    from pytableaux.lang import RenderSet, Notation
     from pytableaux.lang.parsing import ParseTable
     from pytableaux.lang import _symdata
 
@@ -87,7 +87,7 @@ import pytableaux.lang._repr
 def _():
 
     from pytableaux.lang import lex
-    from pytableaux.lang._aux import LangCommonEnum
+    from pytableaux.lang import LangCommonEnum
     from pytableaux.lang.collect import Argument, Predicates
     from pytableaux.lang.lex import Lexical, LexicalItem
     for c in (

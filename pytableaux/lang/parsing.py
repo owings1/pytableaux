@@ -26,12 +26,13 @@ from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Mapping, Set
 
 from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
-from pytableaux.lang._aux import *
+from pytableaux.lang import (BiCoords, LangCommonMeta, Marking, Notation,
+                             ParseTableKey, ParseTableValue, TableStore,
+                             raiseae)
 from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.lex import (Atomic, Constant, LexType,
-                                 Operated, Operator,
-                                 Parameter, Predicate, Predicated,
-                                 Quantified, Sentence, Variable)
+from pytableaux.lang.lex import (Atomic, Constant, LexType, Operated, Operator,
+                                 Parameter, Predicate, Predicated, Quantified,
+                                 Sentence, Variable)
 from pytableaux.tools import MapProxy, abstract, key0
 from pytableaux.tools.abcs import Ebc, abcm
 from pytableaux.tools.hybrids import qset

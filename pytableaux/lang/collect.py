@@ -27,7 +27,7 @@ from itertools import repeat
 from typing import TYPE_CHECKING, Any, Iterable, SupportsIndex
 
 from pytableaux.errors import Emsg, check
-from pytableaux.lang._aux import (LangCommonMeta, PredsItemRef, PredsItemSpec,
+from pytableaux.lang import (LangCommonMeta, PredsItemRef, PredsItemSpec,
                                   raiseae)
 from pytableaux.lang.lex import LexicalItem, Predicate, Sentence
 from pytableaux.tools import closure
