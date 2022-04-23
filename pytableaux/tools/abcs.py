@@ -23,13 +23,13 @@ from __future__ import annotations
 
 __docformat__ = 'google'
 __all__ = (
+    'Abc',
     'abcf',
     'abcm',
     'AbcMeta',
-    'EbcMeta',
-    'Abc',
     'Copyable',
     'Ebc',
+    'EbcMeta',
     'FlagEnum',
     'IntEnum',
 )
@@ -40,13 +40,16 @@ import functools
 import itertools
 import operator as opr
 from collections.abc import Set
-from typing import (Annotated, Any, Callable, Collection, Hashable, Iterable,
-                    Iterator, Mapping, Sequence, SupportsIndex, TypeVar,
-                    overload)
+from typing import (TYPE_CHECKING, Annotated, Any, Callable, Collection,
+                    Hashable, Iterable, Iterator, Mapping, Sequence,
+                    SupportsIndex, TypeVar)
 
 from pytableaux import errors, tools
 from pytableaux.errors import check
 from pytableaux.tools.typing import RT, TT, EnumDictType, EnumT, F, Self, T
+
+if TYPE_CHECKING:
+    from typing import overload
 
 KeysFunc = Callable[[Any], Set[Hashable]]
 NOARG = object()
@@ -67,7 +70,6 @@ class eauto:...
 @tools.static
 class ebcm:
     'Static Enum meta utils.'
-  
 
     @staticmethod
     def fix_name_value(Class: type[EnumT], /) -> type[EnumT]:
@@ -149,6 +151,15 @@ class ebcm:
 class EnumLookup(Mapping[Any, EnumT]):
     'Enum member lookup index.'
 
+    if TYPE_CHECKING:
+        @overload
+        def build(self): # type: ignore
+            "Build and update the whole index."
+
+        @overload
+        def pseudo(self, member: EnumT, /) -> EnumT: # type: ignore
+            "Add a single pseudo member to the index."
+
     __slots__ = (
         '__len__', '__getitem__', '__iter__', '__reversed__',
         'build', 'pseudo'
@@ -184,14 +195,6 @@ class EnumLookup(Mapping[Any, EnumT]):
         self._srcinit(source, self, _build, _pseudo)
         if build:
             _build()
-
-    @overload
-    def build(self): # type: ignore
-        "Build and update the whole index."
-
-    @overload
-    def pseudo(self, member: EnumT, /) -> EnumT: # type: ignore
-        "Add a single pseudo member to the index."
 
     @staticmethod
     def _srcinit(src: Any, dest: Any, build: Callable, pseudo: Callable, /, *,
@@ -289,8 +292,6 @@ class EnumLookup(Mapping[Any, EnumT]):
     def __repr__(self):
         return repr(dict(self))
 
-    del(build, pseudo)
-
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -305,6 +306,11 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
     'General-purpose base Metaclass for all Enum classes.'
 
     #******  Class Instance Variables
+
+    if TYPE_CHECKING:
+        @property
+        @overload
+        def seq(self: type[EbcT]) -> Sequence[EbcT]: ...
 
     seq     : Sequence[EbcT2]
     _lookup : EnumLookup[EbcT2]
@@ -447,12 +453,6 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
         # Override to not double-proxy
         return cls._member_map_
 
-    @property
-    @overload
-    def seq(self: type[EbcT]) -> Sequence[EbcT]: ...
-    del(seq)
-
-EnumMeta = EbcMeta
 #=============================================================================
 #_____________________________________________________________________________
 #

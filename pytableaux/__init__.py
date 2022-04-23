@@ -20,7 +20,6 @@ pytableaux
 ----------
 
 """
-
 __docformat__ = 'google'
 __all__ = (
     'errors',
@@ -34,12 +33,9 @@ __all__ = (
     'tools',
 )
 
-
 from pytableaux import errors
 
 from pytableaux._package_info import package
-_package_info = None
-del(_package_info)
 
 from pytableaux.tools import abcs
 
@@ -63,7 +59,7 @@ import pytableaux.tools.sequences
 import pytableaux.tools.hybrids
 import pytableaux.tools.linked
 
-import pytableaux.lexicals as lexicals
+from pytableaux import lexicals
 import pytableaux.lang._collect
 import pytableaux.lang._write
 
@@ -98,8 +94,8 @@ def _():
         lexicals.Argument,
         lexicals.Lexical,
     ):
-
         c._readonly = True
+
     lexicals.nosetattr.enabled = True
 
     del(lexicals.nosetattr,)
@@ -119,11 +115,15 @@ import pytableaux.proof.helpers
 import pytableaux.proof.writers
 
 from pytableaux import (
-    examples, lexicals, logics, models, parsers, proof, tools
+    examples, logics, models, parsers, proof, tools
 )
 
 from pytableaux.tools.sets import EMPTY_SET
 
 
-
-
+_package_info = None
+del(
+    _,
+    _package_info,
+    pytableaux,
+)

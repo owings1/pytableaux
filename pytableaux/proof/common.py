@@ -26,7 +26,7 @@ __all__ = 'Node', 'Branch', 'Target'
 import operator as opr
 from collections.abc import Set
 from itertools import chain, filterfalse
-from typing import Any, Iterable, Iterator, Mapping, NamedTuple, SupportsIndex
+from typing import Any, Collection, Iterable, Iterator, Mapping, NamedTuple, SupportsIndex
 
 from pytableaux import lexicals, tools
 from pytableaux.errors import Emsg, check
@@ -263,69 +263,67 @@ class Branch(SequenceApi[Node], EventEmitter):
         """
         return self.__nextworld
 
-    def has(self, props: Mapping, ticked: bool = None) -> bool:
+    def has(self, props: Mapping, /) -> bool:
         """
         Check whether there is a node on the branch that matches the given properties,
         optionally filtered by ticked status.
         """
-        return self.find(props, ticked = ticked) != None
+        return self.find(props) is not None
 
-    def has_any(self, props_list: Iterable[Mapping], ticked: bool = None) -> bool:
+    def has_any(self, props_list: Iterable[Mapping], /) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``True``
         when the first match is found.
         """
         for props in props_list:
-            if self.has(props, ticked=ticked):
+            if self.has(props):
                 return True
         return False
 
-    def has_all(self, props_list: Iterable[Mapping], ticked: bool = None) -> bool:
+    def has_all(self, props_list: Iterable[Mapping], /) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``False``
         when the first non-match is found.
         """
         for props in props_list:
-            if not self.has(props, ticked=ticked):
+            if not self.has(props):
                 return False
         return True
 
-    def find(self, props: Mapping, ticked: bool = None) -> Node:
+    def find(self, props: Mapping, /) -> Node:
         """
         Find the first node on the branch that matches the given properties, optionally
         filtered by ticked status. Returns ``None`` if not found.
         """
-        results = self.search_nodes(props, ticked = ticked, limit = 1)
+        results = self.search_nodes(props, limit = 1)
         if results:
             return results[0]
         return None
 
-    def find_all(self, props: Mapping, ticked: bool = None) -> list[Node]:
+    def find_all(self, props: Mapping, /) -> list[Node]:
         """
         Find all the nodes on the branch that match the given properties, optionally
         filtered by ticked status. Returns a list.
         """
-        return self.search_nodes(props, ticked = ticked)
+        return self.search_nodes(props)
 
-    def search_nodes(self, props: Mapping, ticked: bool = None, limit: int = None) -> list[Node]:
+    def search_nodes(self, props: Mapping, /, limit: int = None) -> list[Node]:
         """
         Find all the nodes on the branch that match the given properties, optionally
         filtered by ticked status, up to the limit, if given. Returns a list.
         """
         results = []
-        best_haystack = self.__select_index(props, ticked)
+        best_haystack = self.__select_index(props)
         if not best_haystack:
             return results
         for node in best_haystack:
             if limit != None and len(results) >= limit:
                 break
-            if ticked != None and self.is_ticked(node) != ticked:
-                continue
             if node.has_props(props):
                 results.append(node)
         return results
 
-    def append(self, node: Mapping):
+    def append(self, node: Mapping, /):
         """
         Append a node (Node object or dict of props). Returns self.
         """
@@ -353,7 +351,7 @@ class Branch(SequenceApi[Node], EventEmitter):
 
     add = append
 
-    def extend(self, nodes: Iterable[Mapping]):
+    def extend(self, nodes: Iterable[Mapping], /):
         'Add multiple nodes. Returns self.'
         for node in nodes:
             self.append(node)
@@ -375,7 +373,7 @@ class Branch(SequenceApi[Node], EventEmitter):
             self.emit(BranchEvent.AFTER_BRANCH_CLOSE, self)
         return self
 
-    def is_ticked(self, node: Node) -> bool:
+    def is_ticked(self, node: Node, /) -> bool:
         'Whether the node is ticked relative to the branch.'
         return node in self.__ticked
 
@@ -429,7 +427,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                 index, sub = 0, sub + 1
         return lexicals.Constant((index, sub))
 
-    def __init_parent(self, parent: Branch | None):
+    def __init_parent(self, parent: Branch|None, /):
         if hasattr(self, '_Branch__parent'):
             raise AttributeError
         if parent is not None:
@@ -442,7 +440,7 @@ class Branch(SequenceApi[Node], EventEmitter):
             self.__origin = self
         self.__parent = parent
 
-    def __add_to_index(self, node: Node):
+    def __add_to_index(self, node: Node, /):
         for prop in self.__pidx:
             val = None
             found = False
@@ -458,7 +456,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                     self.__pidx[prop][val] = set()
                 self.__pidx[prop][val].add(node)
 
-    def __select_index(self, props, ticked):
+    def __select_index(self, props: Mapping, /) -> Collection[Node]:
         best_index = None
         for prop in self.__pidx:
             val = None
@@ -474,16 +472,13 @@ class Branch(SequenceApi[Node], EventEmitter):
                 if val not in self.__pidx[prop]:
                     return False
                 index = self.__pidx[prop][val]
-                if best_index == None or len(index) < len(best_index):
+                if best_index is None or len(index) < len(best_index):
                     best_index = index
                 # we could do no better
                 if len(best_index) == 1:
                     break
         if not best_index:
-            if ticked:
-                best_index = self.__ticked
-            else:
-                best_index = self
+            best_index = self
         return best_index
 
     def __getitem__(self, key: SupportsIndex) -> Node:

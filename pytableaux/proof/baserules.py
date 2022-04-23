@@ -40,7 +40,7 @@ __all__ = (
     'group',
 )
 
-from typing import Generator, Iterable, overload
+from typing import TYPE_CHECKING, Generator, Iterable
 
 from pytableaux.lexicals import (Constant, Operated, Operator, Predicate,
                                  Predicated, Quantified, Quantifier, Sentence)
@@ -51,18 +51,22 @@ from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
                                       PredNodes, QuitFlag)
 from pytableaux.proof.tableaux import ClosingRule, Rule
 from pytableaux.tools import abstract
-from pytableaux.tools.abcs import abcf
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import T
+
+if TYPE_CHECKING:
+    from typing import overload
 
 FIRST_CONST_SET = frozenset({Constant.first()})
 
 class NoopRule(Rule):
     "Rule stub that does not apply."
+
     def _get_targets(self, branch: Branch, /) -> None:
         pass
     def _apply(self, target: Target, /):
         pass
+
     @staticmethod
     def example_nodes():
         "Returns empty set."
@@ -122,7 +126,6 @@ class BaseSimpleRule(Rule):
         return self[AdzHelper].closure_score(target)
 
 class BaseNodeRule(BaseSimpleRule):
-    # * * * * * 
 
     Helpers = FilterHelper,
     #: (FilterHelper) Whether to ignore all ticked nodes.
@@ -149,21 +152,21 @@ class PredicatedSentenceRule(BaseSentenceRule):
 
     Helpers = PredNodes,
 
-    @abcf.temp
-    @overload
-    def sentence(self, node: Node, /) -> Predicated:...
+    if TYPE_CHECKING:
+        @overload
+        def sentence(self, node: Node, /) -> Predicated:...
 
 class QuantifiedSentenceRule(BaseSentenceRule):
 
-    @abcf.temp
-    @overload
-    def sentence(self, node: Node, /) -> Quantified:...
+    if TYPE_CHECKING:
+        @overload
+        def sentence(self, node: Node, /) -> Quantified:...
 
 class OperatedSentenceRule(BaseSentenceRule):
 
-    @abcf.temp
-    @overload
-    def sentence(self, node: Node, /) -> Operated:...
+    if TYPE_CHECKING:
+        @overload
+        def sentence(self, node: Node, /) -> Operated:...
 
 class NarrowQuantifierRule(QuantifiedSentenceRule):
 
@@ -252,5 +255,5 @@ def adds(*groups: tuple[dict, ...], **kw):
     return dict(adds = groups, **kw)
 
 del(
-    abstract, overload, abcf
+    abstract,
 )

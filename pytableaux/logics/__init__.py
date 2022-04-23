@@ -32,17 +32,17 @@ import sys
 from collections import defaultdict
 from importlib import import_module
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, overload
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping
 
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import closure, hybrids, mappings
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
-                                     LogicModule, LogicType, F)
+                                     LogicModule, LogicType)
 
 NOARG = object()
 if TYPE_CHECKING:
-    pass
+    from typing import overload
 
 
 class Registry(Mapping[str, LogicModule]):

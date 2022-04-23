@@ -196,7 +196,7 @@ class TestBranch:
     def test_select_index_non_indexed_prop(self):
         branch = Branch()
         branch.add({'foo': 'bar'})
-        idx = branch._Branch__select_index({'foo': 'bar'}, None)
+        idx = branch._Branch__select_index({'foo': 'bar'})
         assert list(idx) == list(branch)
 
     def test_select_index_access(self):
@@ -204,7 +204,7 @@ class TestBranch:
             {'world1': 0, 'world2': 1},
             {'foo': 'bar'},
         ))
-        idx = b._Branch__select_index({'world1': 0, 'world2': 1}, None)
+        idx = b._Branch__select_index({'world1': 0, 'world2': 1})
         assert set(idx) == {b[0]}
 
     def test_close_adds_flag_node(self):

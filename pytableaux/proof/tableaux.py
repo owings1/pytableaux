@@ -35,10 +35,9 @@ import functools
 import operator as opr
 from collections import deque
 from collections.abc import Set
-from types import ModuleType
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
                     Iterable, Iterator, Mapping, NamedTuple, Sequence,
-                    SupportsIndex, TypeVar, final, overload)
+                    SupportsIndex, final)
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lexicals import Argument, Sentence
@@ -50,7 +49,7 @@ from pytableaux.proof.types import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
                                     TabStatKey, TabTimers)
 from pytableaux.tools import abstract, closure, static, isstr
 from pytableaux.tools.abcs import Abc
-from pytableaux.tools.decorators import raisr
+from pytableaux.tools.decorators import raisr, wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
 from pytableaux.tools.linked import linqset
@@ -63,11 +62,10 @@ from pytableaux.tools.timing import StopWatch
 from pytableaux.tools.typing import RuleT
 
 if TYPE_CHECKING:
+    from typing import overload
     from pytableaux.logics import LogicLookupKey
-    from pytableaux.tools.typing import F, T, TypeInstDict
+    from pytableaux.tools.typing import F, T, TypeInstDict, LogicModule
 
-
-# RuleT = TypeVar('RuleT', bound = 'Rule')
 
 NOARG = object()
 NOGET = object()
@@ -75,7 +73,7 @@ NOGET = object()
 
 def locking(method: F) -> F:
     'Decorator for locking TabRules methods after Tableau is started.'
-    @functools.wraps(method)
+    @wraps(method)
     def f(self: TabRules, *args, **kw):
         try:
             if self._root._locked:
@@ -132,10 +130,10 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     __iter__ = None
 
-    @overload
-    def __getitem__(self, key: type[T]) -> T: # type: ignore
-        'Get a helper instance by class.'
-    del(__getitem__)
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, key: type[T]) -> T: # type: ignore
+            'Get a helper instance by class.'
 
     def __new__(cls, *args, **kw):
         inst = super().__new__(cls)
@@ -353,8 +351,7 @@ class ClosingRule(Rule):
 
     @abstract
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch) -> bool:
-        """For calculating a target's closure score. This default
-        implementation delegates to the abstract ``node_will_close_branch()``.
+        """For calculating a target's closure score.
         """
         raise NotImplementedError
 
@@ -574,15 +571,17 @@ class RuleGroup(SequenceApi[Rule]):
         """
         return self._root._ruleindex_get(self._ruleindex, ref, default)
 
-    @overload
-    def names(self) -> list[str]: ...
+    if TYPE_CHECKING:
+        @overload
+        def names(self) -> list[str]: ...
+
+        @overload
+        def __getitem__(self, i:SupportsIndex) -> Rule:...
+
+        @overload
+        def __getitem__(self, s:slice) -> SequenceApi[Rule]:...
+
     names = TabRules.names
-
-    @overload
-    def __getitem__(self, i:SupportsIndex) -> Rule:...
-
-    @overload
-    def __getitem__(self, s:slice) -> SequenceApi[Rule]:...
 
     def __getitem__(self, index):
         return self._seq[index]
@@ -700,7 +699,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     id: int
 
     #: The logic of the tableau.
-    logic: ModuleType|None
+    logic: LogicModule|None
 
     #: The argument of the tableau.
     argument: Argument|None
@@ -1073,11 +1072,12 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     # *** Behaviors
 
-    @overload
-    def __getitem__(self, s: slice) -> list[Branch]: ...
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, s: slice) -> list[Branch]: ...
 
-    @overload
-    def __getitem__(self, i: SupportsIndex) -> Branch: ...
+        @overload
+        def __getitem__(self, i: SupportsIndex) -> Branch: ...
 
     def __getitem__(self, index):
         return self.__branch_list[index]
@@ -1139,7 +1139,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     # *** Util
 
-    def __get_group_application(self, branch: Branch, group: RuleGroup) -> _RuleTarget:
+    def __get_group_application(self, branch: Branch, group: RuleGroup, /) -> _RuleTarget:
         """Find and return the next available rule application for the given open
         branch and rule group. 
         
@@ -1179,7 +1179,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         if results:
             return self.__select_optim_group_application(results)
 
-    def __select_optim_group_application(self, results: Sequence[_RuleTarget]) -> _RuleTarget:
+    def __select_optim_group_application(self, results: Sequence[_RuleTarget], /) -> _RuleTarget:
         """Choose the highest scoring element from given results. The ``results``
         parameter is assumed to be a non-empty list/tuple of (rule, target) pairs.
 
@@ -1262,7 +1262,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             rules = tuple(map(self.__compute_rule_stats, self.rules)),
         )
 
-    def __compute_rule_stats(self, rule: Rule) -> dict[str, Any]:
+    def __compute_rule_stats(self, rule: Rule, /) -> dict[str, Any]:
         'Compute the stats for a rule after the tableau is finished.'
         return dict(
             name    = rule.name,
@@ -1311,16 +1311,14 @@ class Tableau(Sequence[Branch], EventEmitter):
     def _gen_models(self):
         'Build models for the open branches.'
         Model: type[BaseModel] = self.logic.Model
-        # argument = self.argument
         for branch in self.open:
             self.__check_timeout()
             model = Model()
             model.read_branch(branch)
-            # model.is_countermodel = argument and model.is_countermodel_to(argument)
             branch.model = model
             yield model
 
-    def _build_tree(self, branches: Sequence[Branch], node_depth = 0, track = None,/):
+    def _build_tree(self, branches: Sequence[Branch], node_depth = 0, track = None,/) -> TreeStruct:
 
         s = TreeStruct()
 
@@ -1451,19 +1449,36 @@ class TableauxSystem(Abc):
 
     @classmethod
     @abstract
-    def build_trunk(cls, tableau: Tableau, argument: Argument, /):
-        'Build the trunk for an argument on the tableau.'
+    def build_trunk(cls, tableau: Tableau, argument: Argument, /) -> None:
+        """Build the trunk for an argument on the tableau.
+        
+        Args:
+            tableau: The tableau instance.
+            argument: The argument.
+        """
         raise NotImplementedError
 
     @classmethod
     def branching_complexity(cls, node: Node, /) -> int:
-        '''Compute how many new branches would be added if a rule were to be
-        applied to the node.'''
+        """Compute how many new branches would be added if a rule were to be
+        applied to the node.
+
+        Args:
+            node: The node instance.
+        
+        Returns:
+            The number of new branches.
+        """
         return 0
 
     @classmethod
-    def add_rules(cls, logic: ModuleType, rules: TabRules, /):
-        'Populate rules/groups for a tableau.'
+    def add_rules(cls, logic: LogicModule, rules: TabRules, /) -> None:
+        """Populate rules/groups for a tableau.
+        
+        Args:
+            logic: The logic.
+            rules: The tableau's rules.
+        """
         Rules = logic.TabRules
         rules.groups.create('closure').extend(Rules.closure_rules)
         for classes in Rules.rule_groups:
@@ -1507,7 +1522,7 @@ class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None])
         if len(kw):
             self.update(kw)
 
-    def node(self, node: Node) -> NodeStat:
+    def node(self, node: Node, /) -> NodeStat:
         'Get the stat info for the node, and create if missing.'
         # Avoid using defaultdict, since it may hide problems.
         try:
@@ -1614,7 +1629,9 @@ class TreeStruct(dmapattr):
         inst = cls()
         inst.update(it)
         return inst
+
     _from_mapping = _from_iterable
+
 # ----------------------------------------------
 
-del(abstract, final, overload, static, locking)
+del(abstract, final, static, locking)
