@@ -92,7 +92,7 @@ class TabRules:
                 return
             return tuple(
                 Target(adds(
-                    group(anode(w, branch.next_world)),
+                    group(anode(w, branch.new_world())),
                     world = w,
                     branch = branch,
                 ))

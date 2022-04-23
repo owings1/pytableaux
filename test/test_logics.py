@@ -2077,9 +2077,9 @@ class TestD(BaseSuite):
                 access[w1].append(w2)
         for w1 in access:
             assert len(access[w1]) == 1
-        assert len(access) == (b.world_count - 1)
+        assert len(access) == (len(b.worlds) - 1)
         # sanity check
-        assert b.world_count > 2
+        assert len(b.worlds) > 2
 
 @using(logic = 'T')
 class TestT(BaseSuite):

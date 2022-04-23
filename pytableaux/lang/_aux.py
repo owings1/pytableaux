@@ -36,7 +36,7 @@ __all__ = (
     'TbsT', 'CrdT', 'LexT', 'LexItT', 'SenT',
 )
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping, NamedTuple, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping, NamedTuple, Set, TypeVar
 
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import abcs, closure, MapProxy
@@ -190,6 +190,18 @@ class BiCoords(NamedTuple):
 
     def __repr__(self):
         return repr(tuple(self))
+
+    @staticmethod
+    def min_unused(used: Set[BiCoords], maxi: int):
+        # finds the mimimum available by searching for gaps.
+        if not used:
+            return BiCoords.first
+        index = sub = 0
+        while (index, sub) in used:
+            index += 1
+            if index > maxi:
+                index, sub = 0, sub + 1
+        return BiCoords(index, sub)
 
 class TriCoords(NamedTuple):
     index     : int

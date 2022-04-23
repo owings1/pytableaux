@@ -746,7 +746,7 @@ class MaxConsts:
             self._compute_needed_constants_for_node(node, branch)
             for node in branch
         ])
-        return max(1, branch.constants_count) * max(1, node_needed_constants) + 1
+        return max(1, len(branch.constants)) * max(1, node_needed_constants) + 1
 
     def _compute_needed_constants_for_node(self, node: Node, branch: Branch) -> int:
         s: Sentence = node.get('sentence')
@@ -785,7 +785,7 @@ class MaxWorlds:
         projected for the branch (origin).
         """
         max_worlds = self.get_max_worlds(branch)
-        return max_worlds is not None and branch.world_count >= max_worlds
+        return max_worlds is not None and len(branch.worlds) >= max_worlds
 
     def max_worlds_exceeded(self, branch: Branch):
         """
@@ -793,7 +793,7 @@ class MaxWorlds:
         branch (origin).
         """
         max_worlds = self.get_max_worlds(branch)
-        return max_worlds is not None and branch.world_count > max_worlds
+        return max_worlds is not None and len(branch.worlds) > max_worlds
 
     def modal_complexity(self, sentence: Sentence):
         """
@@ -834,7 +834,7 @@ class MaxWorlds:
             self.__compute_needed_worlds_for_node(node, branch)
             for node in branch
         ])
-        return branch.world_count + node_needed_worlds + 1
+        return len(branch.worlds) + node_needed_worlds + 1
 
     def __compute_needed_worlds_for_node(self, node: Node, branch: Branch):
         # we only care about unticked nodes, since ticked nodes will have

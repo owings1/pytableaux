@@ -1148,7 +1148,7 @@ class TabRules:
 
             si = self.sentence(node).lhs
             w1 = node['world']
-            w2 = branch.next_world
+            w2 = branch.new_world()
             return dict(sentence = si) | adds(
                 group(swnode(si, w2), Access(w1, w2)._asdict())
             )

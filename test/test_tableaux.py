@@ -124,7 +124,7 @@ class TestTableau(BaseSuite):
 class TestBranch:
 
     def test_next_world_returns_w0(self):
-        assert Branch().next_world == 0
+        assert Branch().new_world() == 0
 
     def test_new_constant_returns_m(self):
         assert Branch().new_constant() == Constant(0, 0)

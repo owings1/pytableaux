@@ -19,27 +19,33 @@ pytableaux.proof.common
 
 """
 from __future__ import annotations
-from collections import defaultdict
-
 
 __all__ = 'Node', 'Branch', 'Target'
 
 import operator as opr
+from collections import defaultdict
 from collections.abc import Set
 from itertools import chain, filterfalse
-from typing import Any, Collection, Iterable, Iterator, Mapping, NamedTuple, SupportsIndex
+from typing import (TYPE_CHECKING, Any, Collection, Iterable, Iterator, Mapping, NamedTuple,
+                    SupportsIndex)
 
-from pytableaux import lexicals, tools
+from pytableaux.lexicals import Constant, Sentence
 from pytableaux.errors import Emsg, check
 from pytableaux.proof.types import BranchEvent
+from pytableaux.tools import closure, isint, isattrstr, true
 from pytableaux.tools.decorators import lazy, operd, raisr
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap, dmapattr
+from pytableaux.tools.misc import orepr
 from pytableaux.tools.sequences import SequenceApi
-from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.sets import EMPTY_SET, SetView, setf
+if TYPE_CHECKING:
+    from pytableaux.models import BaseModel
+    from pytableaux.proof.tableaux import Rule
 
 _node_defaults = MapCover(world = None, designated = None)
+_first_const = Constant.first()
 
 class Node(MapCover):
     'A tableau node.'
@@ -82,7 +88,7 @@ class Node(MapCover):
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
         """
-        return setf(filter(tools.isint,
+        return setf(filter(isint,
             chain(self.get('worlds', EMPTY_SET),
             map(self.get, ('world', 'world1', 'world2'))),
         ))
@@ -110,7 +116,7 @@ class Node(MapCover):
                 return False
         return True
 
-    __bool__    = tools.true
+    __bool__    = true
     __eq__      = operd(opr.is_)
     __hash__    = operd(id)
     __delattr__ = raisr(AttributeError)
@@ -120,7 +126,7 @@ class Node(MapCover):
         return id(self)
 
     @staticmethod
-    @tools.closure
+    @closure
     def _init_cover():
         forig = MapCover._init_cover
         items = tuple((
@@ -148,7 +154,6 @@ class Node(MapCover):
         return dmap
 
     def __repr__(self):
-        from pytableaux.tools.misc import orepr
         return orepr(self, id = self.id, props = dict(self))
 
 class Access(NamedTuple):
@@ -182,12 +187,16 @@ class Branch(SequenceApi[Node], EventEmitter):
     __ticked  : set[Node]
     __worlds    : set[int]
     __nextworld : int
-    __constants : set[lexicals.Constant]
-    __nextconst : lexicals.Constant
-
+    __constants : set[Constant]
+    __nextconst : Constant
     __index: Branch.Index
 
-    def __init__(self, parent: Branch = None, /, *, nextconst = lexicals.Constant.first()):
+    def __init__(self, parent: Branch = None, /):
+        """Create a branch.
+        
+        Args:
+            parent: The parent branch, if any.
+        """
 
         self.__init_parent(parent)
 
@@ -203,32 +212,37 @@ class Branch(SequenceApi[Node], EventEmitter):
         self.__worlds    = set()
         self.__nextworld = 0
         self.__constants = set()
-        self.__nextconst = nextconst
+        self.__nextconst = _first_const
         self.__index = self.Index()
 
     @property
-    def parent(self) -> Branch:
+    def parent(self) -> Branch|None:
+        "The parent branch, if any."
         return self.__parent
 
     @property
     def origin(self) -> Branch:
+        "The root branch."
         return self.__origin
 
     @property
     def closed(self) -> bool:
+        "Whether the branch is closed."
         return self.__closed
 
     @property
     def leaf(self) -> Node:
+        "The leaf node, if any."
         return self[-1] if len(self) else None
 
     @property
-    def model(self):
+    def model(self) -> BaseModel|None:
+        "The associated model, if any."
         try: return self.__model
         except AttributeError: pass
 
     @model.setter
-    def model(self, model):
+    def model(self, model: BaseModel):
         try:
             self.__model
         except AttributeError: pass
@@ -236,49 +250,51 @@ class Branch(SequenceApi[Node], EventEmitter):
             raise AttributeError
         self.__model = model
 
-    @property
-    def world_count(self):
-        return len(self.__worlds)
+    @lazy.prop
+    def worlds(self) -> SetView[int]:
+        "The set of worlds on the branch."
+        return SetView(self.__worlds)
 
-    @property
-    def constants_count(self):
-        return len(self.__constants)
-
-    @property
-    def next_constant(self):
-        # TODO: WIP
-        return self.__nextconst
-
-    @property
-    def next_world(self) -> int:
-        """
-        Return a new world that does not appear on the branch.
-        """
-        return self.__nextworld
+    @lazy.prop
+    def constants(self) -> SetView[Constant]:
+        "The set of constants on the branch."
+        return SetView(self.__constants)
 
     def has(self, props: Mapping, /) -> bool:
-        """
-        Check whether there is a node on the branch that matches the given properties,
-        optionally filtered by ticked status.
+        """Whether there is a node on the branch that matches the given properties.
+        
+        Args:
+            props: A mapping of properties.
+        
+        Returns:
+            bool: Whether there is a match.
         """
         for _ in self.search(props, limit = 1):
             return True
         return False
 
-    def any(self, props_list: Iterable[Mapping], /) -> bool:
+    def any(self, mappings: Iterable[Mapping], /) -> bool:
+        """Check a list of property mappings against the ``has()`` method.
+        
+        Args:
+            mappings: An iterable of property mappings.
+        
+        Returns:
+            ``True`` when the first match is found, else ``False``.
         """
-        Check a list of property dictionaries against the ``has()`` method. Return ``True``
-        when the first match is found.
-        """
-        for props in props_list:
+        for props in mappings:
             for _ in self.search(props, limit = 1):
                 return True
         return False
 
     def all(self, props_list: Iterable[Mapping], /) -> bool:
-        """
-        Check a list of property dictionaries against the ``has()`` method. Return ``False``
-        when the first non-match is found.
+        """Check a list of property dictionaries against the ``has()`` method.
+        
+        Args:
+            mappings: An iterable of property mappings.
+        
+        Returns:
+            ``False`` when the first non-match is found, else ``True``.
         """
         for props in props_list:
             for _ in self.search(props, limit = 1):
@@ -288,9 +304,13 @@ class Branch(SequenceApi[Node], EventEmitter):
         return True
 
     def find(self, props: Mapping, /) -> Node|None:
-        """
-        Find the first node on the branch that matches the given properties, optionally
-        filtered by ticked status. Returns ``None`` if not found.
+        """Find the first node on the branch that matches the given properties.
+
+        Args:
+            props: A mapping of properties.
+        
+        Returns:
+            The node, or ``None`` if not found.
         """
         for node in self.search(props, limit = 1):
             return node
@@ -299,6 +319,10 @@ class Branch(SequenceApi[Node], EventEmitter):
         """
         Search the nodes on the branch that match the given properties, up to the
         limit, if given.
+
+        Args:
+            props: A mapping of properties.
+            limit (int): An optional result limit.
 
         Returns:
             A generator.
@@ -312,18 +336,24 @@ class Branch(SequenceApi[Node], EventEmitter):
                 yield node
 
     def append(self, node: Mapping, /) -> Branch:
-        """
-        Append a node (Node object or dict of props). Returns self.
+        """Append a node.
+
+        Args:
+            node: Node object or mapping.
+        
+        Returns:
+            self
+        
+        Raises:
+            DuplicateValueError: if the node is already on the branch.
         """
         node = Node(node)
         self.__nodes.append(node)
-        s: lexicals.Sentence = node.get('sentence')
+        s: Sentence = node.get('sentence')
         if s:
             cons = s.constants
             if cons:
                 if self.__nextconst in cons:
-                    # TODO: new_constant() is still a prettier result, since it
-                    #       finds the mimimum available by searching for gaps.
                     self.__nextconst = max(cons).next()
                 self.__constants.update(cons)
         if node.worlds:
@@ -340,13 +370,27 @@ class Branch(SequenceApi[Node], EventEmitter):
     add = append
 
     def extend(self, nodes: Iterable[Mapping], /) -> Branch:
-        'Add multiple nodes. Returns self.'
+        """Add multiple nodes.
+
+        Args:
+            nodes: An iterable of node objects/mappings.
+
+        Returns:
+            self
+
+        Raises:
+            DuplicateValueError: if a node is already on the branch.
+        """
         for node in nodes:
             self.append(node)
         return self
 
-    def tick(self, *nodes: Node):
-        'Tick a node for the branch.'
+    def tick(self, *nodes: Node) -> None:
+        """Tick node(s) for the branch.
+        
+        Args:
+            *nodes: The nodes to tick.
+        """
         event = BranchEvent.AFTER_NODE_TICK
         for node in filterfalse(self.is_ticked, nodes):
             self.__ticked.add(node)
@@ -354,7 +398,12 @@ class Branch(SequenceApi[Node], EventEmitter):
             self.emit(event, node, self)
 
     def close(self) -> Branch:
-        'Close the branch. Returns self.'
+        """Close the branch. Adds a flag node and emits the `AFTER_BRANCH_CLOSE
+        event.
+        
+        Returns:
+            self.
+        """
         if not self.closed:
             self.__closed = True
             self.append({'is_flag': True, 'flag': 'closure'})
@@ -362,7 +411,14 @@ class Branch(SequenceApi[Node], EventEmitter):
         return self
 
     def is_ticked(self, node: Node, /) -> bool:
-        'Whether the node is ticked relative to the branch.'
+        """Whether the node is ticked relative to the branch.
+
+        Args:
+            node: The node instance.
+        
+        Returns
+            bool: Whether the node is ticked.
+        """
         return node in self.__ticked
 
     def copy(self, parent: Branch = None, events: bool = False) -> Branch:
@@ -403,23 +459,14 @@ class Branch(SequenceApi[Node], EventEmitter):
 
         return b
 
-    # def constants(self):
-    #     'Return the set of constants that appear on the branch.'
-    #     # return self._views.constants(self.__constants)
-    #     return self.__constants
-
-    def new_constant(self, /, *, firstconst = lexicals.Constant.first()) -> lexicals.Constant:
+    def new_constant(self) -> Constant:
         'Return a new constant that does not appear on the branch.'
-        if not self.__constants:
-            return firstconst
-        maxidx = firstconst.TYPE.maxi
-        coordset = setf(c.coords for c in self.__constants)
-        index = sub = 0
-        while (index, sub) in coordset:
-            index += 1
-            if index > maxidx:
-                index, sub = 0, sub + 1
-        return lexicals.Constant((index, sub))
+        return self.__nextconst
+
+    def new_world(self) -> int:
+        """Return a new world that does not appear on the branch.
+        """
+        return self.__nextworld
 
     def __init_parent(self, parent: Branch|None, /):
         if hasattr(self, '_Branch__parent'):
@@ -444,17 +491,17 @@ class Branch(SequenceApi[Node], EventEmitter):
 
     __hash__ = operd(id)
     __eq__   = operd(opr.is_)
-    __bool__ = tools.true
+    __bool__ = true
 
     @property
-    def id(self):
+    def id(self) -> int:
+        "The branch object id."
         return id(self)
 
     def __contains__(self, node):
         return node in self.__nodes
 
     def __repr__(self):
-        from pytableaux.tools.misc import orepr
         return orepr(self, 
             id     = self.id,
             nodes  = len(self),
@@ -469,6 +516,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         return b
 
     class Index(dict[str, dict[Any, set[Node]]]):
+        "Branch node index."
 
         __slots__ = EMPTY_SET
 
@@ -502,6 +550,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                 for value, nodes in index.items():
                     inst[prop][value].update(nodes)
             return inst
+
         __copy__ = copy
 
         def select(self, props: Mapping, default: Collection[Node], /) -> Collection[Node]:
@@ -530,17 +579,19 @@ class Branch(SequenceApi[Node], EventEmitter):
             return best
 
 class Target(dmapattr[str, Any]):
+    """Rule application target.
+    """
 
     branch : Branch
-    rule   : object
+    rule   : Rule
     node   : Node
     nodes  : Set[Node]
     world  : int
     world1 : int
     world2 : int
     flag   : str
-    sentence   : lexicals.Sentence
-    constant   : lexicals.Constant
+    sentence   : Sentence
+    constant   : Constant
     designated : bool
 
     __slots__ = setf({
@@ -571,22 +622,20 @@ class Target(dmapattr[str, Any]):
     def __setitem__(self, key: str, value, /, *, isattrkey = _keyattr_ok):
         if isattrkey(key):
             if self.get(key, value) != value:
-            # if key in self and self[key] != value:
                 raise Emsg.ValueConflictFor(key, value, self[key])
-        elif not tools.isattrstr(key):
+        elif not isattrstr(key):
             check.inst(key, str)
             raise Emsg.BadAttrName(key)
         super().__setitem__(key, value)
 
     __delitem__ = raisr(TypeError)
     __delattr__ = raisr(AttributeError)
-    __bool__    = tools.true
+    __bool__    = true
 
     def __dir__(self):
         return list(self._names())
 
     def __repr__(self):
-        from pytableaux.tools.misc import orepr
         return orepr(self, dict(ItemsIterator(self._names(), vget = self.get)))
 
     def _names(self) -> Iterator[str]:
@@ -594,4 +643,4 @@ class Target(dmapattr[str, Any]):
         return (name for name in self.__slots__ if get(name) is not None)
 
 
-del(lazy, operd)
+del(lazy, operd, raisr)

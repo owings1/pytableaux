@@ -202,7 +202,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
 
     def _get_node_targets(self, node: Node, branch: Branch) -> Generator[dict, None, None]:
         unapplied = self[NodeConsts][branch][node]
-        if branch.constants_count and not len(unapplied):
+        if len(branch.constants) and not len(unapplied):
             # Do not release the node from filters, since new constants
             # can appear.
             return
