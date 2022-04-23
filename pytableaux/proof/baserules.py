@@ -42,7 +42,7 @@ __all__ = (
 
 from typing import TYPE_CHECKING, Generator, Iterable
 
-from pytableaux.lexicals import (Constant, Operated, Operator, Predicate,
+from pytableaux.lang.lex import (Constant, Operated, Operator, Predicate,
                                  Predicated, Quantified, Quantifier, Sentence)
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import NodeFilters

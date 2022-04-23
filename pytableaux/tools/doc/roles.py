@@ -29,8 +29,10 @@ from typing import TYPE_CHECKING
 
 import sphinx.roles
 from docutils import nodes
-from pytableaux import lexicals, parsers
-from pytableaux.lexicals import LexType
+from pytableaux.lang.collect import Predicates
+from pytableaux.lang.lex import LexType, Predicate
+from pytableaux.lang.parsing import Parser
+from pytableaux.lang.writing import LexWriter
 from pytableaux.tools.doc import BaseRole, Helper, docinspect
 from pytableaux.tools.typing import F
 from sphinx.util import logging
@@ -143,38 +145,38 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
 
 class lexdress(BaseRole):
 
-    _parser: parsers.Parser = None
-    _lw: lexicals.LexWriter = None
+    _parser: Parser = None
+    _lw: LexWriter = None
 
-    def __init__(self, *, wnotn: str = None, pnotn: str = None, preds:lexicals.Predicates = None):
+    def __init__(self, *, wnotn: str = None, pnotn: str = None, preds:Predicates = None):
         'Override app options with constructor.'
         defaults = Helper.defaults
         if wnotn is not None:
-            self._lw = lexicals.LexWriter(wnotn, 'unicode')
+            self._lw = LexWriter(wnotn, 'unicode')
 
         if pnotn is not None or preds is not None:
             if pnotn is None:
                 pnotn = defaults['pnotn']
             if preds is None:
                 preds = defaults['preds']
-            self._parser = parsers.Parser(pnotn, preds)
+            self._parser = Parser(pnotn, preds)
 
     @property
     def parser(self):
         if self._parser is None:
             opts = self.helper.opts
-            self._parser = parsers.Parser(opts['pnotn'], opts['preds'])
+            self._parser = Parser(opts['pnotn'], opts['preds'])
         return self._parser
 
     @property
     def lw(self):
         if self._lw is None:
             wnotn = self.helper.opts['wnotn']
-            self._lw = lexicals.LexWriter(wnotn, 'unicode')
+            self._lw = LexWriter(wnotn, 'unicode')
         return self._lw
 
     _ctypes_valued = {
-        LexType.Operator, LexType.Quantifier, lexicals.Predicate.System
+        LexType.Operator, LexType.Quantifier, Predicate.System
     }
     _ctypes_nosent = _ctypes_valued | {
         LexType.Constant, LexType.Variable, LexType.Predicate,

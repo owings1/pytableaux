@@ -29,39 +29,30 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_order = 1
 
+from pytableaux.errors import DenotationError, ModelValueError, check
+from pytableaux.lang.collect import Argument, Predicates
+from pytableaux.lang.lex import Atomic, Constant, Operated
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
+                                 Sentence)
+from pytableaux.models import BaseModel, Mval
+from pytableaux.proof.baserules import (BaseClosureRule, BaseNodeRule,
+                                        ExtendedQuantifierRule,
+                                        GetNodeTargetsRule,
+                                        NarrowQuantifierRule,
+                                        OperatedSentenceRule,
+                                        PredicatedSentenceRule,
+                                        QuantifiedSentenceRule, adds, group)
+from pytableaux.proof.common import Access, Branch, Node, Target
+from pytableaux.proof.filters import NodeFilters
+from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
+                                      MaxWorlds, NodeCount, NodesWorlds,
+                                      PredNodes, QuitFlag, WorldIndex)
+from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof.tableaux import TableauxSystem as BaseSystem
 from pytableaux.tools import closure, static
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import EMPTY_SET
-
-from pytableaux.lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
-    Operator as Oper, Quantifier, Argument, Sentence, Predicates
-from pytableaux.models import BaseModel, Mval
-
-from pytableaux.proof.common import Access
-from pytableaux.proof.tableaux import (
-    TableauxSystem as BaseSystem,
-    Tableau,
-)
-from pytableaux.proof.baserules import (
-    BaseClosureRule,
-    BaseNodeRule,
-    GetNodeTargetsRule,
-    ExtendedQuantifierRule,
-    NarrowQuantifierRule,
-    OperatedSentenceRule,
-    PredicatedSentenceRule,
-    QuantifiedSentenceRule,
-    group, adds,
-)
-from pytableaux.proof.common import Access, Branch, Node, Target
-from pytableaux.proof.filters import NodeFilters
-from pytableaux.proof.helpers import (
-    NodesWorlds, AplSentCount,
-    MaxWorlds, PredNodes, QuitFlag, AdzHelper,
-    FilterHelper, NodeCount, WorldIndex,
-)
-from pytableaux.errors import DenotationError, ModelValueError, instcheck
-
 
 Identity  = Predicates.System.Identity
 Existence = Predicates.System.Existence
@@ -602,7 +593,7 @@ class Frame:
         }
 
     def is_equivalent_to(self, other) -> bool:
-        other = instcheck(other, Frame)
+        other = check.inst(other, Frame)
         # check for informational equivalence, ignoring world
         # check atomic keys
         akeys_a = set(self.atomics.keys())

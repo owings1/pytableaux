@@ -18,18 +18,21 @@
 #
 # pytableaux - logics test cases
 from enum import Enum
-from pytest import raises
-
-from .tutils import BaseSuite, larg, using, skip
 
 from pytableaux.errors import *
+from pytableaux.lang.collect import Predicates
+from pytableaux.lang.lex import Atomic, Constant, Operated
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang.lex import Predicate, Predicated, Quantified
+from pytableaux.lang.lex import Quantifier
+from pytableaux.lang.lex import Quantifier as Quant
+from pytableaux.lang.lex import Sentence, Variable
 from pytableaux.logics import registry
-from pytableaux.lexicals import Predicate, Constant, Variable, Quantifier, \
-    Quantifier as Quant, Operator as Oper, \
-    Sentence, Atomic, Predicated, Quantified, Operated, \
-    Predicates
-from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.tableaux import Tableau
+from pytest import raises
+
+from .tutils import BaseSuite, larg, skip, using
 
 Existential = Quantifier.Existential
 Universal = Quantifier.Universal

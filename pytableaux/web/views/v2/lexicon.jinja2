@@ -6,7 +6,7 @@
             <div class="lexicon hidden notation-{{ notn.name|e }}">
                 <span class="label">Operators</span>
                 <table class="operator-symbols">
-                    {%- for oper in lexicals.Operator -%}
+                    {%- for oper in Operator -%}
                         <tr>
                             <td><span class="operator-symbol">{{ table.char(LexType.Operator, oper)|e }}</span></td>
                             <td class="html-ref-symbol">{{ lwh(oper) }}</td>
@@ -42,7 +42,7 @@
                 </ul>
                 <span class="label">Quantifiers</span>
                 <table class="operator-symbols quantifier-symbols">
-                    {%- for quantifier in lexicals.Quantifier -%}
+                    {%- for quantifier in Quantifier -%}
                         <tr>
                             <td>
                                 <span class="operator-symbol quantifier-symbol">
@@ -61,7 +61,7 @@
     <div class="panel">
         <span class="label">Predicates</span>
         <table id="predicates_input_table" class="predicates predicate-symbols">
-            {%- set PredSys = lexicals.Predicate.System -%}
+            {%- set PredSys = Predicate.System -%}
             {%- for pred in PredSys -%}
                 <tr class="system-predicate">
                     <td>

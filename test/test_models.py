@@ -2,7 +2,7 @@ from pytest import raises
 
 from pytableaux.errors import *
 from pytableaux.models import BaseModel
-from pytableaux.lexicals import Operator
+from pytableaux.lang.lex import Operator
 from pytableaux.logics import registry
 
 def test_truth_table_cpl_negation():

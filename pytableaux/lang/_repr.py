@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import reprlib
 
-from pytableaux.lexicals import LexType, LexWriter, Lexical, LexicalEnum, LexicalItem, Predicate
-from pytableaux.tools import closure, MapProxy
+from pytableaux.lang.lex import (Lexical, LexicalEnum, LexicalItem, LexType,
+                                 Predicate)
+from pytableaux.lang.writing import LexWriter
+from pytableaux.tools import MapProxy, closure
+
 
 class LangRepr(reprlib.Repr):
 
@@ -92,7 +95,7 @@ def pr():
 
 """
 
-from tabulate import tabulate; from pytableaux.lexicals import * ; rows = [(item, item.spec) for item in (member.cls.first() for member in LexType)]
+from tabulate import tabulate; from pytableaux.lang.lex import * ; rows = [(item, item.spec) for item in (member.cls.first() for member in LexType)]
 
 
 LexType

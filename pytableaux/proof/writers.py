@@ -24,16 +24,20 @@ __all__ = (
     'TabWriter',
 )
 
-from pytableaux.errors import Emsg
-from pytableaux.lexicals import Argument, LexWriter, Notation
-from pytableaux.proof.tableaux import Tableau, TreeStruct
-from pytableaux.tools import abstract, MapProxy
-from pytableaux.tools.typing import TT
-from pytableaux.tools.abcs import abcf, abcm, AbcMeta
+import os
+from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping
 
 import jinja2
-import os
-from typing import Any, ClassVar, Collection, Mapping, overload
+from pytableaux.errors import Emsg
+from pytableaux.lang.collect import Argument
+from pytableaux.lang.lex import Notation
+from pytableaux.lang.writing import LexWriter
+from pytableaux.proof.tableaux import Tableau, TreeStruct
+from pytableaux.tools import MapProxy, abstract
+from pytableaux.tools.abcs import AbcMeta, abcf, abcm
+from pytableaux.tools.typing import TT
+if TYPE_CHECKING:
+    from typing import overload
 
 class TabWriterMeta(AbcMeta):
     def __call__(cls, *args, **kw):
@@ -88,18 +92,19 @@ class TabWriter(metaclass = TabWriterMeta):
     def write(self, tableau: Tableau, /, **kw) -> str:
         raise NotImplementedError
 
-    @overload
-    def __call__(self, tableau: Tableau, /, **kw) -> str:...
+    if TYPE_CHECKING:
+        @overload
+        def __call__(self, tableau: Tableau, /, **kw) -> str:...
+
+        @classmethod
+        @overload
+        def register(cls, subcls: TT) -> TT: ...
 
     __call__ = write
 
     def __init_subclass__(subcls: type[TemplateWriter], **kw):
         super().__init_subclass__(**kw)
         subcls.__call__ = subcls.write
-
-    @classmethod
-    @overload
-    def register(cls, subcls: TT) -> TT: ...
 
     @abcf.before
     def prepare(ns: dict, bases):

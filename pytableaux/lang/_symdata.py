@@ -24,8 +24,8 @@ from __future__ import annotations
 __all__ = ()
 
 def parsetables():
-    from pytableaux.lexicals import (LexType, Marking, Notation, Operator,
-                                     Predicate, Quantifier)
+    from pytableaux.lang._aux import Marking, Notation
+    from pytableaux.lang.lex import LexType, Operator, Predicate, Quantifier
 
     data = {
         Notation.standard: dict(
@@ -129,8 +129,8 @@ def rendersets():
 
     from html import unescape as html_unescape
 
-    from pytableaux.lexicals import (LexType, Marking, Notation, Operator,
-                                     Predicate, Quantifier)
+    from pytableaux.lang._aux import Marking, Notation
+    from pytableaux.lang.lex import LexType, Operator, Predicate, Quantifier
     from pytableaux.tools import MapProxy
     from pytableaux.tools.misc import dmerged, dtransform
 

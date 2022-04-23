@@ -4,7 +4,7 @@ import time
 
 from pytableaux import examples
 from pytableaux.errors import *
-from pytableaux.lexicals import Atomic, Constant, Predicated
+from pytableaux.lang.lex import Atomic, Constant, Predicated
 from pytableaux.logics.k import DefaultNodeRule as DefaultKRule
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import Filters, NodeFilters, getkey

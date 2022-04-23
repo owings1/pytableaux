@@ -31,7 +31,7 @@ class Meta:
 from pytableaux.proof.baserules import BaseSimpleRule
 from pytableaux.proof.common import Branch, Target
 from pytableaux.proof.helpers import MaxWorlds, UnserialWorlds
-from pytableaux.lexicals import Atomic
+from pytableaux.lang.lex import Atomic
 from pytableaux.logics import k as K
 from pytableaux.logics.k import adds, anode, group, swnode
 

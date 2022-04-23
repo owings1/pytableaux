@@ -25,7 +25,9 @@ from __future__ import annotations
 __all__ = 'aliases', 'arguments', 'argument', 'data', 'preds', 'tabiter', 'titles'
 
 
-from pytableaux import lexicals, parsers, tools
+from pytableaux import tools
+from pytableaux.lang.parsing import Parser
+from pytableaux.lang.collect import Argument, Predicates
 
 data = tools.MapProxy({
     'Addition'                         : (('a',), 'Aab'),
@@ -170,7 +172,7 @@ aliases = tools.MapProxy({
 
 titles = tuple(sorted(data))
 
-preds = lexicals.Predicates(((0,0,1), (1,0,1), (2,0,1)))
+preds = Predicates(((0,0,1), (1,0,1), (2,0,1)))
 
 @tools.closure
 def argument():
@@ -187,10 +189,10 @@ def argument():
             )
         })
 
-    parsearg = parsers.Parser('polish', preds.copy()).argument
+    parsearg = Parser('polish', preds.copy()).argument
 
-    def argument(key: str|lexicals.Argument) -> lexicals.Argument:
-        if isinstance(key, lexicals.Argument):
+    def argument(key: str|Argument) -> Argument:
+        if isinstance(key, Argument):
             return key
         if not isinstance(key, str):
             raise TypeError(key)
@@ -210,7 +212,7 @@ def argument():
 @tools.closure
 def arguments():
 
-    def arguments(*keys: str|lexicals.Argument) -> tuple[lexicals.Argument, ...]:
+    def arguments(*keys: str|Argument) -> tuple[Argument, ...]:
         if not len(keys):
             keys = titles
         return tuple(map(argument, keys))

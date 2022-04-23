@@ -74,8 +74,7 @@ The full API docs are available :doc:`here <modules/index>`.
 If you are interested in building your own proofs, scripting, and
 customizing the output, I recommend looking at the following modules:
 
-* parsers
-* lexicals
+* lang.writing
 * proof.writers
 
 If you are interested in customize rules, building your own logic, or

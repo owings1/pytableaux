@@ -26,13 +26,13 @@ import operator as opr
 from collections import defaultdict
 from collections.abc import Set
 from itertools import chain, filterfalse
-from typing import (TYPE_CHECKING, Any, Collection, Iterable, Iterator, Mapping, NamedTuple,
-                    SupportsIndex)
+from typing import (TYPE_CHECKING, Any, Collection, Iterable, Iterator,
+                    Mapping, NamedTuple, SupportsIndex)
 
-from pytableaux.lexicals import Constant, Sentence
 from pytableaux.errors import Emsg, check
+from pytableaux.lang.lex import Constant, Sentence
 from pytableaux.proof.types import BranchEvent
-from pytableaux.tools import closure, isint, isattrstr, true
+from pytableaux.tools import closure, isattrstr, isint, true
 from pytableaux.tools.decorators import lazy, operd, raisr
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
@@ -40,6 +40,7 @@ from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap, dmapattr
 from pytableaux.tools.misc import orepr
 from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.sets import EMPTY_SET, SetView, setf
+
 if TYPE_CHECKING:
     from pytableaux.models import BaseModel
     from pytableaux.proof.tableaux import Rule

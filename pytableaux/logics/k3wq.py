@@ -29,7 +29,7 @@ class Meta(object):
     category_order = 40
 
 from pytableaux.proof.common import Branch, Node
-from pytableaux.lexicals import Quantifier, Quantified, Operated
+from pytableaux.lang.lex import Quantifier, Quantified, Operated
 from pytableaux.logics import fde as FDE, k3w as K3W, k3 as K3
 from pytableaux.logics.fde import adds, group, sdnode
 

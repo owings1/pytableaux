@@ -28,7 +28,7 @@ class Meta:
     tags = ['bivalent', 'modal', 'first-order']
     category_order = 3
 
-from pytableaux.lexicals import Atomic
+from pytableaux.lang.lex import Atomic
 from pytableaux.proof.baserules import adds, group
 from pytableaux.proof.common import Access, Branch, Node
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex

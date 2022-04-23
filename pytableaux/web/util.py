@@ -30,7 +30,7 @@ import prometheus_client.metrics as pm
 import prometheus_client.metrics_core as pmc
 import simplejson as json
 from prometheus_client.registry import CollectorRegistry
-from pytableaux import lexicals
+from pytableaux.lang.lex import Lexical
 from pytableaux.errors import Emsg
 from pytableaux.tools import abcs, mappings, typing
 
@@ -99,7 +99,7 @@ class AppMetrics(mappings.MapCover[str, pmc.Metric|pm.MetricWrapperBase], abcs.A
 
 def json_default(obj: Any):
 
-    if isinstance(obj, lexicals.Lexical):
+    if isinstance(obj, Lexical):
         return obj.ident
 
     if isinstance(obj, Mapping):

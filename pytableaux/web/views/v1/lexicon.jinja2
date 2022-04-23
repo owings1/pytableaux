@@ -25,14 +25,14 @@
                 </ul>
                 <span class="label">Operators</span>
                 <dl class="operator-symbols">
-                    {% for operator in lexicals.Operator -%}
+                    {% for operator in Operator -%}
                         <dt>{{ table.char(LexType.Operator, operator)|e }}</dt>
                         <dd>{{ operator|e }}</dd>
                     {% endfor %}
                 </dl>
                 <span class="label">Quantifiers</span>
                 <dl class="operator-symbols">
-                    {% for quantifier in lexicals.Quantifier -%}
+                    {% for quantifier in Quantifier -%}
                         <dt>{{ table.char(LexType.Quantifier, quantifier)|e }}</dt>
                         <dd>{{ quantifier|e }}</dd>
                     {% endfor %}
@@ -71,7 +71,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {%- set PredSys = lexicals.Predicate.System -%}
+                    {%- set PredSys = Predicate.System -%}
                     {% for pred in PredSys -%}
                         <tr class="systemPredicate">
                             <td>

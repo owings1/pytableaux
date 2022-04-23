@@ -6,36 +6,25 @@ __all__ = (
     'using',
     'skip',
 )
-from pytableaux import lexicals
+from inspect import getmembers, isclass
+from itertools import chain, filterfalse
+from typing import (Callable, Collection, Iterable,  # Mapping,; Sequence,
+                    Iterator, NamedTuple, overload)
+
+from pytableaux import examples
+from pytableaux.lang.collect import *
+from pytableaux.lang.lex import Notation, Predicate, Sentence
+from pytableaux.lang.parsing import Parser
+from pytableaux.lang.writing import LexWriter
+from pytableaux.logics import registry
+from pytableaux.models import BaseModel
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.tableaux import ClosingRule, Rule, RuleT, Tableau
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.misc import drepr
-from pytableaux.logics import registry
-from pytableaux.tools.typing import F, TT, T
-from pytableaux.lexicals import (
-    Argument, Predicates, Sentence, LexWriter, Notation
-)
-from pytableaux.models import BaseModel
-from pytableaux.parsers import Parser
-from pytableaux import examples
-from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.tableaux import (
-    Tableau, Rule, ClosingRule,
-    RuleT,
-)
+from pytableaux.tools.typing import TT, F, T
 
-from inspect import isclass, getmembers
-from itertools import chain, filterfalse
-from typing import (
-    overload,
-    Callable,
-    Collection,
-    Iterable,
-    Iterator,
-    # Mapping,
-    NamedTuple,
-    # Sequence,
-)
 
 def _setattrs(obj, **attrs):
     if isclass(obj):
@@ -158,7 +147,7 @@ class ArgModels(NamedTuple):
 @dynattrs('logic')
 class BaseSuite:
 
-    preds = Predicates(lexicals.Predicate.gen(3))
+    preds = Predicates(Predicate.gen(3))
     notn = Notation.polish
     logic = registry('CFOL')
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')

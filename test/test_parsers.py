@@ -20,7 +20,8 @@
 from pytest import raises
 
 from pytableaux.errors import ParseError
-from pytableaux.lexicals import Predicate, LexType, Predicates
+from pytableaux.lang.lex import Predicate, LexType
+from pytableaux.lang.collect import Predicates
 from pytableaux.parsers import Parser
 
 preds = Predicates(Predicate.gen(3))

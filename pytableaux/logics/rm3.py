@@ -28,7 +28,7 @@ class Meta:
     tags = 'many-valued', 'glutty', 'non-modal', 'first-order'
     category_order = 130
 
-from pytableaux.lexicals import Operator as Oper
+from pytableaux.lang.lex import Operator as Oper
 from pytableaux.proof.common import Node
 from pytableaux.logics import fde as FDE, lp as LP
 from pytableaux.logics.fde import adds, group, sdnode

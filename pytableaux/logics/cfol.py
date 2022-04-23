@@ -30,7 +30,7 @@ class Meta:
     tags = ['bivalent', 'non-modal', 'first-order']
     category_order = 2
 
-from pytableaux.lexicals import Sentence, Quantified
+from pytableaux.lang.lex import Sentence, Quantified
 from pytableaux.logics import k as K, cpl as CPL
 
 class Model(CPL.Model):

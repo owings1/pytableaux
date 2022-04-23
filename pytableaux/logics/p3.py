@@ -28,7 +28,7 @@ class Meta(object):
     tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
     category_order = 120
 
-from pytableaux.lexicals import Constant, Operator as Oper, Quantifier, Quantified
+from pytableaux.lang.lex import Constant, Operator as Oper, Quantifier, Quantified
 from pytableaux.proof.common import Branch, Node
 from pytableaux.logics import fde as FDE, k3 as K3
 from pytableaux.logics.fde import adds, group, sdnode

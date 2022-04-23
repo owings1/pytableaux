@@ -27,23 +27,24 @@ __all__ = (
     'TruthTables',
 )
 
-from collections import ChainMap
-from docutils import nodes
-from docutils.parsers.rst.directives import class_option, unchanged
 import re
+from collections import ChainMap
+from typing import TYPE_CHECKING
+
 import sphinx.directives.other
 import sphinx.directives.patches
+from docutils import nodes
+from docutils.parsers.rst.directives import class_option, unchanged
 from sphinx.util import logging
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
-from pytableaux import examples
-from pytableaux import lexicals
-from pytableaux import logics
-from pytableaux import models
-from pytableaux import parsers
+from pytableaux import examples, logics, models
+from pytableaux.lang.collect import Predicates
+from pytableaux.lang.lex import Notation, Operator
+from pytableaux.lang.parsing import Parser
+from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import tableaux, writers
 from pytableaux.tools.doc import BaseDirective, SphinxEvent, docparts, rstutils
 
@@ -61,15 +62,15 @@ def cleanws(arg: str, /) -> str:
     "Option spec to remove all whitespace."
     return re_space.sub('', arg)
 
-def predsopt(arg: str, /) -> lexicals.Predicates:
+def predsopt(arg: str, /) -> Predicates:
     "Option spec for list of predicate specs."
-    return lexicals.Predicates(
+    return Predicates(
         tuple(map(int, spec.split(':')))
         for spec in re_comma.split(cleanws(arg))
     )
 
-def opersopt(arg: str, /) -> tuple[lexicals.Operator, ...]:
-    return tuple(map(lexicals.Operator,
+def opersopt(arg: str, /) -> tuple[Operator, ...]:
+    return tuple(map(Operator,
         (s.strip() for s in re_comma.split(arg))
     ))
 
@@ -118,9 +119,9 @@ class Tableaud(BaseDirective):
         example = examples.argument,
         conclusion = unchanged,
         premises = re_comma.split,
-        pnotn = lexicals.Notation,
+        pnotn = Notation,
         preds = predsopt,
-        wnotn = lexicals.Notation,
+        wnotn = Notation,
         classes = class_option,
     )
 
@@ -153,7 +154,7 @@ class Tableaud(BaseDirective):
             tab = docparts.rule_example_tableau(rule)
 
         else:
-            parser = parsers.Parser(ochain['pnotn'], ochain['preds'])
+            parser = Parser(ochain['pnotn'], ochain['preds'])
             try:
                 if 'example' in opts:
                     arg = opts['example']
@@ -175,7 +176,7 @@ class TruthTable(BaseDirective):
     required_arguments = 1
 
     option_spec = dict(
-        wnotn = lexicals.Notation,
+        wnotn = Notation,
         template = unchanged,
         reverse = boolopt,
         clear = boolopt,
@@ -195,12 +196,12 @@ class TruthTable(BaseDirective):
             logic, oper = argstr.split('.')
             logic = logics.registry(logic)
             model: models.BaseModel = logic.Model()
-            oper = lexicals.Operator(oper)
+            oper = Operator(oper)
         except Exception as e:
             logger.error(e)
             raise self.error(f'Bad operator argument: {argstr}')
 
-        lw = lexicals.LexWriter(ochain['wnotn'], 'html')
+        lw = LexWriter(ochain['wnotn'], 'html')
 
         template = opts.get('template', hopts['truth_table_template'])
         reverse = opts.get('reverse', hopts['truth_table_reverse'])
@@ -222,7 +223,7 @@ class TruthTables(BaseDirective):
 
     option_spec = dict(
         operators = opersopt,
-        wnotn = lexicals.Notation,
+        wnotn = Notation,
         template = unchanged,
         reverse = boolopt,
         clear = boolopt,
@@ -243,7 +244,7 @@ class TruthTables(BaseDirective):
         if opers is None:
             opers = sorted(model.truth_functional_operators)
 
-        lw = lexicals.LexWriter(ochain['wnotn'], 'html')
+        lw = LexWriter(ochain['wnotn'], 'html')
 
         template = opts.get('template', hopts['truth_table_template'])
         reverse = opts.get('reverse', hopts['truth_table_reverse'])

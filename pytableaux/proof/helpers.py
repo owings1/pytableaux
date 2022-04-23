@@ -42,7 +42,7 @@ from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping,
                     Sequence, final, overload)
 
 from pytableaux.errors import Emsg, check
-from pytableaux.lexicals import Constant, Predicated, Sentence
+from pytableaux.lang.lex import Constant, Predicated, Sentence
 from pytableaux.models import BaseModel
 from pytableaux.proof.common import Access, Branch, Node, Target
 from pytableaux.proof.filters import NodeFilter
@@ -54,7 +54,6 @@ from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setf, setm
 from pytableaux.tools.typing import KT, VT, P, T, TypeInstDict
-
 
 TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
 NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]

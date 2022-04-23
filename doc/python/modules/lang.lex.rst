@@ -1,23 +1,8 @@
 .. include:: /_inc/attn-doc-freewheel.rsti
 
-***************
-Lexicals Module
-***************
-
 .. contents:: :local:
 
-.. automodule:: pytableaux.lexicals
-
-    Parsing & Writing
-    =================
-
-    .. autoclass:: Parser
-        :members: parse, argument
-
-    .. autoclass:: LexWriter
-        :members: write
-
-    .. autoclass:: Notation
+.. automodule:: pytableaux.lang.lex
 
     Vocabulary
     ==========
@@ -47,10 +32,3 @@ Lexicals Module
 
     .. autoclass:: Operated
 
-    Containers
-    ==========
-
-    .. autoclass:: Argument
-
-    .. autoclass:: Predicates
-    

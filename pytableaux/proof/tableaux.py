@@ -31,7 +31,6 @@ __all__ = (
     'TableauxSystem',
 )
 
-import functools
 import operator as opr
 from collections import deque
 from collections.abc import Set
@@ -40,14 +39,15 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
                     SupportsIndex, final)
 
 from pytableaux.errors import Emsg, check
-from pytableaux.lexicals import Argument, Sentence
+from pytableaux.lang.collect import Argument
+from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
 from pytableaux.models import BaseModel
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.types import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
                                     RuleHelper, RuleMeta, TabEvent, TabFlag,
                                     TabStatKey, TabTimers)
-from pytableaux.tools import abstract, closure, static, isstr
+from pytableaux.tools import abstract, closure, isstr, static
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.decorators import raisr, wraps
 from pytableaux.tools.events import EventEmitter
@@ -63,8 +63,9 @@ from pytableaux.tools.typing import RuleT
 
 if TYPE_CHECKING:
     from typing import overload
+
     from pytableaux.logics import LogicLookupKey
-    from pytableaux.tools.typing import F, T, TypeInstDict, LogicModule
+    from pytableaux.tools.typing import F, LogicModule, T, TypeInstDict
 
 
 NOARG = object()

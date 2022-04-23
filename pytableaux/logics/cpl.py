@@ -21,18 +21,19 @@ from __future__ import annotations
 
 name = 'CPL'
 
-class Meta(object):
+class Meta:
     title    = 'Classical Predicate Logic'
     category = 'Bivalent'
     description = 'Standard bivalent logic with predication, without quantification'
     tags = ['bivalent', 'non-modal']
     category_order = 1
 
-from pytableaux.tools.abcs import Abc, abcf
-from pytableaux.lexicals import Sentence, Quantified, Operated, Argument
+from pytableaux.lang.collect import Argument
+from pytableaux.lang.lex import Operated, Quantified, Sentence
+from pytableaux.logics import k as K
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.logics import k as K
+from pytableaux.tools.abcs import Abc, abcf
 
 class Model(K.Model):
     """
@@ -86,8 +87,9 @@ class TabRules(Abc):
     @abcf.after
     def clearmodal(cls):
         'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from pytableaux.proof.types import demodalize_rules
         from itertools import chain
+
+        from pytableaux.proof.types import demodalize_rules
         demodalize_rules(chain(
             cls.closure_rules,
             chain.from_iterable(cls.rule_groups)

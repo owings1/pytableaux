@@ -20,6 +20,7 @@ pytableaux.web.application
 """
 from __future__ import annotations
 
+
 __all__ = ('WebApp',)
 
 import mimetypes
@@ -33,19 +34,24 @@ import cherrypy as chpy
 import jinja2
 import prometheus_client as prom
 import simplejson as json
-from pytableaux import examples, lexicals, logics, package, parsers, web
+from pytableaux import examples, logics, package, web
 from pytableaux.errors import RequestDataError, TimeoutError
+from pytableaux.lang.collect import Argument, Predicates
+from pytableaux.lang.lex import LexType, Notation, Predicate, TriCoords, Operator, Quantifier
+from pytableaux.lang.parsing import ParseTable
+from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import tableaux, writers
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.mappings import MapCover, MapProxy, dmap
 from pytableaux.tools.timing import StopWatch
 from pytableaux.web import Wevent
 from pytableaux.web.mail import Mailroom, validate_feedback_form
-from pytableaux.web.util import AppMetrics, tojson, fix_uri_req_data
+from pytableaux.web.util import AppMetrics, fix_uri_req_data, tojson
 
 if TYPE_CHECKING:
-    from cherrypy._cprequest import Request, Response
     import logging
+
+    from cherrypy._cprequest import Request, Response
 
 EMPTY = ()
 EMPTY_MAP = MapProxy()
@@ -79,7 +85,7 @@ class WebApp(EventEmitter):
     base_view_data: Mapping[str, Any]
     "Instance base view data, merged with class defaults."
 
-    lw_cache: ClassVar[Mapping[lexicals.Notation, Mapping[str, lexicals.LexWriter]]]
+    lw_cache: ClassVar[Mapping[Notation, Mapping[str, LexWriter]]]
     jsapp_data: ClassVar[Mapping[str, Any]]
     api_defaults: ClassVar[Mapping[str, Any]]
     form_defaults: ClassVar[Mapping[str, Any]]
@@ -148,10 +154,10 @@ class WebApp(EventEmitter):
 
         cls.lw_cache = MapCover({
             notn: MapCover({
-                charset: lexicals.LexWriter(notn, charset)
+                charset: LexWriter(notn, charset)
                 for charset in notn.charsets
             })
-            for notn in lexicals.Notation 
+            for notn in Notation 
         })
 
         # Rendered example arguments
@@ -162,13 +168,13 @@ class WebApp(EventEmitter):
                     conclusion = lw(arg.conclusion),
                 ))
                 for notn, lw in (
-                    (notn, lexicals.LexWriter(notn, charset = 'ascii'))
-                    for notn in lexicals.Notation
+                    (notn, LexWriter(notn, charset = 'ascii'))
+                    for notn in Notation
                 )
             } | {
                 '@Predicates': (
                     arg.predicates(sort=True) -
-                    lexicals.Predicate.System
+                    Predicate.System
                 ).specs()
             })
             for arg in examples.arguments()
@@ -178,10 +184,10 @@ class WebApp(EventEmitter):
             example_args   = example_args,
             example_preds  = tuple(p.spec for p in examples.preds),
             nups           = {
-                notn.name: parsers.ParseTable.fetch(notn).chars[
-                    lexicals.LexType.Predicate
+                notn.name: ParseTable.fetch(notn).chars[
+                    LexType.Predicate
                 ]
-                for notn in lexicals.Notation
+                for notn in Notation
             },
         ))
 
@@ -189,20 +195,22 @@ class WebApp(EventEmitter):
 
         cls.view_data_defaults = MapCover(dict(
 
-            lexicals   = lexicals,
-            LexType    = lexicals.LexType,
-            Notation   = lexicals.Notation,
-            ParseTable = parsers.ParseTable,
+            LexType    = LexType,
+            Notation   = Notation,
+            Operator   = Operator,
+            Quantifier = Quantifier,
+            Predicate  = Predicate,
+            ParseTable = ParseTable,
             Json       = json,
 
             logics         = logics_map,
             example_args   = example_args,
             form_defaults  = cls.form_defaults,
             output_formats = writers.TabWriter.Registry.keys(),
-            output_charsets  = lexicals.Notation.get_common_charsets(),
+            output_charsets  = Notation.get_common_charsets(),
             logic_categories = logics.registry.grouped(logics_map),
 
-            lwh = cls.lw_cache[lexicals.Notation.standard]['html'],
+            lwh = cls.lw_cache[Notation.standard]['html'],
         ))
 
         cls.is_class_setup = True
@@ -533,7 +541,7 @@ class WebApp(EventEmitter):
 
         elabel = 'Notation'
         try:
-            notn = lexicals.Notation[body['notation']]
+            notn = Notation[body['notation']]
         except KeyError as err:
             errors[elabel] = f"Invalid notation: {err}"
 
@@ -559,7 +567,7 @@ class WebApp(EventEmitter):
             },
         )
 
-    def api_prove(self, body: Mapping[str, Any]) -> tuple[dict, tableaux.Tableau, lexicals.LexWriter]:
+    def api_prove(self, body: Mapping[str, Any]) -> tuple[dict, tableaux.Tableau, LexWriter]:
         """
         Example request body::
 
@@ -661,7 +669,7 @@ class WebApp(EventEmitter):
 
             elabel = 'Output Notation'
             try:
-                onotn = lexicals.Notation[odata['notation']]
+                onotn = Notation[odata['notation']]
             except KeyError as err:
                 errors[elabel] = f"Invalid notation: {err}"
             else:
@@ -715,13 +723,13 @@ class WebApp(EventEmitter):
         return resp_data, tableau, lw
 
     @classmethod
-    def _parse_argument(cls, adata: Mapping[str, Any]) -> lexicals.Argument:
+    def _parse_argument(cls, adata: Mapping[str, Any]) -> Argument:
 
         errors = {}
 
         elabel = 'Notation'
         try:
-            notn = lexicals.Notation[
+            notn = Notation[
                 adata.get('notation') or
                 cls.api_defaults['input_notation']
             ]
@@ -751,7 +759,7 @@ class WebApp(EventEmitter):
         if errors:
             raise RequestDataError(errors)
 
-        return lexicals.Argument(conclusion, premises)
+        return Argument(conclusion, premises)
 
     def get_template(self, view: str) -> jinja2.Template:
         cache = self.template_cache
@@ -769,12 +777,12 @@ class WebApp(EventEmitter):
         return req.remote.ip
 
     @staticmethod
-    def _parse_preds(pspecs: Collection[Mapping|Sequence]) -> lexicals.Predicates|None:
+    def _parse_preds(pspecs: Collection[Mapping|Sequence]) -> Predicates|None:
         if not pspecs:
             return None
         errors = {}
-        preds = lexicals.Predicates()
-        Coords = lexicals.TriCoords
+        preds = Predicates()
+        Coords = TriCoords
         fields = Coords._fields
         for i, specdata in enumerate(pspecs, start = 1):
             elabel = f'Predicate {i}'

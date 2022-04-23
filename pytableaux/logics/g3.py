@@ -35,7 +35,7 @@ class Meta:
     )
 
 
-from pytableaux.lexicals import Operator as Oper
+from pytableaux.lang.lex import Operator as Oper
 from pytableaux.proof.common import Branch, Node
 from pytableaux.logics import fde as FDE, l3 as L3, k3 as K3
 from pytableaux.logics.fde import adds, group, sdnode

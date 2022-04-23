@@ -25,7 +25,8 @@ from itertools import product, repeat
 from typing import Any, ClassVar, Mapping
 
 from pytableaux.errors import Emsg, check
-from pytableaux.lexicals import (Argument, Atomic, LexType, Operated, Operator,
+from pytableaux.lang.collect import Argument
+from pytableaux.lang.lex import (Atomic, LexType, Operated, Operator,
                                  Predicated, Quantified, Quantifier, Sentence)
 from pytableaux.proof.common import Branch
 from pytableaux.tools import abstract, closure

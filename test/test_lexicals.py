@@ -16,11 +16,12 @@
 #
 # ------------------
 #
-# pytableaux - lexicals module tests
+# pytableaux - lex module tests
 # import pytest
 
 from pytableaux.errors import *
-from pytableaux.lexicals import *
+from pytableaux.lang.collect import *
+from pytableaux.lang.lex import *
 from pytableaux.tools.sets import EMPTY_SET
 
 try:
@@ -28,10 +29,11 @@ try:
 except ModuleNotFoundError:
     from tutils import BaseSuite, skip
 
-from copy import copy
-from pytest import raises
 import operator as opr
+from copy import copy
 from itertools import product
+
+from pytest import raises
 
 Firsts = dict(
     (cls, cls.first()) for cls in LexType.classes
@@ -370,7 +372,7 @@ class TestGenericApi(BaseSuite):
                 if cls is Quantifier: break
 
     def test_deep_copy(self):
-        from copy import deepcopy, copy
+        from copy import copy, deepcopy
         for cls in LexType.classes:
             a = cls.first()
             b = copy(a)

@@ -35,41 +35,30 @@ class Meta:
         'first-order',
     )
 
+from typing import Any
+
 from pytableaux.errors import ModelValueError
-from pytableaux import lexicals
-from pytableaux.lexicals import (
-    Argument,
-    Atomic,
-    Constant,
-    Predicate,
-    Predicated,
-    Quantified,
-    Quantifier,
-    Operated,
-    Operator as Oper,
-    Sentence,
-)
+from pytableaux.lang.collect import Argument
+from pytableaux.lang.lex import Atomic, Constant, Operated
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
+                                 Sentence)
 from pytableaux.models import BaseModel, Mval
-from pytableaux.proof.baserules import (
-    BaseClosureRule,
-    ExtendedQuantifierRule,
-    GetNodeTargetsRule,
-    NarrowQuantifierRule,
-    OperatedSentenceRule,
-    QuantifiedSentenceRule,
-)
+from pytableaux.proof.baserules import (BaseClosureRule,
+                                        ExtendedQuantifierRule,
+                                        GetNodeTargetsRule,
+                                        NarrowQuantifierRule,
+                                        OperatedSentenceRule,
+                                        QuantifiedSentenceRule)
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import NodeFilters
-from pytableaux.proof.tableaux import (
-    Tableau,
-    TableauxSystem as BaseSystem,
-)
-from pytableaux.tools import closure, MapProxy, static
-from pytableaux.tools.sets import setf
+from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof.tableaux import TableauxSystem as BaseSystem
+from pytableaux.tools import MapProxy, closure, static
 from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.sets import setf
 from pytableaux.tools.typing import T
 
-from typing import Any
 
 def sdnode(s: Sentence, d: bool):
     return dict(sentence = s, designated = d)
@@ -98,8 +87,8 @@ class Model(BaseModel):
     #: A mapping from each predicate to its extension. An extension for an
     #: *n*-ary predicate is a set of *n*-tuples of constants.
     #:
-    #: :type: dict[lexicals.Predicate, set[tuple[lexicals.Constant, ...]]]
-    extensions: dict[Predicate, set[tuple[lexicals.Constant, ...]]]
+    #: :type: dict[Predicate, set[tuple[Constant, ...]]]
+    extensions: dict[Predicate, set[tuple[Constant, ...]]]
 
     def __init__(self):
 
@@ -109,7 +98,7 @@ class Model(BaseModel):
 
         #: A map of predicates to their anti-extension.
         #:
-        #: :type: dict[lexicals.Predicate, set[tuple[lexicals.Constant, ...]]]
+        #: :type: dict[Predicate, set[tuple[Constant, ...]]]
         self.anti_extensions: dict[Predicate, set[tuple[Constant, ...]]] = {}
 
         #: An assignment of each atomic sentence to an admissible truth value.

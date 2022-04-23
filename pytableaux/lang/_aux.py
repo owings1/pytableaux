@@ -6,7 +6,6 @@ __all__ = (
 
     'LangCommonMeta',
     'LangCommonEnumMeta',
-    'ArgumentMeta',
 
     'LangCommonEnum',
 
@@ -36,19 +35,19 @@ __all__ = (
     'TbsT', 'CrdT', 'LexT', 'LexItT', 'SenT',
 )
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping, NamedTuple, Set, TypeVar
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
+                    NamedTuple, Set, TypeVar)
 
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import abcs, closure, MapProxy
+from pytableaux.tools import MapProxy, abcs, closure
 from pytableaux.tools.decorators import NoSetAttr, raisr
-from pytableaux.tools.sets import setm, EMPTY_SET
+from pytableaux.tools.sets import EMPTY_SET, setm
 
 if TYPE_CHECKING:
+    from pytableaux.lang.lex import (CoordsItem, Lexical, LexicalItem, LexType,
+                                     Predicate, Quantifier, Sentence, Variable)
     from pytableaux.lang.parsing import Parser
-    from pytableaux.lexicals import Quantifier, Variable
-    from pytableaux.lexicals import (CoordsItem, Lexical, LexicalItem,
-                                     LexWriter, Sentence,
-                                     Predicate, LexType)
+    from pytableaux.lang.writing import LexWriter
 
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
 raiseae = raisr(AttributeError)
@@ -71,14 +70,6 @@ class LangCommonEnumMeta(abcs.EbcMeta):
     _readonly : bool
     __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.EbcMeta)
-
-class ArgumentMeta(LangCommonMeta):
-    'Argument Metaclass.'
-
-    def __call__(cls, *args, **kw):
-        if len(args) == 1 and not len(kw) and isinstance(args[0], cls):
-            return args[0]
-        return super().__call__(*args, **kw)
 
 #==========================+
 #  Base classes            |

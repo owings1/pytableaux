@@ -5,9 +5,13 @@ Modules
 
 .. toctree::
 
-    lexicals
+    lang.collect
 
-    parsers
+    lang.lex
+
+    lang.parsing
+
+    lang.writing
 
     proof.common
 

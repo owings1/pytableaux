@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.lang._write
-^^^^^^^^^^^^^^^^^^^^^^
+pytableaux.lang.writing
+^^^^^^^^^^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
@@ -28,7 +28,7 @@ from typing import Any, ClassVar, TYPE_CHECKING
 import pytableaux.tools.misc
 from pytableaux.errors import Emsg, check
 from pytableaux.lang._aux import LangCommonMeta, Marking, Notation, RenderSet
-from pytableaux.lexicals import (Atomic, Constant, CoordsItem, Lexical,
+from pytableaux.lang.lex import (Atomic, Constant, CoordsItem, Lexical,
                                  LexType, Operated, Operator, Predicate,
                                  Predicated, Quantified)
 from pytableaux.tools import MapProxy, abstract, closure

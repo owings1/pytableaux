@@ -27,16 +27,18 @@ __all__ = (
 )
 
 import re
-from sphinx.util import logging
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
-    from proof.tableaux import Rule
 
+from pytableaux.lang.collect import Argument
+from pytableaux.lang.lex import Atomic
 from pytableaux.logics import registry
-from pytableaux.lexicals import Argument, Atomic
-from pytableaux.tools.doc import (docinspect, docparts, rstutils, AutodocProcessor,
-                       ReplaceProcessor, SphinxEvent)
+from pytableaux.tools.doc import (AutodocProcessor, ReplaceProcessor,
+                                  SphinxEvent, docinspect, docparts, rstutils)
+from sphinx.util import logging
+
+if TYPE_CHECKING:
+    from proof.tableaux import Rule
+    from sphinx.application import Sphinx
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +126,7 @@ class RolewrapReplace(ReplaceProcessor):
         if defns is not None:
             return defns
 
-        from pytableaux.tools.doc import roles, role_name
+        from pytableaux.tools.doc import role_name, roles
         rolewrap = {
             roles.metadress: ['prefixed'],
             roles.refplus  : ['logicref'],

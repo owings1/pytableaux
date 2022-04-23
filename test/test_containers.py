@@ -4,7 +4,7 @@ import operator as opr
 from pytest import raises
 
 from pytableaux.errors import *
-from pytableaux.lexicals import *
+from pytableaux.lang.lex import *
 
 from pytableaux.tools.abcs import *
 from pytableaux.tools.events import EventsListeners, Listeners
@@ -233,7 +233,7 @@ class TestMappingApi(BaseSuite):
 
     def test_subclasses(self):
         # Ensure modules are loaded
-        from pytableaux.parsers import ParseTable
+        from pytableaux.lang.parsing import ParseTable
         from pytableaux.proof.common import Target
         from pytableaux.proof.helpers import BranchCache
         from pytableaux.proof.tableaux import TreeStruct

@@ -24,7 +24,6 @@ __docformat__ = 'google'
 __all__ = (
     'errors',
     'examples',
-    'lexicals',
     'logics',
     'models',
     'package',
@@ -59,24 +58,24 @@ import pytableaux.tools.sequences
 import pytableaux.tools.hybrids
 import pytableaux.tools.linked
 
-from pytableaux import lexicals
-import pytableaux.lang._collect
-import pytableaux.lang._write
+import pytableaux.lang.collect
+import pytableaux.lang.writing
 
 @tools.closure
 def _():
-    from pytableaux.lang._collect import Argument, Predicates
-    from pytableaux.lang._write import LexWriter
-    lexicals.Argument = Argument
-    lexicals.Predicates = Predicates
-    lexicals.LexWriter = LexWriter
+    pass
+    # from pytableaux.lang.collect import Argument, Predicates
+    # from pytableaux.lang.writing import LexWriter
+    # lexicals.Argument = Argument
+    # lexicals.Predicates = Predicates
+    # lexicals.LexWriter = LexWriter
 
 import pytableaux.parsers
 
 @tools.closure
 def _():
-    from pytableaux.lexicals import RenderSet, Notation
-    from pytableaux.parsers import ParseTable
+    from pytableaux.lang._aux import RenderSet, Notation
+    from pytableaux.lang.parsing import ParseTable
     from pytableaux.lang import _symdata
 
     RenderSet._initcache(Notation, _symdata.rendersets())
@@ -87,18 +86,22 @@ import pytableaux.lang._repr
 @tools.closure
 def _():
 
+    from pytableaux.lang import lex
+    from pytableaux.lang._aux import LangCommonEnum
+    from pytableaux.lang.collect import Argument, Predicates
+    from pytableaux.lang.lex import Lexical, LexicalItem
     for c in (
-        lexicals.LangCommonEnum,
-        lexicals.LexicalItem,
-        lexicals.Predicates,
-        lexicals.Argument,
-        lexicals.Lexical,
+        LangCommonEnum,
+        LexicalItem,
+        Predicates,
+        Argument,
+        Lexical,
     ):
         c._readonly = True
 
-    lexicals.nosetattr.enabled = True
+    lex.nosetattr.enabled = True
 
-    del(lexicals.nosetattr,)
+    del(lex.nosetattr,)
 
 # --------------------------------------------
 

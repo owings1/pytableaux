@@ -181,7 +181,9 @@ class Helper:
 
     def reconfigure(self, opts: dict):
 
-        from pytableaux import lexicals
+        from pytableaux.lang.lex import Notation
+        from pytableaux.lang.writing import RenderSet, LexWriter
+        from pytableaux.lang.collect import Predicates
         from pytableaux.proof import writers
 
         self.opts = opts = dict(self.defaults) | opts
@@ -192,17 +194,17 @@ class Helper:
             lstrip_blocks = True,
         )
 
-        opts['preds'] = lexicals.Predicates(opts['preds'])
+        opts['preds'] = Predicates(opts['preds'])
 
-        wnotn = lexicals.Notation(opts['wnotn'])
+        wnotn = Notation(opts['wnotn'])
 
         # Make a RenderSet that renders subscript 2 as 'n'.
         rskey = f'{type(self).__qualname__}.trunk'
         try:
-            rstrunk = lexicals.RenderSet.fetch(wnotn, rskey)
+            rstrunk = RenderSet.fetch(wnotn, rskey)
         except KeyError:
-            rshtml = lexicals.RenderSet.fetch(wnotn, 'html')
-            rstrunk = lexicals.RenderSet.load(wnotn, rskey, dict(rshtml.data,
+            rshtml = RenderSet.fetch(wnotn, 'html')
+            rstrunk = RenderSet.load(wnotn, rskey, dict(rshtml.data,
                 name = f'{wnotn.name}.{rskey}',
                 renders = dict(rshtml.renders,
                     subscript = lambda sub: (
@@ -212,7 +214,7 @@ class Helper:
             ))
 
         self.pwtrunk = writers.TabWriter('html',
-            lw = lexicals.LexWriter(wnotn, renderset = rstrunk),
+            lw = LexWriter(wnotn, renderset = rstrunk),
             classes = ('example', 'build-trunk'),
         )
 

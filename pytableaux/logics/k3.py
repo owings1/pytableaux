@@ -96,7 +96,7 @@ class TabRules:
 
         @staticmethod
         def example_nodes():
-            from pytableaux.lexicals import Atomic
+            from pytableaux.lang.lex import Atomic
             from pytableaux.logics.fde import sdnode
             a = Atomic.first()
             return sdnode(a, True), sdnode(~a, True)

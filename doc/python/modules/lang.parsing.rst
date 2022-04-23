@@ -1,12 +1,11 @@
 .. include:: /_inc/attn-doc-freewheel.rsti
 
-***************
-Parsers Module
-***************
-
 .. contents:: :local:
 
-.. automodule:: pytableaux.parsers
+.. automodule:: pytableaux.lang.parsing
+
+    .. autoclass:: Parser
+        :members: parse, argument
 
     .. autoclass:: BaseParser
 
@@ -15,4 +14,3 @@ Parsers Module
     .. autoclass:: PolishParser
 
     .. autoclass:: StandardParser
-

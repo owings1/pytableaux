@@ -29,10 +29,11 @@ __all__ = (
 import reprlib
 from typing import Any
 
-from pytableaux import lexicals
-from pytableaux.lexicals import Argument, LexType, Operator, RenderSet
+from pytableaux.lang.collect import Argument
+from pytableaux.lang.lex import Lexical, LexType, Operator
+from pytableaux.lang.parsing import ParseTable
+from pytableaux.lang.writing import LexWriter, RenderSet
 from pytableaux.logics import registry
-from pytableaux.parsers import ParseTable
 from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
 
@@ -73,10 +74,9 @@ TableData = list[list[str]]
 def opers_table(opts: dict = {}) -> TableData:
     'Table data for the Operators table.'
 
-    from html import unescape, escape
+    from html import escape, unescape
 
     # Build outputs into maps
-
     # Parser tables
     charpol, charstd = (
         {o: table.char(o.TYPE, o) for o in Operator}
@@ -156,11 +156,11 @@ class SpecRepr(reprlib.Repr):
 
 def lex_eg_table(choice = 'spec', opts: dict = {}) -> TableData:
 
-    def egitem(lexcls: type[lexicals.Lexical]):
+    def egitem(lexcls: type[Lexical]):
         return lexcls.first()
 
     egitems = [egitem(lexcls) for lexcls in LexType.classes]
-    lw = lexicals.LexWriter('standard', 'unicode')
+    lw = LexWriter('standard', 'unicode')
 
     srepr = SpecRepr().repr
 

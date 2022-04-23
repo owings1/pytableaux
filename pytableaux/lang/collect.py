@@ -15,9 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.lang._collect
-^^^^^^^^^^^^^^^^^^^^^^^^
+pytableaux.lang.collect
+^^^^^^^^^^^^^^^^^^^^^^^
 
+Language collection classes.
 """
 from __future__ import annotations
 
@@ -28,7 +29,7 @@ from typing import TYPE_CHECKING, Any, Iterable, SupportsIndex
 from pytableaux.errors import Emsg, check
 from pytableaux.lang._aux import (LangCommonMeta, PredsItemRef, PredsItemSpec,
                                   raiseae)
-from pytableaux.lexicals import LexicalItem, Predicate, Sentence
+from pytableaux.lang.lex import LexicalItem, Predicate, Sentence
 from pytableaux.tools import closure
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import lazy, membr, wraps

@@ -5,28 +5,16 @@ __all__ = (
     'NodeFilter',
     'NodeFilters',
 )
+import operator as opr
+from typing import TYPE_CHECKING, Any, Callable, Generic, Mapping
+
+from pytableaux.lang.lex import (Operated, Operator, Predicated, Quantified,
+                                 Sentence)
+from pytableaux.proof.common import Access, Node
 from pytableaux.tools import abstract, static, thru
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import LHS, RHS
-
-from pytableaux.lexicals import (
-    Operator,
-    Operated,
-    Predicated,
-    Quantified,
-    Sentence,
-)
-from pytableaux.proof.common import Access, Node
-
-import operator as opr
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Mapping,
-    TYPE_CHECKING,
-)
 
 # TODO: fix generic types on Comparer, Filters
 
