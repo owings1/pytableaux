@@ -49,7 +49,7 @@ Quick Start
 
 The following is an example for building a proof in {@CPL} for Modus Ponens::
 
-    from pytableaux.parsers import Parser
+    from pytableaux.lang.parsing import Parser
     from pytableaux.proof.tableaux import Tableau
     from pytableaux.proof.writers import TabWriter
 

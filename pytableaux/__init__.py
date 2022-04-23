@@ -27,7 +27,6 @@ __all__ = (
     'logics',
     'models',
     'package',
-    'parsers',
     'proof',
     'tools',
 )
@@ -60,23 +59,13 @@ import pytableaux.tools.linked
 
 import pytableaux.lang.collect
 import pytableaux.lang.writing
+import pytableaux.lang.parsing
+
 
 @tools.closure
 def _():
-    pass
-    # from pytableaux.lang.collect import Argument, Predicates
-    # from pytableaux.lang.writing import LexWriter
-    # lexicals.Argument = Argument
-    # lexicals.Predicates = Predicates
-    # lexicals.LexWriter = LexWriter
-
-import pytableaux.parsers
-
-@tools.closure
-def _():
-    from pytableaux.lang import RenderSet, Notation
+    from pytableaux.lang import RenderSet, Notation, _symdata
     from pytableaux.lang.parsing import ParseTable
-    from pytableaux.lang import _symdata
 
     RenderSet._initcache(Notation, _symdata.rendersets())
     ParseTable._initcache(Notation, _symdata.parsetables())
@@ -118,7 +107,7 @@ import pytableaux.proof.helpers
 import pytableaux.proof.writers
 
 from pytableaux import (
-    examples, logics, models, parsers, proof, tools
+    examples, logics, models, proof, tools
 )
 
 from pytableaux.tools.sets import EMPTY_SET

@@ -16,13 +16,13 @@
 #
 # ------------------
 #
-# pytableaux - parsers test cases
+# pytableaux - parsing test cases
 from pytest import raises
 
 from pytableaux.errors import ParseError
 from pytableaux.lang.lex import Predicate, LexType
 from pytableaux.lang.collect import Predicates
-from pytableaux.parsers import Parser
+from pytableaux.lang.parsing import Parser
 
 preds = Predicates(Predicate.gen(3))
 std = Parser('standard', preds)
