@@ -114,6 +114,7 @@ def do_copy_entry(app: Sphinx, entry: HtmlCopyEntry):
     src = os.path.join(app.srcdir, entry[0])
     dest = os.path.join(app.outdir, entry[1])
     eopts = dict(entry[2]) if len(entry) > 2 else {}
+    eopts.setdefault('dirs_exist_ok', True)
     ignore = eopts.get('ignore')
     if ignore is not None:
         if not callable(ignore):

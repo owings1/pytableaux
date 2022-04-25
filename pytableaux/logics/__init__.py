@@ -40,10 +40,10 @@ from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
                                      LogicModule, LogicType)
 
-NOARG = object()
 if TYPE_CHECKING:
     from typing import overload
 
+NOARG = object()
 
 class Registry(Mapping[str, LogicModule]):
     """Logic module registry.

@@ -20,7 +20,6 @@ pytableaux.web.application
 """
 from __future__ import annotations
 
-
 __all__ = ('WebApp',)
 
 import mimetypes
@@ -37,7 +36,8 @@ import simplejson as json
 from pytableaux import examples, logics, package, web
 from pytableaux.errors import RequestDataError, TimeoutError
 from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.lex import LexType, Notation, Predicate, TriCoords, Operator, Quantifier
+from pytableaux.lang.lex import (LexType, Notation, Operator, Predicate,
+                                 Quantifier, TriCoords)
 from pytableaux.lang.parsing import ParseTable
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import tableaux, writers
@@ -206,7 +206,8 @@ class WebApp(EventEmitter):
             logics         = logics_map,
             example_args   = example_args,
             form_defaults  = cls.form_defaults,
-            output_formats = writers.TabWriter.Registry.keys(),
+            # output_formats = writers.TabWriter.Registry.keys(),
+            output_formats = writers.registry.keys(),
             output_charsets  = Notation.get_common_charsets(),
             logic_categories = logics.registry.grouped(logics_map),
 
@@ -662,7 +663,7 @@ class WebApp(EventEmitter):
 
         elabel = 'Output Format'
         try:
-            WriterClass = writers.TabWriter.Registry[odata['format']]
+            WriterClass = writers.registry[odata['format']]
         except KeyError as err:
             errors[elabel] = f"Invalid writer: {err}"
         else:

@@ -14,13 +14,12 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux._package_info
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
-
-"""
-    pytableaux._package_info
-    ----------
-
-"""
 
 __docformat__ = 'google'
 __all__ = ('package',)

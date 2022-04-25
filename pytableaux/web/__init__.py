@@ -20,25 +20,18 @@ pytableaux.web
 """
 from __future__ import annotations
 
-
-__docformat__ = 'google'
-__all__ = ()
-
 import logging
 import re
 from typing import TYPE_CHECKING, Any, Mapping
 
-from pytableaux import package, tools
+from pytableaux import package, tools, __docformat__
 from pytableaux.tools.abcs import Ebc, eauto
 from pytableaux.tools.mappings import ItemMapEnum
 
 if TYPE_CHECKING:
     pass
 
-from pytableaux.web import util
-from pytableaux.web.mail import Mailroom
-import pytableaux.web.util
-import pytableaux.web.mail
+__all__ = ()
 
 class Wevent(Ebc):
     before_dispatch = eauto()
@@ -240,4 +233,4 @@ class EnvConfig(ItemMapEnum):
             import os
             env = os.environ
         logger = get_logger(__name__)
-        return {defn.name: defn.resolve(env) for defn in cls}
+        return {defn.name: defn.resolve(env, logger = logger) for defn in cls}

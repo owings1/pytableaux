@@ -24,22 +24,23 @@ __docformat__ = 'google'
 __all__ = ('tojson',)
 
 import functools
-from typing import TYPE_CHECKING, Any, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
 
 import prometheus_client.metrics as pm
 import prometheus_client.metrics_core as pmc
 import simplejson as json
 from prometheus_client.registry import CollectorRegistry
-from pytableaux.lang.lex import Lexical
 from pytableaux.errors import Emsg
-from pytableaux.tools import abcs, mappings, typing
+from pytableaux.lang.lex import Lexical
+from pytableaux.tools import abcs, mappings
 
 if TYPE_CHECKING:
-    pass
+    from pytableaux.tools.typing import T
 
 metric_defs = []
+
 # Decorator for AppMetrics
-def mwrap(fn: typing.F) -> typing.F:
+def mwrap(fn: Callable[..., T]) -> Callable[..., T]:
     key = fn.__name__
     @functools.wraps(fn)
     def f(self: AppMetrics, *labels):
@@ -80,7 +81,6 @@ class AppMetrics(mappings.MapCover[str, pmc.Metric|pm.MetricWrapperBase], abcs.A
             mkey: metrcls(mkey, *spec, registry = registry)
             for mkey, (metrcls, *spec) in metric_defs
         })
-        
 
     @staticmethod
     def _new_registry(*, auto_describe = True, **kw) -> CollectorRegistry:

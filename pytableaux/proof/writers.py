@@ -14,57 +14,117 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - tableau writers module
-from __future__ import annotations
+"""
+pytableaux.proof.writers
+========================
 
-__all__ = (
-    'TabWriter',
-)
+"""
+from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping
 
 import jinja2
-from pytableaux.errors import Emsg
-from pytableaux.lang.collect import Argument
+from pytableaux import __docformat__
+from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Notation
 from pytableaux.lang.writing import LexWriter
-from pytableaux.proof.tableaux import Tableau, TreeStruct
-from pytableaux.tools import MapProxy, abstract
-from pytableaux.tools.abcs import AbcMeta, abcf, abcm
+from pytableaux.tools import MapProxy, abstract, closure
+from pytableaux.tools.abcs import AbcMeta, abcm
 from pytableaux.tools.typing import TT
+
 if TYPE_CHECKING:
     from typing import overload
 
+    from pytableaux.lang.collect import Argument
+    from pytableaux.proof.tableaux import Tableau, TreeStruct
+
+
+__all__ = (
+    'TabWriter',
+)
+
+registry: Mapping[str, type[TabWriter]]
+"""The tableau writer class registry.
+
+:meta hide-value:
+"""
+
+@closure
+def register():
+    global registry
+    _registry: dict[str, type[TabWriter]] = {}
+    registry = MapProxy(_registry)
+
+    def register(wcls: type[TabWriter],/):
+        """Register a ``TabWriter`` class. Returns the argument, so it can be
+        used as a decorator.
+
+        Args:
+            wcls: The writer class.
+        
+        Returns:
+            The writer class.
+        """
+
+        check.subcls(wcls, TabWriter)
+        if abcm.isabstract(wcls):
+            raise TypeError(f'Cannot register abstract class: {wcls}')
+
+        fmt = wcls.format
+        if fmt in registry:
+            raise KeyError(f"Format {fmt} already registered")
+        _registry[fmt] = wcls
+
+        return wcls
+
+    return register
+
 class TabWriterMeta(AbcMeta):
+    DefaultFormat = 'text'
+
     def __call__(cls, *args, **kw):
         if cls is TabWriter:
             if args:
                 fmt, *args = args
             else:
-                fmt = TabWriter.DefaultFormat
-            return TabWriter.Registry[fmt](*args, **kw)
+                fmt = cls.DefaultFormat
+            return registry[fmt](*args, **kw)
         return super().__call__(*args, **kw)
 
 class TabWriter(metaclass = TabWriterMeta):
+    """Tableau writer base class.
 
-    Registry: ClassVar[Mapping[str, type[TabWriter]]]
-    DefaultFormat = 'text'
+    Constructing a ``TabWriter``.
 
-    #: The format registry identifier.
+    Examples::
+
+        # make an instance of the default writer class, with the default notation.
+        writer = TabWriter()
+
+        # make an HtmlTabWriter, with the default notation and charset.
+        writer = TabWriter('html')
+
+        # make an HtmlTabWriter, with standard notation and ASCII charset.
+        writer = TabWriter('html', 'standard', 'ascii')
+    """
+
     format: ClassVar[str]
-    #: Default LexWriter charset for each notation.
+    "The format registry identifier."
+
     default_charsets: ClassVar[Mapping[Notation, str]] = MapProxy({
         notn: notn.default_charset for notn in Notation
     })
-    #: Default options.
-    defaults: Mapping[str, Any] = MapProxy()
+    "Default ``LexWriter`` charset for each notation."
+
+    defaults: ClassVar[Mapping[str, Any]] = MapProxy()
+    "Default options."
 
     lw: LexWriter
+    "The writer's `LexWriter` instance."
+
     opts: dict[str, Any]
+    "The writer's options."
 
     def __init__(self, notn: Notation|str = None, charset: str = None, *, lw: LexWriter = None, **opts):
         if lw is None:
@@ -86,13 +146,14 @@ class TabWriter(metaclass = TabWriterMeta):
         self.opts = dict(self.defaults) | opts
 
     def attachments(self, /) -> Mapping[str, Any]:
-        return {}
+        return MapProxy()
 
     @abstract
     def write(self, tableau: Tableau, /, **kw) -> str:
         raise NotImplementedError
 
     if TYPE_CHECKING:
+
         @overload
         def __call__(self, tableau: Tableau, /, **kw) -> str:...
 
@@ -102,76 +163,63 @@ class TabWriter(metaclass = TabWriterMeta):
 
     __call__ = write
 
-    def __init_subclass__(subcls: type[TemplateWriter], **kw):
+    def __init_subclass__(subcls: type[TemplateTabWriter], **kw):
         super().__init_subclass__(**kw)
         subcls.__call__ = subcls.write
-
-    @abcf.before
-    def prepare(ns: dict, bases):
-
-        _registry: dict[str, type[TabWriter]] = {}
-
-        def register(cls: type[TabWriter], subcls: type[TabWriter]):
-            'Update available writers.'
-            if not issubclass(subcls, __class__):
-                raise TypeError(subcls, __class__)
-            if abcm.isabstract(subcls):
-                raise TypeError('Cannot register abstract class: %s' % subcls)
-            fmt = subcls.format
-            if fmt in _registry:
-                raise TypeError(
-                    "%s format '%s' already registered" % (__class__.__name__, fmt)
-                )
-            _registry[fmt] = subcls
-            type(cls).register(cls, subcls)
-            return subcls
-
-        ns.update(
-            Registry = MapProxy(_registry),
-            register = classmethod(register),
-        )
 
 _templates_base_dir = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'templates'
 )
 
-class TemplateWriter(TabWriter):
+class TemplateTabWriter(TabWriter):
 
     template_dir: ClassVar[str]
-    main_template: ClassVar[str]
-    _jenv: ClassVar[jinja2.Environment]
-    _jinja_opts: ClassVar[Mapping[str, Any]] = MapProxy(dict(
+
+    jinja_opts: ClassVar[Mapping[str, Any]] = MapProxy(
         trim_blocks   = True,
         lstrip_blocks = True,
-    ))
+    )
+    _jenv: ClassVar[jinja2.Environment]
 
-    def _render(self, template: str, *args, **kw) -> str:
-        return self._jenv.get_template(template).render(*args, **kw)
+    @classmethod
+    def render(cls, template: str, *args, **kw) -> str:
+        return cls._jenv.get_template(template).render(*args, **kw)
 
-    def __init_subclass__(subcls: type[TemplateWriter], **kw):
+    def __init_subclass__(subcls: type[TemplateTabWriter], **kw):
         super().__init_subclass__(**kw)
         if abcm.isabstract(subcls):
             return
         if getattr(subcls, '_jenv', None) is None:
-            if 'loader' not in subcls._jinja_opts:
-                jopts = dict(subcls._jinja_opts)
+            if 'loader' not in subcls.jinja_opts:
+                jopts = dict(subcls.jinja_opts)
                 if getattr(subcls, 'template_dir', None) is None:
                     subcls.template_dir = os.path.join(_templates_base_dir, subcls.format)
                 jopts['loader'] = jinja2.FileSystemLoader(subcls.template_dir)
             subcls._jenv = jinja2.Environment(**jopts)
 
-@TabWriter.register
-class HtmlTabWriter(TemplateWriter):
+@register
+class HtmlTabWriter(TemplateTabWriter):
+    """HTML tableau writer.
+    """
 
     format = 'html'
+
     default_charsets = {notn: 'html' for notn in Notation}
+
     defaults = dict(
         classes      = (),
         wrap_classes = (),
         inline_css   = False,
     )
+    """Option defaults."""
 
-    def write(self, tab: Tableau, /, classes: Collection[str] = None):
+    def write(self, tab: Tableau, /, classes: Collection[str] = None) -> str:
+        """"
+        Args:
+            tab: The tableaux instance.
+            classes: Additional classes for the main tableau element. Merged
+                with `classes` option.
+        """
         opts = self.opts
         wrap_classes = ['tableau-wrapper']
         wrap_classes.extend(opts['wrap_classes'])
@@ -179,7 +227,7 @@ class HtmlTabWriter(TemplateWriter):
         tab_classes.extend(opts['classes'])
         if classes is not None:
             tab_classes.extend(classes)
-        return self._render('tableau.jinja2',
+        return self.render('tableau.jinja2',
             tab = tab,
             lw = self.lw,
             opts = opts,
@@ -187,9 +235,15 @@ class HtmlTabWriter(TemplateWriter):
             tab_classes = tab_classes,
         )
 
-    def attachments(self, /):
+    @classmethod
+    def attachments(cls, /) -> dict[str, str]:
+        """
+        Returns:
+            A dict with:
+              - `css`: The static css.
+        """
         return dict(
-            css = self._render('static/tableau.css')
+            css = cls.render('static/tableau.css')
         )
 
     # classes:
@@ -205,22 +259,25 @@ class HtmlTabWriter(TemplateWriter):
     #             world1, world2, access, ellipsis, flag, <flag>]
     #   misc : clear
 
-@TabWriter.register
-class TextTabWriter(TemplateWriter):
+@register
+class TextTabWriter(TemplateTabWriter):
+    """Plain text tableau writer."""
 
     format = 'text'
+
     defaults = dict(
         summary  = True,
         argument = True,
         heading  = True,
     )
+    """Default options."""
 
-    def write(self, tab: Tableau, /):
+    def write(self, tab: Tableau, /) -> str:
         strs = []
         opts = self.opts
         if opts['summary']:
             premises, conclusion = self._get_argstrs(tab.argument)
-            strs.append(self._render('summary.jinja2',
+            strs.append(self.render('summary.jinja2',
                 stats      = tab.stats,
                 logic      = tab.logic,
                 argument   = tab.argument,
@@ -228,15 +285,15 @@ class TextTabWriter(TemplateWriter):
                 conclusion = conclusion,
             ))
         if opts['heading']:
-            strs.append(self._render('heading.jinja2',
+            strs.append(self.render('heading.jinja2',
                 logic = tab.logic,
             ))
-        template = self._jenv.get_template('nodes.jinja2')
+        template = self._jenv.get_template('nodes.jinja2', None, dict(lw = self.lw))
         strs.append(self._write_structure(tab.tree, template))
         return '\n'.join(strs)
 
-    def _write_structure(self, structure: TreeStruct, template: jinja2.Template, *, prefix: str = '',):
-        nodestr = template.render(structure = structure, lw = self.lw)
+    def _write_structure(self, structure: TreeStruct, template: jinja2.Template, *, prefix: str = '',) -> str:
+        nodestr = template.render(structure = structure)
         lines = [prefix + nodestr]
         children = structure.children
         prefix += (' ' * (len(nodestr) - 1))
@@ -248,8 +305,8 @@ class TextTabWriter(TemplateWriter):
                 lines.append(next_pfx)
         return '\n'.join(lines)
 
-    def _get_argstrs(self, arg: Argument, /) -> tuple[tuple[str, ...], str]:
+    def _get_argstrs(self, arg: Argument|None, /) -> tuple[tuple[str, ...]|None, str|None]:
         if not arg:
-            return (None, None)
+            return None, None
         lw = self.lw
         return tuple(map(lw, arg.premises)), lw(arg.conclusion)

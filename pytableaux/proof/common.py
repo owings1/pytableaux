@@ -470,8 +470,14 @@ class Branch(SequenceApi[Node], EventEmitter):
         return self.__nextworld
 
     def __init_parent(self, parent: Branch|None, /):
-        if hasattr(self, '_Branch__parent'):
+        try:
+            self.__parent
+        except AttributeError:
+            pass
+        else:
             raise AttributeError
+        # if hasattr(self, '_Branch__parent'):
+        #     raise AttributeError
         if parent is not None:
             if parent is self:
                 raise ValueError('A branch cannot be its own parent')

@@ -56,7 +56,7 @@ Python **3.10.1** or later is required.
 
 ```bash
 python3 -m pip install --upgrade \
-    future jinja2 cherrypy prometheus_client simplejson
+    future jinja2 cherrypy prometheus_client simplejson tabulate
 ```
 
 For system-level dependencies, refer to [res/python3.dockerfile][dockerfile].

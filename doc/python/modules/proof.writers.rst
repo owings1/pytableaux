@@ -3,5 +3,9 @@
 .. contents:: :local:
 
 .. automodule:: pytableaux.proof.writers
+    :members: registry, register
+    
+    .. autoclass:: TabWriter()
+        :members:
 
-    .. autoclass:: TabWriter
+

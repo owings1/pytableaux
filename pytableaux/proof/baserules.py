@@ -64,6 +64,7 @@ class NoopRule(Rule):
 
     def _get_targets(self, branch: Branch, /) -> None:
         pass
+
     def _apply(self, target: Target, /):
         pass
 

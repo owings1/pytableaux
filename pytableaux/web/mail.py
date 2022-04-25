@@ -31,8 +31,8 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
 
-from pytableaux import web, errors
-from pytableaux.errors import check, Emsg
+from pytableaux import errors, web
+from pytableaux.errors import Emsg, check
 from pytableaux.tools.mappings import MapCover
 
 if TYPE_CHECKING:
@@ -66,7 +66,7 @@ class Mailroom:
     "Logger instance."
 
     loaded: bool
-    "Whether the config has been loaded, include TLS, etc.."
+    "Whether the config has been loaded, including TLS, etc."
 
     should_stop: bool
     "Flag to signal background thread to exit."

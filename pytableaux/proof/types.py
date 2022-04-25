@@ -13,10 +13,11 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - proof.types module
+"""
+pytableaux.proof.types
+^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
 
 __all__ = (
@@ -25,7 +26,7 @@ __all__ = (
     'RuleHelper',
     'TabEvent',
 )
-from typing import Any, Callable, Iterable, Mapping, NamedTuple
+from typing import Any, Callable, Iterable, Mapping, NamedTuple, TYPE_CHECKING
 
 from pytableaux.errors import check
 from pytableaux.tools import MapProxy, abstract, closure
@@ -34,6 +35,9 @@ from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.timing import StopWatch
+
+if TYPE_CHECKING:
+    from pytableaux.proof.tableaux import Rule
 
 #******  Branch Enum
 
@@ -47,12 +51,14 @@ class BranchEvent(Ebc):
 
 class HelperAttr(str, Ebc):
     'Special ``RuleHelper`` class attribute names.'
+
     InitRuleCls = '__init_ruleclass__'
 
 #******  Rule Enum
 
 class RuleAttr(str, Ebc):
     'Special ``Rule`` class attribute names.'
+
     Helpers     = 'Helpers'
     Timers      = 'Timers'
     NodeFilters = 'NodeFilters'
@@ -63,12 +69,15 @@ class RuleAttr(str, Ebc):
 
 class RuleEvent(Ebc):
     'Rule events.'
+
     BEFORE_APPLY = eauto()
     AFTER_APPLY  = eauto()
 
 class RuleFlag(FlagEnum):
     'Rule state bit flags.'
+
     __slots__ = 'value', '_value_'
+
     NONE   = 0
     INIT   = 1
     LOCKED = 2
@@ -77,6 +86,7 @@ class RuleFlag(FlagEnum):
 
 class TabEvent(Ebc):
     'Tableau events.'
+
     AFTER_BRANCH_ADD    = eauto()
     AFTER_BRANCH_CLOSE  = eauto()
     AFTER_NODE_ADD      = eauto()
@@ -86,6 +96,7 @@ class TabEvent(Ebc):
 
 class TabStatKey(Ebc):
     'Tableau ``stat()`` keys.'
+
     FLAGS       = eauto()
     STEP_ADDED  = eauto()
     STEP_TICKED = eauto()
@@ -96,7 +107,9 @@ class TabStatKey(Ebc):
 
 class TabFlag(FlagEnum):
     'Tableau state bit flags.'
+
     __slots__ = 'value', '_value_'
+
     NONE   = 0
     TICKED = 1
     CLOSED = 2
@@ -112,13 +125,18 @@ class RuleHelper(metaclass = AbcMeta):
 
     __slots__ = EMPTY_SET
 
-    rule: Any
+    rule: Rule
 
     @abstract
     def __init__(self,/): ...
 
     @classmethod
-    def __init_ruleclass__(cls, rulecls: type, /):
+    def __init_ruleclass__(cls, rulecls: type[Rule], /):
+        """``RuleHelper`` hook for initializing & verifiying a ``Rule`` class.
+        
+        Args:
+            rulecls: The rule class using the helper class.
+        """
         pass
 
     @classmethod
@@ -197,108 +215,110 @@ class TabTimers(NamedTuple):
     def create(it = (False,) * 4):
         return TabTimers._make(map(StopWatch, it))
 
-if 'Util Functions' or True:
+def demodalize_rules(Rules: Iterable[type]) -> None:
+    """Remove ``Modal`` filter from ``NodeFilters``, and clear `modal` attribute.
+    
+    Args:
+        Rules: Iterable of rule classes."""
+    from pytableaux.proof.filters import NodeFilters
+    filtersattr = RuleAttr.NodeFilters
+    rmfilters = {NodeFilters.Modal}
+    for rulecls in Rules:
+        value = getattr(rulecls, filtersattr, None)
+        if value is not None and len(value & rmfilters):
+            value -= rmfilters
+            setattr(rulecls, filtersattr, value)
+        if getattr(rulecls, 'modal', None) is not None:
+            rulecls.modal = None
 
-    def demodalize_rules(Rules: Iterable[type]):
-        'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from pytableaux.proof.filters import NodeFilters
-        filtersattr = RuleAttr.NodeFilters
-        rmfilters = {NodeFilters.Modal}
-        for rulecls in Rules:
-            value = getattr(rulecls, filtersattr, None)
-            if value is not None and len(value & rmfilters):
-                value -= rmfilters
-                setattr(rulecls, filtersattr, value)
-            if getattr(rulecls, 'modal', None) is not None:
-                rulecls.modal = None
+def _rule_basecls(metacls: type, default: type = None, /, *, base = {}):
+    try:
+        return base[metacls]
+    except KeyError:
+        if default is not None:
+            base[metacls] = default
+            _rule_basecls.__kwdefaults__.update(base = MapProxy(base))
+        return default
 
-    def _rule_basecls(metacls: type, default: type = None, /, *, base = {}):
-        try:
-            return base[metacls]
-        except KeyError:
-            if default is not None:
-                base[metacls] = default
-                _rule_basecls.__kwdefaults__.update(base = MapProxy(base))
-            return default
+@closure
+def _check_helper_subclass():
+    from inspect import Parameter, Signature
 
-    @closure
-    def _check_helper_subclass():
-        from inspect import Parameter, Signature
-
-        def is_descriptor(obj):
-            return (
-                hasattr(obj, '__get__') or
-                hasattr(obj, '__set__') or
-                hasattr(obj, '__delete__')
-            )
-
-        posflag = (
-            Parameter.POSITIONAL_ONLY |
-            Parameter.POSITIONAL_OR_KEYWORD |
-            Parameter.VAR_POSITIONAL
+    def is_descriptor(obj):
+        return (
+            hasattr(obj, '__get__') or
+            hasattr(obj, '__set__') or
+            hasattr(obj, '__delete__')
         )
-        def getparams(value: Callable, /, *,
-            fromcb: Callable[[Callable], Signature] = Signature.from_callable
-        ):
-            return list(fromcb(value).parameters.values())
 
-        names = qsetf((
-            'rule',
-            # HelperAttr.InitRuleCls,
-            '__init__',
-        ))
+    posflag = (
+        Parameter.POSITIONAL_ONLY |
+        Parameter.POSITIONAL_OR_KEYWORD |
+        Parameter.VAR_POSITIONAL
+    )
+    def getparams(value: Callable, /, *,
+        fromcb: Callable[[Callable], Signature] = Signature.from_callable
+    ):
+        return list(fromcb(value).parameters.values())
 
-        def check(subcls: type):
+    names = qsetf((
+        'rule',
+        # HelperAttr.InitRuleCls,
+        '__init__',
+    ))
 
-            # print(f'check {subcls}')
-            check = abcm.check_mrodict(subcls.mro(), *names)
-            if check is NotImplemented or check is False:
-                return check
+    def check_subclass(subcls: type):
 
-            name = 'rule'
-            if name in names:
+        # print(f'check {subcls}')
+        mrocheck = abcm.check_mrodict(subcls.mro(), *names)
+        if mrocheck is NotImplemented or mrocheck is False:
+            return mrocheck
 
-                value = getattr(subcls, name)
-                if not is_descriptor(value):
-                    return NotImplemented
+        name = 'rule'
+        if name in names:
 
-            name = HelperAttr.InitRuleCls
-            if name in names:
+            value = getattr(subcls, name)
+            if not is_descriptor(value):
+                return NotImplemented
 
+        name = HelperAttr.InitRuleCls
+        if name in names:
+
+            value = getattr(subcls, name)
+            if not callable(value):
+                return NotImplemented
+            params = getparams(value)
+            if len(params) < 2:
+                return NotImplemented
+            p = params[1]
+            if p.kind & posflag != p.kind:
+                return NotImplemented
+    
+        name = '__init__'
+        if name in names:
+
+            value = getattr(subcls, name)
+            if not callable(value):
+                return NotImplemented
+            params = getparams(value)
+            if len(params) < 2:
+                name = '__new__'
                 value = getattr(subcls, name)
                 if not callable(value):
                     return NotImplemented
                 params = getparams(value)
                 if len(params) < 2:
                     return NotImplemented
-                p = params[1]
-                if p.kind & posflag != p.kind:
-                    return NotImplemented
-        
-            name = '__init__'
-            if name in names:
+            p = params[1]
+            if p.kind & posflag != p.kind:
+                return NotImplemented
 
-                value = getattr(subcls, name)
-                if not callable(value):
-                    return NotImplemented
-                params = getparams(value)
-                if len(params) < 2:
-                    name = '__new__'
-                    value = getattr(subcls, name)
-                    if not callable(value):
-                        return NotImplemented
-                    params = getparams(value)
-                    if len(params) < 2:
-                        return NotImplemented
-                p = params[1]
-                if p.kind & posflag != p.kind:
-                    return NotImplemented
+        return True
 
-            return True
-
-        return check
+    return check_subclass
 
 del(
-    abstract, closure,
+    abstract,
+    closure,
     eauto,
 )

@@ -13,7 +13,7 @@ RUN apk add --no-cache --update bash python3 curl py3-pip python3-dev build-base
 USER appuser
 RUN pip3 install --upgrade pip && \
     pip3 install --no-cache-dir \
-    future jinja2 cherrypy prometheus_client simplejson \
+    future jinja2 cherrypy prometheus_client simplejson tabulate \
     pytest coverage Sphinx sphinx_rtd_theme
 
 COPY --chown=appuser:appgroup . .
