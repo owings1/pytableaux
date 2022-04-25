@@ -175,7 +175,7 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
-        if self[MaxConsts].max_constants_exceeded(branch, node.get('world')):
+        if self[MaxConsts].is_exceeded(branch, node.get('world')):
             self[FilterHelper].release(node, branch)
             if self[QuitFlag].get(branch):
                 return

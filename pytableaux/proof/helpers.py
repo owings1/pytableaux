@@ -565,11 +565,7 @@ class FilterHelper(FilterNodeCache):
                     else:
                         # Multiple targets result.
                         check.inst(results, (Sequence, Iterator))
-                        # print(type(results), rule.name)
-                        for res in results:# filter(bool, results):
-                            # if not(res):
-                            #     print(res)
-                            # Filter anything falsy.
+                        for res in results:
                             yield create(res, rule, branch, node)
 
             return targets_gen
@@ -617,141 +613,111 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
                 self[branch][node].update(consts)
             self.consts[branch].update(consts)
 
-class MaxConsts:
+
+class WorldConsts(BranchDictCache[int, set[Constant]]):
+
+    def __init__(self, rule: Rule,/):
+        super().__init__(rule)
+        rule.tableau.on({
+            TabEvent.AFTER_NODE_ADD: self,
+        })
+
+    def __call__(self, node: Node, branch: Branch):
+        s: Sentence = node.get('sentence')
+        if s is not None:
+            world = node.get('world')
+            if world is None:
+                world = 0
+            if world not in self[branch]:
+                self[branch][world] = set()
+            self[branch][world].update(s.constants)
+
+class MaxConsts(dict[Branch, int], RuleHelper):
     """
     Project the maximum number of constants per world required for a branch
     by examining the branches after the trunk is built.
     """
-    __slots__ = 'rule', 'branch_max_constants', 'world_constants'
+    __slots__ = (
+        'rule',
+        # 'branch_max_constants',
+        # 'world_constants',
+        'world_consts',
+    )
 
     def __init__(self, rule: Rule,/):
         self.rule = rule
-        #: Track the maximum number of constants that should be on the branch
-        #: (per world) so we can halt on infinite branches. Map from ``branch.id```
-        #: to ``int```.
-        #: :type: dict({int: int})
-        self.branch_max_constants = {}
-        #: Track the constants at each world.
-        #: :type: dict{int: set(Constant)}
-        self.world_constants = {}
-        rule.tableau.on({
-            TabEvent.AFTER_BRANCH_ADD  : self.__after_branch_add,
-            TabEvent.AFTER_TRUNK_BUILD : self.__after_trunk_build,
-            TabEvent.AFTER_NODE_ADD    : self.__after_node_add,
-        })
+        self.world_consts = WorldConsts(rule)
+        rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self)
 
-    def get_max_constants(self, branch: Branch) -> int:
-        """
-        Get the projected max number of constants (per world) for the branch.
-        """
-        return self.branch_max_constants.get(branch.origin, 1)
-        # try:
-        #     return self.branch_max_constants[branch.origin]
-        # except KeyError:
-        #     return 1
-
-    def get_branch_constants_at_world(self, branch: Branch, world: int) -> set[Constant]:
-        """
-        Get the cached set of constants at a world for the branch.
-
-        :param tableaux.Branch branch:
-        :param int world:
-        :rtype: bool
-        """
-        # if world not in self.world_constants[branch]:
-        #     self.world_constants[branch][world] = set()
-        return self.world_constants[branch][world]
-
-    def max_constants_reached(self, branch: Branch, world: int = 0) -> bool:
+    def is_reached(self, branch: Branch, world: int = 0,/) -> bool:
         """
         Whether we have already reached or exceeded the max number of constants
         projected for the branch (origin) at the given world.
 
-        :param tableaux.Branch branch:
-        :param int world:
+        Args:
+            branch: The branch.
+            world (int): The world.
         """
         if world is None:
             world = 0
-        max_constants = self.get_max_constants(branch)
-        world_constants = self.get_branch_constants_at_world(branch, world)
-        return max_constants != None and len(world_constants) >= max_constants
+        maxc = self.get(branch.origin, 1)
+        # max_constants = self.get_max_constants(branch)
+        return len(self.world_consts[branch][world]) >= maxc
+        # return max_constants != None and len(self[branch][world]) >= max_constants
 
-    def max_constants_exceeded(self, branch: Branch, world: int = 0) -> bool:
+    def is_exceeded(self, branch: Branch, world: int = 0,/) -> bool:
         """
         Whether we have exceeded the max number of constants projected for
         the branch (origin) at the given world.
 
-        :param tableaux.Branch branch:
-        :param int world:
+        Args:
+            branch: The branch.
+            world (int): The world.
         """
         if world is None:
             world = 0
-        max_constants = self.get_max_constants(branch)
-        world_constants = self.get_branch_constants_at_world(branch, world)
-        if max_constants is not None and len(world_constants) > max_constants:
-            return True
+        maxc = self.get(branch.origin, 1)
+        return len(self.world_consts[branch][world]) > maxc
 
     def quit_flag(self, branch: Branch) -> dict:
-        """
-        Generate a quit flag node for the branch. Return value is a ``dict`` with the
-        following keys:
+        """Generate a quit flag node for the branch. Return value is a ``dict``
+        with the following keys:
 
         - *is_flag*: ``True``
         - *flag*: ``'quit'``
         - *info*: ``'RuleName:MaxConstants({n})'`` where *RuleName* is ``rule.name``,
             and ``n`` is the computed max allowed constants for the branch.
 
-        :param tableaux.Branch branch:
-        :rtype: dict
+        Args:
+            branch: The branch.
+
+        Returns:
+            The node dict.
         """
-        info = '{0}:MaxConstants({1})'.format(self.rule.name, str(self.get_max_constants(branch)))
+        maxc = self.get(branch.origin, 1)
+        info = f'{self.rule.name}:{type(self).__name__}({maxc})'
         return dict(is_flag = True, flag = 'quit', info = info)
 
-    # Events
-
-    def __after_trunk_build(self, tableau: Tableau):
+    def __call__(self, tableau: Tableau):
         for branch in tableau:
             origin = branch.origin
-            # In most cases, we will have only one origin branch.
-            if origin in self.branch_max_constants:
-                return
-            self.branch_max_constants[origin] = self._compute_max_constants(branch)
+            if origin in self:
+                raise NotImplementedError('Multiple trunk branches not implemented.')
+            self[origin] = self._compute(branch)
 
-    def __after_branch_add(self, branch: Branch):
-        parent = branch.parent
-        if parent is not None and parent in self.world_constants:
-            self.world_constants[branch] = {
-                world : copy(self.world_constants[parent][world])
-                for world in self.world_constants[parent]
-            }
-        else:
-            self.world_constants[branch] = {}
-
-    def __after_node_add(self, node: Node, branch: Branch):
-        s: Sentence = node.get('sentence')
-        if s:
-            world = node.get('world')
-            if world is None:
-                world = 0
-            if world not in self.world_constants[branch]:
-                self.world_constants[branch][world] = set()
-            self.world_constants[branch][world].update(s.constants)
-
-    # Private util
-
-    def _compute_max_constants(self, branch: Branch) -> int:
+    def _compute(self, branch: Branch,/) -> int:
         """
         Project the maximum number of constants for a branch (origin) as
         the number of constants already on the branch (min 1) * the number of
         quantifiers (min 1) + 1.
         """
         node_needed_constants = sum([
-            self._compute_needed_constants_for_node(node, branch)
+            self._compute_needed_constants_for_node(node)
             for node in branch
         ])
         return max(1, len(branch.constants)) * max(1, node_needed_constants) + 1
 
-    def _compute_needed_constants_for_node(self, node: Node, branch: Branch) -> int:
+    def _compute_needed_constants_for_node(self, node: Node,/) -> int:
         s: Sentence = node.get('sentence')
         return len(s.quantifiers) if s else 0
 
@@ -762,7 +728,6 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
     """
     __slots__ = (
         'rule',
-        # 'branch_max_worlds',
         '_modals',
         '_modal_opfilter',
     )
@@ -773,7 +738,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         self.rule = rule
         self._modal_opfilter = getattr(rule, RuleAttr.ModalOperators).__contains__
         self._modals: dict[Sentence, int] = {}
-        rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__after_trunk_build)
+        rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self)
 
     def is_reached(self, branch: Branch, /) -> bool:
         """
@@ -811,7 +776,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
             info = info
         )
 
-    def __after_trunk_build(self, tableau: Tableau):
+    def __call__(self, tableau: Tableau):
         for branch in tableau:
             origin = branch.origin
             # For normal logics, we will have only one trunk branch.
@@ -905,7 +870,3 @@ class EllipsisExampleHelper:
     def __addnode(self, branch: Branch):
         self.applied.add(branch)
         branch.add(self.mynode)
-
-
-
-del(abstract)
