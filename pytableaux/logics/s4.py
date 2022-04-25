@@ -19,20 +19,23 @@
 # pytableaux - S4 Normal Modal Logic
 from __future__ import annotations
 
+from typing import Generator
+
+from pytableaux.logics import k as K
+from pytableaux.logics import t as T
+from pytableaux.logics.k import adds, anode, group
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.proof.util import Access
+
 name = 'S4'
 
 class Meta:
     title    = 'S4 Normal Modal Logic'
     category = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive and transitive access relation'
-    tags = ['bivalent', 'modal', 'first-order']
+    tags = 'bivalent', 'modal', 'first-order'
     category_order = 4
-
-from pytableaux.proof.common import Access, Branch, Node, Target
-from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.logics import k as K, t as T
-from pytableaux.logics.k import anode, adds, group
-from typing import Generator
 
 class Model(T.Model):
     """
@@ -97,12 +100,12 @@ class TabRules:
                 for w3 in self[WorldIndex].intransitives(branch, w1, w2)
             )
 
-        def score_candidate(self, target: Target):
+        def score_candidate(self, target: Target, /) -> float:
             # Rank the highest world
             return float(target.world2)
 
         @staticmethod
-        def example_nodes():
+        def example_nodes() -> tuple[dict, dict]:
             w1, w2, w3 = range(3)
             return anode(w1, w2), anode(w2, w3)
 

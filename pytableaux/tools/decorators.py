@@ -21,19 +21,6 @@ pytableaux.tools.decorators
 """
 from __future__ import annotations
 
-__docformat__ = 'google'
-
-__all__ = (
-    'membr', 'fixed', 'operd', 'wraps',
-    'raisr', 'lazy', 'NoSetAttr',
-)
-
-# Allowed local imports:
-
-#  - errors
-#  - tools.abcs
-#  - tools.misc
-
 import operator as opr
 from collections import defaultdict
 from functools import WRAPPER_ASSIGNMENTS
@@ -41,150 +28,172 @@ from functools import reduce as _ftreduce
 from inspect import Signature
 from keyword import iskeyword
 from types import DynamicClassAttribute as dynca
-from typing import (Any, Callable, Concatenate, Generic,
-                    Iterable, Iterator, Mapping, TypeVar, overload)
+from typing import (TYPE_CHECKING, Callable, Concatenate, Generic, Iterable,
+                    Iterator, Mapping)
 
+#  - errors
+#  - tools.abcs
+#  - tools.misc
+#  - tools.typing
+from pytableaux import __docformat__
 from pytableaux.errors import check
-from pytableaux.tools import MapProxy, abstract, static
+from pytableaux.tools import MapProxy, abstract
 from pytableaux.tools.abcs import Abc, abcf, abcm
 from pytableaux.tools.typing import RT, F, P, Self, T, _property
 
-if 'Utils' or True:
+# Allowed local imports:
 
-    EMPTY = ()
 
-    class _noexcept(Exception): __new__ = None
+if TYPE_CHECKING:
+    from typing import overload
 
-    # _valfilter = _ftpartial(filter, opr.itemgetter(1))
+__all__ = (
+    'fixed',
+    'lazy',
+    'membr',
+    'NoSetAttr',
+    'operd',
+    'raisr',
+    'wraps',
+)
 
-    def _valfilter(it: Iterable[T], /, *, getter = opr.itemgetter(1)) -> Iterator[T]:
-        return filter(getter, it)
 
-    def _getitems(obj, *keys):
-        return tuple(map(obj.__getitem__, keys))
+EMPTY = ()
 
-    def _getmixed(obj, k, default = None):
-        try: return obj[k]
-        except TypeError:
-            return getattr(obj, k, default)
-        except KeyError:
-            return default
+class _noexcept(Exception): __new__ = None
 
-    def _thru(obj, *_):
-        return obj
+# _valfilter = _ftpartial(filter, opr.itemgetter(1))
 
-    def _thru2(_x, obj, *_):
-        return obj
+def _valfilter(it: Iterable[T], /, *, getter = opr.itemgetter(1)) -> Iterator[T]:
+    return filter(getter, it)
 
-    def _attrstrcheck(name: str):
-        check.inst(name, str)
-        if iskeyword(name):
-            raise TypeError('%s is a keyword' % name)
-        if not name.isidentifier():
-            raise TypeError('%s is not an identifier' % name)
-        return name
+def _getitems(obj, *keys):
+    return tuple(map(obj.__getitem__, keys))
 
-    def _methcaller(name: str):
-        name = _attrstrcheck(name)
-        def f(obj, *args, **kw):
-            return getattr(obj, name)(*args, **kw)
-        f.__name__ = name
-        return f
+def _getmixed(obj, k, default = None):
+    try: return obj[k]
+    except TypeError:
+        return getattr(obj, k, default)
+    except KeyError:
+        return default
 
-    def _checkcallable(obj):
-        return check.inst(obj, Callable)
+def _thru(obj, *_):
+    return obj
 
-    def _checkcallable2(obj):
-        if isinstance(obj, str):
-            return _methcaller(obj)
-        return _checkcallable(obj)
+def _thru2(_x, obj, *_):
+    return obj
 
-if 'Base Classes' or True:
-    class Member(Abc, Generic[T]):
+def _attrstrcheck(name: str):
+    check.inst(name, str)
+    if iskeyword(name):
+        raise TypeError('%s is a keyword' % name)
+    if not name.isidentifier():
+        raise TypeError('%s is not an identifier' % name)
+    return name
 
-        __slots__ = '__name__', '__qualname__', '__owner'
+def _methcaller(name: str):
+    name = _attrstrcheck(name)
+    def f(obj, *args, **kw):
+        return getattr(obj, name)(*args, **kw)
+    f.__name__ = name
+    return f
 
-        def __set_name__(self, owner: T, name):
-            self.owner = owner
-            self.name = name
-            for hook in self._sethooks:
-                hook(self, owner, name)
+def _checkcallable(obj):
+    return check.inst(obj, Callable)
 
-        @property
-        def owner(self) -> T:
-            try: return self.__owner
-            except AttributeError: pass
+def _checkcallable2(obj):
+    if isinstance(obj, str):
+        return _methcaller(obj)
+    return _checkcallable(obj)
 
-        @property
-        def name(self) -> str:
-            try: return self.__name__
-            except AttributeError: pass
-            return type(self).__name__
+class BaseMember(Abc, Generic[T]):
 
-        @owner.setter
-        def owner(self, value):
-            self.__owner = check.inst(value, type)
-            try: self._update_qualname()
-            except AttributeError: pass
+    __slots__ = '__name__', '__qualname__', '__owner'
 
-        @name.setter
-        def name(self, value):
-            self.__name__ = _attrstrcheck(value)
-            try: self._update_qualname()
-            except AttributeError: pass
+    def __set_name__(self, owner: T, name):
+        self.owner = owner
+        self.name = name
+        for hook in self._sethooks:
+            hook(self, owner, name)
 
-        def _update_qualname(self):
-            self.__qualname__ = '%s.%s' % (self.owner.__name__, self.name)
+    @property
+    def owner(self) -> T:
+        try: return self.__owner
+        except AttributeError: pass
 
-        def __repr__(self):
-            if not hasattr(self, '__qualname__') or not callable(self):
-                return object.__repr__(self)
-            return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
-        _sethooks = EMPTY
+    @property
+    def name(self) -> str:
+        try: return self.__name__
+        except AttributeError: pass
+        return type(self).__name__
 
-        def __init_subclass__(subcls, **kw):
-            super().__init_subclass__(**kw)
-            hooks = dict.fromkeys(abcm.merge_mroattr(subcls, '_sethooks',
-                oper = opr.add, supcls = __class__
-            ))
-            hook = getattr(subcls, 'sethook', None)
-            if hook:
-                hooks[hook] = None
-                delattr(subcls, 'sethook')
-            subcls._sethooks = tuple(hooks)
+    @owner.setter
+    def owner(self, value):
+        self.__owner = check.inst(value, type)
+        try: self._update_qualname()
+        except AttributeError: pass
 
-    class Twofer(Abc, Generic[F]):
+    @name.setter
+    def name(self, value):
+        self.__name__ = _attrstrcheck(value)
+        try: self._update_qualname()
+        except AttributeError: pass
 
-        __slots__ = EMPTY
+    def _update_qualname(self):
+        self.__qualname__ = '%s.%s' % (self.owner.__name__, self.name)
 
+    def __repr__(self):
+        if not hasattr(self, '__qualname__') or not callable(self):
+            return object.__repr__(self)
+        return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
+
+    _sethooks = EMPTY
+
+    def __init_subclass__(subcls, **kw):
+        super().__init_subclass__(**kw)
+        hooks = dict.fromkeys(abcm.merge_mroattr(subcls, '_sethooks',
+            oper = opr.add, supcls = __class__
+        ))
+        hook = getattr(subcls, 'sethook', None)
+        if hook:
+            hooks[hook] = None
+            delattr(subcls, 'sethook')
+        subcls._sethooks = tuple(hooks)
+
+class Twofer(Abc, Generic[F]):
+
+    __slots__ = EMPTY
+
+    if TYPE_CHECKING:
         @overload
         def __new__(cls, func: F) -> F: ...
-
         @overload
         def __new__(cls: type[T]) -> T: ...
-
-        def __new__(cls, arg = None, /, *a, **kw):
-            '''If only argument to constructor is callable, construct and call the
-            instance. Otherwise create normally.'''
-            inst = object.__new__(cls)
-            if len(a) or len(kw) or not isinstance(arg, Callable):
-                inst._init(arg, *a, **kw)
-                return inst
-            if isinstance(inst._blankinit, Callable): 
-                inst._blankinit()
-            return inst(arg)
-
-        @abstract
         @overload
         def __call__(self, func: F) -> F: ...
 
-        @abstract
-        def _init(self, arg = None, /, *a, **kw): ...
+    def __new__(cls, arg = None, /, *a, **kw):
+        """If only argument to constructor is callable, construct and call the
+        instance. Otherwise create normally.
+        """
+        inst = object.__new__(cls)
+        if len(a) or len(kw) or not isinstance(arg, Callable):
+            inst._init(arg, *a, **kw)
+            return inst
+        if isinstance(inst._blankinit, Callable): 
+            inst._blankinit()
+        return inst(arg)
 
-        def _blankinit(self):
-            self._init()
+    @abstract
+    def __call__(self, func: F) -> F: ...
 
-class membr(Member[T], Generic[T, RT]):
+    @abstract
+    def _init(self, arg = None, /, *a, **kw): ...
+
+    def _blankinit(self):
+        self._init()
+
+class membr(BaseMember[T], Generic[T, RT]):
 
     __slots__ = 'cbak',
 
@@ -202,20 +211,19 @@ class membr(Member[T], Generic[T, RT]):
         return cb(self, *args, **kw)
 
     @classmethod
-    # def defer(cls, fdefer: F) -> Callable[..., F]:
-    def defer(cls, fdefer: Callable[Concatenate[membr[T, RT], P], RT]) -> Callable[P, RT]: #Callable[P, membr[T, RT]]:
+    def defer(cls, fdefer: Callable[Concatenate[membr[T, RT], P], RT]) -> Callable[P, RT]:
         def fd(member, *args, **kw):
             return fdefer(member, *args, **kw)
         def f(*args, **kw):
             return cls(fd, *args, **kw)
         return f # type: ignore
 
-MbrT = TypeVar('MbrT', bound = membr)
-
-@static
 class operd:
 
-    class Base(Member, Callable):
+    def __new__(cls, *args, **kw):
+        return operd.apply(*args, **kw)
+
+    class Base(BaseMember, Callable):
 
         __slots__ = 'oper', 'info'
 
@@ -237,8 +245,9 @@ class operd:
             return info
 
     class apply(Base):
-        '''Create a function or method from an operator, or other
-        built-in function.'''
+        """Create a function or method from an operator, or other
+        built-in function.
+        """
 
         __slots__ = EMPTY
 
@@ -253,9 +262,6 @@ class operd:
             else:
                 def fapply(*args): return oper(*args)
             return wraps(info)(fapply)
-
-    def __new__(cls, *args, **kw):
-        return operd.apply(*args, **kw)
 
     class reduce(Base):
         """Create a reducing method using functools.reduce to apply
@@ -298,6 +304,7 @@ class operd:
                 return freturn(self, _ftreduce(oper, operands, finit(self)))
             return freduce
 
+        @staticmethod
         def template(*argdefs, **kwdefs) -> type[operd.reduce]:
             'Make a templated subclass with bound arguments.'
             class templated(__class__):
@@ -309,8 +316,9 @@ class operd:
             return templated
 
     class order(Base):
-        '''Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
-        default, except (AttributeError, TypeError), and return ``NotImplemented``.'''
+        """Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
+        default, except (AttributeError, TypeError), and return ``NotImplemented``.
+        """
 
         __slots__ = 'errs', 'fcmp'
 
@@ -326,7 +334,6 @@ class operd:
                 self.errs = AttributeError, TypeError
 
         def __call__(self, fcmp: Callable):
-            # info = self._getinfo(fcmp)
             oper, fcmp = map(_checkcallable, (self.oper, fcmp))
             errs = self.errs
             @wraps(oper)
@@ -337,19 +344,22 @@ class operd:
                     return NotImplemented
             return f
 
-    @overload
-    @staticmethod
-    def repeat(oper: Callable, info: F) -> F:
-        '''Create a method that accepts an arbitrary number of positional
+    if TYPE_CHECKING:
+
+        @overload
+        @staticmethod
+        def repeat(oper: Callable, info: F) -> F: ...
+
+        @overload
+        @staticmethod
+        def repeat(oper: F) -> F: ...
+
+    class repeat(Base):
+        """Create a method that accepts an arbitrary number of positional
         arguments, and repeatedly calls a one argument method for each
         argument (or, equivalently, a two-argument function with self as the
-        first argument).'''
-
-    @overload
-    @staticmethod
-    def repeat(oper: F) -> F: ...
-
-    class _repeat(Base):
+        first argument).
+        """
 
         __slots__ = EMPTY
 
@@ -361,11 +371,7 @@ class operd:
                 for arg in args: oper(self, arg)
             return f
 
-    repeat = _repeat
-    del(_repeat)
-
-operd.repeat
-class wraps(Member):
+class wraps(BaseMember):
 
     __slots__ = '_initial', '_adds'
 
@@ -411,13 +417,13 @@ class wraps(Member):
     def write(self, obj: F) -> F:
         for attr, val in self.merged().items():
             setattr(obj, attr, val)
-        # setattr(obj, '__wraps__', self)
         return obj
 
-class raisr(Member):
-    '''Creates an object that raises the exception when called. When
-    __set_name__ is called, creates a new function. Not to be used
-    as a decorator.'''
+class raisr(BaseMember):
+    """Creates an object that raises the exception when called. When
+    `__set_name__` is called, creates a new function. Not to be used
+    as a decorator.
+    """
 
     __slots__ = 'errtype', 'eargs', 'ekw'
 
@@ -446,18 +452,20 @@ class lazy:
     def __new__(cls, *args, **kw):
         return cls.get(*args, **kw)
 
-    class get(Twofer[F], Member):
+    class get(Twofer[F], BaseMember):
 
         __slots__ = 'key', 'method'
 
-        @overload
-        def __new__(cls, method: F) -> F: ...
-        @overload
-        def __new__(cls, key: str|None, method: F) -> F: ...
-        @overload
-        def __new__(cls, key: str|None) -> lazy.get: ...
-        @overload
-        def __new__(cls) -> lazy.get: ...
+        if TYPE_CHECKING:
+            @overload
+            def __new__(cls, method: F) -> F: ...
+            @overload
+            def __new__(cls, key: str|None, method: F) -> F: ...
+            @overload
+            def __new__(cls, key: str|None) -> lazy.get: ...
+            @overload
+            def __new__(cls) -> lazy.get: ...
+
         __new__ = Twofer.__new__
 
         def __call__(self, method: F) -> F:
@@ -499,8 +507,10 @@ class lazy:
 
         __slots__ = EMPTY
 
-        @overload
-        def __new__(cls, func: Callable[[Self], T]) -> _property[Self, T]: ...
+        if TYPE_CHECKING:
+            @overload
+            def __new__(cls, func: Callable[[Self], T]) -> _property[Self, T]: ...
+
         __new__ = Twofer.__new__
 
         def __call__(self, method: Callable[[Self], T]) -> _property[Self, T]:
@@ -517,7 +527,7 @@ class lazy:
                 lazy.get.__call__(self, method), doc = method.__doc__
             )
 
-class NoSetAttr(Member):
+class NoSetAttr(BaseMember):
     'Lame thing that does a lame thing.'
 
 
@@ -596,9 +606,6 @@ class NoSetAttr(Member):
             return getattr(obj, attr, False)
         return check
 
-    @staticmethod
-    def _true(*_): return True
-
     def sethook(self, owner, name):
         if self._isroot:
             self._isroot = False
@@ -608,6 +615,3 @@ class NoSetAttr(Member):
         func.__name__ = name
         func.__qualname__ = '%s.%s' % (owner.__qualname__, name)
         setattr(owner, name, func)
-        
-del(Abc, TypeVar, EMPTY)
-# ------------------------------

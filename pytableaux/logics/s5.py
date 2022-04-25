@@ -20,19 +20,25 @@
 # pytableaux - S5 Normal Modal Logic
 from __future__ import annotations
 
+from pytableaux.logics import k as K
+from pytableaux.logics import s4 as S4
+from pytableaux.logics import t as T
+from pytableaux.proof.baserules import adds, group
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.proof.util import Access
+
 name = 'S5'
 
 class Meta:
     title = 'S5 Normal Modal Logic'
-    description = 'Normal modal logic with a reflexive, symmetric, and transitive access relation'
-    tags = ['bivalent', 'modal', 'first-order']
+    description = (
+        'Normal modal logic with a reflexive, symmetric, and transitive '
+        'access relation'
+    )
+    tags = ('bivalent', 'modal', 'first-order')
     category = 'Bivalent Modal'
     category_order = 5
-
-from pytableaux.proof.baserules import adds, group
-from pytableaux.proof.common import Access, Branch, Node
-from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.logics import k as K, t as T, s4 as S4
 
 # TODO:
 # Some problematic arguments for S5:
@@ -59,13 +65,13 @@ class Model(S4.Model):
 
 class TableauxSystem(K.TableauxSystem):
     """
-    S5's Tableaux System inherits directly inherits directly from K.
+    L{S5}'s Tableaux System inherits directly inherits directly from K.
     """
     pass
 
 class TabRules:
     """
-    The Tableaux Rules for S5 contain the rules for :ref:`S4 <S4>`, as well
+    The Tableaux Rules for L{S5} contain the rules for {@S4}, as well
     as an additional Symmetric rule, which operates on the accessibility
     relation for worlds.
     """
@@ -75,7 +81,8 @@ class TabRules:
         .. _symmetric-rule:
 
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
-        if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
+        if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add
+        *w'Rw* to *b*.
         """
         Helpers = MaxWorlds, WorldIndex,
         access = True
@@ -88,11 +95,10 @@ class TabRules:
                 self[FilterHelper].release(node, branch)
                 return
 
-            access = Access.fornode(node).reverse()
+            access = Access.fornode(node).reversed()
 
             if not self[WorldIndex].has(branch, access):
-                anode = access._asdict()
-                return adds(group(anode), **anode)
+                return adds(group(anode := access._asdict()), **anode)
 
         @staticmethod
         def example_nodes():

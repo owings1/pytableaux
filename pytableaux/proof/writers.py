@@ -52,7 +52,9 @@ registry: Mapping[str, type[TabWriter]]
 
 @closure
 def register():
+
     global registry
+
     _registry: dict[str, type[TabWriter]] = {}
     registry = MapProxy(_registry)
 

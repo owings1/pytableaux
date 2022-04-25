@@ -26,8 +26,10 @@ from __future__ import annotations
 # __all__ defined at the bottom.
 
 import enum as _enum
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
 
+if  TYPE_CHECKING:
+    from typing import overload
 # Base Errors
 
 class IllegalStateError(Exception):
@@ -102,10 +104,9 @@ class Emsg(_enum.Enum):
         "Object of type {0} is not JSON serializable", (type,)
     )
 
-    ReadOnlyAttr = (AttributeError,
-        "'{1.__name__}' object attribute '{0}' is read-only", (str, type)
+    ReadOnly = (AttributeError,
+        "'{0.__name__}' object attribute '{1}' is read-only", (type, str)
     )
-    # "Read-only attribute: '{0}'", 1
     
     IndexOutOfRange = IndexError, 'Index out of range'
 
@@ -145,7 +146,9 @@ class Emsg(_enum.Enum):
 
     Timeout = TimeoutError, "Timeout of {}ms exceeded", (int,)
 
-
+    if TYPE_CHECKING:
+        @overload
+        def razr(*args): ...
 class check:
 
     @staticmethod
@@ -166,12 +169,11 @@ class check:
             raise Emsg.InstCheck(obj, Callable)
         return obj
 
-instcheck = check.inst
-subclscheck = check.subcls
-
 # Some external assembly required.
 
 class EmsgBase:
+
+
     def __init__(self, cls: type[_ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):
             cls = type(cls[0], cls[1:], {})
@@ -182,6 +184,9 @@ class EmsgBase:
         elif isinstance(fns, int):
             fns = (_thru,) * fns
         self.fns = fns
+        def razr(*args):
+            raise self._makeas(self.cls, args)
+        self.razr = razr
 
     def __call__(self, *args):
         return self._makeas(self.cls, args)
@@ -198,7 +203,8 @@ class EmsgBase:
         ), *args[alen:]
 
 
-__all__ = 'check', 'Emsg', 'instcheck', 'subclscheck', *(
+
+__all__ = 'check', 'Emsg', *(
     name for name, value in locals().items()
     if isinstance(value, type) and issubclass(value, Exception)
 )

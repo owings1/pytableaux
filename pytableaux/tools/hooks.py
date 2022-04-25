@@ -34,7 +34,7 @@ from typing import (Any, Callable, ClassVar, Collection, Iterator, Literal,
 
 # Allowed local imports: errors, tools, tools.abcs, tools.typing
 from pytableaux import tools
-from pytableaux.errors import Emsg, instcheck
+from pytableaux.errors import Emsg, check
 from pytableaux.tools import MapProxy, closure
 from pytableaux.tools.abcs import AbcMeta, Astr, abcf
 from pytableaux.tools.typing import TT, T
@@ -132,7 +132,7 @@ class HookProvider(Mapping[str, tuple[str, ...]], metaclass = AbcMeta, skiphooks
 
     def excluding(self, hooknames: Set[str],/):
         'Return the mapping excluding the specified hooknames (__sub__).'
-        instcheck(hooknames, Set)
+        check.inst(hooknames, Set)
         return {
             key: self[key]
             for key in filterfalse(hooknames.__contains__, self)

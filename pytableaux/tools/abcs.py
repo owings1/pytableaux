@@ -21,7 +21,25 @@ pytableaux.tools.abcs
 """
 from __future__ import annotations
 
-__docformat__ = 'google'
+import abc as _abc
+import enum as _enum
+import functools
+import itertools
+import operator as opr
+from collections.abc import Set
+from typing import (TYPE_CHECKING, Annotated, Any, Callable, Collection,
+                    Hashable, Iterable, Iterator, Mapping, Sequence,
+                    SupportsIndex)
+
+from pytableaux import __docformat__
+from pytableaux import errors, tools
+from pytableaux.errors import check
+from pytableaux.tools.typing import (RT, TT, EbcT, EbcT2, EnumDictType, EnumT,
+                                     F, Self, T)
+
+if TYPE_CHECKING:
+    from typing import overload
+
 __all__ = (
     'Abc',
     'abcf',
@@ -33,23 +51,6 @@ __all__ = (
     'FlagEnum',
     'IntEnum',
 )
-
-import abc as _abc
-import enum as _enum
-import functools
-import itertools
-import operator as opr
-from collections.abc import Set
-from typing import (TYPE_CHECKING, Annotated, Any, Callable, Collection,
-                    Hashable, Iterable, Iterator, Mapping, Sequence,
-                    SupportsIndex, TypeVar)
-
-from pytableaux import errors, tools
-from pytableaux.errors import check
-from pytableaux.tools.typing import RT, TT, EnumDictType, EnumT, F, Self, T
-
-if TYPE_CHECKING:
-    from typing import overload
 
 KeysFunc = Callable[[Any], Set[Hashable]]
 NOARG = object()
@@ -283,14 +284,18 @@ class EnumLookup(Mapping[Any, EnumT]):
         'Default member lookup keys'
         return {member._name_, (member._name_,), member, member._value_}
 
-    def __setattr__(self, name, value, /):
-        raise errors.Emsg.ReadOnlyAttr(name, self)
+    def _asdict(self) -> dict[Any, EnumT]:
+        'Compatibility for JSON serialization.'
+        return dict(self)
 
-    def __delattr__(self, name, /):
-        raise errors.Emsg.ReadOnlyAttr(name, self)
+    def __setattr__(self, name, value):
+        raise errors.Emsg.ReadOnly(self, name)
+
+    def __delattr__(self, name):
+        raise errors.Emsg.ReadOnly(self, name)
 
     def __repr__(self):
-        return repr(dict(self))
+        return repr(self._asdict())
 
 
 #=============================================================================
@@ -299,8 +304,7 @@ class EnumLookup(Mapping[Any, EnumT]):
 #       Enum Meta
 #_____________________________________________________________________________
 
-EbcT  = TypeVar('EbcT',  bound = 'Ebc')
-EbcT2 = TypeVar('EbcT2', bound = 'Ebc')
+
 
 class EbcMeta(_enum.EnumMeta, type[EbcT2]):
     'General-purpose base Metaclass for all Enum classes.'
@@ -760,16 +764,21 @@ class Copyable(Abc, skiphooks = True):
 
     @tools.abstract
     def copy(self: Self) -> Self:
-        raise NotImplementedError
+        cls = type(self)
+        return cls.__new__(cls)
 
-    def __copy__(self):
-        return self.copy()
+    __copy__ = copy
 
     @classmethod
     def __subclasshook__(cls, subcls: type):
         if cls is not __class__:
             return NotImplemented
         return abcm.check_mrodict(subcls.mro(), '__copy__', 'copy')
+
+    def __init_subclass__(subcls: type[Copyable], **kw):
+        "Subclass init hook. Set `__copy__()` to `copy()`."
+        super().__init_subclass__(**kw)
+        subcls.__copy__ = subcls.copy
 
 #=============================================================================
 #_____________________________________________________________________________

@@ -21,6 +21,20 @@ pytableaux.tools.sets
 """
 from __future__ import annotations
 
+import operator as opr
+from collections.abc import MutableSet, Set
+from typing import TYPE_CHECKING
+
+from pytableaux.errors import check
+from pytableaux.tools import abcs
+from pytableaux.tools.decorators import operd
+from pytableaux.tools.typing import VT
+
+if TYPE_CHECKING:
+    from typing import Iterable, overload
+
+    from pytableaux.tools.typing import SetApiT
+
 __all__ = (
     'SetApi',
     'MutableSetApi',
@@ -30,24 +44,12 @@ __all__ = (
     'EMPTY_SET',
 )
 
-import operator as opr
-from collections.abc import MutableSet, Set
-from typing import TYPE_CHECKING
-
-from pytableaux.errors import check
-from pytableaux.tools import abcs
-from pytableaux.tools.decorators import operd
-from pytableaux.tools.typing import VT
-if TYPE_CHECKING:
-    from typing import Iterable, overload
-    from pytableaux.tools.typing import SetApiT
-
-EMPTY = ()
+EMPTY_SET: setf = ()
 
 class SetApi(Set[VT], abcs.Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     if TYPE_CHECKING:
         @overload
@@ -98,7 +100,7 @@ class SetApi(Set[VT], abcs.Copyable):
 class MutableSetApi(MutableSet[VT], SetApi[VT]):
     'Fusion interface of collections.abc.MutableSet and built-in set.'
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     rep = operd.repeat
 
@@ -126,7 +128,7 @@ class MutableSetApi(MutableSet[VT], SetApi[VT]):
 
 class setf(SetApi[VT], frozenset[VT]):
     'SetApi wrapper around built-in frozenset.'
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
     __len__      = frozenset.__len__
     __iter__     = frozenset[VT].__iter__
     __contains__ = frozenset.__contains__
@@ -140,6 +142,14 @@ class setm(MutableSetApi[VT], set[VT]):
     __len__      = set.__len__
     __iter__     = set[VT].__iter__
     __contains__ = set.__contains__
+
+    if TYPE_CHECKING:
+        @overload
+        def clear(self): ...
+        @overload
+        def add(self, value: VT): ...
+        @overload
+        def discard(self, value: VT): ...
 
     clear   = set.clear
     add     = set.add
@@ -171,5 +181,5 @@ class SetView(SetApi[VT]):
         return cls(setf(it))
 
 
-del(abcs, opr, operd, EMPTY)
+del(abcs, opr, operd)
 

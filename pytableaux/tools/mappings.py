@@ -21,6 +21,21 @@ pytableaux.tools.mappings
 """
 from __future__ import annotations
 
+from collections import defaultdict, deque
+from collections.abc import Collection, Iterator, Mapping, MutableMapping, Set
+from itertools import chain, filterfalse
+from operator import not_, truth
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable
+
+from pytableaux.errors import Emsg, check
+from pytableaux.tools import MapProxy, abcs, abstract, closure, isattrstr, true, thru
+from pytableaux.tools.decorators import membr, wraps
+from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.typing import KT, VT, MapiT, MapT, NotImplType, SetT, T
+
+if TYPE_CHECKING:
+    from typing import overload
+
 __all__ = (
     'MappingApi',
     'MutableMappingApi',
@@ -35,48 +50,35 @@ __all__ = (
     'KeySetAttr',
 )
 
-from collections import defaultdict, deque
-from collections.abc import Collection, Iterator, Mapping, MutableMapping, Set
-from itertools import chain, filterfalse
-from operator import not_, truth
-from typing import Any, Callable, Iterable, TypeVar, overload
-
-from pytableaux import tools
-from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy, abcs, abstract, closure
-from pytableaux.tools.decorators import membr, wraps
-from pytableaux.tools.sets import EMPTY_SET, setf
-from pytableaux.tools.typing import KT, VT, F, MapT, NotImplType, SetT, T
-
-MapiT = TypeVar('MapiT', bound = 'MappingApi')
 
 class MappingApi(Mapping[KT, VT], abcs.Copyable):
 
     __slots__ = EMPTY_SET
 
-    @overload
-    def __or__(self:  MapT, b: Mapping) -> MapT: ...
-    @overload
-    def __ror__(self: MapT, b: Mapping) -> MapT: ...
-    @overload
-    def __ror__(self: MapT, b: SetT) -> SetT: ...
+    if TYPE_CHECKING:
+        @overload
+        def __or__(self:  MapT, b: Mapping) -> MapT: ...
+        @overload
+        def __ror__(self: MapT, b: Mapping) -> MapT: ...
+        @overload
+        def __ror__(self: MapT, b: SetT) -> SetT: ...
 
-    @overload
-    def __mod__(self: MapT, b: Mapping) -> MapT: ...
-    @overload
-    def __rmod__(self: MapT, b: Mapping) -> MapT: ...
+        @overload
+        def __mod__(self: MapT, b: Mapping) -> MapT: ...
+        @overload
+        def __rmod__(self: MapT, b: Mapping) -> MapT: ...
 
-    @overload
-    def __and__(self:  MapT, b: SetT) -> MapT: ...
-    @overload
-    def __sub__(self:  MapT, b: SetT) -> MapT: ...
+        @overload
+        def __and__(self:  MapT, b: SetT) -> MapT: ...
+        @overload
+        def __sub__(self:  MapT, b: SetT) -> MapT: ...
 
-    @overload
-    def __rand__(self: MapT, b: SetT) -> SetT: ...
-    @overload
-    def __rsub__(self: MapT, b: SetT) -> SetT: ...
-    @overload
-    def __rxor__(self: MapT, b: SetT) -> SetT: ...
+        @overload
+        def __rand__(self: MapT, b: SetT) -> SetT: ...
+        @overload
+        def __rsub__(self: MapT, b: SetT) -> SetT: ...
+        @overload
+        def __rxor__(self: MapT, b: SetT) -> SetT: ...
 
     @abcs.abcf.temp
     @membr.defer
@@ -87,8 +89,8 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
             return _opcache.resolve(self, opname, other)
         return f
 
-    __or__ = __ror__ = __and__ = __rand__ = __sub__ = __rsub__ = __rxor__ = oper()
-    __mod__ = __rmod__ = __or__
+    __or__ = __ror__ = __and__ = __rand__ = __sub__ = __rsub__ = \
+         __rxor__ = __mod__ = __rmod__ = oper()
 
     def __or__op__(self, other: Mapping):
         'Mapping | Mapping -> Mapping'
@@ -144,7 +146,7 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
     def copy(self):
         return self._from_mapping(self)
 
-    def _asdict(self):
+    def _asdict(self) -> dict[KT, VT]:
         'Compatibility for JSON serialization.'
         return dict(self)
 
@@ -159,14 +161,14 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
         return NotImplemented
 
     @classmethod
-    def _oper_res_type(cls, othrtype: type[Iterable], /):
+    def _oper_res_type(cls, othrtype: type[Iterable], /) -> type[Mapping]:
         '''Return the type (or callable) to construct a new instance from the result
         of an arithmetic operator expression for objects of type cls on the left hand
         side, and of othrtype on the right hand side.'''
         return cls
 
     @classmethod
-    def _roper_res_type(cls, othrtype: type[Iterable], /):
+    def _roper_res_type(cls, othrtype: type[Iterable], /) -> type[Mapping]:
         '''Return the type (or callable) to construct a new instance from the result
         of an arithmetic operator expression for objects of type cls on the right hand
         side, and of othrtype on the left hand side.'''
@@ -180,33 +182,34 @@ class MapCover(MappingApi[KT, VT]):
 
     __slots__ = '__len__', '__getitem__', '__iter__', '__reversed__'
 
+    _cover_items: ClassVar[tuple[tuple[str, str]]] = tuple(zip(__slots__, __slots__))
+    _cover_attrs: ClassVar[setf[str]] = setf(dict(_cover_items).values())
+
     def __init__(self, mapping: Mapping[KT, VT] = None, /, **kwmap):
-        if mapping is None: mapping = kwmap
+        if mapping is None:
+            mapping = kwmap
         else:
             check.inst(mapping, Mapping)
             if len(kwmap):
                 raise TypeError('Expected mapping or kwargs, not both.')
         self._init_cover(mapping, self)
 
-    @staticmethod
-    def _init_cover(src: Mapping, dest: Any, /, *,
-        items = tuple(zip(__slots__, __slots__)),
+    @classmethod
+    def _init_cover(cls, src: Mapping, dest: Any, /, *,
         ga = object.__getattribute__,
         sa = object.__setattr__
     ):
-        for destname, srcname in items:
+        for srcname, destname in cls._cover_items:
             sa(dest, destname, ga(src, srcname))
 
-    __slots__ = frozenset(__slots__)
-
-    def __delattr__(self, name, /, *, slots = __slots__):
-        if name in slots:
-            raise Emsg.ReadOnlyAttr(name, self)
+    def __delattr__(self, name, /):
+        if name in self._cover_attrs:
+            raise Emsg.ReadOnly(self, name)
         super().__delattr__(name)
 
-    def __setattr__(self, name, value, /, *, slots = __slots__):
-        if name in slots:
-            raise Emsg.ReadOnlyAttr(name, self)
+    def __setattr__(self, name, value, /):
+        if name in self._cover_attrs:
+            raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
 
     def __repr__(self):
@@ -215,6 +218,12 @@ class MapCover(MappingApi[KT, VT]):
     @classmethod
     def _from_iterable(cls, it):
         return cls._from_mapping(dict(it))
+
+    def __init_subclass__(subcls: type[MapCover], **kw):
+        super().__init_subclass__(**kw)
+        if isinstance(subcls._cover_items, Mapping):
+            subcls._cover_items = tuple(subcls._cover_items.items())
+        subcls._cover_attrs = setf(dict(subcls._cover_items).values())
 
 class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], abcs.Copyable):
 
@@ -265,9 +274,12 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], abcs.Copyabl
     @closure
     def _setitem_update():
         EMPTY_ITER = iter(())
-        def update(self, it = EMPTY_ITER, /, **kw):
+        def update(self, it: Iterable = None, /, **kw):
             '''Alternate 'update' implementation for classes that need more control'''
-            it = ItemsIterator(it)
+            if it is None:
+                it = EMPTY_ITER
+            else:
+                it = ItemsIterator(it)
             if len(kw):
                 it = chain(it, ItemsIterator(kw))
             setitem = self.__setitem__
@@ -319,7 +331,7 @@ class KeySetAttr(abcs.Abc):
 
     def __setitem__(self, key, value, /):
         super().__setitem__(key, value)
-        if tools.isattrstr(key) and self._keyattr_ok(key):
+        if isattrstr(key) and self._keyattr_ok(key):
             super().__setattr__(key, value)
 
     def __setattr__(self, name, value):
@@ -329,13 +341,17 @@ class KeySetAttr(abcs.Abc):
 
     def __delitem__(self, key, /):
         super().__delitem__(key)
-        if tools.isattrstr(key) and self._keyattr_ok(key):
+        if isattrstr(key) and self._keyattr_ok(key):
             super().__delattr__(key)
 
     def __delattr__(self, name):
         super().__delattr__(name)
         if self._keyattr_ok(name) and name in self:
             super().__delitem__(name)
+
+    if TYPE_CHECKING:
+        @overload
+        def update(self, it: Iterable = None, /, **kw):...
 
     update = MutableMappingApi._setitem_update
 
@@ -373,10 +389,12 @@ class ItemMapEnum(abcs.Ebc):
         'name', 'value', '_value_'
     )
 
-    @overload
-    def __init__(self, mapping: Mapping): ...
-    @overload
-    def __init__(self, *items: tuple[Any, Any]): ...
+    if TYPE_CHECKING:
+        @overload
+        def __init__(self, mapping: Mapping): ...
+        @overload
+        def __init__(self, *items: tuple[Any, Any]): ...
+
     def __init__(self, *args):
         if len(args) == 1 and isinstance(args[0], Mapping):
             self._value_ = args = tuple(args[0].items())
@@ -485,10 +503,10 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
         obj: Mapping[KT, VT]|Iterable[tuple[KT, VT]]|Iterable[KT],
         /, *, 
         vget: Callable[[KT], VT]|None = None,
-        kpred: F = tools.true,
-        vpred: F = tools.true,
-        koper: F = truth,
-        voper: F = truth,
+        kpred: Callable[[KT], bool] = true,
+        vpred: Callable[[VT], bool] = true,
+        koper: Callable[[bool], bool] = truth,
+        voper: Callable[[bool], bool] = truth,
     ):
         if vget is None:
             if hasattr(obj, 'keys'):
@@ -568,7 +586,7 @@ if 'Operators Cache' or True:
             return self.setdefault(othrtype, self.resolve)
 
         def resolve(self, mapi, other, /, *,
-            FTHRU: Callable[[T], T] = tools.thru,
+            FTHRU: Callable[[T], T] = thru,
             ResolverFactory: _CacheResolversType = _ResolverFactory,
         ):
             othrtype = type(other)
@@ -694,8 +712,10 @@ if 'Operators Cache' or True:
 
 
 del(
-    abstract, closure, overload,
-    membr, wraps,
+    abstract,
+    closure,
+    membr,
+    wraps,
     _checklimit, _ResolverFactory,
     # _CacheResolversType, _FuncCache, _TypeFuncsCache, _OperFuncsCache,
 )

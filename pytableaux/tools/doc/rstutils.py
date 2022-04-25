@@ -14,19 +14,21 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-# pytableaux - tools.doc.rstutils module
+"""
+pytableaux.tools.doc.rstutils
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
+
+import csv
+from typing import Iterable
 
 __all__ = (
     'csvlines',
     'indented',
     'rawblock',
 )
-
-import csv
-from typing import Iterable
 
 def rawblock(content: list[str]|str, indent: str|int = None) -> list[str]:
     'Make a raw html block from the lines. Returns a new list of lines.'

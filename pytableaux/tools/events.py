@@ -1,17 +1,26 @@
 from __future__ import annotations
 
-__all__ = 'EventEmitter', 'EventsListeners',
-
 from enum import Enum
-from itertools import filterfalse  # , chain, starmap
-from typing import Callable, Mapping, Sequence
+from itertools import filterfalse
+from typing import TYPE_CHECKING, Callable, Mapping
 
-from pytableaux.errors import instcheck
-from pytableaux.tools.abcs import Abc, Copyable, F, abcf
-from pytableaux.tools.decorators import raisr, wraps
+from pytableaux.errors import check, Emsg
+from pytableaux.tools.abcs import Abc, Copyable, abcf
+from pytableaux.tools.decorators import wraps
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import \
-    dmap  # , ItemsIterator, MutableMappingApi
+from pytableaux.tools.mappings import dmap
+from pytableaux.tools.misc import orepr
+from pytableaux.tools.typing import F
+
+if TYPE_CHECKING:
+    from typing import Iterable, overload
+
+__all__ = (
+    'EventEmitter',
+    'EventsListeners',
+    'Listener',
+    'Listeners',
+)
 
 EventId = str | int | Enum
 
@@ -34,26 +43,32 @@ class EventEmitter(Copyable):
     def emit(self, event: EventId, *args, **kw) -> int:
         return self.events.emit(event, *args, **kw)
 
-    def copy(self):
+    def copy(self, *, listeners:bool = False):
+        """Copy event emitter.
+        
+        Args:
+            listeners (bool): Copy listeners.
+        """
         cls = type(self)
         inst = cls.__new__(cls)
-        inst.events = inst.events.copy()
+        inst.events = inst.events.copy(listeners = listeners)
         return inst
 
 class Listener(Callable, Abc):
 
     cb        : Callable
     once      : bool
-    event     : EventId
     callcount : int
 
-    __slots__ = 'cb', 'once', 'event', 'callcount'
+    __slots__ = (
+        'cb',
+        'once',
+        'callcount',
+    )
 
-    def __init__(self, cb: Callable, once: bool = False, event: EventId|None = None):
-        # instcheck(cb, Callable)
+    def __init__(self, cb: Callable, once: bool = False):
         self.cb = cb
         self.once = once
-        self.event = event
         self.callcount = 0
 
     def __call__(self, *args, **kw):
@@ -61,6 +76,15 @@ class Listener(Callable, Abc):
         return self.cb(*args, **kw)
 
     def __eq__(self, other):
+        # if self is other:
+        #     return True
+        # if not isinstance(other, type(self)):
+        #     # return self.cb is other
+        #     if callable(other):
+        #         return self.cb is other
+        #     return NotImplemented
+        # return False
+
         return self is other or self.cb == other or (
             isinstance(other, type(self)) and
             self.cb == other.cb
@@ -70,33 +94,31 @@ class Listener(Callable, Abc):
         return hash(self.cb)
 
     def __repr__(self):
-        from pytableaux.tools.misc import orepr
         return orepr(self,
-            event = self.event,
             once = self.once,
             cb = self.cb,
             callcount = self.callcount,
         )
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = Emsg.ReadOnly.razr
 
 class Listeners(linqset[Listener]):
+
 
     emitcount: int
     callcount: int
 
-    __slots__ = 'emitcount', 'callcount', 'event'
+    __slots__ = 'emitcount', 'callcount'
 
-    def __init__(self, event: EventId):
-        super().__init__()
-        self.event = event
+    def __init__(self, values: Iterable[Listener] = None):
+        super().__init__(values)
         self.callcount = 0
         self.emitcount = 0
 
     @abcf.temp
     @linqset.hook('cast')
     def cast(value):
-        return instcheck(value, Listener)
+        return check.inst(value, Listener)
 
     def emit(self, *args, **kw) -> int:
         self.emitcount += 1
@@ -116,9 +138,7 @@ class Listeners(linqset[Listener]):
         return count
 
     def __repr__(self):
-        from pytableaux.tools.misc import orepr
         return orepr(self,
-            event = self.event,
             listeners = len(self),
             emitcount = self.emitcount,
             callcount = self.callcount,
@@ -136,10 +156,21 @@ class EventsListeners(dmap[EventId, Listeners]):
         self.create(*names)
 
     def create(self, *events: EventId):
+        """Create events.
+        
+        Args:
+            *events: The event IDs. Existing events are ignored.
+        """
         for event in filterfalse(self.__contains__, events):
-            self[event] = Listeners(event)
+            self[event] = Listeners()
+            # self[event] = Listeners(event)
 
     def delete(self, event: EventId):
+        """Delete an event and all listeners.
+        
+        Args:
+            event: The event ID.
+        """
         del(self[event])
 
     @abcf.temp
@@ -165,7 +196,8 @@ class EventsListeners(dmap[EventId, Listeners]):
                 method(self, arg, *cbs)
             elif isinstance(arg, Mapping) and not len(cbs):
                 for event, cbs in arg.items():
-                    if not isinstance(cbs, Sequence):
+                    # if not isinstance(cbs, Sequence):
+                    if callable(cbs):
                         cbs = cbs,
                     method(self, event, *cbs)
             else:
@@ -173,40 +205,63 @@ class EventsListeners(dmap[EventId, Listeners]):
         return f
 
     @normargs
-    def on(self, event, *cbs: Callable):
-        self[event].extend(Listener(cb, False, event) for cb in cbs)
+    def on(self, event: EventId, *cbs: Callable):
+        """Attach listeners."""
+        self[event].extend(Listener(cb, False) for cb in cbs)
 
     @normargs
     def once(self, event: EventId, *cbs: Callable):
-        self[event].extend(Listener(cb, True, event) for cb in cbs)
+        """Attach single-call listeners."""
+        self[event].extend(Listener(cb, True) for cb in cbs)
 
     @normargs
     def off(self, event: EventId, *cbs: Callable):
+        """Detach listeners."""
         for _ in map(self[event].discard, cbs): pass
 
     def emit(self, event: EventId, *args, **kw) -> int:
-        ev = self[event]
+        """Emit an event.
+        
+        Args:
+            event: The event ID.
+            *args: Listener arguments.
+            **kw: Listener kwargs.
+        
+        Returns:
+            The number of listeners called.
+        """
+        listeners = self[event]
         self.emitcount += 1
-        callcount = ev.emit(*args, **kw)
+        callcount = listeners.emit(*args, **kw)
         self.callcount += callcount
         return callcount
 
-    def barecopy(self):
-        # Only copy event keys, not listeners
+    def copy(self, *, listeners:bool = False):
+        """Copy events.
+        
+        Args:
+            listeners (bool): Copy listeners.
+        """
+        if listeners:
+            return super().copy()
         cls = type(self)
         inst = cls.__new__(cls)
-        __class__.__init__(inst, *self)
+        inst.emitcount = inst.callcount = 0
+        inst.create(*self)
         return inst
 
     def __setitem__(self, key, value):
         # Override for type check
-        super().__setitem__(key, instcheck(value, Listeners))
+        super().__setitem__(key, check.inst(value, Listeners))
+
+    if TYPE_CHECKING:
+        @overload
+        def update(self, it: Iterable = None, /, **kw):...
 
     # Alternate update impl uses setitem.
     update = dmap._setitem_update
 
     def __repr__(self):
-        from pytableaux.tools.misc import orepr
         return orepr(self,
             events = len(self),
             listeners = sum(map(len, self.values())),
@@ -226,4 +281,3 @@ class EventsListeners(dmap[EventId, Listeners]):
         inst.update(it)
         return inst
 
-del(Abc, Copyable, dmap, linqset, abcf, raisr, wraps)

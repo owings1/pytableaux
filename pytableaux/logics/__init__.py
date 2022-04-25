@@ -21,12 +21,6 @@ pytableaux.logics
 """
 from __future__ import annotations
 
-__docformat__ = 'google'
-__all__ = (
-    'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
-    'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't',
-)
-
 import itertools
 import sys
 from collections import defaultdict
@@ -34,8 +28,10 @@ from importlib import import_module
 from types import ModuleType
 from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping
 
+from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import closure, hybrids, mappings
+from pytableaux.tools.abcs import Copyable
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
                                      LogicModule, LogicType)
@@ -43,9 +39,14 @@ from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
 if TYPE_CHECKING:
     from typing import overload
 
+__all__ = (
+    'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
+    'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't',
+)
+
 NOARG = object()
 
-class Registry(Mapping[str, LogicModule]):
+class Registry(Mapping[str, LogicModule], Copyable):
     """Logic module registry.
     """
 
@@ -66,8 +67,7 @@ class Registry(Mapping[str, LogicModule]):
         def remove(self, logic: LogicModule):
             "Remove a logic  module"
         @overload
-        def get(self, key: LogicLookupKey, /) -> LogicModule:
-            ...
+        def get(self, key: LogicLookupKey, /) -> LogicModule: ...
 
     __slots__ = 'packages', 'modules', 'index', 'add', 'remove', 
 
@@ -110,11 +110,9 @@ class Registry(Mapping[str, LogicModule]):
         except KeyError:
             pass
 
-    def copy(self):
+    def copy(self) -> Registry:
         "Copy the registry."
         return type(self)(source = self)
-
-    __copy__ = copy
 
     def clear(self):
         "Clear the registry."
@@ -232,13 +230,13 @@ class Registry(Mapping[str, LogicModule]):
         attributes.
 
         Args:
-            pkgname: The package name. Must be in ``registry.packages``.
+            package: The package name or module. Must be in ``registry.packages``.
         
         Returns:
             The module names added to the registry.
         
         Raises:
-            ValueError: if ``pkgname`` is not in the registry packages.
+            ValueError: if package is not in the registry packages.
         """
         added = set()
         for modname in self.package_all(package):
@@ -277,13 +275,13 @@ class Registry(Mapping[str, LogicModule]):
 
         # return added
 
-    def import_all(self):
+    def import_all(self) -> None:
         """Import all logics for all registry packages. See ``.import_package()``.
         """
         for pkgname in self.packages:
             self.import_package(pkgname)
 
-    def import_package(self, package: str|ModuleType, /):
+    def import_package(self, package: str|ModuleType, /) -> None:
         """Import all logic modules for a package. Uses the ``__all__`` attribute
         to list the logic names.
 
@@ -312,7 +310,7 @@ class Registry(Mapping[str, LogicModule]):
         Raises:
             ValueError: if any not found.
         """
-        groups: dict[str, list[ModuleType]] = defaultdict(list)
+        groups: dict[str, list[LogicModule]] = defaultdict(list)
         for logic in map(self, keys):
             groups[logic.Meta.category].append(logic)
         if not sort:
@@ -340,7 +338,7 @@ class Registry(Mapping[str, LogicModule]):
         """Get the index keys for a logic module.
 
         Args:
-            LogicModule: The logic module.
+            logic: The logic module.
         
         Returns:
             The tuple with the keys, as sepcified in ``.get()``.
@@ -355,7 +353,6 @@ class Registry(Mapping[str, LogicModule]):
         fmt = f'{package.__name__}.%s'.__mod__
         for value in package.__all__:
             yield fmt(value)
-
 
     def __contains__(self, key: LogicLookupKey):
         return key in self.index
@@ -378,7 +375,11 @@ class Registry(Mapping[str, LogicModule]):
 
     def __repr__(self):
         names = (v.name for v in self.values())
-        return f'{type(self).__name__}@{id(self)}{repr(list(names))}'
+        if self is registry:
+            ident = 'default'
+        else:
+            ident = id(self)
+        return f'{type(self).__name__}@{ident}{repr(list(names))}'
 
     class Index(mappings.dmap):
         """Registry index."""

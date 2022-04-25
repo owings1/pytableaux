@@ -16,33 +16,39 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ------------------
-# pytableaux - tools.doc package
+"""
+pytableaux.tools.doc
+^^^^^^^^^^^^^^^^^^^^
+"""
 from __future__ import annotations
-import traceback
-
-__all__ = ()
 
 import enum
 import itertools
 import os.path
 import re
 import shutil
+import traceback
 from typing import (TYPE_CHECKING, Any, ClassVar, Generic, Mapping, NamedTuple,
-                    Optional, overload)
+                    Optional)
 
 import jinja2
 import sphinx.directives
 from docutils.parsers.rst.roles import _roles, set_classes
-from pytableaux.errors import instcheck
+from pytableaux.errors import check
 from pytableaux.tools import MapProxy, abstract, closure
 from pytableaux.tools.typing import T
 from sphinx.util import docstrings, logging
 from sphinx.util.docutils import SphinxRole
 
 if TYPE_CHECKING:
+    from typing import overload
+
     import sphinx.config
     from sphinx.application import Sphinx
     from sphinx.util.typing import RoleFunction
+
+__all__ = ()
+
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +109,12 @@ def app_setup():
     return setup
 
 def validate_copy_entry(entry: HtmlCopyEntry):
-    instcheck(entry, (list, tuple))
+    check.inst(entry, (list, tuple))
     src, dest = entry[0:2]
     eopts = entry[2] if len(entry) > 2 else {}
-    instcheck(src, str)
-    instcheck(dest, str)
-    instcheck(eopts, dict)
+    check.inst(src, str)
+    check.inst(dest, str)
+    check.inst(eopts, dict)
 
 def do_copy_entry(app: Sphinx, entry: HtmlCopyEntry):
     src = os.path.join(app.srcdir, entry[0])
@@ -129,14 +135,15 @@ def app_helper(app: Sphinx) -> Helper:
     'Get the helper instance from the Sphinx app instance'
     return _helpers[app]
 
-@overload
-def role_entry(rolecls: type[T]) -> RoleItem[T]|None: ...
+if TYPE_CHECKING:
+    @overload
+    def role_entry(rolecls: type[T]) -> RoleItem[T]|None: ...
 
-@overload
-def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
+    @overload
+    def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
 
-@overload
-def role_entry(roleish: str) -> RoleItem[RoleFunction]|None:...
+    @overload
+    def role_entry(roleish: str) -> RoleItem[RoleFunction]|None:...
 
 def role_entry(roleish):
     'Get loaded role name and instance, by name, instance or type.'
@@ -182,9 +189,9 @@ class Helper:
 
     def reconfigure(self, opts: dict):
 
-        from pytableaux.lang.lex import Notation
-        from pytableaux.lang.writing import RenderSet, LexWriter
         from pytableaux.lang.collect import Predicates
+        from pytableaux.lang.lex import Notation
+        from pytableaux.lang.writing import LexWriter, RenderSet
         from pytableaux.proof import writers
 
         self.opts = opts = dict(self.defaults) | opts
@@ -305,17 +312,18 @@ class ReplaceProcessor(Processor):
 
     # See https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
-    @overload
-    def __call__(self, app: Sphinx, docname: str, lines: list[str]):
-        'Regex replace for source-read event.'
+    if TYPE_CHECKING:
+        @overload
+        def __call__(self, app: Sphinx, docname: str, lines: list[str]):
+            'Regex replace for source-read event.'
 
-    @overload
-    def __call__(self, app: Sphinx, lines: list[str]):
-        'Regex replace for custom include-read event.'
+        @overload
+        def __call__(self, app: Sphinx, lines: list[str]):
+            'Regex replace for custom include-read event.'
 
-    @overload
-    def __call__(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
-        'Regex replace for autodoc event.'
+        @overload
+        def __call__(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
+            'Regex replace for autodoc event.'
 
     def __call__(self, *args):
         if len(args) == 2:

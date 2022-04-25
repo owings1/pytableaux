@@ -21,6 +21,19 @@ pytableaux.tools.sequences
 """
 from __future__ import annotations
 
+from collections import deque
+from itertools import chain, repeat
+from typing import (TYPE_CHECKING, Any, ClassVar, Iterable, MutableSequence,
+                    Sequence, Sized, SupportsIndex)
+
+from pytableaux.errors import Emsg, check
+from pytableaux.tools import abcs, abstract, closure
+from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.typing import VT, MutSeqT, SeqApiT
+
+if TYPE_CHECKING:
+    from typing import overload
+
 __all__ = (
     'SequenceApi',
     'MutableSequenceApi',
@@ -30,16 +43,6 @@ __all__ = (
     'deqseq',
 )
 
-from collections import deque
-from itertools import chain, repeat
-from typing import (Iterable, MutableSequence, Sequence, Sized, SupportsIndex,
-                    TypeVar, final, overload)
-
-from pytableaux.errors import Emsg, check
-from pytableaux.tools import abcs, abstract
-from pytableaux.tools.typing import VT
-
-EMPTY = ()
 NOARG = object()
 
 def absindex(seqlen: int, index: SupportsIndex, /, strict = True) -> int:
@@ -66,13 +69,17 @@ def slicerange(seqlen: int, slice_: slice, values: Sized, /, strict = True) -> r
 class SequenceApi(Sequence[VT], abcs.Copyable):
     "Extension of collections.abc.Sequence and built-in sequence (tuple)."
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
-    @overload
-    def __getitem__(self: SeqApiT, s: slice, /) -> SeqApiT: ...
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self: SeqApiT, s: slice, /) -> SeqApiT: ...
 
-    @overload
-    def __getitem__(self, i: SupportsIndex, /) -> VT: ...
+        @overload
+        def __getitem__(self, i: SupportsIndex, /) -> VT: ...
+
+        @overload
+        def __rmul__(self: SeqApiT, other: SupportsIndex, /) -> SeqApiT: ...
 
     @abstract
     def __getitem__(self, index, /):
@@ -118,10 +125,48 @@ class SequenceApi(Sequence[VT], abcs.Copyable):
         '''Return the type (or callable) to construct a new instance from __radd__.'''
         return cls._concat_res_type(othrtype)
 
+class seqf(tuple[VT, ...], SequenceApi[VT]):
+    'Frozen sequence, fusion of tuple and SequenceApi.'
+
+    # NB: tuple implements all equality and ordering methods,
+    # as well as __hash__ method.
+
+    __slots__ = EMPTY_SET
+
+    # Note that __getitem__ with slice returns a tuple, not a seqf,
+    # because it does not call _from_iterable.
+
+    if TYPE_CHECKING:
+        @overload
+        def __radd__(self, other: tuple[VT, ...]) -> tuple[VT, ...]: ...
+        @overload
+        def __radd__(self, other: list[VT]) -> list[VT]: ...
+        @overload
+        def __radd__(self, other: deque[VT]) -> deque[VT]: ...
+        @overload
+        def __radd__(self, other: seqf[VT]) -> seqf[VT]: ...
+
+    @classmethod
+    @closure
+    def _rconcat_res_type():
+        passtypes = {tuple, list, deque}
+        def restype(cls: type[seqf], othrtype: type[Iterable], /):
+            if othrtype is seqf or othrtype in passtypes:
+                return othrtype
+            return cls._concat_res_type(othrtype)
+        return restype
+
+    __add__ = SequenceApi.__add__
+    __mul__  = SequenceApi.__mul__
+    __rmul__ = SequenceApi.__rmul__
+
+    def __repr__(self):
+        return type(self).__name__ + super().__repr__()
+
 class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     @abstract
     def sort(self, /, *, key = None, reverse = False):
@@ -135,57 +180,45 @@ class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
 
 class SequenceCover(SequenceApi[VT]):
 
-    __slots__ = {
+    _cover_attrs_reqd: ClassVar[setf[str]] = setf({
         '__len__', '__getitem__', '__contains__', '__iter__',
-        '__reversed__', 'count', 'index',
-    }
+        'count', 'index',
+    })
+    _cover_attrs_optl: ClassVar[setf[str]] = setf({
+        '__reversed__',
+    })
+    _cover_attrs: ClassVar[setf[str]] = _cover_attrs_reqd | _cover_attrs_optl
 
-    def __new__(cls, seq: Sequence[VT], /, *,
-        required = __slots__.difference({'__reversed__'}),
-        optional = __slots__.intersection({'__reversed__'})
-    ):
+    __slots__ = _cover_attrs
+
+    def __new__(cls, seq: Sequence[VT], /):
+
         check.inst(seq, Sequence)
-
-        inst = object.__new__(cls)
-        for name in required:
-            setattr(inst, name, getattr(seq, name))
-        for name in optional:
-            value = getattr(seq, name, NOARG)
-            if value is not NOARG:
-                setattr(inst, name, value)
-        inst.__srctype = type(seq)
-        # inst.__len__      = seq.__len__
-        # inst.__getitem__  = seq.__getitem__
+        inst: SequenceCover[VT] = object.__new__(cls)
+        cls._init_cover(seq, inst)
 
         return inst
-    __slots__ = frozenset(__slots__).union(('__srctype',))
-    __srctype: type[Sequence]
 
-    # __slots__ = '__seq',
+    @classmethod
+    def _init_cover(cls, src: Sequence, dest: SequenceCover, /, *,
+        sa = object.__setattr__
+    ):
+        for name in cls._cover_attrs_reqd:
+            sa(dest, name, getattr(src, name))
+        for name in cls._cover_attrs_optl:
+            value = getattr(src, name, NOARG)
+            if value is not NOARG:
+                sa(dest, name, value)
 
-    # def __init__(self, sequence: Sequence[VT]):
-    #     self.__seq = sequence
+    def __delattr__(self, name, /):
+        if name in self._cover_attrs:
+            raise Emsg.ReadOnly(self, name)
+        super().__delattr__(name)
 
-    # def __len__(self):
-    #     return len(self.__seq)
-
-    # def __getitem__(self, index):
-    #     return self.__seq[index]
-
-    # def __contains__(self, value):
-    #     return value in self.__seq
-
-    # def __iter__(self):
-    #     return iter(self.__seq)
-
-    # def __reversed__(self):
-    #     return reversed(self.__seq)
-
-    # def count(self, value):
-    #     return self.__seq.count(value)
-
-    # def index(self, *args):
-    #     return self.__seq.index(*args)
+    def __setattr__(self, name, value, /):
+        if name in self._cover_attrs:
+            raise Emsg.ReadOnly(self, name)
+        super().__setattr__(name, value)
 
     def copy(self):
         'Immutable copy, returns self.'
@@ -202,57 +235,27 @@ class SequenceCover(SequenceApi[VT]):
             return cls(it)
         return cls(tuple(it))
 
-class seqf(tuple[VT, ...], SequenceApi[VT]):
-    'Frozen sequence, fusion of tuple and SequenceApi.'
-
-    # NB: tuple implements all equality and ordering methods,
-    # as well as __hash__ method.
-
-    __slots__ = EMPTY
-    __add__ = SequenceApi.__add__
-
-    # Note that __getitem__ with slice returns a tuple, not a seqf,
-    # because it does not call _from_iterable.
-
-    @overload
-    def __radd__(self, other: tuple[VT, ...]) -> tuple[VT, ...]: ...
-    @overload
-    def __radd__(self, other: list[VT]) -> list[VT]: ...
-    @overload
-    def __radd__(self, other: deque[VT]) -> deque[VT]: ...
-    @abcs.abcf.temp
-    @overload
-    def __radd__(self, other: seqf[VT]) -> seqf[VT]: ...
-
-    @classmethod
-    def _rconcat_res_type(cls, othrtype: type[Iterable], /):
-        if othrtype in {tuple, list, deque, seqf}:
-            return othrtype
-        return cls._concat_res_type(othrtype)
-
-    __mul__  = SequenceApi.__mul__
-    __rmul__ = SequenceApi.__rmul__
-
-    def __repr__(self):
-        return type(self).__name__ + super().__repr__()
+    def __init_subclass__(subcls: type[SequenceCover], **kw):
+        super().__init_subclass__(**kw)
+        subcls._cover_attrs = setf(subcls._cover_attrs_reqd) | subcls._cover_attrs_optl
 
 class seqm(list[VT], MutableSequenceApi[VT]):
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     __imul__ = MutableSequenceApi.__imul__
     __mul__  = MutableSequenceApi.__mul__
     __rmul__ = MutableSequenceApi.__rmul__
-    __add__  = MutableSequenceApi.__add__
-    __radd__ = MutableSequenceApi.__radd__
-    copy     = MutableSequenceApi.copy
-    __copy__ = MutableSequenceApi.__copy__
+    __add__  = MutableSequenceApi[VT].__add__
+    __radd__ = MutableSequenceApi[VT].__radd__
+    copy     = MutableSequenceApi[VT].copy
 
-    @overload
-    def __getitem__(self: MutSeqT, s: slice, /) -> MutSeqT: ...
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self: MutSeqT, s: slice, /) -> MutSeqT: ...
 
-    @overload
-    def __getitem__(self, i: SupportsIndex, /) -> VT: ...
+        @overload
+        def __getitem__(self, i: SupportsIndex, /) -> VT: ...
 
     def __getitem__(self, i, /):
         if isinstance(i, slice):
@@ -262,15 +265,14 @@ class seqm(list[VT], MutableSequenceApi[VT]):
 
 class deqseq(deque[VT], MutableSequenceApi[VT]):
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     __imul__ = MutableSequenceApi.__imul__
     __mul__  = MutableSequenceApi.__mul__
     __rmul__ = MutableSequenceApi.__rmul__
-    __add__  = MutableSequenceApi.__add__
-    __radd__ = MutableSequenceApi.__radd__
-    copy     = MutableSequenceApi.copy
-    __copy__ = MutableSequenceApi.__copy__
+    __add__  = MutableSequenceApi[VT].__add__
+    __radd__ = MutableSequenceApi[VT].__radd__
+    copy     = MutableSequenceApi[VT].copy
 
     def sort(self, /, *, key = None, reverse = False):
         values = sorted(self, key = key, reverse = reverse)
@@ -286,11 +288,7 @@ class deqseq(deque[VT], MutableSequenceApi[VT]):
 
 EMPTY_SEQ = seqf()
 
-SeqApiT  = TypeVar('SeqApiT',  bound = SequenceApi)
-MutSeqT  = TypeVar('MutSeqT',  bound = MutableSequenceApi)
-
 SequenceApi.register(tuple)
 MutableSequenceApi.register(list)
 # MutableSequenceApi.register(deque)
 
-del(abstract, final, overload)

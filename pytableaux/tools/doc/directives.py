@@ -14,18 +14,11 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-# pytableaux - directives module
+"""
+pytableaux.tools.doc.directives
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""
 from __future__ import annotations
-
-__all__ = (
-    'CSVTable',
-    'Include',
-    'Tableaud',
-    'TruthTable',
-    'TruthTables',
-)
 
 import re
 from collections import ChainMap
@@ -35,11 +28,6 @@ import sphinx.directives.other
 import sphinx.directives.patches
 from docutils import nodes
 from docutils.parsers.rst.directives import class_option, unchanged
-from sphinx.util import logging
-
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
-
 from pytableaux import examples, logics, models
 from pytableaux.lang.collect import Predicates
 from pytableaux.lang.lex import Notation, Operator
@@ -47,6 +35,18 @@ from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import tableaux, writers
 from pytableaux.tools.doc import BaseDirective, SphinxEvent, docparts, rstutils
+from sphinx.util import logging
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
+
+__all__ = (
+    'CSVTable',
+    'Include',
+    'Tableaud',
+    'TruthTable',
+    'TruthTables',
+)
 
 logger = logging.getLogger(__name__)
 

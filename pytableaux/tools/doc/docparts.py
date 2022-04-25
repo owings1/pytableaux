@@ -21,11 +21,6 @@ pytableaux.tools.doc.docparts
 """
 from __future__ import annotations
 
-__all__ = (
-    'opers_table',
-    'rule_example_tableau',
-    'trunk_example_tableau',
-)
 import reprlib
 from typing import Any
 
@@ -37,6 +32,11 @@ from pytableaux.logics import registry
 from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
 
+__all__ = (
+    'opers_table',
+    'rule_example_tableau',
+    'trunk_example_tableau',
+)
 
 def rule_example_tableau(rulecls: type[Rule], /, **opts) -> Tableau:
     "Get a rule's example tableau for documentation."

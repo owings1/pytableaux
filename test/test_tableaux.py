@@ -11,7 +11,7 @@ from pytableaux.proof.filters import Filters, NodeFilters, getkey
 from pytableaux.proof.helpers import FilterHelper, MaxConsts
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
 from pytableaux.proof.tableaux import TableauxSystem as TabSys
-from pytableaux.proof.types import TabEvent, TabFlag, TabStatKey
+from pytableaux.proof.util import TabEvent, TabFlag, TabStatKey
 from pytableaux.tools import MapProxy
 from pytest import raises
 
@@ -434,7 +434,7 @@ class TestMaxConstantsTracker(BaseSuite):
         proof.argument = self.parg('NLVxNFx', 'LMSxFx')
         rule = proof.rules.get(MtrTestRule)
         branch = proof[0]
-        assert rule[MaxConsts]._compute_max_constants(branch) == 3
+        assert rule[MaxConsts]._compute(branch) == 3
 
     @skip
     def xtest_compute_for_node_one_q_returns_1(self):

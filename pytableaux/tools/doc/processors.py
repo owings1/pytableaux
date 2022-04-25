@@ -14,17 +14,11 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-# pytableaux - sphinx processors
+"""
+pytableaux.tools.doc.processors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""
 from __future__ import annotations
-
-__all__ = (
-    'BuildtrunkExample',
-    'RuledocExample',
-    'RuledocInherit',
-    'GlobalReplace',
-)
 
 import re
 from typing import TYPE_CHECKING
@@ -39,6 +33,13 @@ from sphinx.util import logging
 if TYPE_CHECKING:
     from proof.tableaux import Rule
     from sphinx.application import Sphinx
+
+__all__ = (
+    'BuildtrunkExample',
+    'RuledocExample',
+    'RuledocInherit',
+    'GlobalReplace',
+)
 
 logger = logging.getLogger(__name__)
 

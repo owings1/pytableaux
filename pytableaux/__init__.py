@@ -110,7 +110,7 @@ import pytableaux.models
 
 # ----- proof
 
-import pytableaux.proof.types
+import pytableaux.proof.util
 import pytableaux.proof.common
 import pytableaux.proof.filters
 import pytableaux.proof.tableaux

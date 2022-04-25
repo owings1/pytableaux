@@ -60,7 +60,7 @@ class TabRules(Abc):
     @abcf.after
     def clearmodal(cls):
         'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from pytableaux.proof.types import demodalize_rules
+        from pytableaux.proof.util import demodalize_rules
         from itertools import chain
         demodalize_rules(chain(
             cls.closure_rules,

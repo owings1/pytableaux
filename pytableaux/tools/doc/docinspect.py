@@ -14,11 +14,20 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - documentation inspection utilities
+"""
+pytableaux.tools.doc.docinspect
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""
 from __future__ import annotations
+
+import os
+import re
+from inspect import getsource
+from typing import Any
+
+from pytableaux.logics import LogicLocatorRef, registry
+from pytableaux.proof.tableaux import ClosingRule, Rule
+from pytableaux.proof.tableaux import TableauxSystem as TabSys
 
 __all__ = (
     'get_logic_names',
@@ -26,14 +35,6 @@ __all__ = (
     'is_concrete_rule',
     'is_transparent_rule',
 )
-
-from pytableaux.proof.tableaux import ClosingRule, Rule, TableauxSystem as TabSys
-from pytableaux.logics import registry, LogicLocatorRef
-
-from inspect import getsource
-import re
-import os
-from typing import Any
 
 def get_logic_names(logic_docdir: str = None, suffix: str = '.rst', /) -> set[str]:
     'Get all logic names with a .rst document in the doc dir.'

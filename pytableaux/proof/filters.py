@@ -1,20 +1,25 @@
 from __future__ import annotations
 
-__all__ = (
-    'Filters',
-    'NodeFilter',
-    'NodeFilters',
-)
 import operator as opr
 from typing import TYPE_CHECKING, Any, Callable, Generic, Mapping
 
 from pytableaux.lang.lex import (Operated, Operator, Predicated, Quantified,
                                  Sentence)
-from pytableaux.proof.common import Access, Node
+from pytableaux.proof.common import Node
+from pytableaux.proof.util import Access
 from pytableaux.tools import abstract, static, thru
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import LHS, RHS
+
+if TYPE_CHECKING:
+    pass
+
+__all__ = (
+    'Filters',
+    'NodeFilter',
+    'NodeFilters',
+)
 
 # TODO: fix generic types on Comparer, Filters
 

@@ -35,9 +35,10 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
+from pytableaux.proof import RuleHelper, RuleMeta
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.types import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
-                                    RuleHelper, RuleMeta, TabEvent, TabFlag,
+from pytableaux.proof.util import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
+                                    TabEvent, TabFlag,
                                     TabStatKey, TabTimers)
 from pytableaux.tools import abstract, closure, isstr, static
 from pytableaux.tools.abcs import Abc
@@ -79,7 +80,8 @@ def locking(method: F) -> F:
         try:
             if self._root._locked:
                 raise Emsg.IllegalState('locked')
-        except AttributeError: pass
+        except AttributeError:
+            pass
         return method(self, *args, **kw)
     return f
 
@@ -88,7 +90,10 @@ def locking(method: F) -> F:
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
 
-    _defaults: ClassVar[Mapping[str, Any]] = dict(is_rank_optim = True, nolock = False)
+    _defaults: ClassVar[Mapping[str, Any]] = dict(
+        is_rank_optim = True,
+        nolock = False,
+    )
     _optkeys: ClassVar[setf[str]]
 
     #: Helper classes.
@@ -273,7 +278,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         def fset(self: Rule, name, value, /):
             flagv = self.flag.value
             if flagv and flagv & LockedVal == flagv and protected(name):
-                raise Emsg.ReadOnlyAttr(name, self)
+                raise Emsg.ReadOnly(self, name)
             super().__setattr__(name, value)
         return fset
 
@@ -282,7 +287,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         protected: Callable[[str], bool] = slots.__contains__
         def fdel(self: Rule, name,/):
             if protected(name):
-                raise Emsg.ReadOnlyAttr(name, self)
+                raise Emsg.ReadOnly(self, name)
             super().__delattr__(name)
         return fdel
 

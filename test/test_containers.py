@@ -260,7 +260,7 @@ class TestMappingApi(BaseSuite):
 
             if cls is EventsListeners:
                 # EventsListeners expects Listeners value type.
-                exp = dict(test = Listeners('test'))
+                exp = dict(test = Listeners())
             elif issubclass(cls, BranchCache):
                 # BranchCache classes want BranchCache instances.
                 exp = BranchCache(rule)

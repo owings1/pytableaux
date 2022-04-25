@@ -63,10 +63,10 @@ from pytableaux.tools.sequences import EMPTY_SEQ, seqf
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.typing import IcmpFunc, IndexType, T
 
-ITEM_CACHE_SIZE = 10000
-
 if TYPE_CHECKING:
     from typing import overload
+
+ITEM_CACHE_SIZE = 10000
 
 ##############################################################
 
@@ -466,7 +466,7 @@ class LexicalItem(Lexical, metaclass = LexicalItemMeta, lexcopy = True):
             if isinstance(getattr(type(self), name, None), property):
                 pass
             else:
-                raise Emsg.ReadOnlyAttr(name, self)
+                raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
 
 class CoordsItem(LexicalItem):

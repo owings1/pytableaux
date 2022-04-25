@@ -19,21 +19,22 @@
 # pytableaux - Reflexive Normal Modal Logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Atomic
+from pytableaux.logics import k as K
+from pytableaux.logics.k import swnode
+from pytableaux.proof.baserules import adds, group
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.proof.util import Access
+
 name = 'T'
 
 class Meta:
     title    = 'Reflexive Normal Modal Logic'
     category = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive access relation'
-    tags = ['bivalent', 'modal', 'first-order']
+    tags = 'bivalent', 'modal', 'first-order'
     category_order = 3
-
-from pytableaux.lang.lex import Atomic
-from pytableaux.proof.baserules import adds, group
-from pytableaux.proof.common import Access, Branch, Node
-from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.logics import k as K
-from pytableaux.logics.k import swnode
 
 class Model(K.Model):
     """

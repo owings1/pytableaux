@@ -21,6 +21,23 @@ pytableaux.proof.baserules
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, Generator, Iterable
+
+from pytableaux.lang.lex import (Constant, Operated, Operator, Predicate,
+                                 Predicated, Quantified, Quantifier, Sentence)
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.filters import NodeFilters
+from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
+                                      MaxConsts, NodeConsts, NodeCount,
+                                      PredNodes, QuitFlag)
+from pytableaux.proof.tableaux import ClosingRule, Rule
+from pytableaux.tools import abstract
+from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools.typing import T
+
+if TYPE_CHECKING:
+    from typing import overload
+
 __all__ = (
     'Rule',
 
@@ -40,32 +57,17 @@ __all__ = (
     'group',
 )
 
-from typing import TYPE_CHECKING, Any, Generator, Iterable
-
-from pytableaux.lang.lex import (Constant, Operated, Operator, Predicate,
-                                 Predicated, Quantified, Quantifier, Sentence)
-from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.filters import NodeFilters
-from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
-                                      MaxConsts, NodeConsts, NodeCount,
-                                      PredNodes, QuitFlag)
-from pytableaux.proof.tableaux import ClosingRule, Rule
-from pytableaux.tools import abstract
-from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import T
-
-if TYPE_CHECKING:
-    from typing import overload
-
 FIRST_CONST_SET = frozenset({Constant.first()})
 
 class NoopRule(Rule):
     "Rule stub that does not apply."
 
     def _get_targets(self, branch: Branch, /) -> None:
-        pass
+        "Returns ``None``."
+        return None
 
     def _apply(self, target: Target, /):
+        "Noop apply."
         pass
 
     @staticmethod
@@ -77,7 +79,7 @@ class BaseClosureRule(ClosingRule):
 
     Helpers = BranchTarget,
 
-    def _get_targets(self, branch: Branch) -> tuple[Target]:
+    def _get_targets(self, branch: Branch, /) -> tuple[Target]:
         """Return the cached target from ``BranchTarget`` helper as a
         singleton, if any.
         """
@@ -85,7 +87,7 @@ class BaseClosureRule(ClosingRule):
         if target is not None:
             return target,
 
-    def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch):
+    def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
         """For calculating a target's closure score. This default
         implementation delegates to the abstract ``node_will_close_branch()``.
         """
@@ -95,15 +97,15 @@ class BaseClosureRule(ClosingRule):
         return False
 
     @abstract
-    def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
+    def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
         raise NotImplementedError
 
     @abstract
-    def _branch_target_hook(self, node: Node, branch: Branch):
+    def _branch_target_hook(self, node: Node, branch: Branch, /):
         'Method for ``BranchTarget`` helper.'
         raise NotImplementedError
 
-    def group_score(self, target: Target, /):
+    def group_score(self, target: Target, /) -> float:
         # Called in tableau
         return 1.0 #??
         # return self.score_candidate(target) / max(1, self.branch_level)
@@ -118,12 +120,12 @@ class BaseSimpleRule(Rule):
     #: (AdzHelper) Whether the target node should be ticked after application.
     ticking: bool = True
 
-    def _apply(self, target: Target):
+    def _apply(self, target: Target, /) -> None:
         'Delegates to ``AdzHelper._apply()``.'
         self[AdzHelper]._apply(target)
 
-    def score_candidate(self, target: Target):
-        'Uses to ``AdzHelper.closure_score()`` to score the candidate target.'
+    def score_candidate(self, target: Target, /) -> float:
+        'Uses ``AdzHelper.closure_score()`` to score the candidate target.'
         return self[AdzHelper].closure_score(target)
 
 class BaseNodeRule(BaseSimpleRule):
@@ -132,7 +134,7 @@ class BaseNodeRule(BaseSimpleRule):
     #: (FilterHelper) Whether to ignore all ticked nodes.
     ignore_ticked = True
 
-    def example_nodes(self):
+    def example_nodes(self) -> tuple[dict]:
         'Delegates to ``(FilterHelper.example_node(),)``'
         return self[FilterHelper].example_node(),
 
@@ -171,10 +173,10 @@ class OperatedSentenceRule(BaseSentenceRule):
 
 class NarrowQuantifierRule(QuantifiedSentenceRule):
 
-    Helpers = QuitFlag, MaxConsts,
+    Helpers = QuitFlag, MaxConsts
 
     @FilterHelper.node_targets
-    def _get_targets(self, node: Node, branch: Branch):
+    def _get_targets(self, node: Node, branch: Branch, /):
         if self[MaxConsts].is_exceeded(branch, node.get('world')):
             self[FilterHelper].release(node, branch)
             if self[QuitFlag].get(branch):
@@ -195,29 +197,39 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
 
     ticking = False
 
-    Helpers = NodeConsts, NodeCount,
+    Helpers = NodeConsts, NodeCount
 
     def _get_node_targets(self, node: Node, branch: Branch) -> Generator[dict, None, None]:
         unapplied = self[NodeConsts][branch][node]
-        if len(branch.constants) and not len(unapplied):
-            # Do not release the node from filters, since new constants
-            # can appear.
+        unapplied_count = len(unapplied)
+        if len(branch.constants) and not unapplied_count:
+            # Do not release the node from filters, since new constants can appear.
             return
-        constants = unapplied or FIRST_CONST_SET
-        getcnodes = self._get_constant_nodes
+        if unapplied_count:
+            constants = unapplied
+        else:
+            constants = FIRST_CONST_SET
+        # getcnodes = self._get_constant_nodes
+        # branchall = branch.all
         
-        return (
-            dict(
-                adds     = group(nodes),
-                constant = constant ,
-            )
-            for nodes, constant in (
-                (getcnodes(node, c, branch), c)
-                for c in constants
-            )
-            if len(unapplied) > 0
-            or not branch.all(nodes)
-        )
+        for c in constants:
+            nodes = self._get_constant_nodes(node, c, branch)
+            if unapplied_count or not branch.all(nodes):
+                yield dict(adds = group(nodes), constant = c)
+
+
+        # return (
+        #     dict(
+        #         adds     = group(nodes),
+        #         constant = constant ,
+        #     )
+        #     for nodes, constant in (
+        #         (getcnodes(node, c, branch), c)
+        #         for c in constants
+        #     )
+        #     if len(unapplied) > 0
+        #     or not branch.all(nodes)
+        # )
 
     @abstract
     def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /):
@@ -235,17 +247,25 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
 class GetNodeTargetsRule(BaseNodeRule):
 
     @FilterHelper.node_targets
-    def _get_targets(self, node: Node, branch: Branch):
-        '''Wrapped by ``@FilterHelper.node_targets`` and delegates to abstract method
-        ``_get_node_targets().``
-        '''
+    def _get_targets(self, node: Node, branch: Branch, /):
+        """Wrapped by ``@FilterHelper.node_targets`` and delegates to abstract method
+        ``_get_node_targets()``.
+        """
         return self._get_node_targets(node, branch)
 
     @abstract
-    def _get_node_targets(self, node: Node, branch: Branch):
+    def _get_node_targets(self, node: Node, branch: Branch, /):
         raise NotImplementedError
 
 def group(*items: T) -> tuple[T, ...]:
+    """Tuple builder.
+    
+    Args:
+        *items: members.
+
+    Returns:
+        The tuple of arguments.
+    """
     return items
 
 def adds(*groups: tuple[dict, ...], **kw) -> dict[str, tuple[dict, ...]|Any]:
@@ -260,6 +280,3 @@ def adds(*groups: tuple[dict, ...], **kw) -> dict[str, tuple[dict, ...]|Any]:
     """
     return dict(adds = groups, **kw)
 
-del(
-    abstract,
-)

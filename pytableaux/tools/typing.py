@@ -20,22 +20,29 @@ pytableaux.tools.typing
 """
 from __future__ import annotations
 
-__all__ = ()
-#==========================+
-#  No local dependencies!  |
-#==========================+
-
 import enum as _enum
 from collections.abc import Set
 from types import FunctionType, MethodType, ModuleType
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
-                    Generic, Mapping, ParamSpec, SupportsIndex, TypeVar,
-                    overload)
+                    Generic, Mapping, ParamSpec, SupportsIndex, TypeVar)
+
+#==========================+
+#  No local dependencies!  |
+#==========================+
+
 
 if TYPE_CHECKING:
+    from typing import overload
+
     from pytableaux.models import BaseModel
     from pytableaux.proof.tableaux import Rule, TableauxSystem
+    from pytableaux.tools.abcs import Ebc
+    from pytableaux.tools.linked import Link, LinkSequence
+    from pytableaux.tools.mappings import MappingApi
+    from pytableaux.tools.sequences import MutableSequenceApi, SequenceApi
     from pytableaux.tools.sets import SetApi
+
+__all__ = ()
 
 class LogicType(
     metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None))
@@ -113,7 +120,7 @@ Self = TypeVar('Self')
 F = TypeVar('F', bound = Callable[..., Any])
 "Callable bound, decorator"
 
-TT = TypeVar('TT',    bound = type)
+TT = TypeVar('TT', bound = type)
 "Type bound, class decorator"
 
 MapT = TypeVar('MapT', bound = Mapping)
@@ -125,11 +132,32 @@ SetT = TypeVar('SetT', bound = Set)
 EnumT = TypeVar('EnumT', bound = _enum.Enum)
 "Enum bound"
 
+EbcT  = TypeVar('EbcT', bound = 'Ebc')
+"Bound to ``Ebc``"
+
+EbcT2 = TypeVar('EbcT2', bound = 'Ebc')
+"Bound to ``Ebc``"
+
 SetApiT = TypeVar('SetApiT', bound = 'SetApi')
 "Bound to ``SetApi``"
 
+SeqApiT = TypeVar('SeqApiT', bound = 'SequenceApi')
+"Bound to ``SequenceApi``"
+
+MutSeqT = TypeVar('MutSeqT', bound = 'MutableSequenceApi')
+"Bound to ``MutableSequenceApi``"
+
+MapiT = TypeVar('MapiT', bound = 'MappingApi')
+"Bound to ``MappingApi``"
+
 RuleT = TypeVar('RuleT', bound = 'Rule')
 "Bound to ``Rule``"
+
+LinkT = TypeVar('LinkT', bound = 'Link')
+"Bound to ``Link``"
+
+LinkSeqT = TypeVar('LinkSeqT', bound = 'LinkSequence')
+"Bound to ``LinkSequence``"
 
 P = ParamSpec('P')
 "Param spec"
@@ -140,8 +168,7 @@ P = ParamSpec('P')
 
 if TYPE_CHECKING:
 
-    class TypeInstDict(dict[type[VT], VT],
-        metaclass = type('TidMeta', (type,), dict(__call__ = dict))):
+    class TypeInstDict(dict[type[VT], VT]):
         'Stub type for mapping of ``type[T]`` -> ``T``.'
         @overload
         def __getitem__(self, key: type[T]) -> T: ...
@@ -162,8 +189,8 @@ if TYPE_CHECKING:
         _auto_called : bool
         _cls_name    : str
 
-    # Stub adapted from typing module with added annotations.
     class _property(property, Generic[Self, T]):
+        "Stub adapted from typing module with added annotations."
         fget: Callable[[Self], Any] | None
         fset: Callable[[Self, Any], None] | None
         fdel: Callable[[Self], None] | None

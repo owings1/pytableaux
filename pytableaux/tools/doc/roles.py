@@ -21,8 +21,6 @@ pytableaux.tools.doc.roles
 """
 from __future__ import annotations
 
-__all__ = ('lexdress', 'metadress', 'refplus',)
-
 import functools
 import re
 from typing import TYPE_CHECKING
@@ -39,6 +37,8 @@ from sphinx.util import logging
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
+
+__all__ = ('lexdress', 'metadress', 'refplus',)
 
 logger = logging.getLogger(__name__)
 

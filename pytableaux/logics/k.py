@@ -36,20 +36,21 @@ from pytableaux.lang.lex import Operator as Oper
 from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, Mval
-from pytableaux.proof.baserules import (BaseClosureRule, BaseNodeRule,
+from pytableaux.proof.baserules import (BaseClosureRule,  # BaseNodeRule,
                                         ExtendedQuantifierRule,
                                         GetNodeTargetsRule,
                                         NarrowQuantifierRule,
                                         OperatedSentenceRule,
                                         PredicatedSentenceRule,
                                         QuantifiedSentenceRule, adds, group)
-from pytableaux.proof.common import Access, Branch, Node, Target
+from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import NodeFilters
 from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof.tableaux import TableauxSystem as BaseSystem
+from pytableaux.proof.util import Access
 from pytableaux.tools import closure, static
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import EMPTY_SET
