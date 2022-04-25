@@ -20,13 +20,12 @@ pytableaux._package_info
 
 """
 from __future__ import annotations
-
-__docformat__ = 'google'
-__all__ = ('package',)
-
 import dataclasses
 import os.path
 import typing
+
+__docformat__ = 'google'
+__all__ = ('package',)
 
 __version__ = 2, 0, 0, 'alpha'
 'Version tuple (major, minor, patch, release).'
@@ -111,5 +110,8 @@ class package:
 
     root: str = os.path.dirname(os.path.abspath(__file__))
     'Base package directory.'
+
+    docformat: str = __docformat__
+    'The doc format.'
 
     __slots__ = ()

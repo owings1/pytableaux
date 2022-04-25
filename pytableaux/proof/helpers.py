@@ -13,11 +13,33 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - rule helpers module
+"""
+pytableaux.proof.helpers
+------------------------
+"""
 from __future__ import annotations
+
+import functools
+from copy import copy
+from itertools import filterfalse
+from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping,
+                    Sequence)
+
+from pytableaux.errors import Emsg, check
+from pytableaux.lang.lex import Constant, Predicated, Sentence
+from pytableaux.proof.common import Access, Branch, Node, Target
+from pytableaux.proof.filters import NodeFilter
+from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
+from pytableaux.proof.types import RuleAttr, RuleEvent, RuleHelper, TabEvent
+from pytableaux.tools import MapProxy, abstract, closure
+from pytableaux.tools.abcs import abcm
+from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
+from pytableaux.tools.mappings import dmap
+from pytableaux.tools.sets import EMPTY_SET, setm
+from pytableaux.tools.typing import KT, VT, T, TypeInstDict
+
+if TYPE_CHECKING:
+    from typing import overload
 
 __all__ = (
     'AdzHelper',
@@ -36,28 +58,10 @@ __all__ = (
     'MaxWorlds',
 )
 
-import functools
-from copy import copy
-from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping,
-                    Sequence, final, overload)
-
-from pytableaux.errors import Emsg, check
-from pytableaux.lang.lex import Constant, Predicated, Sentence
-from pytableaux.models import BaseModel
-from pytableaux.proof.common import Access, Branch, Node, Target
-from pytableaux.proof.filters import NodeFilter
-from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
-from pytableaux.proof.types import RuleAttr, RuleEvent, RuleHelper, TabEvent
-from pytableaux.tools import MapProxy, abstract, closure
-from pytableaux.tools.abcs import abcm
-from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
-from pytableaux.tools.mappings import dmap
-from pytableaux.tools.sets import EMPTY_SET, setf, setm
-from pytableaux.tools.typing import KT, VT, P, T, TypeInstDict
-
 TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
 NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]
 NodeTargetsGen = Callable[[Rule, Iterable[Node], Branch], Iterator[Target]]
+
 
 class AdzHelper:
 
@@ -527,7 +531,7 @@ class FilterHelper(FilterNodeCache):
 
         def make_targets_fn(cls: type[FilterHelper], node_targets_fn: NodeTargetsFn) -> TargetsFn:
             """
-            Method decoratorp to only iterate through nodes matching the
+            Method decorator to only iterate through nodes matching the
             configured FilterHelper filters.
 
             The rule may return a falsy value for no targets, a single
@@ -701,7 +705,7 @@ class MaxConsts:
         :rtype: dict
         """
         info = '{0}:MaxConstants({1})'.format(self.rule.name, str(self.get_max_constants(branch)))
-        return {'is_flag': True, 'flag': 'quit', 'info': info}
+        return dict(is_flag = True, flag = 'quit', info = info)
 
     # Events
 
@@ -751,96 +755,89 @@ class MaxConsts:
         s: Sentence = node.get('sentence')
         return len(s.quantifiers) if s else 0
 
-
-class MaxWorlds:
+class MaxWorlds(dict[Branch, int], RuleHelper):
     """
     Project the maximum number of worlds required for a branch by examining the
     branches after the trunk is built.
     """
-    __slots__ = 'rule', 'branch_max_worlds', 'modal_complexities'
+    __slots__ = (
+        'rule',
+        # 'branch_max_worlds',
+        '_modals',
+        '_modal_opfilter',
+    )
 
-    modal_operators = setf(BaseModel.modal_operators)
+    _modals: dict[Sentence, int]
 
     def __init__(self, rule: Rule,/):
         self.rule = rule
-        # Track the maximum number of worlds that should be on the branch
-        # so we can halt on infinite branches.
-        self.branch_max_worlds = {}
-        # Cache the modal complexities
-        self.modal_complexities: dict[Sentence, int] = {}
+        self._modal_opfilter = getattr(rule, RuleAttr.ModalOperators).__contains__
+        self._modals: dict[Sentence, int] = {}
         rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__after_trunk_build)
 
-    def get_max_worlds(self, branch: Branch):
-        """
-        Get the maximum worlds projected for the branch.
-        """
-        origin = branch.origin
-        if origin.id in self.branch_max_worlds:
-            return self.branch_max_worlds[origin.id]
-
-    def max_worlds_reached(self, branch: Branch):
+    def is_reached(self, branch: Branch, /) -> bool:
         """
         Whether we have already reached or exceeded the max number of worlds
         projected for the branch (origin).
         """
-        max_worlds = self.get_max_worlds(branch)
-        return max_worlds is not None and len(branch.worlds) >= max_worlds
+        origin = branch.origin
+        return origin in self and len(branch.worlds) >= self[origin]
 
-    def max_worlds_exceeded(self, branch: Branch):
+    def is_exceeded(self, branch: Branch, /) -> bool:
         """
         Whether we have exceeded the max number of worlds projected for the
         branch (origin).
         """
-        max_worlds = self.get_max_worlds(branch)
-        return max_worlds is not None and len(branch.worlds) > max_worlds
+        origin = branch.origin
+        return origin in self and len(branch.worlds) > self[origin]
 
-    def modal_complexity(self, sentence: Sentence):
+    def modals(self, s: Sentence, /) -> int:
         """
         Compute and cache the modal complexity of a sentence by counting its
         modal operators.
         """
-        if sentence not in self.modal_complexities:
-            self.modal_complexities[sentence] = len(
-                tuple(filter(self.modal_operators.__contains__, sentence.operators))
-                # [o for o in sentence.operators if o in self.modal_operators]
-            )
-        return self.modal_complexities[sentence]
+        if s not in self._modals:
+            self._modals[s] = sum(map(self._modal_opfilter, s.operators))
+        return self._modals[s]
 
-    def quit_flag(self, branch: Branch):
+    def quit_flag(self, branch: Branch, /) -> dict[str, Any]:
         """
         Generate a quit flag node for the branch.
         """
-        info = '{0}:MaxWorlds({1})'.format(self.rule.name, str(self.get_max_worlds(branch)))
-        return {'is_flag': True, 'flag': 'quit', 'info': info}
-
-    # Events
+        info = f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin)})'
+        return dict(
+            is_flag = True,
+            flag = 'quit',
+            info = info
+        )
 
     def __after_trunk_build(self, tableau: Tableau):
         for branch in tableau:
             origin = branch.origin
-            # In most cases, we will have only one origin branch.
-            if origin.id in self.branch_max_worlds:
-                return
-            self.branch_max_worlds[origin.id] = self.__compute_max_worlds(branch)
+            # For normal logics, we will have only one trunk branch.
+            if origin in self:
+                raise NotImplementedError('Multiple trunk branches not implemented.')
+            self[origin] = self._compute(branch)
 
-    # Private util
-
-    def __compute_max_worlds(self, branch: Branch):
+    def _compute(self, branch: Branch) -> int:
         # Project the maximum number of worlds for a branch (origin) as
         # the number of worlds already on the branch + the number of modal
         # operators + 1.
-        node_needed_worlds = sum([
-            self.__compute_needed_worlds_for_node(node, branch)
-            for node in branch
-        ])
-        return len(branch.worlds) + node_needed_worlds + 1
+        return 1 + len(branch.worlds) + sum(
+            map(self.modals, (
+                node['sentence']
+                for node in filterfalse(branch.is_ticked, branch)
+                if 'sentence' in node
+            ))
+        )
 
-    def __compute_needed_worlds_for_node(self, node: Node, branch: Branch):
-        # we only care about unticked nodes, since ticked nodes will have
-        # already created any worlds.
-        if not branch.is_ticked(node) and node.has('sentence'):
-            return self.modal_complexity(node['sentence'])
-        return 0
+    @classmethod
+    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
+        "``RuleHelper`` init hook. Set the `modal_operators` attribute."
+        super().__init_ruleclass__(rulecls, **kw)
+        if not hasattr(rulecls, RuleAttr.ModalOperators):
+            raise Emsg.MissingAttribute(RuleAttr.ModalOperators)
+
 
 # --------------------------------------------------
 
@@ -911,4 +908,4 @@ class EllipsisExampleHelper:
 
 
 
-del(abstract, final, overload)
+del(abstract)

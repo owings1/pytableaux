@@ -81,6 +81,7 @@ class TabRules:
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
         Helpers =  MaxWorlds, UnserialWorlds,
+        modal_operators = Model.modal_operators
         ignore_ticked = False
         ticking = False
 
@@ -113,7 +114,7 @@ class TabRules:
                 return False
 
             # As above, this is unnecessary
-            if self[MaxWorlds].max_worlds_exceeded(branch):
+            if self[MaxWorlds].is_exceeded(branch):
                 return False
 
             return True

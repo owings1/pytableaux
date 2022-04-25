@@ -23,14 +23,6 @@ pytableaux.proof.tableaux
 """
 from __future__ import annotations
 
-__docformat__ = 'google'
-__all__ = (
-    'ClosingRule',
-    'Rule',
-    'Tableau',
-    'TableauxSystem',
-)
-
 import operator as opr
 from collections import deque
 from collections.abc import Set
@@ -38,11 +30,11 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
                     Iterable, Iterator, Mapping, NamedTuple, Sequence,
                     SupportsIndex, final)
 
+from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
-from pytableaux.models import BaseModel
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.types import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
                                     RuleHelper, RuleMeta, TabEvent, TabFlag,
@@ -65,8 +57,16 @@ if TYPE_CHECKING:
     from typing import overload
 
     from pytableaux.logics import LogicLookupKey
+    from pytableaux.models import BaseModel
     from pytableaux.tools.typing import F, LogicModule, T, TypeInstDict
 
+
+__all__ = (
+    'ClosingRule',
+    'Rule',
+    'Tableau',
+    'TableauxSystem',
+)
 
 NOARG = object()
 NOGET = object()
@@ -208,7 +208,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         return 0.0
 
     @final
-    def target(self, branch: Branch) -> Target|None:
+    def target(self, branch: Branch, /) -> Target|None:
         "Get the rule target if it applies."
         with self.timers['search']:
             targets = self._get_targets(branch)
@@ -217,7 +217,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
                 return self.__select_best_target(targets)
 
     @final
-    def apply(self, target: Target) -> None:
+    def apply(self, target: Target, /) -> None:
         "Apply the rule to a target returned from ``.target()``."
         with self.timers['apply']:
             self.emit(RuleEvent.BEFORE_APPLY, target)

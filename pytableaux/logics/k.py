@@ -1126,16 +1126,17 @@ class TabRules:
         branch_level = 1
 
         Helpers = QuitFlag, MaxWorlds, AplSentCount,
+        modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: Node, branch: Branch):
 
             # Check for max worlds reached
-            if self[MaxWorlds].max_worlds_exceeded(branch):
+            if self[MaxWorlds].is_exceeded(branch):
                 self[FilterHelper].release(node, branch)
                 if self[QuitFlag].get(branch):
                     return
                 fnode = self[MaxWorlds].quit_flag(branch)
-                return adds(group(fnode)) | dict(flag = True)
+                return adds(group(fnode), flag = fnode['flag'])
 
             si = self.sentence(node).lhs
             w1 = node['world']
@@ -1158,7 +1159,7 @@ class TabRules:
             track_count = self[AplSentCount][branch].get(si, 0)
             if track_count == 0:
                 return 1.0
-            return -1.0 * self[MaxWorlds].modal_complexity(s) * track_count
+            return -1.0 * self[MaxWorlds].modals(s) * track_count
 
         def group_score(self, target: Target):
             if target['candidate_score'] > 0:
@@ -1195,18 +1196,19 @@ class TabRules:
         branch_level = 1
 
         Helpers = QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex,
+        modal_operators = Model.modal_operators
 
         Timers = 'get_targets',
 
         def _get_node_targets(self, node: Node, branch: Branch):
 
             # Check for max worlds reached
-            if self[MaxWorlds].max_worlds_exceeded(branch):
+            if self[MaxWorlds].is_exceeded(branch):
                 self[FilterHelper].release(node, branch)
                 if self[QuitFlag].get(branch):
                     return
                 fnode = self[MaxWorlds].quit_flag(branch)
-                return adds(group(fnode)) | dict(flag = True)
+                return adds(group(fnode), flag = fnode['flag'])
 
             # Only count least-applied-to nodes
             if not self[NodeCount].isleast(node, branch):

@@ -14,41 +14,50 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import annotations
 """
 pytableaux
 ----------
 
 """
-__docformat__ = 'google'
-__all__ = (
-    'errors',
-    'examples',
-    'logics',
-    'models',
-    'package',
-    'proof',
-    'tools',
-)
+from __future__ import annotations
 
-from pytableaux import errors
-
+# ----- package info
 from pytableaux._package_info import package
 
-from pytableaux.tools import abcs
+__docformat__ = package.docformat
 
-errors.Emsg = abcs.ebcm.rebase(errors.Emsg, errors.EmsgBase, abcs.Ebc)
-del(errors.EmsgBase)
+_package_info = None
+del(_package_info)
+
+# ----- errors, tools
+
+from pytableaux import errors, tools
+
+import pytableaux.tools.abcs
+
+@tools.closure
+def _():
+
+    # Rebase errors.Emsg
+
+    from pytableaux.tools.abcs import ebcm, Ebc
+    errors.Emsg = ebcm.rebase(errors.Emsg, errors.EmsgBase, Ebc)
+
+    errors.EmsgBase = None
+    del(errors.EmsgBase)
 
 
 import pytableaux.tools.typing
 import pytableaux.tools.hooks
-# operd, NoSetAttr, lazy, membr, raisr, wraps
 import pytableaux.tools.decorators
 import pytableaux.tools.sets
 
-# Back patch
-abcs.abcm._frozenset = pytableaux.tools.sets.setf
+@tools.closure
+def _():
+    # Back patch abcm._frozenset
+
+    from pytableaux.tools.abcs import abcm
+    abcm._frozenset = pytableaux.tools.sets.setf
 
 import pytableaux.tools.timing
 import pytableaux.tools.misc
@@ -57,10 +66,11 @@ import pytableaux.tools.sequences
 import pytableaux.tools.hybrids
 import pytableaux.tools.linked
 
+# ------ lang
+
 import pytableaux.lang.collect
 import pytableaux.lang.writing
 import pytableaux.lang.parsing
-
 
 @tools.closure
 def _():
@@ -92,11 +102,13 @@ def _():
 
     del(lex.nosetattr,)
 
-# --------------------------------------------
+# ----- logics, examples, models
 
 import pytableaux.logics
 import pytableaux.examples
 import pytableaux.models
+
+# ----- proof
 
 import pytableaux.proof.types
 import pytableaux.proof.common
@@ -106,11 +118,24 @@ import pytableaux.proof.baserules
 import pytableaux.proof.helpers
 import pytableaux.proof.writers
 
-from pytableaux import (
-    examples, logics, models, proof, tools
-)
+# from pytableaux import (
+#     examples, logics, models, proof, tools
+# )
+
+# ---- root aliases
 
 from pytableaux.tools.sets import EMPTY_SET
+
+__all__ = (
+    'errors',
+    'examples',
+    'logics',
+    'models',
+    'package',
+    'proof',
+    'tools',
+    'EMPTY_SET',
+)
 
 
 _package_info = None

@@ -40,7 +40,7 @@ __all__ = (
     'group',
 )
 
-from typing import TYPE_CHECKING, Generator, Iterable
+from typing import TYPE_CHECKING, Any, Generator, Iterable
 
 from pytableaux.lang.lex import (Constant, Operated, Operator, Predicate,
                                  Predicated, Quantified, Quantifier, Sentence)
@@ -179,12 +179,8 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
             self[FilterHelper].release(node, branch)
             if self[QuitFlag].get(branch):
                 return
-            return dict(
-                flag = True,
-                ** adds (
-                    group(self[MaxConsts].quit_flag(branch))
-                ),
-            )
+            fnode = self[MaxConsts].quit_flag(branch)
+            return adds(group(fnode), flag = fnode['flag'])
 
         return self._get_node_targets(node, branch)
 
@@ -252,7 +248,16 @@ class GetNodeTargetsRule(BaseNodeRule):
 def group(*items: T) -> tuple[T, ...]:
     return items
 
-def adds(*groups: tuple[dict, ...], **kw):
+def adds(*groups: tuple[dict, ...], **kw) -> dict[str, tuple[dict, ...]|Any]:
+    """Target dict builder for `AdzHelper`.
+    
+    Args:
+        *groups: node groups.
+        **kw: dict keywords.
+
+    Returns:
+        A dict built from ``dict(adds = groups, **kw)``.
+    """
     return dict(adds = groups, **kw)
 
 del(

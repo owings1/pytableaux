@@ -60,12 +60,28 @@ class RuleAttr(str, Ebc):
     'Special ``Rule`` class attribute names.'
 
     Helpers     = 'Helpers'
+    "Rule helper classes."
+
     Timers      = 'Timers'
-    NodeFilters = 'NodeFilters'
+    "Rule timer names."
+
     DefaultOpts = '_defaults'
+    "Rule default options."
+
     OptKeys     = '_optkeys'
+    "Rule option keys."
+
     Name        = 'name'
+    "Rule class name attribute."
+
+    NodeFilters = 'NodeFilters'
+    "For `FilterHelper`."
+
     IgnoreTicked = 'ignore_ticked'
+    "For `FilterHelper`."
+
+    ModalOperators = 'modal_operators'
+    "For `MaxWorlds` helper."
 
 class RuleEvent(Ebc):
     'Rule events.'

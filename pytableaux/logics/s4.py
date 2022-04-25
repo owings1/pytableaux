@@ -76,10 +76,11 @@ class TabRules:
         Helpers = MaxWorlds, WorldIndex,
         access = True
         ticking = False
+        modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: Node, branch: Branch,/) -> Generator[dict, None, None]:
 
-            if self[MaxWorlds].max_worlds_reached(branch):
+            if self[MaxWorlds].is_reached(branch):
                 self[FilterHelper].release(node, branch)
                 return
 

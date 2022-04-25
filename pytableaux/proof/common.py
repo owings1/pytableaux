@@ -407,7 +407,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         """
         if not self.closed:
             self.__closed = True
-            self.append({'is_flag': True, 'flag': 'closure'})
+            self.append(dict(is_flag = True, flag = 'closure'))
             self.emit(BranchEvent.AFTER_BRANCH_CLOSE, self)
         return self
 
