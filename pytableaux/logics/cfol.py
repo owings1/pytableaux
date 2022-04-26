@@ -19,6 +19,9 @@
 # pytableaux - Classical First-Order Logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Quantified, Sentence
+from pytableaux.logics import cpl as CPL
+from pytableaux.logics import k as K
 from pytableaux.tools.abcs import Abc, abcf
 
 name = 'CFOL'
@@ -30,15 +33,12 @@ class Meta:
     tags = ['bivalent', 'non-modal', 'first-order']
     category_order = 2
 
-from pytableaux.lang.lex import Sentence, Quantified
-from pytableaux.logics import k as K, cpl as CPL
-
 class Model(CPL.Model):
     """
     A CFOL Model is just like :ref:`CPL model <cpl-model>` but with quantification.
     """
 
-    def is_sentence_opaque(self, s: Sentence):
+    def is_sentence_opaque(self, s: Sentence, /) -> bool:
         """
         A sentence is opaque if its operator is either Necessity or Possibility.
         """
@@ -60,8 +60,9 @@ class TabRules(Abc):
     @abcf.after
     def clearmodal(cls):
         'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from pytableaux.proof.util import demodalize_rules
         from itertools import chain
+
+        from pytableaux.proof.util import demodalize_rules
         demodalize_rules(chain(
             cls.closure_rules,
             chain.from_iterable(cls.rule_groups)

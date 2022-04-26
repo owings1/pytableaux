@@ -27,9 +27,8 @@ from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping,
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
-from pytableaux.proof import RuleHelper
+from pytableaux.proof import RuleHelper, filters
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.filters import NodeFilter
 from pytableaux.proof.tableaux import ClosingRule, Rule
 from pytableaux.proof.util import Access, RuleAttr, RuleEvent, TabEvent
 from pytableaux.tools import MapProxy, abstract, closure
@@ -464,7 +463,7 @@ class PredNodes(FilterNodeCache):
     def __call__(self, node: Node, _):
         return isinstance(node.get('sentence'), Predicated)
 
-FiltersDict = TypeInstDict[NodeFilter]
+FiltersDict = TypeInstDict[filters.NodeCompare]
 NodePredFunc = Callable[[Node], bool]
 
 class FilterHelper(FilterNodeCache):
@@ -474,7 +473,7 @@ class FilterHelper(FilterNodeCache):
     __slots__ = 'filters', '_garbage', 'pred',
 
     filters: FiltersDict
-    "Mapping from ``NodeFilter`` class to instance."
+    "Mapping from ``NodeCompare`` class to instance."
 
     pred: NodePredFunc
     """A single predicate of all filters. To also check the `ignore_ticked`
@@ -583,7 +582,7 @@ class FilterHelper(FilterNodeCache):
         )
         if values:
             for Filter in values:
-                check.subcls(check.inst(Filter, type), NodeFilter)
+                check.subcls(check.inst(Filter, type), filters.NodeCompare)
         else:
             if not abcm.isabstract(rulecls):
                 import warnings
@@ -643,7 +642,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
     """Track the unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
 
-    Only nodes that are applicable according to the rule's ``NodeFilter`` helper.
+    Only nodes that are applicable according to the rule's ``NodeCompare`` helper.
     method are tracked.
     """
 

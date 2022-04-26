@@ -44,7 +44,7 @@ from pytableaux.lang.lex import Operator as Oper
 from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, Mval
-from pytableaux.proof import TableauxSystem as BaseSystem
+from pytableaux.proof import TableauxSystem as BaseSystem, filters
 from pytableaux.proof.baserules import (BaseClosureRule,
                                         ExtendedQuantifierRule,
                                         GetNodeTargetsRule,
@@ -52,7 +52,6 @@ from pytableaux.proof.baserules import (BaseClosureRule,
                                         OperatedSentenceRule,
                                         QuantifiedSentenceRule)
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.filters import NodeFilters
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.tools import MapProxy, closure, static
 from pytableaux.tools.hybrids import qsetf
@@ -74,9 +73,13 @@ class Model(BaseModel):
 
     class Value(Mval):
         'The admissible values for sentences.'
+
         F = 'False',   0.0
+
         N = 'Neither', 0.25
+
         B = 'Both',    0.75
+
         T = 'True',    1.0
 
     #: The set of designated values.
@@ -587,13 +590,13 @@ class TableauxSystem(BaseSystem):
 class DefaultNodeRule(GetNodeTargetsRule):
     """Default FDE node rule with:
     
-    - NodeFilters.Designation with defaults: designation = `None`
+    - filters.DesignationNode with defaults: designation = `None`
     - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
     - FilterHelper implements `example_nodes()` with its `example_node()` method.
     - AdzHelper implements `_apply()` with its `_apply()` method.
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
     """
-    NodeFilters = NodeFilters.Designation,
+    NodeFilters = filters.DesignationNode,
     designation: bool|None = None
 
 class OperatorNodeRule(OperatedSentenceRule, DefaultNodeRule):

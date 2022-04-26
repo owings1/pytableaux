@@ -20,14 +20,12 @@ pytableaux.proof.util
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, NamedTuple
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, NamedTuple
 
-from pytableaux.errors import check
-from pytableaux.tools import MapProxy, abstract, closure
-from pytableaux.tools.abcs import AbcMeta, Ebc, FlagEnum, abcm, eauto
-from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
-from pytableaux.tools.mappings import ItemMapEnum, dmap
-from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools import MapProxy
+from pytableaux.tools.abcs import Ebc, FlagEnum, eauto
+from pytableaux.tools.mappings import ItemMapEnum
+from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
@@ -46,9 +44,9 @@ def demodalize_rules(Rules: Iterable[type[Rule]]) -> None:
     
     Args:
         Rules: Iterable of rule classes."""
-    from pytableaux.proof.filters import NodeFilters
+    from pytableaux.proof import filters
     filtersattr = RuleAttr.NodeFilters
-    rmfilters = {NodeFilters.Modal}
+    rmfilters = {filters.ModalNode}
     for rulecls in Rules:
         value = getattr(rulecls, filtersattr, None)
         if value is not None and len(value & rmfilters):

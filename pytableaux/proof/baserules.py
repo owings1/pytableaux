@@ -25,8 +25,8 @@ from typing import TYPE_CHECKING, Any, Generator, Iterable
 
 from pytableaux.lang.lex import (Constant, Operated, Operator, Predicate,
                                  Predicated, Quantified, Quantifier, Sentence)
+from pytableaux.proof import filters
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.filters import NodeFilters
 from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
                                       MaxConsts, NodeConsts, NodeCount,
                                       PredNodes, QuitFlag)
@@ -140,7 +140,7 @@ class BaseNodeRule(BaseSimpleRule):
 
 class BaseSentenceRule(BaseNodeRule):
 
-    NodeFilters = NodeFilters.Sentence,
+    NodeFilters = filters.SentenceNode,
 
     negated    : bool      |None = None
     operator   : Operator  |None = None
@@ -148,8 +148,8 @@ class BaseSentenceRule(BaseNodeRule):
     predicate  : Predicate |None = None
 
     def sentence(self, node: Node, /) -> Sentence:
-        'Delegates to ``NodeFilters.Sentence`` of ``FilterHelper``.'
-        return self[FilterHelper].filters[NodeFilters.Sentence].sentence(node)
+        'Delegates to ``filters.SentenceNode`` of ``FilterHelper``.'
+        return self[FilterHelper].filters[filters.SentenceNode].sentence(node)
 
 class PredicatedSentenceRule(BaseSentenceRule):
 

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import operator as opr
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic, Iterable,
-                    Mapping, NamedTuple, Protocol, Sequence)
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic,
+                    Mapping, NamedTuple)
 
-from pytableaux.errors import check
+from pytableaux import __docformat__
 from pytableaux.lang.lex import (Operated, Operator, Predicate, Predicated,
                                  Quantified, Quantifier, Sentence)
 from pytableaux.proof.common import Node
 from pytableaux.proof.util import Access
-from pytableaux.tools import MapProxy, abstract, closure, static, thru
+from pytableaux.tools import MapProxy, abstract, thru
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
@@ -18,51 +18,76 @@ from pytableaux.tools.typing import LHS, RHS, T
 if TYPE_CHECKING:
     from typing import overload
 
+    class SentenceComparable:
+
+        negated    : bool|None
+        operator   : Operator|None
+        quantifier : Quantifier|None
+        predicate  : Predicate|None
+else:
+    SentenceComparable = object
+
 __all__ = (
+    'AttrCompare',
     'Comparer',
-    'Filters',
-    'NodeFilter',
-    'NodeFilters',
+    'DesignationNode',
+    'ModalNode',
+    'NodeCompare',
+    'SentenceCompare',
+    'SentenceNode',
 )
 
 EMPTY = ()
-def getattr_safe(obj, name):
+
+def getattr_safe(obj: Any, name: str) -> Any:
     return getattr(obj, name, None)
-def getkey(obj, name):
-    return obj[name]
-def getkey_safe(obj, name):
+
+def getkey(obj: Any, key: Any) -> Any:
+    return obj[key]
+
+def getkey_safe(obj: Any, key: Any) -> Any:
     try:
-        return obj[name]
+        return obj[key]
     except KeyError:
         return None
 
-class SentenceComparable(Protocol):
+BoolCompFunc = Callable[[Any, Any], bool]
+"Function that returns a boolean for any two arguments."
 
-    negated    : bool|None
-    operator   : Operator|None
-    quantifier : Quantifier|None
-    predicate  : Predicate|None
+CompAttrCompItem = tuple[tuple[str, Any], ...]
+"The `compitem` type for `Attr` comparer."
 
-class SentenceCompItem(NamedTuple):
+CompSentenceType = type[Operated]|type[Quantified]|type[Predicated]
+"Union of possible expected sentence types."
 
-    type: SentenceCompType
+CompSentenceMap = tuple[tuple[str, tuple[CompSentenceType, BoolCompFunc]], ...]
+"The type for the reference data for building sentence comp items."
+
+class CompSentenceCompItem(NamedTuple):
+    "Comparison parameters for a sentence filter/comparator."
+
+    type: CompSentenceType
+    "The expected sentence type."
+
     item: Operator|Quantifier|Predicate
+    "The specific lexical item to match."
+
     name: str
-    fcmp: Callable[[Any, Any], bool]
+    "The attribute name of the item, e.g. `'operator'`."
+
+    fcmp: BoolCompFunc
+    "The comparison function for the expected item, e.g. `is` or `equals`."
+
     negated: bool
-
-CompFuncType = Callable[[Any, Any], bool]
-AttrCompItem = tuple[tuple[str, Any], ...]
-SentenceCompType = type[Operated]|type[Quantified]|type[Predicated]
-SentenceCompMap = tuple[tuple[str, tuple[SentenceCompType, CompFuncType]], ...]
-
-# TODO: fix generic types on Comparer, Filters
+    "Whether the sentence must be negated."
 
 class Comparer(Generic[LHS, RHS, T], Abc):
+    "Filter/comparer base class."
 
     __slots__ = 'compitem',
 
     compitem: T
+    "The hashable comparison item tuple."
 
     def __init__(self, *args, **kw):
         self.compitem = self._build(*args, **kw)
@@ -88,198 +113,211 @@ class Comparer(Generic[LHS, RHS, T], Abc):
     def _build(cls, lhs: LHS, lget: Callable[..., Any], /) -> T:
         raise NotImplementedError
 
-@static
-class Filters:
-
-    class Attr(Comparer[LHS, RHS, AttrCompItem]):
-
-        #: LHS attr -> RHS attr mapping.
-        attrmap: ClassVar[Mapping[str, str]] = MapProxy()
-
-        if TYPE_CHECKING:
-            @overload
-            def rget(self, rhs: RHS, name: str, /) -> Any:...
-            @overload
-            def fcmp(self, a: Any, b: Any, /) -> bool: ...
-
-        rget = staticmethod(getattr)
-        fcmp = staticmethod(opr.eq)
-
-        __slots__ = EMPTY_SET
-
-        @classmethod
-        def _build(cls, lhs: LHS, /, attrs: tuple[str, ...] = None, attrmap: Mapping[str, str] = None, getitem: bool = False,):
-            """Build a comparison item.
-
-            Args:
-                lhs: The base object.
-                attrs: Names of attributes to use. The attrmap translates into rhs name.
-                attrmap: Lhs to rhs attr name mapping. Merges with class attrmap.
-                getitem: Use mapping subscript to get lhs values, intead of getattr.
-
-            Returns:
-                The comparison item tuple.
-            """
-            if getitem:
-                lget = getkey_safe
-            else:
-                lget = getattr_safe
-            if attrs is None:
-                attrs = EMPTY
-            if attrmap is None:
-                attrmap = MapProxy.EMPTY_MAP
-            attrmap = dict(zip(attrs, attrs)) | cls.attrmap | attrmap
-            trans = attrmap.get
-            return tuple(
-                (name, value)
-                for name, value in (
-                    (trans(name, name), lget(lhs, name))
-                    for name in attrmap
-                )
-                if value is not None
-            )
-
-        def __call__(self, rhs: RHS, /) -> bool:
-            rget = self.rget
-            fcmp = self.fcmp
-            for name, value in self.compitem:
-                if not fcmp(value, rget(rhs, name)):
-                    return False
-            return True
-
-        def example(self) -> RHS|dmapns[str, Any]:
-            return dmapns(self.compitem)
-
-        def __repr__(self):
-            props = tuple(f'{k}={v}' for k, v in self.compitem)
-            pstr = ', '.join(props)
-            return f'<{type(self).__qualname__}:({pstr})>'
-
-    class Sentence(Comparer[SentenceComparable, RHS, SentenceCompItem]):
-
-        compmap: ClassVar[SentenceCompMap] = tuple(dict(
-            operator   = (Operated, opr.is_),
-            quantifier = (Quantified, opr.is_),
-            predicate  = (Predicated, opr.eq),
-        ).items())
-
-        if TYPE_CHECKING:
-            @staticmethod
-            @overload
-            def rget(rhs: RHS, /) -> Sentence|None:...
-            
-        rget = staticmethod(thru)
-
-        __slots__ = EMPTY_SET
-
-        @classmethod
-        def _build(cls, lhs: SentenceComparable, /, getitem: bool = False,) -> SentenceCompItem|None:
-            """Build a sentence comparison item.
-
-            Args:
-                lhs: The base object.
-                getitem: Use mapping subscript to get lhs values, intead of getattr.
-
-            Returns:
-                The sentence comparison item tuple.
-            """
-            if getitem:
-                lget = getkey_safe
-            else:
-                lget = getattr_safe
-            for s_name, (s_type, s_fcmp) in cls.compmap:
-                if (s_item := lget(lhs, s_name)) is not None:
-                    s_negated = bool(lget(lhs, 'negated'))
-                    break
-            else:
-                return None
-            return SentenceCompItem(
-                s_type, s_item, s_name, s_fcmp, s_negated
-            )
-
-        def sentence(self, rhs: RHS, /) -> Sentence|None:
-            """Get the sentence to be examine from the rhs, or None. For a `negated`
-            filter, returns the negatum, if any, else None. For a non-`negated`
-            filter, returns the value retrieved unaltered.
-            """
-            if (s := self.rget(rhs)) is not None:
-                if self.compitem.negated:
-                    if type(s) is Operated and s.operator is Operator.Negation:
-                        return s.lhs
-                else:
-                    return s
-
-        def __call__(self, rhs: RHS, /) -> bool:
-            return (compitem := self.compitem) is None or (
-                type(s := self.sentence(rhs)) is compitem.type and
-                compitem.fcmp(getattr(s, compitem.name), compitem.item)
-            )
-
-        def example(self) -> Sentence|None:
-            if (compitem := self.compitem) is None:
-                return
-            s = compitem.type.first(compitem.item)
-            if compitem.negated:
-                s = s.negate()
-            return s
-
-        def __repr__(self):
-            clsname = type(self).__qualname__
-            if (compitem := self.compitem) is None:
-                return f'<{clsname}:NONE>'
-            nstr = '(negate)' if compitem.negated else ''
-            return (
-                f'<{clsname}:'
-                f'{compitem.name}' '=' f'{compitem.item}' f'{nstr}''>'
-            )
-
-class NodeFilter(Comparer):
+class NodeCompare(Comparer):
+    "Node filter mixin class."
 
     @abstract
     def example_node(self) -> dict: ...
 
-@static
-class NodeFilters(Filters):
+class AttrCompare(Comparer[LHS, RHS, CompAttrCompItem]):
+    "Attribute filter/comparer."
 
-    class Sentence(Filters.Sentence[Node], NodeFilter):
+    attrmap: ClassVar[Mapping[str, str]] = MapProxy()
+    "LHS attr -> RHS attr mapping."
 
-        __slots__ = EMPTY_SET
+    if TYPE_CHECKING:
+        @overload
+        def rget(self, rhs: RHS, name: str, /) -> Any:...
+
+        @overload
+        def fcmp(self, a: Any, b: Any, /) -> bool: ...
+
+    rget = staticmethod(getattr)
+    fcmp = staticmethod(opr.eq)
+
+    __slots__ = EMPTY_SET
+
+    @classmethod
+    def _build(cls, lhs: LHS, /, attrs: tuple[str, ...] = None, attrmap: Mapping[str, str] = None, getitem: bool = False,):
+        """Build a comparison item.
+
+        Args:
+            lhs: The base object.
+            attrs: Names of attributes to use. The attrmap translates into rhs name.
+            attrmap: Lhs to rhs attr name mapping. Merges with class attrmap.
+            getitem: Use mapping subscript to get lhs values, intead of getattr.
+
+        Returns:
+            The comparison item tuple.
+        """
+        if getitem:
+            lget = getkey_safe
+        else:
+            lget = getattr_safe
+        if attrs is None:
+            attrs = EMPTY
+        if attrmap is None:
+            attrmap = MapProxy.EMPTY_MAP
+        attrmap = dict(zip(attrs, attrs)) | cls.attrmap | attrmap
+        trans = attrmap.get
+        return tuple(
+            (trans(name, name), value)
+            for name, value in (
+                (name, lget(lhs, name))
+                for name in attrmap
+            )
+            if value is not None
+        )
+
+    def __call__(self, rhs: RHS, /) -> bool:
+        "Return whether the rhs passes the filter."
+        rget = self.rget
+        fcmp = self.fcmp
+        for name, value in self.compitem:
+            if not fcmp(value, rget(rhs, name)):
+                return False
+        return True
+
+    def example(self) -> RHS|dmapns[str, Any]:
+        "Build an example object/mapping that satisfies the filter."
+        return dmapns(self.compitem)
+
+    def __repr__(self):
+        props = tuple(f'{k}={v}' for k, v in self.compitem)
+        pstr = ', '.join(props)
+        return f'<{type(self).__qualname__}:({pstr})>'
+
+class SentenceCompare(Comparer[SentenceComparable, RHS, CompSentenceCompItem]):
+    "Sentence filter/comparer."
+
+    compmap: ClassVar[CompSentenceMap] = (
+        *dict(
+            operator   = (Operated, opr.is_),
+            quantifier = (Quantified, opr.is_),
+            predicate  = (Predicated, opr.eq),
+        ).items(),
+    )
+
+    if TYPE_CHECKING:
 
         @staticmethod
-        def rget(node: Node, /) -> Sentence|None:
-            return node.get('sentence')
+        @overload
+        def rget(rhs: RHS, /) -> Sentence|None:...
+        
+    rget = staticmethod(thru)
 
-        def example_node(self) -> dict[str, Sentence]:
-            n = {}
-            s = self.example()
-            if s is not None:
-                n['sentence'] = s
-            return n
+    __slots__ = EMPTY_SET
 
-    class Designation(Filters.Attr[LHS, Node], NodeFilter):
+    @classmethod
+    def _build(cls, lhs: SentenceComparable, /, getitem: bool = False,) -> CompSentenceCompItem|None:
+        """Build a sentence comparison item.
 
-        attrmap = MapProxy(designation = 'designated')
+        Args:
+            lhs: The base object.
+            getitem: Use mapping subscript to get lhs values, intead of getattr.
 
-        __slots__ = EMPTY_SET
+        Returns:
+            The sentence comparison item tuple.
+        """
+        if getitem:
+            lget = getkey_safe
+        else:
+            lget = getattr_safe
+        for s_name, (s_type, s_fcmp) in cls.compmap:
+            if (s_item := lget(lhs, s_name)) is not None:
+                s_negated = bool(lget(lhs, 'negated'))
+                break
+        else:
+            return None
+        return CompSentenceCompItem(
+            s_type, s_item, s_name, s_fcmp, s_negated
+        )
 
-        @staticmethod
-        def rget(node: Node, key: str, /) -> bool:
-            return node[key]
+    def sentence(self, rhs: RHS, /) -> Sentence|None:
+        """Get the sentence to be examine from the rhs, or None. For a `negated`
+        filter, returns the negatum, if any, else None. For a non-`negated`
+        filter, returns the value retrieved unaltered.
+        """
+        if (s := self.rget(rhs)) is not None:
+            if self.compitem.negated:
+                if type(s) is Operated and s.operator is Operator.Negation:
+                    return s.lhs
+            else:
+                return s
 
-        def example_node(self) -> dict[str, bool]:
-            return dict(self.example())
+    def __call__(self, rhs: RHS, /) -> bool:
+        "Return whether the rhs passes the filter."
+        return (compitem := self.compitem) is None or (
+            type(s := self.sentence(rhs)) is compitem.type and
+            compitem.fcmp(getattr(s, compitem.name), compitem.item)
+        )
 
-    class Modal(Filters.Attr[LHS, Node], NodeFilter):
+    def example(self) -> Sentence|None:
+        "Construct an example sentence that matches the filter conditions."
+        if (compitem := self.compitem) is None:
+            return
+        s = compitem.type.first(compitem.item)
+        if compitem.negated:
+            s = s.negate()
+        return s
 
-        attrmap = MapProxy(modal = 'is_modal', access = 'is_access')
+    def __repr__(self):
+        clsname = type(self).__qualname__
+        if (compitem := self.compitem) is None:
+            return f'<{clsname}:NONE>'
+        nstr = '(negate)' if compitem.negated else ''
+        return (
+            f'<{clsname}:'
+            f'{compitem.name}' '=' f'{compitem.item}' f'{nstr}''>'
+        )
 
-        __slots__ = EMPTY_SET
+class SentenceNode(SentenceCompare[Node], NodeCompare):
+    "Sentence node filter."
 
-        def example_node(self) -> dict[str, int]:
-            n = {}
-            attrs = self.example()
-            if attrs.get('is_access'):
-                n.update(Access(0, 1)._asdict())
-            elif attrs.get('is_modal'):
-                n['world'] = 0
-            return n
+    __slots__ = EMPTY_SET
+
+    @staticmethod
+    def rget(node: Node, /) -> Sentence|None:
+        return node.get('sentence')
+
+    def example_node(self) -> dict[str, Sentence]:
+        n = {}
+        s = self.example()
+        if s is not None:
+            n['sentence'] = s
+        return n
+
+class DesignationNode(AttrCompare[LHS, Node], NodeCompare):
+    "Designation node filter."
+
+    attrmap = MapProxy(
+        designation = 'designated',
+    )
+
+    __slots__ = EMPTY_SET
+
+    @staticmethod
+    def rget(node: Node, key: str, /) -> bool:
+        return node[key]
+
+    def example_node(self) -> dict[str, bool]:
+        return dict(self.example())
+
+class ModalNode(AttrCompare[LHS, Node], NodeCompare):
+    "Modal node filter."
+
+    attrmap = MapProxy(
+        modal = 'is_modal',
+        access = 'is_access',
+    )
+
+    __slots__ = EMPTY_SET
+
+    def example_node(self) -> dict[str, int]:
+        n = {}
+        attrs = self.example()
+        if attrs.get('is_access'):
+            n.update(Access(0, 1)._asdict())
+        elif attrs.get('is_modal'):
+            n['world'] = 0
+        return n

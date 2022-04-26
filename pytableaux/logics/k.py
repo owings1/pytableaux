@@ -37,15 +37,15 @@ from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, Mval
 from pytableaux.proof import TableauxSystem as BaseSystem
-from pytableaux.proof.baserules import BaseClosureRule  # BaseNodeRule,
-from pytableaux.proof.baserules import (ExtendedQuantifierRule,
+from pytableaux.proof import filters
+from pytableaux.proof.baserules import (BaseClosureRule,
+                                        ExtendedQuantifierRule,
                                         GetNodeTargetsRule,
                                         NarrowQuantifierRule,
                                         OperatedSentenceRule,
                                         PredicatedSentenceRule,
                                         QuantifiedSentenceRule, adds, group)
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.filters import NodeFilters
 from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
@@ -711,20 +711,19 @@ class TableauxSystem(BaseSystem):
 class DefaultNodeRule(GetNodeTargetsRule):
     """Default K node rule with:
     
-    - NodeFilters.Modal with defaults: modal = `True`, access = `None`.
+    - filters.ModalNode with defaults: modal = `True`, access = `None`.
     - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
     - FilterHelper implements `example_nodes()` with its `example_node()` method.
     - AdzHelper implements `_apply()` with its `_apply()` method.
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
     """
-    NodeFilters =  NodeFilters.Modal,
+    NodeFilters = filters.ModalNode,
     modal  : bool = True
     access : bool|None = None
 
 class OperatorNodeRule(OperatedSentenceRule, DefaultNodeRule):
     'Convenience mixin class for most common rules.'
     pass
-
 
 def swnode(s: Sentence, w: int|None):
     'Make a sentence/world node dict. Excludes world if None.'
