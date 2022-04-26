@@ -679,6 +679,7 @@ class abcm:
 
     @staticmethod
     def mroiter(subcls: type, /, supcls: type|tuple[type, ...] = None, *,
+        mcls: type|tuple[type, ...] = None,
         reverse = True, start: SupportsIndex = None, stop: SupportsIndex = None,
     ) -> Iterable[type]:
         it = subcls.mro()
@@ -686,6 +687,8 @@ class abcm:
             it = reversed(it)
         else:
             it = iter(it)
+        if mcls is not None:
+            it = filter(lambda c: isinstance(c, mcls), it)
         if supcls is not None:
             it = filter(lambda c: issubclass(c, supcls), it)
         if start is not None or stop is not None:

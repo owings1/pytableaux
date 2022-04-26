@@ -44,6 +44,7 @@ from pytableaux.lang.lex import Operator as Oper
 from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, Mval
+from pytableaux.proof import TableauxSystem as BaseSystem
 from pytableaux.proof.baserules import (BaseClosureRule,
                                         ExtendedQuantifierRule,
                                         GetNodeTargetsRule,
@@ -53,7 +54,6 @@ from pytableaux.proof.baserules import (BaseClosureRule,
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import NodeFilters
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.tableaux import TableauxSystem as BaseSystem
 from pytableaux.tools import MapProxy, closure, static
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import setf

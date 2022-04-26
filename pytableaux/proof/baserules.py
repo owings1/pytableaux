@@ -149,7 +149,7 @@ class BaseSentenceRule(BaseNodeRule):
 
     def sentence(self, node: Node, /) -> Sentence:
         'Delegates to ``NodeFilters.Sentence`` of ``FilterHelper``.'
-        return self[FilterHelper].filters[NodeFilters.Sentence].get(node)
+        return self[FilterHelper].filters[NodeFilters.Sentence].sentence(node)
 
 class PredicatedSentenceRule(BaseSentenceRule):
 
@@ -209,27 +209,11 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
             constants = unapplied
         else:
             constants = FIRST_CONST_SET
-        # getcnodes = self._get_constant_nodes
-        # branchall = branch.all
         
         for c in constants:
             nodes = self._get_constant_nodes(node, c, branch)
             if unapplied_count or not branch.all(nodes):
                 yield dict(adds = group(nodes), constant = c)
-
-
-        # return (
-        #     dict(
-        #         adds     = group(nodes),
-        #         constant = constant ,
-        #     )
-        #     for nodes, constant in (
-        #         (getcnodes(node, c, branch), c)
-        #         for c in constants
-        #     )
-        #     if len(unapplied) > 0
-        #     or not branch.all(nodes)
-        # )
 
     @abstract
     def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /):

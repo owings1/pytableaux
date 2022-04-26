@@ -161,7 +161,7 @@
                                     data-step="0">{{ tableau.stats['trunk_duration_ms']|e }}</span>
                                 {%- for application in tableau.history %}
                                     <span class="step-rule-duration step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
-                                        {{- application['duration_ms']|e }}ms
+                                        {{- application.duration.value|e }}ms
                                     </span>
                                 {%- endfor %}
                             </div>

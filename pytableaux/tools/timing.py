@@ -116,11 +116,14 @@ class StopWatch(TimingCommon):
 
 class Counter(TimingCommon):
     __slots__ = 'value',
-    def __init__(self, value = 0):
+    value: int
+    __hash__ = None
+    def __init__(self, value: int = 0):
         self.value = value
     def inc(self, n = 1):
         self.value += n
-    def __int__(self):
+    def __index__(self):
         return self.value
+    for_json = __int__ = __index__
     def __repr__(self):
         return '<%s:%s>' % (type(self).__name__, self.value)

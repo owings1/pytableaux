@@ -884,7 +884,7 @@ class Sentence(LexicalItem):
 
     opmap = {
         # Ad hoc mapping since Operator index is not yet built.
-        o.libname: o for o in Operator.seq if o.libname is not None
+        o.libname: o for o in Operator if o.libname is not None
     }
 
     @abcm.f.temp

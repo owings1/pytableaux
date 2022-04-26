@@ -22,19 +22,67 @@ pytableaux.proof
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Mapping
-
+from pytableaux import _ENV, __docformat__
 from pytableaux.errors import check
 from pytableaux.proof.util import HelperAttr, RuleAttr
-from pytableaux.tools import MapProxy, abstract, closure
+from pytableaux.tools import MapProxy, abstract, closure, static
 from pytableaux.tools.abcs import AbcMeta, abcm
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.typing import LogicModule, NotImplType
 
 if TYPE_CHECKING:
     from typing import overload
 
-    from pytableaux.proof.tableaux import Rule
+    from pytableaux.proof.tableaux import Rule, Tableau, TabRules
+    from pytableaux.proof.common import Node
+    from pytableaux.lang.collect import Argument
+
+__all__ = (
+    'TableauxSystem',
+    'RuleHelper',
+)
+@static
+class TableauxSystem(metaclass = AbcMeta):
+    'Tableaux system base class.'
+
+    @classmethod
+    @abstract
+    def build_trunk(cls, tableau: Tableau, argument: Argument, /) -> None:
+        """Build the trunk for an argument on the tableau.
+        
+        Args:
+            tableau: The tableau instance.
+            argument: The argument.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def branching_complexity(cls, node: Node, /) -> int:
+        """Compute how many new branches would be added if a rule were to be
+        applied to the node.
+
+        Args:
+            node: The node instance.
+        
+        Returns:
+            The number of new branches.
+        """
+        return 0
+
+    @classmethod
+    def add_rules(cls, logic: LogicModule, rules: TabRules, /) -> None:
+        """Populate rules/groups for a tableau.
+
+        Args:
+            logic: The logic.
+            rules: The tableau's rules.
+        """
+        Rules = logic.TabRules
+        rules.groups.create('closure').extend(Rules.closure_rules)
+        for classes in Rules.rule_groups:
+            rules.groups.create().extend(classes)
 
 class RuleHelper(metaclass = AbcMeta):
     'Rule helper interface.'
@@ -44,7 +92,7 @@ class RuleHelper(metaclass = AbcMeta):
     rule: Rule
 
     @abstract
-    def __init__(self,/): ...
+    def __init__(self, rule: Rule,/): ...
 
     @classmethod
     def __init_ruleclass__(cls, rulecls: type[Rule], /):
@@ -56,14 +104,72 @@ class RuleHelper(metaclass = AbcMeta):
         pass
 
     @classmethod
-    def __subclasshook__(cls, subcls: type, /):
-        if cls is not __class__:
-            return NotImplemented
-        return _check_helper_subclass(subcls)
+    @closure
+    def __subclasshook__():
 
-#******  Rule Meta
+        from inspect import Parameter as Param, Signature
+
+        POSMASK = Param.POSITIONAL_ONLY | Param.POSITIONAL_OR_KEYWORD | Param.VAR_POSITIONAL
+
+        def is_descriptor(obj, /, *, names = ('__get__', '__set__', '__delete__')) -> bool:
+            return any(hasattr(obj, name) for name in names)
+
+        def is_positional(param: Param) -> bool:
+            return param.kind & POSMASK == param.kind
+
+        def get_params(value: Callable, /) -> list[Param]:
+            return list(Signature.from_callable(value).parameters.values())
+
+        # ---------------------
+        def insp_rule(subcls: type):
+            yield abcm.check_mrodict(subcls.__mro__, name := 'rule')
+            yield is_descriptor(getattr(subcls, name))
+
+        def insp_init(subcls: type):
+            yield callable(value := subcls.__init__)
+            if len(params := get_params(value)) < 2:
+                yield callable(value := subcls.__new__)
+                yield len(params := get_params(value)) > 1
+            yield is_positional(params[1])
+
+        def insp_init_ruleclass(subcls: type):
+            yield abcm.check_mrodict(subcls.__mro__, name := HelperAttr.InitRuleCls)
+            yield callable(value := getattr(subcls, name))
+            yield len(params := get_params(value)) > 1
+            yield is_positional(params[1])
+        # ---------------------
+
+        inspections = (
+            insp_rule,
+            insp_init,
+            # insp_init_ruleclass,
+        )
+
+        def compute(subcls: type):
+            for fn in inspections:
+                for i, v in enumerate(fn(subcls)):
+                    if v is not True:
+                        return NotImplemented, (fn.__name__, i)
+            return True, None
+
+        cache: dict[type, tuple[bool|NotImplType, Any]] = {}
+
+        def hook_cached(cls, subcls: type, /):
+            if cls is not __class__:
+                return NotImplemented
+            try:
+                return cache[subcls][0]
+            except KeyError:
+                return cache.setdefault(subcls, compute(subcls))[0]
+
+        if _ENV['DEBUG']:
+            hook_cached.cache = cache
+
+        return hook_cached
+
 
 class RuleMeta(AbcMeta):
+    """Rule meta class."""
 
     @classmethod
     def __prepare__(cls, clsname: str, bases: tuple[type, ...], **kw) -> dict[str, Any]:
@@ -73,119 +179,37 @@ class RuleMeta(AbcMeta):
         helper: Mapping[type[RuleHelper], Mapping[str, Any]] = {}, **kw
     ):
 
-        RuleBase = _rule_basecls(cls)
-
         Class = super().__new__(cls, clsname, bases, ns, **kw)
 
-        if RuleBase is None:
-            RuleBase = _rule_basecls(cls, Class)
+        mromerge = abcm.merge_mroattr
 
-        abcm.merge_mroattr(Class, RuleAttr.Helpers, supcls = RuleBase,
-            default   = EMPTY_QSET,
-            transform = qsetf,
-        )
-        abcm.merge_mroattr(Class, RuleAttr.Timers, supcls = RuleBase,
-            default   = EMPTY_QSET,
-            transform = qsetf,
-        )
-        abcm.merge_mroattr(Class, RuleAttr.DefaultOpts, supcls = RuleBase,
-            default   = dmap(),
-            transform = MapProxy,
-        )
-        
-        setattr(Class, RuleAttr.OptKeys, setf(getattr(Class, RuleAttr.DefaultOpts)))
+        # name
         setattr(Class, RuleAttr.Name, clsname)
 
-        for Helper in getattr(Class, RuleAttr.Helpers):
-            check.subcls(Helper, RuleHelper)
-            initrulecls = getattr(Helper, HelperAttr.InitRuleCls, None)
-            if initrulecls is not None:
-                initrulecls(Class, **helper.get(Helper, MapProxy.EMPTY_MAP))
+        # _defaults
+        defaults = mromerge(Class, RuleAttr.DefaultOpts, mcls = cls,
+            default = dmap(), transform = MapProxy,
+        )
+        # _optkeys
+        setattr(Class, RuleAttr.OptKeys, setf(defaults))
 
-        return Class
-
-def _rule_basecls(metacls: type, default: type = None, /, *, base = {}):
-    try:
-        return base[metacls]
-    except KeyError:
-        if default is not None:
-            base[metacls] = default
-            _rule_basecls.__kwdefaults__.update(base = MapProxy(base))
-        return default
-
-@closure
-def _check_helper_subclass():
-    from inspect import Parameter, Signature
-
-    def is_descriptor(obj):
-        return (
-            hasattr(obj, '__get__') or
-            hasattr(obj, '__set__') or
-            hasattr(obj, '__delete__')
+        # Timers
+        mromerge(Class, RuleAttr.Timers, mcls = cls,
+            default = EMPTY_QSET, transform = qsetf,
         )
 
-    posflag = (
-        Parameter.POSITIONAL_ONLY |
-        Parameter.POSITIONAL_OR_KEYWORD |
-        Parameter.VAR_POSITIONAL
-    )
-    def getparams(value: Callable, /, *,
-        fromcb: Callable[[Callable], Signature] = Signature.from_callable
-    ):
-        return list(fromcb(value).parameters.values())
+        # Helpers
+        Helpers = mromerge(Class, RuleAttr.Helpers, mcls = cls,
+            default = EMPTY_QSET, transform = qsetf,
+        )
+        for Helper in Helpers:
+            check.subcls(Helper, RuleHelper)
+            kwopts = helper.get(Helper, MapProxy.EMPTY_MAP)
+            finit = getattr(Helper, HelperAttr.InitRuleCls, None)
+            if finit is None:
+                if kwopts:
+                    raise TypeError(f'Unexpected opts for helper {Helper}: {kwopts}')
+            else:
+                finit(Class, **kwopts)
 
-    names = qsetf((
-        'rule',
-        # HelperAttr.InitRuleCls,
-        '__init__',
-    ))
-
-    def check_subclass(subcls: type):
-
-        # print(f'check {subcls}')
-        mrocheck = abcm.check_mrodict(subcls.mro(), *names)
-        if mrocheck is NotImplemented or mrocheck is False:
-            return mrocheck
-
-        name = 'rule'
-        if name in names:
-
-            value = getattr(subcls, name)
-            if not is_descriptor(value):
-                return NotImplemented
-
-        name = HelperAttr.InitRuleCls
-        if name in names:
-
-            value = getattr(subcls, name)
-            if not callable(value):
-                return NotImplemented
-            params = getparams(value)
-            if len(params) < 2:
-                return NotImplemented
-            p = params[1]
-            if p.kind & posflag != p.kind:
-                return NotImplemented
-    
-        name = '__init__'
-        if name in names:
-
-            value = getattr(subcls, name)
-            if not callable(value):
-                return NotImplemented
-            params = getparams(value)
-            if len(params) < 2:
-                name = '__new__'
-                value = getattr(subcls, name)
-                if not callable(value):
-                    return NotImplemented
-                params = getparams(value)
-                if len(params) < 2:
-                    return NotImplemented
-            p = params[1]
-            if p.kind & posflag != p.kind:
-                return NotImplemented
-
-        return True
-
-    return check_subclass
+        return Class

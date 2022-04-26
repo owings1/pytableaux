@@ -44,6 +44,7 @@ __all__ = (
     'dmap',
     'defaultdmap',
     'dmapattr',
+    'dmapns',
     'ItemMapEnum',
     'ItemsIterator',
     'DequeCache',
@@ -356,12 +357,24 @@ class KeySetAttr(abcs.Abc):
     update = MutableMappingApi._setitem_update
 
     @classmethod
-    def _keyattr_ok(cls, name):
+    def _keyattr_ok(cls, name: str) -> bool:
         'Return whether it is ok to set the attribute name.'
         return not hasattr(cls, name)
 
 class dmapattr(KeySetAttr, dmap[KT, VT]):
     __slots__ = EMPTY_SET
+
+class dmapns(dmapattr[KT, VT]):
+
+    def __init__(self, it: Iterable = None, **kw):
+        if it is not None:
+            self.update(it)
+        if len(kw):
+            self.update(kw)
+
+    @classmethod
+    def _keyattr_ok(cls, name: str) -> bool:
+        return len(name) and name[0] != '_'
 
 class ItemMapEnum(abcs.Ebc):
     """Fixed mapping enum based on item tuples.

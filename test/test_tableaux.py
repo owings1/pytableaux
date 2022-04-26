@@ -6,11 +6,11 @@ from pytableaux import examples
 from pytableaux.errors import *
 from pytableaux.lang.lex import Atomic, Constant, Predicated
 from pytableaux.logics.k import DefaultNodeRule as DefaultKRule
+from pytableaux.proof import TableauxSystem as TabSys
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import Filters, NodeFilters, getkey
 from pytableaux.proof.helpers import FilterHelper, MaxConsts
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
-from pytableaux.proof.tableaux import TableauxSystem as TabSys
 from pytableaux.proof.util import TabEvent, TabFlag, TabStatKey
 from pytableaux.tools import MapProxy
 from pytest import raises

@@ -19,7 +19,8 @@ pytableaux.proof.util
 
 """
 from __future__ import annotations
-from typing import Any, Callable, Iterable, Mapping, NamedTuple, TYPE_CHECKING
+
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, NamedTuple
 
 from pytableaux.errors import check
 from pytableaux.tools import MapProxy, abstract, closure
@@ -27,9 +28,10 @@ from pytableaux.tools.abcs import AbcMeta, Ebc, FlagEnum, abcm, eauto
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import ItemMapEnum, dmap
 from pytableaux.tools.sets import EMPTY_SET, setf
-from pytableaux.tools.timing import StopWatch
+from pytableaux.tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
+    from pytableaux.proof.common import Node, Target
     from pytableaux.proof.tableaux import Rule
 
 __all__ = (
@@ -158,6 +160,13 @@ class TabFlag(FlagEnum):
     TRUNK_BUILT = 32
 
 #******  Auxilliary Classes
+class StepEntry(NamedTuple):
+    #: The rule instance.
+    rule   : Rule
+    #: The target produced by the rule.
+    target : Target
+    #: The duration counter.
+    duration: Counter
 
 class Access(NamedTuple):
 
@@ -192,6 +201,39 @@ class NodeStat(dict[TabStatKey, TabFlag|int|None]):
 
     def __init__(self):
         super().__init__(self._defaults)
+
+
+
+class BranchStat(dict[TabStatKey, TabFlag|int|dict[Any, NodeStat]|None]):
+
+    __slots__ = EMPTY_SET
+
+    _defaults = MapProxy({
+        TabStatKey.FLAGS       : TabFlag.NONE,
+        TabStatKey.STEP_ADDED  : TabFlag.NONE,
+        TabStatKey.STEP_CLOSED : TabFlag.NONE,
+        TabStatKey.INDEX       : None,
+        TabStatKey.PARENT      : None,
+    })
+
+    def __init__(self, mapping: Mapping = None, /, **kw):
+        super().__init__(self._defaults)
+        self[TabStatKey.NODES] = {}
+        if mapping is not None:
+            self.update(mapping)
+        if len(kw):
+            self.update(kw)
+
+    def node(self, node: Node, /) -> NodeStat:
+        'Get the stat info for the node, and create if missing.'
+        # Avoid using defaultdict, since it may hide problems.
+        try:
+            return self[TabStatKey.NODES][node]
+        except KeyError:
+            return self[TabStatKey.NODES].setdefault(node, NodeStat())
+
+    def view(self) -> dict[TabStatKey, TabFlag|int|Any|None]:
+        return {k: self[k] for k in self._defaults}
 
 class TabTimers(NamedTuple):
     'Tableau timers data class.'

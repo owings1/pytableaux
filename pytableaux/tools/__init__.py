@@ -21,7 +21,16 @@ pytableaux.tools
 """
 from __future__ import annotations
 
-__docformat__ = 'google'
+import keyword
+import re
+from abc import abstractmethod as abstract
+from types import FunctionType
+from types import MappingProxyType as _MapProxy
+from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping
+
+from pytableaux import __docformat__
+from pytableaux.tools.typing import KT, TT, VT, T
+
 __all__ = (
     'abstract',
     'closure',
@@ -30,14 +39,6 @@ __all__ = (
     'classns',
     'classalias',
 )
-
-import keyword
-from abc import abstractmethod as abstract
-from types import FunctionType, MappingProxyType as _MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping
-
-from pytableaux.tools.typing import KT, TT, VT, T
-
 def closure(func: Callable[..., T]) -> T:
     'Closure decorator calls the argument and returns its return value.'
     return func()
@@ -190,3 +191,10 @@ def isattrstr(obj: Any) -> bool:
 def isstr(obj: Any) -> bool:
     'Whether the argument is an ``str`` instance'
     return isinstance(obj, str)
+
+re_boolyes = re.compile(r'^(true|yes|1)$', re.I)
+'Regex for string boolean `yes`.'
+
+def sbool(arg: str, /) -> bool:
+    "Cast string to boolean, leans toward ``False``."
+    return bool(re_boolyes.match(arg))

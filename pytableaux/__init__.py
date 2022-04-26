@@ -22,6 +22,7 @@ pytableaux
 from __future__ import annotations
 
 # ----- package info
+
 from pytableaux._package_info import package
 
 __docformat__ = package.docformat
@@ -46,6 +47,16 @@ def _():
     errors.EmsgBase = None
     del(errors.EmsgBase)
 
+# ----- env
+
+_ENV = {}
+
+@tools.closure
+def _():
+    from os import environ as env
+    _ENV.update(
+        DEBUG = tools.sbool(env.get('DEBUG', ''))
+    )
 
 import pytableaux.tools.typing
 import pytableaux.tools.hooks
@@ -110,10 +121,14 @@ import pytableaux.models
 
 # ----- proof
 
+import pytableaux.proof
 import pytableaux.proof.util
 import pytableaux.proof.common
 import pytableaux.proof.filters
 import pytableaux.proof.tableaux
+
+# pytableaux.proof.Rule = pytableaux.proof.tableaux.Rule
+
 import pytableaux.proof.baserules
 import pytableaux.proof.helpers
 import pytableaux.proof.writers

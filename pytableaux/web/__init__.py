@@ -71,13 +71,6 @@ def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]):
     levelnum = getattr(logging, leveluc)
     logger.setLevel(levelnum)
 
-re_boolyes = re.compile(r'^(true|yes|1)$', re.I)
-'Regex for string boolean `yes`.'
-
-def sbool(arg: str, /) -> bool:
-    "Cast string to boolean, leans toward ``False``."
-    return bool(re_boolyes.match(arg))
-
 class EnvConfig(ItemMapEnum):
 
     app_name = dict(
@@ -103,7 +96,7 @@ class EnvConfig(ItemMapEnum):
     is_debug = dict(
         default = False,
         envvar  = ('PT_DEBUG', 'DEBUG'),
-        type    = sbool,
+        type    = tools.sbool,
     )
     loglevel = dict(
         default = 'info',
@@ -123,7 +116,7 @@ class EnvConfig(ItemMapEnum):
     feedback_enabled = dict(
         default = False,
         envvar  = 'PT_FEEDBACK',
-        type    = sbool,
+        type    = tools.sbool,
     )
     feedback_to_address = dict(
         default = None,
@@ -153,7 +146,7 @@ class EnvConfig(ItemMapEnum):
     smtp_starttls = dict(
         default = True,
         envvar  = ('PT_SMTP_STARTTLS', 'SMTP_STARTTLS'),
-        type    = sbool,
+        type    = tools.sbool,
     )
     smtp_tlscertfile = dict(
         default = None,

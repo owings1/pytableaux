@@ -37,26 +37,27 @@ from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
 from pytableaux.proof import RuleHelper, RuleMeta
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.util import (BranchEvent, NodeStat, RuleEvent, RuleFlag,
-                                    TabEvent, TabFlag,
-                                    TabStatKey, TabTimers)
+from pytableaux.proof.util import (BranchEvent, BranchStat, RuleEvent,
+                                   RuleFlag, StepEntry, TabEvent, TabFlag,
+                                   TabStatKey, TabTimers)
 from pytableaux.tools import abstract, closure, isstr, static
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.decorators import raisr, wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import MapCover, MapProxy, dmap, dmapattr
+from pytableaux.tools.mappings import MapCover, MapProxy, dmap, dmapns
 from pytableaux.tools.misc import orepr
 from pytableaux.tools.sequences import (SequenceApi, SequenceCover, absindex,
                                         seqf, seqm)
 from pytableaux.tools.sets import EMPTY_SET, setf
-from pytableaux.tools.timing import StopWatch
+from pytableaux.tools.timing import Counter, StopWatch
 from pytableaux.tools.typing import RuleT
 
 if TYPE_CHECKING:
     from typing import overload
 
+    from pytableaux.proof import TableauxSystem
     from pytableaux.logics import LogicLookupKey
     from pytableaux.models import BaseModel
     from pytableaux.tools.typing import F, LogicModule, T, TypeInstDict
@@ -66,7 +67,6 @@ __all__ = (
     'ClosingRule',
     'Rule',
     'Tableau',
-    'TableauxSystem',
 )
 
 NOARG = object()
@@ -903,9 +903,9 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.finish()
         return self
 
-    def next(self):
-        """Choose the next rule step to perform. Returns the (rule, target)
-        pair, or ``None``if no rule can be applied.
+    def next(self) -> StepEntry|None:
+        """Choose the next rule step to perform. Returns the StepEntry or ``None``
+        if no rule can be applied.
 
         This iterates over the open branches, then over rule groups.
         """
@@ -934,19 +934,19 @@ class Tableau(Sequence[Branch], EventEmitter):
         """
         if TabFlag.FINISHED in self.__flag:
             return False
-        ruletarget = stepentry = None
+        entry = None
         with StopWatch() as timer:
             if not self.__is_max_steps_exceeded():
-                ruletarget = self.next()
-                if not ruletarget:
+                entry = self.next()
+                if entry is None:
                     self.__flag &= ~TabFlag.PREMATURE
-            if ruletarget:
-                ruletarget.rule.apply(ruletarget.target)
-                stepentry = StepEntry(*ruletarget, timer.elapsed())
-                self.__history.append(stepentry)
+            if entry is not None:
+                entry.rule.apply(entry.target)
+                entry.duration.inc(timer.elapsed_ms())
+                self.__history.append(entry)
             else:
                 self.finish()
-        return stepentry
+        return entry
 
     def branch(self, /, parent: Branch = None) -> Branch:
         """Create a new branch on the tableau, as a copy of ``parent``, if given.
@@ -1145,7 +1145,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     # *** Util
 
-    def __get_group_application(self, branch: Branch, group: RuleGroup, /) -> _RuleTarget:
+    def __get_group_application(self, branch: Branch, group: RuleGroup, /) -> StepEntry:
         """Find and return the next available rule application for the given open
         branch and rule group. 
         
@@ -1171,8 +1171,8 @@ class Tableau(Sequence[Branch], EventEmitter):
         results = deque(maxlen = len(group) if is_group_optim else 0)
         for rule in group:
             target = rule.target(branch)
-            if target:
-                ruletarget = _RuleTarget(rule, target)
+            if target is not None:
+                entry = StepEntry(rule, target, Counter())
                 if not is_group_optim:
                     target.update(
                         group_score         = None,
@@ -1180,12 +1180,12 @@ class Tableau(Sequence[Branch], EventEmitter):
                         min_group_score     = None,
                         is_group_optim      = False,
                     )
-                    return ruletarget
-                results.append(ruletarget)
+                    return entry
+                results.append(entry)
         if results:
             return self.__select_optim_group_application(results)
 
-    def __select_optim_group_application(self, results: Sequence[_RuleTarget], /) -> _RuleTarget:
+    def __select_optim_group_application(self, results: Sequence[StepEntry], /) -> StepEntry:
         """Choose the highest scoring element from given results. The ``results``
         parameter is assumed to be a non-empty list/tuple of (rule, target) pairs.
 
@@ -1206,7 +1206,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         Returns:
             The highest scoring element.
         """
-        group_scores = tuple(rule.group_score(target) for rule, target in results)
+        group_scores = tuple(entry.rule.group_score(entry.target) for entry in results)
         max_group_score = max(group_scores)
         min_group_score = min(group_scores)
         for group_score, res in zip(group_scores, results):
@@ -1250,7 +1250,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             steps           = len(self.history),
             distinct_nodes  = distinct_nodes,
             rules_duration_ms = sum(
-                step.duration_ms
+                step.duration.value
                 for step in self.history
             ),
             build_duration_ms  = timers.build.elapsed_ms(),
@@ -1449,97 +1449,15 @@ class Tableau(Sequence[Branch], EventEmitter):
         else:
             s.balanced_line_width = s.balanced_line_margin = 0
 
-@static
-class TableauxSystem(Abc):
-    'Tableaux system base class.'
 
-    @classmethod
-    @abstract
-    def build_trunk(cls, tableau: Tableau, argument: Argument, /) -> None:
-        """Build the trunk for an argument on the tableau.
-        
-        Args:
-            tableau: The tableau instance.
-            argument: The argument.
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def branching_complexity(cls, node: Node, /) -> int:
-        """Compute how many new branches would be added if a rule were to be
-        applied to the node.
-
-        Args:
-            node: The node instance.
-        
-        Returns:
-            The number of new branches.
-        """
-        return 0
-
-    @classmethod
-    def add_rules(cls, logic: LogicModule, rules: TabRules, /) -> None:
-        """Populate rules/groups for a tableau.
-        
-        Args:
-            logic: The logic.
-            rules: The tableau's rules.
-        """
-        Rules = logic.TabRules
-        rules.groups.create('closure').extend(Rules.closure_rules)
-        for classes in Rules.rule_groups:
-            rules.groups.create().extend(classes)
 
 # ----------------------------------------------
 # Data Classes
 # ----------------------------------------------
 
-class _RuleTarget(NamedTuple):
-    #: The rule instance that will apply.
-    rule   : Rule
-    #: The target produced by the rule.
-    target : Target
 
-class StepEntry(NamedTuple):
-    #: The rule instance that was applied.
-    rule   : Rule
-    #: The target returned by the rule.
-    target : Target
-    #: The duration in milliseconds of the application.
-    duration_ms: int
 
-class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None]):
-
-    __slots__ = EMPTY_SET
-
-    _defaults = MapProxy({
-        TabStatKey.FLAGS       : TabFlag.NONE,
-        TabStatKey.STEP_ADDED  : TabFlag.NONE,
-        TabStatKey.STEP_CLOSED : TabFlag.NONE,
-        TabStatKey.INDEX       : None,
-        TabStatKey.PARENT      : None,
-    })
-
-    def __init__(self, mapping: Mapping = None, /, **kw):
-        super().__init__(self._defaults)
-        self[TabStatKey.NODES] = {}
-        if mapping is not None:
-            self.update(mapping)
-        if len(kw):
-            self.update(kw)
-
-    def node(self, node: Node, /) -> NodeStat:
-        'Get the stat info for the node, and create if missing.'
-        # Avoid using defaultdict, since it may hide problems.
-        try:
-            return self[TabStatKey.NODES][node]
-        except KeyError:
-            return self[TabStatKey.NODES].setdefault(node, NodeStat())
-
-    def view(self) -> dict[TabStatKey, TabFlag|int|Branch|None]:
-        return {k: self[k] for k in self._defaults}
-
-class TreeStruct(dmapattr):
+class TreeStruct(dmapns):
     'Recursive tree structure representation of a tableau.'
 
     root: bool
@@ -1637,6 +1555,10 @@ class TreeStruct(dmapattr):
         return inst
 
     _from_mapping = _from_iterable
+
+    @classmethod
+    def _keyattr_ok(cls, name: str) -> bool:
+        return name and name[0] != '_'
 
 # ----------------------------------------------
 

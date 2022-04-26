@@ -35,7 +35,8 @@ if TYPE_CHECKING:
     from typing import overload
 
     from pytableaux.models import BaseModel
-    from pytableaux.proof.tableaux import Rule, TableauxSystem
+    from pytableaux.proof import TableauxSystem
+    from pytableaux.proof.tableaux import Rule
     from pytableaux.tools.abcs import Ebc
     from pytableaux.tools.linked import Link, LinkSequence
     from pytableaux.tools.mappings import MappingApi
@@ -54,8 +55,12 @@ class LogicType(
         description: str
         category_order: int
         tags: Collection[str]
-    TableauxSystem: ClassVar[type[TableauxSystem]]
-    Model: ClassVar[type[BaseModel]]
+    if TYPE_CHECKING:
+        class TableauxSystem(TableauxSystem): pass
+        class Model(BaseModel): pass
+    else:
+        TableauxSystem: ClassVar[type[TableauxSystem]]
+        Model: ClassVar[type[BaseModel]]
     class TabRules:
         closure_rules: ClassVar[tuple[type[Rule], ...]]
         rule_groups: ClassVar[tuple[ tuple[type[Rule], ...], ... ]]
