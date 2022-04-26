@@ -1,15 +1,9 @@
 from __future__ import annotations
 
-__all__ = (
-    'BaseSuite',
-    'larg',
-    'using',
-    'skip',
-)
 from inspect import getmembers, isclass
 from itertools import chain, filterfalse
-from typing import (Callable, Collection, Iterable,  # Mapping,; Sequence,
-                    Iterator, NamedTuple, overload)
+from typing import (TYPE_CHECKING, Callable, Collection, Iterable,
+                    Iterator, NamedTuple)
 
 from pytableaux import examples
 from pytableaux.lang.collect import *
@@ -19,12 +13,19 @@ from pytableaux.lang.writing import LexWriter
 from pytableaux.logics import registry
 from pytableaux.models import BaseModel
 from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.tableaux import ClosingRule, Rule, RuleT, Tableau
+from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.misc import drepr
-from pytableaux.tools.typing import TT, F, T
+from pytableaux.tools.typing import TT, F, T, RuleT
 
+if TYPE_CHECKING:
+    from typing import overload
+__all__ = (
+    'BaseSuite',
+    'larg',
+    'using',
+    'skip',
+)
 
 def _setattrs(obj, **attrs):
     if isclass(obj):
@@ -97,11 +98,12 @@ def loopgen(c: Collection[T], n: int = None):
 
 SKIPPED = []
 
-@overload
-def skip(cls: TT) -> TT: ...
+if TYPE_CHECKING:
+    @overload
+    def skip(cls: TT) -> TT: ...
 
-@overload
-def skip(func: F) -> F: ...
+    @overload
+    def skip(func: F) -> F: ...
 
 def skip(what):
     def skipped(*_, **__):
@@ -333,4 +335,3 @@ class BaseSuite:
     def Model(self) -> type[BaseModel]:
         return self.logic.Model
 
-drepr.lw = LexWriter._sys = BaseSuite.lw

@@ -41,7 +41,10 @@ if TYPE_CHECKING:
 
 
 __all__ = (
+    'HtmlTabWriter',
     'TabWriter',
+    'TemplateTabWriter',
+    'TextTabWriter',
 )
 
 registry: Mapping[str, type[TabWriter]]

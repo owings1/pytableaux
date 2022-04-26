@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -35,7 +36,6 @@ from pytableaux.tools import MapProxy, abstract, closure
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
-from pytableaux.tools.misc import orepr
 from pytableaux.tools.sets import EMPTY_SET, setm
 from pytableaux.tools.typing import KT, VT, T, TypeInstDict
 
@@ -143,7 +143,9 @@ class BranchCache(dmap[Branch, T], RuleHelper):
         del(self[branch])
 
     def __repr__(self):
-        return orepr(self, self._reprdict())
+        info = self._reprdict()
+        pstr = ' '.join(f'{k}:{v}' for k, v in info.items())
+        return f'<{type(self).__name__} {pstr}>'
 
     def _reprdict(self):
         return dict(branches = len(self))

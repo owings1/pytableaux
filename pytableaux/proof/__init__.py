@@ -22,10 +22,11 @@ pytableaux.proof
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Mapping
+
 from pytableaux import _ENV, __docformat__
 from pytableaux.errors import check
 from pytableaux.proof.util import HelperAttr, RuleAttr
-from pytableaux.tools import MapProxy, abstract, closure, static
+from pytableaux.tools import MapProxy, abstract, closure
 from pytableaux.tools.abcs import AbcMeta, abcm
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
@@ -35,15 +36,15 @@ from pytableaux.tools.typing import LogicModule, NotImplType
 if TYPE_CHECKING:
     from typing import overload
 
-    from pytableaux.proof.tableaux import Rule, Tableau, TabRules
-    from pytableaux.proof.common import Node
     from pytableaux.lang.collect import Argument
+    from pytableaux.proof.common import Node
+    from pytableaux.proof.tableaux import Rule, Tableau, TabRules
 
 __all__ = (
     'TableauxSystem',
     'RuleHelper',
 )
-@static
+
 class TableauxSystem(metaclass = AbcMeta):
     'Tableaux system base class.'
 
@@ -107,7 +108,8 @@ class RuleHelper(metaclass = AbcMeta):
     @closure
     def __subclasshook__():
 
-        from inspect import Parameter as Param, Signature
+        from inspect import Parameter as Param
+        from inspect import Signature
 
         POSMASK = Param.POSITIONAL_ONLY | Param.POSITIONAL_OR_KEYWORD | Param.VAR_POSITIONAL
 

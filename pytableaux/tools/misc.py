@@ -13,19 +13,19 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - tools.misc module
-from __future__ import annotations
-from typing import Any, Callable, Mapping
+"""
+pytableaux.tools.misc
+^^^^^^^^^^^^^^^^^^^^^
 
-__all__ = ()
+"""
+from __future__ import annotations
+
+from itertools import islice
+from typing import Any, Callable, Mapping
 
 from pytableaux.tools import closure
 
-from itertools import islice
-from types import ModuleType
+__all__ = ()
 
 class track:
     """Track additions change updates to locals.
@@ -118,14 +118,6 @@ def dtransform():
 
     return api
 
-def cat(*args: str) -> str:
-    'Concat all argument strings'
-    return ''.join(args)
-
-def wrparens(*args: str, parens='()') -> str:
-    'Concat all argument strings and wrap in parentheses'
-    return cat(parens[0], ''.join(args), parens[-1])
-
 def drepr(d: dict, /, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
     lw = drepr.lw
     istr = j.join(
@@ -133,8 +125,6 @@ def drepr(d: dict, /, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
         for k,v in islice(d.items(), limit)
     )
     assert not paren
-    # if paren:
-    #     return wrparens(istr)
     return istr
 # For testing, set this to a LexWriter instance.
 drepr.lw = None
@@ -144,8 +134,6 @@ def valrepr(v, /, lw = None) -> str:
         return v
     if isinstance(v, type):
         return v.__name__
-    if isinstance(v, ModuleType) and 'logics.' in v.__name__:
-        return getattr(v, 'name', v.__name__)
     if lw is None:
         lw = drepr.lw
     if lw is not None and lw.canwrite(v):
@@ -165,8 +153,3 @@ def orepr(obj, d: dict = None, /, **kw) -> str:
         return f'<{oname}>'
     except Exception as e:
         return f'<{oname} !ERR: {repr(e)} !>'
-
-def wraprepr(obj, inner, **kw) -> str:
-    if not isinstance(obj, str):
-        obj = type(obj).__name__
-    return cat(obj, wrparens(inner.__repr__(), **kw))

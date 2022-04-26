@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -26,18 +27,17 @@ from collections import defaultdict
 from collections.abc import Set
 from itertools import chain, filterfalse
 from typing import (TYPE_CHECKING, Any, Collection, Iterable, Iterator,
-                    Mapping, NamedTuple, SupportsIndex)
+                    Mapping, SupportsIndex)
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Sentence
 from pytableaux.proof.util import BranchEvent, PropMap
-from pytableaux.tools import closure, isattrstr, isint, true
+from pytableaux.tools import isattrstr, isint, true
 from pytableaux.tools.abcs import Copyable
 from pytableaux.tools.decorators import lazy, operd, raisr
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap, dmapattr
-from pytableaux.tools.misc import orepr
 from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.sets import EMPTY_SET, SetView, setf
 
@@ -147,7 +147,7 @@ class Node(MapCover):
         return dmap
 
     def __repr__(self):
-        return orepr(self, id = self.id, props = dict(self))
+        return f'<{type(self).__name__} id:{self.id} props:{dict(self)}>'
 
 class Branch(SequenceApi[Node], EventEmitter):
     'A tableau branch.'
@@ -419,7 +419,6 @@ class Branch(SequenceApi[Node], EventEmitter):
         if not self.closed:
             self.__closed = True
             self.append(PropMap.ClosureNode)
-            # self.append(dict(is_flag = True, flag = 'closure'))
             self.emit(BranchEvent.AFTER_BRANCH_CLOSE, self)
         return self
 
@@ -459,7 +458,6 @@ class Branch(SequenceApi[Node], EventEmitter):
             self.__origin = self
         self.__parent = parent
 
-
     if TYPE_CHECKING:
         @overload
         def add(self, node: Mapping, /) -> Branch:...
@@ -487,11 +485,10 @@ class Branch(SequenceApi[Node], EventEmitter):
         return node in self.__nodes
 
     def __repr__(self):
-        return orepr(self, 
-            id     = self.id,
-            nodes  = len(self),
-            leaf   = self.leaf.id if self.leaf else None,
-            closed = self.closed,
+        leafid = leaf.id if (leaf := self.leaf) else None
+        return (
+            f'<{type(self).__name__} id:{self.id} nodes:{len(self)} '
+            f'leaf:{leafid} closed:{self.closed}>'
         )
 
     @classmethod
@@ -619,11 +616,11 @@ class Target(dmapattr[str, Any]):
         return list(self._names())
 
     def __repr__(self):
-        return orepr(self, dict(ItemsIterator(self._names(), vget = self.get)))
+        props = dict(ItemsIterator(self._names(), vget = self.get))
+        return f'<{type(self).__name__} {props}>'
 
     def _names(self) -> Iterator[str]:
         get = self.get
         return (name for name in self.__slots__ if get(name) is not None)
 
 
-del(lazy, operd, raisr)

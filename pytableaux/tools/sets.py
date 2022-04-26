@@ -36,15 +36,15 @@ if TYPE_CHECKING:
     from pytableaux.tools.typing import SetApiT
 
 __all__ = (
-    'SetApi',
+    'EMPTY_SET',
     'MutableSetApi',
+    'SetApi',
     'setf',
     'setm',
     'SetView',
-    'EMPTY_SET',
 )
 
-EMPTY_SET: setf = ()
+EMPTY_SET: setf = frozenset()
 
 class SetApi(Set[VT], abcs.Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
@@ -129,6 +129,7 @@ class MutableSetApi(MutableSet[VT], SetApi[VT]):
 class setf(SetApi[VT], frozenset[VT]):
     'SetApi wrapper around built-in frozenset.'
     __slots__ = EMPTY_SET
+
     __len__      = frozenset.__len__
     __iter__     = frozenset[VT].__iter__
     __contains__ = frozenset.__contains__
@@ -179,7 +180,3 @@ class SetView(SetApi[VT]):
     @classmethod
     def _from_iterable(cls: type[SetApiT], it: Iterable[VT]) -> SetApiT:
         return cls(setf(it))
-
-
-del(abcs, opr, operd)
-

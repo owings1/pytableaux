@@ -28,29 +28,29 @@ from operator import not_, truth
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable
 
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy, abcs, abstract, closure, isattrstr, true, thru
+from pytableaux.tools import MapProxy, abcs, closure, isattrstr, true, thru
 from pytableaux.tools.decorators import membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
-from pytableaux.tools.typing import KT, VT, MapiT, MapT, NotImplType, SetT, T
+from pytableaux.tools.typing import KT, VT, NotImplType, T
 
 if TYPE_CHECKING:
     from typing import overload
+    from pytableaux.tools.typing import MapiT, MapT, SetT
 
 __all__ = (
-    'MappingApi',
-    'MutableMappingApi',
-    'MapCover',
-    'MapProxy',
-    'dmap',
     'defaultdmap',
+    'DequeCache',
+    'dmap',
     'dmapattr',
     'dmapns',
     'ItemMapEnum',
     'ItemsIterator',
-    'DequeCache',
     'KeySetAttr',
+    'MapCover',
+    'MappingApi',
+    # 'MapProxy',
+    'MutableMappingApi',
 )
-
 
 class MappingApi(Mapping[KT, VT], abcs.Copyable):
 
@@ -298,8 +298,8 @@ class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
     __slots__ = EMPTY_SET
 
     copy    = MutableMappingApi.copy
-    __or__  = MutableMappingApi.__or__
-    __ror__ = MutableMappingApi.__ror__
+    __or__  = MutableMappingApi[KT, VT].__or__
+    __ror__ = MutableMappingApi[KT, VT].__ror__
 
 class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
     'Mutable mapping api from defaultdict.'
@@ -307,8 +307,8 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
     __slots__ = EMPTY_SET
 
     copy    = MutableMappingApi.copy
-    __or__  = MutableMappingApi.__or__
-    __ror__ = MutableMappingApi.__ror__
+    __or__  = MutableMappingApi[KT, VT].__or__
+    __ror__ = MutableMappingApi[KT, VT].__ror__
 
     @classmethod
     def _from_mapping(cls, mapping, /):
@@ -725,16 +725,16 @@ if 'Operators Cache' or True:
 
 
 del(
-    abstract,
     closure,
     membr,
     wraps,
-    _checklimit, _ResolverFactory,
+    _checklimit,
+    _ResolverFactory,
     # _CacheResolversType, _FuncCache, _TypeFuncsCache, _OperFuncsCache,
 )
 
 # fail if deleted
-MapProxy
+# MapProxy
 
 
 # def _gen(n = 5, *a):

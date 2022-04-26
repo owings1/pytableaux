@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from pytableaux.tools.mappings import MappingApi
     from pytableaux.tools.sequences import MutableSequenceApi, SequenceApi
     from pytableaux.tools.sets import SetApi
+    from pytableaux.tools.timing import TimingCommon
 
 __all__ = ()
 
@@ -163,6 +164,9 @@ LinkT = TypeVar('LinkT', bound = 'Link')
 
 LinkSeqT = TypeVar('LinkSeqT', bound = 'LinkSequence')
 "Bound to ``LinkSequence``"
+
+TimT = TypeVar('TimT', bound = 'TimingCommon')
+"Bound to ``TimingCommon``."
 
 P = ParamSpec('P')
 "Param spec"

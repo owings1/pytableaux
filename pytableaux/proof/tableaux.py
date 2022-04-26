@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -26,9 +27,8 @@ from __future__ import annotations
 import operator as opr
 from collections import deque
 from collections.abc import Set
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
-                    Iterable, Iterator, Mapping, NamedTuple, Sequence,
-                    SupportsIndex, final)
+from typing import (TYPE_CHECKING, Any, Callable, Collection, Iterable,
+                    Iterator, Mapping, Sequence, SupportsIndex, final)
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
@@ -41,26 +41,23 @@ from pytableaux.proof.util import (BranchEvent, BranchStat, RuleEvent,
                                    RuleFlag, StepEntry, TabEvent, TabFlag,
                                    TabStatKey, TabTimers)
 from pytableaux.tools import abstract, closure, isstr, static
-from pytableaux.tools.abcs import Abc
 from pytableaux.tools.decorators import raisr, wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
 from pytableaux.tools.linked import linqset
 from pytableaux.tools.mappings import MapCover, MapProxy, dmap, dmapns
-from pytableaux.tools.misc import orepr
 from pytableaux.tools.sequences import (SequenceApi, SequenceCover, absindex,
                                         seqf, seqm)
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.timing import Counter, StopWatch
-from pytableaux.tools.typing import RuleT
 
 if TYPE_CHECKING:
-    from typing import overload
+    from typing import ClassVar, overload
 
-    from pytableaux.proof import TableauxSystem
     from pytableaux.logics import LogicLookupKey
     from pytableaux.models import BaseModel
-    from pytableaux.tools.typing import F, LogicModule, T, TypeInstDict
+    from pytableaux.proof import TableauxSystem
+    from pytableaux.tools.typing import F, LogicModule, RuleT, T, TypeInstDict
 
 
 __all__ = (
@@ -230,7 +227,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             self.emit(RuleEvent.AFTER_APPLY, target)
 
     @final
-    def branch(self, parent: Branch = None) -> Branch:
+    def branch(self, parent: Branch = None, /) -> Branch:
         """Create a new branch on the tableau. Convenience for
         ``self.tableau.branch()``.
 
@@ -245,18 +242,15 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     @classmethod
     def test(cls, /, *, noassert = False):
         """Run a simple test on the rule."""
-        tab = Tableau()
-        tab.rules.append(cls)
+        (tab := Tableau()).rules.append(cls)
         rule = tab.rules.get(cls)
         branch = tab.branch()
-        nodes = rule.example_nodes()
-        branch.extend(nodes)
+        branch.extend(nodes := rule.example_nodes())
         result = tab.step()
         tab.build()
         if not noassert:
             assert len(rule.history) > 0
-        from types import SimpleNamespace
-        return SimpleNamespace(
+        return dmapns(
             cls     = cls,
             rule    = rule,
             tableau = tab,
@@ -264,12 +258,19 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             nodes   = nodes,
             result  = result,
         )
+        # from types import SimpleNamespace
+        # return SimpleNamespace(
+        #     cls     = cls,
+        #     rule    = rule,
+        #     tableau = tab,
+        #     branch  = branch,
+        #     nodes   = nodes,
+        #     result  = result,
+        # )
 
     def __repr__(self):
-        return orepr(self,
-            module  = self.__module__,
-            applied = len(self.history),
-        )
+        return (f'<{type(self).__name__} module:{self.__module__} '
+            f'applied:{len(self.history)}>')
 
     @closure
     def __setattr__(*, slots = __slots__):
@@ -317,7 +318,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         - `max_candidate_score`
 
         Args:
-            targets: The list of targets.
+            targets: The sequence of targets.
         """
         is_rank_optim = self.opts['is_rank_optim']
         if is_rank_optim:
@@ -352,11 +353,11 @@ class ClosingRule(Rule):
     _defaults = dict(is_rank_optim = False)
 
     @final
-    def _apply(self, target: Target):
+    def _apply(self, target: Target, /):
         target.branch.close()
 
     @abstract
-    def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch) -> bool:
+    def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
         """For calculating a target's closure score.
         """
         raise NotImplementedError
@@ -443,11 +444,12 @@ class TabRules(SequenceApi[Rule]):
         return getitem
 
     def __repr__(self):
-        return orepr(self, logic = self._tab.logic,
-            groups = len(self.groups), rules = len(self),
-        )
+        logic = self._tab.logic
+        lname = logic.name if logic else None
+        return (f'<{type(self).__name__} logic:{lname} '
+            f'groups:{len(self.groups)} rules:{len(self)}>')
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = locking(object.__setattr__)
 
     @locking
@@ -475,16 +477,19 @@ class TabRules(SequenceApi[Rule]):
                 return idx[ref]
             if isinstance(ref, type):
                 rule = idx[check.subcls(ref, Rule).__name__]
-                if ref is type(rule): return rule
+                if ref is type(rule):
+                    return rule
                 raise KeyError
             if isinstance(ref, Rule):
                 refcls = type(ref)
                 rule = idx[refcls.__name__]
-                if refcls is type(rule): return rule
+                if refcls is type(rule):
+                    return rule
                 raise KeyError
             raise Emsg.InstCheck(ref, (str, type, Rule))
         except KeyError:
-            if default is not NOARG: return default
+            if default is not NOARG:
+                return default
         raise Emsg.MissingValue(ref)
 
 class RuleGroup(SequenceApi[Rule]):
@@ -602,9 +607,9 @@ class RuleGroup(SequenceApi[Rule]):
         return self.get(ref, NOGET) is not NOGET
 
     def __repr__(self):
-        return orepr(self, name = self.name, rules = len(self))
+        return f'<{type(self).__name__} name:{self.name} rules:{len(self)}>'
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = locking(object.__setattr__)
 
     def _lock(self):
@@ -655,7 +660,8 @@ class RuleGroups(SequenceApi[RuleGroup]):
         try:
             return self._root._groupindex[name]
         except KeyError:
-            if default is NOARG: raise
+            if default is NOARG:
+                raise
             return default
 
     def names(self) -> seqm[str]:
@@ -677,19 +683,18 @@ class RuleGroups(SequenceApi[RuleGroup]):
         if isinstance(item, str):
             return item in self._root._groupindex
         check.inst(item (str, RuleGroup))
-        for check in self:
-            if item is check: return True
+        for grp in self:
+            if item is grp:
+                return True
         return False
 
     def __repr__(self):
-        return orepr(self,
-            logic = self._root._tab.logic,
-            groups = len(self),
-            names = self.names(),
-            rules = sum(map(len, self))
-        )
+        logic = self._root._tab.logic
+        lname = logic.name if logic else None
+        return (f'<{type(self).__name__} logic:{lname} groups:{len(self)} '
+            f'names:{self.names()} rules:{sum(map(len, self))}>')
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = locking(object.__setattr__)
 
     def _lock(self):
@@ -1104,7 +1109,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         return branch in self.__branchstat
 
     def __repr__(self):
-        return orepr(self, dict(
+        info = dict(
             id    = self.id,
             logic = (self.logic and self.logic.name),
             len   = len(self),
@@ -1121,7 +1126,9 @@ class Tableau(Sequence[Branch], EventEmitter):
         } | (
             {'argument': self.argument}
             if self.argument else {}
-        ))
+        )
+        istr = ' '.join(f'{k}:{v}' for k, v in info.items())
+        return f'<{type(self).__name__} {istr}>'
 
     # *** Events
 

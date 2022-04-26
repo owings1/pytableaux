@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from collections import deque
 from itertools import chain, repeat
-from typing import (TYPE_CHECKING, Any, ClassVar, Iterable, MutableSequence,
+from typing import (TYPE_CHECKING, ClassVar, Iterable, MutableSequence,
                     Sequence, Sized, SupportsIndex)
 
 from pytableaux.errors import Emsg, check
@@ -35,12 +35,12 @@ if TYPE_CHECKING:
     from typing import overload
 
 __all__ = (
-    'SequenceApi',
+    'deqseq',
     'MutableSequenceApi',
-    'SequenceCover',
     'seqf',
     'seqm',
-    'deqseq',
+    'SequenceApi',
+    'SequenceCover',
 )
 
 NOARG = object()
