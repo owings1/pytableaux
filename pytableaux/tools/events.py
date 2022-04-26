@@ -26,11 +26,10 @@ from itertools import filterfalse
 from typing import TYPE_CHECKING, Callable, Mapping
 
 from pytableaux.errors import check, Emsg
-from pytableaux.tools.abcs import Abc, Copyable, abcf
+from pytableaux.tools import abcs
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.linked import linqset
 from pytableaux.tools.mappings import dmap
-from pytableaux.tools.misc import orepr
 from pytableaux.tools.typing import F
 
 if TYPE_CHECKING:
@@ -45,7 +44,7 @@ __all__ = (
 
 EventId = str | int | Enum
 
-class EventEmitter(Copyable):
+class EventEmitter(abcs.Copyable):
 
     __slots__ = 'events',
 
@@ -75,7 +74,7 @@ class EventEmitter(Copyable):
         inst.events = inst.events.copy(listeners = listeners)
         return inst
 
-class Listener(Callable, Abc):
+class Listener(Callable, abcs.Abc):
 
     cb        : Callable
     once      : bool
@@ -106,11 +105,9 @@ class Listener(Callable, Abc):
         return hash(self.cb)
 
     def __repr__(self):
-        return orepr(self,
-            once = self.once,
-            cb = self.cb,
-            callcount = self.callcount,
-        )
+        return (
+            f'<{type(self).__name__} once:{self.once} cb:{self.cb} '
+            f'callcount:{self.callcount}>')
 
     __delattr__ = Emsg.ReadOnly.razr
 
@@ -127,7 +124,7 @@ class Listeners(linqset[Listener]):
         self.callcount = 0
         self.emitcount = 0
 
-    @abcf.temp
+    @abcs.abcf.temp
     @linqset.hook('cast')
     def cast(value):
         return check.inst(value, Listener)
@@ -150,11 +147,9 @@ class Listeners(linqset[Listener]):
         return count
 
     def __repr__(self):
-        return orepr(self,
-            listeners = len(self),
-            emitcount = self.emitcount,
-            callcount = self.callcount,
-        )
+        return (
+            f'<{type(self).__name__} listeners:{len(self)} '
+            f'emitcount:{self.emitcount} callcount:{self.callcount}>')
 
 class EventsListeners(dmap[EventId, Listeners]):
 
@@ -185,7 +180,7 @@ class EventsListeners(dmap[EventId, Listeners]):
         """
         del(self[event])
 
-    @abcf.temp
+    @abcs.abcf.temp
     def normargs(method: F) -> F:
         '''
         Possible ways to call on/once/off ...
@@ -274,12 +269,10 @@ class EventsListeners(dmap[EventId, Listeners]):
     update = dmap._setitem_update
 
     def __repr__(self):
-        return orepr(self,
-            events = len(self),
-            listeners = sum(map(len, self.values())),
-            emitcount = self.emitcount,
-            callcount = self.callcount,
-        )
+        return (
+            f'<{type(self).__name__} events:{len(self)} '
+            f'listeners:{sum(map(len, self.values()))} '
+            f'emitcount:{self.emitcount} callcount:{self.callcount}>')
 
     @classmethod
     def _from_mapping(cls, mapping):

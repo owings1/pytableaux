@@ -85,7 +85,6 @@ class LexWriterMeta(LangCommonMeta):
                 check.inst(lw, LexWriter)
             syslws['unset'] = None
             syslws['set'] = lw
-            pytableaux.tools.misc.drepr.lw = lw
 
         def fdel(cls):
             syslws.pop('unset')

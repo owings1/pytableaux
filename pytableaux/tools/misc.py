@@ -20,7 +20,6 @@ pytableaux.tools.misc
 """
 from __future__ import annotations
 
-from itertools import islice
 from typing import Any, Callable, Mapping
 
 from pytableaux.tools import closure
@@ -118,38 +117,3 @@ def dtransform():
 
     return api
 
-def drepr(d: dict, /, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
-    lw = drepr.lw
-    istr = j.join(
-        f'{k}{vj}{valrepr(v, lw = lw)}'
-        for k,v in islice(d.items(), limit)
-    )
-    assert not paren
-    return istr
-# For testing, set this to a LexWriter instance.
-drepr.lw = None
-
-def valrepr(v, /, lw = None) -> str:
-    if isinstance(v, str):
-        return v
-    if isinstance(v, type):
-        return v.__name__
-    if lw is None:
-        lw = drepr.lw
-    if lw is not None and lw.canwrite(v):
-        return lw(v)
-    return repr(v)
-
-def orepr(obj, d: dict = None, /, **kw) -> str:
-    if d is None:
-        d = kw
-    elif len(kw):
-        d = dict(d, **kw)
-    oname = type(obj).__qualname__
-    try:
-        dstr = drepr(d, j = ' ', vj = ':', paren = False)
-        if dstr:
-            return f'<{oname} {dstr}>'
-        return f'<{oname}>'
-    except Exception as e:
-        return f'<{oname} !ERR: {repr(e)} !>'
