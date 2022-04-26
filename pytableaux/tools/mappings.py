@@ -28,13 +28,14 @@ from operator import not_, truth
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable
 
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy, abcs, closure, isattrstr, true, thru
+from pytableaux.tools import MapProxy, abcs, closure, isattrstr, thru, true
 from pytableaux.tools.decorators import membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.typing import KT, VT, NotImplType, T
 
 if TYPE_CHECKING:
     from typing import overload
+
     from pytableaux.tools.typing import MapiT, MapT, SetT
 
 __all__ = (
@@ -48,11 +49,11 @@ __all__ = (
     'KeySetAttr',
     'MapCover',
     'MappingApi',
-    # 'MapProxy',
     'MutableMappingApi',
 )
 
 class MappingApi(Mapping[KT, VT], abcs.Copyable):
+    "Extended mapping api with fine-grained operator support."
 
     __slots__ = EMPTY_SET
 
@@ -197,18 +198,18 @@ class MapCover(MappingApi[KT, VT]):
 
     @classmethod
     def _init_cover(cls, src: Mapping, dest: Any, /, *,
-        ga = object.__getattribute__,
+        # ga = object.__getattribute__,
         sa = object.__setattr__
     ):
         for srcname, destname in cls._cover_items:
-            sa(dest, destname, ga(src, srcname))
+            sa(dest, destname, getattr(src, srcname))
 
-    def __delattr__(self, name, /):
+    def __delattr__(self, name: str, /):
         if name in self._cover_attrs:
             raise Emsg.ReadOnly(self, name)
         super().__delattr__(name)
 
-    def __setattr__(self, name, value, /):
+    def __setattr__(self, name: str, value: Any, /):
         if name in self._cover_attrs:
             raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
@@ -217,7 +218,7 @@ class MapCover(MappingApi[KT, VT]):
         return repr(self._asdict())
 
     @classmethod
-    def _from_iterable(cls, it):
+    def _from_iterable(cls, it: Iterable):
         return cls._from_mapping(dict(it))
 
     def __init_subclass__(subcls: type[MapCover], **kw):
@@ -276,7 +277,9 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], abcs.Copyabl
     def _setitem_update():
         EMPTY_ITER = iter(())
         def update(self, it: Iterable = None, /, **kw):
-            '''Alternate 'update' implementation for classes that need more control'''
+            """Alternate 'update' implementation for classes that need more 
+            setitem/delitem control.
+            """
             if it is None:
                 it = EMPTY_ITER
             else:
@@ -289,7 +292,7 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], abcs.Copyabl
         return update
 
     @classmethod
-    def _from_iterable(cls, it):
+    def _from_iterable(cls: type[MapiT], it: Iterable, /) -> MapiT:
         return cls(it)
 
 class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
@@ -317,7 +320,7 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
         return cls(None, mapping)
 
     @classmethod
-    def _from_iterable(cls, it, /):
+    def _from_iterable(cls: type[MapiT], it: Iterable, /) -> MapiT:
         return cls(None, it)
 
     @classmethod
@@ -327,6 +330,7 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
         return super()._roper_res_type(othrtype)
 
 class KeySetAttr(abcs.Abc):
+    "Mixin class for read-write attribute-key gate."
 
     __slots__ = EMPTY_SET
 
@@ -362,15 +366,18 @@ class KeySetAttr(abcs.Abc):
         return not hasattr(cls, name)
 
 class dmapattr(KeySetAttr, dmap[KT, VT]):
+    "Dict attr dmap base class."
+
     __slots__ = EMPTY_SET
 
-class dmapns(dmapattr[KT, VT]):
-
-    def __init__(self, it: Iterable = None, **kw):
+    def __init__(self, it: Iterable = None, /, **kw):
         if it is not None:
             self.update(it)
         if len(kw):
             self.update(kw)
+
+class dmapns(dmapattr[KT, VT]):
+    "Dict attr namespace with __dict__ slot and liberal key approval."
 
     @classmethod
     def _keyattr_ok(cls, name: str) -> bool:
@@ -464,7 +471,7 @@ class DequeCache(Collection[VT], abcs.Abc):
 
     @property
     def maxlen(self) -> int:
-        return self._maxlen
+        return self._maxlen()
 
     def __init__(self, maxlen = 10):
 
@@ -472,7 +479,7 @@ class DequeCache(Collection[VT], abcs.Abc):
         rev  : dict[VT, set] = {}
         deck : deque[VT] = deque(maxlen = maxlen)
 
-        self._maxlen = maxlen
+        self._maxlen = lambda: deck.maxlen
 
         self.__len__ = deck.__len__
         self.__iter__ = deck.__iter__
@@ -489,9 +496,10 @@ class DequeCache(Collection[VT], abcs.Abc):
             if item in self:
                 item = self[item]
             else:
-                if len(self) == self.maxlen:
+                if len(self) == deck.maxlen:
                     old = deck.popleft()
-                    for k in rev.pop(old): del(idx[k])
+                    for k in rev.pop(old):
+                        del(idx[k])
                 idx[item] = item
                 rev[item] = {item}
                 deck.append(item)
@@ -555,18 +563,17 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
             if koper(kpred(k)) and voper(vpred(v)):
                 yield k, v
 
-if 'Operators Cache' or True:
+if TYPE_CHECKING:
+    class _opcache: pass
 
-    def _checklimit(length: int, /, *, _limit = 50):
-        return length > _limit and length > 0
+@closure
+def _opcache():
 
-    class _CacheResolversType(dict[tuple[Callable, Callable], Callable]):
+    class CacheResolversType(dict[tuple[Callable, Callable], Callable]):
 
         __slots__ = EMPTY_SET
 
-        def __missing__(self, pair: tuple[Callable, Callable], /, *,
-            checklimit: Callable[[int], bool] = _checklimit
-        ):
+        def __missing__(self, pair: tuple[Callable, Callable], /):
             while checklimit(len(self)):
                 self.pop(next(iter(self)))
             res_create, get_res_iter = pair
@@ -575,9 +582,7 @@ if 'Operators Cache' or True:
             cached_resolver.__qualname__ = cached_resolver.__name__
             return self.setdefault(pair, cached_resolver)
 
-    _ResolverFactory = _CacheResolversType()
-
-    class _FuncCache(dict[type[Iterable], Callable[[MappingApi, Iterable], Iterable|NotImplType]]):
+    class FuncCache(dict[type[Iterable], Callable[[MappingApi, Iterable], Iterable|NotImplType]]):
 
         __slots__ = setf(('get_res_iter', 'get_res_type'))
 
@@ -591,17 +596,12 @@ if 'Operators Cache' or True:
             else:
                 self.get_res_type = mapitype._oper_res_type
 
-        def __missing__(self, othrtype: type[Iterable], /, *,
-            checklimit: Callable[[int], bool] = _checklimit
-        ):
+        def __missing__(self, othrtype: type[Iterable], /):
             while checklimit(len(self)):
                 self.pop(next(iter(self)))
             return self.setdefault(othrtype, self.resolve)
 
-        def resolve(self, mapi, other, /, *,
-            FTHRU: Callable[[T], T] = thru,
-            ResolverFactory: _CacheResolversType = _ResolverFactory,
-        ):
+        def resolve(self, mapi, other, /, *, FTHRU: Callable[[T], T] = thru):
             othrtype = type(other)
             if not issubclass(othrtype, Iterable):
                 return self.reject(othrtype)
@@ -624,7 +624,7 @@ if 'Operators Cache' or True:
             else:
                 raise Emsg.InstCheck(it, Iterable)
             res = res_create(it)
-            self[othrtype] = ResolverFactory[res_create, get_res_iter]
+            self[othrtype] = resolve_cache[res_create, get_res_iter]
             return res
 
         @closure
@@ -633,108 +633,91 @@ if 'Operators Cache' or True:
             def FNOTIMPL(*args, **kw):
                 return NotImplemented
 
-            def reject(self: _FuncCache, othrtype: type[Iterable], /, *,
-                FNOTIMPL: Callable[..., NotImplType] = FNOTIMPL
-            ):
+            def reject(self: FuncCache, othrtype: type[Iterable], /):
                 self[othrtype] = FNOTIMPL
                 return NotImplemented
 
             return reject
 
-    class _TypeFuncsCache(dict[str, _FuncCache]):
+    class TypeFuncsCache(dict[str, FuncCache]):
 
         __slots__ = setf({'mapitype'})
 
         def __init__(self, mapitype: type[MappingApi]):
             self.mapitype = mapitype
 
-        def __missing__(self, opname: str, /, *,
-            _FuncCache: type[_FuncCache] = _FuncCache
-        ):
-            return self.setdefault(opname, _FuncCache(self.mapitype, opname))
+        def __missing__(self, opname: str, /):
+            return self.setdefault(opname, FuncCache(self.mapitype, opname))
 
-    class _OperFuncsCache(dict[type[MappingApi], _TypeFuncsCache]):
+    class OperFuncsCache(dict[type[MappingApi], TypeFuncsCache]):
 
         __slots__ = EMPTY_SET
 
-        def __missing__(self, mapitype: type[MappingApi], /, *,
-            _TypeFuncsCache: type[_TypeFuncsCache] = _TypeFuncsCache,
-            checklimit: Callable[[int], bool] = _checklimit,
-        ):
+        def __missing__(self, mapitype: type[MappingApi], /):
             while checklimit(len(self)):
                 self.pop(next(iter(self)))
-            return self.setdefault(mapitype, _TypeFuncsCache(mapitype))
+            return self.setdefault(mapitype, TypeFuncsCache(mapitype))
 
-    @closure
-    def _opcache():
+    def checklimit(length: int, /, *, _limit = 50):
+        return length > _limit and length > 0
 
-        source = _OperFuncsCache()
-        resolvers = _ResolverFactory
-        checklimit = _checklimit
+    source = OperFuncsCache()
+    resolve_cache = CacheResolversType()
+    limit_conf = checklimit.__kwdefaults__
 
-        class opercache:
+    class opercache:
 
-            @staticmethod
-            def get(
-                mapitype: type[MapiT], opname: str, othrtype: type[T],
-            /) -> Callable[[MapiT, T], MapiT|NotImplType]:
-                return source[mapitype][opname][othrtype]
+        @staticmethod
+        def get(mapitype: type[MapiT], opname: str, othrtype: type[T],
+        /) -> Callable[[MapiT, T], MapiT|NotImplType]:
+            return source[mapitype][opname][othrtype]
 
-            @staticmethod
-            def resolve(mapi: MapiT, opname: str, other: T, / ) -> MapiT|NotImplType:
-                return source[type(mapi)][opname][type(other)](mapi, other)
+        @staticmethod
+        def resolve(mapi: MapiT, opname: str, other: T,
+        /) -> MapiT|NotImplType:
+            return source[type(mapi)][opname][type(other)](mapi, other)
 
-            @staticmethod
-            def copy():
-                return {
-                    k: {k: dict(v) for k, v in v.items()}
-                    for k, v in source.items()
-                }
-
-            @staticmethod
+        @staticmethod
+        @closure
+        def resolvers():
+            _resolvers = MapProxy(resolve_cache)
             def resolvers():
-                return MapProxy(resolvers)
+                return _resolvers
+            return resolvers
 
-            @staticmethod
-            def clear():
-                source.clear()
-                resolvers.clear()
+        @staticmethod
+        def clear():
+            source.clear()
+            resolve_cache.clear()
 
-            @staticmethod
-            def limit(n: int|None = None) -> int|None:
-                if n is None:
-                    return checklimit.__kwdefaults__['limit']
-                checklimit.__kwdefaults__['limit'] = min(0, int(n))
+        @staticmethod
+        def limit(n: int|None = None) -> int|None:
+            if n is None:
+                return limit_conf['_limit']
+            limit_conf['_limit'] = min(0, int(n))
 
-            @staticmethod
-            @closure
-            def __dir__(funcs = [get, resolve, copy, clear, limit, resolvers]):
-                for f in funcs: f.__qualname__ = f.__name__
-                names = [f.__name__ for f in funcs]
-                return lambda: names
+        @staticmethod
+        @closure
+        def __dir__(funcs = [get, resolve, clear, limit, resolvers]):
+            names = [f.__name__ for f in funcs]
+            return lambda: list(names)
 
-            def __new__(cls): return inst
-            def __init__(self): pass
-            __class__ = None
-            __slots__ = EMPTY_SET
+        def __new__(cls): return opercache
+        __class__ = __init__  = None
+        __slots__ = EMPTY_SET
 
-        c = opercache
-        c.__qualname__ = c.__qualname__.split('.')[-1]
-        inst = object.__new__(c)
-        return inst
-
+    return opercache
 
 del(
-    closure,
-    membr,
-    wraps,
-    _checklimit,
-    _ResolverFactory,
+    # closure,
+    # membr,
+    # wraps,
+    # checklimit,
+    # _ResolverFactory,
     # _CacheResolversType, _FuncCache, _TypeFuncsCache, _OperFuncsCache,
 )
 
 # fail if deleted
-# MapProxy
 
 
 # def _gen(n = 5, *a):
