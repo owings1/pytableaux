@@ -6,9 +6,9 @@ from pytableaux import examples
 from pytableaux.errors import *
 from pytableaux.lang.lex import Atomic, Constant, Predicated
 from pytableaux.logics.k import DefaultNodeRule as DefaultKRule
-from pytableaux.proof import TableauxSystem as TabSys
+from pytableaux.proof import TableauxSystem as TabSys, filters
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.filters import Filters, NodeFilters, getkey
+from pytableaux.proof.filters import getkey
 from pytableaux.proof.helpers import FilterHelper, MaxConsts
 from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
 from pytableaux.proof.util import TabEvent, TabFlag, TabStatKey
@@ -367,7 +367,7 @@ class TestFilters(BaseSuite):
     def test_AttrFilter_node_is_modal(self):
         class Lhs(object):
             testname = True
-        class AttrFilt(Filters.Attr):
+        class AttrFilt(filters.AttrCompare):
             attrmap = {'testname': 'is_modal'}
         f = AttrFilt(Lhs())
         assert f(Node({'world1': 0}))
@@ -376,7 +376,7 @@ class TestFilters(BaseSuite):
     def test_AttrFilter_key_node_designated(self):
         class Lhs(object):
             testname = True
-        class AttrFilt(Filters.Attr):
+        class AttrFilt(filters.AttrCompare):
             attrmap = {'testname': 'designated'}
         f = AttrFilt(Lhs())
         f.rget = getkey#gets.key()
@@ -420,7 +420,7 @@ class TestMaxConstantsTracker(BaseSuite):
         class FilterNodeRule(RuleStub):
             Helpers = FilterHelper,
             ignore_ticked = None
-            NodeFilters = NodeFilters.Modal,
+            NodeFilters = filters.ModalNode,
             modal = None
     
         class MtrTestRule(FilterNodeRule):
