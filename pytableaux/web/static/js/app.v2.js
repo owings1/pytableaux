@@ -506,8 +506,12 @@
 
             $(Sel.fieldConclusion).val(arg.conclusion)
 
-            $.each(AppData.example_preds, function(i, pred) {
-                addPredicate(pred.index, pred.subscript, pred.arity)
+            const preds = AppData.example_args[argName]['@Predicates']
+            $.each(preds, function(i, pred) {
+                if (!Array.isArray(pred)) {
+                    pred = [pred.index, pred.subscript, pred.arity]
+                }
+                addPredicate(pred[0], pred[1], pred[2])
             })
         }
 

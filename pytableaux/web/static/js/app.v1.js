@@ -466,8 +466,15 @@
                 addPremise(value)
             })
             $('#conclusion').val(arg.conclusion)
-            $.each(AppData.example_preds, function(i, pred) {
-                addPredicate(pred.index, pred.subscript, pred.name, pred.arity)
+            // const preds = AppData.example_preds
+            const preds = AppData.example_args[argName]['@Predicates']
+            $.each(preds, function(i, pred) {
+                if (!Array.isArray(pred)) {
+                    var pargs = [pred.index, pred.subscript, pred.name, pred.arity]
+                } else {
+                    var pargs = [pred[0], pred[1], pred[3], pred[2]]
+                }
+                addPredicate(pargs[0], pargs[1], pargs[2], pargs[3])
             })
         }
 

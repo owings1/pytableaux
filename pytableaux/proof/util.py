@@ -201,8 +201,6 @@ class NodeStat(dict[TabStatKey, TabFlag|int|None]):
     def __init__(self):
         super().__init__(self._defaults)
 
-
-
 class BranchStat(dict[TabStatKey, TabFlag|int|dict[Any, NodeStat]|None]):
 
     __slots__ = EMPTY_SET

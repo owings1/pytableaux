@@ -25,7 +25,6 @@ import itertools
 from types import DynamicClassAttribute as dynca
 from typing import Any, ClassVar, TYPE_CHECKING
 
-import pytableaux.tools.misc
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import LangCommonMeta, Marking, Notation, RenderSet
 from pytableaux.lang.lex import (Atomic, Constant, CoordsItem, Lexical,

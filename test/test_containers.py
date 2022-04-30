@@ -267,6 +267,8 @@ class TestMappingApi(BaseSuite):
             elif cls is TreeStruct:
                 # TreeStruct has defaults.
                 exp = dict(TreeStruct())
+            elif cls is dmapattr:
+                exp = dict()
             else:
                 # ParseTable needs [str, item] structure.
                 # Target requires branch key.

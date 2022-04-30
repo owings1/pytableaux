@@ -71,7 +71,6 @@ def _():
     abcm._frozenset = pytableaux.tools.sets.setf
 
 import pytableaux.tools.timing
-import pytableaux.tools.misc
 import pytableaux.tools.mappings
 import pytableaux.tools.sequences
 import pytableaux.tools.hybrids
