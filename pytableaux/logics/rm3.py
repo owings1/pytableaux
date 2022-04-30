@@ -19,19 +19,28 @@
 # pytableaux - R-mingle 3 logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.logics import fde as FDE
+from pytableaux.logics import lp as LP
+from pytableaux.proof.common import Node
+from pytableaux.proof.util import adds, group, sdnode
+
 name = 'RM3'
 
 class Meta:
-    title = 'R-mingle 3'
-    category = 'Many-valued'
-    description = 'Three-valued logic (True, False, Both) with a primitive Conditional operator'
-    tags = 'many-valued', 'glutty', 'non-modal', 'first-order'
+    title       = 'R-mingle 3'
+    category    = 'Many-valued'
+    description = (
+        'Three-valued logic (True, False, Both) with a primitive '
+        'Conditional operator'
+    )
     category_order = 130
-
-from pytableaux.lang.lex import Operator as Oper
-from pytableaux.proof.common import Node
-from pytableaux.logics import fde as FDE, lp as LP
-from pytableaux.logics.fde import adds, group, sdnode
+    tags = (
+        'many-valued',
+        'glutty',
+        'non-modal',
+        'first-order',
+    )
 
 class Model(LP.Model):
     """

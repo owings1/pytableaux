@@ -30,10 +30,10 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
 from pytableaux.proof import RuleHelper, filters
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import ClosingRule, Rule
+from pytableaux.proof.tableaux import Rule
 from pytableaux.proof.util import Access, RuleAttr, RuleEvent, TabEvent
 from pytableaux.tools import MapProxy, abstract, closure
-from pytableaux.tools.abcs import abcm
+from pytableaux.tools.abcs import abcm, Copyable
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setm
@@ -41,33 +41,38 @@ from pytableaux.tools.typing import KT, VT, T, TypeInstDict
 
 if TYPE_CHECKING:
     from typing import overload
+
     from pytableaux.proof.tableaux import Tableau
+
+    TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
+    NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]
+    NodeTargetsGen = Callable[[Rule, Iterable[Node], Branch], Iterator[Target]]
+    NodePredFunc = Callable[[Node], bool]
+    FiltersDict = TypeInstDict[filters.NodeCompare]
+else:
+    TargetsFn = NodeTargetsFn = NodeTargetsGen = NodePredFunc = Callable
+    FiltersDict = dict
 
 __all__ = (
     'AdzHelper',
-    'QuitFlag',
     'AplSentCount',
+    'BranchTarget',
+    'FilterHelper',
+    'MaxConsts',
+    'MaxWorlds',
+    'NodeConsts',
     'NodeCount',
     'NodesWorlds',
+    'PredNodes',
+    'QuitFlag',
     'UnserialWorlds',
     'WorldIndex',
-    'PredNodes',
-    'FilterHelper',
-
-    'BranchTarget',
-    'MaxConsts',
-    'NodeConsts',
-    'MaxWorlds',
 )
 
-TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
-NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]
-NodeTargetsGen = Callable[[Rule, Iterable[Node], Branch], Iterator[Target]]
-
-
-class AdzHelper:
+class AdzHelper(RuleHelper):
 
     __slots__ = 'rule', 'closure_rules'
+    rule: Rule
 
     def __init__(self, rule: Rule,/):
         self.rule = rule
@@ -101,7 +106,7 @@ class AdzHelper:
                     break
         return close_count / min(1, len(target['adds']))
 
-class BranchCache(dmap[Branch, T], RuleHelper):
+class BranchCache(dmap[Branch, T], Copyable, RuleHelper):
 
     _valuetype: type[T] = bool
 
@@ -118,10 +123,9 @@ class BranchCache(dmap[Branch, T], RuleHelper):
 
     def copy(self, /, *, listeners:bool = False):
         cls = type(self)
+        inst = cls.__new__(cls, self.rule)
         if listeners:
-            inst = cls(self.rule)
-        else:
-            inst = cls.__new__(cls, self.rule)
+            self.listen_on(self.rule, self.rule.tableau)
         inst.update(self)
         return inst
 
@@ -175,6 +179,14 @@ class BranchDictCache(BranchCache[dmap[KT, VT]]):
     _valuetype = dmap
 
     __slots__ = EMPTY_SET
+
+    def copy(self, /, *, listeners:bool = False):
+        inst = super().copy(listeners = listeners)
+        inst.update({
+            key: value.copy()
+            for key, value in self.items()
+        })
+        return inst
 
     def listen_on(self, rule: Rule, tableau: Tableau, /):
         super().listen_on(rule, tableau)
@@ -368,6 +380,11 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
         self.nodes = self.Nodes(rule)
         super().__init__(rule)
 
+    def copy(self, /, *, listeners: bool = False):
+        inst: WorldIndex = super().copy(listeners = listeners)
+        inst.nodes = self.nodes.copy(listeners = listeners)
+        return inst
+
     def listen_on(self, rule: Rule, tableau: Tableau, /):
         super().listen_on(rule, tableau)
         tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
@@ -375,14 +392,6 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
     def listen_off(self, rule: Rule, tableau: Tableau, /):
         tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
         super().listen_off(rule, tableau)
-
-    def copy(self, /, *, listeners: bool = False):
-        inst = super().copy(listeners = listeners)
-        if listeners:
-            inst.nodes.update(self.nodes)
-        else:
-            inst.nodes = self.nodes.copy(listeners = listeners)
-        return inst
 
     def has(self, branch: Branch, access: Access) -> bool:
         'Whether w1 sees w2 on the given branch.'
@@ -406,8 +415,6 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
             self[branch][w1].add(w2)
             self.nodes(node, branch)
 
-# * * * * *    FilterNodeCache    * * * * * #
-
 class FilterNodeCache(BranchCache[set[Node]]):
 
     __slots__ = 'ignore_ticked',
@@ -426,6 +433,11 @@ class FilterNodeCache(BranchCache[set[Node]]):
         self.ignore_ticked = bool(getattr(rule, RuleAttr.IgnoreTicked))
         super().__init__(rule)
 
+    def copy(self, /, *, listeners: bool = False):
+        inst = super().copy(listeners = listeners)
+        inst.ignore_ticked = self.ignore_ticked
+        return inst
+
     def listen_on(self, rule: Rule, tableau: Tableau, /):
         super().listen_on(rule, tableau)
         tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
@@ -436,12 +448,6 @@ class FilterNodeCache(BranchCache[set[Node]]):
         tableau.off(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
         tableau.off(TabEvent.AFTER_NODE_TICK, self.__after_node_tick)
         super().listen_off(rule, tableau)
-
-    def copy(self, /, *, listeners: bool = False):
-        inst = super().copy(listeners = listeners)
-        if not listeners:
-            inst.ignore_ticked = self.ignore_ticked
-        return inst
 
     def __after_node_add(self, node: Node, branch: Branch, /):
         if self(node, branch):
@@ -465,9 +471,6 @@ class PredNodes(FilterNodeCache):
     def __call__(self, node: Node, _):
         return isinstance(node.get('sentence'), Predicated)
 
-FiltersDict = TypeInstDict[filters.NodeCompare]
-NodePredFunc = Callable[[Node], bool]
-
 class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``
     class attribute.
@@ -489,6 +492,13 @@ class FilterHelper(FilterNodeCache):
         self.filters, self.pred = self._build_filters_pred(rule)
         super().__init__(rule)
 
+    def copy(self, /, *, listeners:bool = False):
+        inst: FilterHelper = super().copy(listeners = listeners)
+        inst._garbage = self._garbage.copy()
+        inst.filters = self.filters
+        inst.pred = self.pred
+        return inst
+
     @staticmethod
     def _build_filters_pred(rule: Rule) -> tuple[FiltersDict, NodePredFunc]:
         filters = MapProxy(zip(
@@ -498,16 +508,6 @@ class FilterHelper(FilterNodeCache):
         def pred(node, /):
             return all(f(node) for f in funcs)
         return filters, pred
-
-    def copy(self, /, *, listeners:bool = False):
-        inst: FilterHelper = super().copy(listeners = listeners)
-        if listeners:
-            inst._garbage.update(self._garbage)
-        else:
-            inst._garbage = self._garbage.copy()
-            inst.filters = self.filters
-            inst.pred = self.pred
-        return inst
 
     def filter(self, node: Node, branch: Branch, /) -> bool:
         """Whether the node passes the filter. If `ignore_ticked` is `True`,
@@ -605,7 +605,7 @@ class FilterHelper(FilterNodeCache):
             The rule may return a falsy value for no targets, a single
             target (non-empty Mapping), an Iterator or a Sequence.
             
-            Returns a flat list of targets.
+            Returns a flat tuple of targets.
             """
             fiter_targets = make_targets_iter(node_targets_fn)
             @functools.wraps(fiter_targets)
@@ -686,7 +686,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
             if node not in self[branch]:
                 # By tracking per node, we are tracking per world, a fortiori.
                 self[branch][node] = self.consts[branch].copy()
-        s: Sentence = node.get('sentence')
+        s = node.get('sentence')
         if s is None:
             return
         consts = s.constants - self.consts[branch]
@@ -907,6 +907,7 @@ class EllipsisExampleHelper:
     def __init__(self, rule: Rule,/):
         self.rule = rule
         self.applied: set[Branch] = set()
+        from pytableaux.proof.rules import ClosingRule
         self.isclosure = isinstance(rule, ClosingRule)
         if self.isclosure:
             self.closenodes = list(

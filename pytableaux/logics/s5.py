@@ -23,22 +23,25 @@ from __future__ import annotations
 from pytableaux.logics import k as K
 from pytableaux.logics import s4 as S4
 from pytableaux.logics import t as T
-from pytableaux.proof.baserules import adds, group
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.proof.util import Access
+from pytableaux.proof.util import Access, adds, group
 
 name = 'S5'
 
 class Meta:
-    title = 'S5 Normal Modal Logic'
+    title       = 'S5 Normal Modal Logic'
+    category    = 'Bivalent Modal'
     description = (
         'Normal modal logic with a reflexive, symmetric, and transitive '
         'access relation'
     )
-    tags = ('bivalent', 'modal', 'first-order')
-    category = 'Bivalent Modal'
     category_order = 5
+    tags = (
+        'bivalent',
+        'modal',
+        'first-order',
+    )
 
 # TODO:
 # Some problematic arguments for S5:

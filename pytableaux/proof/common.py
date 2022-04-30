@@ -42,7 +42,7 @@ from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.sets import EMPTY_SET, SetView, setf
 
 if TYPE_CHECKING:
-    from typing import overload
+    from typing import overload, Literal
     from pytableaux.models import BaseModel
     from pytableaux.proof.tableaux import Rule
 
@@ -148,6 +148,12 @@ class Node(MapCover):
 
     def __repr__(self):
         return f'<{type(self).__name__} id:{self.id} props:{dict(self)}>'
+
+    if TYPE_CHECKING:
+        @overload
+        def get(self, key: Literal['sentence']) -> Sentence|None:...
+        @overload
+        def __getitem__(self, key: Literal['sentence']) -> Sentence:...
 
 class Branch(SequenceApi[Node], EventEmitter):
     'A tableau branch.'

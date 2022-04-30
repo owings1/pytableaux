@@ -19,19 +19,26 @@
 # pytableaux - Bochvar 3 External logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.logics import fde as FDE
+from pytableaux.logics import k3 as K3
+from pytableaux.logics import k3w as K3W
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.util import adds, group, sdnode
+
 name = 'B3E'
 
 class Meta:
-    title    = 'Bochvar 3 External Logic'
-    category = 'Many-valued'
+    title       = 'Bochvar 3 External Logic'
+    category    = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_order = 50
-
-from pytableaux.lang.lex import Operator as Oper
-from pytableaux.proof.common import Branch, Node
-from pytableaux.logics import k3 as K3, k3w as K3W, fde as FDE
-from pytableaux.logics.fde import adds, group, sdnode
+    tags = (
+        'many-valued',
+        'gappy',
+        'non-modal',
+        'first-order',
+    )
 
 def gap(v):
     return min(v, 1 - v)
@@ -112,7 +119,7 @@ class TabRules:
         operator    = Oper.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             # Keep designation fixed to False for inheritance below
             return adds(group(sdnode(s.lhs, False)))
@@ -133,7 +140,7 @@ class TabRules:
         designation = False
         negated     = True
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             return adds(group(sdnode(s.lhs, not self.designation)))
 
@@ -196,7 +203,7 @@ class TabRules:
         operator    = Oper.Conditional
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             lhsa, rhsa = (operand.asserted() for operand in s)
             sn = ~lhsa | rhsa
@@ -217,7 +224,7 @@ class TabRules:
         operator    = Oper.Conditional
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             # Keep designation fixed for inheritance below.
             return adds(
@@ -254,7 +261,7 @@ class TabRules:
         operator    = Oper.Biconditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             lhsa, rhsa = (operand.asserted() for operand in s)
             sn1 = ~lhsa | rhsa

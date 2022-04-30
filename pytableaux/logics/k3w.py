@@ -19,19 +19,24 @@
 # pytableaux - Weak Kleene Logic
 from __future__ import annotations
 
-name = 'K3W'
-
-class Meta:
-    title    = 'Weak Kleene 3-valued logic'
-    category = 'Many-valued'
-    description = 'Three-valued logic with values T, F, and N'
-    tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
-    category_order = 30
-
 from pytableaux.lang.lex import Operator as Oper
 from pytableaux.proof.common import Branch, Node
 from pytableaux.logics import fde as FDE, k3 as K3
-from pytableaux.logics.fde import adds, group, sdnode
+from pytableaux.proof.util import adds, group, sdnode
+
+name = 'K3W'
+
+class Meta:
+    title       = 'Weak Kleene 3-valued logic'
+    category    = 'Many-valued'
+    description = 'Three-valued logic with values T, F, and N'
+    category_order = 30
+    tags = (
+        'many-valued',
+        'gappy',
+        'non-modal',
+        'first-order',
+    )
 
 class Model(K3.Model):
     """

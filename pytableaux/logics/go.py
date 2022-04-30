@@ -19,19 +19,28 @@
 # pytableaux - Gappy Object 3-valued Logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang.lex import Quantified, Quantifier
+from pytableaux.logics import b3e as B3E
+from pytableaux.logics import fde as FDE
+from pytableaux.logics import k3 as K3
+from pytableaux.proof import rules
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.util import adds, group, sdnode
+
 name = 'GO'
 
 class Meta:
-    title    = 'Gappy Object 3-valued Logic'
-    category = 'Many-valued'
+    title       = 'Gappy Object 3-valued Logic'
+    category    = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_order = 60
-
-from pytableaux.lang.lex import Quantified, Operator as Oper, Quantifier
-from pytableaux.proof.common import Branch, Node
-from pytableaux.logics import fde as FDE, k3 as K3, b3e as B3E
-from pytableaux.logics.fde import adds, group, sdnode
+    tags = (
+        'many-valued',
+        'gappy',
+        'non-modal',
+        'first-order',
+    )
 
 def gap(v):
     return min(v, 1 - v)
@@ -445,7 +454,7 @@ class TabRules:
     class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
         pass
         
-    class ExistentialNegatedDesignated(FDE.QuantifiedSentenceRule, FDE.DefaultNodeRule):
+    class ExistentialNegatedDesignated(rules.QuantifiedSentenceRule, FDE.DefaultNodeRule):
         """
         From an unticked, designated negated existential node *n* on a branch *b*,
         add a designated node *n'* to *b* with a universal sentence consisting of

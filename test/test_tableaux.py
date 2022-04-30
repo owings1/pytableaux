@@ -10,7 +10,8 @@ from pytableaux.proof import TableauxSystem as TabSys, filters
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import getkey
 from pytableaux.proof.helpers import FilterHelper, MaxConsts
-from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
+from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof.rules import ClosingRule, Rule
 from pytableaux.proof.util import TabEvent, TabFlag, TabStatKey
 from pytableaux.tools import MapProxy
 from pytest import raises

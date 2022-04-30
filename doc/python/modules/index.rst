@@ -13,6 +13,8 @@ Modules
 
     lang.writing
 
+    proof
+
     proof.common
 
     proof.tableaux

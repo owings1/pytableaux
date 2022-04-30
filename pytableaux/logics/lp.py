@@ -19,6 +19,12 @@
 # pytableaux - Logic of Paradox
 from __future__ import annotations as annotations
 
+from pytableaux.logics import fde as FDE
+from pytableaux.models import Mval
+from pytableaux.proof.rules import BaseClosureRule
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.tools.hybrids import qsetf
+
 name = 'LP'
 
 class Meta:
@@ -32,12 +38,6 @@ class Meta:
         'non-modal',
         'first-order',
     )
-
-from pytableaux.logics import fde as FDE
-from pytableaux.models import Mval
-from pytableaux.proof.baserules import BaseClosureRule
-from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.tools.hybrids import qsetf
 
 class Model(FDE.Model):
     """
@@ -92,7 +92,7 @@ class TabRules:
         @staticmethod
         def example_nodes():
             from pytableaux.lang.lex import Atomic
-            from pytableaux.logics.fde import sdnode
+            from pytableaux.proof.util import sdnode
             s = Atomic.first()
             return sdnode(s, False), sdnode(~s, False)
 

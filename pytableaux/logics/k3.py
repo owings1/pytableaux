@@ -19,6 +19,13 @@
 # pytableaux - Strong Kleene Logic
 from __future__ import annotations
 
+from pytableaux.logics import fde as FDE
+from pytableaux.models import Mval
+from pytableaux.proof.rules import BaseClosureRule
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.sets import setf
+
 name = 'K3'
 
 class Meta:
@@ -32,13 +39,6 @@ class Meta:
         'non-modal',
         'first-order',
     )
-
-from pytableaux.logics import fde as FDE
-from pytableaux.models import Mval
-from pytableaux.proof.baserules import BaseClosureRule
-from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.sets import setf
 
 class Model(FDE.Model):
     """A L{K3} model is like an {@FDE model} without the V{B} value."""
@@ -97,7 +97,7 @@ class TabRules:
         @staticmethod
         def example_nodes():
             from pytableaux.lang.lex import Atomic
-            from pytableaux.logics.fde import sdnode
+            from pytableaux.proof.util import sdnode
             a = Atomic.first()
             return sdnode(a, True), sdnode(~a, True)
 

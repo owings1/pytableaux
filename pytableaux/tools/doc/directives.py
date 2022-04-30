@@ -33,7 +33,7 @@ from pytableaux.lang.collect import Predicates
 from pytableaux.lang.lex import Notation, Operator
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
-from pytableaux.proof import tableaux, writers
+from pytableaux.proof import rules, tableaux, writers
 from pytableaux.tools.doc import BaseDirective, SphinxEvent, docparts, rstutils
 from sphinx.util import logging
 
@@ -149,7 +149,7 @@ class Tableaud(BaseDirective):
                 raise self.error(f'Bad rule argument: {rulestr}')
 
             classes.extend(('example', 'rule'))
-            if issubclass(rule, tableaux.ClosingRule):
+            if issubclass(rule, rules.ClosingRule):
                 classes.append('closure')
             tab = docparts.rule_example_tableau(rule)
 

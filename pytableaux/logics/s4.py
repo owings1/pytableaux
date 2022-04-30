@@ -23,19 +23,22 @@ from typing import Generator
 
 from pytableaux.logics import k as K
 from pytableaux.logics import t as T
-from pytableaux.logics.k import adds, anode, group
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.proof.util import Access
+from pytableaux.proof.util import Access, adds, anode, group
 
 name = 'S4'
 
 class Meta:
-    title    = 'S4 Normal Modal Logic'
-    category = 'Bivalent Modal'
+    title       = 'S4 Normal Modal Logic'
+    category    = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive and transitive access relation'
-    tags = 'bivalent', 'modal', 'first-order'
     category_order = 4
+    tags = (
+        'bivalent',
+        'modal',
+        'first-order',
+    )
 
 class Model(T.Model):
     """

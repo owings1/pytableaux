@@ -30,7 +30,8 @@ from pytableaux.lang.parsing import ParseTable
 from pytableaux.lang.writing import LexWriter, RenderSet
 from pytableaux.logics import registry
 from pytableaux.proof.helpers import EllipsisExampleHelper
-from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
+from pytableaux.proof.rules import ClosingRule, Rule
+from pytableaux.proof.tableaux import Tableau
 
 __all__ = (
     'opers_table',

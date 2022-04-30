@@ -2014,7 +2014,7 @@ class TestCFOL(BaseSuite):
         c1, c2 = s1.params
         m.set_literal_value(s1, 'T')
         m.finish()
-        identicals = m.get_identicals(c1)
+        identicals = m._get_identicals(c1)
         assert len(identicals) == 1
         assert c2 in identicals
 

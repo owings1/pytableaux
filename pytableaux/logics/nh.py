@@ -19,22 +19,30 @@
 # pytableaux - Paraconsistent Hybrid 3-valued Logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang.lex import Quantified, Sentence
+from pytableaux.logics import fde as FDE
+from pytableaux.logics import lp as LP
+from pytableaux.logics import mh as MH
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.util import adds, group, sdnode
+
 name = 'NH'
 
-class Meta(object):
-    title    = 'Paraconsistent Hybrid Logic'
-    category = 'Many-valued'
-    description = ' '.join((
-        'Three-valued logic (True, False, Both) with non-standard conjunction,',
-        'and a classical-like conditional',
-    ))
-    tags = 'many-valued', 'glutty', 'non-modal', 'first-order'
+class Meta:
+    title       = 'Paraconsistent Hybrid Logic'
+    category    = 'Many-valued'
+    description = (
+        'Three-valued logic (True, False, Both) with non-standard conjunction, '
+        'and a classical-like conditional'
+    )
     category_order = 110
-
-from pytableaux.lang.lex import Operator as Oper, Sentence, Quantified
-from pytableaux.proof.common import Branch, Node
-from pytableaux.logics import fde as FDE, lp as LP, mh as MH
-from pytableaux.logics.fde import adds, group, sdnode
+    tags = (
+        'many-valued',
+        'glutty',
+        'non-modal',
+        'first-order',
+    )
 
 class Model(LP.Model):
 

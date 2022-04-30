@@ -4,6 +4,8 @@
 
 .. automodule:: pytableaux.proof.tableaux
 
+    .. autoclass:: Rule
+
     .. autoclass:: Tableau
 
         .. autoattribute:: argument
@@ -43,15 +45,8 @@
     .. autoclass:: TreeStruct
         :members:
 
-    .. autoclass:: Rule
-
-    .. autoclass:: ClosingRule
-
     .. autoclass:: TabRules
     
     .. autoclass:: RuleGroups
     
     .. autoclass:: RuleGroup
-
-    .. autoclass:: TableauxSystem
-        :members:

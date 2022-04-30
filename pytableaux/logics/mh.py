@@ -19,22 +19,29 @@
 # pytableaux - Paracomplete Hybrid 3-valued Logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang.lex import Quantified, Sentence
+from pytableaux.logics import fde as FDE
+from pytableaux.logics import k3 as K3
+from pytableaux.proof.common import Node
+from pytableaux.proof.util import adds, group, sdnode
+
 name = 'MH'
 
-class Meta(object):
-    title    = 'Paracomplete Hybrid Logic'
-    category = 'Many-valued'
-    description = ' '.join((
-        'Three-valued logic (True, False, Neither) with non-standard disjunction,',
-        'and a classical-like conditional',
-    ))
-    tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
+class Meta:
+    title       = 'Paracomplete Hybrid Logic'
+    category    = 'Many-valued'
+    description = (
+        'Three-valued logic (True, False, Neither) with non-standard disjunction, '
+        'and a classical-like conditional'
+    )
     category_order = 70
-
-from pytableaux.lang.lex import Operator as Oper, Sentence, Quantified
-from pytableaux.proof.common import Node
-from pytableaux.logics import fde as FDE, k3 as K3
-from pytableaux.logics.fde import sdnode, adds, group
+    tags = (
+        'many-valued',
+        'gappy',
+        'non-modal',
+        'first-order',
+    )
 
 class Model(K3.Model):
 
@@ -424,4 +431,3 @@ class TabRules:
             DisjunctionNegatedUndesignated,
         ),
     )
-

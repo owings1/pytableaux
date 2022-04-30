@@ -41,7 +41,7 @@ from pytableaux.proof.util import (BranchEvent, BranchStat, RuleEvent,
                                    RuleFlag, StepEntry, TabEvent, TabFlag,
                                    TabStatKey, TabTimers)
 from pytableaux.tools import abstract, closure, isstr, static
-from pytableaux.tools.decorators import raisr, wraps
+from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
 from pytableaux.tools.linked import linqset
@@ -61,7 +61,6 @@ if TYPE_CHECKING:
 
 
 __all__ = (
-    'ClosingRule',
     'Rule',
     'Tableau',
 )
@@ -93,39 +92,41 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     )
     _optkeys: ClassVar[setf[str]]
 
-    #: Helper classes.
     Helpers: ClassVar[qsetf[type[RuleHelper]]] = EMPTY_QSET
+    "Helper classes."
 
-    #: StopWatch names to create in ``timers`` mapping.
     Timers: ClassVar[qsetf[str]] = qsetf(('search', 'apply'))
+    "StopWatch names to create in ``timers`` mapping."
 
-    #: The rule class name.
     name: ClassVar[str]
+    "The rule class name."
 
-    #: The number of branches resulting from an application. A value
-    #: of ``1`` means no additional branches. A value of ``2`` means
-    #: one additional branch, etc.
     branch_level: ClassVar[int] = 1
+    """The number of branches resulting from an application. A value
+    of ``1`` means no additional branches. A value of ``2`` means
+    one additional branch, etc.
+    """
 
-    #: The tableau instance.
     tableau: Tableau
+    "The tableau instance."
 
-    #: The options.
     opts: Mapping[str, bool]
+    "The options."
 
-    #: Helper instances mapped by class.
-    #:
-    #: :type: Mapping[type[RuleHelper], RuleHelper]
     helpers: TypeInstDict[RuleHelper]
+    """Helper instances mapped by class.
+    
+    :type: Mapping[type[RuleHelper], RuleHelper]
+    """
 
-    #: StopWatch instances mapped by name.
     timers: Mapping[str, StopWatch]
+    "StopWatch instances mapped by name."
 
-    #: The targets applied to.
     history: Sequence[Target]
+    "The targets applied to."
 
-    #: The state bit flag.
     flag: RuleFlag
+    "The state bit flag."
 
     __slots__ = setf(
         ('tableau', 'helpers', 'timers', 'opts', 'history', 'flag', '__getitem__')
@@ -258,15 +259,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             nodes   = nodes,
             result  = result,
         )
-        # from types import SimpleNamespace
-        # return SimpleNamespace(
-        #     cls     = cls,
-        #     rule    = rule,
-        #     tableau = tab,
-        #     branch  = branch,
-        #     nodes   = nodes,
-        #     result  = result,
-        # )
 
     def __repr__(self):
         return (f'<{type(self).__name__} module:{self.__module__} '
@@ -346,21 +338,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
                 return target
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
-
-class ClosingRule(Rule):
-    'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
-    
-    _defaults = dict(is_rank_optim = False)
-
-    @final
-    def _apply(self, target: Target, /):
-        target.branch.close()
-
-    @abstract
-    def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
-        """For calculating a target's closure score.
-        """
-        raise NotImplementedError
 
 # ----------------------------------------------
 
@@ -1457,67 +1434,82 @@ class Tableau(Sequence[Branch], EventEmitter):
             s.balanced_line_width = s.balanced_line_margin = 0
 
 
-
-# ----------------------------------------------
-# Data Classes
-# ----------------------------------------------
-
-
-
 class TreeStruct(dmapns):
     'Recursive tree structure representation of a tableau.'
 
     root: bool
     
-    #: The nodes on this structure.
     nodes: list[Node]
-    #: The ticked steps list.
-    ticksteps: list[int|None]
-    #: The child structures.
-    children: list[TreeStruct]
-    #: Whether this is a terminal (childless) structure.
-    leaf: bool
-    #: Whether this is a terminal structure that is closed.
-    closed: bool
-    #: Whether this is a terminal structure that is open.
-    open: bool
-    #: The pre-ordered tree left value.
-    left: int
-    #: The pre-ordered tree right value.
-    right: int
-    #: The total node count of all descendants.
-    descendant_node_count: int
-    #: The node count plus descendant node count.
-    structure_node_count: int
-    #: The depth of this structure (ancestor structure count).
-    depth: int
-    #: Whether this structure or a descendant is open.
-    has_open: bool
-    #: Whether this structure or a descendant is closed.
-    has_closed: bool
-    #: If closed, the step number at which it closed.
-    closed_step: int|None
-    #: The step number at which this structure first appears.
-    step: int
-    #: The number of descendant terminal structures, or 1.
-    width: int
-    #: 0.5x the width of the first child structure, plus 0.5x the
-    #: width of the last child structure (if distinct from the first),
-    #: plus the sum of the widths of the other (distinct) children.
-    balanced_line_width: float
-    #: 0.5x the width of the first child structure divided by the
-    #: width of this structure.
-    balanced_line_margin: float
-    #: The branch id, only set for leaves
-    branch_id: int|None
-    #: The model id, if exists, only set for leaves
-    model_id: int|None
-    #: Whether this is the one and only branch
-    is_only_branch: bool
-    #: The step at which the branch was added.
-    branch_step: int
+    "The nodes on this structure."
 
-    # def __init__(self, values: Mapping = None, /, **kw):
+    ticksteps: list[int|None]
+    "The ticked steps list."
+
+    children: list[TreeStruct]
+    "The child structures."
+
+    leaf: bool
+    "Whether this is a terminal (childless) structure."
+
+    closed: bool
+    "Whether this is a terminal structure that is closed."
+
+    open: bool
+    "Whether this is a terminal structure that is open."
+
+    left: int
+    "The pre-ordered tree left value."
+
+    right: int
+    "The pre-ordered tree right value."
+
+    descendant_node_count: int
+    "The total node count of all descendants."
+
+    structure_node_count: int
+    "The node count plus descendant node count."
+
+    depth: int
+    "The depth of this structure (ancestor structure count)."
+
+    has_open: bool
+    "Whether this structure or a descendant is open."
+
+    has_closed: bool
+    "Whether this structure or a descendant is closed."
+
+    closed_step: int|None
+    "If closed, the step number at which it closed."
+
+    step: int
+    "The step number at which this structure first appears."
+
+    width: int
+    "The number of descendant terminal structures, or 1."
+
+    balanced_line_width: float
+    """0.5x the width of the first child structure, plus 0.5x the
+    width of the last child structure (if distinct from the first),
+    plus the sum of the widths of the other (distinct) children.
+    """
+
+    balanced_line_margin: float
+    """0.5x the width of the first child structure divided by the
+    width of this structure.
+    """
+
+    branch_id: int|None
+    "The branch id, only set for leaves"
+
+    model_id: int|None
+    "The model id, if exists, only set for leaves"
+
+    is_only_branch: bool
+    "Whether this is the one and only branch"
+
+    branch_step: int
+    "The step at which the branch was added"
+
     def __init__(self):
         # self.root = None
 
@@ -1562,10 +1554,6 @@ class TreeStruct(dmapns):
         return inst
 
     _from_mapping = _from_iterable
-
-    @classmethod
-    def _keyattr_ok(cls, name: str) -> bool:
-        return name and name[0] != '_'
 
 # ----------------------------------------------
 

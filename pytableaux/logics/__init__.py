@@ -30,8 +30,7 @@ from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import closure, hybrids, mappings
-from pytableaux.tools.abcs import Copyable
+from pytableaux.tools import closure, hybrids, mappings, abcs
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
                                      LogicModule, LogicType)
@@ -46,7 +45,7 @@ __all__ = (
 
 NOARG = object()
 
-class Registry(Mapping[str, LogicModule], Copyable):
+class Registry(Mapping[str, LogicModule], abcs.Copyable):
     """Logic module registry.
     """
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from inspect import getmembers, isclass
 from itertools import chain, filterfalse
-from typing import (TYPE_CHECKING, Callable, Collection, Iterable,
-                    Iterator, NamedTuple)
+from typing import (TYPE_CHECKING, Callable, Collection, Iterable, Iterator,
+                    NamedTuple)
 
 from pytableaux import examples
 from pytableaux.lang.collect import *
@@ -13,10 +13,11 @@ from pytableaux.lang.writing import LexWriter
 from pytableaux.logics import registry
 from pytableaux.models import BaseModel
 from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.tableaux import ClosingRule, Rule, Tableau
+from pytableaux.proof.rules import ClosingRule, Rule
+from pytableaux.proof.tableaux import Tableau
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.typing import TT, F, T, RuleT
+from pytableaux.tools.typing import TT, F, RuleT, T
 
 if TYPE_CHECKING:
     from typing import overload

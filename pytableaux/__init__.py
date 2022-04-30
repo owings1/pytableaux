@@ -62,6 +62,7 @@ import pytableaux.tools.typing
 import pytableaux.tools.hooks
 import pytableaux.tools.decorators
 import pytableaux.tools.sets
+from pytableaux.tools.sets import EMPTY_SET
 
 @tools.closure
 def _():
@@ -128,17 +129,9 @@ import pytableaux.proof.tableaux
 
 # pytableaux.proof.Rule = pytableaux.proof.tableaux.Rule
 
-import pytableaux.proof.baserules
+import pytableaux.proof.rules
 import pytableaux.proof.helpers
 import pytableaux.proof.writers
-
-# from pytableaux import (
-#     examples, logics, models, proof, tools
-# )
-
-# ---- root aliases
-
-from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
     'errors',

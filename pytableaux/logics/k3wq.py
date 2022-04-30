@@ -19,19 +19,26 @@
 # pytableaux - Weak Kleene Logic with alternate quantification
 from __future__ import annotations
 
+from pytableaux.lang.lex import Operated, Quantified, Quantifier
+from pytableaux.logics import fde as FDE
+from pytableaux.logics import k3 as K3
+from pytableaux.logics import k3w as K3W
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.util import adds, group, sdnode
+
 name = 'K3WQ'
 
 class Meta(object):
-    title    = 'Weak Kleene 3-valued alternate-quantifier logic'
-    category = 'Many-valued'
+    title       = 'Weak Kleene 3-valued alternate-quantifier logic'
+    category    = 'Many-valued'
     description = 'Three-valued logic with values T, F, and N, with alternate quantification'
-    tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
     category_order = 40
-
-from pytableaux.proof.common import Branch, Node
-from pytableaux.lang.lex import Quantifier, Quantified, Operated
-from pytableaux.logics import fde as FDE, k3w as K3W, k3 as K3
-from pytableaux.logics.fde import adds, group, sdnode
+    tags = (
+        'many-valued',
+        'gappy',
+        'non-modal',
+        'first-order',
+    )
 
 class Model(K3W.Model):
     """
@@ -228,7 +235,7 @@ class TabRules(object):
         convert     = Quantifier.Universal
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             v, si = s[1:]
             d = self.designation
@@ -257,7 +264,7 @@ class TabRules(object):
         convert     = Quantifier.Universal
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             v, si = s[1:]
             r = branch.new_constant() >> s
@@ -279,7 +286,7 @@ class TabRules(object):
         quantifier  = Quantifier.Existential
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             return adds(
                 group(sdnode(~(branch.new_constant() >> s), self.designation))
@@ -301,7 +308,7 @@ class TabRules(object):
         quantifier  = Quantifier.Universal
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             v, si = s[1:]
             d = self.designation
@@ -328,7 +335,7 @@ class TabRules(object):
         quantifier  = Quantifier.Universal
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             v, si = s[1:]
             r = branch.new_constant() >> s

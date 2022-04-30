@@ -20,6 +20,24 @@
 # pytableaux - First Degree Entailment Logic
 from __future__ import annotations
 
+from typing import Any
+
+from pytableaux.errors import Emsg
+from pytableaux.lang.collect import Argument
+from pytableaux.lang.lex import Atomic, Constant, Operated
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
+                                 Sentence)
+from pytableaux.models import BaseModel, Mval
+from pytableaux.proof import TableauxSystem as BaseSystem
+from pytableaux.proof import filters, rules
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.tools import MapProxy, closure, static
+from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.sets import setf
+
 name = 'FDE'
 
 class Meta:
@@ -34,39 +52,6 @@ class Meta:
         'non-modal',
         'first-order',
     )
-
-from typing import Any
-
-from pytableaux.errors import ModelValueError
-from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Atomic, Constant, Operated
-from pytableaux.lang.lex import Operator as Oper
-from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
-                                 Sentence)
-from pytableaux.models import BaseModel, Mval
-from pytableaux.proof import TableauxSystem as BaseSystem, filters
-from pytableaux.proof.baserules import (BaseClosureRule,
-                                        ExtendedQuantifierRule,
-                                        GetNodeTargetsRule,
-                                        NarrowQuantifierRule,
-                                        OperatedSentenceRule,
-                                        QuantifiedSentenceRule)
-from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import Tableau
-from pytableaux.tools import MapProxy, closure, static
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.sets import setf
-from pytableaux.tools.typing import T
-
-
-def sdnode(s: Sentence, d: bool):
-    return dict(sentence = s, designated = d)
-
-def group(*items: T) -> tuple[T, ...]:
-    return items
-
-def adds(*groups: tuple[dict, ...]):
-    return dict(adds = groups)
 
 class Model(BaseModel):
     'An FDE Model.'
@@ -266,14 +251,14 @@ class Model(BaseModel):
 
     def read_branch(self, branch: Branch, /):
         for node in branch:
-            s: Sentence = node.get('sentence')
-            if not s:
+            s = node.get('sentence')
+            if s is None:
                 continue
             self._collect_node(node)
             is_literal = self.is_sentence_literal(s)
             is_opaque = self.is_sentence_opaque(s)
             if is_literal or is_opaque:
-                if type(s) is Operated and s.operator == Oper.Negation:
+                if type(s) is Operated and s.operator is Oper.Negation:
                     # If the sentence is negated, set the value of the negatum
                     s = s.lhs
                     if node['designated']:
@@ -321,7 +306,7 @@ class Model(BaseModel):
         self.finish()
 
     def _collect_node(self, node: Node, /):
-        s: Sentence = node.get('sentence')
+        s = node.get('sentence')
         if s is not None:
             self.predicates.update(s.predicates)
             self.all_atomics.update(s.atomics)
@@ -338,7 +323,7 @@ class Model(BaseModel):
         try:
             value = self.Value[value]
         except KeyError:
-            self._raise_value('UnknownForSentence', value, s)
+            raise Emsg.UnknownForSentence(value, s)
         cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value)
@@ -358,9 +343,9 @@ class Model(BaseModel):
         try:
             value = self.Value[value]
         except KeyError:
-            self._raise_value('UnknownForSentence', value, s)
+            raise Emsg.UnknownForSentence(value, s)
         if s in self.opaques and self.opaques[s] is not value:
-            self._raise_value('ConflictForSentence', value, s)
+            raise Emsg.ConflictForSentence(value, s)
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants, as well
         # as other lexical items.
@@ -373,9 +358,9 @@ class Model(BaseModel):
         try:
             value = self.Value[value]
         except KeyError:
-            self._raise_value('UnknownForSentence', value, s)
+            raise Emsg.UnknownForSentence(value, s)
         if s in self.atomics and self.atomics[s] is not value:
-            self._raise_value('ConflictForSentence', value, s)
+            raise Emsg.ConflictForSentence(value, s)
         self.atomics[s] = value
 
     def set_predicated_value(self, s: Predicated, value, /):
@@ -383,7 +368,7 @@ class Model(BaseModel):
         try:
             value = Value[value]
         except KeyError:
-            self._raise_value('UnknownForSentence', value, s)
+            raise Emsg.UnknownForSentence(value, s)
         predicate = s.predicate
         params = s.params
         for param in params:
@@ -393,16 +378,16 @@ class Model(BaseModel):
         anti_extension = self.get_anti_extension(predicate)
         if value is Value.N:
             if params in extension:
-                self._raise_value('ConflictForExtension', value, params)
+                raise Emsg.ConflictForExtension(value, params)
             if params in anti_extension:
-                self._raise_value('ConflictForAntiExtension', value, params)
+                raise Emsg.ConflictForAntiExtension(value, params)
         elif value is Value.T:
             if params in anti_extension:
-                self._raise_value('ConflictForAntiExtension', value, params)
+                raise Emsg.ConflictForAntiExtension(value, params)
             extension.add(params)
         elif value is Value.F:
             if params in extension:
-                self._raise_value('ConflictForExtension', value, params)
+                raise Emsg.ConflictForExtension(value, params)
             anti_extension.add(params)
         elif value is Value.B:
             extension.add(params)
@@ -495,25 +480,6 @@ class Model(BaseModel):
 
         return func_mapper
 
-    _error_formats = {
-        ModelValueError: {
-            'UnknownForSentence':
-                'Non-existent value {0} for sentence {1}',
-            'ConflictForSentence':
-                'Inconsistent value {0} for sentence {1}',
-            'ConflictForExtension':
-                'Cannot set value {0} for tuple {1} already in extension',
-            'ConflictForAnitExtension':
-                'Cannot set value {0} for tuple {1} already in anti-extension',
-        },
-    }
-
-    def _raise_value(self, fmt, *args):
-        ErrorClass = ModelValueError
-        if fmt in self._error_formats[ErrorClass]:
-            fmt = self._error_formats[ErrorClass][fmt]
-        raise ErrorClass(fmt, *(str(arg) for arg in args))
-
 @static
 class TableauxSystem(BaseSystem):
     """
@@ -571,7 +537,7 @@ class TableauxSystem(BaseSystem):
 
     @classmethod
     def branching_complexity(cls, node: Node, /):
-        s: Sentence = node.get('sentence')
+        s = node.get('sentence')
         if s is None:
             return 0
         d: bool = node['designated']
@@ -587,7 +553,7 @@ class TableauxSystem(BaseSystem):
                 last_is_negated = False
         return complexity
 
-class DefaultNodeRule(GetNodeTargetsRule):
+class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default FDE node rule with:
     
     - filters.DesignationNode with defaults: designation = `None`
@@ -599,14 +565,14 @@ class DefaultNodeRule(GetNodeTargetsRule):
     NodeFilters = filters.DesignationNode,
     designation: bool|None = None
 
-class OperatorNodeRule(OperatedSentenceRule, DefaultNodeRule):
+class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
     'Mixin class for typical operator rules.'
     pass
 
-class QuantifierSkinnyRule(NarrowQuantifierRule, DefaultNodeRule):
+class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule):
     pass
 
-class QuantifierFatRule(ExtendedQuantifierRule, DefaultNodeRule):
+class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule):
     pass
 
 class ConjunctionReducingRule(OperatorNodeRule):
@@ -631,7 +597,7 @@ class TabRules:
     to double negation only, one designated rule, and one undesignated rule.
     """
 
-    class DesignationClosure(BaseClosureRule):
+    class DesignationClosure(rules.BaseClosureRule):
         """
         A branch closes when a sentence appears on a node marked *designated*,
         and the same sentence appears on a node marked *undesignated*.
@@ -1059,7 +1025,7 @@ class TabRules:
         """
         operator = Oper.Biconditional
 
-    class ExistentialDesignated(NarrowQuantifierRule, DefaultNodeRule):
+    class ExistentialDesignated(rules.NarrowQuantifierRule, DefaultNodeRule):
         """
         From an unticked designated existential node *n* on a branch *b* quantifying over
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
@@ -1075,7 +1041,7 @@ class TabRules:
                 group(sdnode(branch.new_constant() >> s, self.designation))
             )
 
-    class ExistentialNegatedDesignated(QuantifiedSentenceRule, DefaultNodeRule):
+    class ExistentialNegatedDesignated(rules.QuantifiedSentenceRule, DefaultNodeRule):
         """
         From an unticked designated negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a designated node to *b*

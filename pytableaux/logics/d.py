@@ -19,25 +19,29 @@
 # pytableaux - Deonitic Normal Modal Logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Atomic
+from pytableaux.logics import k as K
+from pytableaux.proof.rules import BaseSimpleRule
+from pytableaux.proof.common import Branch, Target
+from pytableaux.proof.helpers import MaxWorlds, UnserialWorlds
+from pytableaux.proof.util import adds, anode, group, swnode
+
 name = 'D'
 
 class Meta:
-    title    = 'Deontic Normal Modal Logic'
-    category = 'Bivalent Modal'
+    title       = 'Deontic Normal Modal Logic'
+    category    = 'Bivalent Modal'
     description = 'Normal modal logic with a serial access relation'
-    tags = ['bivalent', 'modal', 'first-order']
     category_order = 2
-
-from pytableaux.proof.baserules import BaseSimpleRule
-from pytableaux.proof.common import Branch, Target
-from pytableaux.proof.helpers import MaxWorlds, UnserialWorlds
-from pytableaux.lang.lex import Atomic
-from pytableaux.logics import k as K
-from pytableaux.logics.k import adds, anode, group, swnode
+    tags = (
+        'bivalent',
+        'modal',
+        'first-order',
+    )
 
 class Model(K.Model):
     """
-    A D model is just like a :ref:`K model <k-model>` with a *serial* restriction
+    A L{D} model is just like a :ref:`K model <k-model>` with a *serial* restriction
     on the access relation.
     """
     def finish(self):
@@ -55,30 +59,32 @@ class Model(K.Model):
 
 class TableauxSystem(K.TableauxSystem):
     """
-    D's Tableaux System inherits directly inherits directly from K.
+    L{D}'s Tableaux System inherits directly inherits directly from L{K}.
     """
     pass
 
 class TabRules:
     """
-    The Tableaux Rules for D contain the rules for :ref:`K <K>`, as well as an additional
-    Serial rule, which operates on the accessibility relation for worlds.
+    The Tableaux Rules for L{D} contain the rules for :ref:`K <K>`, as well as
+    an additional Serial rule, which operates on the accessibility relation for
+    worlds.
     """
 
     class Serial(BaseSimpleRule):
         """
         .. _serial-rule:
 
-        The Serial rule applies to a an open branch *b* when there is a world *w* that
-        appears on *b*, but there is no world *w'* such that *w* accesses *w'*. The exception
-        to this is when the Serial rule was the last rule to apply to the branch. This
-        prevents infinite repetition of the Serial rule for open branches that are otherwise
-        finished. For this reason, the Serial rule is ordered
-        last in the rules, so that all other rules are checked before it.
+        The Serial rule applies to a an open branch *b* when there is a world *w*
+        that appears on *b*, but there is no world *w'* such that *w* accesses *w'*.
+        The exception to this is when the Serial rule was the last rule to apply to
+        the branch. This prevents infinite repetition of the Serial rule for open
+        branches that are otherwise finished. For this reason, the Serial rule is
+        ordered last in the rules, so that all other rules are checked before it.
 
-        For a node *n* on an open branch *b* on which appears a world *w* for which there is
-        no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
-        and *w1* as world2, where *w1* does not yet appear on *b*.
+        For a node *n* on an open branch *b* on which appears a world *w* for
+        which there is no world *w'* on *b* such that *w* accesses *w'*, add a
+        node to *b* with *w* as world1, and *w1* as world2, where *w1* does not
+        yet appear on *b*.
         """
         Helpers =  MaxWorlds, UnserialWorlds,
         modal_operators = Model.modal_operators

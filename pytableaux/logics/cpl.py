@@ -19,21 +19,24 @@
 # pytableaux - Classical Predicate Logic
 from __future__ import annotations
 
-name = 'CPL'
-
-class Meta:
-    title    = 'Classical Predicate Logic'
-    category = 'Bivalent'
-    description = 'Standard bivalent logic with predication, without quantification'
-    tags = ['bivalent', 'non-modal']
-    category_order = 1
-
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import Operated, Quantified, Sentence
 from pytableaux.logics import k as K
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.tools.abcs import Abc, abcf
+
+name = 'CPL'
+
+class Meta:
+    title       = 'Classical Predicate Logic'
+    category    = 'Bivalent'
+    description = 'Standard bivalent logic with predication, without quantification'
+    category_order = 1
+    tags = (
+        'bivalent',
+        'non-modal',
+    )
 
 class Model(K.Model):
     """

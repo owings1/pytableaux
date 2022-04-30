@@ -27,7 +27,7 @@ from typing import Any
 
 from pytableaux.logics import LogicLocatorRef, registry
 from pytableaux.proof import TableauxSystem as TabSys
-from pytableaux.proof.tableaux import ClosingRule, Rule
+from pytableaux.proof.rules import ClosingRule, Rule
 
 __all__ = (
     'get_logic_names',

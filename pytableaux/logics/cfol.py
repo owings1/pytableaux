@@ -27,11 +27,15 @@ from pytableaux.tools.abcs import Abc, abcf
 name = 'CFOL'
 
 class Meta:
-    title    = 'Classical First Order Logic'
-    category = 'Bivalent'
+    title       = 'Classical First Order Logic'
+    category    = 'Bivalent'
     description = 'Standard bivalent logic with full first-order quantification'
-    tags = ['bivalent', 'non-modal', 'first-order']
     category_order = 2
+    tags = (
+        'bivalent',
+        'non-modal',
+        'first-order',
+    )
 
 class Model(CPL.Model):
     """

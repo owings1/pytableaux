@@ -20,6 +20,13 @@
 # pytableaux - Gödel 3-valued logic
 from __future__ import annotations
 
+from pytableaux.lang.lex import Operator as Oper
+from pytableaux.logics import fde as FDE
+from pytableaux.logics import k3 as K3
+from pytableaux.logics import l3 as L3
+from pytableaux.proof.common import Branch, Node
+from pytableaux.proof.util import adds, group, sdnode
+
 name = 'G3'
 
 class Meta:
@@ -33,12 +40,6 @@ class Meta:
         'non-modal',
         'first-order',
     )
-
-
-from pytableaux.lang.lex import Operator as Oper
-from pytableaux.proof.common import Branch, Node
-from pytableaux.logics import fde as FDE, l3 as L3, k3 as K3
-from pytableaux.logics.fde import adds, group, sdnode
 
 class Model(L3.Model):
     """

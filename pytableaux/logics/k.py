@@ -20,43 +20,40 @@
 # pytableaux - Kripke Normal Modal Logic
 from __future__ import annotations
 
-name = 'K'
-
-class Meta(object):
-    title    = 'Kripke Normal Modal Logic'
-    category = 'Bivalent Modal'
-    description = 'Base normal modal logic with no access relation restrictions'
-    tags = ['bivalent', 'modal', 'first-order']
-    category_order = 1
-
 from pytableaux.errors import DenotationError, ModelValueError, check
-from pytableaux.lang.collect import Argument, Predicates
+from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import Atomic, Constant, Operated
 from pytableaux.lang.lex import Operator as Oper
 from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, Mval
 from pytableaux.proof import TableauxSystem as BaseSystem
-from pytableaux.proof import filters
-from pytableaux.proof.baserules import (BaseClosureRule,
-                                        ExtendedQuantifierRule,
-                                        GetNodeTargetsRule,
-                                        NarrowQuantifierRule,
-                                        OperatedSentenceRule,
-                                        PredicatedSentenceRule,
-                                        QuantifiedSentenceRule, adds, group)
+from pytableaux.proof import filters, rules
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.util import Access
+from pytableaux.proof.util import Access, adds, group, swnode
 from pytableaux.tools import closure, static
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import EMPTY_SET
 
-Identity  = Predicates.System.Identity
-Existence = Predicates.System.Existence
+name = 'K'
+
+class Meta:
+    title       = 'Kripke Normal Modal Logic'
+    category    = 'Bivalent Modal'
+    description = 'Base normal modal logic with no access relation restrictions'
+    category_order = 1
+    tags = (
+        'bivalent',
+        'modal',
+        'first-order',
+    )
+
+Identity  = Predicate.System.Identity
+Existence = Predicate.System.Existence
 
 def substitute_params(params, old_value, new_value):
     return tuple(new_value if p == old_value else p for p in params)
@@ -69,33 +66,32 @@ class Model(BaseModel):
 
     class Value(Mval):
         'The admissible values for sentences.'
+
         F = 'False', 0.0
-        T = 'True', 1.0
+
+        T = 'True' , 1.0
 
     unassigned_value = Value.F
+
+    frames: dict[int, Frame]
+    "A map from worlds to their frame"
+
+    access: set[tuple[int, int]]
+    "A set of pairs of worlds, i.e. the `access` relation"
+
+    constants: set[Constant]
+    "The fixed domain of constants, common to all worlds in the model"
+
 
     def __init__(self):
 
         super().__init__()
 
-        #: A map from worlds to their frame. Worlds are reprented as integers.
-        #:
-        #: :type: dict
-        self.frames: dict[int, Frame] = {}
-
-        #: A set of pairs of worlds, which functions as an `access` relation.
-        #:
-        #: :type: set
-        self.access: set[tuple[int, int]] = set()
-
-        #: The fixed domain of constants, common to all worlds in the model.
-        #:
-        #: :type: set
-        self.constants: set[Constant] = set()
+        self.frames = {}
+        self.access = set()
+        self.constants = set()
 
         self.predicates: set[Predicate] = {Identity, Existence}
-        # self.fde = FDEModel()
-        # self.fde.Value = self.Value
 
         # ensure there is a w0
         self.world_frame(0)
@@ -108,24 +104,6 @@ class Model(BaseModel):
         model.Value = Value
         return model.truth_function
 
-    # def truth_function(self, operator: Oper, a, b=None):
-    #     return self.fde.truth_function(operator, a, b)
-
-    # def value_of_operated(self, s: Operated, **kw):
-    #     if self.is_sentence_opaque(s):
-    #         return self.value_of_opaque(s, **kw)
-    #     if s.operator in self.modal_operators:
-    #         return self.value_of_modal(s, **kw)
-    #     return super().value_of_operated(s, **kw)
-
-    # def value_of_modal(self, s: Operated, **kw):
-    #     oper = s.operator
-    #     if oper == Oper.Possibility:
-    #         return self.value_of_possibility(s, **kw)
-    #     if oper == Oper.Necessity:
-    #         return self.value_of_necessity(s, **kw)
-    #     raise NotImplementedError
-
     def value_of_predicated(self, s: Predicated, **kw):
         """
         A sentence for predicate `P` is true at :m:`w` iff the tuple of the parameters
@@ -134,9 +112,7 @@ class Model(BaseModel):
         params = s.params
         for param in params:
             if param not in self.constants:
-                raise DenotationError(
-                    'Parameter {0} is not in the constants'.format(param)
-                )
+                raise DenotationError(f'Parameter {param} is not in the constants')
         if params in self.get_extension(s.predicate, **kw):
             return self.Value.T
         return self.Value.F
@@ -165,7 +141,7 @@ class Model(BaseModel):
                 return Fals
         return Value.T
 
-    def value_of_possibility(self, s: Operated, world=0, **kw):
+    def value_of_possibility(self, s: Operated, world: int = 0, **kw):
         """
         A possibility sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
@@ -177,7 +153,7 @@ class Model(BaseModel):
                 return Tru
         return Value.F
 
-    def value_of_necessity(self, s: Operated, world=0, **kw):
+    def value_of_necessity(self, s: Operated, /, world: int = 0, **kw):
         """
         A necessity sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         each :m:`w'` such that :m:`<w, w'>` is in the access relation.
@@ -197,43 +173,43 @@ class Model(BaseModel):
         Value = self.Value
         Tru = Value.T
         for premise in argument.premises:
-            if self.value_of(premise, world=0) is not Tru:
+            if self.value_of(premise, world = 0) is not Tru:
                 return False
-        return self.value_of(argument.conclusion, world=0) is Value.F
+        return self.value_of(argument.conclusion, world = 0) is Value.F
 
     def get_data(self) -> dict:
         return dict(
-            Worlds = {
-                'description'     : 'set of worlds',
-                'in_summary'      : True,
-                'datatype'        : 'set',
-                'member_datatype' : 'int',
-                'member_typehint' : 'world',
-                'symbol'          : 'W',
-                'values'          : sorted(self.frames),
-            },
-            Access = {
-                'description'     : 'access relation',
-                'in_summary'      : True,
-                'datatype'        : 'set',
-                'typehint'        : 'access_relation',
-                'member_datatype' : 'tuple',
-                'member_typehint' : 'access',
-                'symbol'          : 'R',
-                'values'          : sorted(self.access),
-            },
-            Frames = {
-                'description'     : 'world frames',
-                'datatype'        : 'list',
-                'typehint'        : 'frames',
-                'member_datatype' : 'map',
-                'member_typehint' : 'frame',
-                'symbol'          : 'F',
-                'values'          : [
+            Worlds = dict(
+                description     = 'set of worlds',
+                in_summary      = True,
+                datatype        = 'set',
+                member_datatype = 'int',
+                member_typehint = 'world',
+                symbol          = 'W',
+                values          = sorted(self.frames),
+            ),
+            Access = dict(
+                description     = 'access relation',
+                in_summary      = True,
+                datatype        = 'set',
+                typehint        = 'access_relation',
+                member_datatype = 'tuple',
+                member_typehint = 'access',
+                symbol          = 'R',
+                values          = sorted(self.access),
+            ),
+            Frames = dict(
+                description     = 'world frames',
+                datatype        = 'list',
+                typehint        = 'frames',
+                member_datatype = 'map',
+                member_typehint = 'frame',
+                symbol          = 'F',
+                values          = [
                     frame.get_data()
                     for frame in sorted(self.frames.values())
                 ]
-            }
+            )
         )
 
     def read_branch(self, branch: Branch, /):
@@ -242,8 +218,8 @@ class Model(BaseModel):
         self.finish()
 
     def _read_node(self, node: Node, /):
-        s: Sentence = node.get('sentence')
-        if s:
+        s = node.get('sentence')
+        if s is not None:
             w = node.get('world')
             if w == None:
                 w = 0
@@ -301,7 +277,7 @@ class Model(BaseModel):
     def _agument_extension_with_identicals(self, pred: Predicate, w):
         extension = self.get_extension(pred, world = w)
         for c in self.constants:
-            identicals = self.get_identicals(c, world = w)
+            identicals = self._get_identicals(c, world = w)
             to_add = set()
             for params in extension:
                 if c in params:
@@ -318,7 +294,7 @@ class Model(BaseModel):
             if c in todo:
                 denotum = Denotum()
                 frame.domain.add(denotum)
-                denoters = {c}.union(self.get_identicals(c, world = w))
+                denoters = {c}.union(self._get_identicals(c, world = w))
                 frame.denotation.update({c: denotum for c in denoters})
                 todo -= denoters
         assert not todo
@@ -335,7 +311,7 @@ class Model(BaseModel):
                 for params in self.get_extension(pred, world = w)
             }
 
-    def get_identicals(self, c: Constant, **kw) -> set[Constant]:
+    def _get_identicals(self, c: Constant, **kw) -> set[Constant]:
         ext = self.get_extension(Identity, **kw)
         identicals = set()
         for params in ext:
@@ -344,7 +320,7 @@ class Model(BaseModel):
         identicals.discard(c)
         return identicals
 
-    def set_literal_value(self, s: Sentence, value, **kw):
+    def set_literal_value(self, s: Sentence, value: Model.Value, /, **kw):
         cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value, **kw)
@@ -358,11 +334,11 @@ class Model(BaseModel):
         else:
             raise NotImplementedError
 
-    def set_opaque_value(self, s: Sentence, value, world = 0, **kw):
+    def set_opaque_value(self, s: Sentence, value: Model.Value, /, world: int = 0):
         value = self.Value[value]
         frame = self.world_frame(world)
         if frame.opaques.get(s, value) is not value:
-            raise ModelValueError('Inconsistent value for sentence {0}'.format(s))
+            raise ModelValueError(f'Inconsistent value for sentence {s}')
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants.
         # NB: in FDE we added the atomics to all_atomics, but we don't have that
@@ -371,14 +347,14 @@ class Model(BaseModel):
         self.predicates.update(s.predicates)
         frame.opaques[s] = value
 
-    def set_atomic_value(self, s: Atomic, value, world = 0, **kw):
+    def set_atomic_value(self, s: Atomic, value: Model.Value, /, world: int = 0):
         value = self.Value[value]
         frame = self.world_frame(world)
         if s in frame.atomics and frame.atomics[s] is not value:
-            raise ModelValueError('Inconsistent value for sentence {0}'.format(s))
+            raise ModelValueError(f'Inconsistent value for sentence {s}')
         frame.atomics[s] = value
 
-    def set_predicated_value(self, s: Predicated, value, **kw):
+    def set_predicated_value(self, s: Predicated, value: Model.Value, /, **kw):
         Value = self.Value
         value = Value[value]
         pred = s.predicate
@@ -393,21 +369,17 @@ class Model(BaseModel):
         if value is Value.F:
             if params in extension:
                 raise ModelValueError(
-                    'Cannot set value {0} for tuple {1} already in extension'.format(
-                        value, params
-                    )
+                    f'Cannot set value {value} for tuple {params} already in extension'
                 )
             anti_extension.add(params)
         if value is Value.T:
             if params in anti_extension:
                 raise ModelValueError(
-                    'Cannot set value {0} for tuple {1} already in anti-extension'.format(
-                        value, params
-                    )
+                    f'Cannot set value {value} for tuple {params} already in anti-extension'
                 )
             extension.add(params)
 
-    def get_extension(self, pred, world = 0, **kw) -> set[tuple[Constant, ...]]:
+    def get_extension(self, pred: Predicate, /, world: int = 0) -> set[tuple[Constant, ...]]:
         frame = self.world_frame(world)
         if pred not in self.predicates:
             self.predicates.add(pred)
@@ -417,7 +389,7 @@ class Model(BaseModel):
             frame.anti_extensions[pred] = set()
         return frame.extensions[pred]
 
-    def get_anti_extension(self, pred, world = 0, **kw) -> set[tuple[Constant, ...]]:
+    def get_anti_extension(self, pred: Predicate, /, world: int = 0) -> set[tuple[Constant, ...]]:
         frame = self.world_frame(world)
         if pred not in self.predicates:
             self.predicates.add(pred)
@@ -427,15 +399,15 @@ class Model(BaseModel):
             frame.anti_extensions[pred] = set()
         return frame.anti_extensions[pred]
 
-    def get_domain(self, world = 0, **kw):
+    def get_domain(self, world: int = 0):
         # TODO: wip
         return self.world_frame(world).domain
 
-    def get_denotation(self, world = 0, **kw):
+    def get_denotation(self, world: int = 0):
         # TODO: wip
         return self.world_frame(world).denotation
 
-    def get_denotum(self, c: Constant, world = 0, **kw):
+    def get_denotum(self, c: Constant, /, world = 0):
         # TODO: wip
         frame = self.world_frame(world)
         world = frame.world
@@ -443,25 +415,21 @@ class Model(BaseModel):
         try:
             return den[c]
         except KeyError:
-            raise DenotationError(
-                'Constant {0} does not have a reference at w{1}'.format(
-                    c, world
-                )
-            )
+            raise DenotationError(f'{c} does not have a reference at w{world}')
 
-    def add_access(self, w1, w2):
+    def add_access(self, w1: int, w2: int, /):
         self.access.add((w1, w2))
         self.world_frame(w1)
         self.world_frame(w2)
 
-    def has_access(self, w1, w2):
+    def has_access(self, w1: int, w2: int, /) -> bool:
         return (w1, w2) in self.access
 
-    def visibles(self, world):
+    def visibles(self, world: int, /) -> set[int]:
         return {w for w in self.frames if (world, w) in self.access}
 
-    def world_frame(self, world):
-        if world == None:
+    def world_frame(self, world: int) -> Frame:
+        if world is None:
             world = 0
         if not isinstance(world, int):
             raise TypeError(world)
@@ -469,10 +437,10 @@ class Model(BaseModel):
             self.frames[world] = Frame(world)
         return self.frames[world]
 
-    def value_of_opaque(self, s: Sentence, world = 0, **kw):
+    def value_of_opaque(self, s: Sentence, /, world: int = 0, **kw):
         return self.world_frame(world).opaques.get(s, self.unassigned_value)
 
-    def value_of_atomic(self, s: Atomic, world = 0, **kw):
+    def value_of_atomic(self, s: Atomic, /, world: int = 0, **kw):
         return self.world_frame(world).atomics.get(s, self.unassigned_value)
 
 class Denotum:
@@ -492,26 +460,23 @@ class Frame:
     A K-frame comprises the interpretation of sentences and predicates at a world.
     """
 
+    world: int
+    "The world of the frame"
+
+    atomics: dict[Atomic, Model.Value]
+    "An assignment of each atomic sentence to a truth value"
+
+    opaques: dict[Sentence, Model.Value]
+    "An assignment of each opaque (un-interpreted) sentence to a value"
+
+    extensions: dict[Predicate, set[tuple[Constant, ...]]]
+    "A map of predicates to their extension."
+
     def __init__(self, world):
 
-        #: The world of the frame.
-        #:
-        #: :type: int
         self.world = world
-
-        #: An assignment of each atomic sentence to a truth value.
-        #:
-        #: :type: dict
         self.atomics = {}
-
-        #: An assignment of each opaque (un-interpreted) sentence to a value.
         self.opaques = {}
-
-        #: A map of predicates to their extension. An extension for an
-        #: *n*-ary predicate is a set of *n*-tuples of constants.
-        #:
-        #: :type: dict
-        #: :meta hide-value:
         self.extensions = {Identity: set(), Existence: set()}
 
         # Track the anti-extensions to ensure integrity
@@ -523,75 +488,75 @@ class Frame:
         self.property_classes = {Identity: set(), Existence: set()}
 
     def get_data(self) -> dict:
-        return {
-            'description' : 'frame at world {0}'.format(str(self.world)),
-            'datatype'    : 'map',
-            'typehint'    : 'frame',
-            'value'       : {
-                'world'   : {
-                    'description' : 'world',
-                    'datatype'    : 'int',
-                    'typehint'    : 'world', 
-                    'value'       : self.world,
-                    'symbol'      : 'w',
-                },
-                'Atomics' : {
-                    'description'     : 'atomic values',
-                    'datatype'        : 'function',
-                    'typehint'        : 'truth_function',
-                    'input_datatype'  : 'sentence',
-                    'output_datatype' : 'string',
-                    'output_typehint' : 'truth_value',
-                    'symbol'          : 'v',
-                    'values'          : [
-                        {
-                            'input'  : sentence,
-                            'output' : self.atomics[sentence]
-                        }
+        return dict(
+            description = f'frame at world {self.world}',
+            datatype    = 'map',
+            typehint    = 'frame',
+            value       = dict(
+                world   = dict(
+                    description = 'world',
+                    datatype    = 'int',
+                    typehint    = 'world', 
+                    value       = self.world,
+                    symbol      = 'w',
+                ),
+                Atomics = dict(
+                    description     = 'atomic values',
+                    datatype        = 'function',
+                    typehint        = 'truth_function',
+                    input_datatype  = 'sentence',
+                    output_datatype = 'string',
+                    output_typehint = 'truth_value',
+                    symbol          = 'v',
+                    values          = [
+                        dict(
+                            input  = sentence,
+                            output = self.atomics[sentence]
+                        )
                         for sentence in sorted(self.atomics)
                     ]
-                },
-                'Opaques' : {
-                    'description'     : 'opaque values',
-                    'datatype'        : 'function',
-                    'typehint'        : 'truth_function',
-                    'input_datatype'  : 'sentence',
-                    'output_datatype' : 'string',
-                    'output_typehint' : 'truth_value',
-                    'symbol'          : 'v',
-                    'values'          : [
-                        {
-                            'input'  : sentence,
-                            'output' : self.opaques[sentence],
-                        }
+                ),
+                Opaques = dict(
+                    description     = 'opaque values',
+                    datatype        = 'function',
+                    typehint        = 'truth_function',
+                    input_datatype  = 'sentence',
+                    output_datatype = 'string',
+                    output_typehint = 'truth_value',
+                    symbol          = 'v',
+                    values          = [
+                        dict(
+                            input  = sentence,
+                            output = self.opaques[sentence],
+                        )
                         for sentence in sorted(self.opaques)
                     ]
-                },
+                ),
                 # TODO: include (instead?) domain and property class data
-                'Predicates' : {
-                    'description' : 'predicate extensions',
-                    'datatype'    : 'list',
-                    'values'      : [
-                        {
-                            'description'     : 'predicate extension for {0}'.format(pred.name),
-                            'datatype'        : 'function',
-                            'typehint'        : 'extension',
-                            'input_datatype'  : 'predicate',
-                            'output_datatype' : 'set',
-                            'output_typehint' : 'extension',
-                            'symbol'          : 'P',
-                            'values'          : [
-                                {
-                                    'input'  : pred,
-                                    'output' : self.extensions[pred],
-                                }
+                Predicates = dict(
+                    description = 'predicate extensions',
+                    datatype    = 'list',
+                    values      = [
+                        dict(
+                            description     = f'predicate extension for {pred.name}',
+                            datatype        = 'function',
+                            typehint        = 'extension',
+                            input_datatype  = 'predicate',
+                            output_datatype = 'set',
+                            output_typehint = 'extension',
+                            symbol          = 'P',
+                            values          = [
+                                dict(
+                                    input  = pred,
+                                    output = self.extensions[pred],
+                                )
                             ]
-                        }
+                        )
                         for pred in sorted(self.extensions)
                     ]
-                }
-            }
-        }
+                )
+            )
+        )
 
     def is_equivalent_to(self, other) -> bool:
         other = check.inst(other, Frame)
@@ -657,7 +622,6 @@ class Frame:
             return NotImplemented
         return self.world >= other.world
 
-@static
 class TableauxSystem(BaseSystem):
     """
     Modal tableaux are similar to classical tableaux, with the addition of a
@@ -667,8 +631,16 @@ class TableauxSystem(BaseSystem):
     to their classical counterparts.
     """
 
-    neg_branchable = {Oper.Conjunction, Oper.MaterialBiconditional, Oper.Biconditional}
-    pos_branchable = {Oper.Disjunction, Oper.MaterialConditional, Oper.Conditional}
+    neg_branchable = {
+        Oper.Conjunction,
+        Oper.MaterialBiconditional,
+        Oper.Biconditional,
+    }
+    pos_branchable = {
+        Oper.Disjunction,
+        Oper.MaterialConditional,
+        Oper.Conditional,
+    }
 
     modal = True
 
@@ -687,15 +659,15 @@ class TableauxSystem(BaseSystem):
 
     @classmethod
     def branching_complexity(cls, node: Node) -> int:
-        s: Sentence = node.get('sentence')
+        s = node.get('sentence')
         if s is None:
             return 0
         last_is_negated = False
         complexity = 0
         for oper in s.operators:
-            if oper == Oper.Assertion:
+            if oper is Oper.Assertion:
                 continue
-            if oper == Oper.Negation:
+            if oper is Oper.Negation:
                 if last_is_negated:
                     last_is_negated = False
                     continue
@@ -708,7 +680,7 @@ class TableauxSystem(BaseSystem):
                 complexity += 1
         return complexity
 
-class DefaultNodeRule(GetNodeTargetsRule):
+class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default K node rule with:
     
     - filters.ModalNode with defaults: modal = `True`, access = `None`.
@@ -721,19 +693,9 @@ class DefaultNodeRule(GetNodeTargetsRule):
     modal  : bool = True
     access : bool|None = None
 
-class OperatorNodeRule(OperatedSentenceRule, DefaultNodeRule):
+class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
     'Convenience mixin class for most common rules.'
     pass
-
-def swnode(s: Sentence, w: int|None):
-    'Make a sentence/world node dict. Excludes world if None.'
-    if w is None:
-        return dict(sentence = s)
-    return dict(sentence = s, world = w)
-
-def anode(w1: int, w2: int):
-    'Make an Access node dict.'
-    return Access(w1, w2)._asdict()
 
 @static
 class TabRules:
@@ -743,7 +705,7 @@ class TabRules:
     connectives.
     """
 
-    class ContradictionClosure(BaseClosureRule):
+    class ContradictionClosure(rules.BaseClosureRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
@@ -773,7 +735,7 @@ class TabRules:
             if s is not None:
                 return branch.find(swnode(s.negative(), node.get('world')))
 
-    class SelfIdentityClosure(BaseClosureRule, PredicatedSentenceRule):
+    class SelfIdentityClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
         """
         A branch closes when a sentence of the form :s:`~a = a` appears on the
         branch *at any world*.
@@ -782,36 +744,37 @@ class TabRules:
         negated = True
         predicate = Predicate.System.Identity
 
-        def _branch_target_hook(self, node: Node, branch: Branch):
+        def _branch_target_hook(self, node: Node, branch: Branch, /):
             res = self.node_will_close_branch(node, branch)
             if res:
                 return Target(node = node, branch = branch)
             if res is False:
                 self[FilterHelper].release(node, branch)
 
-        def node_will_close_branch(self, node: Node, branch: Branch,/) -> bool:
+        def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
             if self[FilterHelper](node, branch):
                 if len(self.sentence(node).paramset) == 1:
                     return True
                 return False
 
-        def example_nodes(self):
-            w = 0 if self.modal else None
+        @classmethod
+        def example_nodes(cls) -> tuple[dict]:
+            w = 0 if cls.modal else None
             c = Constant.first()
-            return swnode(~self.predicate((c, c)), w),
+            return swnode(~cls.predicate((c, c)), w),
 
-    class NonExistenceClosure(BaseClosureRule):
+    class NonExistenceClosure(rules.BaseClosureRule):
         """
         A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.
         """
         modal = True
 
-        def _branch_target_hook(self, node: Node, branch: Branch,/):
+        def _branch_target_hook(self, node: Node, branch: Branch, /):
             if self.node_will_close_branch(node, branch):
                 return Target(node = node, branch = branch)
 
-        def node_will_close_branch(self, node: Node, _,/):
+        def node_will_close_branch(self, node: Node, _, /):
             s = node.get('sentence')
             return (
                 isinstance(s, Operated) and
@@ -820,9 +783,10 @@ class TabRules:
                 s.lhs.predicate == Existence
             )
 
-        def example_nodes(self):
+        @classmethod
+        def example_nodes(cls) -> tuple[dict]:
             s = ~Predicated.first(Existence)
-            w = 0 if self.modal else None
+            w = 0 if cls.modal else None
             return swnode(s, w),
 
     class DoubleNegation(OperatorNodeRule):
@@ -834,7 +798,7 @@ class TabRules:
         operator = Oper.Negation
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             return adds(
                 group(swnode(self.sentence(node).lhs, node.get('world')))
             )
@@ -847,7 +811,7 @@ class TabRules:
         operator = Oper.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             return adds(
                 group(swnode(self.sentence(node).lhs, node.get('world')))
             )
@@ -862,7 +826,7 @@ class TabRules:
         operator = Oper.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             return adds(
                 group(swnode(~self.sentence(node).lhs, node.get('world')))
             )
@@ -893,7 +857,7 @@ class TabRules:
         operator = Oper.Conjunction
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             w = node.get('world')
             return adds(
@@ -910,7 +874,7 @@ class TabRules:
         operator = Oper.Disjunction
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             w = node.get('world')
             return adds(
@@ -927,7 +891,7 @@ class TabRules:
         operator = Oper.Disjunction
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             w = node.get('world')
             return adds(
@@ -962,7 +926,7 @@ class TabRules:
         operator = Oper.MaterialConditional
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             w = node.get('world')
             return adds(
@@ -980,7 +944,7 @@ class TabRules:
         operator = Oper.MaterialBiconditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             w = node.get('world')
             lhs, rhs = s
@@ -1059,7 +1023,7 @@ class TabRules:
         negated  = True
         operator = Oper.Biconditional
 
-    class Existential(NarrowQuantifierRule, DefaultNodeRule):
+    class Existential(rules.NarrowQuantifierRule, DefaultNodeRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -1068,13 +1032,13 @@ class TabRules:
         quantifier = Quantifier.Existential
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             return adds(
                 group(swnode(branch.new_constant() >> s, node.get('world')))
             )
 
-    class ExistentialNegated(QuantifiedSentenceRule, DefaultNodeRule):
+    class ExistentialNegated(rules.QuantifiedSentenceRule, DefaultNodeRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
@@ -1092,7 +1056,7 @@ class TabRules:
                 group(swnode(self.convert(v, ~si), node.get('world')))
             )
 
-    class Universal(ExtendedQuantifierRule, DefaultNodeRule):
+    class Universal(rules.ExtendedQuantifierRule, DefaultNodeRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1114,9 +1078,9 @@ class TabRules:
         """
         negated    = True
         quantifier = Quantifier.Universal
-        convert = Quantifier.Existential
+        convert    = Quantifier.Existential
 
-    class Possibility(OperatedSentenceRule, DefaultNodeRule):
+    class Possibility(rules.OperatedSentenceRule, DefaultNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1128,7 +1092,7 @@ class TabRules:
         Helpers = QuitFlag, MaxWorlds, AplSentCount,
         modal_operators = Model.modal_operators
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
 
             # Check for max worlds reached
             if self[MaxWorlds].is_exceeded(branch):
@@ -1141,11 +1105,12 @@ class TabRules:
             si = self.sentence(node).lhs
             w1 = node['world']
             w2 = branch.new_world()
-            return dict(sentence = si) | adds(
-                group(swnode(si, w2), Access(w1, w2)._asdict())
+            return adds(
+                group(swnode(si, w2), Access(w1, w2)._asdict()),
+                sentence = si
             )
 
-        def score_candidate(self, target: Target):
+        def score_candidate(self, target: Target, /) -> float:
             """
             :overrides: AdzHelper closure score
             """
@@ -1161,7 +1126,7 @@ class TabRules:
                 return 1.0
             return -1.0 * self[MaxWorlds].modals(s) * track_count
 
-        def group_score(self, target: Target):
+        def group_score(self, target: Target, /) -> float:
             if target['candidate_score'] > 0:
                 return 1.0
             s = self.sentence(target.node)
@@ -1179,13 +1144,13 @@ class TabRules:
         convert    = Oper.Necessity
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             return adds(
                 group(swnode(self.convert(~s.lhs), node['world']))
             )
 
-    class Necessity(OperatedSentenceRule, DefaultNodeRule):
+    class Necessity(rules.OperatedSentenceRule, DefaultNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -1198,9 +1163,7 @@ class TabRules:
         Helpers = QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex,
         modal_operators = Model.modal_operators
 
-        Timers = 'get_targets',
-
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
 
             # Check for max worlds reached
             if self[MaxWorlds].is_exceeded(branch):
@@ -1208,35 +1171,30 @@ class TabRules:
                 if self[QuitFlag].get(branch):
                     return
                 fnode = self[MaxWorlds].quit_flag(branch)
-                return adds(group(fnode), flag = fnode['flag'])
+                yield adds(group(fnode), flag = fnode['flag'])
+                return
 
             # Only count least-applied-to nodes
             if not self[NodeCount].isleast(node, branch):
                 return
 
-            with self.timers['get_targets']:
+            s = self.sentence(node)
+            si = s.lhs
+            w1 = node['world']
 
-                targets = []
+            for w2 in self[WorldIndex][branch].get(w1, EMPTY_SET):
+                if (node, w2) in self[NodesWorlds][branch]:
+                    continue
+                add = swnode(si, w2)
+                if not branch.has(add):
+                    anode = self[WorldIndex].nodes[branch][w1, w2]
+                    yield adds(group(add),
+                        sentence = si,
+                        world    = w2,
+                        nodes    = qsetf({node, anode}),
+                    )
 
-                s = self.sentence(node)
-                si = s.lhs
-                w1 = node['world']
-
-                for w2 in self[WorldIndex][branch].get(w1, EMPTY_SET):
-                    if (node, w2) in self[NodesWorlds][branch]:
-                        continue
-                    add = swnode(si, w2)
-                    if not branch.has(add):
-                        anode = self[WorldIndex].nodes[branch][w1, w2]
-                        targets.append(dict(
-                            sentence = si,
-                            world    = w2,
-                            nodes    = qsetf({node, anode}),
-                            ** adds(group(add))
-                        ))
-            return targets
-
-        def score_candidate(self, target: Target):
+        def score_candidate(self, target: Target, /) -> float:
 
             if target.get('flag'):
                 return 1.0
@@ -1256,15 +1214,16 @@ class TabRules:
             # Pick the least branching complexity
             return -1.0 * self.tableau.branching_complexity(target.node)
 
-        def group_score(self, target: Target):
+        def group_score(self, target: Target, /) -> float:
 
             if self.score_candidate(target) > 0:
                 return 1.0
 
             return -1.0 * self[NodeCount][target.branch].get(target.node, 0)
 
-        def example_nodes(self):
-            s = Operated.first(self.operator)
+        @classmethod
+        def example_nodes(cls) -> tuple[dict, dict]:
+            s = Operated.first(cls.operator)
             a = Access(0, 1)
             return swnode(s, a.w1), a._asdict()
 
@@ -1277,7 +1236,7 @@ class TabRules:
         operator = Oper.Necessity
         convert  = Oper.Possibility
 
-    class IdentityIndiscernability(PredicatedSentenceRule, DefaultNodeRule):
+    class IdentityIndiscernability(rules.PredicatedSentenceRule, DefaultNodeRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
@@ -1289,7 +1248,7 @@ class TabRules:
 
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch) -> list[Target]:
+        def _get_node_targets(self, node: Node, branch: Branch, /) -> list[Target]:
             pnodes = self[PredNodes][branch]
             pa, pb = self.sentence(node)
             if pa == pb:
@@ -1327,10 +1286,11 @@ class TabRules:
                 ))
             return targets
 
-        def example_nodes(self):
-            w = 0 if self.modal else None
+        @classmethod
+        def example_nodes(cls) -> tuple[dict, dict]:
+            w = 0 if cls.modal else None
             s1 = Predicated.first()
-            s2 = self.predicate((s1[0], s1[0].next()))
+            s2 = cls.predicate((s1[0], s1[0].next()))
             return swnode(s1, w), swnode(s2, w)
 
     closure_rules = (
@@ -1376,5 +1336,3 @@ class TabRules:
             Universal,
         ),
     )
-
-del(static)

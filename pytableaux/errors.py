@@ -146,6 +146,20 @@ class Emsg(_enum.Enum):
 
     Timeout = TimeoutError, "Timeout of {}ms exceeded", (int,)
 
+
+    UnknownForSentence = (ModelValueError,
+        'Non-existent value {0} for sentence {1}', (str, str)
+    )
+    ConflictForSentence = (ModelValueError,
+        'Inconsistent value {0} for sentence {1}', (str, str)
+    )
+    ConflictForExtension = (ModelValueError,
+        'Cannot set value {0} for tuple {1} already in extension', (str, str)
+    )
+    ConflictForAntiExtension = (ModelValueError,
+        'Cannot set value {0} for tuple {1} already in anti-extension', (str, str)
+    )
+
     if TYPE_CHECKING:
         @overload
         def razr(*args): ...

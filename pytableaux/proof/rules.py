@@ -15,13 +15,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.proof.baserules
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytableaux.proof.rules
+^^^^^^^^^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generator, Iterable
+from typing import TYPE_CHECKING, Generator, Iterable, final
 
 from pytableaux.lang.lex import (Constant, Operated, Operator, Predicate,
                                  Predicated, Quantified, Quantifier, Sentence)
@@ -30,31 +30,25 @@ from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
                                       MaxConsts, NodeConsts, NodeCount,
                                       PredNodes, QuitFlag)
-from pytableaux.proof.tableaux import ClosingRule, Rule
+from pytableaux.proof.tableaux import Rule
+from pytableaux.proof.util import adds, group
 from pytableaux.tools import abstract
 from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import T
 
 if TYPE_CHECKING:
     from typing import overload
 
 __all__ = (
-    'Rule',
-
     'BaseClosureRule',
-
     'BaseNodeRule',
+    'ClosingRule',
+    'ExtendedQuantifierRule',
     'GetNodeTargetsRule',
-
+    'NarrowQuantifierRule',
+    'OperatedSentenceRule',
     'PredicatedSentenceRule',
     'QuantifiedSentenceRule',
-    'OperatedSentenceRule',
-
-    'NarrowQuantifierRule',
-    'ExtendedQuantifierRule',
-
-    'adds',
-    'group',
+    'Rule',
 )
 
 FIRST_CONST_SET = frozenset({Constant.first()})
@@ -74,6 +68,21 @@ class NoopRule(Rule):
     def example_nodes():
         "Returns empty set."
         return EMPTY_SET
+
+class ClosingRule(Rule):
+    'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
+    
+    _defaults = dict(is_rank_optim = False)
+
+    @final
+    def _apply(self, target: Target, /):
+        target.branch.close()
+
+    @abstract
+    def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
+        """For calculating a target's closure score.
+        """
+        raise NotImplementedError
 
 class BaseClosureRule(ClosingRule):
 
@@ -241,25 +250,3 @@ class GetNodeTargetsRule(BaseNodeRule):
     def _get_node_targets(self, node: Node, branch: Branch, /):
         raise NotImplementedError
 
-def group(*items: T) -> tuple[T, ...]:
-    """Tuple builder.
-    
-    Args:
-        *items: members.
-
-    Returns:
-        The tuple of arguments.
-    """
-    return items
-
-def adds(*groups: tuple[dict, ...], **kw) -> dict[str, tuple[dict, ...]|Any]:
-    """Target dict builder for `AdzHelper`.
-    
-    Args:
-        *groups: node groups.
-        **kw: dict keywords.
-
-    Returns:
-        A dict built from ``dict(adds = groups, **kw)``.
-    """
-    return dict(adds = groups, **kw)

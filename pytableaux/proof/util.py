@@ -28,17 +28,60 @@ from pytableaux.tools.abcs import Ebc, FlagEnum, eauto
 from pytableaux.tools.mappings import ItemMapEnum
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.timing import Counter, StopWatch
+from pytableaux.tools.typing import T
 
 if TYPE_CHECKING:
+    from pytableaux.lang.lex import Sentence
     from pytableaux.proof.common import Node, Target
     from pytableaux.proof.tableaux import Rule
 
 __all__ = (
+    'adds',
+    'anode',
     'BranchEvent',
+    'group',
     'RuleEvent',
+    'sdnode',
+    'swnode',
     'TabEvent',
 )
 
+def group(*items: T) -> tuple[T, ...]:
+    """Tuple builder.
+    
+    Args:
+        *items: members.
+
+    Returns:
+        The tuple of arguments.
+    """
+    return items
+
+def adds(*groups: tuple[dict, ...], **kw) -> dict[str, tuple[dict, ...]|Any]:
+    """Target dict builder for `AdzHelper`.
+    
+    Args:
+        *groups: node groups.
+        **kw: dict keywords.
+
+    Returns:
+        A dict built from ``dict(adds = groups, **kw)``.
+    """
+    return dict(adds = groups, **kw)
+
+def sdnode(s: Sentence, d: bool):
+    'Make a sentence/designated node dict.'
+    return dict(sentence = s, designated = d)
+
+def swnode(s: Sentence, w: int|None):
+    'Make a sentence/world node dict. Excludes world if None.'
+    if w is None:
+        return dict(sentence = s)
+    return dict(sentence = s, world = w)
+
+def anode(w1: int, w2: int):
+    'Make an Access node dict.'
+    return Access(w1, w2)._asdict()
 
 def demodalize_rules(Rules: Iterable[type[Rule]]) -> None:
     """Remove ``Modal`` filter from ``NodeFilters``, and clear `modal` attribute.
