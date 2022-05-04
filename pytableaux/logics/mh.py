@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -62,10 +63,8 @@ class Model(K3.Model):
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    MH's Tableaux System inherits directly from the `FDE system`_, employing
+    MH's Tableaux System inherits directly from the {@FDE} system, employing
     designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
     # operator => negated => designated
     branchables = {
@@ -107,11 +106,7 @@ class TableauxSystem(FDE.TableauxSystem):
 
 class TabRules:
     """
-    The closure rules for MH are the `FDE closure rule`_, and the `K3 closure rule`_.
-    ...
-    
-    .. _FDE closure rule: fde.html#logics.fde.TabRules.DesignationClosure
-    .. _K3 closure rule: k3.html#logics.k3.TabRules.GlutClosure
+    The closure rules for MH are the FDE closure rule and the K3 closure rule.
     """
 
     class GlutClosure(K3.TabRules.GlutClosure):

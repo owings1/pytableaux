@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -28,7 +29,7 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'K3WQ'
 
-class Meta(object):
+class Meta:
     title       = 'Weak Kleene 3-valued alternate-quantifier logic'
     category    = 'Many-valued'
     description = 'Three-valued logic with values T, F, and N, with alternate quantification'
@@ -114,7 +115,7 @@ class TableauxSystem(FDE.TableauxSystem):
     designation markers, and building the trunk in the same way.
     """
 
-class TabRules(object):
+class TabRules:
     """
     The Tableaux System for K3WQ contains the `FDE closure rule`_, and the
     `K3 closure rule`_. All of the operator rules are the same as :ref:`K3W`. The

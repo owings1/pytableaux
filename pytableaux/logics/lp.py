@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -21,9 +22,11 @@ from __future__ import annotations as annotations
 
 from pytableaux.logics import fde as FDE
 from pytableaux.models import Mval
-from pytableaux.proof.rules import BaseClosureRule
 from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.rules import BaseClosureRule
+from pytableaux.proof.util import sdnode
 from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.sets import setf
 
 name = 'LP'
 
@@ -41,13 +44,19 @@ class Meta:
 
 class Model(FDE.Model):
     """
-    An L{LP} model is like an {@FDE model} without the V{N} value,
-    which yields an exhaustion restraint an predicate's extension/anti-extension.
+    An L{LP} model is like an {@FDE model} without the V{N} value.
     """
+
     class Value(Mval):
+
         F = 'False', 0.0
+
         B = 'Both', 0.5
+
         T = 'True', 1.0
+
+    #: The set of designated values.
+    designated_values = setf({Value.B, Value.T})
 
     unassigned_value = Value.F
 
@@ -71,7 +80,7 @@ class TabRules:
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):
             nnode = self._find_closing_node(node, branch)
-            if nnode:
+            if nnode is not None:
                 return Target(
                     nodes = qsetf((node, nnode)),
                     branch = branch,
@@ -84,15 +93,11 @@ class TabRules:
             if node.get('designated') is False:
                 s = self.sentence(node)
                 if s is not None:
-                    return branch.find(dict(
-                        sentence = s.negative(),
-                        designated = False,
-                    ))
+                    return branch.find(sdnode(s.negative(), False))
 
         @staticmethod
         def example_nodes():
             from pytableaux.lang.lex import Atomic
-            from pytableaux.proof.util import sdnode
             s = Atomic.first()
             return sdnode(s, False), sdnode(~s, False)
 

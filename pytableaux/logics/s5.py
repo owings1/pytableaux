@@ -67,9 +67,6 @@ class Model(S4.Model):
             self.access.update(to_add)
 
 class TableauxSystem(K.TableauxSystem):
-    """
-    L{S5}'s Tableaux System inherits directly inherits directly from K.
-    """
     pass
 
 class TabRules:

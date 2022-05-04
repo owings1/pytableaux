@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -87,10 +88,6 @@ class Model(K3.Model):
         return seq[i - 1]
 
 class TableauxSystem(FDE.TableauxSystem):
-    """
-    L{P3}'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
-    employing designation markers, and building the trunk in the same way.
-    """
 
     branchables = {
         Oper.Negation: {

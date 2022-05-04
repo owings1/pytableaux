@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -21,8 +22,9 @@ from __future__ import annotations
 
 from pytableaux.logics import fde as FDE
 from pytableaux.models import Mval
-from pytableaux.proof.rules import BaseClosureRule
 from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.rules import BaseClosureRule
+from pytableaux.proof.util import sdnode
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import setf
 
@@ -45,14 +47,15 @@ class Model(FDE.Model):
 
     class Value(Mval):
         'The admissible values for sentences.'
+
         F = 'False',   0.0
+
         N = 'Neither', 0.5
+
         T = 'True',    1.0
 
-    #: The (singleton) set of designated values in model.
-    #:
-    #: :type: set
     designated_values = setf({Value.T})
+    "The (singleton) set of designated values."
 
     unassigned_value = Value.N
 
@@ -89,15 +92,11 @@ class TabRules:
             if node.get('designated'):
                 s = self.sentence(node)
                 if s is not None:
-                    return branch.find(dict(
-                        sentence = s.negative(),
-                        designated = True,
-                    ))
+                    return branch.find(sdnode(s.negative(), True))
 
         @staticmethod
         def example_nodes():
             from pytableaux.lang.lex import Atomic
-            from pytableaux.proof.util import sdnode
             a = Atomic.first()
             return sdnode(a, True), sdnode(~a, True)
 

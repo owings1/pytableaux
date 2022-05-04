@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -63,10 +64,8 @@ class Model(LP.Model):
 
 class TableauxSystem(FDE.TableauxSystem):
     """
-    NH's Tableaux System inherits directly from the `FDE system`_, employing
+    NH's Tableaux System inherits directly from the {@FDE} system, employing
     designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
     # operator => negated => designated
     branchables = {

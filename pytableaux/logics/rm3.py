@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -44,10 +45,8 @@ class Meta:
 
 class Model(LP.Model):
     """
-    An RM3 model is just like an `LP model`_ with different tables for the conditional
+    An RM3 model is just like an {@LP model} with different tables for the conditional
     and bi-conditional operators.
-
-    .. _LP model: lp.html#logics.lp.Model
     """
     def truth_function(self, oper: Oper, a, b=None, /):
         Value = self.Value
@@ -56,12 +55,7 @@ class Model(LP.Model):
         return super().truth_function(oper, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):
-    """
-    RM3's Tableaux System inherits directly from the `FDE system`_, employing
-    designation markers, and building the trunk in the same way.
 
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
-    """
     branchables = FDE.TableauxSystem.branchables | {
         Oper.Conditional: {
             False : {True: 2, False: 1},

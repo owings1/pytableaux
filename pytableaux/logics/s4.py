@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -60,9 +61,6 @@ class Model(T.Model):
             self.access.update(to_add)
 
 class TableauxSystem(K.TableauxSystem):
-    """
-    S4's Tableaux System inherits directly inherits directly from K.
-    """
     pass
 
 class TabRules:

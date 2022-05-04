@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -50,9 +51,6 @@ class Model(K.Model):
         super().finish()
 
 class TableauxSystem(K.TableauxSystem):
-    """
-    T's Tableaux System inherits directly inherits directly from K.
-    """
     pass
 
 class TabRules:
