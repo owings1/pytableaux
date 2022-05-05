@@ -32,12 +32,18 @@ del(_package_info)
 
 # ----- errors, tools
 
+import pytableaux.tools.typing
 from pytableaux import errors, tools
 
 import pytableaux.tools.abcs
+import pytableaux.tools.hooks
 
 @tools.closure
 def _():
+
+    # Back patch abcs.hookutil
+    from pytableaux.tools import abcs, hooks
+    abcs.hookutil = hooks.hookutil
 
     # Rebase errors.Emsg
 
@@ -49,17 +55,29 @@ def _():
 
 # ----- env
 
-_ENV = {}
+import dataclasses
+
+@dataclasses.dataclass
+class _Settings:
+    DEBUG: bool
+    ITEM_CACHE_SIZE: int
+
+# _ENV = {}
+_ENV: _Settings
 
 @tools.closure
 def _():
     from os import environ as env
-    _ENV.update(
-        DEBUG = tools.sbool(env.get('DEBUG', ''))
+    global _ENV
+    _ENV = _Settings(
+        DEBUG = tools.sbool(env.get('DEBUG', '')),
+        ITEM_CACHE_SIZE = int(env.get('ITEM_CACHE_SIZE', 1000) or 0)
     )
 
-import pytableaux.tools.typing
-import pytableaux.tools.hooks
+del(dataclasses,_Settings)
+
+# ---- tools
+
 import pytableaux.tools.decorators
 import pytableaux.tools.sets
 from pytableaux.tools.sets import EMPTY_SET

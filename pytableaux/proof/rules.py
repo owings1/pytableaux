@@ -76,6 +76,7 @@ class ClosingRule(Rule):
 
     @final
     def _apply(self, target: Target, /):
+        "Closes the branch."
         target.branch.close()
 
     @abstract
@@ -228,7 +229,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
     def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /):
         raise NotImplementedError
 
-    def score_candidate(self, target: Target):
+    def score_candidate(self, target: Target) -> float:
         if target.get('flag'):
             return 1.0
         if self[AdzHelper].closure_score(target) == 1:

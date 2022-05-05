@@ -21,38 +21,13 @@ pytableaux.lang.lex
 """
 from __future__ import annotations
 
-__docformat__ = 'google'
-__all__ = (
-    # 'Argument',
-    # 'LexWriter',
-    'Notation',
-    # 'Predicates',
-
-    'Atomic',
-    'Constant',
-    'Lexical',
-    'LexicalEnum',
-    'LexicalItem',
-    'LexType',
-    'Operated',
-    'Operator',
-    'Parameter',
-    'Predicate',
-    'Predicated',
-    'Quantified',
-    'Quantifier',
-    'Quantifier',
-    'Sentence',
-    'Variable',
-)
-
 import operator as opr
 from itertools import chain, repeat
 from types import DynamicClassAttribute as dynca
 from typing import (TYPE_CHECKING, Annotated, Any, ClassVar, Iterable,
                     Iterator, Literal, Sequence, SupportsIndex, final)
 
-from pytableaux import tools
+from pytableaux import __docformat__, tools, _ENV
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import *
 from pytableaux.tools.abcs import abcm
@@ -66,7 +41,26 @@ from pytableaux.tools.typing import IcmpFunc, IndexType, T
 if TYPE_CHECKING:
     from typing import overload
 
-ITEM_CACHE_SIZE = 10000
+__all__ = (
+    'Atomic',
+    'Constant',
+    'Lexical',
+    'LexicalEnum',
+    'LexicalItem',
+    'LexType',
+    'Notation',
+    'Operated',
+    'Operator',
+    'Parameter',
+    'Predicate',
+    'Predicated',
+    'Quantified',
+    'Quantifier',
+    'Quantifier',
+    'Sentence',
+    'Variable',
+)
+
 
 ##############################################################
 
@@ -74,7 +68,7 @@ class LexicalItemMeta(LangCommonMeta):
     """Common metaclass for non-Enum ``Lexical`` classes.
     """
 
-    Cache: ClassVar[DequeCache] = DequeCache(maxlen = ITEM_CACHE_SIZE)
+    Cache: ClassVar[DequeCache] = DequeCache(maxlen = _ENV.ITEM_CACHE_SIZE)
 
     def __call__(cls, *spec):
         if len(spec) == 1:
@@ -97,35 +91,39 @@ class LexicalItemMeta(LangCommonMeta):
         try:
             inst = super().__call__(*spec)
         except TypeError:
-            if cls in LexType or len(spec) != 1:
+            if (
+                # If a concrete LexType raised the error, propagate.
+                cls in LexType
+                or
+                # Creating from spec supports only length 1.
+                len(spec) != 1
+            ):
                 raise
             # Try arg as ident tuple (clsname, spec)
             clsname, spec = spec[0]
-            lextypecls = LexType(clsname).cls
-            # Don't, for example, create a Predicate
-            # from a Sentence class.
-            if not issubclass(lextypecls, cls) and (
-                # With the exception for Enum classes,
-                # if we are invoking the LexicalItem
-                # class directly.
+            Class = LexType(clsname).cls
+            # Don't, for example, create a Predicate from a Sentence class.
+            if not issubclass(Class, cls) and (
+                # With the exception for Enum classes, if we are invoking the
+                # LexicalItem class directly.
                 cls is not LexicalItem or
-                not issubclass(lextypecls, LexicalEnum)
+                not issubclass(Class, LexicalEnum)
             ):
-                raise TypeError(lextypecls, cls)
+                raise TypeError(Class, cls)
             # Try cache
             try:
                 return cache[clsname, spec]
             except KeyError:
                 pass
             # Construct
-            inst = lextypecls(*spec)
+            inst = Class(*spec)
         # Try cache, store in cache.
         try:
-            inst = cache[inst.ident]
+            return cache[inst.ident]
         except KeyError:
             cache[inst.ident] = inst
-        cache[clsname, spec] = inst
-        return inst
+            # cache[clsname, spec] = inst
+            return inst
 
 @abcm.clsafter
 class Lexical:

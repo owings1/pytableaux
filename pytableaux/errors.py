@@ -26,10 +26,13 @@ from __future__ import annotations
 # __all__ defined at the bottom.
 
 import enum as _enum
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING
 
 if  TYPE_CHECKING:
     from typing import overload
+    from typing import TypeVar
+    _ExT = TypeVar('_ExT', bound = Exception)
+    _T = TypeVar('_T')
 # Base Errors
 
 class IllegalStateError(Exception):
@@ -146,7 +149,6 @@ class Emsg(_enum.Enum):
 
     Timeout = TimeoutError, "Timeout of {}ms exceeded", (int,)
 
-
     UnknownForSentence = (ModelValueError,
         'Non-existent value {0} for sentence {1}', (str, str)
     )
@@ -163,6 +165,9 @@ class Emsg(_enum.Enum):
     if TYPE_CHECKING:
         @overload
         def razr(*args): ...
+
+        cls: type[Exception]
+
 class check:
 
     @staticmethod
@@ -186,7 +191,6 @@ class check:
 # Some external assembly required.
 
 class EmsgBase:
-
 
     def __init__(self, cls: type[_ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):
@@ -224,8 +228,6 @@ __all__ = 'check', 'Emsg', *(
 )
 
 
-from typing import TypeVar
-_ExT = TypeVar('_ExT', bound = Exception)
-_T = TypeVar('_T')
+
 
 # del(_len, _thru, TypeVar)

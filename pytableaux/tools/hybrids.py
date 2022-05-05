@@ -1,22 +1,52 @@
-from __future__ import annotations
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.tools.hybrids
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-__all__ = (
-    'SequenceSet', 'MutableSequenceSet', 'qsetf', 'qset', 'QsetView', 'EMPTY_QSET',
-)
+"""
+from __future__ import annotations
 
 from collections.abc import Collection
 from itertools import filterfalse
-from typing import Iterable, Iterator, SupportsIndex, TypeVar, final, overload
+from typing import TYPE_CHECKING, Iterable, Iterator, SupportsIndex
 
-from pytableaux.errors import (DuplicateValueError, Emsg, MissingValueError,
+from pytableaux.errors import (DuplicateValueError, Emsg,
                                check)
 from pytableaux.tools import abstract
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.sequences import (EMPTY_SEQ, MutableSequenceApi,
                                         SequenceApi, seqf, seqm, slicerange)
 from pytableaux.tools.sets import EMPTY_SET, MutableSetApi, SetApi, setf, setm
-from pytableaux.tools.typing import VT
+from pytableaux.tools.typing import VT, IndexType
 
+if TYPE_CHECKING:
+    from typing import overload, Callable, Any
+
+    from pytableaux.tools.typing import SeqSetT
+
+__all__ = (
+    'EMPTY_QSET',
+    'MutableSequenceSet',
+    'qset',
+    'qsetf',
+    'QsetView',
+    'SequenceSet',
+)
 
 class SequenceSet(SequenceApi[VT], SetApi[VT]):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
@@ -27,16 +57,16 @@ class SequenceSet(SequenceApi[VT], SetApi[VT]):
         'Returns 1 if in the set, else 0.'
         return int(value in self)
 
-    def index(self, value, start = 0, stop = None, /) -> int:
+    def index(self, value, start: int = 0, stop: int = None, /) -> int:
         'Get the index of the value in the sequence.'
         if value not in self:
-            raise MissingValueError(value)
+            raise Emsg.MissingValue(value)
         return super().index(value, start, stop)
 
     def __mul__(self, other):
         if isinstance(other, SupportsIndex):
             if int(other) > 1 and len(self) > 0:
-                raise DuplicateValueError(self[0])
+                raise Emsg.DuplicateValue(self[0])
         return super().__mul__(other)
 
     __rmul__ = __mul__
@@ -45,6 +75,9 @@ class SequenceSet(SequenceApi[VT], SetApi[VT]):
     def __contains__(self, value):
         'Set-based `contains` implementation.'
         return False
+
+    def __repr__(self):
+        return f'{type(self).__name__}(''{'f'{repr(list(self))[1:-1]}''})'
 
 class qsetf(SequenceSet[VT]):
     'Immutable sequence set implementation setf and seqf bases.'
@@ -77,11 +110,12 @@ class qsetf(SequenceSet[VT]):
     def __contains__(self, value):
         return value in self._set_
 
-    @overload
-    def __getitem__(self: SeqSetT, index: slice) -> SeqSetT: ...
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self: SeqSetT, index: slice) -> SeqSetT: ...
 
-    @overload
-    def __getitem__(self, index: SupportsIndex) -> VT: ...
+        @overload
+        def __getitem__(self, index: SupportsIndex) -> VT: ...
 
     def __getitem__(self, index):
         if isinstance(index, SupportsIndex):
@@ -96,8 +130,9 @@ class qsetf(SequenceSet[VT]):
     def __reversed__(self) -> Iterator[VT]:
         return reversed(self._seq_)
 
-    def __repr__(self):
-        return '%s({%s})' % (type(self).__name__, list(self._seq_).__repr__()[1:-1])
+    # def __repr__(self):
+    #     return f'{type(self).__name__}(''{'f'{repr(list(self))[1:-1]}''})'
+        # return '%s({%s})' % (type(self).__name__, list(self._seq_).__repr__()[1:-1])
 
 EMPTY_QSET = qsetf()
 
@@ -124,11 +159,11 @@ class QsetView(SequenceSet[VT]):
         'Immutable copy, returns self.'
         return self
 
-    def __repr__(self):
-        prefix = type(self).__name__
-        if len(self):
-            return f'{prefix}{list(self)}'
-        return f'{prefix}''{}'
+    # def __repr__(self):
+    #     prefix = type(self).__name__
+    #     if len(self):
+    #         return f'{prefix}{list(self)}'
+    #     return f'{prefix}''{}'
 
     @classmethod
     def _from_iterable(cls, it):
@@ -169,7 +204,7 @@ class MutableSequenceSet(SequenceSet[VT], MutableSequenceApi[VT], MutableSetApi[
 
 
 class qset(MutableSequenceSet[VT]):
-    'MutableSequenceSet implementation backed by built-in set and list.'
+    'Mutable sequence set implementation backed by built-in set and list.'
 
     _set_type_: type[setm] = setm
     _seq_type_: type[seqm] = seqm
@@ -186,7 +221,8 @@ class qset(MutableSequenceSet[VT]):
         return inst
 
     def __init__(self, values: Iterable[VT] = None, /,):
-        if values is not None: self |= values
+        if values is not None:
+            self |= values
 
     def copy(self):
         inst = object.__new__(type(self))
@@ -221,13 +257,15 @@ class qset(MutableSequenceSet[VT]):
         'Insert a value before an index. Raises ``DuplicateValueError``.'
 
         # hook.cast
-        if cast is not None: value = cast(value)
+        if cast is not None:
+            value = cast(value)
 
         if value in self:
             raise DuplicateValueError(value)
 
         # hook.check
-        check is not None and check(self, (value,), EMPTY_SET)
+        if check is not None:
+            check(self, (value,), EMPTY_SET)
 
         # --- begin changes -----
         self._seq_.insert(index, value)
@@ -235,7 +273,8 @@ class qset(MutableSequenceSet[VT]):
         # --- end changes -----
 
         # hook.done
-        done is not None and done(self, (value,), EMPTY_SET)
+        if done is not None:
+            done(self, (value,), EMPTY_SET)
 
     @abcm.hookable('check', 'done')
     def __delitem__(self, key: SupportsIndex|slice, /, *,
@@ -256,7 +295,8 @@ class qset(MutableSequenceSet[VT]):
         leaving = self[key]
 
         # hook.check
-        check is not None and check(self, EMPTY_SET, (leaving,))
+        if check is not None:
+            check(self, EMPTY_SET, (leaving,))
 
         # --- begin changes -----
         del self._seq_[key]
@@ -264,11 +304,18 @@ class qset(MutableSequenceSet[VT]):
         # --- end changes -----
 
         # hook.done
-        done is not None and done(self, EMPTY_SET, (leaving,))
+        if done is not None:
+            done(self, EMPTY_SET, (leaving,))
+
+    if TYPE_CHECKING:
+        @overload
+        def __setitem__(self, key: SupportsIndex, value: VT):...
+        @overload
+        def __setitem__(self, key: slice, value: Collection[VT]):...
 
     @abcm.hookable('cast')
-    def __setitem__(self, key: SupportsIndex|slice, value: VT|Collection[VT], /, *,
-        cast = None
+    def __setitem__(self, key: IndexType, value, /, *,
+        cast: Callable[[Any], VT] = None
     ):
         'Set value by index/slice. Raises ``DuplicateValueError``.'
 
@@ -292,7 +339,7 @@ class qset(MutableSequenceSet[VT]):
 
     @abcm.hookable('check', 'done')
     def __setitem_index__(self, index: SupportsIndex, arriving, /, *,
-        check = None, done = None,
+        check: Callable = None, done: Callable = None,
     ):
         'Index setitem Implementation'
 
@@ -301,10 +348,11 @@ class qset(MutableSequenceSet[VT]):
     
         #  Check for duplicates
         if arriving in self and arriving != leaving:
-            raise DuplicateValueError(arriving)
+            raise Emsg.DuplicateValue(arriving)
 
         # hook.check
-        check is not None and check(self, (arriving,), (leaving,))
+        if check is not None:
+            check(self, (arriving,), (leaving,))
 
         # --- begin changes -----
 
@@ -324,11 +372,12 @@ class qset(MutableSequenceSet[VT]):
         # --- end changes -----
 
         # hook.done
-        done is not None and done(self, (arriving,), (leaving,))
+        if done is not None:
+            done(self, (arriving,), (leaving,))
 
     @abcm.hookable('check', 'done')
     def __setitem_slice__(self, slice_: slice, arriving: Collection[VT], /, *,
-        check = None, done = None,
+        check: Callable = None, done: Callable = None,
     ):
         'Slice setitem Implementation'
 
@@ -343,10 +392,11 @@ class qset(MutableSequenceSet[VT]):
         # Any value that we already contain, and is not leaving with the others
         # is a duplicate.
         for v in filterfalse(leaving.__contains__, filter(self.__contains__, arriving)):
-            raise DuplicateValueError(v)
+            raise Emsg.DuplicateValue(v)
 
         # hook.check
-        check is not None and check(self, arriving, leaving)
+        if check is not None:
+            check(self, arriving, leaving)
 
         # --- begin changes -----
         # Remove from set.
@@ -364,12 +414,11 @@ class qset(MutableSequenceSet[VT]):
         # --- end changes -----
 
         # hook.done
-        done is not None and done(self, arriving, leaving)
+        if done is not None:
+            done(self, arriving, leaving)
 
-
-SeqSetT = TypeVar('SeqSetT', bound = SequenceSet)
 
 del(
-    abstract, overload, final,
+    abstract,
     abcm,
 )

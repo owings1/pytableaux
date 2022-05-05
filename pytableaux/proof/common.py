@@ -42,7 +42,8 @@ from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.sets import EMPTY_SET, SetView, setf
 
 if TYPE_CHECKING:
-    from typing import overload, Literal
+    from typing import Literal, overload
+
     from pytableaux.models import BaseModel
     from pytableaux.proof.tableaux import Rule
 
@@ -569,22 +570,20 @@ class Target(dmapattr[str, Any]):
     """
 
     branch : Branch
-    rule   : Rule
+    constant : Constant
+    designated : bool
+    flag   : str
     node   : Node
     nodes  : Set[Node]
+    rule   : Rule
+    sentence : Sentence
     world  : int
     world1 : int
     world2 : int
-    flag   : str
-    sentence : Sentence
-    constant : Constant
-    designated : bool
 
     __slots__ = setf({
-        'branch', 'rule', 'node', 'nodes',
-        'world', 'world1', 'world2',
-        'sentence', 'designated', 'constant',
-        'flag',
+        'branch', 'constant', 'designated', 'flag', 'node', 'nodes', 'rule',
+        'sentence', 'world', 'world1', 'world2',
     })
 
     def __init__(self, it: Iterable = None, /, **kw):
@@ -596,17 +595,17 @@ class Target(dmapattr[str, Any]):
             raise Emsg.MissingValue('branch')
 
     @property
-    def type(self):
+    def type(self) -> str:
         if 'nodes'  in self: return 'Nodes'
         if 'node'   in self: return 'Node'
         if 'branch' in self: return 'Branch'
         raise ValueError
 
     # For dmapattr
-    _keyattr_ok = __slots__.__contains__
+    _keyattr_ok = staticmethod(__slots__.__contains__)
 
-    def __setitem__(self, key: str, value, /, *, isattrkey = _keyattr_ok):
-        if isattrkey(key):
+    def __setitem__(self, key: str, value: Any):
+        if self._keyattr_ok(key):
             if self.get(key, value) != value:
                 raise Emsg.ValueConflictFor(key, value, self[key])
         elif not isattrstr(key):
@@ -627,6 +626,7 @@ class Target(dmapattr[str, Any]):
 
     def _names(self) -> Iterator[str]:
         get = self.get
-        return (name for name in self.__slots__ if get(name) is not None)
+        return filter(lambda n: get(n) is not None, self.__slots__)
+        # return (name for name in self.__slots__ if get(name) is not None)
 
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 

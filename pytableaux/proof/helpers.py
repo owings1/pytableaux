@@ -37,21 +37,14 @@ from pytableaux.tools.abcs import abcm, Copyable
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import KT, VT, T, TypeInstDict
+from pytableaux.tools.typing import KT, VT, T, FiltersDict, TargetsFn, NodeTargetsFn, NodeTargetsGen, NodePredFunc
 
 if TYPE_CHECKING:
     from typing import overload
 
     from pytableaux.proof.tableaux import Tableau
-
-    TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
-    NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]
-    NodeTargetsGen = Callable[[Rule, Iterable[Node], Branch], Iterator[Target]]
-    NodePredFunc = Callable[[Node], bool]
-    FiltersDict = TypeInstDict[filters.NodeCompare]
 else:
-    TargetsFn = NodeTargetsFn = NodeTargetsGen = NodePredFunc = Callable
-    FiltersDict = dict
+    pass
 
 __all__ = (
     'AdzHelper',
@@ -607,21 +600,20 @@ class FilterHelper(FilterNodeCache):
             
             Returns a flat tuple of targets.
             """
-            fiter_targets = make_targets_iter(node_targets_fn)
-            @functools.wraps(fiter_targets)
-            def get_targets_filtered(rule: Rule, branch: Branch):
+            node_targets_gen = make_targets_iter(node_targets_fn)
+            @functools.wraps(node_targets_gen)
+            def get_targets_filtered(rule: Rule, branch: Branch, /):
                 helper = rule[cls]
                 helper.gc()
-                nodes = helper[branch]
-                return tuple(fiter_targets(rule, nodes, branch))
+                return tuple(node_targets_gen(rule, helper[branch], branch))
             return get_targets_filtered
 
-        def create(it, r: Rule, b: Branch, n: Node) -> Target:
+        def create(it, r: Rule, b: Branch, n: Node, /) -> Target:
             return Target(it, rule = r, branch = b, node = n)
 
         def make_targets_iter(node_targets_fn: NodeTargetsFn) -> NodeTargetsGen:
             @functools.wraps(node_targets_fn)
-            def targets_gen(rule: Rule, nodes: Iterable[Node], branch: Branch):
+            def targets_gen(rule: Rule, nodes: Iterable[Node], branch: Branch, /):
                 for node in nodes:
                     results = node_targets_fn(rule, node, branch)
                     if not results:

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2022 Doug Owings.
 # 
@@ -24,20 +25,22 @@ import enum as _enum
 from collections.abc import Set
 from types import FunctionType, MethodType, ModuleType
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
-                    Generic, Mapping, ParamSpec, SupportsIndex, TypeVar)
+                    Mapping, ParamSpec, SupportsIndex, TypeVar)
 
 #==========================+
 #  No local dependencies!  |
 #==========================+
 
-
 if TYPE_CHECKING:
-    from typing import overload
+    from typing import Generic, overload, Sequence, Iterable, Iterator
 
     from pytableaux.models import BaseModel
-    from pytableaux.proof import TableauxSystem
+    from pytableaux.proof import TableauxSystem, filters
+    from pytableaux.proof.common import Branch, Node, Target
     from pytableaux.proof.tableaux import Rule
     from pytableaux.tools.abcs import Ebc
+    from pytableaux.tools.hooks import HookConn
+    from pytableaux.tools.hybrids import SequenceSet
     from pytableaux.tools.linked import Link, LinkSequence
     from pytableaux.tools.mappings import MappingApi
     from pytableaux.tools.sequences import MutableSequenceApi, SequenceApi
@@ -80,20 +83,64 @@ LogicModule = LogicType | ModuleType
 "Logic module alias for type hinting."
 
 LogicLookupKey = ModuleType | str
-"""Logic registry key. Module or string. See ``Registry.get()``."""
+"Logic registry key. Module or string. See ``Registry.get()``."
 
 HasModuleAttr = MethodType | FunctionType | type
 "Supports the ``__module__`` attribute (class, method, or function."
 
 LogicLocatorRef = LogicLookupKey | HasModuleAttr
-"""Either a logic registry key (string/module), or class, method, or function."""
+"Either a logic registry key (string/module), or class, method, or function."
 
-#==============================================+
-#  Generic aliases -- no 'isinstance' support  |
-#==============================================+
+#======================+
+#  Generic aliases     |
+#======================+
 
-IcmpFunc = Callable[[int, int], bool]
-"Function that compares two ints and returns a boolean value, e.g. `>` or `<`."
+if TYPE_CHECKING:
+
+    IcmpFunc = Callable[[int, int], bool]
+    "Function that compares two ints and returns a boolean, e.g. `>` or `<`."
+
+    TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
+    "Function like ``Rule._get_targets()``."
+
+    NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]
+    "Node-iterating targets function."
+
+    NodeTargetsGen = Callable[[Rule, Iterable[Node], Branch], Iterator[Target]]
+    "Normalized node-iterating targets function."
+
+    NodePredFunc = Callable[[Node], bool]
+    "Function that takes a Node and returns a boolean."
+
+    HkProviderInfo = Mapping[str, tuple[str, ...]]
+    "Hook provider info, `hookname` -> `attrnames`."
+
+    HkUserInfo = Mapping[type, Mapping[str, Callable]]
+    "Hook user info, `provider` -> `hookname` -> `callback`."
+
+    HkConns = Mapping[str, tuple[HookConn, ...]]
+    "Hook connections, `hookname` -> `conns`."
+
+    HkProviders = Mapping[type, HkProviderInfo]
+    "All hook providers info mappings."
+
+    HkProvsTable = dict[type, HkProviderInfo]
+    "Hook providers dict."
+
+    HkUsersTable = dict[type, HkUserInfo]
+    "Hook users dict."
+
+    HkConnsTable = dict[type, dict[type, HkConns]]
+    "Hook conns dict."
+
+else:
+
+    IcmpFunc = TargetsFn = NodeTargetsFn = NodeTargetsGen = NodePredFunc = \
+        Callable
+
+    HkProviderInfo = HkUserInfo = HkConns = HkProviders = Mapping
+
+    HkProvsTable = HkUsersTable = HkConnsTable = dict
 
 #==========================+
 #  Type variables          |
@@ -153,6 +200,9 @@ SeqApiT = TypeVar('SeqApiT', bound = 'SequenceApi')
 MutSeqT = TypeVar('MutSeqT', bound = 'MutableSequenceApi')
 "Bound to ``MutableSequenceApi``"
 
+SeqSetT = TypeVar('SeqSetT', bound = 'SequenceSet')
+"Bound to ``SequenceSet``"
+
 MapiT = TypeVar('MapiT', bound = 'MappingApi')
 "Bound to ``MappingApi``"
 
@@ -190,6 +240,9 @@ if TYPE_CHECKING:
         @overload
         def pop(self, key: type[T]) -> T:...
 
+    FiltersDict = TypeInstDict[filters.NodeCompare]
+    "Dict of filter type to filter."
+
     class EnumDictType(_enum._EnumDict):
         'Stub type for annotation reference.'
         _member_names: list[str]
@@ -220,7 +273,7 @@ if TYPE_CHECKING:
         def __delete__(self, __obj: Self) -> None: ...
 
 else:
-    TypeInstDict = dict
+    TypeInstDict = FiltersDict = dict
     EnumDictType = _enum._EnumDict
     _property = property
     

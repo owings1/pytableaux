@@ -24,8 +24,7 @@ from typing import Any
 
 from pytableaux.errors import Emsg
 from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Atomic, Constant, Operated
-from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang.lex import Atomic, Constant, Operated, Operator
 from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, Mval
@@ -34,7 +33,7 @@ from pytableaux.proof import filters, rules
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof.util import adds, group, sdnode
-from pytableaux.tools import MapProxy, closure, static
+from pytableaux.tools import MapProxy, closure
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import setf
 
@@ -67,37 +66,37 @@ class Model(BaseModel):
 
         T = 'True',    1.0
 
-    #: The set of designated values.
     designated_values = setf({Value.B, Value.T})
+    "The set of designated values."
 
     unassigned_value = Value.N
 
-    #: A mapping from each predicate to its extension. An extension for an
-    #: *n*-ary predicate is a set of *n*-tuples of constants.
-    #:
-    #: :type: dict[Predicate, set[tuple[Constant, ...]]]
     extensions: dict[Predicate, set[tuple[Constant, ...]]]
+    """A mapping from each predicate to its extension.
+    
+    :type: dict[Predicate, set[tuple[Constant, ...]]]
+    """
+
+    anti_extensions: dict[Predicate, set[tuple[Constant, ...]]]
+    """A map of predicates to their anti-extension.
+    
+    :type: dict[Predicate, set[tuple[Constant, ...]]]
+    """
+
+    atomics: dict[Atomic, Model.Value]
+    "An assignment of each atomic sentence to a value."
+
+    opaques: dict[Sentence, Model.Value]
+    "An assignment of each opaque (un-interpreted) sentence to a value."
 
     def __init__(self):
 
         super().__init__()
 
         self.extensions = {}
-
-        #: A map of predicates to their anti-extension.
-        #:
-        #: :type: dict[Predicate, set[tuple[Constant, ...]]]
-        self.anti_extensions: dict[Predicate, set[tuple[Constant, ...]]] = {}
-
-        #: An assignment of each atomic sentence to an admissible truth value.
-        #:
-        #: :type: dict
-        self.atomics: dict[Atomic, Any] = {}
-
-        #: An assignment of each opaque (un-interpreted) sentence to a value.
-        #:
-        #: :type: dict
-        self.opaques: dict[Sentence, Any] = {}
+        self.anti_extensions = {}
+        self.atomics = {}
+        self.opaques = {}
 
         #: Track set of atomics for performance.
         self.all_atomics: set[Atomic] = set()
@@ -107,18 +106,17 @@ class Model(BaseModel):
         self.predicates: set[Predicate] = set()
 
     def value_of_predicated(self, s: Predicated, /, **kw) -> Model.Value:
-        Value = self.Value
         params = s.params
         pred = s.predicate
         extension = self.get_extension(pred)
         anti_extension = self.get_anti_extension(pred)
         if params in extension:
             if params in anti_extension:
-                return Value.B
-            return Value.T
+                return self.Value.B
+            return self.Value.T
         if params in anti_extension:
-            return Value.F
-        return Value.N
+            return self.Value.F
+        return self.Value.N
 
     def value_of_existential(self, s: Quantified, /, **kw) -> Model.Value:
         """
@@ -128,8 +126,9 @@ class Model(BaseModel):
         """
         maxval = max(self.Value)
         value = min(self.Value)
+        value_of = self.value_of
         for c in self.constants:
-            v = self.value_of(c >> s, **kw)
+            v = value_of(c >> s, **kw)
             if v > value:
                 value = v
                 if value is maxval:
@@ -254,11 +253,11 @@ class Model(BaseModel):
             s = node.get('sentence')
             if s is None:
                 continue
-            self._collect_node(node)
+            self._collect_sentence(s)
             is_literal = self.is_sentence_literal(s)
             is_opaque = self.is_sentence_opaque(s)
             if is_literal or is_opaque:
-                if type(s) is Operated and s.operator is Oper.Negation:
+                if type(s) is Operated and s.operator is Operator.Negation:
                     # If the sentence is negated, set the value of the negatum
                     s = s.lhs
                     if node['designated']:
@@ -305,12 +304,10 @@ class Model(BaseModel):
                     self.set_literal_value(s, value)
         self.finish()
 
-    def _collect_node(self, node: Node, /):
-        s = node.get('sentence')
-        if s is not None:
-            self.predicates.update(s.predicates)
-            self.all_atomics.update(s.atomics)
-            self.constants.update(s.constants)
+    def _collect_sentence(self, s: Sentence, /):
+        self.predicates.update(s.predicates)
+        self.all_atomics.update(s.atomics)
+        self.constants.update(s.constants)
 
     def finish(self):
         # TODO: consider augmenting the logic with Identity and Existence predicate
@@ -324,20 +321,21 @@ class Model(BaseModel):
             value = self.Value[value]
         except KeyError:
             raise Emsg.UnknownForSentence(value, s)
-        cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value)
-        elif cls is Operated and s.operator is Oper.Negation:
-            self.set_literal_value(
-                s.lhs,
-                self.truth_function(s.operator, value)
-            )
-        elif cls is Atomic:
-            self.set_atomic_value(s, value)
-        elif cls is Predicated:
-            self.set_predicated_value(s, value)
         else:
-            raise NotImplementedError()
+            stype = type(s)
+            if stype is Operated and s.operator is Operator.Negation:
+                self.set_literal_value(
+                    s.lhs,
+                    self.truth_function(s.operator, value)
+                )
+            elif stype is Atomic:
+                self.set_atomic_value(s, value)
+            elif stype is Predicated:
+                self.set_predicated_value(s, value)
+            else:
+                raise NotImplementedError()
 
     def set_opaque_value(self, s: Sentence, value, /):
         try:
@@ -349,9 +347,7 @@ class Model(BaseModel):
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants, as well
         # as other lexical items.
-        self.predicates.update(s.predicates)
-        self.all_atomics.update(s.atomics)
-        self.constants.update(s.constants)
+        self._collect_sentence(s)
         self.opaques[s] = value
         
     def set_atomic_value(self, s: Atomic, value, /):
@@ -438,49 +434,48 @@ class Model(BaseModel):
             return max(self.Value[a], self.Value[b])
 
         def conditional(self: Model, a, b, /):
-            return self.truth_function(Oper.MaterialConditional, a, b)
+            return self.truth_function(Operator.MaterialConditional, a, b)
 
         def biconditional(self: Model, a, b, /):
             return self.truth_function(
-                Oper.Conjunction,
-                self.truth_function(Oper.Conditional, a, b),
-                self.truth_function(Oper.Conditional, b, a)
+                Operator.Conjunction,
+                self.truth_function(Operator.Conditional, a, b),
+                self.truth_function(Operator.Conditional, b, a)
             )
 
         def material_conditional(self: Model, a, b, /):
             return self.truth_function(
-                Oper.Disjunction,
-                self.truth_function(Oper.Negation, a),
+                Operator.Disjunction,
+                self.truth_function(Operator.Negation, a),
                 b
             )
 
         def material_biconditional(self: Model, a, b, /):
             return self.truth_function(
-                Oper.Conjunction,
-                self.truth_function(Oper.MaterialConditional, a, b),
-                self.truth_function(Oper.MaterialConditional, b, a)
+                Operator.Conjunction,
+                self.truth_function(Operator.MaterialConditional, a, b),
+                self.truth_function(Operator.MaterialConditional, b, a)
             )
 
         _funcmap = MapProxy({
-            Oper.Assertion     : assertion,
-            Oper.Negation      : negation,
-            Oper.Conjunction   : conjunction,
-            Oper.Disjunction   : disjunction,
-            Oper.Conditional   : conditional,
-            Oper.Biconditional : biconditional,
-            Oper.MaterialConditional   : material_conditional,
-            Oper.MaterialBiconditional : material_biconditional,
+            Operator.Assertion : assertion,
+            Operator.Negation  : negation,
+            Operator.Conjunction : conjunction,
+            Operator.Disjunction : disjunction,
+            Operator.Conditional : conditional,
+            Operator.Biconditional : biconditional,
+            Operator.MaterialConditional   : material_conditional,
+            Operator.MaterialBiconditional : material_biconditional,
         })
 
-        def func_mapper(self: Model, oper: Oper, a, b = None, /) -> Model.Value:
+        def func_mapper(self: Model, oper: Operator, a, b = None, /) -> Model.Value:
             try:
-                return _funcmap[Oper(oper)](self, a, b)
+                return _funcmap[Operator(oper)](self, a, b)
             except KeyError:
                 raise NotImplementedError(oper)
 
         return func_mapper
 
-@static
 class TableauxSystem(BaseSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff
@@ -491,34 +486,34 @@ class TableauxSystem(BaseSystem):
 
     # operator => negated => designated
     branchables = {
-        Oper.Negation: {
+        Operator.Negation: {
             True: {True: 0, False: 0},
         },
-        Oper.Assertion: {
+        Operator.Assertion: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },
-        Oper.Conjunction: {
+        Operator.Conjunction: {
             False : {True: 0, False: 1},
             True  : {True: 1, False: 0},
         },
-        Oper.Disjunction: {
+        Operator.Disjunction: {
             False : {True: 1, False: 0},
             True  : {True: 0, False: 1},
         },
-        Oper.MaterialConditional: {
+        Operator.MaterialConditional: {
             False : {True: 1, False: 0},
             True  : {True: 0, False: 1},
         },
-        Oper.MaterialBiconditional: {
+        Operator.MaterialBiconditional: {
             False : {True: 1, False: 1},
             True  : {True: 1, False: 1},
         },
-        Oper.Conditional: {
+        Operator.Conditional: {
             False : {True: 1, False: 0},
             True  : {True: 0, False: 1},
         },
-        Oper.Biconditional: {
+        Operator.Biconditional: {
             False : {True: 1, False: 1},
             True  : {True: 1, False: 1},
         },
@@ -530,21 +525,21 @@ class TableauxSystem(BaseSystem):
         To build the trunk for an argument, add a designated node for each premise, and
         an undesignated node for the conclusion.
         """
-        add = tab.branch().append
+        append = tab.branch().append
         for premise in arg.premises:
-            add(sdnode(premise, True))
-        add(sdnode(arg.conclusion, False))
+            append(sdnode(premise, True))
+        append(sdnode(arg.conclusion, False))
 
     @classmethod
-    def branching_complexity(cls, node: Node, /):
+    def branching_complexity(cls, node: Node, /) -> int:
         s = node.get('sentence')
         if s is None:
             return 0
-        d: bool = node['designated']
+        d = node['designated']
         last_is_negated = False
         complexity = 0
         for oper in s.operators:
-            if oper is Oper.Negation:
+            if oper is Operator.Negation:
                 if not last_is_negated:
                     last_is_negated = True
                     continue
@@ -570,17 +565,19 @@ class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
     pass
 
 class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule):
+    'Mixin class for "narrow" quantifier rules.'
     pass
 
 class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule):
+    'Mixin class for "extended" quantifier rules.'
     pass
 
 class ConjunctionReducingRule(OperatorNodeRule):
 
-    conjunct_op: Oper
+    conjunct_op: Operator
     branch_level = 1
 
-    def _get_node_targets(self, node: Node, _):
+    def _get_node_targets(self, node: Node, _, /):
         oper = self.conjunct_op
         lhs, rhs = self.sentence(node)
         s = oper(lhs, rhs) & oper(rhs, lhs)
@@ -588,7 +585,6 @@ class ConjunctionReducingRule(OperatorNodeRule):
             s = ~s
         return adds(group(sdnode(s, self.designation)))
 
-@static
 class TabRules:
     """
     In general, rules for connectives consist of four rules per connective:
@@ -619,8 +615,6 @@ class TabRules:
             s = Atomic.first()
             return sdnode(s, True), sdnode(s, False)
 
-        # private util
-
         def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             if s is not None:
@@ -634,10 +628,10 @@ class TabRules:
 
         designation = True
         negated     = True
-        operator    = Oper.Negation
+        operator    = Operator.Negation
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             return adds(
                 group(sdnode(self.sentence(node).lhs, self.designation))
             )
@@ -656,10 +650,10 @@ class TabRules:
         node to *b* with the operand of *b*, then tick *n*.
         """
         designation = True
-        operator    = Oper.Assertion
+        operator    = Operator.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             return adds(
                 group(sdnode(self.sentence(node).lhs, self.designation))
             )
@@ -678,10 +672,10 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Assertion
+        operator    = Operator.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             return adds(
                 group(sdnode(~self.sentence(node).lhs, self.designation))
             )
@@ -699,10 +693,10 @@ class TabRules:
         *c*, add a designated node with *c* to *b*, then tick *n*.
         """
         designation = True
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -717,10 +711,10 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -735,10 +729,10 @@ class TabRules:
         undesignated node with *c* to *b'*, then tick *n*.
         """
         designation = False
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -754,10 +748,10 @@ class TabRules:
         """
         designation = False
         negated     = True
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -771,7 +765,7 @@ class TabRules:
         then tick *n*.
         """
         designation = True
-        operator    = Oper.Disjunction
+        operator    = Operator.Disjunction
 
     class DisjunctionNegatedDesignated(ConjunctionNegatedUndesignated):
         """
@@ -779,7 +773,7 @@ class TabRules:
         *d*, add a designated node with the negation of *d* to *b*, then tick *n*.
         """
         designation = True
-        operator    = Oper.Disjunction
+        operator    = Operator.Disjunction
 
     class DisjunctionUndesignated(ConjunctionDesignated):
         """
@@ -787,7 +781,7 @@ class TabRules:
         *d*, add an undesignated node with *d* to *b*, then tick *n*.
         """
         designation = False
-        operator    = Oper.Disjunction
+        operator    = Operator.Disjunction
 
     class DisjunctionNegatedUndesignated(ConjunctionNegatedDesignated):
         """
@@ -796,7 +790,7 @@ class TabRules:
         *b'*, then tick *n*.
         """
         designation = False
-        operator    = Oper.Disjunction
+        operator    = Operator.Disjunction
 
     class MaterialConditionalDesignated(OperatorNodeRule):
         """
@@ -806,10 +800,10 @@ class TabRules:
         then tick *n*.
         """
         designation = True
-        operator    = Oper.MaterialConditional
+        operator    = Operator.MaterialConditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -825,10 +819,10 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.MaterialConditional
+        operator    = Operator.MaterialConditional
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -842,10 +836,10 @@ class TabRules:
         with the consequent to *b*, then tick *n*.
         """
         designation = False
-        operator    = Oper.MaterialConditional
+        operator    = Operator.MaterialConditional
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -861,10 +855,10 @@ class TabRules:
         """
         designation = False
         negated     = True
-        operator    = Oper.MaterialConditional
+        operator    = Operator.MaterialConditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -881,10 +875,10 @@ class TabRules:
         consequent to *b''*, then tick *n*.
         """
         designation = True
-        operator    = Oper.MaterialBiconditional
+        operator    = Operator.MaterialBiconditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -902,10 +896,10 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.MaterialBiconditional
+        operator    = Operator.MaterialBiconditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -944,7 +938,7 @@ class TabRules:
         the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
@@ -954,7 +948,7 @@ class TabRules:
         designated node with the antecedent, and a designated node with the negation of
         the consequent to *b*, then tick *n*.
         """
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
@@ -964,7 +958,7 @@ class TabRules:
         undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
@@ -975,7 +969,7 @@ class TabRules:
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
@@ -987,7 +981,7 @@ class TabRules:
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
-        operator = Oper.Biconditional
+        operator = Operator.Biconditional
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
@@ -999,7 +993,7 @@ class TabRules:
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        operator = Oper.Biconditional
+        operator = Operator.Biconditional
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
@@ -1011,7 +1005,7 @@ class TabRules:
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
-        operator = Oper.Biconditional
+        operator = Operator.Biconditional
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
@@ -1023,7 +1017,7 @@ class TabRules:
         and add an undesignated node with the antecedent and an undesignated node with the
         consequent to *b''*, then tick *n*.
         """
-        operator = Oper.Biconditional
+        operator = Operator.Biconditional
 
     class ExistentialDesignated(rules.NarrowQuantifierRule, DefaultNodeRule):
         """
@@ -1054,7 +1048,7 @@ class TabRules:
         convert     = Quantifier.Universal
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _,/):
+        def _get_node_targets(self, node: Node, _, /):
             v, si = self.sentence(node)[1:]
             return adds(
                 group(sdnode(self.convert(v, ~si), self.designation))
@@ -1073,7 +1067,7 @@ class TabRules:
         branch_level = 1
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            return sdnode(c >> self.sentence(node), self.designation),
+            return group(sdnode(c >> self.sentence(node), self.designation))
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """

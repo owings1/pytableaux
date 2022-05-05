@@ -25,7 +25,7 @@ from collections import defaultdict, deque
 from collections.abc import Collection, Iterator, Mapping, MutableMapping, Set
 from itertools import chain, filterfalse
 from operator import not_, truth
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Generic
 
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import MapProxy, abcs, closure, isattrstr, thru, true
@@ -460,13 +460,17 @@ class ItemMapEnum(abcs.Ebc):
     def _oper_res_type(cls, othrtype: type[Iterable], /):
         return dict
 
-class DequeCache(Collection[VT], abcs.Abc):
+class DequeCache(Generic[VT], abcs.Abc):
 
     __slots__ = (
-        '__len__', '__getitem__',
-        '__reversed__',
-        '__setitem__', '__iter__', '__contains__',
-        'clear', '_maxlen',
+        # '__len__',
+        '__getitem__',
+        # '__reversed__',
+        '__setitem__',
+        # '__iter__',
+        # '__contains__',
+        # 'clear',
+        '_maxlen',
     )
 
     @property
@@ -481,10 +485,10 @@ class DequeCache(Collection[VT], abcs.Abc):
 
         self._maxlen = lambda: deck.maxlen
 
-        self.__len__ = deck.__len__
-        self.__iter__ = deck.__iter__
-        self.__reversed__ = deck.__reversed__
-        self.__contains__ = rev.__contains__
+        # self.__len__ = deck.__len__
+        # self.__iter__ = deck.__iter__
+        # self.__reversed__ = deck.__reversed__
+        # self.__contains__ = rev.__contains__
         self.__getitem__ = idx.__getitem__
 
         def clear():
@@ -492,21 +496,24 @@ class DequeCache(Collection[VT], abcs.Abc):
             rev.clear()
             deck.clear()
 
-        def setitem(key, item: VT):
-            if item in self:
-                item = self[item]
-            else:
-                if len(self) == deck.maxlen:
-                    old = deck.popleft()
-                    for k in rev.pop(old):
-                        del(idx[k])
-                idx[item] = item
-                rev[item] = {item}
-                deck.append(item)
-            idx[key] = item
-            rev[item].add(key)
+        if maxlen == 0:
+            def setitem(key, item: VT, /): pass
+        else:
+            def setitem(key, item: VT, /):
+                if item in rev:
+                    item = idx[item]
+                else:
+                    if len(deck) == deck.maxlen:
+                        old = deck.popleft()
+                        for k in rev.pop(old):
+                            del(idx[k])
+                    idx[item] = item
+                    rev[item] = {item}
+                    deck.append(item)
+                idx[key] = item
+                rev[item].add(key)
 
-        self.clear = clear
+        # self.clear = clear
         self.__setitem__ = setitem
 
 

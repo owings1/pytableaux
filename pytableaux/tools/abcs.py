@@ -35,10 +35,12 @@ from pytableaux import __docformat__
 from pytableaux import errors, tools
 from pytableaux.errors import check
 from pytableaux.tools.typing import (RT, TT, EbcT, EbcT2, EnumDictType, EnumT,
-                                     F, Self, T)
+                                     F, Self, T, HkUserInfo)
 
 if TYPE_CHECKING:
     from typing import overload
+
+    from pytableaux.tools.hooks import hookutil
 
 __all__ = (
     'Abc',
@@ -154,7 +156,7 @@ class EnumLookup(Mapping[Any, EnumT]):
 
     if TYPE_CHECKING:
         @overload
-        def build(self): # type: ignore
+        def build(self):
             "Build and update the whole index."
 
         @overload
@@ -410,6 +412,12 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
 
     #******  Mapping(ish) Behavior
 
+    if TYPE_CHECKING:
+        @overload
+        def get(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, /) -> EbcT: ...
+        @overload
+        def get(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, default: T, /) -> EbcT|T: ...
+
     def get(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, default: Any = NOARG, /) -> EbcT|EbcT2:
         """Get a member by an indexed reference key.
 
@@ -486,7 +494,7 @@ class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
         type(cls)._on_init(cls, subcls)
 
     @classmethod
-    def _member_keys(cls: EbcMeta, member: Ebc):
+    def _member_keys(cls: EbcMeta, member: Ebc) -> Set[Hashable]:
         'Propagate hook up to metaclass.'
         return type(cls)._member_keys(cls, member)
 
@@ -508,6 +516,7 @@ class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
             return f'<{clsname}.?ERR?>'
 
 class Astr(str, Ebc, skipflags = True, skipabcm = True):
+    "Attribute names for abc functionality."
 
     flag     = '_abc_flag'
     hookuser = '_abc_hook_user'
@@ -583,7 +592,7 @@ class abcm:
     _frozenset: type[frozenset] = frozenset
 
     @staticmethod
-    def nsinit(ns: dict, bases, /, skipflags = False):
+    def nsinit(ns: dict, bases: tuple[type, ...], /, skipflags = False):
         'Class namespace prepare routine.'
         # iterate over copy since hooks may modify ns.
         if not skipflags:
@@ -599,8 +608,7 @@ class abcm:
     @staticmethod
     def clsafter(Class: TT, ns: Mapping = None, /, skipflags = False,
         deleter = type.__delattr__) -> TT:
-        'After class init routine.'
-        # Allow use as standalone class decorator
+        'After class init routine. Usable as standalone class decorator.'
         if ns is None:
             ns = Class.__dict__.copy()
         todelete = set()
@@ -709,7 +717,7 @@ class abcm:
 
     @staticmethod
     def hookinfo(Class: type):
-        from pytableaux.tools.hooks import hookutil
+        # from pytableaux.tools.hooks import hookutil
         return hookutil.provider_info(Class)
 
 
@@ -717,7 +725,7 @@ class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
 
     def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /,
-        hooks = None,
+        hooks: HkUserInfo = None,
         skiphooks = False,
         skipflags = False,
         hookinfo = None,
@@ -726,7 +734,6 @@ class AbcMeta(_abc.ABCMeta):
         abcm.nsinit(ns, bases, skipflags = skipflags)
         Class = super().__new__(cls, clsname, bases, ns, **kw)
         if not skiphooks:
-            from pytableaux.tools.hooks import hookutil
             hookutil.init_user(Class, hooks)
         abcm.clsafter(Class, ns, skipflags = skipflags)
         if not skiphooks:
@@ -778,9 +785,14 @@ class Copyable(Abc, skiphooks = True):
             return NotImplemented
         return abcm.check_mrodict(subcls.mro(), '__copy__', 'copy')
 
-    def __init_subclass__(subcls: type[Copyable], **kw):
+    def __init_subclass__(subcls: type[Copyable], immutcopy: bool = False, **kw):
         "Subclass init hook. Set `__copy__()` to `copy()`."
         super().__init_subclass__(**kw)
+        if immutcopy:
+            if 'copy' not in subcls.__dict__:
+                subcls.copy = Ebc.__copy__
+            if '__deepcopy__' not in subcls.__dict__:
+                subcls.__deepcopy__ = Ebc.__deepcopy__
         subcls.__copy__ = subcls.copy
 
 #=============================================================================

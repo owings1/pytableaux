@@ -22,9 +22,8 @@ from __future__ import annotations
 
 from pytableaux.errors import DenotationError, ModelValueError, check
 from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Atomic, Constant, Operated
-from pytableaux.lang.lex import Operator as Oper
-from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
+from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
+                                 Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, Mval
 from pytableaux.proof import TableauxSystem as BaseSystem
@@ -51,9 +50,6 @@ class Meta:
         'modal',
         'first-order',
     )
-
-Identity  = Predicate.System.Identity
-Existence = Predicate.System.Existence
 
 def substitute_params(params, old_value, new_value):
     return tuple(new_value if p == old_value else p for p in params)
@@ -91,7 +87,7 @@ class Model(BaseModel):
         self.access = set()
         self.constants = set()
 
-        self.predicates: set[Predicate] = {Identity, Existence}
+        self.predicates: set[Predicate] = set(Predicate.System)
 
         # ensure there is a w0
         self.world_frame(0)
@@ -263,13 +259,13 @@ class Model(BaseModel):
                     self.set_opaque_value(s, unval, world = w)
 
     def _ensure_self_identity(self, w):
-        ext = self.get_extension(Identity, world = w)
+        ext = self.get_extension(Predicate.System.Identity, world = w)
         for c in self.constants:
             # make sure each constant is self-identical
             ext.add((c, c))
 
     def _ensure_self_existence(self, w):
-        ext = self.get_extension(Existence, world = w)
+        ext = self.get_extension(Predicate.System.Existence, world = w)
         for c in self.constants:
             # make sure each constant exists
             ext.add((c,))
@@ -304,7 +300,7 @@ class Model(BaseModel):
         w = frame.world
         for pred in self.predicates:
             # Skip identity and existence
-            if pred in (Identity, Existence):
+            if pred in Predicate.System:
                 continue
             frame.property_classes[pred] = {
                 tuple(self.get_denotum(p, world = w) for p in params)
@@ -312,7 +308,7 @@ class Model(BaseModel):
             }
 
     def _get_identicals(self, c: Constant, **kw) -> set[Constant]:
-        ext = self.get_extension(Identity, **kw)
+        ext = self.get_extension(Predicate.System.Identity, **kw)
         identicals = set()
         for params in ext:
             if c in params:
@@ -324,7 +320,7 @@ class Model(BaseModel):
         cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value, **kw)
-        elif cls is Operated and s.operator is Oper.Negation:
+        elif cls is Operated and s.operator is Operator.Negation:
             negval = self.truth_function(s.operator, value)
             self.set_literal_value(s.lhs, negval, **kw)
         elif cls is Atomic:
@@ -477,7 +473,7 @@ class Frame:
         self.world = world
         self.atomics = {}
         self.opaques = {}
-        self.extensions = {Identity: set(), Existence: set()}
+        self.extensions = {pred: set() for pred in Predicate.System}
 
         # Track the anti-extensions to ensure integrity
         self.anti_extensions = {}
@@ -485,7 +481,7 @@ class Frame:
         # TODO: WIP
         self.denotation = {}
         self.domain = set()
-        self.property_classes = {Identity: set(), Existence: set()}
+        self.property_classes = {pred: set() for pred in Predicate.System}
 
     def get_data(self) -> dict:
         return dict(
@@ -558,7 +554,7 @@ class Frame:
             )
         )
 
-    def is_equivalent_to(self, other) -> bool:
+    def is_equivalent_to(self, other: Frame) -> bool:
         other = check.inst(other, Frame)
         # check for informational equivalence, ignoring world
         # check atomic keys
@@ -632,14 +628,14 @@ class TableauxSystem(BaseSystem):
     """
 
     neg_branchable = {
-        Oper.Conjunction,
-        Oper.MaterialBiconditional,
-        Oper.Biconditional,
+        Operator.Conjunction,
+        Operator.MaterialBiconditional,
+        Operator.Biconditional,
     }
     pos_branchable = {
-        Oper.Disjunction,
-        Oper.MaterialConditional,
-        Oper.Conditional,
+        Operator.Disjunction,
+        Operator.MaterialConditional,
+        Operator.Conditional,
     }
 
     modal = True
@@ -665,9 +661,9 @@ class TableauxSystem(BaseSystem):
         last_is_negated = False
         complexity = 0
         for oper in s.operators:
-            if oper is Oper.Assertion:
+            if oper is Operator.Assertion:
                 continue
-            if oper is Oper.Negation:
+            if oper is Operator.Negation:
                 if last_is_negated:
                     last_is_negated = False
                     continue
@@ -778,14 +774,14 @@ class TabRules:
             s = node.get('sentence')
             return (
                 isinstance(s, Operated) and
-                s.operator is Oper.Negation and
+                s.operator is Operator.Negation and
                 isinstance(s.lhs, Predicated) and
-                s.lhs.predicate == Existence
+                s.lhs.predicate is Predicate.System.Existence
             )
 
         @classmethod
         def example_nodes(cls) -> tuple[dict]:
-            s = ~Predicated.first(Existence)
+            s = ~Predicated.first(Predicate.System.Existence)
             w = 0 if cls.modal else None
             return swnode(s, w),
 
@@ -795,7 +791,7 @@ class TabRules:
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
         """
         negated  = True
-        operator = Oper.Negation
+        operator = Operator.Negation
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
@@ -808,7 +804,7 @@ class TabRules:
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
         """
-        operator = Oper.Assertion
+        operator = Operator.Assertion
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
@@ -823,7 +819,7 @@ class TabRules:
         then tick *n*.
         """
         negated  = True
-        operator = Oper.Assertion
+        operator = Operator.Assertion
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
@@ -837,7 +833,7 @@ class TabRules:
         for each conjunct, add a node with world *w* to *b* with the conjunct,
         then tick *n*.
         """
-        operator = Oper.Conjunction
+        operator = Operator.Conjunction
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
@@ -854,7 +850,7 @@ class TabRules:
         the conjunct to *b*, then tick *n*.
         """
         negated  = True
-        operator = Oper.Conjunction
+        operator = Operator.Conjunction
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _, /):
@@ -871,7 +867,7 @@ class TabRules:
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
         then tick *n*.
         """
-        operator = Oper.Disjunction
+        operator = Operator.Disjunction
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _, /):
@@ -888,7 +884,7 @@ class TabRules:
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
         """
         negated  = True
-        operator = Oper.Disjunction
+        operator = Operator.Disjunction
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
@@ -905,7 +901,7 @@ class TabRules:
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-        operator = Oper.MaterialConditional
+        operator = Operator.MaterialConditional
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
@@ -923,7 +919,7 @@ class TabRules:
         of the consequent, then tick *n*.
         """
         negated  = True
-        operator = Oper.MaterialConditional
+        operator = Operator.MaterialConditional
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
@@ -941,7 +937,7 @@ class TabRules:
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-        operator = Oper.MaterialBiconditional
+        operator = Operator.MaterialBiconditional
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _, /):
@@ -962,7 +958,7 @@ class TabRules:
         then tick *n*.
         """
         negated  = True
-        operator = Oper.MaterialBiconditional
+        operator = Operator.MaterialBiconditional
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
@@ -984,7 +980,7 @@ class TabRules:
         *n*.
         """
         negated  = False
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class ConditionalNegated(MaterialConditionalNegated):
         """
@@ -995,7 +991,7 @@ class TabRules:
         of the consequent, then tick *n*.
         """
         negated  = True
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class Biconditional(MaterialBiconditional):
         """
@@ -1008,7 +1004,7 @@ class TabRules:
         tick *n*.
         """
         negated  = False
-        operator = Oper.Biconditional
+        operator = Operator.Biconditional
 
     class BiconditionalNegated(MaterialBiconditionalNegated):
         """
@@ -1021,7 +1017,7 @@ class TabRules:
         then tick *n*.
         """
         negated  = True
-        operator = Oper.Biconditional
+        operator = Operator.Biconditional
 
     class Existential(rules.NarrowQuantifierRule, DefaultNodeRule):
         """
@@ -1086,7 +1082,7 @@ class TabRules:
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
         world1 *w* and world2 *w'* to *b*, then tick *n*.
         """
-        operator = Oper.Possibility
+        operator = Operator.Possibility
         branch_level = 1
 
         Helpers = QuitFlag, MaxWorlds, AplSentCount,
@@ -1140,8 +1136,8 @@ class TabRules:
         possibilium of *n*, then tick *n*.
         """
         negated    = True
-        operator   = Oper.Possibility
-        convert    = Oper.Necessity
+        operator   = Operator.Possibility
+        convert    = Operator.Necessity
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
@@ -1157,7 +1153,7 @@ class TabRules:
         with *s* at *w2*, add it to *b*. The node *n* is never ticked.
         """
         ticking = False
-        operator = Oper.Necessity
+        operator = Operator.Necessity
         branch_level = 1
 
         Helpers = QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex,
@@ -1233,8 +1229,8 @@ class TabRules:
         possibility node whose operand is the negation of the negated necessitatum of *n*,
         then tick *n*.
         """
-        operator = Oper.Necessity
-        convert  = Oper.Possibility
+        operator = Operator.Necessity
+        convert  = Operator.Possibility
 
     class IdentityIndiscernability(rules.PredicatedSentenceRule, DefaultNodeRule):
         """

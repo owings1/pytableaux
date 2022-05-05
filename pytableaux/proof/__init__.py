@@ -164,7 +164,7 @@ class RuleHelper(metaclass = AbcMeta):
             except KeyError:
                 return cache.setdefault(subcls, compute(subcls))[0]
 
-        if _ENV['DEBUG']:
+        if _ENV.DEBUG:
             hook_cached.cache = cache
 
         return hook_cached

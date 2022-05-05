@@ -24,9 +24,8 @@ from __future__ import annotations
 import keyword
 import re
 from abc import abstractmethod as abstract
-from types import FunctionType
-from types import MappingProxyType as _MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping
+from types import FunctionType, MappingProxyType
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Literal, Mapping
 
 from pytableaux import __docformat__
 from pytableaux.tools.typing import KT, TT, VT, T
@@ -43,7 +42,7 @@ def closure(func: Callable[..., T]) -> T:
     'Closure decorator calls the argument and returns its return value.'
     return func()
 
-def classalias(orig: type[T]):
+def classalias(orig: type[T]) -> Callable[[type], type[T]]:
     """Decorator factory for class alias for type hinting.
 
     Usage::
@@ -52,12 +51,12 @@ def classalias(orig: type[T]):
         class integer: pass
 
     Args:
-        orig: The reference class.
+        orig (type): The reference class.
     
     Returns:
-        A decorator that ignores its argument as returns `orig`.
+        A decorator that ignores its argument and returns `orig`.
     """
-    def d(alias: type) -> type[T]:
+    def d(_: type) -> type[T]:
         return orig
     return d
 
@@ -71,17 +70,19 @@ def classns():
 
     class nsdict(dict):
         __slots__ = '_raw',
-        def __init__(self, ns, *args, **kw):
+        _raw: Mapping[str, Any]
+        def __init__(self, ns: dict, **kw):
             self._raw = MapProxy(ns)
             self.update(ns)
             for key in ignore:
                 self.pop(key, None)
-            super().__init__(*args, **kw)
+            if len(kw):
+                self.update(kw)
 
     class meta(type):
-        def __new__(cls, clsname, bases, ns, **kw):
-            if setup:
-                return super().__new__(cls, clsname, bases, ns)
+        def _new(cls, clsname: str, bases: tuple[type, ...], ns: dict, **kw):
+            # if setup:
+            #     return super().__new__(cls, clsname, bases, ns)
             return nsdict(ns, **kw)
 
     setup = True
@@ -105,13 +106,16 @@ def classns():
         """
         __slots__ = ()
 
+    meta.__new__ = meta._new
+    del(meta._new)
+
     setup = False
 
     return classns
 
 class MapProxy(Mapping[KT, VT]):
     'Cast to a proxy if not already.'
-    EMPTY_MAP = _MapProxy({})
+    EMPTY_MAP = MappingProxyType({})
 
     def __new__(cls, mapping: Mapping[KT, VT] = None,/, **kw) -> MapProxy[KT, VT]:
 
@@ -124,9 +128,9 @@ class MapProxy(Mapping[KT, VT]):
             mapping = dict(mapping, **kw)
         elif len(kw):
             raise TypeError("Cannot specify kwargs and mapping")
-        if isinstance(mapping, _MapProxy):
+        if isinstance(mapping, MappingProxyType):
             return mapping # type: ignore
-        return _MapProxy(mapping) # type: ignore
+        return MappingProxyType(mapping) # type: ignore
 
 def static(cls: TT, /) -> TT:
     'Static class decorator, and wrapper around staticmethod'
@@ -153,13 +157,17 @@ def thru(obj: T) -> T:
     'Return the argument.'
     return obj
 
-def true(obj: Any) -> Literal[True]:
+def true(_: Any) -> Literal[True]:
     'Always returns ``True``.'
     return True
 
-def false(obj: Any) -> Literal[False]:
+def false(_: Any) -> Literal[False]:
     'Always returns ``False``.'
     return False
+
+# def notnone(obj: Any) -> bool:
+#     'Wether `obj` is not `None`.'
+#     return obj is not None
 
 def key0(obj: Any) -> Any:
     'Get key/subscript ``0``.'
@@ -169,11 +177,17 @@ def noinit(slf: Any = None):
     'Raise `TypeError`.'
     raise TypeError
 
+def dund(*names:str) -> Iterator[str]:
+    "Convert names to dunder format."
+    return map('__{}__'.format, names)
+
 def isdund(name: str) -> bool:
     'Whether the string is a dunder name string.'
     return (
-        len(name) > 4 and name[:2] == name[-2:] == '__' and
-        name[2] != '_' and name[-3] != '_'
+        len(name) > 4 and
+        name[:2] == name[-2:] == '__' and
+        name[2] != '_' and
+        name[-3] != '_'
     )
 
 def isint(obj: Any) -> bool:

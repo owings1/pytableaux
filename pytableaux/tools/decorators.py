@@ -31,6 +31,7 @@ from types import DynamicClassAttribute as dynca
 from typing import (TYPE_CHECKING, Callable, Concatenate, Generic, Iterable,
                     Iterator, Mapping)
 
+# Allowed local imports:
 #  - errors
 #  - tools.abcs
 #  - tools.misc
@@ -40,9 +41,6 @@ from pytableaux.errors import check
 from pytableaux.tools import MapProxy, abstract
 from pytableaux.tools.abcs import Abc, abcf, abcm
 from pytableaux.tools.typing import RT, F, P, Self, T, _property
-
-# Allowed local imports:
-
 
 if TYPE_CHECKING:
     from typing import overload
