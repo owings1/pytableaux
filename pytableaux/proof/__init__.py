@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping
 from pytableaux import _ENV, __docformat__
 from pytableaux.errors import check
 from pytableaux.proof.util import HelperAttr, RuleAttr
-from pytableaux.tools import MapProxy, abstract, closure
+from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure
 from pytableaux.tools.abcs import AbcMeta, abcm
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
@@ -206,7 +206,7 @@ class RuleMeta(AbcMeta):
         )
         for Helper in Helpers:
             check.subcls(Helper, RuleHelper)
-            kwopts = helper.get(Helper, MapProxy.EMPTY_MAP)
+            kwopts = helper.get(Helper, EMPTY_MAP)
             finit = getattr(Helper, HelperAttr.InitRuleCls, None)
             if finit is None:
                 if kwopts:

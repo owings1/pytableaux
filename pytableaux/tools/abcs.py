@@ -27,15 +27,15 @@ import functools
 import itertools
 import operator as opr
 from collections.abc import Set
-from typing import (TYPE_CHECKING, Annotated, Any, Callable, Collection,
+from typing import (TYPE_CHECKING, Any, Callable, Collection,
                     Hashable, Iterable, Iterator, Mapping, Sequence,
                     SupportsIndex)
 
-from pytableaux import __docformat__
-from pytableaux import errors, tools
-from pytableaux.errors import check
+from pytableaux import __docformat__, tools
+from pytableaux.errors import check, Emsg
 from pytableaux.tools.typing import (RT, TT, EbcT, EbcT2, EnumDictType, EnumT,
-                                     F, Self, T, HkUserInfo)
+                                     F, HkProviderInfo, HkUserInfo, KeysFunc,
+                                     NotImplType, Self, T)
 
 if TYPE_CHECKING:
     from typing import overload
@@ -47,14 +47,19 @@ __all__ = (
     'abcf',
     'abcm',
     'AbcMeta',
+    'Astr',
     'Copyable',
+    'eauto',
     'Ebc',
+    'ebcm',
     'EbcMeta',
+    'EnumLookup',
+    'Eset',
     'FlagEnum',
     'IntEnum',
+    'IntFlag',
 )
 
-KeysFunc = Callable[[Any], Set[Hashable]]
 NOARG = object()
 
 class Eset(frozenset, _enum.Enum):
@@ -63,16 +68,23 @@ class Eset(frozenset, _enum.Enum):
     Empty = frozenset()
 
     member_key_methods = {'_member_keys'}
+
     reserve_names = {'seq', '_lookup', 'get',}
+
     hook_methods  = {'_member_keys', '_on_init', '_after_init'}
-    clean_methods = hook_methods
 
-@tools.classalias(_enum.auto)
-class eauto:...
+    clean_methods = hook_methods.copy()
 
-@tools.static
+if TYPE_CHECKING:
+    @tools.classalias(_enum.auto)
+    class eauto:...
+else:
+    eauto = _enum.auto
+
 class ebcm:
     'Static Enum meta utils.'
+
+    __new__ = NotImplemented
 
     @staticmethod
     def fix_name_value(Class: type[EnumT], /) -> type[EnumT]:
@@ -100,7 +112,8 @@ class ebcm:
         )
 
     @staticmethod
-    def clean_methods(Class: type[EnumT], /, *, deleter = type.__delattr__) -> type[EnumT]:
+    def clean_methods(Class: type[EnumT], /, *,
+        deleter: Callable[[type, str], Any] = type.__delattr__) -> type[EnumT]:
         for hname in filter(Class.__dict__.__contains__, Eset.clean_methods):
             deleter(Class, hname)
         return Class
@@ -131,16 +144,16 @@ class ebcm:
         if not len(bases):
             # If no new bases passed, try the last enum class of the old bases.
             it = filter(ebcm.is_enumcls, reversed(oldcls.__bases__))
-            bases = list(it)[0:1]
+            bases = tuple(itertools.islice(it, 1))#list(it)[0:1]
             if not len(bases):
                 # Fall back on built-in Enum.
-                bases = _enum.Enum,
+                bases = (_enum.Enum,)
         # Reuse old non-enum bases.
         bases = ebcm.mixins(oldcls) + bases
         # Class name.
         clsname = oldcls.__name__
         # Prepare class dict.
-        cdict = check.inst(metaclass.__prepare__(clsname, bases, **kw), dict)
+        cdict = metaclass.__prepare__(clsname, bases, **kw)
         # Add member data from old class. Use _member_map_ to include aliases.
         for mname, m in oldcls._member_map_.items():
             # Use __setitem__, not update, else EnumDict won't work.
@@ -200,14 +213,14 @@ class EnumLookup(Mapping[Any, EnumT]):
             _build()
 
     @staticmethod
-    def _srcinit(src: Any, dest: Any, build: Callable, pseudo: Callable, /, *,
-        ga = object.__getattribute__,
+    def _srcinit(src: Mapping, dest: EnumLookup, build: Callable, pseudo: Callable, /, *,
+        # ga = object.__getattribute__,
         sa = object.__setattr__,
         names = tuple(filter(tools.isdund, __slots__))
     ) -> None:
         "Initialize instance mapping and closure attributes."
         for name in names:
-            sa(dest, name, ga(src, name))
+            sa(dest, name, getattr(src, name))
         sa(dest, 'build', build)
         sa(dest, 'pseudo', pseudo)
 
@@ -271,9 +284,9 @@ class EnumLookup(Mapping[Any, EnumT]):
         "Verify a pseudo member, returning index keys."
         check = Owner._value2member_map_[pseudo._value_]
         if check is not pseudo:
-            raise TypeError from errors.Emsg.ValueConflict(pseudo, check)
+            raise TypeError from Emsg.ValueConflict(pseudo, check)
         if pseudo._name_ is not None:
-            raise TypeError from errors.Emsg.WrongValue(pseudo._name_, None)
+            raise TypeError from Emsg.WrongValue(pseudo._name_, None)
         return cls._pseudo_keys(pseudo)
 
     @staticmethod
@@ -291,10 +304,10 @@ class EnumLookup(Mapping[Any, EnumT]):
         return dict(self)
 
     def __setattr__(self, name, value):
-        raise errors.Emsg.ReadOnly(self, name)
+        raise Emsg.ReadOnly(self, name)
 
     def __delattr__(self, name):
-        raise errors.Emsg.ReadOnly(self, name)
+        raise Emsg.ReadOnly(self, name)
 
     def __repr__(self):
         return repr(self._asdict())
@@ -305,7 +318,6 @@ class EnumLookup(Mapping[Any, EnumT]):
 #
 #       Enum Meta
 #_____________________________________________________________________________
-
 
 
 class EbcMeta(_enum.EnumMeta, type[EbcT2]):
@@ -333,7 +345,7 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
         return ns
 
     def __new__(cls, clsname: str, bases: tuple[type, ...], ns: EnumDictType, /, *,
-        skipflags = False, noidxbuild = False, skipabcm = False, **kw
+        skipflags: bool = False, noidxbuild: bool = False, skipabcm: bool = False, **kw
     ):
         if not skipabcm:
             # Run generic Abc init hooks.
@@ -383,11 +395,11 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
 
     #******  Subclass Init Hooks
 
-    def _member_keys(cls, member: Ebc,/) -> Set[Hashable]:
+    def _member_keys(cls, member: Ebc, /) -> Set[Hashable]:
         'Init hook to get the index lookup keys for a member.'
         return Eset.Empty
 
-    def _on_init(cls, subcls: type[EbcT]|EbcMeta,/):
+    def _on_init(cls, subcls: type[EbcT]|EbcMeta, /):
         '''Init hook after all members have been initialized, before index
         is created. **NB:** Skips abstract classes.'''
         pass
@@ -530,7 +542,7 @@ class FlagEnum(_enum.Flag, Ebc, skipflags = True, skipabcm = True):
     _invert_ : tuple[int, FlagEnum]
 
     @classmethod
-    def _missing_(cls, value: Any):
+    def _missing_(cls, value: Any, /):
         member: FlagEnum = super()._missing_(value)
         member.value = member._value_
         member.name  = member._name_
@@ -562,16 +574,17 @@ class abcf(FlagEnum, skipflags = True, skipabcm = True):
 
     def __call__(self, obj: F) -> F:
         """Add the flag to obj's meta flag with bitwise OR. Return obj for
-        decorator use."""
+        decorator use.
+        """
         return self.save(obj, self | self.read(obj))
 
     @classmethod
-    def read(cls, obj, default: abcf|int = 0, /, *, attr = Astr.flag) -> abcf:
+    def read(cls, obj, default: abcf|int = 0, /, *, attr: str = Astr.flag) -> abcf:
         "Get the flag (or `blank`) for any obj."
         return getattr(obj, attr, cls(default))
 
     @classmethod
-    def save(cls, obj: F, value: abcf|int, /, *, attr = Astr.flag) -> F:
+    def save(cls, obj: F, value: abcf|int, /, *, attr: str = Astr.flag) -> F:
         'Write the value, returns obj for decorator use.'
         setattr(obj, attr, cls(value))
         return obj
@@ -582,17 +595,26 @@ class abcf(FlagEnum, skipflags = True, skipabcm = True):
 #       Abc Meta
 #_____________________________________________________________________________
 
-@tools.static
 class abcm:
     'Static Abc meta util functions.'
 
-    @tools.classalias(abcf)
-    class f: pass
+    __new__ = NotImplemented
+    # def __new__(cls, *args, **kw):
+    #     return AbcMeta(*args, **kw)
+
+
+    if TYPE_CHECKING:
+
+        @tools.classalias(abcf)
+        class f: pass
+
+    else:
+        f = abcf
 
     _frozenset: type[frozenset] = frozenset
 
     @staticmethod
-    def nsinit(ns: dict, bases: tuple[type, ...], /, skipflags = False):
+    def nsinit(ns: dict, bases: tuple[type, ...], /, skipflags: bool = False) -> None:
         'Class namespace prepare routine.'
         # iterate over copy since hooks may modify ns.
         if not skipflags:
@@ -606,8 +628,9 @@ class abcm:
             ns['__slots__'] = abcm._frozenset(slots)
 
     @staticmethod
-    def clsafter(Class: TT, ns: Mapping = None, /, skipflags = False,
-        deleter = type.__delattr__) -> TT:
+    def clsafter(Class: TT, ns: Mapping = None, /, skipflags: bool = False,
+        deleter: Callable[[type, str], Any] = type.__delattr__
+    ) -> TT:
         'After class init routine. Usable as standalone class decorator.'
         if ns is None:
             ns = Class.__dict__.copy()
@@ -626,16 +649,16 @@ class abcm:
         return Class
 
     @staticmethod
-    def isabstract(obj):
+    def isabstract(obj) -> bool:
         if isinstance(obj, type):
             return bool(len(getattr(obj, '__abstractmethods__', Eset.Empty)))
         return bool(getattr(obj, '__isabstractmethod__', False))
 
     @staticmethod
-    def annotated_attrs(obj):
+    def annotated_attrs(obj) -> dict[str, tuple]:
         'Evaluate annotions of type Annotated.'
         # This is called infrequently, so we import lazily.
-        from typing import get_args, get_origin, get_type_hints
+        from typing import get_args, get_origin, get_type_hints, Annotated
         annot = get_type_hints(obj, include_extras = True)
         return {
             k: get_args(v) for k,v in annot.items()
@@ -643,7 +666,7 @@ class abcm:
         }
 
     @staticmethod
-    def check_mrodict(mro: Sequence[type], *names: str):
+    def check_mrodict(mro: Sequence[type], *names: str) -> NotImplType|bool:
         'Check whether methods are implemented for dynamic subclassing.'
         if len(names) and not len(mro):
             return NotImplemented
@@ -658,7 +681,9 @@ class abcm:
         return True
 
     @staticmethod
-    def merge_mroattr(subcls: type, name: str, *args, setter = setattr, **kw):
+    def merge_mroattr(subcls: type, name: str, *args,
+        setter: Callable[[type, str, Any], Any] = setattr, **kw
+    ):
         value = abcm.merged_mroattr(subcls, name, *args, **kw)
         setter(subcls, name, value)
         return value
@@ -687,9 +712,9 @@ class abcm:
 
     @staticmethod
     def mroiter(subcls: type, /, supcls: type|tuple[type, ...] = None, *,
-        mcls: type|tuple[type, ...] = None,
-        reverse = True, start: SupportsIndex = None, stop: SupportsIndex = None,
-    ) -> Iterable[type]:
+        mcls: type|tuple[type, ...] = None, reverse: bool = True,
+        start: SupportsIndex = None, stop: SupportsIndex = None,
+    ) -> Iterator[type]:
         it = subcls.mro()
         if reverse:
             it = reversed(it)
@@ -715,20 +740,18 @@ class abcm:
             return func
         return decorator
 
-    @staticmethod
-    def hookinfo(Class: type):
-        # from pytableaux.tools.hooks import hookutil
-        return hookutil.provider_info(Class)
-
+    # @staticmethod
+    # def hookinfo(Class: type):
+    #     return hookutil.provider_info(Class)
 
 class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
 
-    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /,
+    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, *,
         hooks: HkUserInfo = None,
-        skiphooks = False,
-        skipflags = False,
-        hookinfo = None,
+        skiphooks: bool = False,
+        skipflags: bool = False,
+        hookinfo: HkProviderInfo = None,
         **kw
     ):
         abcm.nsinit(ns, bases, skipflags = skipflags)
@@ -740,17 +763,17 @@ class AbcMeta(_abc.ABCMeta):
             hookutil.init_provider(Class, hookinfo)
         return Class
 
-    def hook(cls, *hooks: str, attr = Astr.hookuser):
+    def hook(cls, *hooks: str, attr: str = Astr.hookuser) -> Callable[[F], F]:
         'Decorator factory for tagging hook implementation (user).'
         def decorator(func: F) -> F:
             value = getattr(func, attr, None)
             if value is None:
-                value = dict()
+                value = {}
                 setattr(func, attr, value)
             impl = value.setdefault(cls, {})
             for name in hooks:
                 if name in impl:
-                    raise TypeError from errors.Emsg.DuplicateKey(name)
+                    raise TypeError from Emsg.DuplicateKey(name)
                 impl[name] = func
             return func
         return decorator
@@ -768,7 +791,7 @@ class Abc(metaclass = AbcMeta, skiphooks = True):
 
     __slots__ = Eset.Empty
 
-class Copyable(Abc, skiphooks = True):
+class Copyable(metaclass = AbcMeta, skiphooks = True):
 
     __slots__ = Eset.Empty
 
@@ -818,3 +841,9 @@ class IntFlag(int, FlagEnum):
 #_____________________________________________________________________________
 
 Eset = ebcm.rebase(Eset, Ebc)
+
+
+del(
+    _abc,
+    opr,
+)

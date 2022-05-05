@@ -45,9 +45,9 @@ from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import MapCover, MapProxy, dmap, dmapns
-from pytableaux.tools.sequences import (SequenceApi, SequenceCover, absindex,
-                                        seqf, seqm)
+from pytableaux.tools.mappings import MapProxy, dmap, dmapns
+from pytableaux.tools.sequences import (SeqCover, SequenceApi, absindex, seqf,
+                                        seqm)
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.timing import Counter, StopWatch
 
@@ -62,24 +62,16 @@ if TYPE_CHECKING:
 
 __all__ = (
     'Rule',
+    'RuleGroup',
+    'RuleGroups',
     'Tableau',
+    'TabRules',
+    'TreeStruct',
 )
 
 NOARG = object()
 NOGET = object()
 
-
-def locking(method: F) -> F:
-    'Decorator for locking TabRules methods after Tableau is started.'
-    @wraps(method)
-    def f(self: TabRules, *args, **kw):
-        try:
-            if self._root._locked:
-                raise Emsg.IllegalState('locked')
-        except AttributeError:
-            pass
-        return method(self, *args, **kw)
-    return f
 
 # ----------------------------------------------
 
@@ -168,7 +160,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         # history
         history = deque()
         self.on(RuleEvent.AFTER_APPLY, history.append)
-        self.history = SequenceCover(history)
+        self.history = SeqCover(history)
 
         # helpers
         self.helpers = helpers = {}
@@ -341,11 +333,23 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
 # ----------------------------------------------
 
+def locking(method: F) -> F:
+    'Decorator for locking TabRules methods after Tableau is started.'
+    @wraps(method)
+    def f(self: TabRules, *args, **kw):
+        try:
+            if self._root._locked:
+                raise Emsg.IllegalState('locked')
+        except AttributeError:
+            pass
+        return method(self, *args, **kw)
+    return f
+
 class TabRules(SequenceApi[Rule]):
     'Grouped and named collection of rules for a tableau.'
 
     __slots__ = setf((
-        '_root', '_tab', '_tab', '_ruleindex', '_groupindex',
+        '_root', '_tab', '_ruleindex', '_groupindex',
         '_locked', 'groups'
     ))
  
@@ -433,8 +437,8 @@ class TabRules(SequenceApi[Rule]):
     def _lock(self, _ = None):
         self._tab.off(TabEvent.AFTER_BRANCH_ADD, self._lock)
         self.groups._lock()
-        self._ruleindex  = MapCover(self._ruleindex)
-        self._groupindex = MapCover(self._groupindex)
+        self._ruleindex  = MapProxy(self._ruleindex)
+        self._groupindex = MapProxy(self._groupindex)
         self._locked = True
 
     def _checkname(self, name: str, /):
@@ -590,8 +594,8 @@ class RuleGroup(SequenceApi[Rule]):
     __setattr__ = locking(object.__setattr__)
 
     def _lock(self):
-        self._seq = SequenceCover(self._seq)
-        self._ruleindex = MapCover(self._ruleindex)
+        self._seq = SeqCover(self._seq)
+        self._ruleindex = MapProxy(self._ruleindex)
 
 class RuleGroups(SequenceApi[RuleGroup]):
 
@@ -676,7 +680,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
 
     def _lock(self):
         for _ in map(RuleGroup._lock, self): pass
-        self._seq = SequenceCover(self._seq)
+        self._seq = SeqCover(self._seq)
 
 # ----------------------------------------------
 
@@ -758,7 +762,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     #: The tableau timers.
     timers: TabTimers
 
-    _defaults = MapCover(dict(
+    _defaults = MapProxy(dict(
         is_group_optim  = True,
         is_build_models = False,
         build_timeout   = None,
@@ -769,7 +773,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
         # Events init
         super().__init__(*TabEvent)
-        self.__branch_listeners = MapCover({
+        self.__branch_listeners = MapProxy({
             BranchEvent.AFTER_BRANCH_CLOSE : self.__after_branch_close,
             BranchEvent.AFTER_NODE_ADD     : self.__after_node_add,
             BranchEvent.AFTER_NODE_TICK    : self.__after_node_tick,
@@ -786,11 +790,11 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.__branching_complexities: dict[Node, int] = {}
 
         # Exposed attributes
-        self.history = SequenceCover(self.__history)
+        self.history = SeqCover(self.__history)
         self.opts    = self._defaults | opts
         self.timers  = TabTimers.create()
         self.rules   = TabRules(self)
-        self.open    = SequenceCover(self.__open)
+        self.open    = SeqCover(self.__open)
 
         # Init
         if logic is not None:
@@ -972,8 +976,10 @@ class Tableau(Sequence[Branch], EventEmitter):
         # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
         nodes = tuple(branch) if branch.parent is None else EMPTY_SET
         self.emit(TabEvent.AFTER_BRANCH_ADD, branch)
-        for node in nodes:
-            self.__after_node_add(node, branch)
+        if len(nodes):
+            afteradd = self.__after_node_add
+            for node in nodes:
+                afteradd(node, branch)
         branch.on(self.__branch_listeners)
         return self
 
@@ -1093,17 +1099,16 @@ class Tableau(Sequence[Branch], EventEmitter):
             open  = len(self.open),
             step  = self.current_step,
             finished = self.finished,
-         ) | {
-            key: value
-            for key, value in {
-                prop: getattr(self, prop)
-                for prop in ('premature', 'valid', 'invalid',)
-            }.items()
-            if self.finished and value
-        } | (
-            {'argument': self.argument}
-            if self.argument else {}
         )
+        if self.finished:
+            if self.premature:
+                info['premature'] = True
+            elif self.valid:
+                info['valid'] = True
+            elif self.invalid:
+                info['invalid'] = True
+        if self.argument is not None:
+            info['argument'] = self.argument
         istr = ' '.join(f'{k}:{v}' for k, v in info.items())
         return f'<{type(self).__name__} {istr}>'
 

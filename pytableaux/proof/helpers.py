@@ -494,10 +494,10 @@ class FilterHelper(FilterNodeCache):
 
     @staticmethod
     def _build_filters_pred(rule: Rule) -> tuple[FiltersDict, NodePredFunc]:
-        filters = MapProxy(zip(
+        filters = MapProxy(dict(zip(
             types := getattr(rule, RuleAttr.NodeFilters),
             funcs := tuple(ftype(rule) for ftype in types)
-        ))
+        )))
         def pred(node, /):
             return all(f(node) for f in funcs)
         return filters, pred

@@ -21,15 +21,14 @@ pytableaux.tools.decorators
 """
 from __future__ import annotations
 
+import functools
 import operator as opr
 from collections import defaultdict
-from functools import WRAPPER_ASSIGNMENTS
-from functools import reduce as _ftreduce
 from inspect import Signature
 from keyword import iskeyword
 from types import DynamicClassAttribute as dynca
-from typing import (TYPE_CHECKING, Callable, Concatenate, Generic, Iterable,
-                    Iterator, Mapping)
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Concatenate,
+                    Generic, Iterable, Iterator, Mapping)
 
 # Allowed local imports:
 #  - errors
@@ -46,7 +45,6 @@ if TYPE_CHECKING:
     from typing import overload
 
 __all__ = (
-    'fixed',
     'lazy',
     'membr',
     'NoSetAttr',
@@ -57,6 +55,7 @@ __all__ = (
 
 
 EMPTY = ()
+WRASS = functools.WRAPPER_ASSIGNMENTS
 
 class _noexcept(Exception): __new__ = None
 
@@ -84,9 +83,9 @@ def _thru2(_x, obj, *_):
 def _attrstrcheck(name: str):
     check.inst(name, str)
     if iskeyword(name):
-        raise TypeError('%s is a keyword' % name)
+        raise TypeError(f'{name} is a keyword')
     if not name.isidentifier():
-        raise TypeError('%s is not an identifier' % name)
+        raise TypeError(f'{name} is not an identifier')
     return name
 
 def _methcaller(name: str):
@@ -96,13 +95,10 @@ def _methcaller(name: str):
     f.__name__ = name
     return f
 
-def _checkcallable(obj):
-    return check.inst(obj, Callable)
-
 def _checkcallable2(obj):
     if isinstance(obj, str):
         return _methcaller(obj)
-    return _checkcallable(obj)
+    return check.callable(obj)
 
 class BaseMember(Abc, Generic[T]):
 
@@ -217,15 +213,20 @@ class membr(BaseMember[T], Generic[T, RT]):
         return f # type: ignore
 
 class operd:
+    """Build operational functions: `apply` (default), `reduce`, `order`, `repeat`.
+    """
 
     def __new__(cls, *args, **kw):
-        return operd.apply(*args, **kw)
+        return cls.apply(*args, **kw)
 
     class Base(BaseMember, Callable):
 
         __slots__ = 'oper', 'info'
 
-        def __init__(self, oper: Callable, info = None):
+        oper: Callable
+        info: Callable|Mapping|None
+
+        def __init__(self, oper: Callable, info: Callable|Mapping = None):
             self.oper = oper
             self.info = info
 
@@ -234,12 +235,11 @@ class operd:
                 self.info = self
             setattr(owner, name, self())
 
-        def _getinfo(self, info = None):
+        def _getinfo(self, info: Callable|Mapping = None, /) -> Callable|Mapping:
             if info is None:
                 if self.info is None:
-                    info = self.oper
-                else:
-                    info = self.info
+                    return self.oper
+                return self.info
             return info
 
     class apply(Base):
@@ -249,9 +249,9 @@ class operd:
 
         __slots__ = EMPTY
 
-        def __call__(self, info = None):
+        def __call__(self, info: Callable|Mapping = None):
             info = self._getinfo(info)
-            oper = _checkcallable(self.oper)
+            oper = check.callable(self.oper)
             n = len(Signature.from_callable(oper).parameters)
             if n == 1:
                 def fapply(operand): return oper(operand)
@@ -285,62 +285,67 @@ class operd:
 
         __slots__ = 'freturn', 'finit'
 
+        freturn: Callable
+        finit: Callable
+
         def __init__(self, oper: Callable, /,
-            info = None, freturn: Callable = _thru2, finit: Callable = _thru,
+            info: Callable|Mapping = None,
+            freturn: Callable|str = _thru2,
+            finit: Callable|str = _thru,
         ):
             super().__init__(oper, info)
             self.freturn = _checkcallable2(freturn)
             self.finit = _checkcallable2(finit)
 
-        def __call__(self, info = None):
+        def __call__(self, info: Callable|Mapping = None):
             info = self._getinfo(info)
-            oper, freturn, finit = map(_checkcallable,
+            oper, freturn, finit = map(check.callable,
                 (self.oper, self.freturn, self.finit),
             )
             @wraps(info)
             def freduce(self, *operands):
-                return freturn(self, _ftreduce(oper, operands, finit(self)))
+                return freturn(self, functools.reduce(oper, operands, finit(self)))
             return freduce
 
-        @staticmethod
-        def template(*argdefs, **kwdefs) -> type[operd.reduce]:
-            'Make a templated subclass with bound arguments.'
-            class templated(__class__):
-                _argdefs = argdefs
-                _kwdefs = kwdefs
-                __slots__ = ()
-                def __init__(self, *args, **kw):
-                    super().__init__(*(argdefs + args), **(kwdefs | kw))
-            return templated
+        # @staticmethod
+        # def template(*argdefs, **kwdefs) -> type[operd.reduce]:
+        #     'Make a templated subclass with bound arguments.'
+        #     class templated(__class__):
+        #         _argdefs = argdefs
+        #         _kwdefs = kwdefs
+        #         __slots__ = ()
+        #         def __init__(self, *args, **kw):
+        #             super().__init__(*(argdefs + args), **(kwdefs | kw))
+        #     return templated
 
-    class order(Base):
-        """Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
-        default, except (AttributeError, TypeError), and return ``NotImplemented``.
-        """
+    # class order(Base):
+    #     """Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
+    #     default, except (AttributeError, TypeError), and return ``NotImplemented``.
+    #     """
 
-        __slots__ = 'errs', 'fcmp'
+    #     __slots__ = 'errs',
 
-        def __init__(self, oper: Callable, /, *errs, info = None):
-            super().__init__(oper, info)
-            if errs:
-                if errs == (None,): self.errs = _noexcept,
-                else: self.errs = errs
-                for ecls in self.errs:
-                    check.inst(ecls, type)
-                    check.subcls(ecls, Exception)
-            else:
-                self.errs = AttributeError, TypeError
+    #     def __init__(self, oper: Callable, /, *errs: type[Exception], info: Callable|Mapping = None):
+    #         super().__init__(oper, info)
+    #         if errs:
+    #             if errs == (None,): self.errs = _noexcept,
+    #             else: self.errs = errs
+    #             for ecls in self.errs:
+    #                 check.inst(ecls, type)
+    #                 check.subcls(ecls, Exception)
+    #         else:
+    #             self.errs = AttributeError, TypeError
 
-        def __call__(self, fcmp: Callable):
-            oper, fcmp = map(_checkcallable, (self.oper, fcmp))
-            errs = self.errs
-            @wraps(oper)
-            def f(self, other) -> bool:
-                try:
-                    return oper(fcmp(self, other), 0)
-                except errs:
-                    return NotImplemented
-            return f
+    #     def __call__(self, fcmp: Callable):
+    #         oper, fcmp = map(check.callable, (self.oper, fcmp))
+    #         errs = self.errs
+    #         @wraps(oper)
+    #         def f(self, other) -> bool:
+    #             try:
+    #                 return oper(fcmp(self, other), 0)
+    #             except errs:
+    #                 return NotImplemented
+    #         return f
 
     if TYPE_CHECKING:
 
@@ -361,9 +366,9 @@ class operd:
 
         __slots__ = EMPTY
 
-        def __call__(self, info = None):
+        def __call__(self, info: Callable|Mapping = None):
             info = self._getinfo(info)
-            oper = _checkcallable(self.oper)
+            oper = check.callable(self.oper)
             @wraps(info)
             def f(self, *args):
                 for arg in args: oper(self, arg)
@@ -373,7 +378,7 @@ class wraps(BaseMember):
 
     __slots__ = '_initial', '_adds'
 
-    def __init__(self, fin: Callable | Mapping):
+    def __init__(self, fin: Callable|Mapping):
         'Initialize argument, intial input function that will be decorated.'
         self._adds = {}
         self._initial = self.read(fin)
@@ -390,7 +395,7 @@ class wraps(BaseMember):
     @staticmethod
     def read(data):
         return dict(
-            _valfilter((k, _getmixed(data, k)) for k in WRAPPER_ASSIGNMENTS)
+            _valfilter((k, _getmixed(data, k)) for k in WRASS)
         )
 
     def update(self, data = None, /, **kw) -> wraps:
@@ -398,7 +403,7 @@ class wraps(BaseMember):
         adds = self._adds
         initial = self._initial
         skip = {'__doc__', '__annotations__'}
-        for attr, val in _valfilter((k, data.get(k)) for k in WRAPPER_ASSIGNMENTS):
+        for attr, val in _valfilter((k, data.get(k)) for k in WRASS):
             if attr in skip:
                 if initial.get(attr):
                     continue
@@ -409,7 +414,7 @@ class wraps(BaseMember):
         adds = self._adds
         initial = self._initial
         return dict(
-            _valfilter((k, initial.get(k, adds.get(k))) for k in WRAPPER_ASSIGNMENTS)
+            _valfilter((k, initial.get(k, adds.get(k))) for k in WRASS)
         )
 
     def write(self, obj: F) -> F:
@@ -529,7 +534,7 @@ class NoSetAttr(BaseMember):
     'Lame thing that does a lame thing.'
 
 
-    _defaults = MapProxy(dict(cls = None, attr = None))
+    _defaults: ClassVar[Mapping[str, Any]] = MapProxy(dict(cls = None, attr = None))
     efmt = "Attribute '{0}' of '{1.__class__.__name__}' objects is readonly".format
 
     __slots__ = 'enabled', 'defaults', '_cache', '_isroot'
@@ -539,9 +544,9 @@ class NoSetAttr(BaseMember):
     _cache: dict
     _isroot: bool
 
-    def __init__(self, /, *, enabled = True, root = False, **defaults):
-        self.enabled = enabled
-        self._isroot = root
+    def __init__(self, /, *, enabled: bool = True, root: bool = False, **defaults):
+        self.enabled = bool(enabled)
+        self._isroot = bool(root)
         self.defaults = self._defaults | defaults
         self._cache = defaultdict(dict)
 

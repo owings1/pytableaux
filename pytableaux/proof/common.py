@@ -25,15 +25,15 @@ import builtins
 import operator as opr
 from collections import defaultdict
 from collections.abc import Set
-from itertools import chain, filterfalse
+from itertools import filterfalse
 from typing import (TYPE_CHECKING, Any, Collection, Iterable, Iterator,
                     Mapping, SupportsIndex)
 
+from pytableaux import tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Sentence
 from pytableaux.proof.util import BranchEvent, PropMap
-from pytableaux.tools import isattrstr, isint, true
-from pytableaux.tools.abcs import Copyable
+from pytableaux.tools import EMPTY_MAP, isattrstr, isint, abcs, MapProxy
 from pytableaux.tools.decorators import lazy, operd, raisr
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
@@ -47,34 +47,54 @@ if TYPE_CHECKING:
     from pytableaux.models import BaseModel
     from pytableaux.proof.tableaux import Rule
 
-__all__ = 'Node', 'Branch', 'Target'
+__all__ = (
+    'Branch',
+    'Node',
+    'Target',
+)
 
 _first_const = Constant.first()
 
+NOARG = object()
 
 class Node(MapCover):
     'A tableau node.'
 
     __slots__ = (
-        'step', 'ticked', '_is_access', '_is_modal', '_worlds',
-        '__len__', '_getitem_orig', '__iter__', '__reversed__',
+        'step', 'ticked',
+        '_is_access', '_is_modal', '_worlds',
     )
-    _cover_items = dict(MapCover._cover_items, __getitem__ = '_getitem_orig')
 
     def __new__(cls, arg = None, /):
         if type(arg) is cls:
             return arg
         return object.__new__(cls)
 
-    def __init__(self, mapping: Mapping = None, /):
-        if self is mapping:
-            return
-        self._init_cover(dict(mapping or EMPTY_SET), self)
+    @tools.closure
+    def __init__():
+        sa = object.__setattr__
+        def init(self: Node, mapping: Mapping = EMPTY_MAP, /):
+            if mapping is self:
+                return
+            try:
+                if len(mapping):
+                    mapping = MapProxy(dict(mapping))
+                else:
+                    mapping = EMPTY_MAP
+            except TypeError:
+                check.inst(mapping, Mapping)
+                raise
+            sa(self, '_cov_mapping', mapping)
+        return init
 
-    def copy(self) -> Node:
-        inst = object.__new__(type(self))
-        self._init_cover(self, inst)
-        return inst
+    @tools.closure
+    def copy():
+        sa = object.__setattr__
+        def copy(self: Node) -> Node:
+            inst = object.__new__(type(self))
+            sa(inst, '_cov_mapping', self._cov_mapping)
+            return inst
+        return copy
 
     @property
     def id(self) -> int:
@@ -86,22 +106,19 @@ class Node(MapCover):
 
     @lazy.prop
     def is_modal(self) -> bool:
-        return self.any('world', 'world1', 'world2', 'worlds')
+        return self.any('world', 'world1', 'world2')
 
     @lazy.prop
     def is_access(self) -> bool:
         return self.has('world1', 'world2')
 
     @lazy.prop
-    def worlds(self) -> setf[int]:
+    def worlds(self, /, *, names = ('world', 'world1', 'world2')) -> setf[int]:
         """
-        Return the set of worlds referenced in the node properties. This combines
-        the properties `world`, `world1`, `world2`, and `worlds`.
+        The set of worlds referenced in the node properties. This combines
+        the properties `world`, `world1`, and `world2`.
         """
-        return setf(filter(isint,
-            chain(self.get('worlds', EMPTY_SET),
-            map(self.get, ('world', 'world1', 'world2'))),
-        ))
+        return setf(filter(isint, map(self.get, names)))
 
     def has(self, *names: str) -> bool:
         'Whether the node has a non-``None`` property of all the given names.'
@@ -126,21 +143,23 @@ class Node(MapCover):
                 return False
         return True
 
-    __bool__    = true
+    __bool__    = operd(tools.true)
     __eq__      = operd(opr.is_)
     __hash__    = operd(builtins.id)
     __delattr__ = raisr(AttributeError)
 
     def __getitem__(self, key):
         try:
-            return self._getitem_orig(key)
+            return self._cov_mapping[key]
         except KeyError:
             return PropMap.NodeDefaults[key]
 
-    def __setattr__(self, name, val):
-        if getattr(self, name, val) != val:
+    def __setattr__(self, name: str, value: Any, /, *, _sa = object.__setattr__):
+        if (v := getattr(self, name, NOARG)) is not NOARG and (
+            name != 'ticked' or value is not v
+        ):
             raise Emsg.ReadOnly(self, name)
-        super().__setattr__(name, val)
+        _sa(self, name, value)
 
     @classmethod
     def _oper_res_type(cls, other_type: type[Iterable]) -> type[Mapping]:
@@ -371,18 +390,18 @@ class Branch(SequenceApi[Node], EventEmitter):
         """
         node = Node(node)
         self.__nodes.append(node)
-        s: Sentence = node.get('sentence')
-        if s:
-            cons = s.constants
-            if cons:
+
+        if (s := node.get('sentence')) is not None:
+            if len(cons := s.constants):
                 if self.__nextconst in cons:
                     self.__nextconst = max(cons).next()
                 self.__constants.update(cons)
-        if node.worlds:
-            maxworld = max(node.worlds)
+
+        if len(worlds := node.worlds):
+            maxworld = max(worlds)
             if maxworld >= self.__nextworld:
                 self.__nextworld = maxworld + 1
-            self.__worlds.update(node.worlds)
+            self.__worlds.update(worlds)
 
         # Add to index *before* after_node_add event
         self.__index.add(node)
@@ -411,7 +430,7 @@ class Branch(SequenceApi[Node], EventEmitter):
             *nodes: The nodes to tick.
         """
         event = BranchEvent.AFTER_NODE_TICK
-        for node in filterfalse(self.is_ticked, nodes):
+        for node in filterfalse(self.__ticked.__contains__, nodes):
             self.__ticked.add(node)
             node.ticked = True
             self.emit(event, node, self)
@@ -484,11 +503,11 @@ class Branch(SequenceApi[Node], EventEmitter):
     def __iter__(self) -> Iterator[Node]:
         return iter(self.__nodes)
 
-    __hash__ = operd(builtins.id)
+    __bool__ = operd(tools.true)
     __eq__   = operd(opr.is_)
-    __bool__ = true
+    __hash__ = operd(builtins.id)
 
-    def __contains__(self, node):
+    def __contains__(self, node, /):
         return node in self.__nodes
 
     def __repr__(self):
@@ -499,12 +518,12 @@ class Branch(SequenceApi[Node], EventEmitter):
         )
 
     @classmethod
-    def _from_iterable(cls, it: Iterable):
+    def _from_iterable(cls, it: Iterable, /):
         b = cls()
         b.extend(it)
         return b
 
-    class Index(dict[str, dict[Any, set[Node]]], Copyable):
+    class Index(dict[str, dict[Any, set[Node]]], abcs.Copyable):
         "Branch node index."
 
         __slots__ = EMPTY_SET
@@ -613,9 +632,9 @@ class Target(dmapattr[str, Any]):
             raise Emsg.BadAttrName(key)
         super().__setitem__(key, value)
 
+    __bool__    = operd(tools.true)
     __delitem__ = raisr(TypeError)
     __delattr__ = raisr(AttributeError)
-    __bool__    = true
 
     def __dir__(self):
         return list(self._names())
@@ -626,7 +645,13 @@ class Target(dmapattr[str, Any]):
 
     def _names(self) -> Iterator[str]:
         get = self.get
-        return filter(lambda n: get(n) is not None, self.__slots__)
-        # return (name for name in self.__slots__ if get(name) is not None)
+        return (name for name in self.__slots__ if get(name) is not None)
 
 
+del(
+    builtins,
+    lazy,
+    operd,
+    opr,
+    raisr,
+)

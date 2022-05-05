@@ -22,13 +22,14 @@ pytableaux.tools.mappings
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from collections.abc import Collection, Iterator, Mapping, MutableMapping, Set
+from collections.abc import Iterator, Mapping, MutableMapping, Set
 from itertools import chain, filterfalse
 from operator import not_, truth
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Generic
+from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable
 
-from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy, abcs, closure, isattrstr, thru, true
+from pytableaux import __docformat__, tools
+from pytableaux.errors import Emsg
+from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, isattrstr
 from pytableaux.tools.decorators import membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.typing import KT, VT, NotImplType, T
@@ -44,11 +45,13 @@ __all__ = (
     'dmap',
     'dmapattr',
     'dmapns',
+    'EMPTY_MAP',
     'ItemMapEnum',
     'ItemsIterator',
     'KeySetAttr',
     'MapCover',
     'MappingApi',
+    'MapProxy',
     'MutableMappingApi',
 )
 
@@ -59,7 +62,7 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
 
     if TYPE_CHECKING:
         @overload
-        def __or__(self:  MapT, b: Mapping) -> MapT: ...
+        def __or__(self: MapT, b: Mapping) -> MapT: ...
         @overload
         def __ror__(self: MapT, b: Mapping) -> MapT: ...
         @overload
@@ -71,9 +74,9 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
         def __rmod__(self: MapT, b: Mapping) -> MapT: ...
 
         @overload
-        def __and__(self:  MapT, b: SetT) -> MapT: ...
+        def __and__(self: MapT, b: SetT) -> MapT: ...
         @overload
-        def __sub__(self:  MapT, b: SetT) -> MapT: ...
+        def __sub__(self: MapT, b: SetT) -> MapT: ...
 
         @overload
         def __rand__(self: MapT, b: SetT) -> SetT: ...
@@ -182,37 +185,43 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
 class MapCover(MappingApi[KT, VT]):
     'Mapping reference.'
 
-    __slots__ = '__len__', '__getitem__', '__iter__', '__reversed__'
+    __slots__ = (
+        '__getitem__',
+        '_cov_mapping',
+    )
+    _cov_mapping: Mapping[KT, VT]
 
-    _cover_items: ClassVar[tuple[tuple[str, str]]] = tuple(zip(__slots__, __slots__))
-    _cover_attrs: ClassVar[setf[str]] = setf(dict(_cover_items).values())
-
-    def __init__(self, mapping: Mapping[KT, VT] = None, /, **kwmap):
-        if mapping is None:
-            mapping = kwmap
-        else:
-            check.inst(mapping, Mapping)
-            if len(kwmap):
-                raise TypeError('Expected mapping or kwargs, not both.')
-        self._init_cover(mapping, self)
-
-    @classmethod
-    def _init_cover(cls, src: Mapping, dest: Any, /, *,
-        # ga = object.__getattribute__,
+    @tools.closure
+    def __init__():
         sa = object.__setattr__
-    ):
-        for srcname, destname in cls._cover_items:
-            sa(dest, destname, getattr(src, srcname))
+        def init(self: MapCover, mapping: Mapping[KT, VT], /):
+            if type(mapping) is not MapProxy:
+                mapping = MapProxy(mapping)
+            sa(self, '_cov_mapping', mapping)
+            sa(self, '__getitem__', mapping.__getitem__)
+        return init
+
+    def copy(self):
+        return self._from_mapping(self._asdict())
+
+    def __reversed__(self) -> Iterator[KT]:
+        return reversed(self._cov_mapping)
+
+    def __len__(self):
+        return len(self._cov_mapping)
+
+    def __iter__(self) -> Iterator[KT]:
+        return iter(self._cov_mapping)
 
     def __delattr__(self, name: str, /):
-        if name in self._cover_attrs:
+        if name in __class__.__slots__:
             raise Emsg.ReadOnly(self, name)
         super().__delattr__(name)
 
-    def __setattr__(self, name: str, value: Any, /):
-        if name in self._cover_attrs:
+    def __setattr__(self, name: str, value: Any, /, *, _sa = object.__setattr__):
+        if hasattr(self, name) and name in __class__.__slots__:
             raise Emsg.ReadOnly(self, name)
-        super().__setattr__(name, value)
+        _sa(self, name, value)
 
     def __repr__(self):
         return repr(self._asdict())
@@ -221,11 +230,8 @@ class MapCover(MappingApi[KT, VT]):
     def _from_iterable(cls, it: Iterable):
         return cls._from_mapping(dict(it))
 
-    def __init_subclass__(subcls: type[MapCover], **kw):
-        super().__init_subclass__(**kw)
-        if isinstance(subcls._cover_items, Mapping):
-            subcls._cover_items = tuple(subcls._cover_items.items())
-        subcls._cover_attrs = setf(dict(subcls._cover_items).values())
+    # def __init_subclass__(subcls: type[MapCover], **kw):
+    #     super().__init_subclass__(**kw)
 
 class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], abcs.Copyable):
 
@@ -273,11 +279,11 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], abcs.Copyabl
         ): pass
         return self
 
-    @closure
+    @tools.closure
     def _setitem_update():
         EMPTY_ITER = iter(())
         def update(self, it: Iterable = None, /, **kw):
-            """Alternate 'update' implementation for classes that need more 
+            """Alternate `.update()` implementation for classes that need more 
             setitem/delitem control.
             """
             if it is None:
@@ -300,7 +306,7 @@ class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
 
     __slots__ = EMPTY_SET
 
-    copy    = MutableMappingApi.copy
+    copy    = MutableMappingApi[KT, VT].copy
     __or__  = MutableMappingApi[KT, VT].__or__
     __ror__ = MutableMappingApi[KT, VT].__ror__
 
@@ -309,7 +315,7 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
 
     __slots__ = EMPTY_SET
 
-    copy    = MutableMappingApi.copy
+    copy    = MutableMappingApi[KT, VT].copy
     __or__  = MutableMappingApi[KT, VT].__or__
     __ror__ = MutableMappingApi[KT, VT].__ror__
 
@@ -329,7 +335,7 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
             return dmap
         return super()._roper_res_type(othrtype)
 
-class KeySetAttr(abcs.Abc):
+class KeySetAttr(metaclass = abcs.AbcMeta):
     "Mixin class for read-write attribute-key gate."
 
     __slots__ = EMPTY_SET
@@ -400,7 +406,7 @@ class ItemMapEnum(abcs.Ebc):
     These methods would not be called internally by operator methods, since we
     always resolve to a ``dict`` (not our own class).
 
-    Note that ``.get()`` is implemented as ``.iget()``, since ``AbcEnumMeta``
+    Note that ``.get()`` is implemented as ``.mget()``, since ``AbcEnumMeta``
     uses ``'get'`` as a class method to lookup enum members.
     """
 
@@ -427,7 +433,7 @@ class ItemMapEnum(abcs.Ebc):
     keys = MappingApi.keys
     items = MappingApi.items
     values = MappingApi.values
-    iget = MappingApi.get # get() is not allowed for Ebc
+    mget = MappingApi.get # get() is not allowed for Ebc
 
     _asdict = MappingApi._asdict
 
@@ -531,8 +537,8 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
         obj: Mapping[KT, VT]|Iterable[tuple[KT, VT]]|Iterable[KT],
         /, *, 
         vget: Callable[[KT], VT]|None = None,
-        kpred: Callable[[KT], bool] = true,
-        vpred: Callable[[VT], bool] = true,
+        kpred: Callable[[KT], bool] = tools.true,
+        vpred: Callable[[VT], bool] = tools.true,
         koper: Callable[[bool], bool] = truth,
         voper: Callable[[bool], bool] = truth,
     ):
@@ -573,7 +579,7 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
 if TYPE_CHECKING:
     class _opcache: pass
 
-@closure
+@tools.closure
 def _opcache():
 
     class CacheResolversType(dict[tuple[Callable, Callable], Callable]):
@@ -608,7 +614,7 @@ def _opcache():
                 self.pop(next(iter(self)))
             return self.setdefault(othrtype, self.resolve)
 
-        def resolve(self, mapi, other, /, *, FTHRU: Callable[[T], T] = thru):
+        def resolve(self, mapi, other, /, *, FTHRU: Callable[[T], T] = tools.thru):
             othrtype = type(other)
             if not issubclass(othrtype, Iterable):
                 return self.reject(othrtype)
@@ -634,7 +640,7 @@ def _opcache():
             self[othrtype] = resolve_cache[res_create, get_res_iter]
             return res
 
-        @closure
+        @tools.closure
         def reject():
 
             def FNOTIMPL(*args, **kw):
@@ -674,6 +680,8 @@ def _opcache():
 
     class opercache:
 
+        __new__ = NotImplemented
+
         @staticmethod
         def get(mapitype: type[MapiT], opname: str, othrtype: type[T],
         /) -> Callable[[MapiT, T], MapiT|NotImplType]:
@@ -685,7 +693,7 @@ def _opcache():
             return source[type(mapi)][opname][type(other)](mapi, other)
 
         @staticmethod
-        @closure
+        @tools.closure
         def resolvers():
             _resolvers = MapProxy(resolve_cache)
             def resolvers():
@@ -704,30 +712,16 @@ def _opcache():
             limit_conf['_limit'] = min(0, int(n))
 
         @staticmethod
-        @closure
+        @tools.closure
         def __dir__(funcs = [get, resolve, clear, limit, resolvers]):
             names = [f.__name__ for f in funcs]
             return lambda: list(names)
 
-        def __new__(cls): return opercache
-        __class__ = __init__  = None
-        __slots__ = EMPTY_SET
-
     return opercache
 
 del(
-    # closure,
-    # membr,
-    # wraps,
-    # checklimit,
-    # _ResolverFactory,
-    # _CacheResolversType, _FuncCache, _TypeFuncsCache, _OperFuncsCache,
+    membr,
+    tools,
+    truth,
+    wraps,
 )
-
-# fail if deleted
-
-
-# def _gen(n = 5, *a):
-#     # testing...
-#     r = n  if isinstance(n, range) else range(n, *a)
-#     return zip(r, map('valueOf(%s)'.__mod__, r))

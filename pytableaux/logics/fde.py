@@ -24,8 +24,8 @@ from typing import Any
 
 from pytableaux.errors import Emsg
 from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Atomic, Constant, Operated, Operator
-from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
+from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
+                                 Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, Mval
 from pytableaux.proof import TableauxSystem as BaseSystem

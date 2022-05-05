@@ -32,8 +32,11 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
 #==========================+
 
 if TYPE_CHECKING:
-    from typing import Generic, overload, Sequence, Iterable, Iterator
+    from typing import (Generic, Hashable, Iterable, Iterator, Sequence,
+                        overload)
 
+    from pytableaux.lang.lex import (CoordsItem, Lexical, LexicalItem,
+                                     Sentence, TableStore)
     from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem, filters
     from pytableaux.proof.common import Branch, Node, Target
@@ -100,6 +103,9 @@ if TYPE_CHECKING:
     IcmpFunc = Callable[[int, int], bool]
     "Function that compares two ints and returns a boolean, e.g. `>` or `<`."
 
+    KeysFunc = Callable[[Any], Set[Hashable]]
+    "Function that returns a Set."
+
     TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
     "Function like ``Rule._get_targets()``."
 
@@ -135,8 +141,8 @@ if TYPE_CHECKING:
 
 else:
 
-    IcmpFunc = TargetsFn = NodeTargetsFn = NodeTargetsGen = NodePredFunc = \
-        Callable
+    IcmpFunc = KeysFunc = TargetsFn = NodeTargetsFn = NodeTargetsGen = \
+        NodePredFunc = Callable
 
     HkProviderInfo = HkUserInfo = HkConns = HkProviders = Mapping
 
@@ -216,7 +222,22 @@ LinkSeqT = TypeVar('LinkSeqT', bound = 'LinkSequence')
 "Bound to ``LinkSequence``"
 
 TimT = TypeVar('TimT', bound = 'TimingCommon')
-"Bound to ``TimingCommon``."
+"Bound to ``TimingCommon``"
+
+TbsT = TypeVar('TbsT', bound = 'TableStore')
+"Bound to ``TableStore``"
+
+CrdT = TypeVar('CrdT', bound = 'CoordsItem')
+"Bound to ``CoordsItem``"
+
+LexT = TypeVar('LexT', bound = 'Lexical')
+"Bound to ``Lexical``"
+
+LexItT = TypeVar('LexItT', bound = 'LexicalItem')
+"Bound to ``LexicalItem``"
+
+SenT = TypeVar('SenT', bound = 'Sentence')
+"Bound to ``Sentence``"
 
 P = ParamSpec('P')
 "Param spec"

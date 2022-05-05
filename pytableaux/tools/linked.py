@@ -23,11 +23,11 @@ from itertools import filterfalse
 from typing import (TYPE_CHECKING, Collection, Generic, Iterable, Iterator,
                     Literal, SupportsIndex)
 
-from pytableaux import __docformat__
+from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg
 from pytableaux.errors import check as echeck
-from pytableaux.tools import abstract, static
 from pytableaux.tools.abcs import Copyable, IntEnum, abcm
+from pytableaux.tools.hooks import HookProvider
 from pytableaux.tools.hybrids import MutableSequenceSet
 from pytableaux.tools.sequences import (MutableSequenceApi, SequenceApi,
                                         absindex, slicerange)
@@ -121,9 +121,10 @@ class HashLink(Link[VT]):
     def __hash__(self):
         return hash(self.value)
 
-@static
 class linkiter:
     "Link iterator methods."
+
+    __new__ = NotImplemented
 
     @staticmethod
     def links(origin: Link[VT]|None, step: int = 1, count: int = -1, /) -> Iterator[Link[VT]]:
@@ -216,7 +217,7 @@ class LinkSequence(SequenceApi[VT]):
 
     __slots__ = '__link_first__', '__link_last__',
 
-    @abstract
+    @tools.abstract
     def __new__(cls, *args, **kw):
         inst = super().__new__(cls)
         inst.__link_first__ = None
@@ -252,7 +253,7 @@ class LinkSequence(SequenceApi[VT]):
 
         raise Emsg.InstCheck(i, (SupportsIndex, slice))
 
-    def _link_at(self, index: SupportsIndex) -> Link[VT]:
+    def _link_at(self, index: SupportsIndex, /) -> Link[VT]:
         'Get a Link entry by index. Supports negative value. Raises ``IndexError``.'
 
         length = len(self)
@@ -503,7 +504,7 @@ class linkseq(LinkSequence[VT], MutableSequenceApi[VT]):
         self.__len -= 1
 
 class linqset(linkseq[VT], MutableSequenceSet[VT],
-    hookinfo = abcm.hookinfo(linkseq) - {'check'}
+    hookinfo = HookProvider(linkseq) - {'check'}
 ):
     """Mutable ``linqseq`` implementation for hashable values, based on
     a dict index. Inserting and removing is fast (O(1)) no matter where

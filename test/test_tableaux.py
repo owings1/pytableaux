@@ -6,14 +6,16 @@ from pytableaux import examples
 from pytableaux.errors import *
 from pytableaux.lang.lex import Atomic, Constant, Predicated
 from pytableaux.logics.k import DefaultNodeRule as DefaultKRule
-from pytableaux.proof import TableauxSystem as TabSys, filters
+from pytableaux.proof import TableauxSystem as TabSys
+from pytableaux.proof import filters
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import getkey
 from pytableaux.proof.helpers import FilterHelper, MaxConsts
+from pytableaux.proof.rules import ClosingRule, NoopRule, Rule
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.rules import ClosingRule, Rule
 from pytableaux.proof.util import TabEvent, TabFlag, TabStatKey
 from pytableaux.tools import MapProxy
+from pytableaux.tools.mappings import MapCover, dmap
 from pytest import raises
 
 from .tutils import BaseSuite, skip, using
@@ -25,10 +27,6 @@ def mock_sleep_5ms():
 exarg = examples.argument
 sen = 'sentence'
 
-class RuleStub(Rule):
-    def _apply(self, target): pass
-    def _get_targets(self, branch): pass
-    def example_nodes(self): return tuple()
 
 class TestTableauxSystem(BaseSuite):
 
@@ -93,7 +91,7 @@ class TestTableau(BaseSuite):
 
     def test_after_branch_add_with_nodes_no_parent(self):
 
-        class MockRule(RuleStub):
+        class MockRule(NoopRule):
 
             __slots__ = '__dict__',
             def __init__(self, *args, **opts):
@@ -171,7 +169,7 @@ class TestBranch:
 
     def test_regression_branch_has_works_with_newly_added_node_on_after_node_add(self):
 
-        class MyRule(RuleStub):
+        class MyRule(NoopRule):
 
             __slots__ = 'should_be', 'shouldnt_be'
 
@@ -313,7 +311,7 @@ class TestBranch:
 class TestNode:
 
     def test_worlds_contains_worlds(self):
-        node = Node({'worlds': {0, 1}})
+        node = Node({'world1': 0, 'world2': 1})
         res = node.worlds
         assert 0 in res
         assert 1 in res
@@ -328,9 +326,9 @@ class TestNode:
         exp = {}
         exp.update({'a':1,'b':2,'c':3})
         for inp in [
-            zip(('a', 'b', 'c'), (1, 2, 3)),
+            dmap(zip(('a', 'b', 'c'), (1, 2, 3))),
             MapProxy(exp),
-            exp.items()
+            MapCover._from_iterable(exp.items()),
         ]:
             assert dict(Node(inp)) == exp
 
@@ -418,7 +416,7 @@ class TestMaxConstantsTracker(BaseSuite):
 
     def test_argument_trunk_two_qs_returns_3(self):
     
-        class FilterNodeRule(RuleStub):
+        class FilterNodeRule(NoopRule):
             Helpers = FilterHelper,
             ignore_ticked = None
             NodeFilters = filters.ModalNode,

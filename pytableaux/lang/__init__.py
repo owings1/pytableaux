@@ -1,4 +1,40 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pytableaux.lang
+^^^^^^^^^^^^^^^
+
+"""
 from __future__ import annotations
+
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
+                    NamedTuple, Set)
+
+from pytableaux.errors import Emsg, check
+from pytableaux.tools import MapProxy, abcs, closure
+from pytableaux.tools.decorators import NoSetAttr, raisr
+from pytableaux.tools.sets import EMPTY_SET, setm
+from pytableaux.tools.typing import CrdT, LexItT, LexT, SenT, TbsT
+
+if TYPE_CHECKING:
+    from pytableaux.lang.lex import (Lexical, LexType, Predicate, Quantifier,
+                                     Sentence, Variable)
+    from pytableaux.lang.parsing import Parser
+    from pytableaux.lang.writing import LexWriter
 
 __all__ = (
     'BiCoords',
@@ -35,20 +71,6 @@ __all__ = (
     'TbsT', 'CrdT', 'LexT', 'LexItT', 'SenT',
 )
 
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
-                    NamedTuple, Set, TypeVar)
-
-from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy, abcs, closure
-from pytableaux.tools.decorators import NoSetAttr, raisr
-from pytableaux.tools.sets import EMPTY_SET, setm
-
-if TYPE_CHECKING:
-    from pytableaux.lang.lex import (CoordsItem, Lexical, LexicalItem, LexType,
-                                     Predicate, Quantifier, Sentence, Variable)
-    from pytableaux.lang.parsing import Parser
-    from pytableaux.lang.writing import LexWriter
-
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
 raiseae = raisr(AttributeError)
 
@@ -61,12 +83,14 @@ class LangCommonMeta(abcs.AbcMeta):
     shared among these classes and is activated after the modules are fully
     initialized.
     """
+
     _readonly : bool
     __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.AbcMeta)
 
 class LangCommonEnumMeta(abcs.EbcMeta):
     'Common Enum metaclass for lang classes.'
+
     _readonly : bool
     __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.EbcMeta)
@@ -114,8 +138,13 @@ class Notation(LangCommonEnum):
     Parser: type[Parser]
     "The notation's parser class."
 
-    polish   = abcs.eauto(), 'unicode'
+    #--- Members
+
+    polish = abcs.eauto(), 'unicode'
+    "Polish notation."
+
     standard = abcs.eauto(), 'unicode'
+    "Standard notation."
 
     def __init__(self, num, default_charset: str, /):
         self.charsets = setm((default_charset,))
@@ -155,26 +184,48 @@ class Notation(LangCommonEnum):
 class Marking(LangCommonEnum):
     'Miscellaneous marking/punctuation enum.'
 
-    paren_open  = abcs.eauto()
+    paren_open = abcs.eauto()
+    "Open parenthesis marking."
+
     paren_close = abcs.eauto()
-    whitespace  = abcs.eauto()
-    digit       = abcs.eauto()
-    meta        = abcs.eauto()
-    subscript   = abcs.eauto()
+    "Close parenthesis marking."
+
+    whitespace = abcs.eauto()
+    "Whitespace marking."
+
+    digit = abcs.eauto()
+    "Digit marking."
+
+    meta = abcs.eauto()
+    "Meta marking."
+
+    subscript = abcs.eauto()
+    "Subscript marking."
 
 #==========================+
 #  Aux classes             |
 #==========================+
 
 class BiCoords(NamedTuple):
-    index     : int
-    subscript : int
+    "An (index, subscript) tuple."
+
+    index: int
+    "The index integer."
+
+    subscript: int
+    "The subscript integer."
 
     class Sorting(NamedTuple):
-        subscript : int
-        index     : int
+        "BiCoords sorting tuple (subscript, index)."
+
+        subscript: int
+        "The subscript integer."
+
+        index: int
+        "The index integer."
 
     def sorting(self) -> BiCoords.Sorting:
+        "Return the sorting tuple."
         return self.Sorting(self.subscript, self.index)
 
     first = (0, 0)
@@ -195,16 +246,31 @@ class BiCoords(NamedTuple):
         return BiCoords(index, sub)
 
 class TriCoords(NamedTuple):
-    index     : int
-    subscript : int
-    arity     : int
+    "An (index, subscript, arity) tuple."
+
+    index: int
+    "The index integer."
+
+    subscript: int
+    "The subscript integer."
+
+    arity: int
+    "The arity integer."
 
     class Sorting(NamedTuple):
-        subscript : int
-        index     : int
-        arity     : int
+        "TriCoords sorting tuple (subscript, index, arity)."
+
+        subscript: int
+        "The subscript integer."
+
+        index: int
+        "The index integer."
+
+        arity: int
+        "The arity integer."
 
     def sorting(self) -> TriCoords.Sorting:
+        "Return the sorting tuple."
         return self.Sorting(self.subscript, self.index, self.arity)
 
     first = (0, 0, 1)
@@ -299,39 +365,51 @@ class RenderSet(TableStore):
 #  Type aliases -- used a runtime with isinstance  |
 #==================================================+
 
-ParameterSpec  = BiCoords
+ParameterSpec = BiCoords
+"Parameter spec type (BiCoords)."
 
-PredicateSpec  = TriCoords
+PredicateSpec = TriCoords
+"Predicate spec type (TriCoords)."
 
-AtomicSpec     = BiCoords
+AtomicSpec = BiCoords
+"Atomic spec type (BiCoords)."
 
-#==============================================+
-#  Generic aliases -- no 'isinstance' support  |
-#==============================================+
-
-SpecType = tuple[int|str|tuple, ...]
-"Tuple with integers, strings, or such nested tuples."
-
-IdentType = tuple[str, SpecType]
-"Tuple of (classname, spec)"
-
-ParameterIdent = tuple[str, BiCoords]
-
-QuantifierSpec = tuple[str]
-
-OperatorSpec   = tuple[str]
-
-PredicateRef  = tuple[int, ...] | str
-
-PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
-
-QuantifiedSpec = tuple[str, BiCoords, IdentType]
-
-OperandsSpec   = tuple[IdentType, ...]
-
-OperatedSpec   = tuple[str, OperandsSpec]
+#====================+
+#  Generic aliases   |
+#====================+
 
 if TYPE_CHECKING:
+
+    SpecType = tuple[int|str|tuple, ...]
+    "Tuple with integers, strings, or such nested tuples."
+
+    IdentType = tuple[str, SpecType]
+    "Tuple of (classname, spec)."
+
+    ParameterIdent = tuple[str, BiCoords]
+    "Tuple of (classname, (index, subscript))."
+
+    QuantifierSpec = tuple[str]
+    "Singleton tuple of quantifier name."
+
+    OperatorSpec = tuple[str]
+    "Singleton tuple of operator name."
+
+    PredicateRef = tuple[int, ...] | str
+    "Predicate ref type, int tuple or string."
+
+    PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
+    "Predicated sentence spec type."
+
+    QuantifiedSpec = tuple[str, BiCoords, IdentType]
+    "Quantified sentence spec type."
+
+    OperandsSpec = tuple[IdentType, ...]
+    "Operands argument type."
+
+    OperatedSpec   = tuple[str, OperandsSpec]
+    "Operated sentence spec type."
+
     # deferred
     PredsItemSpec = PredicateSpec | Predicate
     PredsItemRef  = PredicateRef  | Predicate
@@ -340,24 +418,11 @@ if TYPE_CHECKING:
     ParseTableKey   = LexType|Marking|type[Predicate.System]
     ParseTableValue = int|Lexical
 else:
+    SpecType = IdentType = ParameterIdent = QuantifierSpec = OperatorSpec = \
+        PredicatedSpec = QuantifiedSpec = OperandsSpec = OperatedSpec = tuple
+
+    PredicateRef = tuple|str
+
     PredsItemSpec = PredsItemRef = OperCallArg = QuantifiedItem = \
         ParseTableKey = ParseTableValue = object
 
-#==========================+
-#  Type variables          |
-#==========================+
-
-TbsT   = TypeVar('TbsT',   bound = 'TableStore')
-"TypeVar bound to `TableStore`."
-
-CrdT   = TypeVar('CrdT',   bound = 'CoordsItem')
-"TypeVar bound to `CoordsItem`."
-
-LexT   = TypeVar('LexT',   bound = 'Lexical')
-"TypeVar bound to `Lexical`."
-
-LexItT = TypeVar('LexItT', bound = 'LexicalItem')
-"TypeVar bound to `LexicalItem`."
-
-SenT   = TypeVar('SenT',   bound = 'Sentence')
-"TypeVar bound to `Sentence`."

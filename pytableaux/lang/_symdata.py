@@ -143,10 +143,10 @@ def rendersets():
         # ₀₁₂₃₄₅₆₇₈₉
         return ''.join(chr(0x2080 + int(d)) for d in str(sub))
 
-    asciimeta = MapProxy(
+    asciimeta = MapProxy(dict(
         conseq    = '|-',
         nonconseq = '|/-',
-    )
+    ))
     htmsub = '<sub>%d</sub>'.__mod__
 
     data = {notn: {} for notn in Notation}

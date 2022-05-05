@@ -113,7 +113,8 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
 
         def cmpgen(a: Argument, b: Argument, /,):
             if a is b:
-                yield 0 ; return
+                yield 0
+                return
             yield bool(a.conclusion) - bool(b.conclusion)
             yield len(a) - len(b)
             yield from (sorder(sa, sb) for sa, sb in zip(a, b))

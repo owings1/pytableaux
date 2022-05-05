@@ -49,6 +49,7 @@ def _():
 
     from pytableaux.tools.abcs import ebcm, Ebc
     errors.Emsg = ebcm.rebase(errors.Emsg, errors.EmsgBase, Ebc)
+    abcs.Emsg = errors.Emsg
 
     errors.EmsgBase = None
     del(errors.EmsgBase)
@@ -62,7 +63,6 @@ class _Settings:
     DEBUG: bool
     ITEM_CACHE_SIZE: int
 
-# _ENV = {}
 _ENV: _Settings
 
 @tools.closure
@@ -163,9 +163,7 @@ __all__ = (
 )
 
 
-_package_info = None
 del(
     _,
-    _package_info,
     pytableaux,
 )

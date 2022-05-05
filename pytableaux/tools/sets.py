@@ -21,6 +21,7 @@ pytableaux.tools.sets
 """
 from __future__ import annotations
 
+import functools
 import operator as opr
 from collections.abc import MutableSet, Set
 from typing import TYPE_CHECKING
@@ -78,7 +79,7 @@ class SetApi(Set[VT], abcs.Copyable):
     __sub__ = Set[VT].__sub__
     __xor__ = Set[VT].__xor__
 
-    red = operd.reduce.template(freturn = '_from_iterable')
+    red = functools.partial(operd.reduce, freturn = '_from_iterable')
     app = operd.apply
 
     issubset     = app(opr.le,   set.issubset)
@@ -102,8 +103,6 @@ class MutableSetApi(MutableSet[VT], SetApi[VT]):
 
     __slots__ = EMPTY_SET
 
-    rep = operd.repeat
-
     if TYPE_CHECKING:
         @overload
         def update(self, *others: Iterable): ...
@@ -113,6 +112,8 @@ class MutableSetApi(MutableSet[VT], SetApi[VT]):
         def difference_update(self, *others: Iterable): ...
         @overload
         def symmetric_difference_update(self, other: Iterable): ...
+
+    rep = operd.repeat
 
     update = rep(opr.ior, set.update)
 
@@ -180,3 +181,10 @@ class SetView(SetApi[VT]):
     @classmethod
     def _from_iterable(cls: type[SetApiT], it: Iterable[VT]) -> SetApiT:
         return cls(setf(it))
+
+del(
+    abcs,
+    functools,
+    operd,
+    opr,
+)

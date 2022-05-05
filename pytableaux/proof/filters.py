@@ -22,15 +22,15 @@ pytableaux.proof.filters
 from __future__ import annotations
 
 import operator as opr
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic,
-                    Mapping, NamedTuple)
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic, Mapping,
+                    NamedTuple)
 
 from pytableaux import __docformat__
 from pytableaux.lang.lex import (Operated, Operator, Predicate, Predicated,
                                  Quantified, Quantifier, Sentence)
 from pytableaux.proof.common import Node
 from pytableaux.proof.util import Access
-from pytableaux.tools import MapProxy, abstract, thru
+from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, thru
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
@@ -143,7 +143,7 @@ class NodeCompare(Comparer):
 class AttrCompare(Comparer[LHS, RHS, CompAttrCompItem]):
     "Attribute filter/comparer."
 
-    attrmap: ClassVar[Mapping[str, str]] = MapProxy()
+    attrmap: ClassVar[Mapping[str, str]] = EMPTY_MAP
     "LHS attr -> RHS attr mapping."
 
     if TYPE_CHECKING:
@@ -178,7 +178,7 @@ class AttrCompare(Comparer[LHS, RHS, CompAttrCompItem]):
         if attrs is None:
             attrs = EMPTY
         if attrmap is None:
-            attrmap = MapProxy.EMPTY_MAP
+            attrmap = EMPTY_MAP
         attrmap = dict(zip(attrs, attrs)) | cls.attrmap | attrmap
         trans = attrmap.get
         return tuple(
@@ -311,9 +311,9 @@ class SentenceNode(SentenceCompare[Node], NodeCompare):
 class DesignationNode(AttrCompare[LHS, Node], NodeCompare):
     "Designation node filter."
 
-    attrmap = MapProxy(
+    attrmap = MapProxy(dict(
         designation = 'designated',
-    )
+    ))
 
     __slots__ = EMPTY_SET
 
@@ -327,10 +327,10 @@ class DesignationNode(AttrCompare[LHS, Node], NodeCompare):
 class ModalNode(AttrCompare[LHS, Node], NodeCompare):
     "Modal node filter."
 
-    attrmap = MapProxy(
+    attrmap = MapProxy(dict(
         modal = 'is_modal',
         access = 'is_access',
-    )
+    ))
 
     __slots__ = EMPTY_SET
 

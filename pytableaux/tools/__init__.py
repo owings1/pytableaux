@@ -28,15 +28,16 @@ from types import FunctionType, MappingProxyType
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Literal, Mapping
 
 from pytableaux import __docformat__
-from pytableaux.tools.typing import KT, TT, VT, T
+from pytableaux.tools.typing import TT, T
 
 __all__ = (
     'abstract',
+    'classalias',
+    'classns',
     'closure',
+    'EMPTY_MAP',
     'MapProxy',
     'static',
-    'classns',
-    'classalias',
 )
 def closure(func: Callable[..., T]) -> T:
     'Closure decorator calls the argument and returns its return value.'
@@ -61,7 +62,17 @@ def classalias(orig: type[T]) -> Callable[[type], type[T]]:
     return d
 
 if TYPE_CHECKING:
+
     class classns: pass
+
+    @classalias(MappingProxyType)
+    class MapProxy: pass
+
+else:
+
+    MapProxy = MappingProxyType
+
+EMPTY_MAP = MapProxy({})
 
 @closure
 def classns():
@@ -81,18 +92,14 @@ def classns():
 
     class meta(type):
         def _new(cls, clsname: str, bases: tuple[type, ...], ns: dict, **kw):
-            # if setup:
-            #     return super().__new__(cls, clsname, bases, ns)
             return nsdict(ns, **kw)
-
-    setup = True
 
     class classns(metaclass = meta):
         """A base class that produces a dict of the class body.
 
         Usage::
 
-            class ns(clasns):
+            class ns(classns):
                 def spam(): ...
         
         The value of ``ns`` will be::
@@ -109,28 +116,7 @@ def classns():
     meta.__new__ = meta._new
     del(meta._new)
 
-    setup = False
-
     return classns
-
-class MapProxy(Mapping[KT, VT]):
-    'Cast to a proxy if not already.'
-    EMPTY_MAP = MappingProxyType({})
-
-    def __new__(cls, mapping: Mapping[KT, VT] = None,/, **kw) -> MapProxy[KT, VT]:
-
-        if mapping is None:
-            if len(kw):
-                mapping = kw
-            else:
-                return cls.EMPTY_MAP # type: ignore
-        elif not isinstance(mapping, Mapping):
-            mapping = dict(mapping, **kw)
-        elif len(kw):
-            raise TypeError("Cannot specify kwargs and mapping")
-        if isinstance(mapping, MappingProxyType):
-            return mapping # type: ignore
-        return MappingProxyType(mapping) # type: ignore
 
 def static(cls: TT, /) -> TT:
     'Static class decorator, and wrapper around staticmethod'

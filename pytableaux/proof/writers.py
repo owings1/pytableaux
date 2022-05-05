@@ -20,6 +20,7 @@ pytableaux.proof.writers
 
 """
 from __future__ import annotations
+from collections import deque
 
 import os
 from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping
@@ -29,7 +30,7 @@ from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Notation
 from pytableaux.lang.writing import LexWriter
-from pytableaux.tools import MapProxy, abstract, closure
+from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure
 from pytableaux.tools.abcs import AbcMeta, abcm
 from pytableaux.tools.typing import TT
 
@@ -45,6 +46,8 @@ __all__ = (
     'TabWriter',
     'TemplateTabWriter',
     'TextTabWriter',
+    'registry',
+    'register',
 )
 
 registry: Mapping[str, type[TabWriter]]
@@ -58,8 +61,8 @@ def register():
 
     global registry
 
-    _registry: dict[str, type[TabWriter]] = {}
-    registry = MapProxy(_registry)
+    regtable: dict[str, type[TabWriter]] = {}
+    registry = MapProxy(regtable)
 
     def register(wcls: type[TabWriter],/):
         """Register a ``TabWriter`` class. Returns the argument, so it can be
@@ -79,14 +82,15 @@ def register():
         fmt = wcls.format
         if fmt in registry:
             raise KeyError(f"Format {fmt} already registered")
-        _registry[fmt] = wcls
+        regtable[fmt] = wcls
 
         return wcls
 
     return register
 
 class TabWriterMeta(AbcMeta):
-    DefaultFormat = 'text'
+
+    DefaultFormat: ClassVar[str] = 'text'
 
     def __call__(cls, *args, **kw):
         if cls is TabWriter:
@@ -122,7 +126,7 @@ class TabWriter(metaclass = TabWriterMeta):
     })
     "Default ``LexWriter`` charset for each notation."
 
-    defaults: ClassVar[Mapping[str, Any]] = MapProxy()
+    defaults: ClassVar[Mapping[str, Any]] = EMPTY_MAP
     "Default options."
 
     lw: LexWriter
@@ -142,7 +146,7 @@ class TabWriter(metaclass = TabWriterMeta):
             lw = LexWriter(notn, charset, **opts)
         else:
             if notn is not None:
-                if Notation(notn) != lw.notation:
+                if Notation(notn) is not lw.notation:
                     raise Emsg.ValueConflict(notn, lw.notation)
             if charset is not None:
                 if charset != lw.charset:
@@ -151,7 +155,7 @@ class TabWriter(metaclass = TabWriterMeta):
         self.opts = dict(self.defaults) | opts
 
     def attachments(self, /) -> Mapping[str, Any]:
-        return MapProxy()
+        return EMPTY_MAP
 
     @abstract
     def write(self, tableau: Tableau, /, **kw) -> str:
@@ -180,10 +184,10 @@ class TemplateTabWriter(TabWriter):
 
     template_dir: ClassVar[str]
 
-    jinja_opts: ClassVar[Mapping[str, Any]] = MapProxy(
+    jinja_opts: ClassVar[Mapping[str, Any]] = MapProxy(dict(
         trim_blocks   = True,
         lstrip_blocks = True,
-    )
+    ))
     _jenv: ClassVar[jinja2.Environment]
 
     @classmethod
@@ -278,40 +282,40 @@ class TextTabWriter(TemplateTabWriter):
     """Default options."""
 
     def write(self, tab: Tableau, /) -> str:
-        strs = []
+        strs = deque()
         opts = self.opts
         if opts['summary']:
-            premises, conclusion = self._get_argstrs(tab.argument)
-            strs.append(self.render('summary.jinja2',
-                stats      = tab.stats,
-                logic      = tab.logic,
-                argument   = tab.argument,
-                premises   = premises,
-                conclusion = conclusion,
+            strs.append(self.render('summary.jinja2', self._get_argstrs(tab.argument),
+                stats    = tab.stats,
+                logic    = tab.logic,
+                argument = tab.argument,
             ))
         if opts['heading']:
-            strs.append(self.render('heading.jinja2',
-                logic = tab.logic,
-            ))
+            strs.append(self.render('heading.jinja2', logic = tab.logic))
         template = self._jenv.get_template('nodes.jinja2', None, dict(lw = self.lw))
         strs.append(self._write_structure(tab.tree, template))
         return '\n'.join(strs)
 
     def _write_structure(self, structure: TreeStruct, template: jinja2.Template, *, prefix: str = '',) -> str:
         nodestr = template.render(structure = structure)
-        lines = [prefix + nodestr]
+        lines = deque()
+        append = lines.append
+        writestruct = self._write_structure
+        append(prefix + nodestr)
         children = structure.children
-        prefix += (' ' * (len(nodestr) - 1))
+        prefix += ' ' * (len(nodestr) - 1)
         for c, child in enumerate(children):
             is_last = c == len(children) - 1
             next_pfx = prefix + (' ' if is_last else '|')
-            lines.append(self._write_structure(child, template, prefix = next_pfx))
+            append(writestruct(child, template, prefix = next_pfx))
             if not is_last:
-                lines.append(next_pfx)
+                append(next_pfx)
         return '\n'.join(lines)
 
-    def _get_argstrs(self, arg: Argument|None, /) -> tuple[tuple[str, ...]|None, str|None]:
-        if not arg:
-            return None, None
-        lw = self.lw
-        return tuple(map(lw, arg.premises)), lw(arg.conclusion)
+    def _get_argstrs(self, arg: Argument|None, /) -> dict[str, tuple[str, ...]|str|None]:
+        if arg is None:
+            return dict(premises = None, conclusion = None)
+        return dict(
+            premises = tuple(map(lw := self.lw, arg.premises)),
+            conclusion = lw(arg.conclusion),
+        )

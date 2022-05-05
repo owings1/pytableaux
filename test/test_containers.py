@@ -237,6 +237,7 @@ class TestMappingApi(BaseSuite):
         from pytableaux.proof.common import Target
         from pytableaux.proof.helpers import BranchCache
         from pytableaux.proof.tableaux import TreeStruct
+        from pytableaux.web.util import AppMetrics
 
         rule = self.rule_tab('Conjunction').rule
 
@@ -254,11 +255,15 @@ class TestMappingApi(BaseSuite):
             EventsListeners,
             Target,
             TreeStruct,
+            AppMetrics,
         )
 
         for cls in classes:
 
-            if cls is EventsListeners:
+            if cls is AppMetrics:
+                # AppMetrics copies the metrics, which makes equality fail.
+                exp = dict(AppMetrics._from_mapping({}))
+            elif cls is EventsListeners:
                 # EventsListeners expects Listeners value type.
                 exp = dict(test = Listeners())
             elif issubclass(cls, BranchCache):

@@ -35,12 +35,15 @@ if TYPE_CHECKING:
     from typing import overload
 
 __all__ = (
+    'absindex',
     'deqseq',
+    'EMPTY_SEQ',
     'MutableSequenceApi',
     'seqf',
     'seqm',
     'SequenceApi',
-    'SequenceCover',
+    'SeqCover',
+    'slicerange',
 )
 
 NOARG = object()
@@ -156,9 +159,9 @@ class seqf(tuple[VT, ...], SequenceApi[VT]):
             return cls._concat_res_type(othrtype)
         return restype
 
-    __add__ = SequenceApi.__add__
-    __mul__  = SequenceApi.__mul__
-    __rmul__ = SequenceApi.__rmul__
+    __add__ = SequenceApi[VT].__add__
+    __mul__  = SequenceApi[VT].__mul__
+    __rmul__ = SequenceApi[VT].__rmul__
 
     def __repr__(self):
         return type(self).__name__ + super().__repr__()
@@ -178,7 +181,7 @@ class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
         self.extend(chain.from_iterable(repeat(self, int(other) - 1)))
         return self
 
-class SequenceCover(SequenceApi[VT]):
+class SeqCover(SequenceApi[VT], immutcopy = True):
 
     _cover_attrs_reqd: ClassVar[setf[str]] = setf({
         '__len__', '__getitem__', '__contains__', '__iter__',
@@ -194,13 +197,13 @@ class SequenceCover(SequenceApi[VT]):
     def __new__(cls, seq: Sequence[VT], /):
 
         check.inst(seq, Sequence)
-        inst: SequenceCover[VT] = object.__new__(cls)
+        inst: SeqCover[VT] = object.__new__(cls)
         cls._init_cover(seq, inst)
 
         return inst
 
     @classmethod
-    def _init_cover(cls, src: Sequence, dest: SequenceCover, /, *,
+    def _init_cover(cls, src: Sequence, dest: SeqCover, /, *,
         sa = object.__setattr__
     ):
         for name in cls._cover_attrs_reqd:
@@ -220,9 +223,9 @@ class SequenceCover(SequenceApi[VT]):
             raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
 
-    def copy(self):
-        'Immutable copy, returns self.'
-        return self
+    # def copy(self):
+    #     'Immutable copy, returns self.'
+    #     return self
 
     def __repr__(self):
         return f'{type(self).__name__}({list(self)})'
@@ -235,7 +238,7 @@ class SequenceCover(SequenceApi[VT]):
             return cls(it)
         return cls(tuple(it))
 
-    def __init_subclass__(subcls: type[SequenceCover], **kw):
+    def __init_subclass__(subcls: type[SeqCover], **kw):
         super().__init_subclass__(**kw)
         subcls._cover_attrs = setf(subcls._cover_attrs_reqd) | subcls._cover_attrs_optl
 
@@ -243,9 +246,9 @@ class seqm(list[VT], MutableSequenceApi[VT]):
 
     __slots__ = EMPTY_SET
 
-    __imul__ = MutableSequenceApi.__imul__
-    __mul__  = MutableSequenceApi.__mul__
-    __rmul__ = MutableSequenceApi.__rmul__
+    __imul__ = MutableSequenceApi[VT].__imul__
+    __mul__  = MutableSequenceApi[VT].__mul__
+    __rmul__ = MutableSequenceApi[VT].__rmul__
     __add__  = MutableSequenceApi[VT].__add__
     __radd__ = MutableSequenceApi[VT].__radd__
     copy     = MutableSequenceApi[VT].copy
@@ -267,9 +270,9 @@ class deqseq(deque[VT], MutableSequenceApi[VT]):
 
     __slots__ = EMPTY_SET
 
-    __imul__ = MutableSequenceApi.__imul__
-    __mul__  = MutableSequenceApi.__mul__
-    __rmul__ = MutableSequenceApi.__rmul__
+    __imul__ = MutableSequenceApi[VT].__imul__
+    __mul__  = MutableSequenceApi[VT].__mul__
+    __rmul__ = MutableSequenceApi[VT].__rmul__
     __add__  = MutableSequenceApi[VT].__add__
     __radd__ = MutableSequenceApi[VT].__radd__
     copy     = MutableSequenceApi[VT].copy
@@ -290,5 +293,5 @@ EMPTY_SEQ = seqf()
 
 SequenceApi.register(tuple)
 MutableSequenceApi.register(list)
-# MutableSequenceApi.register(deque)
+MutableSequenceApi.register(deque)
 

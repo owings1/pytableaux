@@ -42,7 +42,7 @@ from pytableaux.lang.parsing import ParseTable
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import tableaux, writers
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.mappings import MapCover, MapProxy, dmap
+from pytableaux.tools.mappings import MapProxy, dmap, EMPTY_MAP
 from pytableaux.tools.timing import StopWatch
 from pytableaux.web import Wevent
 from pytableaux.web.mail import Mailroom, validate_feedback_form
@@ -54,7 +54,6 @@ if TYPE_CHECKING:
     from cherrypy._cprequest import Request, Response
 
 EMPTY = ()
-EMPTY_MAP = MapProxy()
 
 class WebApp(EventEmitter):
 
@@ -102,7 +101,7 @@ class WebApp(EventEmitter):
 
         static_dir = f'{package.root}/web/static'
         doc_dir = os.path.abspath(f'{package.root}/../doc/_build/html')
-        cls.routes_defaults = MapCover({
+        cls.routes_defaults = MapProxy({
             '/': {
                 'request.dispatch': AppDispatcher(),
             },
@@ -125,7 +124,7 @@ class WebApp(EventEmitter):
             },
         })
 
-        cls.config_defaults = MapCover(dict(web.EnvConfig.env_config(),
+        cls.config_defaults = MapProxy(dict(web.EnvConfig.env_config(),
             copyright   = package.copyright,
             issues_href = package.issues.url,
             source_href = package.repository.url,
@@ -134,16 +133,16 @@ class WebApp(EventEmitter):
             view_version = 'v2',
         ))
 
-        cls.api_defaults = MapCover(dict(
-            input_notation  = 'polish',
-            output_notation = 'polish',
+        cls.api_defaults = MapProxy(dict(
+            input_notation  = Notation.polish.name,
+            output_notation = Notation.polish.name,
             output_format   = 'html',
         ))
 
-        cls.form_defaults = MapCover(dict(
-            input_notation  = 'standard',
+        cls.form_defaults = MapProxy(dict(
+            input_notation  = Notation.standard.name,
             output_format   = 'html',
-            output_notation = 'standard',
+            output_notation = Notation.standard.name,
             output_charset  = 'html',
             show_controls   = True,
             build_models    = True,
@@ -152,8 +151,8 @@ class WebApp(EventEmitter):
             group_optimizations = True,
         ))
 
-        cls.lw_cache = MapCover({
-            notn: MapCover({
+        cls.lw_cache = MapProxy({
+            notn: MapProxy({
                 charset: LexWriter(notn, charset)
                 for charset in notn.charsets
             })
@@ -161,9 +160,9 @@ class WebApp(EventEmitter):
         })
 
         # Rendered example arguments
-        example_args = MapCover({
-            arg.title : MapCover({
-                notn.name: MapCover(dict(
+        example_args = MapProxy({
+            arg.title : MapProxy({
+                notn.name: MapProxy(dict(
                     premises = tuple(map(lw, arg.premises)),
                     conclusion = lw(arg.conclusion),
                 ))
@@ -180,20 +179,20 @@ class WebApp(EventEmitter):
             for arg in examples.arguments()
         })
 
-        cls.jsapp_data = MapCover(dict(
+        cls.jsapp_data = MapProxy(dict(
             example_args   = example_args,
             example_preds  = tuple(p.spec for p in examples.preds),
-            nups           = {
+            nups           = MapProxy({
                 notn.name: ParseTable.fetch(notn).chars[
                     LexType.Predicate
                 ]
                 for notn in Notation
-            },
+            }),
         ))
 
         logics_map = {key: logics.registry(key) for key in logics.__all__}
 
-        cls.view_data_defaults = MapCover(dict(
+        cls.view_data_defaults = MapProxy(dict(
 
             LexType    = LexType,
             Notation   = Notation,

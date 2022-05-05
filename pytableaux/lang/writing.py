@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import itertools
 from types import DynamicClassAttribute as dynca
-from typing import Any, ClassVar, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING, Mapping
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import LangCommonMeta, Marking, Notation, RenderSet
@@ -99,7 +99,7 @@ class LexWriter(metaclass = LexWriterMeta):
 
     notation: ClassVar[Notation]
     defaults: ClassVar[dict[str, Any]] = {}
-    _methodmap = MapProxy[LexType, str](dict(
+    _methodmap: ClassVar[Mapping[LexType, str]] = MapProxy(dict(
         zip(LexType, itertools.repeat(NotImplemented))
     ))
     _sys: ClassVar[LexWriter]

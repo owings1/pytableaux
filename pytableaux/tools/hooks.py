@@ -41,7 +41,11 @@ from pytableaux.tools.typing import (TT, HkConns, HkConnsTable, HkProviderInfo,
 if TYPE_CHECKING:
     from typing import Literal, overload
 
-__all__ = 'hookutil', 'HookProvider'
+__all__ = (
+    'HookConn',
+    'HookProvider',
+    'hookutil',
+)
 
 class HookProvider(HkProviderInfo, metaclass = abcs.AbcMeta, skiphooks = True):
     'Mapping view and query API for hook provider.'
@@ -494,7 +498,7 @@ class HookConn(Mapping[str, Any]):
         raise KeyError(key)
 
     def __iter__(self):
-        yield from self.__slots__
+        return iter(self.__slots__)
 
     def __reversed__(self):
         return reversed(self.__slots__)
