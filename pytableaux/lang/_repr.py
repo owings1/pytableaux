@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import reprlib
 
-from pytableaux.lang.lex import (Lexical, LexicalEnum, LexicalItem, LexType,
+from pytableaux.lang.lex import (Lexical, LexicalEnum, LexicalAbc, LexType,
                                  Predicate)
 from pytableaux.lang.writing import LexWriter
-from pytableaux.tools import MapProxy, closure
+from pytableaux.tools import closure
 
 
 class LangRepr(reprlib.Repr):
@@ -65,7 +65,7 @@ def _setup():
 
     Lexical.__repr__ = __repr__
     Predicate.__str__ = __str__pred
-    LexicalItem.__str__ = __str__item
+    LexicalAbc.__str__ = __str__item
     LexicalEnum.__str__ = __str__enum
 
     reg = {

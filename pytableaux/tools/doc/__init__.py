@@ -189,8 +189,8 @@ class Helper:
 
     def reconfigure(self, opts: dict):
 
+        from pytableaux.lang import Notation
         from pytableaux.lang.collect import Predicates
-        from pytableaux.lang.lex import Notation
         from pytableaux.lang.writing import LexWriter, RenderSet
         from pytableaux.proof import writers
 

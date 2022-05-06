@@ -28,7 +28,7 @@ from pytableaux.errors import Emsg
 from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure
 from pytableaux.tools.decorators import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import CrdT, LexItT, LexT, SenT, SenT2, TbsT, T
+from pytableaux.tools.typing import CrdT, LexAbcT, LexT, TbsT, T
 
 if TYPE_CHECKING:
     from typing import overload, Iterator, Sequence
@@ -44,7 +44,7 @@ __all__ = (
     'LangCommonEnum',
     'LangCommonEnumMeta',
     'LangCommonMeta',
-    'LexicalItemMeta',
+    'LexicalAbcMeta',
     'Marking',
     'Notation',
     'RenderSet',
@@ -83,10 +83,8 @@ __all__ = (
 
     # Type variables
     'CrdT',
-    'LexItT',
+    'LexAbcT',
     'LexT',
-    'SenT',
-    'SenT2',
     'TbsT',
 )
 
@@ -114,8 +112,8 @@ class LangCommonEnumMeta(abcs.EbcMeta):
     __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.EbcMeta)
 
-class LexicalItemMeta(LangCommonMeta):
-    "Common metaclass for non-Enum ``Lexical`` classes."
+class LexicalAbcMeta(LangCommonMeta):
+    "Common metaclass for non-Enum lexical classes."
 
     # Populated in lex module.
     __call__ = NotImplemented

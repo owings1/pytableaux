@@ -20,6 +20,8 @@ pytableaux.web.application
 """
 from __future__ import annotations
 
+from pytableaux.lang import Notation
+
 __all__ = ('WebApp',)
 
 import mimetypes
@@ -36,13 +38,13 @@ import simplejson as json
 from pytableaux import examples, logics, package, web
 from pytableaux.errors import RequestDataError, TimeoutError
 from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.lex import (LexType, Notation, Operator, Predicate,
-                                 Quantifier, TriCoords)
+from pytableaux.lang.lex import (LexType, Operator, Predicate, Quantifier,
+                                 TriCoords)
 from pytableaux.lang.parsing import ParseTable
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import tableaux, writers
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.mappings import MapProxy, dmap, EMPTY_MAP
+from pytableaux.tools.mappings import EMPTY_MAP, MapProxy, dmap
 from pytableaux.tools.timing import StopWatch
 from pytableaux.web import Wevent
 from pytableaux.web.mail import Mailroom, validate_feedback_form

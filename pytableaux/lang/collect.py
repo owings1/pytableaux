@@ -30,7 +30,7 @@ from pytableaux import tools, __docformat__, EMPTY_SET
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import (LangCommonMeta, PredsItemRef, PredsItemSpec,
                              raiseae)
-from pytableaux.lang.lex import LexicalItem, Predicate, Sentence
+from pytableaux.lang.lex import LexicalAbc, Predicate, Sentence
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import lazy, membr, wraps
 from pytableaux.tools.hybrids import qset
@@ -300,7 +300,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
 
         def __new__(cls, *spec):
             'Set the Enum value to the predicate instance.'
-            return LexicalItem.__new__(Predicate)
+            return LexicalAbc.__new__(Predicate)
 
         @classmethod
         def _member_keys(cls, pred: Predicate):

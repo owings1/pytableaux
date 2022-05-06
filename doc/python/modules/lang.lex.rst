@@ -4,19 +4,37 @@
 
 .. automodule:: pytableaux.lang.lex
 
-    .. autoclass:: Lexical
+    Base classes
+    ^^^^^^^^^^^^
+
+    .. autoclass:: Lexical()
         :members:
 
-    .. autoclass:: LexicalItem
+    .. autoclass:: LexicalAbc()
         :members:
 
     .. autoclass:: LexicalEnum()
         :members:
 
-    .. autoclass:: CoordsItem
+    .. autoclass:: CoordsItem()
         :members:
 
-    .. autoclass:: Parameter
+    .. autoclass:: Parameter()
+        :members:
+
+    .. autoclass:: Sentence()
+        :members:
+
+    Concrete classes
+    ^^^^^^^^^^^^^^^^
+
+    .. autoclass:: Predicate
+        :members:
+
+    .. autoclass:: Constant()
+        :members:
+
+    .. autoclass:: Variable()
         :members:
 
     .. autoclass:: Quantifier()
@@ -25,19 +43,7 @@
     .. autoclass:: Operator()
         :members:
 
-    .. autoclass:: Constant
-        :members:
-
-    .. autoclass:: Variable
-        :members:
-
-    .. autoclass:: Predicate
-        :members:
-
-    .. autoclass:: Sentence
-        :members:
-
-    .. autoclass:: Atomic
+    .. autoclass:: Atomic()
         :members:
 
     .. autoclass:: Predicated
@@ -46,9 +52,9 @@
     .. autoclass:: Quantified
         :members:
 
-    .. autoclass:: Operated
+    .. autoclass:: Operated()
         :members:
 
-    .. autoclass:: LexType
+    .. autoclass:: LexType()
         :members:
 

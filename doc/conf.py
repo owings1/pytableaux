@@ -49,6 +49,15 @@ extensions = [
     'sphinx.ext.intersphinx',
 ]
 
+
+# napoleon_preprocess_types = True
+
+# autodoc_class_signature = 'separated'
+autodoc_default_options = {
+    # 'no-value': True,
+    # 'special-members': '__init__',
+}
+# autodoc_member_order = 'groupwise'
 autodoc_member_order = 'bysource'
 
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration

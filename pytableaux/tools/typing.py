@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from typing import (Generic, Hashable, Iterable, Iterator, Sequence,
                         overload)
 
-    from pytableaux.lang.lex import (CoordsItem, Lexical, LexicalItem,
+    from pytableaux.lang.lex import (CoordsItem, Lexical, LexicalAbc,
                                      Sentence, TableStore)
     from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem, filters
@@ -188,8 +188,8 @@ EnumT = TypeVar('EnumT', bound = _enum.Enum)
 F = TypeVar('F', bound = Callable[..., Any])
 "Bound to ``Callable``, decorator"
 
-LexItT = TypeVar('LexItT', bound = 'LexicalItem')
-"Bound to ``LexicalItem``"
+LexAbcT = TypeVar('LexAbcT', bound = 'LexicalAbc')
+"Bound to ``LexicalAbc``"
 
 LexT = TypeVar('LexT', bound = 'Lexical')
 "Bound to ``Lexical``"
@@ -212,11 +212,11 @@ MutSeqT = TypeVar('MutSeqT', bound = 'MutableSequenceApi')
 RuleT = TypeVar('RuleT', bound = 'Rule')
 "Bound to ``Rule``"
 
-SenT = TypeVar('SenT', bound = 'Sentence')
-"Bound to ``Sentence``"
+# SenT = TypeVar('SenT', bound = 'Sentence')
+# "Bound to ``Sentence``"
 
-SenT2 = TypeVar('SenT2', bound = 'Sentence')
-"Bound to ``Sentence``"
+# SenT2 = TypeVar('SenT2', bound = 'Sentence')
+# "Bound to ``Sentence``"
 
 SeqApiT = TypeVar('SeqApiT', bound = 'SequenceApi')
 "Bound to ``SequenceApi``"

@@ -350,6 +350,39 @@ class TestSentence(BaseSuite):
 
 class TestGenericApi(BaseSuite):
 
+    def test_first_all_lex_classes(self):
+
+        assert Lexical.first()      == Predicate.first()
+        assert LexicalAbc.first()   == Predicate.first()
+        assert LexicalEnum.first()  == Quantifier.first()
+        assert CoordsItem.first()   == Predicate.first()
+        assert Parameter.first()    == Constant.first()
+        assert Sentence.first()     == Atomic.first()
+
+        assert type(Variable.first())   is Variable
+        assert type(Quantifier.first()) is Quantifier
+        assert type(Operator.first())   is Operator
+        assert type(Atomic.first())     is Atomic
+        assert type(Predicated.first()) is Predicated
+        assert type(Quantified.first()) is Quantified
+        assert type(Operated.first())   is Operated
+
+    def test_gen_all_lex_classes(self):
+        assert list(Lexical.gen(1))[0]     == Predicate.first()
+        assert list(LexicalAbc.gen(1))[0]  == Predicate.first()
+        assert list(LexicalEnum.gen(1))[0] == Quantifier.first()
+        assert list(CoordsItem.gen(1))[0]  == Predicate.first()
+        assert list(Parameter.gen(1))[0]   == Constant.first()
+        assert list(Sentence.gen(1))[0]    == Atomic.first()
+
+        assert type(list(Variable.gen(1))[0])   is Variable
+        assert type(list(Quantifier.gen(1))[0]) is Quantifier
+        assert type(list(Operator.gen(1))[0])   is Operator
+        assert type(list(Atomic.gen(1))[0])     is Atomic
+        assert type(list(Predicated.gen(1))[0]) is Predicated
+        assert type(list(Quantified.gen(1))[0]) is Quantified
+        assert type(list(Operated.gen(1))[0])   is Operated
+
     def test_first_next(self):
         for cls in LexType.classes:
             inst = cls.first()
@@ -381,7 +414,6 @@ class TestGenericApi(BaseSuite):
             assert itm.sort_tuple[0] == cls.TYPE.rank
             for i in itm.sort_tuple:
                 assert type(i) is int
-
 class TestCrossCompare(BaseSuite):
 
     class TestCrossSorting(BaseSuite):

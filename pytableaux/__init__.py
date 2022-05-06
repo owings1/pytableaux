@@ -117,10 +117,10 @@ def _():
     from pytableaux.lang import lex
     from pytableaux.lang import LangCommonEnum
     from pytableaux.lang.collect import Argument, Predicates
-    from pytableaux.lang.lex import Lexical, LexicalItem
+    from pytableaux.lang.lex import Lexical, LexicalAbc
     for c in (
         LangCommonEnum,
-        LexicalItem,
+        LexicalAbc,
         Predicates,
         Argument,
         Lexical,

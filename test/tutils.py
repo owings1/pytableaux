@@ -6,8 +6,9 @@ from typing import (TYPE_CHECKING, Callable, Collection, Iterable, Iterator,
                     NamedTuple)
 
 from pytableaux import examples
+from pytableaux.lang import Notation
 from pytableaux.lang.collect import *
-from pytableaux.lang.lex import Notation, Predicate, Sentence
+from pytableaux.lang.lex import Predicate, Sentence
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.logics import registry

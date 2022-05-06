@@ -29,8 +29,9 @@ import sphinx.directives.patches
 from docutils import nodes
 from docutils.parsers.rst.directives import class_option, unchanged
 from pytableaux import examples, logics, models
+from pytableaux.lang import Notation
 from pytableaux.lang.collect import Predicates
-from pytableaux.lang.lex import Notation, Operator
+from pytableaux.lang.lex import Operator
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import rules, tableaux, writers

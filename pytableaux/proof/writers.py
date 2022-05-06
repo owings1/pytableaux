@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping
 import jinja2
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
-from pytableaux.lang.lex import Notation
+from pytableaux.lang import Notation
 from pytableaux.lang.writing import LexWriter
 from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure
 from pytableaux.tools.abcs import AbcMeta, abcm
