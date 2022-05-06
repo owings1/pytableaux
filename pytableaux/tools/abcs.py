@@ -33,7 +33,8 @@ from typing import (TYPE_CHECKING, Any, Callable, Collection,
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import check, Emsg
-from pytableaux.tools.typing import (RT, TT, EbcT, EbcT2, EnumDictType, EnumT,
+from pytableaux.tools import MapProxy, EMPTY_MAP
+from pytableaux.tools.typing import (RT, TT, EnumDictType, EnumT,
                                      F, HkProviderInfo, HkUserInfo, KeysFunc,
                                      NotImplType, Self, T)
 
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     from typing import overload
 
     from pytableaux.tools.hooks import hookutil
+    from pytableaux.tools.typing import iter
 
 __all__ = (
     'Abc',
@@ -60,7 +62,14 @@ __all__ = (
     'IntFlag',
 )
 
+EMPTY = ()
 NOARG = object()
+
+if TYPE_CHECKING:
+    @tools.classalias(_enum.auto)
+    class eauto:...
+else:
+    eauto = _enum.auto
 
 class Eset(frozenset, _enum.Enum):
     'Enum meta enumeration.'
@@ -69,17 +78,11 @@ class Eset(frozenset, _enum.Enum):
 
     member_key_methods = {'_member_keys'}
 
-    reserve_names = {'seq', '_lookup', 'get',}
+    reserve_names = {'_seq', '_lookup', 'get',}
 
     hook_methods  = {'_member_keys', '_on_init', '_after_init'}
 
     clean_methods = hook_methods.copy()
-
-if TYPE_CHECKING:
-    @tools.classalias(_enum.auto)
-    class eauto:...
-else:
-    eauto = _enum.auto
 
 class ebcm:
     'Static Enum meta utils.'
@@ -163,69 +166,88 @@ class ebcm:
         # Create class.
         return metaclass(clsname, bases, cdict, **kw)
 
-
-class EnumLookup(Mapping[Any, EnumT]):
+class EnumLookup(Mapping[Any, T]):
     'Enum member lookup index.'
 
     if TYPE_CHECKING:
         @overload
-        def build(self):
-            "Build and update the whole index."
+        def build(self): ...
 
         @overload
-        def pseudo(self, member: EnumT, /) -> EnumT: # type: ignore
-            "Add a single pseudo member to the index."
+        def pseudo(self, member: T, /) -> T: ...
+
+        @overload
+        def __getitem__(self, key: Any, /) -> T: ...
+
+    _mapping: Mapping[Any, T]
+
+    build: Callable[[], None]
+    "Build and update the whole index."
+
+    pseudo: Callable[[T], T]
+    "Add a single pseudo member to the index."
 
     __slots__ = (
-        '__len__', '__getitem__', '__iter__', '__reversed__',
-        'build', 'pseudo'
+        '__getitem__',
+        '_mapping',
+        'build',
+        'pseudo',
     )
 
-    def __init__(self, Owner: type[EnumT], /, *funcs: KeysFunc, build = False):
+    def __init__(self, Owner: type[T], /, build: bool = False,
+        _sa = object.__setattr__
+    ):
 
-        if hasattr(self, 'build'):
+        if hasattr(self, '__getitem__'):
             raise TypeError
-
-        keyfuncs = {self._default_keys}
-        keyfuncs.update(funcs)
-        for meth in Eset.member_key_methods:
-            func = getattr(Owner, meth, None)
-            if callable(func):
-                keyfuncs.add(func)
 
         source = {}
 
-        setitem = source.__setitem__
+        _sa(self, '__getitem__', source.__getitem__)
+        _sa(self, '_mapping', MapProxy(source))
 
         def _pseudo(member: EnumT) -> EnumT:
             for key in self._check_pseudo(member, Owner):
-                setitem(key, member)
+                source[key] = member
             return member
 
         def _build():
-            builder = self._makemap(Owner, keyfuncs)
             source.clear()
-            source.update(builder)
+            if len(Owner):
+                builder = self._makemap(Owner, self._get_keyfuncs(Owner))
+                source.update(builder)
             return self
 
-        self._srcinit(source, self, _build, _pseudo)
+        _sa(self, 'build', _build)
+        _sa(self, 'pseudo', _pseudo)
+
         if build:
             _build()
 
-    @staticmethod
-    def _srcinit(src: Mapping, dest: EnumLookup, build: Callable, pseudo: Callable, /, *,
-        # ga = object.__getattribute__,
-        sa = object.__setattr__,
-        names = tuple(filter(tools.isdund, __slots__))
-    ) -> None:
-        "Initialize instance mapping and closure attributes."
-        for name in names:
-            sa(dest, name, getattr(src, name))
-        sa(dest, 'build', build)
-        sa(dest, 'pseudo', pseudo)
+    def __iter__(self):
+        return iter(self._mapping)
+
+    def __len__(self):
+        return len(self._mapping)
+
+    def __reversed__(self):
+        return reversed(self._mapping)
+
+    def _asdict(self) -> dict[Any, T]:
+        'Compatibility for JSON serialization.'
+        return dict(self)
+
+    def __setattr__(self, name, value):
+        raise Emsg.ReadOnly(self, name)
+
+    def __delattr__(self, name):
+        raise Emsg.ReadOnly(self, name)
+
+    def __repr__(self):
+        return repr(self._asdict())
 
     @classmethod
-    def _makemap(cls, Owner: type[EnumT], keyfuncs: Collection[KeysFunc], /) -> dict[Hashable, EnumT]:
+    def _makemap(cls, Owner: EbcMeta|type[EnumT], keyfuncs: Collection[KeysFunc], /) -> dict[Hashable, EnumT]:
         "Build an index source dictionary."
 
         # Named members, including aliases, but not pseudos.
@@ -280,7 +302,7 @@ class EnumLookup(Mapping[Any, EnumT]):
         }
 
     @classmethod
-    def _check_pseudo(cls, pseudo: EnumT, Owner: type[EnumT], /) -> set[Hashable]:
+    def _check_pseudo(cls, pseudo: _enum.Enum, Owner: EbcMeta|type[_enum.Enum], /) -> set[Hashable]:
         "Verify a pseudo member, returning index keys."
         check = Owner._value2member_map_[pseudo._value_]
         if check is not pseudo:
@@ -288,6 +310,14 @@ class EnumLookup(Mapping[Any, EnumT]):
         if pseudo._name_ is not None:
             raise TypeError from Emsg.WrongValue(pseudo._name_, None)
         return cls._pseudo_keys(pseudo)
+
+    @classmethod
+    def _get_keyfuncs(cls, Owner: EbcMeta|type[_enum.Enum], /) -> set[KeysFunc]:
+        funcs = {cls._default_keys}
+        for meth in Eset.member_key_methods:
+            if callable(func := getattr(Owner, meth, None)):
+                funcs.add(func)
+        return funcs
 
     @staticmethod
     def _pseudo_keys(pseudo: _enum.Enum, /) -> set[Hashable]:
@@ -299,19 +329,6 @@ class EnumLookup(Mapping[Any, EnumT]):
         'Default member lookup keys'
         return {member._name_, (member._name_,), member, member._value_}
 
-    def _asdict(self) -> dict[Any, EnumT]:
-        'Compatibility for JSON serialization.'
-        return dict(self)
-
-    def __setattr__(self, name, value):
-        raise Emsg.ReadOnly(self, name)
-
-    def __delattr__(self, name):
-        raise Emsg.ReadOnly(self, name)
-
-    def __repr__(self):
-        return repr(self._asdict())
-
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -319,33 +336,22 @@ class EnumLookup(Mapping[Any, EnumT]):
 #       Enum Meta
 #_____________________________________________________________________________
 
-
-class EbcMeta(_enum.EnumMeta, type[EbcT2]):
+class EbcMeta(_enum.EnumMeta):
     'General-purpose base Metaclass for all Enum classes.'
 
-    #******  Class Instance Variables
+    _mixin_bases_: tuple[type, ...]
+    _lookup: EnumLookup
+    _seq: Sequence
 
-    if TYPE_CHECKING:
-        @property
-        @overload
-        def seq(self: type[EbcT]) -> Sequence[EbcT]: ...
-
-    seq     : Sequence[EbcT2]
-    _lookup : EnumLookup[EbcT2]
-
-    _member_names_ : Sequence[str]
-    _member_map_   : Mapping[str, EbcT2]
-    _mixin_bases_  : tuple[type, ...]
-
-    #******  Class Creation
+    _member_names_: Sequence[str] # Override to tuple instead of list
+    __members__: Mapping = None # Override to not double-proxy
 
     @classmethod
-    def __prepare__(cls, clsname: str, bases: tuple[type, ...], **kw):
-        ns: EnumDictType = super().__prepare__(clsname, bases, **kw)
-        return ns
+    def __prepare__(cls, clsname: str, bases: tuple[type, ...], **kw) -> EnumDictType:
+        return super().__prepare__(clsname, bases, **kw)
 
     def __new__(cls, clsname: str, bases: tuple[type, ...], ns: EnumDictType, /, *,
-        skipflags: bool = False, noidxbuild: bool = False, skipabcm: bool = False, **kw
+        skipflags: bool = False, idxbuild: bool = True, skipabcm: bool = False, **kw
     ):
         if not skipabcm:
             # Run generic Abc init hooks.
@@ -357,6 +363,7 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
 
         # Create class.
         Class = super().__new__(cls, clsname, bases, ns, **kw)
+
         # Store mixin bases
         Class._mixin_bases_ = ebcm.mixins(Class)
 
@@ -365,16 +372,20 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
             abcm.clsafter(Class, ns, skipflags = skipflags)
 
         # Freeze Enum class attributes.
-        Class._member_map_ = tools.MapProxy(Class._member_map_)
+        Class._member_map_ = Class.__members__ = MapProxy(Class._member_map_)
         Class._member_names_ = tuple(Class._member_names_)
+
+        # Create lookup index.
+        Class._lookup = EnumLookup(Class)
 
         if not len(Class):
             # No members to process.
+            Class._seq = EMPTY
             Class._after_init()
             return Class
 
         # Store the fixed member sequence. Necessary for iterating.
-        Class.seq = ebcm.buildseq(Class)
+        Class._seq = ebcm.buildseq(Class)
 
         # Performance tweaks.
         ebcm.fix_name_value(Class)
@@ -382,8 +393,9 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
         # Init hook to process members before index is created.
         Class._on_init(Class)
 
-        # Create index.
-        Class._lookup = EnumLookup(Class, build = not noidxbuild)
+        # Build index, if applicable.
+        if idxbuild:
+            Class._lookup.build()
 
         # After init hook.
         Class._after_init()
@@ -395,11 +407,11 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
 
     #******  Subclass Init Hooks
 
-    def _member_keys(cls, member: Ebc, /) -> Set[Hashable]:
+    def _member_keys(cls, member: Any, /) -> Set[Hashable]:
         'Init hook to get the index lookup keys for a member.'
         return Eset.Empty
 
-    def _on_init(cls, subcls: type[EbcT]|EbcMeta, /):
+    def _on_init(cls, subcls: type, /):
         '''Init hook after all members have been initialized, before index
         is created. **NB:** Skips abstract classes.'''
         pass
@@ -410,27 +422,22 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
 
     #******  Class Call
 
-    def __call__(cls: type[EbcT]|EbcMeta[EbcT2], value: Any, names = None, **kw) -> EbcT:
+    def __call__(cls, value, names = None, **kw):
         if names is not None:
             return super().__call__(value, names, **kw)
         try:
             return cls._lookup[value]
         except KeyError:
             pass
-        # Will raise ValueError for bad value.
-        member = cls.__new__(cls, value) # type: ignore
         # It must be a pseudo member, since it was not in _lookup.
-        return cls._lookup.pseudo(member)
+        return cls._lookup.pseudo(
+            # Will raise ValueError for bad value.
+            cls.__new__(cls, value)
+        )
 
     #******  Mapping(ish) Behavior
 
-    if TYPE_CHECKING:
-        @overload
-        def get(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, /) -> EbcT: ...
-        @overload
-        def get(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, default: T, /) -> EbcT|T: ...
-
-    def get(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, default: Any = NOARG, /) -> EbcT|EbcT2:
+    def get(cls, key, default = NOARG, /):
         """Get a member by an indexed reference key.
 
         Args:
@@ -450,7 +457,7 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
                 raise
             return default
 
-    def __getitem__(cls: type[EbcT]|EbcMeta[EbcT2], key: Any, /) -> EbcT|EbcT2:
+    def __getitem__(cls, key, /):
         return cls._lookup[key]
 
     def __contains__(cls, key: Any, /):
@@ -458,11 +465,11 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
 
     #******  Sequence(ish) Behavior
 
-    def __iter__(cls: type[EbcT]|EbcMeta[EbcT2]) -> Iterator[EbcT|EbcT2]:
-        return iter(cls.seq)
+    def __iter__(cls):
+        return iter(cls._seq)
 
-    def __reversed__(cls: type[EbcT]|EbcMeta[EbcT2]) -> Iterator[EbcT|EbcT2]:
-        return reversed(cls.seq)
+    def __reversed__(cls):
+        return reversed(cls._seq)
 
     #******  Misc Behaviors
 
@@ -472,10 +479,41 @@ class EbcMeta(_enum.EnumMeta, type[EbcT2]):
     def __dir__(cls):
         return cls._member_names_
 
-    @property
-    def __members__(cls):
-        # Override to not double-proxy
-        return cls._member_map_
+    if TYPE_CHECKING:
+
+        @overload
+        def __call__(cls: EbcMeta|type[EnumT], value: Any, /) -> EnumT: ...
+        @overload
+        def __call__(cls: EbcMeta|type[EnumT], value: Any, names: Any, /, **kw) -> type[EnumT]: ...
+
+        @overload
+        def __getitem__(cls: EbcMeta|type[EnumT], key: Any, /) -> EnumT: ...
+
+        @overload
+        def get(cls: EbcMeta|type[EnumT], key: Any, /) -> EnumT: ...
+        @overload
+        def get(cls: EbcMeta|type[EnumT], key: Any, default: T, /) -> EnumT|T: ...
+
+        @overload
+        def __iter__(cls: EbcMeta|type[EnumT]) -> Iterator[EnumT]: ...
+        @overload
+        def __reversed__(cls: EbcMeta|type[EnumT]) -> Iterator[EnumT]: ...
+
+        @property
+        @overload
+        def _seq(cls: EbcMeta|type[EnumT]) -> Sequence[EnumT]: ...
+
+        @property
+        @overload
+        def _lookup(cls: EbcMeta|type[EnumT]) -> EnumLookup[EnumT]: ...
+
+        @property
+        @overload
+        def _member_map_(cls: EbcMeta|type[EnumT]) -> Mapping[str, EnumT]: ...
+
+        @property
+        @overload
+        def __members__(cls: EbcMeta|type[EnumT]) -> Mapping[str, EnumT]: ...
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -501,19 +539,19 @@ class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
         return self
 
     @classmethod
-    def _on_init(cls: EbcMeta, subcls: type[Ebc]):
+    def _on_init(cls, subcls: type):
         'Propagate hook up to metaclass.'
-        type(cls)._on_init(cls, subcls)
+        EbcMeta._on_init(cls, subcls)
 
     @classmethod
-    def _member_keys(cls: EbcMeta, member: Ebc) -> Set[Hashable]:
+    def _member_keys(cls, member: Any) -> Set[Hashable]:
         'Propagate hook up to metaclass.'
-        return type(cls)._member_keys(cls, member)
+        return EbcMeta._member_keys(cls, member)
 
     @classmethod
-    def _after_init(cls: EbcMeta):
+    def _after_init(cls):
         'Propagate hook up to metaclass.'
-        type(cls)._after_init(cls)
+        EbcMeta._after_init(cls)
 
     def __repr__(self):
         clsname = type(self).__name__
@@ -599,19 +637,18 @@ class abcm:
     'Static Abc meta util functions.'
 
     __new__ = NotImplemented
-    # def __new__(cls, *args, **kw):
-    #     return AbcMeta(*args, **kw)
-
 
     if TYPE_CHECKING:
 
         @tools.classalias(abcf)
         class f: pass
 
+        @tools.classalias(frozenset)
+        class _frozenset: pass
+
     else:
         f = abcf
-
-    _frozenset: type[frozenset] = frozenset
+        _frozenset = frozenset
 
     @staticmethod
     def nsinit(ns: dict, bases: tuple[type, ...], /, skipflags: bool = False) -> None:
@@ -659,9 +696,9 @@ class abcm:
         'Evaluate annotions of type Annotated.'
         # This is called infrequently, so we import lazily.
         from typing import get_args, get_origin, get_type_hints, Annotated
-        annot = get_type_hints(obj, include_extras = True)
+        hints = get_type_hints(obj, include_extras = True)
         return {
-            k: get_args(v) for k,v in annot.items()
+            k: get_args(v) for k,v in hints.items()
             if get_origin(v) is Annotated
         }
 
@@ -739,10 +776,6 @@ class abcm:
             value.update(hooks)
             return func
         return decorator
-
-    # @staticmethod
-    # def hookinfo(Class: type):
-    #     return hookutil.provider_info(Class)
 
 class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
@@ -841,7 +874,6 @@ class IntFlag(int, FlagEnum):
 #_____________________________________________________________________________
 
 Eset = ebcm.rebase(Eset, Ebc)
-
 
 del(
     _abc,

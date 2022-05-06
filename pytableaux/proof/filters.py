@@ -58,8 +58,6 @@ __all__ = (
     'SentenceNode',
 )
 
-EMPTY = ()
-
 def getattr_safe(obj: Any, name: str) -> Any:
     return getattr(obj, name, None)
 
@@ -119,15 +117,19 @@ class Comparer(Generic[LHS, RHS, T], Abc):
     def __eq__(self, other):
         if self is other:
             return True
-        if not isinstance(other, __class__):
-            return NotImplemented
-        return type(self) is type(other) and self.compitem == other.compitem
+        if type(self) is type(other):
+            return self.compitem == other.compitem
+        if isinstance(other, __class__):
+            return False
+        return NotImplemented
 
     @abstract
-    def __call__(self, rhs: RHS) -> bool: ...
+    def __call__(self, rhs: RHS) -> bool:
+        raise NotImplementedError
 
     @abstract
-    def example(self) -> RHS|Any: ...
+    def example(self) -> RHS|Any:
+        raise NotImplementedError
 
     @classmethod
     @abstract
@@ -176,7 +178,7 @@ class AttrCompare(Comparer[LHS, RHS, CompAttrCompItem]):
         else:
             lget = getattr_safe
         if attrs is None:
-            attrs = EMPTY
+            attrs = EMPTY_SET
         if attrmap is None:
             attrmap = EMPTY_MAP
         attrmap = dict(zip(attrs, attrs)) | cls.attrmap | attrmap
@@ -223,7 +225,7 @@ class SentenceCompare(Comparer[SentenceComparable, RHS, CompSentenceCompItem]):
 
         @staticmethod
         @overload
-        def rget(rhs: RHS, /) -> Sentence|None:...
+        def rget(rhs: RHS, /) -> Sentence|None: ...
         
     rget = staticmethod(thru)
 

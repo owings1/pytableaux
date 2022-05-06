@@ -24,8 +24,8 @@ from __future__ import annotations
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
                     NamedTuple, Set)
 
-from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy, abcs, closure
+from pytableaux.errors import Emsg
+from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure
 from pytableaux.tools.decorators import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
 from pytableaux.tools.typing import CrdT, LexItT, LexT, SenT, TbsT
@@ -37,38 +37,52 @@ if TYPE_CHECKING:
     from pytableaux.lang.writing import LexWriter
 
 __all__ = (
+    # Classes
     'BiCoords',
+    'LangCommonEnum',
+    'LangCommonEnumMeta',
+    'LangCommonMeta',
+    'Marking',
+    'Notation',
+    'RenderSet',
+    'TableStore',
     'TriCoords',
 
-    'LangCommonMeta',
-    'LangCommonEnumMeta',
-
-    'LangCommonEnum',
-
-    'Notation',
-    'Marking',
-
-    'TableStore',
-    'RenderSet',
-
+    # Attributes
     'nosetattr',
     'raiseae',
 
-    # aliases
+    # Type aliases
     'PredicateSpec',
     'ParameterSpec',
     'AtomicSpec',
 
-    # Generic alias
-    'SpecType', 'IdentType',  'ParameterIdent', 'QuantifierSpec',
-    'OperatorSpec',  'PredicateRef',  'PredicatedSpec',
-    'QuantifiedSpec', 'OperandsSpec', 'OperatedSpec',
-    # Generic alias (deferred)
-    'PredsItemSpec', 'PredsItemRef', 'OperCallArg', 'QuantifiedItem',
-    'ParseTableKey', 'ParseTableValue',
+    # Generic aliases
+    'IdentType',
+    'OperandsSpec',
+    'OperatedSpec',
+    'OperatorSpec',
+    'ParameterIdent',
+    'PredicatedSpec',
+    'PredicateRef',
+    'QuantifiedSpec',
+    'QuantifierSpec',
+    'SpecType',
+
+    # Deferred aliases
+    'OperCallArg',
+    'ParseTableKey',
+    'ParseTableValue',
+    'PredsItemRef',
+    'PredsItemSpec',
+    'QuantifiedItem',
 
     # Type variables
-    'TbsT', 'CrdT', 'LexT', 'LexItT', 'SenT',
+    'CrdT',
+    'LexItT',
+    'LexT',
+    'SenT',
+    'TbsT',
 )
 
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
@@ -79,10 +93,10 @@ raiseae = raisr(AttributeError)
 #==========================+
 
 class LangCommonMeta(abcs.AbcMeta):
-    """Common metaclass for lang classes. The nosetattr member is
-    shared among these classes and is activated after the modules are fully
-    initialized.
-    """
+    "Common metaclass for lang classes."
+    
+    # The nosetattr member is shared among these classes and is activated after
+    # the modules are fully initialized.
 
     _readonly : bool
     __delattr__ = raiseae
@@ -174,12 +188,13 @@ class Notation(LangCommonEnum):
     @closure
     def __setattr__():
         from enum import Enum
-        def __setattr__(self, name, value):
+        esa = Enum.__setattr__
+        def setter(self, name: str, value):
             if name == 'Parser' and not hasattr(self, name):
-                Enum.__setattr__(self, name, value)
+                esa(self, name, value)
             else:
                 super().__setattr__(name, value)
-        return __setattr__
+        return setter
 
 class Marking(LangCommonEnum):
     'Miscellaneous marking/punctuation enum.'
@@ -207,7 +222,7 @@ class Marking(LangCommonEnum):
 #==========================+
 
 class BiCoords(NamedTuple):
-    "An (index, subscript) tuple."
+    "An (`index`, `subscript`) integer tuple."
 
     index: int
     "The index integer."
@@ -216,7 +231,7 @@ class BiCoords(NamedTuple):
     "The subscript integer."
 
     class Sorting(NamedTuple):
-        "BiCoords sorting tuple (subscript, index)."
+        "BiCoords sorting tuple (`subscript`, `index`)."
 
         subscript: int
         "The subscript integer."
@@ -246,7 +261,7 @@ class BiCoords(NamedTuple):
         return BiCoords(index, sub)
 
 class TriCoords(NamedTuple):
-    "An (index, subscript, arity) tuple."
+    "An (`index`, `subscript`, `arity`) integer tuple."
 
     index: int
     "The index integer."
@@ -258,7 +273,7 @@ class TriCoords(NamedTuple):
     "The arity integer."
 
     class Sorting(NamedTuple):
-        "TriCoords sorting tuple (subscript, index, arity)."
+        "TriCoords sorting tuple (`subscript`, `index`, `arity`)."
 
         subscript: int
         "The subscript integer."
@@ -284,13 +299,14 @@ TriCoords.first = TriCoords._make(TriCoords.first)
 class TableStore(metaclass = LangCommonMeta):
 
     default_fetch_key: ClassVar[str]
+
     _instances: ClassVar[dict[Notation, dict[str, TbsT]]]
 
     __slots__ = EMPTY_SET
 
     @classmethod
     def load(cls: type[TbsT], notn: Notation, key: str, data: Mapping, /) -> TbsT:
-        check.inst(key, str)
+        # check.inst(key, str)
         notn = Notation[notn]
         idx = cls._instances[notn]
         if key in idx:
@@ -342,16 +358,24 @@ class RenderSet(TableStore):
     default_fetch_key = 'ascii'
 
     notation: Notation
+    "The notation."
+
     charset: str
+    "The charset name."
+
     renders: Mapping[Any, Callable[..., str]]
+    "Render functions."
+
     strings: Mapping[Any, str]
+    "Fixed strings mapping."
+
     data: Mapping[str, Any]
 
     def __init__(self, data: Mapping[str, Any]):
         self.notation = notn = Notation(data['notation'])
         self.charset = data['charset']
-        self.renders = data.get('renders', {})
-        self.strings = data.get('strings', {})
+        self.renders = data.get('renders', EMPTY_MAP)
+        self.strings = data.get('strings', EMPTY_MAP)
         self.data = data
         notn.charsets.add(self.charset)
         notn.rendersets.add(self)
@@ -378,37 +402,37 @@ AtomicSpec = BiCoords
 #  Generic aliases   |
 #====================+
 
+SpecType = tuple[int|str|tuple, ...]
+"Tuple with integers, strings, or such nested tuples."
+
+IdentType = tuple[str, SpecType]
+"Tuple of (classname, spec)."
+
+ParameterIdent = tuple[str, BiCoords]
+"Tuple of (classname, (index, subscript))."
+
+QuantifierSpec = tuple[str]
+"Singleton tuple of quantifier name."
+
+OperatorSpec = tuple[str]
+"Singleton tuple of operator name."
+
+PredicateRef = tuple[int, ...] | str
+"Predicate ref type, int tuple or string."
+
+PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
+"Predicated sentence spec type."
+
+QuantifiedSpec = tuple[str, BiCoords, IdentType]
+"Quantified sentence spec type."
+
+OperandsSpec = tuple[IdentType, ...]
+"Operands argument type."
+
+OperatedSpec = tuple[str, OperandsSpec]
+"Operated sentence spec type."
+
 if TYPE_CHECKING:
-
-    SpecType = tuple[int|str|tuple, ...]
-    "Tuple with integers, strings, or such nested tuples."
-
-    IdentType = tuple[str, SpecType]
-    "Tuple of (classname, spec)."
-
-    ParameterIdent = tuple[str, BiCoords]
-    "Tuple of (classname, (index, subscript))."
-
-    QuantifierSpec = tuple[str]
-    "Singleton tuple of quantifier name."
-
-    OperatorSpec = tuple[str]
-    "Singleton tuple of operator name."
-
-    PredicateRef = tuple[int, ...] | str
-    "Predicate ref type, int tuple or string."
-
-    PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
-    "Predicated sentence spec type."
-
-    QuantifiedSpec = tuple[str, BiCoords, IdentType]
-    "Quantified sentence spec type."
-
-    OperandsSpec = tuple[IdentType, ...]
-    "Operands argument type."
-
-    OperatedSpec   = tuple[str, OperandsSpec]
-    "Operated sentence spec type."
 
     # deferred
     PredsItemSpec = PredicateSpec | Predicate
@@ -418,8 +442,6 @@ if TYPE_CHECKING:
     ParseTableKey   = LexType|Marking|type[Predicate.System]
     ParseTableValue = int|Lexical
 else:
-    SpecType = IdentType = ParameterIdent = QuantifierSpec = OperatorSpec = \
-        PredicatedSpec = QuantifiedSpec = OperandsSpec = OperatedSpec = tuple
 
     PredicateRef = tuple|str
 

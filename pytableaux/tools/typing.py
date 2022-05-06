@@ -21,6 +21,7 @@ pytableaux.tools.typing
 """
 from __future__ import annotations
 
+import builtins
 import enum as _enum
 from collections.abc import Set
 from types import FunctionType, MethodType, ModuleType
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
     from pytableaux.proof import TableauxSystem, filters
     from pytableaux.proof.common import Branch, Node, Target
     from pytableaux.proof.tableaux import Rule
-    from pytableaux.tools.abcs import Ebc
+    from pytableaux.tools.abcs import Ebc, EbcMeta
     from pytableaux.tools.hooks import HookConn
     from pytableaux.tools.hybrids import SequenceSet
     from pytableaux.tools.linked import Link, LinkSequence
@@ -176,68 +177,66 @@ RHS = TypeVar('RHS')
 Self = TypeVar('Self')
 "Generic, self"
 
-F = TypeVar('F', bound = Callable[..., Any])
-"Callable bound, decorator"
-
-TT = TypeVar('TT', bound = type)
-"Type bound, class decorator"
-
-MapT = TypeVar('MapT', bound = Mapping)
-"Mapping bound"
-
-SetT = TypeVar('SetT', bound = Set)
-"Set bound"
-
-EnumT = TypeVar('EnumT', bound = _enum.Enum)
-"Enum bound"
-
-EbcT  = TypeVar('EbcT', bound = 'Ebc')
-"Bound to ``Ebc``"
-
-EbcT2 = TypeVar('EbcT2', bound = 'Ebc')
-"Bound to ``Ebc``"
-
-SetApiT = TypeVar('SetApiT', bound = 'SetApi')
-"Bound to ``SetApi``"
-
-SeqApiT = TypeVar('SeqApiT', bound = 'SequenceApi')
-"Bound to ``SequenceApi``"
-
-MutSeqT = TypeVar('MutSeqT', bound = 'MutableSequenceApi')
-"Bound to ``MutableSequenceApi``"
-
-SeqSetT = TypeVar('SeqSetT', bound = 'SequenceSet')
-"Bound to ``SequenceSet``"
-
-MapiT = TypeVar('MapiT', bound = 'MappingApi')
-"Bound to ``MappingApi``"
-
-RuleT = TypeVar('RuleT', bound = 'Rule')
-"Bound to ``Rule``"
-
-LinkT = TypeVar('LinkT', bound = 'Link')
-"Bound to ``Link``"
-
-LinkSeqT = TypeVar('LinkSeqT', bound = 'LinkSequence')
-"Bound to ``LinkSequence``"
-
-TimT = TypeVar('TimT', bound = 'TimingCommon')
-"Bound to ``TimingCommon``"
-
-TbsT = TypeVar('TbsT', bound = 'TableStore')
-"Bound to ``TableStore``"
+# ---- Bound TypeVars
 
 CrdT = TypeVar('CrdT', bound = 'CoordsItem')
 "Bound to ``CoordsItem``"
 
-LexT = TypeVar('LexT', bound = 'Lexical')
-"Bound to ``Lexical``"
+EnumT = TypeVar('EnumT', bound = _enum.Enum)
+"Bound to ``Enum``"
+
+F = TypeVar('F', bound = Callable[..., Any])
+"Bound to ``Callable``, decorator"
 
 LexItT = TypeVar('LexItT', bound = 'LexicalItem')
 "Bound to ``LexicalItem``"
 
+LexT = TypeVar('LexT', bound = 'Lexical')
+"Bound to ``Lexical``"
+
+LinkSeqT = TypeVar('LinkSeqT', bound = 'LinkSequence')
+"Bound to ``LinkSequence``"
+
+LinkT = TypeVar('LinkT', bound = 'Link')
+"Bound to ``Link``"
+
+MapiT = TypeVar('MapiT', bound = 'MappingApi')
+"Bound to ``MappingApi``"
+
+MapT = TypeVar('MapT', bound = Mapping)
+"Bound to ``Mapping``"
+
+MutSeqT = TypeVar('MutSeqT', bound = 'MutableSequenceApi')
+"Bound to ``MutableSequenceApi``"
+
+RuleT = TypeVar('RuleT', bound = 'Rule')
+"Bound to ``Rule``"
+
 SenT = TypeVar('SenT', bound = 'Sentence')
 "Bound to ``Sentence``"
+
+SeqApiT = TypeVar('SeqApiT', bound = 'SequenceApi')
+"Bound to ``SequenceApi``"
+
+SeqSetT = TypeVar('SeqSetT', bound = 'SequenceSet')
+"Bound to ``SequenceSet``"
+
+SetApiT = TypeVar('SetApiT', bound = 'SetApi')
+"Bound to ``SetApi``"
+
+SetT = TypeVar('SetT', bound = Set)
+"Bound to ``Set``"
+
+TbsT = TypeVar('TbsT', bound = 'TableStore')
+"Bound to ``TableStore``"
+
+TimT = TypeVar('TimT', bound = 'TimingCommon')
+"Bound to ``TimingCommon``"
+
+TT = TypeVar('TT', bound = type)
+"Bound to ``type``, class decorator"
+
+# ----
 
 P = ParamSpec('P')
 "Param spec"
@@ -247,6 +246,15 @@ P = ParamSpec('P')
 #==========================+
 
 if TYPE_CHECKING:
+
+    @overload
+    def iter(__etype: type[EnumT]) -> Iterator[EnumT]: ...
+
+    @overload
+    def iter(__it: Iterable[T]) -> Iterator[T]: ...
+
+    @overload
+    def iter(__function: Callable[[], T], __sentinel: Any) -> Iterator[T]: ...
 
     class TypeInstDict(dict[type[VT], VT]):
         'Stub type for mapping of ``type[T]`` -> ``T``.'
@@ -294,7 +302,11 @@ if TYPE_CHECKING:
         def __delete__(self, __obj: Self) -> None: ...
 
 else:
+    iter = builtins.iter
     TypeInstDict = FiltersDict = dict
     EnumDictType = _enum._EnumDict
     _property = property
     
+del(
+    builtins,
+)

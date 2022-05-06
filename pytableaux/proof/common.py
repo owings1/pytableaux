@@ -25,7 +25,6 @@ import builtins
 import operator as opr
 from collections import defaultdict
 from collections.abc import Set
-from itertools import filterfalse
 from typing import (TYPE_CHECKING, Any, Collection, Iterable, Iterator,
                     Mapping, SupportsIndex)
 
@@ -61,8 +60,11 @@ class Node(MapCover):
     'A tableau node.'
 
     __slots__ = (
-        'step', 'ticked',
-        '_is_access', '_is_modal', '_worlds',
+        '_is_access',
+        '_is_modal',
+        '_worlds',
+        'step',
+        'ticked',
     )
 
     def __new__(cls, arg = None, /):
@@ -148,6 +150,12 @@ class Node(MapCover):
     __hash__    = operd(builtins.id)
     __delattr__ = raisr(AttributeError)
 
+    if TYPE_CHECKING:
+        @overload
+        def get(self, key: Literal['sentence']) -> Sentence|None:...
+        @overload
+        def __getitem__(self, key: Literal['sentence']) -> Sentence:...
+
     def __getitem__(self, key):
         try:
             return self._cov_mapping[key]
@@ -169,23 +177,38 @@ class Node(MapCover):
     def __repr__(self):
         return f'<{type(self).__name__} id:{self.id} props:{dict(self)}>'
 
-    if TYPE_CHECKING:
-        @overload
-        def get(self, key: Literal['sentence']) -> Sentence|None:...
-        @overload
-        def __getitem__(self, key: Literal['sentence']) -> Sentence:...
-
 class Branch(SequenceApi[Node], EventEmitter):
     'A tableau branch.'
 
     __closed: bool
-    __nodes: qset[Node]
-    __ticked: set[Node]
-    __worlds: set[int]
     __constants: set[Constant]
     __index: Branch.Index
-    __nextworld: int
+    __model: BaseModel
     __nextconst: Constant
+    __nextworld: int
+    __nodes: qset[Node]
+    __origin: Branch
+    __parent: Branch|None
+    __ticked: set[Node]
+    __worlds: set[int]
+    _constants: SetView[Constant]
+    _worlds: SetView[int]
+
+    __slots__ = (
+        '__closed',
+        '__constants',
+        '__index',
+        '__model',
+        '__nextconst',
+        '__nextworld',
+        '__nodes',
+        '__origin',
+        '__parent',
+        '__ticked',
+        '__worlds',
+        '_constants',
+        '_worlds',
+    )
 
     def __init__(self, parent: Branch = None, /):
         """Create a branch.
@@ -328,8 +351,8 @@ class Branch(SequenceApi[Node], EventEmitter):
                 return True
         return False
 
-    def all(self, props_list: Iterable[Mapping], /) -> bool:
-        """Check a list of property dictionaries against the ``has()`` method.
+    def all(self, mappings: Iterable[Mapping], /) -> bool:
+        """Check a list of property mappings against the ``has()`` method.
         
         Args:
             mappings: An iterable of property mappings.
@@ -337,7 +360,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         Returns:
             ``False`` when the first non-match is found, else ``True``.
         """
-        for props in props_list:
+        for props in mappings:
             for _ in self.search(props, limit = 1):
                 break
             else:
@@ -423,17 +446,16 @@ class Branch(SequenceApi[Node], EventEmitter):
         for _ in map(self.append, nodes): pass
         return self
 
-    def tick(self, *nodes: Node) -> None:
-        """Tick node(s) for the branch.
+    def tick(self, node: Node) -> None:
+        """Tick a node for the branch.
         
         Args:
-            *nodes: The nodes to tick.
+            node: The node to tick.
         """
-        event = BranchEvent.AFTER_NODE_TICK
-        for node in filterfalse(self.__ticked.__contains__, nodes):
+        if node not in self.__ticked:
             self.__ticked.add(node)
             node.ticked = True
-            self.emit(event, node, self)
+            self.emit(BranchEvent.AFTER_NODE_TICK, node, self)
 
     def close(self) -> Branch:
         """Close the branch. Adds a flag node and emits the `AFTER_BRANCH_CLOSE
@@ -442,7 +464,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         Returns:
             self.
         """
-        if not self.closed:
+        if not self.__closed:
             self.__closed = True
             self.append(PropMap.ClosureNode)
             self.emit(BranchEvent.AFTER_BRANCH_CLOSE, self)
@@ -494,8 +516,8 @@ class Branch(SequenceApi[Node], EventEmitter):
 
     add = append
 
-    def __getitem__(self, key: SupportsIndex) -> Node:
-        return self.__nodes[key]
+    def __getitem__(self, i):
+        return self.__nodes[i]
 
     def __len__(self):
         return len(self.__nodes)

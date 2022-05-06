@@ -83,7 +83,7 @@ class Model(K3.Model):
         return super().truth_function(oper, a, b)
         
     def back_cycle(self, value):
-        seq = self.Value.seq
+        seq = self.Value._seq
         i = seq.index(value)
         return seq[i - 1]
 

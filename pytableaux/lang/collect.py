@@ -303,7 +303,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
         def _after_init(cls):
             'Enum after init hook. Set Predicate class attributes.'
             super()._after_init()
-            for pred in cls.seq:
+            for pred in cls:
                 setattr(Predicate, pred.name, pred)
             Predicate.System = cls
 
