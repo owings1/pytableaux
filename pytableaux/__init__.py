@@ -128,6 +128,7 @@ def _():
         c._readonly = True
 
     lex.nosetattr.enabled = True
+    lex.nosetattr._cache.clear()
 
     del(lex.nosetattr,)
 

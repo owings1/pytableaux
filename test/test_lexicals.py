@@ -80,7 +80,7 @@ class TestParameter(BaseSuite):
 class TestPredicate(BaseSuite):
 
     def test_errors(self):
-        with raises(ValueError):
+        with raises(TypeError):
             Predicate(1, 0, 2, 'Identity')
         with raises(ValueError):
             Predicate(-1, 4, 2)
@@ -89,15 +89,9 @@ class TestPredicate(BaseSuite):
         with raises(ValueError):
             Predicate(0, -1, 1)
         with raises(AttributeError):
-            F._value_
-        with raises(AttributeError):
             F._value_ = F
         with raises(AttributeError):
-            F._name_
-        with raises(AttributeError):
             F._name_ = F.name
-        with raises(AttributeError):
-            F.__objclass__
         with raises(AttributeError):
             F.__objclass__ = F.__class__
     def test_sys_attrs(self):
@@ -124,7 +118,7 @@ class TestPredicates(BaseSuite):
             Predicates().get((-1, 2))
         with raises(KeyError):
             Predicates().get((1, 2))
-        with raises(ValueError):
+        with raises(TypeError):
             Predicates().add((0, 0, 2, 'Identity'))
         with raises(TypeError): # bad arity
             Predicates().add((0, 0, None))
@@ -143,7 +137,7 @@ class TestPredicates(BaseSuite):
 
     def test_get_pred_coords_tuple(self):
         pred, = Predicates({(1, 1, 1)})
-        assert pred.coords == (1, 1, 1)
+        assert pred.spec == (1, 1, 1)
         assert pred.bicoords == (1, 1)
 
     def test_pred_no_name(self):
@@ -475,4 +469,4 @@ class TestClasses(BaseSuite):
         with raises(AttributeError):
             s = Atomic.first()
             s.index = 2
-        A.index = A.index
+        # A.index = A.index

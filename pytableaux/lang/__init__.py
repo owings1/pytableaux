@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 pytableaux.lang
-^^^^^^^^^^^^^^^
+---------------
 
 """
 from __future__ import annotations
@@ -28,9 +28,11 @@ from pytableaux.errors import Emsg
 from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure
 from pytableaux.tools.decorators import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import CrdT, LexItT, LexT, SenT, TbsT
+from pytableaux.tools.typing import CrdT, LexItT, LexT, SenT, SenT2, TbsT, T
 
 if TYPE_CHECKING:
+    from typing import overload, Iterator, Sequence
+    from pytableaux.tools.abcs import EnumLookup
     from pytableaux.lang.lex import (Lexical, LexType, Predicate, Quantifier,
                                      Sentence, Variable)
     from pytableaux.lang.parsing import Parser
@@ -42,9 +44,11 @@ __all__ = (
     'LangCommonEnum',
     'LangCommonEnumMeta',
     'LangCommonMeta',
+    'LexicalItemMeta',
     'Marking',
     'Notation',
     'RenderSet',
+    'SysPredEnumMeta',
     'TableStore',
     'TriCoords',
 
@@ -82,6 +86,7 @@ __all__ = (
     'LexItT',
     'LexT',
     'SenT',
+    'SenT2',
     'TbsT',
 )
 
@@ -108,6 +113,35 @@ class LangCommonEnumMeta(abcs.EbcMeta):
     _readonly : bool
     __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.EbcMeta)
+
+class LexicalItemMeta(LangCommonMeta):
+    "Common metaclass for non-Enum ``Lexical`` classes."
+
+    # Populated in lex module.
+    __call__ = NotImplemented
+
+class SysPredEnumMeta(LangCommonEnumMeta):
+    "Meta class for special system predicates enum."
+
+    if TYPE_CHECKING:
+
+        __members__: Mapping[str, Predicate]
+        _lookup: EnumLookup[Predicate]
+        _member_map_: Mapping[str, Predicate]
+        _seq: Sequence[Predicate]
+
+        @overload
+        def __iter__(cls) -> Iterator[Predicate]: ...
+        @overload
+        def __reversed__(cls) -> Iterator[Predicate]: ...
+        @overload
+        def __getitem__(cls, key, /) -> Predicate: ...
+        @overload
+        def __call__(cls, value, /) -> Predicate: ...
+        @overload
+        def get(cls, key, /) -> Predicate: ...
+        @overload
+        def get(cls, key, default: T, /) -> Predicate|T: ...
 
 #==========================+
 #  Base classes            |

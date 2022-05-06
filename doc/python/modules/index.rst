@@ -5,6 +5,8 @@ Modules
 
 .. toctree::
 
+    lang
+
     lang.collect
 
     lang.lex

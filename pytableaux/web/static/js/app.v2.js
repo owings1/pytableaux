@@ -232,9 +232,9 @@
                         addPremise()
                     } else if ($target.hasClass(Cls.predAdd)) {
                         // Add predicate.
-                        const coords = getNextPredCoords()
+                        const spec = getNextPredCoords()
                         const arity = 1
-                        addPredicate(coords[0], coords[1], arity)
+                        addPredicate(spec[0], spec[1], arity)
                             .find(':input')
                             .focus() 
                     } else if ($target.hasClass(Cls.premiseDel)) {
@@ -704,10 +704,10 @@
                 } else {
                     arityVal = arityNumVal
                 }
-                const coords = $(Sel.fieldsPredSymbol, $row).val().split('.')
+                const spec = $(Sel.fieldsPredSymbol, $row).val().split('.')
                 preds.push({
-                    index     : +coords[0],
-                    subscript : +coords[1],
+                    index     : +spec[0],
+                    subscript : +spec[1],
                     arity     : arityVal
                 })
             })

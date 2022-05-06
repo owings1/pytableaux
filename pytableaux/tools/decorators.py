@@ -37,7 +37,7 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Concatenate,
 #  - tools.typing
 from pytableaux import __docformat__
 from pytableaux.errors import check
-from pytableaux.tools import MapProxy, abstract
+from pytableaux.tools import MapProxy, abstract, abcs
 from pytableaux.tools.abcs import Abc, abcf, abcm
 from pytableaux.tools.typing import RT, F, P, Self, T, _property
 
@@ -63,9 +63,6 @@ class _noexcept(Exception): __new__ = None
 
 def _valfilter(it: Iterable[T], /, *, getter = opr.itemgetter(1)) -> Iterator[T]:
     return filter(getter, it)
-
-def _getitems(obj, *keys):
-    return tuple(map(obj.__getitem__, keys))
 
 def _getmixed(obj, k, default = None):
     try: return obj[k]
@@ -100,7 +97,7 @@ def _checkcallable2(obj):
         return _methcaller(obj)
     return check.callable(obj)
 
-class BaseMember(Abc, Generic[T]):
+class BaseMember(Generic[T], metaclass = abcs.AbcMeta):
 
     __slots__ = '__name__', '__qualname__', '__owner'
 
@@ -154,7 +151,7 @@ class BaseMember(Abc, Generic[T]):
             delattr(subcls, 'sethook')
         subcls._sethooks = tuple(hooks)
 
-class Twofer(Abc, Generic[F]):
+class Twofer(Generic[F], metaclass = abcs.AbcMeta):
 
     __slots__ = EMPTY
 
@@ -306,46 +303,6 @@ class operd:
             def freduce(self, *operands):
                 return freturn(self, functools.reduce(oper, operands, finit(self)))
             return freduce
-
-        # @staticmethod
-        # def template(*argdefs, **kwdefs) -> type[operd.reduce]:
-        #     'Make a templated subclass with bound arguments.'
-        #     class templated(__class__):
-        #         _argdefs = argdefs
-        #         _kwdefs = kwdefs
-        #         __slots__ = ()
-        #         def __init__(self, *args, **kw):
-        #             super().__init__(*(argdefs + args), **(kwdefs | kw))
-        #     return templated
-
-    # class order(Base):
-    #     """Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
-    #     default, except (AttributeError, TypeError), and return ``NotImplemented``.
-    #     """
-
-    #     __slots__ = 'errs',
-
-    #     def __init__(self, oper: Callable, /, *errs: type[Exception], info: Callable|Mapping = None):
-    #         super().__init__(oper, info)
-    #         if errs:
-    #             if errs == (None,): self.errs = _noexcept,
-    #             else: self.errs = errs
-    #             for ecls in self.errs:
-    #                 check.inst(ecls, type)
-    #                 check.subcls(ecls, Exception)
-    #         else:
-    #             self.errs = AttributeError, TypeError
-
-    #     def __call__(self, fcmp: Callable):
-    #         oper, fcmp = map(check.callable, (self.oper, fcmp))
-    #         errs = self.errs
-    #         @wraps(oper)
-    #         def f(self, other) -> bool:
-    #             try:
-    #                 return oper(fcmp(self, other), 0)
-    #             except errs:
-    #                 return NotImplemented
-    #         return f
 
     if TYPE_CHECKING:
 
@@ -533,16 +490,38 @@ class lazy:
 class NoSetAttr(BaseMember):
     'Lame thing that does a lame thing.'
 
-
-    _defaults: ClassVar[Mapping[str, Any]] = MapProxy(dict(cls = None, attr = None))
-    efmt = "Attribute '{0}' of '{1.__class__.__name__}' objects is readonly".format
-
-    __slots__ = 'enabled', 'defaults', '_cache', '_isroot'
-
     enabled: bool
+    "Whether raising is enabled."
+
+    _defaults: ClassVar[Mapping[str, Any]] = MapProxy(dict(
+        efmt = (
+            "Attribute '{0}' of '{1.__class__.__name__}' "
+            "objects is readonly"
+        ).format,
+
+        # Control attribute name to check on the object,
+        # e.g. '_readonly', in addition to this object's
+        # `enabled` setting.
+        attr = None,
+
+        # If `True`: Check `attr` on the object's class;
+        # If set to a `type`, check the `attr` on that class;
+        # If Falsy, only check for this object's `enabled` setting.
+        cls = None,
+    ))
+
+    __slots__ = (
+        '_cache',
+        '_isroot',
+        'defaults',
+        'enabled',
+    )
     defaults: Mapping
-    _cache: dict
+
     _isroot: bool
+    "Skip the first `__set_name__` hook."
+
+    _cache: dict
 
     def __init__(self, /, *, enabled: bool = True, root: bool = False, **defaults):
         self.enabled = bool(enabled)
@@ -550,31 +529,30 @@ class NoSetAttr(BaseMember):
         self.defaults = self._defaults | defaults
         self._cache = defaultdict(dict)
 
-    def __call__(self, basecls, **opts):
-        opts = self.defaults | opts
-        attr, cls = _getitems(opts, 'attr', 'cls')
-        ok = basecls.__setattr__
-        efmt = self.efmt
-        return self._make(ok, efmt, attr, cls)
+    def __call__(self, basecls: type, **opts):
+        return self._make(
+            basecls.__setattr__,
+            *map((self.defaults | opts).get, ('efmt', 'attr', 'cls'))
+        )
 
-    def _make(self, ok, efmt, attr, cls, /):
+    def _make(self, sa: F, efmt: Callable[[str, Any], str], attr: str|None, cls: bool|type|None, /) -> F:
         if attr:
-            if cls == True:
+            if cls is True:
                 check = self._clschecker(attr)
             elif cls:
                 check = self._fixedchecker(attr, cls)
             else:
                 check = self._selfchecker(attr)
-            def f(obj, name, value):
+            def f(obj, name, value, /):
                 if self.enabled and check(obj):
                     raise AttributeError(efmt(name, obj))
-                ok(obj, name, value)
+                sa(obj, name, value)
         else:
-            def f(obj, name, value):
+            def f(obj, name, value, /):
                 if self.enabled:
                     raise AttributeError(efmt(name, obj))
-                ok(obj, name, value)
-        return wraps(ok)(f)
+                sa(obj, name, value)
+        return wraps(sa)(f)
 
     @abcf.temp
     def cache(func: F) -> F:

@@ -32,9 +32,9 @@ from pytableaux import __docformat__, package
 from pytableaux.errors import Emsg
 from pytableaux.lang.lex import Lexical
 from pytableaux.tools import abcs, mappings
+from pytableaux.tools.typing import T
 
 if TYPE_CHECKING:
-    from pytableaux.tools.typing import T
     class HasRegistry:
         registry: CollectorRegistry
     MetricType = pmc.Metric|pm.MetricWrapperBase|HasRegistry
@@ -56,7 +56,8 @@ def mwrap(fn: Callable[..., T]) -> Callable[..., T]:
     key = fn.__name__
     @functools.wraps(fn)
     def f(self: AppMetrics, *labels):
-        return self[key].labels(self.config.get('app_name', package.name), *labels)
+        app_name = self.config.get('app_name', package.name)
+        return self[key].labels(app_name, *labels)
     metcls, desc, labels = fn()
     labels = ['app_name', *labels]
     f.spec = key, desc, labels
@@ -64,6 +65,16 @@ def mwrap(fn: Callable[..., T]) -> Callable[..., T]:
     return f
 
 class AppMetrics(mappings.MapCover[str, MetricType], abcs.Abc):
+
+    __slots__ = (
+        'config',
+        'registry',
+    )
+
+    config: Mapping[str, Any]
+    registry: CollectorRegistry
+
+    # ------------------------------------------------------------------
 
     @mwrap
     def app_requests_count() -> pm.Counter:
@@ -81,8 +92,7 @@ class AppMetrics(mappings.MapCover[str, MetricType], abcs.Abc):
     def proofs_execution_time() -> pm.Summary:
         return pm.Summary, 'total proof execution time', ['logic']
 
-    config: Mapping[str, Any]
-    registry: CollectorRegistry
+    # ------------------------------------------------------------------
 
     def __init__(self, config: Mapping[str, Any], registry: CollectorRegistry = None, /):
         self.config = config
@@ -128,7 +138,6 @@ class AppMetrics(mappings.MapCover[str, MetricType], abcs.Abc):
 
         return inst
 
-del(mwrap,)
 
 # ------------------------------------------------------------------
 
@@ -168,4 +177,6 @@ def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]:
                 form_data[param] = [form_data[param]]
     return form_data
 
-
+del(
+    mwrap,
+)

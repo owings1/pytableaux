@@ -622,7 +622,7 @@
                 const $tr = $(this)
                 const arity = $('input.arity', $tr).val()
                 if (arity.length > 0) {
-                    const coords = $('input.predicateSymbol', $tr).val().split('.')
+                    const spec = $('input.predicateSymbol', $tr).val().split('.')
                     const arityNumVal = +arity
                     // let invalid arity propagate
                     var arityVal
@@ -633,8 +633,8 @@
                     }
                     data.argument.predicates.push({
                         name      : $('input.predicateName', $tr).val(),
-                        index     : +coords[0],
-                        subscript : +coords[1],
+                        index     : +spec[0],
+                        subscript : +spec[1],
                         arity     : arityVal
                     })
                 }

@@ -215,6 +215,9 @@ RuleT = TypeVar('RuleT', bound = 'Rule')
 SenT = TypeVar('SenT', bound = 'Sentence')
 "Bound to ``Sentence``"
 
+SenT2 = TypeVar('SenT2', bound = 'Sentence')
+"Bound to ``Sentence``"
+
 SeqApiT = TypeVar('SeqApiT', bound = 'SequenceApi')
 "Bound to ``SequenceApi``"
 

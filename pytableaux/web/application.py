@@ -782,8 +782,7 @@ class WebApp(EventEmitter):
             return None
         errors = {}
         preds = Predicates()
-        Coords = TriCoords
-        fields = Coords._fields
+        fields = TriCoords._fields
         for i, specdata in enumerate(pspecs, start = 1):
             elabel = f'Predicate {i}'
             try:
@@ -791,8 +790,8 @@ class WebApp(EventEmitter):
                     keys = fields
                 else:
                     keys = range(len(fields))
-                coords = Coords(*map(specdata.__getitem__, keys))
-                preds.add(coords)
+                spec = TriCoords(*map(specdata.__getitem__, keys))
+                preds.add(spec)
             except Exception as e:
                 errors[elabel] = errstr(e)
         if errors:

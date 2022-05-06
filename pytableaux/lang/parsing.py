@@ -186,8 +186,6 @@ class ParseContext:
 
     def __exit__(self, typ, value, traceback):
         pass
-        # self.is_open = False
-        # del(self.pos, self.bound)
 
     def current(self) -> str|None:
         'Return the current character, or ``None`` if after last.'
@@ -434,11 +432,6 @@ class BaseParser(Parser):
         index = self.table.value(context.current())
         context.advance()
         return BiCoords(index, self._read_subscript(context))
-
-    # def __setattr__(self, name, value):
-    #     if name in self.__slots__ and hasattr(self, name):
-    #         raise AttributeError(name)
-    #     super().__setattr__(name, value)
 
     __delattr__ = raiseae
 

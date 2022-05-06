@@ -26,23 +26,26 @@ import operator as opr
 from itertools import repeat
 from typing import TYPE_CHECKING, Any, Iterable, SupportsIndex
 
+from pytableaux import tools, __docformat__, EMPTY_SET
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import (LangCommonMeta, PredsItemRef, PredsItemSpec,
-                                  raiseae)
+                             raiseae)
 from pytableaux.lang.lex import LexicalItem, Predicate, Sentence
-from pytableaux.tools import closure
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import lazy, membr, wraps
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sequences import SequenceApi, seqf
-from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import EnumDictType, IcmpFunc, IndexType
 
 if TYPE_CHECKING:
     from typing import overload
 
-__all__ = 'Argument', 'Predicates'
+__all__ = (
+    'Argument',
+    'ArgumentMeta',
+    'Predicates',
+)
 
 NOARG = object()
 EMPTY_IT = iter(EMPTY_SET)
@@ -92,10 +95,10 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
         """Return the predicates occuring in the argument.
         
         Args:
-            **kw: sort keywords to pass to ``Predicates`` constructor.
+            **kw: sort keywords to pass to :class:`Predicates` constructor.
         
         Returns:
-            ``Predicates`` instance.
+            Predicates: The predicates.
         """
         return Predicates((p for s in self for p in s.predicates), **kw)
 
@@ -106,7 +109,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     # title is not considered in equality.
 
     @abcm.f.temp
-    @closure
+    @tools.closure
     def ordr():
 
         sorder = Sentence.orderitems
@@ -188,7 +191,8 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
 
     #******  Other
 
-    def __forjson__(self, **_):
+    def for_json(self):
+        'JSON Comptibility'
         return dict(
             conclusion = self.conclusion,
             premises = self.premises
@@ -225,7 +229,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
         Args:
             values: Iterable of predicates or specs.
             sort: Whether to sort. Default is ``False``.
-            key: Optional sort key.
+            key: Optional sort key function.
             reverse: Whether to reverse sort.
         """
         self._lookup = dmap()
@@ -246,11 +250,15 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
         Raises:
             KeyError: if missing and no default specified.
         """
-        try: return self._lookup[ref]
+        try:
+            return self._lookup[ref]
         except KeyError:
-            try: return self.System[ref]
-            except KeyError: pass
-            if default is NOARG: raise
+            try:
+                return self.System[ref]
+            except KeyError:
+                pass
+            if default is NOARG:
+                raise
             return default
 
     def specs(self):
@@ -268,7 +276,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
             # mismatch.
             for other in filter(None, map(self._lookup.get, pred.refkeys)):
                 if other != pred:
-                    raise Emsg.ValueConflictFor(pred, pred.coords, other.coords)
+                    raise Emsg.ValueConflictFor(pred, pred.spec, other.spec)
             self._lookup |= zip(pred.refkeys, repeat(pred))
 
     #******  Override qset
@@ -317,3 +325,13 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
             }
             ns |= members
             ns._member_names += members.keys()
+
+
+del(
+    abcm,
+    lazy,
+    membr,
+    opr,
+    tools,
+    wraps,
+)

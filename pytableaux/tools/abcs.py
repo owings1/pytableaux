@@ -27,16 +27,15 @@ import functools
 import itertools
 import operator as opr
 from collections.abc import Set
-from typing import (TYPE_CHECKING, Any, Callable, Collection,
-                    Hashable, Iterable, Iterator, Mapping, Sequence,
-                    SupportsIndex)
+from typing import (TYPE_CHECKING, Any, Callable, Collection, Hashable,
+                    Iterable, Iterator, Mapping, Sequence, SupportsIndex)
 
 from pytableaux import __docformat__, tools
-from pytableaux.errors import check, Emsg
-from pytableaux.tools import MapProxy, EMPTY_MAP
-from pytableaux.tools.typing import (RT, TT, EnumDictType, EnumT,
-                                     F, HkProviderInfo, HkUserInfo, KeysFunc,
-                                     NotImplType, Self, T)
+from pytableaux.errors import Emsg, check
+from pytableaux.tools import MapProxy
+from pytableaux.tools.typing import (RT, TT, EnumDictType, EnumT, F,
+                                     HkProviderInfo, HkUserInfo, KeysFunc,
+                                     NotImplType, Self, T, T1)
 
 if TYPE_CHECKING:
     from typing import overload
@@ -116,7 +115,8 @@ class ebcm:
 
     @staticmethod
     def clean_methods(Class: type[EnumT], /, *,
-        deleter: Callable[[type, str], Any] = type.__delattr__) -> type[EnumT]:
+        deleter: Callable[[type, str], Any] = type.__delattr__
+    ) -> type[EnumT]:
         for hname in filter(Class.__dict__.__contains__, Eset.clean_methods):
             deleter(Class, hname)
         return Class
@@ -147,7 +147,7 @@ class ebcm:
         if not len(bases):
             # If no new bases passed, try the last enum class of the old bases.
             it = filter(ebcm.is_enumcls, reversed(oldcls.__bases__))
-            bases = tuple(itertools.islice(it, 1))#list(it)[0:1]
+            bases = tuple(itertools.islice(it, 1))
             if not len(bases):
                 # Fall back on built-in Enum.
                 bases = (_enum.Enum,)
@@ -247,7 +247,7 @@ class EnumLookup(Mapping[Any, T]):
         return repr(self._asdict())
 
     @classmethod
-    def _makemap(cls, Owner: EbcMeta|type[EnumT], keyfuncs: Collection[KeysFunc], /) -> dict[Hashable, EnumT]:
+    def _makemap(cls, Owner: type[EnumT], keyfuncs: Collection[KeysFunc], /) -> dict[Hashable, EnumT]:
         "Build an index source dictionary."
 
         # Named members, including aliases, but not pseudos.
@@ -302,7 +302,7 @@ class EnumLookup(Mapping[Any, T]):
         }
 
     @classmethod
-    def _check_pseudo(cls, pseudo: _enum.Enum, Owner: EbcMeta|type[_enum.Enum], /) -> set[Hashable]:
+    def _check_pseudo(cls, pseudo: _enum.Enum, Owner: type[_enum.Enum], /) -> set[Hashable]:
         "Verify a pseudo member, returning index keys."
         check = Owner._value2member_map_[pseudo._value_]
         if check is not pseudo:
@@ -312,7 +312,8 @@ class EnumLookup(Mapping[Any, T]):
         return cls._pseudo_keys(pseudo)
 
     @classmethod
-    def _get_keyfuncs(cls, Owner: EbcMeta|type[_enum.Enum], /) -> set[KeysFunc]:
+    def _get_keyfuncs(cls, Owner: type[_enum.Enum], /) -> set[KeysFunc]:
+        "Get the key functions."
         funcs = {cls._default_keys}
         for meth in Eset.member_key_methods:
             if callable(func := getattr(Owner, meth, None)):
@@ -343,7 +344,7 @@ class EbcMeta(_enum.EnumMeta):
     _lookup: EnumLookup
     _seq: Sequence
 
-    _member_names_: Sequence[str] # Override to tuple instead of list
+    _member_names_: Sequence[str] # Use tuple instead of list
     __members__: Mapping = None # Override to not double-proxy
 
     @classmethod
@@ -405,21 +406,6 @@ class EbcMeta(_enum.EnumMeta):
 
         return Class
 
-    #******  Subclass Init Hooks
-
-    def _member_keys(cls, member: Any, /) -> Set[Hashable]:
-        'Init hook to get the index lookup keys for a member.'
-        return Eset.Empty
-
-    def _on_init(cls, subcls: type, /):
-        '''Init hook after all members have been initialized, before index
-        is created. **NB:** Skips abstract classes.'''
-        pass
-
-    def _after_init(cls):
-        'Init hook once the class is initialized. Includes abstract classes.'
-        pass
-
     #******  Class Call
 
     def __call__(cls, value, names = None, **kw):
@@ -478,6 +464,21 @@ class EbcMeta(_enum.EnumMeta):
 
     def __dir__(cls):
         return cls._member_names_
+
+    #******  Subclass Init Hooks
+
+    def _member_keys(cls, member: Any, /) -> Set[Hashable]:
+        'Init hook to get the index lookup keys for a member.'
+        return Eset.Empty
+
+    def _on_init(cls, subcls: type, /):
+        '''Init hook after all members have been initialized, before index
+        is created. **NB:** Skips abstract classes.'''
+        pass
+
+    def _after_init(cls):
+        'Init hook once the class is initialized. Includes abstract classes.'
+        pass
 
     if TYPE_CHECKING:
 
@@ -695,7 +696,7 @@ class abcm:
     def annotated_attrs(obj) -> dict[str, tuple]:
         'Evaluate annotions of type Annotated.'
         # This is called infrequently, so we import lazily.
-        from typing import get_args, get_origin, get_type_hints, Annotated
+        from typing import Annotated, get_args, get_origin, get_type_hints
         hints = get_type_hints(obj, include_extras = True)
         return {
             k: get_args(v) for k,v in hints.items()
