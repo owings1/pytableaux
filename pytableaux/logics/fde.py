@@ -20,14 +20,14 @@
 # pytableaux - First Degree Entailment Logic
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from pytableaux.errors import Emsg
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
-from pytableaux.models import BaseModel, Mval
+from pytableaux.models import BaseModel, ValueFDE
 from pytableaux.proof import TableauxSystem as BaseSystem
 from pytableaux.proof import filters, rules
 from pytableaux.proof.common import Branch, Node, Target
@@ -52,19 +52,10 @@ class Meta:
         'first-order',
     )
 
-class Model(BaseModel):
+class Model(BaseModel[ValueFDE]):
     'An FDE Model.'
 
-    class Value(Mval):
-        'The admissible values for sentences.'
-
-        F = 'False',   0.0
-
-        N = 'Neither', 0.25
-
-        B = 'Both',    0.75
-
-        T = 'True',    1.0
+    Value = ValueFDE
 
     designated_values = setf({Value.B, Value.T})
     "The set of designated values."
@@ -83,10 +74,10 @@ class Model(BaseModel):
     :type: dict[Predicate, set[tuple[Constant, ...]]]
     """
 
-    atomics: dict[Atomic, Model.Value]
+    atomics: dict[Atomic, ValueFDE]
     "An assignment of each atomic sentence to a value."
 
-    opaques: dict[Sentence, Model.Value]
+    opaques: dict[Sentence, ValueFDE]
     "An assignment of each opaque (un-interpreted) sentence to a value."
 
     def __init__(self):
@@ -105,7 +96,7 @@ class Model(BaseModel):
         #: Track set of predicates for performance.
         self.predicates: set[Predicate] = set()
 
-    def value_of_predicated(self, s: Predicated, /, **kw) -> Model.Value:
+    def value_of_predicated(self, s: Predicated, /, **kw):
         params = s.params
         pred = s.predicate
         extension = self.get_extension(pred)
@@ -118,7 +109,7 @@ class Model(BaseModel):
             return self.Value.F
         return self.Value.N
 
-    def value_of_existential(self, s: Quantified, /, **kw) -> Model.Value:
+    def value_of_existential(self, s: Quantified, /, **kw):
         """
         The value of an existential sentence is the maximum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
@@ -135,7 +126,7 @@ class Model(BaseModel):
                     break
         return value
 
-    def value_of_universal(self, s: Quantified, /, **kw) -> Model.Value:
+    def value_of_universal(self, s: Quantified, /, **kw):
         """
         The value of an universal sentence is the minimum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
@@ -402,10 +393,10 @@ class Model(BaseModel):
             self.predicates.add(pred)
         return self.anti_extensions[pred]
 
-    def value_of_atomic(self, s: Sentence, /, **kw) -> Model.Value:
+    def value_of_atomic(self, s: Sentence, /, **kw) -> ValueFDE:
         return self.atomics.get(s, self.unassigned_value)
 
-    def value_of_opaque(self, s: Sentence, /, **kw) -> Model.Value:
+    def value_of_opaque(self, s: Sentence, /, **kw) -> ValueFDE:
         return self.opaques.get(s, self.unassigned_value)
 
     value_of_possibility = value_of_opaque
@@ -468,7 +459,7 @@ class Model(BaseModel):
             Operator.MaterialBiconditional : material_biconditional,
         })
 
-        def func_mapper(self: Model, oper: Operator, a, b = None, /) -> Model.Value:
+        def func_mapper(self: Model, oper: Operator, a, b = None, /):
             try:
                 return _funcmap[Operator(oper)](self, a, b)
             except KeyError:

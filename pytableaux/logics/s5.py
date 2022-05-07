@@ -54,8 +54,9 @@ class Model(S4.Model):
     *symmetric* restriction on the access relation.
     """
     def finish(self):
+        finish = super().finish
         while True:
-            super().finish()
+            finish()
             to_add = set()
             for w1 in self.frames:
                 for w2 in self.visibles(w1):

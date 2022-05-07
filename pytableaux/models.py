@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import product, repeat
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Generic, Mapping
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.collect import Argument
@@ -33,8 +33,15 @@ from pytableaux.proof.common import Branch
 from pytableaux.tools import abstract, closure
 from pytableaux.tools.abcs import Abc, Ebc
 from pytableaux.tools.sets import setf
+from pytableaux.tools.typing import VT
 
-__all__ = 'BaseModel', 'Mval'
+from typing import TypeVar, TYPE_CHECKING
+
+__all__ = (
+    'BaseModel',
+    'Mval',
+    'ValueFDE',
+)
 
 class Mval(Ebc):
 
@@ -80,11 +87,52 @@ class Mval(Ebc):
     def _member_keys(cls, member: Mval):
         return super()._member_keys(member) | {member.label, member.num}
 
+
+class ValueFDE(Mval):
+    "Model values for gappy + glutty 4-valued logics, like FDE."
+
+    F = 'False',   0.0
+
+    N = 'Neither', 0.25
+
+    B = 'Both',    0.75
+
+    T = 'True',    1.0
+
+class ValueK3(Mval):
+    "Model values for gappy 3-valued logics, like K3 and others."
+
+    F = 'False',   0.0
+
+    N = 'Neither', 0.5
+
+    T = 'True',    1.0
+
+class ValueLP(Mval):
+    "Model values for glutty 3-valued logics, like LP and others."
+
+    F = 'False', 0.0
+
+    B = 'Both', 0.5
+
+    T = 'True', 1.0
+
+class ValueCPL(Mval):
+    'Model values for 2-valued "classical" logics.'
+
+    F = 'False', 0.0
+
+    T = 'True' , 1.0
+
 MvalId = Mval | str | float
 
-class BaseModel(Abc):
+MvalT = TypeVar('MvalT', bound = Mval)
+MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 
-    Value: ClassVar[type[Mval]]
+class BaseModel(Generic[MvalT_co], Abc):
+
+    # Value: ClassVar[type[Mval]]
+    Value: ClassVar[type[MvalT_co]]
 
     truth_functional_operators: ClassVar[setf[Operator]] = setf({
         Operator.Assertion             ,
@@ -114,7 +162,7 @@ class BaseModel(Abc):
             LexType.Predicated : 'value_of_predicated',
             LexType.Quantified : 'value_of_quantified',
         }
-        def value_of(self: BaseModel, s: Sentence, /, **kw) -> Mval:
+        def value_of(self: BaseModel, s: Sentence, /, **kw) -> MvalT_co:
             if self.is_sentence_opaque(s):
                 return self.value_of_opaque(s, **kw)
             try:
@@ -125,7 +173,7 @@ class BaseModel(Abc):
             raise NotImplementedError
         return value_of
 
-    def value_of_quantified(self, s: Quantified, /, **kw) -> Mval:
+    def value_of_quantified(self, s: Quantified, /, **kw) -> MvalT_co:
         try:
             q = s.quantifier
         except AttributeError:
@@ -137,7 +185,7 @@ class BaseModel(Abc):
         check.inst(s, Quantified)
         raise NotImplementedError
 
-    def value_of_operated(self, s: Operated, /, **kw) -> Mval:
+    def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
         if self.is_sentence_opaque(s):
             return self.value_of_opaque(s, **kw)
         if s.operator in self.truth_functional_operators:
@@ -153,7 +201,7 @@ class BaseModel(Abc):
         check.inst(s, Operated)
         raise NotImplementedError
 
-    def value_of_modal(self, s: Operated, /, **kw) -> Mval:
+    def value_of_modal(self, s: Operated, /, **kw) -> MvalT_co:
         oper = s.operator
         if oper is Operator.Possibility:
             return self.value_of_possibility(s, **kw)
@@ -175,7 +223,7 @@ class BaseModel(Abc):
             )
         )
 
-    def truth_table(self, oper: Operator, / , reverse = False) -> TruthTable:
+    def truth_table(self, oper: Operator, / , reverse = False) -> TruthTable[MvalT_co]:
         oper = Operator(oper)
         inputs = tuple(product(*repeat(self.Value, oper.arity)))
         if reverse:
@@ -195,12 +243,12 @@ class BaseModel(Abc):
         pass
 
     @abstract
-    def truth_function(self, oper: Operator, *values: MvalId) -> Mval:
-        if oper not in self.truth_functional_operators:
-            raise ValueError(oper)
-        if len(values) != oper.arity:
-            raise Emsg.WrongLength(values, oper.arity)
-        check.inst(oper, Operator)
+    def truth_function(self, oper: Operator, a, b = None, /) -> MvalT_co:
+        # if oper not in self.truth_functional_operators:
+        #     raise ValueError(oper)
+        # if len(values) != oper.arity:
+        #     raise Emsg.WrongLength(values, oper.arity)
+        # check.inst(oper, Operator)
         raise NotImplementedError
 
     @abstract
@@ -208,62 +256,62 @@ class BaseModel(Abc):
         self.finish()
 
     @abstract
-    def value_of_existential(self, s: Quantified, /, **kw) -> Mval:
+    def value_of_existential(self, s: Quantified, /, **kw) -> MvalT_co:
         check.inst(s, Quantified)
         raise NotImplementedError
 
     @abstract
-    def value_of_universal(self, s: Quantified, /, **kw) -> Mval:
+    def value_of_universal(self, s: Quantified, /, **kw) -> MvalT_co:
         check.inst(s, Quantified)
         raise NotImplementedError
 
     @abstract
-    def value_of_possibility(self, s: Operated, /, **kw) -> Mval:
+    def value_of_possibility(self, s: Operated, /, **kw) -> MvalT_co:
         check.inst(s, Operated)
         raise NotImplementedError
 
     @abstract
-    def value_of_necessity(self, s: Operated, /, **kw) -> Mval:
+    def value_of_necessity(self, s: Operated, /, **kw) -> MvalT_co:
         check.inst(s, Operated)
         raise NotImplementedError
 
     @abstract
-    def set_literal_value(self, s: Sentence, value: MvalId, /):
+    def set_literal_value(self, s: Sentence, value: Any, /):
         check.inst(s, Sentence)
         raise NotImplementedError
 
     @abstract
-    def set_opaque_value(self, s: Sentence, value: MvalId, /):
+    def set_opaque_value(self, s: Sentence, value: Any, /):
         check.inst(s, Sentence)
         raise NotImplementedError
 
     @abstract
-    def set_atomic_value(self, s: Atomic, value: MvalId, /):
+    def set_atomic_value(self, s: Atomic, value: Any, /):
         check.inst(s, Atomic)
         raise NotImplementedError
 
     @abstract
-    def set_predicated_value(self, s: Predicated, value: MvalId, /):
+    def set_predicated_value(self, s: Predicated, value: Any, /):
         check.inst(s, Predicated)
         raise NotImplementedError
 
     @abstract
-    def value_of_opaque(self, s: Sentence, /) -> Mval:
+    def value_of_opaque(self, s: Sentence, /) -> MvalT_co:
         check.inst(s, Sentence)
         raise NotImplementedError
 
     @abstract
-    def value_of_atomic(self, s: Atomic, /) -> Mval:
+    def value_of_atomic(self, s: Atomic, /) -> MvalT_co:
         check.inst(s, Atomic)
         raise NotImplementedError
 
     @abstract
-    def value_of_predicated(self, s: Predicated, /) -> Mval:
+    def value_of_predicated(self, s: Predicated, /) -> MvalT_co:
         check.inst(s, Predicated)
         raise NotImplementedError
 
     @abstract
-    def is_countermodel_to(self, a: Argument, /) -> bool:
+    def is_countermodel_to(self, a: Argument, /) -> MvalT_co:
         check.inst(a, Argument)
         raise NotImplementedError
 
@@ -273,10 +321,10 @@ class BaseModel(Abc):
 
 
 @dataclass(kw_only = True)
-class TruthTable:
+class TruthTable(Generic[MvalT]):
     'Truth table data class.'
 
-    inputs: tuple[tuple[Mval], ...]
-    outputs: tuple[Mval, ...]
+    inputs: tuple[tuple[MvalT], ...]
+    outputs: tuple[MvalT, ...]
     operator: Operator
-    Value: type[Mval]
+    Value: type[MvalT]

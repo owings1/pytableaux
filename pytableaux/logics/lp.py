@@ -21,7 +21,7 @@
 from __future__ import annotations as annotations
 
 from pytableaux.logics import fde as FDE
-from pytableaux.models import Mval
+from pytableaux.models import BaseModel, ValueLP
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.rules import BaseClosureRule
 from pytableaux.proof.util import sdnode
@@ -42,18 +42,12 @@ class Meta:
         'first-order',
     )
 
-class Model(FDE.Model):
+class Model(FDE.Model, BaseModel[ValueLP]):
     """
     An L{LP} model is like an {@FDE model} without the V{N} value.
     """
 
-    class Value(Mval):
-
-        F = 'False', 0.0
-
-        B = 'Both', 0.5
-
-        T = 'True', 1.0
+    Value = ValueLP
 
     #: The set of designated values.
     designated_values = setf({Value.B, Value.T})

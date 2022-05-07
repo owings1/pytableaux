@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from pytableaux.logics import fde as FDE
-from pytableaux.models import Mval
+from pytableaux.models import BaseModel, ValueK3
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.rules import BaseClosureRule
 from pytableaux.proof.util import sdnode
@@ -42,17 +42,10 @@ class Meta:
         'first-order',
     )
 
-class Model(FDE.Model):
+class Model(FDE.Model, BaseModel[ValueK3]):
     """A L{K3} model is like an {@FDE model} without the V{B} value."""
 
-    class Value(Mval):
-        'The admissible values for sentences.'
-
-        F = 'False',   0.0
-
-        N = 'Neither', 0.5
-
-        T = 'True',    1.0
+    Value = ValueK3
 
     designated_values = setf({Value.T})
     "The (singleton) set of designated values."

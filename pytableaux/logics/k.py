@@ -20,12 +20,14 @@
 # pytableaux - Kripke Normal Modal Logic
 from __future__ import annotations
 
+from typing import Any, Callable, Optional, cast
+
 from pytableaux.errors import DenotationError, ModelValueError, check
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
-from pytableaux.models import BaseModel, Mval
+from pytableaux.models import BaseModel, ValueCPL
 from pytableaux.proof import TableauxSystem as BaseSystem
 from pytableaux.proof import filters, rules
 from pytableaux.proof.common import Branch, Node, Target
@@ -34,7 +36,7 @@ from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       PredNodes, QuitFlag, WorldIndex)
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof.util import Access, adds, group, swnode
-from pytableaux.tools import closure, static
+from pytableaux.tools import closure
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import EMPTY_SET
 
@@ -54,18 +56,13 @@ class Meta:
 def substitute_params(params, old_value, new_value):
     return tuple(new_value if p == old_value else p for p in params)
 
-class Model(BaseModel):
+class Model(BaseModel[ValueCPL]):
     """
     A K model comprises a non-empty collection of K-frames, a world access
     relation, and a set of constants (the domain).
     """
 
-    class Value(Mval):
-        'The admissible values for sentences.'
-
-        F = 'False', 0.0
-
-        T = 'True' , 1.0
+    Value = ValueCPL
 
     unassigned_value = Value.F
 
@@ -98,7 +95,10 @@ class Model(BaseModel):
         from pytableaux.logics import fde as FDE
         model = FDE.Model()
         model.Value = Value
-        return model.truth_function
+        return cast(
+            Callable[[Operator, Any, Optional[Any]], ValueCPL],
+            model.truth_function,
+        )
 
     def value_of_predicated(self, s: Predicated, **kw):
         """
@@ -316,21 +316,20 @@ class Model(BaseModel):
         identicals.discard(c)
         return identicals
 
-    def set_literal_value(self, s: Sentence, value: Model.Value, /, **kw):
-        cls = s.TYPE.cls
+    def set_literal_value(self, s: Sentence, value: ValueCPL, /, **kw):
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value, **kw)
-        elif cls is Operated and s.operator is Operator.Negation:
+        elif (stype := type(s)) is Operated and s.operator is Operator.Negation:
             negval = self.truth_function(s.operator, value)
             self.set_literal_value(s.lhs, negval, **kw)
-        elif cls is Atomic:
+        elif stype is Atomic:
             self.set_atomic_value(s, value, **kw)
-        elif cls is Predicated:
+        elif stype is Predicated:
             self.set_predicated_value(s, value, **kw)
         else:
             raise NotImplementedError
 
-    def set_opaque_value(self, s: Sentence, value: Model.Value, /, world: int = 0):
+    def set_opaque_value(self, s: Sentence, value: ValueCPL, /, world: int = 0):
         value = self.Value[value]
         frame = self.world_frame(world)
         if frame.opaques.get(s, value) is not value:
@@ -343,14 +342,14 @@ class Model(BaseModel):
         self.predicates.update(s.predicates)
         frame.opaques[s] = value
 
-    def set_atomic_value(self, s: Atomic, value: Model.Value, /, world: int = 0):
+    def set_atomic_value(self, s: Atomic, value: ValueCPL, /, world: int = 0):
         value = self.Value[value]
         frame = self.world_frame(world)
         if s in frame.atomics and frame.atomics[s] is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         frame.atomics[s] = value
 
-    def set_predicated_value(self, s: Predicated, value: Model.Value, /, **kw):
+    def set_predicated_value(self, s: Predicated, value: ValueCPL, /, **kw):
         Value = self.Value
         value = Value[value]
         pred = s.predicate
@@ -459,10 +458,10 @@ class Frame:
     world: int
     "The world of the frame"
 
-    atomics: dict[Atomic, Model.Value]
+    atomics: dict[Atomic, ValueCPL]
     "An assignment of each atomic sentence to a truth value"
 
-    opaques: dict[Sentence, Model.Value]
+    opaques: dict[Sentence, ValueCPL]
     "An assignment of each opaque (un-interpreted) sentence to a value"
 
     extensions: dict[Predicate, set[tuple[Constant, ...]]]
@@ -693,7 +692,6 @@ class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
     'Convenience mixin class for most common rules.'
     pass
 
-@static
 class TabRules:
     """
     Rules for modal operators employ *world* indexes as well access-type

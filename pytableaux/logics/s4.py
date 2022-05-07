@@ -47,12 +47,14 @@ class Model(T.Model):
     restriction on the access relation.
     """
     def finish(self):
+        finish = super().finish
+        vis = self.visibles
         while True:
-            super().finish()
+            finish
             to_add = set()
             for w1 in self.frames:
-                for w2 in self.visibles(w1):
-                    for w3 in self.visibles(w2):
+                for w2 in vis(w1):
+                    for w3 in vis(w2):
                         a = (w1, w3)
                         if a not in self.access:
                             to_add.add(a)

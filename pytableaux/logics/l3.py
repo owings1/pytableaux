@@ -23,6 +23,7 @@ from __future__ import annotations
 from pytableaux.lang.lex import Operator as Oper
 from pytableaux.logics import fde as FDE
 from pytableaux.logics import k3 as K3
+from pytableaux.models import ValueK3
 from pytableaux.proof.common import Node
 from pytableaux.proof.util import adds, group, sdnode
 
@@ -31,7 +32,10 @@ name = 'L3'
 class Meta:
     title       = u'Łukasiewicz 3-valued Logic'
     category    = 'Many-valued'
-    description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
+    description = (
+        'Three-valued logic (True, False, Neither) with a '
+        'primitive Conditional operator'
+    )
     category_order = 80
     tags = (
         'many-valued',
@@ -46,7 +50,7 @@ class Model(K3.Model):
     for the conditional and bi-conditional operators.
     """
 
-    def truth_function(self, operator, a, b = None):
+    def truth_function(self, operator, a, b = None) -> ValueK3:
         if operator == Oper.Conditional:
             if a == self.Value.N and b == self.Value.N:
                 return self.Value.T
