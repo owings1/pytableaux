@@ -54,6 +54,8 @@ class Model(FDE.Model, BaseModel[ValueLP]):
 
     unassigned_value = Value.F
 
+Model.truth_function
+
 class TableauxSystem(FDE.TableauxSystem):
     """
     L{LP}'s Tableaux System inherits directly from the {@FDE system},

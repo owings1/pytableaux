@@ -48,6 +48,7 @@ class Model(LP.Model):
     An RM3 model is just like an {@LP model} with different tables for the conditional
     and bi-conditional operators.
     """
+
     def truth_function(self, oper: Oper, a, b=None, /):
         Value = self.Value
         if oper == Oper.Conditional and Value[a] > Value[b]:
