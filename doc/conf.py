@@ -19,6 +19,8 @@ addpath = os.path.abspath(
 if addpath not in sys.path:
     sys.path.insert(1, addpath)
 
+os.environ['DOC_MODE'] = 'True'
+
 from pytableaux import package
 
 # General information about the project.
@@ -49,11 +51,15 @@ extensions = [
     'sphinx.ext.intersphinx',
 ]
 
-
+napoleon_numpy_docstring = False
 # napoleon_preprocess_types = True
+napoleon_type_aliases = {
+
+}
 
 # autodoc_class_signature = 'separated'
 autodoc_default_options = {
+    'exclude-members': 'for_json',
     # 'no-value': True,
     # 'special-members': '__init__',
 }

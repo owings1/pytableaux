@@ -45,7 +45,7 @@
     .. autoclass:: TreeStruct
         :members:
 
-    .. autoclass:: TabRules
+    .. autoclass:: TabRuleGroups
     
     .. autoclass:: RuleGroups
     

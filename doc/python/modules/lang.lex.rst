@@ -10,9 +10,6 @@
     .. autoclass:: Lexical()
         :members:
 
-    .. autoclass:: LexicalAbc()
-        :members:
-
     .. autoclass:: LexicalEnum()
         :members:
 
