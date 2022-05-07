@@ -26,7 +26,7 @@ import operator as opr
 from itertools import chain, repeat
 from types import FunctionType
 from typing import (TYPE_CHECKING, Annotated, Any, ClassVar, Iterable,
-                    Iterator, Literal, Mapping, Sequence, SupportsIndex, final)
+                    Iterator, Literal, Mapping, Sequence, SupportsIndex)
 
 from pytableaux import _ENV, __docformat__, tools
 from pytableaux.errors import Emsg, check
@@ -82,7 +82,7 @@ _Ranks: Mapping[str, int] = MapProxy(dict(
     Operated   = 90,
 ))
 
-
+DOC_MODE = _ENV.DOC_MODE
 #----------------------------------------------------------
 #
 #   Bases Classes
@@ -91,8 +91,7 @@ _Ranks: Mapping[str, int] = MapProxy(dict(
 
 @abcm.clsafter
 class Lexical:
-    """Base Lexical interface for for :class:`LexicalAbc` and :class:`LexicalEnum`
-    clases.
+    """Base Lexical interface.
     """
 
     __slots__ = EMPTY_SET
@@ -296,7 +295,7 @@ class Lexical:
             if isinstance(value, _ftypes):
                 setattr(subcls, name, value)
 
-    if TYPE_CHECKING:
+    if TYPE_CHECKING and not DOC_MODE:
 
         @classmethod
         @overload
@@ -567,10 +566,10 @@ class Quantifier(LexicalEnum):
     #******  Members
 
     Existential = (0, 'Existential')
-    "The Existential quantifier :s:`X`"
+    "The Existential quantifier :sc:`X`"
 
     Universal   = (1, 'Universal')
-    "The Universal quantifier :s:`L`"
+    "The Universal quantifier :sc:`L`"
 
     #******  Call Behavior
 
@@ -602,34 +601,34 @@ class Operator(LexicalEnum):
     #******  Members
 
     Assertion             = (10,  'Assertion',              1, None)
-    "Assertion (:s:`*`) operator"
+    "Assertion (:sc:`*`) operator"
 
     Negation              = (20,  'Negation',               1, '__invert__')
-    "Negation (:s:`~`) operator"
+    "Negation (:sc:`~`) operator"
 
     Conjunction           = (30,  'Conjunction',            2, '__and__')
-    "Conjunction (:s:`&`) operator"
+    "Conjunction (:sc:`&`) operator"
 
     Disjunction           = (40,  'Disjunction',            2, '__or__')
-    "Disjunction (:s:`V`) operator"
+    "Disjunction (:sc:`V`) operator"
 
     MaterialConditional   = (50,  'Material Conditional',   2, None)
-    "Material Conditional (:s:`>`) operator"
+    "Material Conditional (:sc:`>`) operator"
 
     MaterialBiconditional = (60,  'Material Biconditional', 2, None)
-    "Material Biconditiona (:s:`<`) operator"
+    "Material Biconditiona (:sc:`<`) operator"
 
     Conditional           = (70,  'Conditional',            2, None)
-    "Conditional (:s:`$`) operator"
+    "Conditional (:sc:`$`) operator"
 
     Biconditional         = (80,  'Biconditional',          2, None)
-    "Biconditional (:s:`%`) operator"
+    "Biconditional (:sc:`%`) operator"
 
     Possibility           = (90,  'Possibility',            1, None)
-    "Possibility (:s:`P`) operator"
+    "Possibility (:sc:`P`) operator"
 
     Necessity             = (100, 'Necessity',              1, None)
-    "Necessity (:s:`N`) operator"
+    "Necessity (:sc:`N`) operator"
 
     lib_opmap: ClassVar[Mapping[str, Operator]]
 
@@ -898,10 +897,10 @@ class Predicate(CoordsItem):
         'System predicates enum.'
 
         Existence : Annotated[Predicate, (-2, 0, 1, 'Existence')]
-        "The Existence predicate :s:`!`"
+        "The Existence predicate :sc:`!`"
 
         Identity  : Annotated[Predicate, (-1, 0, 2, 'Identity')]
-        "The Identity predicate :s:`=`"
+        "The Identity predicate :sc:`=`"
 
 class Constant(Parameter):
     """Constant parameter implementation."""
@@ -1596,7 +1595,7 @@ del(
     _ENV,
     _Ranks,
     DequeCache,
-    final,
+    DOC_MODE,
     FunctionType,
     lazy,
     membr,

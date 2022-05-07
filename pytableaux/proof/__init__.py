@@ -38,11 +38,12 @@ if TYPE_CHECKING:
 
     from pytableaux.lang.collect import Argument
     from pytableaux.proof.common import Node
-    from pytableaux.proof.tableaux import Rule, Tableau, TabRules
+    from pytableaux.proof.tableaux import Rule, Tableau, TabRuleGroups
 
 __all__ = (
     'TableauxSystem',
     'RuleHelper',
+    'RuleMeta',
 )
 
 class TableauxSystem(metaclass = AbcMeta):
@@ -73,7 +74,7 @@ class TableauxSystem(metaclass = AbcMeta):
         return 0
 
     @classmethod
-    def add_rules(cls, logic: LogicModule, rules: TabRules, /) -> None:
+    def add_rules(cls, logic: LogicModule, rules: TabRuleGroups, /) -> None:
         """Populate rules/groups for a tableau.
 
         Args:

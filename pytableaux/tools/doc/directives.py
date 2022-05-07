@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 import sphinx.directives.other
 import sphinx.directives.patches
 from docutils import nodes
-from docutils.parsers.rst.directives import class_option, unchanged
+from docutils.parsers.rst.directives import unchanged
 from pytableaux import examples, logics, models
 from pytableaux.lang import Notation
 from pytableaux.lang.collect import Predicates
@@ -35,7 +35,9 @@ from pytableaux.lang.lex import Operator
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import rules, tableaux, writers
-from pytableaux.tools.doc import BaseDirective, SphinxEvent, docparts, rstutils
+from pytableaux.tools.doc import (BaseDirective, SphinxEvent, classopt,
+                                  docparts, opersopt, predsopt, re_comma,
+                                  rstutils)
 from sphinx.util import logging
 
 if TYPE_CHECKING:
@@ -55,25 +57,11 @@ logger = logging.getLogger(__name__)
 #    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
 
-re_space = re.compile(r'\s')
-re_comma = re.compile(r',')
 divclear_rawhtml = '<div class="clear"></div>'
 
-def cleanws(arg: str, /) -> str:
-    "Option spec to remove all whitespace."
-    return re_space.sub('', arg)
 
-def predsopt(arg: str, /) -> Predicates:
-    "Option spec for list of predicate specs."
-    return Predicates(
-        tuple(map(int, spec.split(':')))
-        for spec in re_comma.split(cleanws(arg))
-    )
 
-def opersopt(arg: str, /) -> tuple[Operator, ...]:
-    return tuple(map(Operator,
-        (s.strip() for s in re_comma.split(arg))
-    ))
+
 
 def boolopt(arg: str, /) -> bool:
     if arg:
@@ -89,7 +77,7 @@ def boolopt(arg: str, /) -> bool:
 
 class Clear(BaseDirective):
     option_spec = dict(
-        classes = class_option,
+        classes = classopt,
     )
     def run(self):
         classes = self.set_classes()
@@ -123,7 +111,7 @@ class Tableaud(BaseDirective):
         pnotn = Notation,
         preds = predsopt,
         wnotn = Notation,
-        classes = class_option,
+        classes = classopt,
     )
 
     opts_with_args = {'wnotn', 'classes'}
@@ -181,7 +169,7 @@ class TruthTable(BaseDirective):
         template = unchanged,
         reverse = boolopt,
         clear = boolopt,
-        classes = class_option,
+        classes = classopt,
     )
 
     def run(self):
@@ -228,7 +216,7 @@ class TruthTables(BaseDirective):
         template = unchanged,
         reverse = boolopt,
         clear = boolopt,
-        classes = class_option,
+        classes = classopt,
     )
 
     def run(self):
@@ -284,7 +272,7 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
 
     option_spec = dict(sphinx.directives.patches.CSVTable.option_spec,
         generator = generator_opt,
-        classes = class_option,
+        classes = classopt,
     )
     option_spec.pop('class', None)
 

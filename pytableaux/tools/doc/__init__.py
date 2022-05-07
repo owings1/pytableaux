@@ -22,20 +22,28 @@ pytableaux.tools.doc
 """
 from __future__ import annotations
 
-import enum
 import itertools
 import os.path
 import re
 import shutil
 import traceback
-from typing import (TYPE_CHECKING, Any, ClassVar, Generic, Mapping, NamedTuple,
-                    Optional)
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic, Mapping,
+                    NamedTuple, Optional)
 
 import jinja2
 import sphinx.directives
-from docutils.parsers.rst.roles import _roles, set_classes
+from docutils import nodes
+from docutils.parsers.rst.directives import class_option
+from docutils.parsers.rst.roles import _roles
 from pytableaux.errors import check
-from pytableaux.tools import MapProxy, abstract, closure
+from pytableaux.lang import Notation
+from pytableaux.lang.collect import Predicates
+from pytableaux.lang.lex import Operator
+from pytableaux.lang.writing import LexWriter, RenderSet
+from pytableaux.proof import writers
+from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract, closure
+from pytableaux.tools.hybrids import qset
+from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import T
 from sphinx.util import docstrings, logging
 from sphinx.util.docutils import SphinxRole
@@ -45,9 +53,32 @@ if TYPE_CHECKING:
 
     import sphinx.config
     from sphinx.application import Sphinx
+    from sphinx.environment import BuildEnvironment
     from sphinx.util.typing import RoleFunction
 
-__all__ = ()
+__all__ = (
+    'app_helper',
+    'app_setup',
+    'AutodocProcessor',
+    'BaseDirective',
+    'BaseRole',
+    'classopt',
+    'cleanws',
+    'ConfKey',
+    'Helper',
+    'nodeopt',
+    'opersopt',
+    'predsopt',
+    'Processor',
+    're_comma',
+    're_space',
+    'ReplaceProcessor',
+    'role_entry',
+    'role_instance',
+    'role_name',
+    'RoleItem',
+    'SphinxEvent',
+)
 
 
 logger = logging.getLogger(__name__)
@@ -173,7 +204,13 @@ def role_name(roleish: type|RoleFunction) -> str|None:
     'Get loaded role name, by name, instance or type.'
     return role_entry(roleish).name
 
-class Helper:
+class Helper(abcs.Abc):
+
+    __slots__ = (
+        'jenv',
+        'opts',
+        'pwtrunk',
+    )
 
     defaults = dict(
         wnotn = 'standard',
@@ -188,11 +225,6 @@ class Helper:
         self.reconfigure(opts)
 
     def reconfigure(self, opts: dict):
-
-        from pytableaux.lang import Notation
-        from pytableaux.lang.collect import Predicates
-        from pytableaux.lang.writing import LexWriter, RenderSet
-        from pytableaux.proof import writers
 
         self.opts = opts = dict(self.defaults) | opts
 
@@ -230,12 +262,12 @@ class Helper:
         "Render a jinja2 template from the template path."
         return self.jenv.get_template(template).render(*args, **kw)
 
-class SphinxEvent(str, enum.Enum):
+class SphinxEvent(str, abcs.Ebc):
     'Custom Sphinx event names.'
 
     IncludeRead = 'include-read'
 
-class ConfKey(str, enum.Enum):
+class ConfKey(str, abcs.Ebc):
     'Custom config keys.'
 
     options = 'pt_options'
@@ -244,28 +276,85 @@ class ConfKey(str, enum.Enum):
     htmlcopy = 'pt_htmlcopy'
     "The config key for html copy actions."
 
-class BaseRole(SphinxRole):
+def set_classes(opts: dict) -> dict:
+    if 'class' in opts:
+        if 'classes' in opts:
+            raise TypeError(f"both 'class' and 'classes' in options: {opts}")
+        opts['classes'] = opts.pop('class')
+    return opts
+
+NOARG = object()
+
+class RoleDirectiveMixin(abcs.Abc):
+
+    env: BuildEnvironment
+    option_spec: ClassVar[Mapping[str, Callable]] = EMPTY_MAP
+
+    options: dict[str, Any]
+
+    @property
+    def helper(self):
+        return app_helper(self.env.app)
+
+    def set_classes(self, opts = NOARG, /) -> qset[str]:
+        if opts is NOARG:
+            opts = self.options
+        opts['classes'] = qset(set_classes(opts).get('classes', EMPTY_SET))
+        return opts['classes']
+
+    @classmethod
+    def parse_opts(cls, rawopts: Mapping[str, Any]) -> dict[str, Any]:
+        optspec = cls.option_spec
+        todo = dict(rawopts)
+        builder = {}
+        if optspec.get('classes', None) is classopt:
+            if 'classes' in set_classes(todo):
+                builder['classes'] = todo.pop('classes')
+        try:
+            builder.update({
+                key: optspec[key](value)
+                for key, value in todo.items()
+            })
+        except KeyError:
+            raise
+        return builder
+
+class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
+
+    arguments: list[str]
+    # @property
+    # def helper(self):
+    #     return app_helper(self.env.app)
+
+    # options: dict[str, Any]
+
+    # def set_classes(self) -> qset[str]:
+    #     set_classes(self.options)
+    #     classes = qset(self.options.get('classes', EMPTY_SET))
+    #     self.options['classes'] = classes
+    #     return classes
+    #     # return self.options.get('classes', [])
+
+
+class BaseRole(SphinxRole, RoleDirectiveMixin):
 
     patterns: ClassVar[dict[str, str|re.Pattern]] = {}
 
-    @property
-    def helper(self):
-        return app_helper(self.env.app)
 
-class BaseDirective(sphinx.directives.SphinxDirective):
+    def asfunc(self):
+        """Convert to role function with `option_spec` for inline
+        directive use.
 
-    @property
-    def helper(self):
-        return app_helper(self.env.app)
+        See: https://docutils.sourceforge.io/docs/ref/rst/directives.html#code
+        """
+        def role_func(*args, **kw):
+            return self(*args, **kw)
+        role_func.options = dict(self.option_spec)
+        return role_func
 
-    arguments: list[str]
-    options: dict[str, Any]
+class Processor(abcs.Abc):
 
-    def set_classes(self) -> list[str]:
-        set_classes(self.options)
-        return self.options.get('classes', [])
-
-class Processor:
+    __slots__ = EMPTY_SET
 
     app: Sphinx
 
@@ -304,6 +393,13 @@ class AutodocProcessor(Processor):
         return self
 
 class ReplaceProcessor(Processor):
+
+    __slots__ = (
+        'args',
+        'event',
+        'lines',
+        'mode',
+    )
 
     event: str
     mode: str
@@ -351,3 +447,33 @@ class RoleItem(RoleItem, Generic[T]):
     inst: T
 
 HtmlCopyEntry = tuple[str, str, Optional[dict]]
+
+re_space = re.compile(r'\s')
+re_comma = re.compile(r',')
+
+if TYPE_CHECKING:
+    @overload
+    def classopt(arg: Any) -> list[str]: ...
+
+classopt = class_option
+
+def cleanws(arg: str, /) -> str:
+    "Option spec to remove all whitespace."
+    return re_space.sub('', arg)
+
+def predsopt(arg: str, /) -> Predicates:
+    "Option spec for list of predicate specs."
+    return Predicates(
+        tuple(map(int, spec.split(':')))
+        for spec in re_comma.split(cleanws(arg))
+    )
+
+def opersopt(arg: str, /) -> tuple[Operator, ...]:
+    return tuple(map(Operator,
+        (s.strip() for s in re_comma.split(arg))
+    ))
+
+def nodeopt(arg: str, /):
+    return getattr(nodes, arg)
+
+del(class_option)

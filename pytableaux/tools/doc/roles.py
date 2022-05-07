@@ -26,12 +26,17 @@ import re
 from typing import TYPE_CHECKING
 
 import sphinx.roles
+from collections import ChainMap
 from docutils import nodes
+# from docutils.parsers.rst.directives import flag, unchanged
+from docutils.parsers.rst.roles import CustomRole
+from pytableaux.lang import Notation
 from pytableaux.lang.collect import Predicates
 from pytableaux.lang.lex import LexType, Predicate
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
-from pytableaux.tools.doc import BaseRole, Helper, docinspect
+from pytableaux.tools.doc import BaseRole, Helper, classopt, docinspect, nodeopt, predsopt
+from pytableaux.tools.hybrids import qset
 from pytableaux.tools.typing import F
 from sphinx.util import logging
 
@@ -145,35 +150,24 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
 
 class lexdress(BaseRole):
 
-    _parser: Parser = None
-    _lw: LexWriter = None
+    option_spec = dict(
+        node = nodeopt,
+        wnotn = Notation,
+        pnotn = Notation,
+        preds = predsopt,
+        classes = classopt,
+    )
 
-    def __init__(self, *, wnotn: str = None, pnotn: str = None, preds:Predicates = None):
-        'Override app options with constructor.'
-        defaults = Helper.defaults
-        if wnotn is not None:
-            self._lw = LexWriter(wnotn, 'unicode')
+    opt_defaults = dict(
+        node = nodes.inline,
+        wnotn = Helper.defaults['wnotn'],
+        pnotn = Helper.defaults['pnotn'],
+        preds = Predicates(Helper.defaults['preds']),
+        classes = qset(['lexitem']),
+    )
 
-        if pnotn is not None or preds is not None:
-            if pnotn is None:
-                pnotn = defaults['pnotn']
-            if preds is None:
-                preds = defaults['preds']
-            self._parser = Parser(pnotn, preds)
-
-    @property
-    def parser(self):
-        if self._parser is None:
-            opts = self.helper.opts
-            self._parser = Parser(opts['pnotn'], opts['preds'])
-        return self._parser
-
-    @property
-    def lw(self):
-        if self._lw is None:
-            wnotn = self.helper.opts['wnotn']
-            self._lw = LexWriter(wnotn, 'unicode')
-        return self._lw
+    def __init__(self):
+        ...
 
     _ctypes_valued = {
         LexType.Operator, LexType.Quantifier, Predicate.System
@@ -186,37 +180,54 @@ class lexdress(BaseRole):
     @rolerun
     def run(self):
 
+        preds: Predicates
+
+        classes = self.set_classes()
+        classes.update(self.opt_defaults['classes'])
+
+        opts = ChainMap(self.options, self.opt_defaults)
+
+        nodecls = opts['node']
+        parser = Parser(opts['pnotn'], preds := opts['preds'])
+        lw = LexWriter(opts['wnotn'], 'unicode')
+
         text = self.text
 
-        classes = ['lexitem']
+        # if opts:
+        #     print('\n\n')
+        #     print(opts, nodecls.__name__)
+        #     print('\n\n')
+
 
         item = None
         match = self._re_nosent.match(text)
 
-        if match:
+        if match is not None:
             char, sub = match.groups()
-            table = self.parser.table
+            table = parser.table
             ctype = table.type(char)
             if ctype in self._ctypes_nosent:
                 # Non-sentence items.
-                sub = int(sub) if len(sub) else 0
+                if len(sub):
+                    sub = int(sub)
+                else:
+                    sub = 0
                 if ctype in self._ctypes_valued:
                     item = table.value(char)
                 elif ctype is LexType.Predicate:
-                    preds = self.parser.preds
                     item = preds.get((table.value(char), sub))
                 else:
                     item = ctype.cls(table.value(char), sub)
 
         if item is None:
             # Parse as sentence.
-            item = self.parser(text)
+            item = parser(text)
 
-        classes.append(item.TYPE.name.lower())
+        classes.add(item.TYPE.name.lower())
 
-        rend = self.lw(item)
+        rend = lw(item)
 
-        return nodes.inline(text = rend, classes = classes)
+        return nodecls(text = rend, classes = classes)
 
 class metadress(BaseRole):
 
@@ -225,6 +236,7 @@ class metadress(BaseRole):
         'V': 'truth_value',
         '!': 'rewrite',
     }
+
     modes = dict(
         logic_name = dict(
             match_map = {
@@ -400,6 +412,35 @@ class metadress(BaseRole):
         
 
 def setup(app: Sphinx):
-    app.add_role('s', lexdress())
+    # sinst = lexdress()
+    # def sfunc(*args, **kw):
+    #     return sinst(*args, **kw)
+    # sfunc.options = sinst.option_spec
+    # app.add_role('s', sfunc)
+
+    app.add_role('s', role_s := lexdress().asfunc())
+
+    # The role directive in reStructuredText::
+    #
+    #     .. role:: sc(s)
+    #        :node: literal
+    #        :class: code
+    #
+    # See:
+    #
+    #   docutils.parsers.rst.directives.misc.Role
+    #
+    # CustomRole is just a wrapper that merges options/content.
+    #
+    opts = lexdress.parse_opts({
+        'node': 'literal',
+        'class': ['code']
+    })
+
+    role_s_ = CustomRole('sc', role_s, options = opts)
+    app.add_role(role_s_.name, role_s_)
+
+    # app.add_role('m', metadress().asfunc())
+    # app.add_role('refp', refplus().asfunc())
     app.add_role('m', metadress())
     app.add_role('refp', refplus())

@@ -40,7 +40,7 @@ from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.util import (BranchEvent, BranchStat, RuleEvent,
                                    RuleFlag, StepEntry, TabEvent, TabFlag,
                                    TabStatKey, TabTimers)
-from pytableaux.tools import abstract, closure, isstr, static
+from pytableaux.tools import abstract, closure, isstr
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
@@ -65,7 +65,7 @@ __all__ = (
     'RuleGroup',
     'RuleGroups',
     'Tableau',
-    'TabRules',
+    'TabRuleGroups',
     'TreeStruct',
 )
 
@@ -334,9 +334,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 # ----------------------------------------------
 
 def locking(method: F) -> F:
-    'Decorator for locking TabRules methods after Tableau is started.'
+    'Decorator for locking TabRuleGroups methods after Tableau is started.'
     @wraps(method)
-    def f(self: TabRules, *args, **kw):
+    def f(self: TabRuleGroups, *args, **kw):
         try:
             if self._root._locked:
                 raise Emsg.IllegalState('locked')
@@ -345,13 +345,17 @@ def locking(method: F) -> F:
         return method(self, *args, **kw)
     return f
 
-class TabRules(SequenceApi[Rule]):
+class TabRuleGroups(SequenceApi[Rule]):
     'Grouped and named collection of rules for a tableau.'
 
-    __slots__ = setf((
-        '_root', '_tab', '_ruleindex', '_groupindex',
-        '_locked', 'groups'
-    ))
+    __slots__ = (
+        '_groupindex',
+        '_locked',
+        '_root',
+        '_ruleindex',
+        '_tab',
+        'groups',
+    )
  
     #: The rule groups sequence view.
     groups: RuleGroups
@@ -411,7 +415,7 @@ class TabRules(SequenceApi[Rule]):
             True  : ( (1).__mul__, reversed, opr.sub, opr.le ),
         }.__getitem__
 
-        def getitem(self: TabRules, index: SupportsIndex, /,) -> Rule:
+        def getitem(self: TabRuleGroups, index: SupportsIndex, /,) -> Rule:
             length = len(self)
             index = absindex(length, index)
             istart, iterfunc, adjust, compare = select(2 * index > length)
@@ -493,7 +497,7 @@ class RuleGroup(SequenceApi[Rule]):
     #: The group name, or ``None``.
     name: str|None
 
-    def __init__(self, name: str|None, root: TabRules):
+    def __init__(self, name: str|None, root: TabRuleGroups):
         self._name = name
         self._root = root
         self._seq: list[Rule] = []
@@ -573,7 +577,7 @@ class RuleGroup(SequenceApi[Rule]):
         @overload
         def __getitem__(self, s:slice) -> SequenceApi[Rule]:...
 
-    names = TabRules.names
+    names = TabRuleGroups.names
 
     def __getitem__(self, index):
         return self._seq[index]
@@ -601,7 +605,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
 
     __slots__ = '_root', '_seq',
 
-    def __init__(self, root: TabRules):
+    def __init__(self, root: TabRuleGroups):
         self._root = root
         self._seq: list[RuleGroup] = []
 
@@ -700,7 +704,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     System: TableauxSystem|None
 
     #: The rule instances.
-    rules: TabRules
+    rules: TabRuleGroups
 
     #: The build options.
     opts: Mapping[str, bool|int|None]
@@ -793,7 +797,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.history = SeqCover(self.__history)
         self.opts    = self._defaults | opts
         self.timers  = TabTimers.create()
-        self.rules   = TabRules(self)
+        self.rules   = TabRuleGroups(self)
         self.open    = SeqCover(self.__open)
 
         # Init
@@ -1562,4 +1566,4 @@ class TreeStruct(dmapns):
 
 # ----------------------------------------------
 
-del(abstract, final, static, locking)
+del(abstract, final, locking)

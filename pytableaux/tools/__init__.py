@@ -37,7 +37,6 @@ __all__ = (
     'closure',
     'EMPTY_MAP',
     'MapProxy',
-    'static',
 )
 def closure(func: Callable[..., T]) -> T:
     'Closure decorator calls the argument and returns its return value.'
@@ -117,27 +116,6 @@ def classns():
     del(meta._new)
 
     return classns
-
-def static(cls: TT, /) -> TT:
-    'Static class decorator, and wrapper around staticmethod'
-
-    if not isinstance(cls, type):
-        raise TypeError(cls)
-
-    ns = cls.__dict__
-
-    for name, member in ns.items():
-        if isdund(name) or not isinstance(member, FunctionType):
-            continue
-        setattr(cls, name, staticmethod(member))
-
-    if '__new__' not in ns:
-        cls.__new__ = thru # type: ignore
-
-    if '__init__' not in ns:
-        cls.__init__ = noinit
-
-    return cls
 
 def thru(obj: T) -> T:
     'Return the argument.'
