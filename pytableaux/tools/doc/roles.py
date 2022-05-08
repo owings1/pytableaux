@@ -23,20 +23,20 @@ from __future__ import annotations
 
 import functools
 import re
+from collections import ChainMap
 from typing import TYPE_CHECKING
 
 import sphinx.roles
-from collections import ChainMap
 from docutils import nodes
-# from docutils.parsers.rst.directives import flag, unchanged
-from docutils.parsers.rst.roles import CustomRole
+from pytableaux import logics
 from pytableaux.lang import Notation
 from pytableaux.lang.collect import Predicates
 from pytableaux.lang.lex import LexType, Predicate
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
-from pytableaux.tools.doc import BaseRole, Helper, classopt, docinspect, nodeopt, predsopt
-from pytableaux.tools.hybrids import qset
+from pytableaux.tools import MapProxy, abcs
+from pytableaux.tools.doc import BaseRole, Helper, classopt, nodeopt, predsopt
+from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.typing import F
 from sphinx.util import logging
 
@@ -76,7 +76,8 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
         pass
 
     _logic_union = '|'.join(
-        sorted(docinspect.get_logic_names(), key = len, reverse = True)
+        sorted(logics.registry.all(), key = len, reverse = True)
+        # sorted(docinspect.get_logic_names(), key = len, reverse = True)
     )
     patterns = dict(
         logicref = (
@@ -94,18 +95,15 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
                 f'title={repr(self.title)}, '
                 f'target={repr(self.target)}'
             )
-        # _log()
         
         self.classes = list(self._classes)
 
         lrmatch = re.match(self.patterns['logicref'], self.text)
         if lrmatch:
             self.logicname = lrmatch.group('name')
-            # logger.info('Match!')
             self._logic_ref(**lrmatch.groupdict())
         else:
             self.logicname = None
-            # _log()
 
         if self.disabled:
             ret = self.create_non_xref_node()
@@ -114,7 +112,6 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
 
         if lrmatch:
             ...
-            # logger.info(ret[0][0].astext())
         return ret
 
     def _logic_ref(self, *, name: str, sect: str|None, anchor: str|None):
@@ -148,43 +145,44 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
         
         self.classes.append('logicref')
 
+
+class _Ctype(frozenset, abcs.Ebc):
+    valued = {
+        LexType.Operator, LexType.Quantifier, Predicate.System
+    }
+    nosent = valued | {
+        LexType.Constant, LexType.Variable, LexType.Predicate,
+    }
+
+_re_nosent = re.compile(r'^(.)([0-9]*)$')
+
+
 class lexdress(BaseRole):
 
-    option_spec = dict(
+    option_spec = MapProxy(dict({'class': None},
         node = nodeopt,
         wnotn = Notation,
         pnotn = Notation,
         preds = predsopt,
         classes = classopt,
-    )
+    ))
 
-    opt_defaults = dict(
+    opt_defaults = MapProxy(dict({'class': None},
         node = nodes.inline,
         wnotn = Helper.defaults['wnotn'],
         pnotn = Helper.defaults['pnotn'],
         preds = Predicates(Helper.defaults['preds']),
-        classes = qset(['lexitem']),
-    )
+        classes = qsetf(['lexitem']),
+    ))
 
-    def __init__(self):
-        ...
-
-    _ctypes_valued = {
-        LexType.Operator, LexType.Quantifier, Predicate.System
-    }
-    _ctypes_nosent = _ctypes_valued | {
-        LexType.Constant, LexType.Variable, LexType.Predicate,
-    }
-    _re_nosent = re.compile(r'^(.)([0-9]*)$')
 
     @rolerun
     def run(self):
 
-        preds: Predicates
-
         classes = self.set_classes()
         classes.update(self.opt_defaults['classes'])
 
+        preds: Predicates
         opts = ChainMap(self.options, self.opt_defaults)
 
         nodecls = opts['node']
@@ -193,26 +191,20 @@ class lexdress(BaseRole):
 
         text = self.text
 
-        # if opts:
-        #     print('\n\n')
-        #     print(opts, nodecls.__name__)
-        #     print('\n\n')
-
-
         item = None
-        match = self._re_nosent.match(text)
+        match = _re_nosent.match(text)
 
         if match is not None:
             char, sub = match.groups()
             table = parser.table
             ctype = table.type(char)
-            if ctype in self._ctypes_nosent:
+            if ctype in _Ctype.nosent:
                 # Non-sentence items.
                 if len(sub):
                     sub = int(sub)
                 else:
                     sub = 0
-                if ctype in self._ctypes_valued:
+                if ctype in _Ctype.valued:
                     item = table.value(char)
                 elif ctype is LexType.Predicate:
                     item = preds.get((table.value(char), sub))
@@ -412,35 +404,19 @@ class metadress(BaseRole):
         
 
 def setup(app: Sphinx):
-    # sinst = lexdress()
-    # def sfunc(*args, **kw):
-    #     return sinst(*args, **kw)
-    # sfunc.options = sinst.option_spec
-    # app.add_role('s', sfunc)
-
-    app.add_role('s', role_s := lexdress().asfunc())
-
     # The role directive in reStructuredText::
     #
     #     .. role:: sc(s)
     #        :node: literal
     #        :class: code
     #
-    # See:
-    #
-    #   docutils.parsers.rst.directives.misc.Role
-    #
-    # CustomRole is just a wrapper that merges options/content.
-    #
-    opts = lexdress.parse_opts({
-        'node': 'literal',
-        'class': ['code']
-    })
 
-    role_s_ = CustomRole('sc', role_s, options = opts)
-    app.add_role(role_s_.name, role_s_)
+    app.add_role('s', role_s := lexdress())
+    app.add_role(name_sc := 'sc', role_s.wrapped(name_sc, dict(
+        node = 'literal',
+        classes = ['code'],
+    )))
 
-    # app.add_role('m', metadress().asfunc())
-    # app.add_role('refp', refplus().asfunc())
+
     app.add_role('m', metadress())
     app.add_role('refp', refplus())

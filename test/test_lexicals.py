@@ -242,7 +242,7 @@ class TestSentence(BaseSuite):
             assert s.asserted() == self.p('Ta')
             assert s.disjoin(B) == self.p('Aab')
             assert s.conjoin(B) == self.p('Kab')
-            assert s.variable_occurs(x) == False
+            # assert s.variable_occurs(x) == False
 
         def test_next(self):
             s = A.next()
@@ -275,12 +275,12 @@ class TestSentence(BaseSuite):
             assert s.asserted() == self.p('TFm')
             assert s.disjoin(B) == self.p('AFmb')
             assert s.conjoin(B) == self.p('KFmb')
-            assert s.variable_occurs(x) == False
+            # assert s.variable_occurs(x) == False
             s = Predicated(F, (x,))
             assert s.TYPE is LexType.Predicated
             assert s.substitute(a, x) == F((a,))
             assert s.variables == {x}
-            assert s.variable_occurs(x) == True
+            # assert s.variable_occurs(x) == True
 
         def test_atomic_less_than_predicated(self):
             s2 = Predicated.first()

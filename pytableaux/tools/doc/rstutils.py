@@ -24,11 +24,17 @@ from __future__ import annotations
 import csv
 from typing import Iterable
 
+
+
 __all__ = (
     'csvlines',
     'indented',
     'rawblock',
 )
+
+def rsttable(data, /, headers = (), **kw):
+    from tabulate import tabulate
+    return tabulate(data, headers, tablefmt = 'rst', **kw)
 
 def rawblock(content: list[str]|str, indent: str|int = None) -> list[str]:
     'Make a raw html block from the lines. Returns a new list of lines.'

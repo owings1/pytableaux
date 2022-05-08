@@ -245,35 +245,6 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
                 added.add(logic)
         return added
 
-        # package = self._check_package(package)
-        # # if isinstance(package, ModuleType):
-        # #     package = package.__name__
-        # # if package not in self.packages:
-        # #     raise Emsg.NotLogicsPackage(package)
-        # # pkgmod = sys.modules.get(package)
-        # # if pkgmod is None:
-        # #     return
-
-        # # fmt = f'{package}''.%s'.__mod__
-
-        # it1 = (modname
-        #     for modname in self._package_all(package)
-        #     if
-        #         modname not in self.modules
-        #     and
-        #         modname in sys.modules
-        # )
-        # it = it1
-
-
-        # added = set()
-        # for modname in it:
-        #     module = sys.modules[modname]
-        #     self.add(module)
-        #     added.add(modname)
-
-        # return added
-
     def import_all(self) -> None:
         """Import all logics for all registry packages. See ``.import_package()``.
         """

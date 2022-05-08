@@ -80,7 +80,7 @@ Doc dependencies:
 
 ```bash
 python3 -m pip install --upgrade \
-    Sphinx sphinx_rtd_theme
+    Sphinx sphinx_rtd_theme sphinx-toolbox
 ```
 <!-- optional: python-Levenshtein -->
 

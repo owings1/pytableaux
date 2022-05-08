@@ -27,8 +27,9 @@ import os.path
 import re
 import shutil
 import traceback
+from dataclasses import dataclass
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic, Mapping,
-                    NamedTuple, Optional)
+                    Optional)
 
 import jinja2
 import sphinx.directives
@@ -41,11 +42,14 @@ from pytableaux.lang.collect import Predicates
 from pytableaux.lang.lex import Operator
 from pytableaux.lang.writing import LexWriter, RenderSet
 from pytableaux.proof import writers
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract, closure
+from pytableaux.tools import (EMPTY_MAP, MapProxy, NameTuple, abcs, abstract,
+                              closure)
 from pytableaux.tools.hybrids import qset
+from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import T
-from sphinx.util import docstrings, logging
+from sphinx.util import logging
+from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
 
 if TYPE_CHECKING:
@@ -65,6 +69,7 @@ __all__ = (
     'classopt',
     'cleanws',
     'ConfKey',
+    'DirectiveHelper',
     'Helper',
     'nodeopt',
     'opersopt',
@@ -86,6 +91,9 @@ logger = logging.getLogger(__name__)
 _helpers: Mapping[Sphinx, Helper] = None
 "The Shinx application ``Helper`` instances."
 
+def spaceargs(arg: str, /) -> list[str]:
+    return arg.strip().split(' ')
+
 @closure
 def app_setup():
 
@@ -100,8 +108,10 @@ def app_setup():
         app.add_config_value(ConfKey.options, {}, 'env', [dict])
         app.add_config_value(ConfKey.htmlcopy, [], 'env', [list[HtmlCopyEntry]])
 
-        from pytableaux.tools.doc import directives, processors, roles
+        from pytableaux.tools.doc import (directives, docparts, processors,
+                                          roles)
         directives.setup(app)
+        docparts.setup(app)
         processors.setup(app)
         roles.setup(app)
 
@@ -158,8 +168,6 @@ def do_copy_entry(app: Sphinx, entry: HtmlCopyEntry):
             if isinstance(ignore, str):
                 ignore = ignore,
             eopts['ignore'] = shutil.ignore_patterns(*ignore)
-
-    # logger.info(f'{src} -> {dest}, **{eopts}')
     shutil.copytree(src, dest, **eopts)
 
 def app_helper(app: Sphinx) -> Helper:
@@ -174,7 +182,7 @@ if TYPE_CHECKING:
     def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
 
     @overload
-    def role_entry(roleish: str) -> RoleItem[RoleFunction]|None:...
+    def role_entry(roleish: str) -> RoleItem[RoleFunction]|None: ...
 
 def role_entry(roleish):
     'Get loaded role name and instance, by name, instance or type.'
@@ -278,9 +286,12 @@ class ConfKey(str, abcs.Ebc):
 
 def set_classes(opts: dict) -> dict:
     if 'class' in opts:
-        if 'classes' in opts:
-            raise TypeError(f"both 'class' and 'classes' in options: {opts}")
-        opts['classes'] = opts.pop('class')
+        if opts['class'] is None:
+            del(opts['class'])
+        else:
+            if 'classes' in opts:
+                raise TypeError(f"both 'class' and 'classes' in options: {opts}")
+            opts['classes'] = opts.pop('class')
     return opts
 
 NOARG = object()
@@ -299,12 +310,10 @@ class RoleDirectiveMixin(abcs.Abc):
     def set_classes(self, opts = NOARG, /) -> qset[str]:
         if opts is NOARG:
             opts = self.options
-        opts['classes'] = qset(set_classes(opts).get('classes', EMPTY_SET))
-        return opts['classes']
+        return qset(set_classes(opts).get('classes', EMPTY_SET))
 
-    @classmethod
-    def parse_opts(cls, rawopts: Mapping[str, Any]) -> dict[str, Any]:
-        optspec = cls.option_spec
+    def parse_opts(self, rawopts: Mapping[str, Any]) -> dict[str, Any]:
+        optspec = self.option_spec
         todo = dict(rawopts)
         builder = {}
         if optspec.get('classes', None) is classopt:
@@ -322,35 +331,66 @@ class RoleDirectiveMixin(abcs.Abc):
 class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
 
     arguments: list[str]
-    # @property
-    # def helper(self):
-    #     return app_helper(self.env.app)
-
-    # options: dict[str, Any]
-
-    # def set_classes(self) -> qset[str]:
-    #     set_classes(self.options)
-    #     classes = qset(self.options.get('classes', EMPTY_SET))
-    #     self.options['classes'] = classes
-    #     return classes
-    #     # return self.options.get('classes', [])
-
 
 class BaseRole(SphinxRole, RoleDirectiveMixin):
 
     patterns: ClassVar[dict[str, str|re.Pattern]] = {}
 
+    def __init__(self):
+        pass
+        self.options = {'class': None}
 
-    def asfunc(self):
-        """Convert to role function with `option_spec` for inline
-        directive use.
+    def wrapped(self, name: str, newopts: Mapping, newcontent: list[str] = [], /):
+        "Wrapper for ad-hoc customized roles."
+        try:
+            buildopts = dict(self.options)
+        except AttributeError:
+            buildopts = {}
+        buildopts.update(self.parse_opts(newopts))
+        buildopts = MapProxy(buildopts)
 
-        See: https://docutils.sourceforge.io/docs/ref/rst/directives.html#code
-        """
-        def role_func(*args, **kw):
-            return self(*args, **kw)
-        role_func.options = dict(self.option_spec)
-        return role_func
+        inst = BaseRole()
+        inst.option_spec = MapProxy(dict(self.option_spec))
+
+        def run():
+
+            options = dict(buildopts) | inst.options
+            content = newcontent.copy()
+
+            if content and inst.content:
+                content += '\n'
+            content.extend(inst.content)
+
+            return self(name, inst.rawtext, inst.text, inst.lineno, inst.inliner,
+                options, content)
+
+        inst.run = run
+
+        return inst
+
+class DirectiveHelper:
+
+    arg_parser = staticmethod(spaceargs)
+
+    required_arguments = 0
+    optional_arguments = 0
+
+    inst: BaseDirective
+    arguments: list[str]
+
+    def __init__(self, inst: BaseDirective, rawarg: str, /):
+        if rawarg is None:
+            args = []
+        else:
+            args = self.arg_parser(rawarg)
+        n = len(args)
+        if n < self.required_arguments or n > self.optional_arguments:
+            raise inst.error('Wrong number of arguments')
+        self.arguments = args
+        self.inst = inst
+
+    @abstract
+    def run(self): ...
 
 class Processor(abcs.Abc):
 
@@ -368,17 +408,24 @@ class Processor(abcs.Abc):
 
 class AutodocProcessor(Processor):
 
+    @dataclass
+    class Record(dmapns):
+        what: str
+        name: str
+        obj: Any
+        options: dict
+        lines: list[str]
+
+    __slots__ = 'app', 'lines', 'record'
+
     def applies(self):
         return True
 
-    def __call__(self, app: Sphinx, what: str, name: str, obj: Any, options: dict, lines: list[str]):
+    def __call__(self, app:Sphinx, *args):
         try:
             self.app = app
-            self.what = what
-            self.name = name
-            self.obj = obj
-            self.options = options
-            self.lines = lines
+            self.record = self.Record(*args)
+            self.lines = self.record.lines
             if self.applies():
                 self.run()
         except Exception as err:
@@ -387,10 +434,13 @@ class AutodocProcessor(Processor):
             raise
 
     def __iadd__(self, other: str|list[str]):
-        if not isinstance(other, str):
-            other = '\n'.join(other)
-        self.lines.extend(docstrings.prepare_docstring(other))
+        self.lines.extend(self.prepstr(other))
         return self
+
+    def prepstr(self, s: str|list[str], ignore: int = None, tabsize: int = 8) -> list[str]:
+        if not isinstance(s, str):
+            s = '\n'.join(s)
+        return prepare_docstring(s, ignore, tabsize)
 
 class ReplaceProcessor(Processor):
 
@@ -438,24 +488,41 @@ class ReplaceProcessor(Processor):
         self.args = args
         self.run()
 
-class RoleItem(NamedTuple):
-    name: Any
-    inst: Any
-
-class RoleItem(RoleItem, Generic[T]):
+class RoleItem(NameTuple, Generic[T]):
     name: str
     inst: T
 
 HtmlCopyEntry = tuple[str, str, Optional[dict]]
 
 re_space = re.compile(r'\s')
+
 re_comma = re.compile(r',')
+
+re_nonslug_plus = re.compile(r'[^a-zA-Z0-9_-]+')
+"One or more non alpha, num, _ or - chars"
 
 if TYPE_CHECKING:
     @overload
     def classopt(arg: Any) -> list[str]: ...
 
 classopt = class_option
+
+def boolopt(arg: str, /) -> bool:
+    if arg:
+        arg = arg.strip()
+    else:
+        arg = 'on'
+    arg = arg.lower()
+    if arg in ('true', 'yes', 'on'):
+        return True
+    if arg in ('false', 'no', 'off'):
+        return False
+    raise ValueError(f"Invalid boolean value: '{arg}'")
+
+def stropt(arg: str, /) -> str:
+    if arg is None:
+        arg = ''
+    return arg
 
 def cleanws(arg: str, /) -> str:
     "Option spec to remove all whitespace."
@@ -475,5 +542,10 @@ def opersopt(arg: str, /) -> tuple[Operator, ...]:
 
 def nodeopt(arg: str, /):
     return getattr(nodes, arg)
+
+def attrsopt(arg: str, /) -> list[str]:
+    "list of attr-like names"
+    return re_nonslug_plus.sub(' ', arg).split(' ')
+
 
 del(class_option)

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import itertools
 from types import DynamicClassAttribute as dynca
-from typing import Any, ClassVar, TYPE_CHECKING, Mapping
+from typing import TYPE_CHECKING, Any, ClassVar, Mapping
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import LangCommonMeta, Marking, Notation, RenderSet
@@ -33,6 +33,7 @@ from pytableaux.lang.lex import (Atomic, Constant, CoordsItem, Lexical,
 from pytableaux.tools import MapProxy, abstract, closure
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.sets import EMPTY_SET
+
 if TYPE_CHECKING:
     from typing import overload
 

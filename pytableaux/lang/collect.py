@@ -269,15 +269,17 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
     def after_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
         'Implement after change (done) hook. Update lookup index.'
         for pred in leaving or EMPTY_IT:
-            self._lookup -= pred.refkeys
+            self._lookup -= pred.refs
+            del(self._lookup[pred])
         for pred in arriving or EMPTY_IT:
             # Is there a distinct predicate that matches any lookup keys,
             # viz. BiCoords or name, that does not equal pred, e.g. arity
             # mismatch.
-            for other in filter(None, map(self._lookup.get, pred.refkeys)):
+            for other in filter(None, map(self._lookup.get, pred.refs)):
                 if other != pred:
                     raise Emsg.ValueConflictFor(pred, pred.spec, other.spec)
-            self._lookup |= zip(pred.refkeys, repeat(pred))
+            self._lookup |= zip(pred.refs, repeat(pred))
+            self._lookup[pred] = pred
 
     #******  Override qset
 
@@ -305,7 +307,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
         @classmethod
         def _member_keys(cls, pred: Predicate):
             'Enum lookup index init hook. Add all predicate keys.'
-            return super()._member_keys(pred) | pred.refkeys
+            return super()._member_keys(pred) | pred.refs.union((pred,))
 
         @classmethod
         def _after_init(cls):

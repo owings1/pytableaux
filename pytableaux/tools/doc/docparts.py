@@ -21,23 +21,36 @@ pytableaux.tools.doc.docparts
 """
 from __future__ import annotations
 
+import html
 import reprlib
-from typing import Any
+import sys
+from typing import TYPE_CHECKING, Any
 
 from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Lexical, LexType, Operator
+from pytableaux.lang.lex import LexType, Operator
 from pytableaux.lang.parsing import ParseTable
 from pytableaux.lang.writing import LexWriter, RenderSet
 from pytableaux.logics import registry
 from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.proof.rules import ClosingRule, Rule
 from pytableaux.proof.tableaux import Tableau
+from pytableaux.tools import closure
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 __all__ = (
+    'lex_eg_table',
     'opers_table',
     'rule_example_tableau',
     'trunk_example_tableau',
 )
+
+class SpecRepr(reprlib.Repr):
+
+    def repr_TriCoords(self, obj, level):
+        return self.repr(tuple(obj))
+    repr_BiCoords = repr_TriCoords
 
 def rule_example_tableau(rulecls: type[Rule], /, **opts) -> Tableau:
     "Get a rule's example tableau for documentation."
@@ -68,134 +81,247 @@ def trunk_example_tableau(logic: Any, arg: Argument, /) -> str:
     tab.finish()
     return tab
 
-pre = '``{}``'.format
+def fmt_raw(obj: Any):
+    "No formatting."
+    return obj
 
-TableData = list[list[str]]
+def fmt_literal(s: str):
+    "Wrap in double backticks."
+    return f'``{s}``'
 
-def opers_table(opts: dict = {}) -> TableData:
-    'Table data for the Operators table.'
 
-    from html import escape, unescape
+@closure
+def opers_table():
 
-    # Build outputs into maps
-    # Parser tables
-    charpol, charstd = (
-        {o: table.char(o.TYPE, o) for o in Operator}
-        for table in (
-            ParseTable.fetch('polish'),
-            ParseTable.fetch('standard'),
-        )
+    def oper_data(o):
+        # Get the operator symbols.
+        for src in sources:
+            if type(src) is ParseTable:
+                func = src.char
+            else:
+                func = src.string
+            yield func(o.TYPE, o)
+
+    def sources_info():
+        for src in sources:
+            if type(src) is ParseTable:
+                yield (src.notation, 'ascii', True)
+            else:
+                yield (src.notation, src.charset, False)
+
+    sources = (
+        ParseTable.fetch('polish'),
+        ParseTable.fetch('standard'),
+        RenderSet.fetch('standard', 'unicode'),
+        RenderSet.fetch('standard', 'html'),
     )
-    # Render tables
-    strhtml, strunic = (
-        {o: rset.string(o.TYPE, o) for o in Operator}
-        for rset in (
-            RenderSet.fetch('standard', 'html'),
-            RenderSet.fetch('standard', 'unicode'),
-        )
-    )
 
-    # ordered symbol lookups
-    #        0            1           2            3
-    #      polish.ascii  std.ascii, std.unicode, std.html
-    maps = [charpol,     charstd,    strunic,      strhtml]
-    # raw symbol table outputs
-    rawrows = [
-        [m[o] for m in maps]
-        for o in Operator
+    formats = [
+        fmt_literal,
+        fmt_literal,
+        fmt_raw,
+        lambda s: f'{html.unescape(s)} / {html.escape(s)}',
     ]
-    # formatted symbol cells
-    symbolrows = [
-        [
-            pre(r[0]),
-            pre(r[1]),
-            r[2],
-            f'{unescape(r[3])} / {escape(r[3])}'
+
+    def build(*, flat = True):
+        """Table data for the Operators symbols table.
+
+        Example:
+
+        ======================  =========  ======  ========  ========  ===============
+        ..                      Notation   Polish  Standard  Standard  Standard
+        ..                      Charset    ascii   ascii     unicode   html
+        ..                      Can parse  Y       Y         N         N
+        ..
+        Operator
+        ..
+        Assertion                          ``T``   ``*``     ○         ○ / &amp;#9675;
+        Negation                           ``N``   ``~``     ¬         ¬ / &amp;not;
+        Conjunction                        ``K``   ``&``     ∧         ∧ / &amp;and;
+        Disjunction                        ``A``   ``V``     ∨         ∨ / &amp;or;
+        Material Conditional               ``C``   ``>``     ⊃         ⊃ / &amp;sup;
+        Material Biconditional             ``E``   ``<``     ≡         ≡ / &amp;equiv;
+        Conditional                        ``U``   ``$``     →         → / &amp;rarr;
+        Biconditional                      ``B``   ``%``     ↔         ↔ / &amp;harr;
+        Possibility                        ``M``   ``P``     ◇         ◇ / &amp;#9671;
+        Necessity                          ``L``   ``N``     ◻         ◻ / &amp;#9723;
+        ======================  =========  ======  ========  ========  ===============
+        """
+
+        width = 2 + len(sources)
+        blank = [''] * width
+
+        # main body rows
+        main = [
+            [o.label, '', *(fmt(value) for fmt, value in zip(
+                formats, oper_data(o)))
+            ]
+            for o in Operator
         ]
-        for r in rawrows
-    ]
-    
-    heads = [
+        # header info / columns
+        head_cols = [
+            blank[0:3],
+            [
+                'Notation',
+                'Charset',
+                'Can parse',
+            ], *(
+                [
+                    notn.name.capitalize(),
+                    charset,
+                    'NY'[canparse]
+                ]
+                for (notn, charset, canparse)
+                in sources_info()
+            )
+        ]
+        heads = list(zip(*head_cols))
+        # Middle transition
+        middle = [
+            blank,
+            ['Operator', *blank[:-1] ],
+            blank,
+        ]
+        # Assemble
+        header = heads[0]
+        body = heads[1:] + middle + main
+        if flat:
+            return [header] + body
+        return body, header
 
-        ['', 'Notation',   'Polish', 'Standard',   'Standard',   'Standard'],
-        ['', 'Charset',    'ascii',  'ascii'  ,    'unicode'   ,   'html' ],
-        ['', 'Can parse',      'Y',    'Y',          'N'      ,     'M'     ],
-
-    ]
-    cols = len(heads[0])
-
-    operrow = ['Operator'] + [''] * (cols - 1)
+    return build
 
 
-    # table layour
+def lex_eg_table(columns: list[str], /, *,
+    notn = 'standard', charset = 'unicode',
+    flat = False):
+    "lexical item attribute examples."
+    """
+    Example:
+
+    ╒════════════╤════════╤════════════════════════════════════╕
+    │ Type       │ Item   │ sort_tuple                         │
+    ╞════════════╪════════╪════════════════════════════════════╡
+    │ Predicate  │ F      │ (10, 0, 0, 1)                      │
+    │ Constant   │ a      │ (20, 0, 0)                         │
+    │ Variable   │ x      │ (30, 0, 0)                         │
+    │ Quantifier │ ∃      │ (40, 0)                            │
+    │ Operator   │ ○      │ (50, 10)                           │
+    │ Atomic     │ A      │ (60, 0, 0)                         │
+    │ Predicated │ Fa     │ (70, 10, 0, 0, 1, 20, 0, 0)        │
+    │ Quantified │ ∃xFx   │ (80, 40, 0, 30, 0, 0, 70, 10, ...) │
+    │ Operated   │ ○A     │ (90, 50, 10, 60, 0, 0)             │
+    ╘════════════╧════════╧════════════════════════════════════╛
+    """
+    lw = LexWriter(notn, charset)
+
+    srepr = SpecRepr()
+    srepr.maxtuple = 8
+
+    header = ['Type', 'Item', *columns]
     body = [
-        [o.label ,'' , r[0], r[1], r[2], r[3]]
+        [
+            item.TYPE.name,
+            lw(item),
+            *map(srepr.repr, (
+                getattr(item, name)
+                for name in columns)
+            )
+        ]
+        for item in [
+            m.cls.first() for m in LexType
+        ]
+    ]
+    if flat:
+        return [header] + body
+    return body, header
 
-        for o, r in zip(
-            Operator, symbolrows
+# ------------------------------------------------
+
+def setup(app: Sphinx):
+    "Sphinx setup."
+
+    from pytableaux.tools.doc import DirectiveHelper, directives
+
+    class OperSymTable(DirectiveHelper):
+        run = staticmethod(opers_table)
+
+    class LexEgTable(DirectiveHelper):
+        required_arguments = 1
+        optional_arguments = sys.maxsize
+        def run(self):
+            return lex_eg_table(self.arguments)
+
+    directives.CSVTable.generators.update({
+        'lex-eg-table'   : LexEgTable,
+        'oper-sym-table' : OperSymTable,
+    })
+
+# ------------------------------------------------
+
+def main():
+    "Terminal main. Print rando tables."
+
+    import tabulate as Tb
+    from tabulate import tabulate as tb
+    from random import shuffle
+
+    flat = False
+
+    def _randgen():
+        formats = list(Tb.tabulate_formats)
+        while True:
+            shuffle(formats)
+            yield from formats
+    fmtit = _randgen()
+    del(_randgen)
+
+    lexatrs = ['spec', 'ident', 'sort_tuple']
+    shuffle(lexatrs)
+
+    def callspec_it():
+        callspecs = [
+            (opers_table,),
+            (lex_eg_table, lexatrs[0:2]),
+            *((lex_eg_table, [name]) for name in lexatrs),
+        ]
+        shuffle(callspecs)
+        return iter(callspecs)
+
+    def prargs(*args):
+        for arg in args:
+            print(arg)
+
+    def pr(body, headers = [], tablefmt = None, *args, func = None, **kw):
+
+        if tablefmt is None:
+            tablefmt = next(fmtit)
+        inforow = []
+        infohead = []
+
+        if func is None:
+            inforow.append('?')
+        else:
+            inforow.append(func.__name__)
+        inforow.append(tablefmt)
+
+        info = tb([ inforow ], infohead, tablefmt = 'fancy_outline')
+
+        prargs(
+            info,
+            '\n',
+            tb(body, headers, tablefmt, *args, **kw),
+            '\n'
         )
-    ]
 
-    spacerrow = [''] * cols
-
-    rows = list(heads)
-
-    rows.append(spacerrow)
-    rows.append(operrow)
-    rows.append(spacerrow)
-
-    rows.extend(body)
-
-    return rows
-
-class SpecRepr(reprlib.Repr):
-
-    def repr_TriCoords(self, obj, level):
-        return self.repr(tuple(obj))
-    repr_BiCoords = repr_TriCoords
+    for func, *args in callspec_it():
+        rows = func(*args, flat = flat)
+        if flat:
+            header = []
+        else:
+            rows, header = rows
+        pr(rows, header, tablefmt = next(fmtit), func = func)
 
 
-def lex_eg_table(choice = 'spec', opts: dict = {}) -> TableData:
-
-    def egitem(lexcls: type[Lexical]):
-        return lexcls.first()
-
-    egitems = [egitem(lexcls) for lexcls in LexType.classes]
-    lw = LexWriter('standard', 'unicode')
-
-    srepr = SpecRepr().repr
-
-    # header row data
-    hdata = dict(
-        spec        = 'spec',
-        ident       = 'ident',
-        sort_tuple  = 'sort_tuple',
-        hash        = 'hash'
-    )
-    # row data for python repr
-    rdata = [
-        [item, type(item),
-        dict(
-            spec       = srepr(item.spec),
-            ident      = srepr(item.ident),
-            sort_tuple = srepr(item.sort_tuple),
-            hash       = srepr(item.hash)
-        )]
-        for item in egitems
-    ]
-
-    
-    # table with one 'attribute' column
-    heads = [
-        # one header row
-        ['Type', 'Item', hdata[choice]]
-    ]
-    body = [
-        [lexcls.__name__, lw(item), row[choice]]
-        for item, lexcls, row in rdata
-    ]
-
-    rows = list(heads)
-    rows.extend(body)
-
-    return rows
+if __name__ == '__main__':
+    main()

@@ -19,6 +19,7 @@ pytableaux.tools.doc.processors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
+import enum
 
 import re
 from typing import TYPE_CHECKING
@@ -30,9 +31,12 @@ from pytableaux.tools.doc import (AutodocProcessor, ReplaceProcessor,
                                   SphinxEvent, docinspect, docparts, rstutils)
 from sphinx.util import logging
 
+
 if TYPE_CHECKING:
     from proof.tableaux import Rule
     from sphinx.application import Sphinx
+    import sphinx_toolbox.more_autodoc.overloads
+    
 
 __all__ = (
     'BuildtrunkExample',
@@ -43,14 +47,51 @@ __all__ = (
 
 logger = logging.getLogger(__name__)
 
+class EnumMemberValue(AutodocProcessor):
+
+
+    on: None|AutodocProcessor.Record = None
+    member: None|enum.Enum = None
+
+    def applies(self):
+        rec = self.record
+
+        if not self.on:
+            if isinstance(rec.obj, enum.EnumMeta):
+                self.on = rec
+            return
+
+        ecls = self.on.obj
+
+        if rec.name.startswith(self.on.name):
+            membname = rec.name.removeprefix(f'{self.on.name}.')
+            try:
+                self.member = ecls[membname]
+            except:
+                pass
+            else:
+                return True
+        else:
+            self.on = None
+        return False
+
+    def run(self):
+        member = self.member
+        # print(f'{type(member).__name__}  -  {member} | {member.value}')
+        # print('')
+        # print('\n'.join(self.lines))
+        # print('')
+        self.member = None
+
 class RuledocInherit(AutodocProcessor):
     'Create docstring lines for an "inheriting only" ``Rule`` class.'
 
     def applies(self):
-        return docinspect.is_transparent_rule(self.obj)
+        return docinspect.is_transparent_rule(self.record.obj)
 
     def run(self):
-        base: type[Rule] = self.obj.mro()[1]
+        obj: type[Rule] = self.record.obj
+        base: type[Rule] = obj.mro()[1]
         logic = registry.locate(base)
         self += (
             f'*This rule is the same as* :class:`{logic.name} {base.name} '
@@ -62,14 +103,15 @@ class RuledocExample(AutodocProcessor):
     'Append docstring with html rule example.'
 
     def applies(self):
-        return docinspect.is_concrete_rule(self.obj)
+        return docinspect.is_concrete_rule(self.record.obj)
 
     def run(self):
-        logic = registry.locate(self.obj)
+        obj: type[Rule] = self.record.obj
+        logic = registry.locate(obj)
         self += f"""
         Example:
         
-        .. tableau:: {logic.name}.{self.obj.name}
+        .. tableau:: {logic.name}.{obj.name}
         """
         # self.lines.extend(rstutils.rawblock(self.pw(tab, classes = classes)))
 
@@ -77,7 +119,7 @@ class BuildtrunkExample(AutodocProcessor):
     'Append docstring with html build trunk example.'
 
     def applies(self):
-        return docinspect.is_concrete_build_trunk(self.obj)
+        return docinspect.is_concrete_build_trunk(self.record.obj)
 
     argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
@@ -90,7 +132,8 @@ class BuildtrunkExample(AutodocProcessor):
         return self.pw.lw
 
     def run(self):
-        logic = registry.locate(self.obj)
+        rec = self.record
+        logic = registry.locate(rec.obj)
         arg = self.argument
         tab = docparts.trunk_example_tableau(logic, arg)
         self += 'Example:'
@@ -149,9 +192,11 @@ def setup(app: Sphinx):
 
     app.setup_extension('sphinx.ext.autodoc')
 
-    app.connect('autodoc-process-docstring', RuledocInherit())
-    app.connect('autodoc-process-docstring', RuledocExample())
-    app.connect('autodoc-process-docstring', BuildtrunkExample())
+    ev = 'autodoc-process-docstring'
+    app.connect(ev, EnumMemberValue())
+    app.connect(ev, RuledocInherit())
+    app.connect(ev, RuledocExample())
+    app.connect(ev, BuildtrunkExample())
 
     replacers = (
         RolewrapReplace(),

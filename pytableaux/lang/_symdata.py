@@ -278,31 +278,40 @@ def rendersets():
 
     return data
 
-def dcopy(a: Mapping, /) -> dict:
-    'Basic dict copy of a mapping, recursive for mapping values.'
-    return {
-        key: dcopy(value)
-            if isinstance(value, Mapping)
-            else value
-        for key, value in a.items()
-    }
 
-def dmerged(a: dict, b: dict, /) -> dict:
-    'Basic dict merge copy, recursive for dict value.'
-    c = {}
-    for key, value in b.items():
-        if isinstance(value, dict):
-            avalue = a.get(key)
-            if isinstance(avalue, dict):
-                c[key] = dmerged(a[key], value)
+@closure
+def dmerged():
+
+
+    # TODO: memoize ...
+
+    def merger(a: dict, b: dict, /) -> dict:
+        'Basic dict merge copy, recursive for dict value.'
+        c = {}
+        for key, value in b.items():
+            if isinstance(value, dict):
+                avalue = a.get(key)
+                if isinstance(avalue, dict):
+                    c[key] = merger(a[key], value)
+                else:
+                    c[key] = dcopy(value)
             else:
-                c[key] = dcopy(value)
-        else:
-            c[key] = value
-    for key in a:
-        if key not in c:
-            c[key] = a[key]
-    return c
+                c[key] = value
+        for key in a:
+            if key not in c:
+                c[key] = a[key]
+        return c
+
+    def dcopy(a: Mapping, /) -> dict:
+        'Basic dict copy of a mapping, recursive for mapping values.'
+        return {
+            key: dcopy(value)
+                if isinstance(value, Mapping)
+                else value
+            for key, value in a.items()
+        }
+
+    return merger
 
 @closure
 def dtransform():
@@ -337,4 +346,5 @@ def dtransform():
         return b
 
     return api
+
 

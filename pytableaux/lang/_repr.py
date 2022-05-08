@@ -37,7 +37,7 @@ def _setup():
 
     def __repr__(self):
         try:
-            return f'<{self.TYPE.role}: {self}>'
+            return f'<{self.TYPE.role.__name__}: {self}>'
         except AttributeError:
             return object.__repr__(self)
 

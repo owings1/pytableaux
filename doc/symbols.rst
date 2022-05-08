@@ -14,7 +14,7 @@ Symbols Sets
 .. csv-table::
     :header-rows: 4
     :widths: auto
-    :generator: opers_table
+    :generator: oper-sym-table
 
 
 .. _lexical-item-specs-table:
@@ -53,7 +53,8 @@ long as you know its original type.
 .. csv-table::
     :header-rows: 1
     :widths: auto
-    :generator: lexspec_eg_table
+    :generator: lex-eg-table
+    :generator-args: spec
     :classes: lex-eg-table flex-last spec-table
 
 .. _lexical-item-idents-table:
@@ -70,7 +71,8 @@ the spec.
 .. csv-table::
     :header-rows: 1
     :widths: auto
-    :generator: lexident_eg_table
+    :generator: lex-eg-table
+    :generator-args: ident
     :classes: lex-eg-table flex-last ident-table
 
 .. _lexical-item-sort_tuple-table:
@@ -89,6 +91,7 @@ the risk of confusing one for the other.
 .. csv-table::
     :header-rows: 1
     :widths: auto
-    :generator: lexsorttuple_eg_table
-    :classes: lex-eg-table flex-last sort_tuple-table
+    :generator: lex-eg-table
+    :generator-args: sort_tuple
+    :classes: lex-eg-table flex-last sort-tuple-table
 

@@ -569,7 +569,11 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
 
     default_fetch_key = 'default'
 
-    __slots__ = 'reversed', 'chars'
+    __slots__ = (
+        'chars',
+        'keypair',
+        'reversed',
+    )
 
     reversed: Mapping[tuple[ParseTableKey, ParseTableValue], str]
     "Reversed mapping of item to symbol."
@@ -577,12 +581,22 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
     chars: Mapping[ParseTableKey, seqf[str]]
     "Grouping of each symbol type to the the symbols."
 
-    def __init__(self, data: Mapping[str, tuple[ParseTableKey, ParseTableValue]], /):
+    keypair: tuple[Notation, str]
+
+    @property
+    def notation(self) -> Notation:
+        return self.keypair[0]
+
+    @property
+    def fetchkey(self) -> str:
+        return self.keypair[1]
+
+    def __init__(self, data: Mapping[str, tuple[ParseTableKey, ParseTableValue]], keypair: tuple[Notation, str], /):
         """
         Args:
             data: The table data.
         """
-
+        self.keypair = keypair
         super().__init__(dict(data))
 
         vals = self.values()
@@ -605,8 +619,9 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
 
         # chars for each type in value order, duplicates discarded
         self.chars = MapProxy({
-            ctype: seqf(rev[ctype, val] for val in tvals[ctype])
-            for ctype in ctypes
+            ctype: seqf(rev[ctype, val]
+                for val in tvals[ctype])
+                    for ctype in ctypes
         })
 
     def type(self, char: str, default = NOARG, /) -> ParseTableKey:
@@ -662,12 +677,14 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
     def __setattr__(self, name, value, /, *, sa = object.__setattr__):
         if getattr(self, name, NOARG) is not NOARG:
             raise AttributeError(name)
-        # if name not in self.__slots__ or hasattr(self, name):
-        #     raise AttributeError(name)
         sa(self, name, value)
 
     __delattr__ = raiseae
 
+    @classmethod
+    def _from_mapping(cls, mapping):
+        keypair = (Notation.default, f'_mapping{id(mapping)}')
+        return cls(mapping, keypair)
 del(
     abstract,
     lazy,

@@ -1,57 +1,103 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
+==============================================
+:mod:`pytableaux.lang.lex` — Lexical classes
+==============================================
 
-.. contents:: :local:
+.. module:: pytableaux.lang.lex
 
-.. automodule:: pytableaux.lang.lex
+.. contents:: Contents
+    :local:
 
-    Base classes
-    ^^^^^^^^^^^^
+Base classes
+==============
 
-    .. autoclass:: Lexical()
-        :members:
+.. autoclass:: Lexical()
+    :members:
 
-    .. autoclass:: LexicalEnum()
-        :members:
+.. autoclass:: LexicalEnum()
+    :members:
+    :show-inheritance:
 
-    .. autoclass:: CoordsItem()
-        :members:
 
-    .. autoclass:: Parameter()
-        :members:
+.. autoclass:: CoordsItem()
+    :members:
+    :exclude-members: Coords
 
-    .. autoclass:: Sentence()
-        :members:
 
-    Concrete classes
-    ^^^^^^^^^^^^^^^^
+.. autoclass:: Parameter()
+    :members:
+    :show-inheritance:
 
-    .. autoclass:: Predicate
-        :members:
 
-    .. autoclass:: Constant()
-        :members:
+.. autoclass:: Sentence()
+    :members:
+    :show-inheritance:
 
-    .. autoclass:: Variable()
-        :members:
 
-    .. autoclass:: Quantifier()
-        :members:
+Concrete classes
+=================
 
-    .. autoclass:: Operator()
-        :members:
+.. autoclass:: Predicate
+    :members:
+    :special-members: __init__
+    :exclude-members: Coords
 
-    .. autoclass:: Atomic()
-        :members:
 
-    .. autoclass:: Predicated
-        :members:
+.. autoclass:: Constant()
+    :members:
+    :special-members: __init__
+    :show-inheritance:
 
-    .. autoclass:: Quantified
-        :members:
 
-    .. autoclass:: Operated()
-        :members:
+.. autoclass:: Variable()
+    :members:
+    :special-members: __init__
+    :show-inheritance:
 
-    .. autoclass:: LexType()
-        :members:
+Enum classes
+------------
+
+.. autoclass:: Quantifier()
+    :members:
+    :special-members: __init__
+    :show-inheritance:
+
+
+.. autoclass:: Operator()
+    :members:
+    :special-members: __init__
+    :show-inheritance:
+
+Sentence classes
+----------------
+
+.. autoclass:: Atomic()
+    :members:
+    :special-members: __init__
+    :show-inheritance:
+
+
+.. autoclass:: Predicated
+    :members:
+    :special-members: __init__
+    :show-inheritance:
+
+
+.. autoclass:: Quantified
+    :members:
+    :special-members: __init__
+    :show-inheritance:
+
+
+.. autoclass:: Operated()
+    :members:
+    :special-members: __init__
+    :show-inheritance:
+
+
+Special classes
+=================
+
+.. autoclass:: LexType()
+    :members:
+    :special-members: __init__
 

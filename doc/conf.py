@@ -10,22 +10,22 @@ from __future__ import annotations
 import os
 import sys
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
+
+# =================================================================================
+# =================================================================================
 
 addpath = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..')
 )
 if addpath not in sys.path:
     sys.path.insert(1, addpath)
-
 os.environ['DOC_MODE'] = 'True'
-
 from pytableaux import package
-
 # General information about the project.
 project = package.name
-
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
@@ -34,39 +34,127 @@ project = package.name
 version = package.version.short
 # The full version, including alpha/beta/rc tags.
 release = package.version.full
-
 copyright = package.copyright
+
+# =================================================================================
+# =================================================================================
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'pytableaux.tools.doc.extension',
-    'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',
-    # https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#configuration
-    'sphinx.ext.napoleon',
-    # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
-    'sphinx.ext.intersphinx',
+    # ,
 ]
 
+# =================================================================================
+# =================================================================================
+
+
+# -------------------
+# -  Napoleon
+# -------------------
+#
+# https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#configuration
+#  
+#
+extensions.insert(1, 'sphinx.ext.napoleon')
+
 napoleon_numpy_docstring = False
-# napoleon_preprocess_types = True
+napoleon_preprocess_types = True
+napoleon_attr_annotations = True
 napoleon_type_aliases = {
 
 }
 
+# -------------------
+# -  Autodoc
+# -------------------
+#
+# https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
+#
+#
+extensions.append('sphinx.ext.autodoc')
+
 # autodoc_class_signature = 'separated'
+
+autodoc_inherit_docstrings = True
+"""
+This value controls the docstrings inheritance. If set to True the
+docstring for classes or methods, if not explicitly set, is inherited
+from parents.
+
+The default is True.
+"""
+
+autodoc_typehints_format = 'short'
+"""
+This value controls the format of typehints. The setting takes the
+following values:
+
+  * 'fully-qualified' - Show the module name and its name of typehints
+
+  * 'short' - Suppress the leading module names of the typehints
+     (ex. io.StringIO -> StringIO) (default)
+
+New in version 4.4.
+
+Changed in version 5.0: The default setting was changed to 'short'
+"""
+
+
+autodoc_member_order = 'bysource' # 'groupwise'
+
 autodoc_default_options = {
     'exclude-members': 'for_json',
     # 'no-value': True,
     # 'special-members': '__init__',
 }
-# autodoc_member_order = 'groupwise'
-autodoc_member_order = 'bysource'
 
+# -----------------------------
+# - sphinx_toolbox More Autodoc
+# -----------------------------
+#
+# https://sphinx-toolbox.readthedocs.io/en/latest/extensions/more_autodoc/overloads.html
+#
+
+# extensions.append('sphinx_toolbox.more_autodoc.overloads')
+
+overloads_location = [ 'signature',
+                       'top',
+                      'bottom'][  2 ]
+
+
+
+# -------------------
+# - Custom Extension
+# -------------------
+#
+#
+extensions.append('pytableaux.tools.doc.extension')
+
+pt_options = dict(
+
+)
+
+pt_htmlcopy = [
+    (
+        f'{package.root}/web/static/css/fonts/charmonman',
+        '_static/fonts/charmonman',
+    ),
+]
+
+# -------------------
+# -  Intersphinx
+# -------------------
+#
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
+#
+#
+extensions.append('sphinx.ext.intersphinx')
+
 intersphinx_mapping = dict(
     python = (
         'https://docs.python.org/3',
@@ -75,12 +163,26 @@ intersphinx_mapping = dict(
     )
 )
 
-# Others tried: material, xcode
-pygments_style = 'colorful'
 
+# -------------------
+# -  Smartquote
+# -------------------
+# 
+# https://docutils.sourceforge.io/docs/user/smartquotes.html
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes
+#
+#
+
+smartquotes = False
+
+# -------------------
+# -  HTML
+# -------------------
+# 
 # https://github.com/readthedocs/sphinx_rtd_theme
-html_theme = 'sphinx_rtd_theme'
-# html_theme = 'default'
+# 
+
+html_theme = 'sphinx_rtd_theme' # 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -93,10 +195,8 @@ if html_theme == 'sphinx_rtd_theme':
         # style_external_links = True,
     )
 
-# Smartquote
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes
-# https://docutils.sourceforge.io/docs/user/smartquotes.html
-smartquotes = False
+# Others tried: material, xcode
+pygments_style = 'colorful'
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 html_show_sphinx = False
@@ -108,6 +208,13 @@ html_static_path = [
     '_static',
     f'{package.root}/proof/templates/html/static',
 ]
+
+# Output file base name for HTML help builder.
+htmlhelp_basename = 'pytableauxdoc'
+
+# =================================================================================
+# =================================================================================
+
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -125,23 +232,11 @@ source_suffix = '.rst'
 # The master toctree document.
 master_doc = 'index'
 
-# Output file base name for HTML help builder.
-htmlhelp_basename = 'pytableauxdoc'
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
 add_module_names = False
 
-pt_options = dict(
-
-)
-
-pt_htmlcopy = [
-    (
-        f'{package.root}/web/static/css/fonts/charmonman',
-        '_static/fonts/charmonman',
-    ),
-]
 
 cssflag = {
     'doc.css'         : True,

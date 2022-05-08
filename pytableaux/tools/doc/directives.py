@@ -20,24 +20,23 @@ pytableaux.tools.doc.directives
 """
 from __future__ import annotations
 
-import re
 from collections import ChainMap
+from importlib import import_module
 from typing import TYPE_CHECKING
 
 import sphinx.directives.other
 import sphinx.directives.patches
 from docutils import nodes
-from docutils.parsers.rst.directives import unchanged
 from pytableaux import examples, logics, models
 from pytableaux.lang import Notation
-from pytableaux.lang.collect import Predicates
 from pytableaux.lang.lex import Operator
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import rules, tableaux, writers
-from pytableaux.tools.doc import (BaseDirective, SphinxEvent, classopt,
-                                  docparts, opersopt, predsopt, re_comma,
-                                  rstutils)
+from pytableaux.tools.doc import (BaseDirective, DirectiveHelper, SphinxEvent,
+                                  attrsopt, boolopt, classopt, docparts,
+                                  opersopt, predsopt, re_comma, rstutils,
+                                  stropt)
 from sphinx.util import logging
 
 if TYPE_CHECKING:
@@ -60,21 +59,6 @@ logger = logging.getLogger(__name__)
 divclear_rawhtml = '<div class="clear"></div>'
 
 
-
-
-
-def boolopt(arg: str, /) -> bool:
-    if arg:
-        arg = arg.strip()
-    else:
-        arg = 'on'
-    arg = arg.lower()
-    if arg in ('true', 'yes', 'on'):
-        return True
-    if arg in ('false', 'no', 'off'):
-        return False
-    raise ValueError(f"Invalid boolean value: '{arg}'")
-
 class Clear(BaseDirective):
     option_spec = dict(
         classes = classopt,
@@ -83,6 +67,7 @@ class Clear(BaseDirective):
         classes = self.set_classes()
         classes.append('clear')
         return [nodes.container(classes = classes)]
+
 
 class Tableaud(BaseDirective):
     """Tableau directive.
@@ -106,7 +91,7 @@ class Tableaud(BaseDirective):
     option_spec = dict(
         logic = logics.registry,
         example = examples.argument,
-        conclusion = unchanged,
+        conclusion = stropt,
         premises = re_comma.split,
         pnotn = Notation,
         preds = predsopt,
@@ -166,7 +151,7 @@ class TruthTable(BaseDirective):
 
     option_spec = dict(
         wnotn = Notation,
-        template = unchanged,
+        template = stropt,
         reverse = boolopt,
         clear = boolopt,
         classes = classopt,
@@ -213,7 +198,7 @@ class TruthTables(BaseDirective):
     option_spec = dict(
         operators = opersopt,
         wnotn = Notation,
-        template = unchanged,
+        template = stropt,
         reverse = boolopt,
         clear = boolopt,
         classes = classopt,
@@ -254,43 +239,70 @@ class TruthTables(BaseDirective):
 
         return [nodes.raw(format = 'html', text = content)]
 
+
 class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     "Override csv-table to allow generator function."
 
-    generators = dict(
-        opers_table       = [docparts.opers_table],
-        lexspec_eg_table  = [docparts.lex_eg_table, 'spec'],
-        lexident_eg_table = [docparts.lex_eg_table, 'ident'],
-        lexsorttuple_eg_table = [docparts.lex_eg_table, 'sort_tuple'],
-    )
+    generators: dict[str, DirectiveHelper] = {}
 
-    def generator_opt(arg: str):
-        try:
-            return CSVTable.generators[arg]
-        except KeyError:
-            raise ValueError(f"Invalid CSVTable generator name: '{arg}'")
+    option_spec = dict(sphinx.directives.patches.CSVTable.option_spec) | {
+        'generator'      : generators.__getitem__,
+        'generator-args' : stropt,
+        'classes'        : classopt,
+    }
 
-    option_spec = dict(sphinx.directives.patches.CSVTable.option_spec,
-        generator = generator_opt,
-        classes = classopt,
-    )
     option_spec.pop('class', None)
 
     def run(self):
+
         classes = self.set_classes()
+        opts = self.options
+
+        if (GenCls := opts.get('generator')) is None:
+            self.generator = None
+        else:
+            self.generator = GenCls(self, opts.get('generator-args'))
+
         res = super().run()
+
         res[0]['classes'].extend(classes)
         return res
 
     def get_csv_data(self):
-        # Override docutils.parsers.rst.directives.CSVTable.get_csv_data()
-        entry = self.options.get('generator')
-        if entry is None:
+        if self.generator is None:
             return super().get_csv_data()
-        generator, *args = entry
-        rows = generator(*args, self.options)
-        source = '_generator'
+        rows = self.generator.run()
+        source = type(self.generator).__name__
         return rstutils.csvlines(rows), source
+
+
+class MemberTable(CSVTable):
+
+    option_spec = CSVTable.option_spec | dict(
+        columns = attrsopt,
+    )
+    defaults = {
+        'header-rows' : 1,
+        'widths'      : 'auto',
+    }
+    required_arguments = 1
+
+    def run(self):
+
+        objref = self.arguments[0].strip()
+
+        obj = import_module(objref)
+        classes = self.set_classes()
+
+
+        members = list(obj)
+        headers = keys = self.options['columns']
+
+        getter = getattr
+        data = [
+            list(getter(member, key) for key in keys)
+            for member in members
+        ]
 
 class Include(sphinx.directives.other.Include, BaseDirective):
     "Override include directive that allows the app to modify content via events."

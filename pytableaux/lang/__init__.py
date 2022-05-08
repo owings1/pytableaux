@@ -21,22 +21,24 @@ pytableaux.lang
 """
 from __future__ import annotations
 
+import enum as _enum
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
                     NamedTuple, Set)
 
 from pytableaux.errors import Emsg
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure
+from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure, dxopy
 from pytableaux.tools.decorators import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import CrdT, LexAbcT, LexT, TbsT, T
+from pytableaux.tools.typing import CrdT, LexAbcT, LexT, T, TbsT
 
 if TYPE_CHECKING:
-    from typing import overload, Iterator, Sequence
-    from pytableaux.tools.abcs import EnumLookup
+    from typing import Iterator, Sequence, overload
+
     from pytableaux.lang.lex import (Lexical, LexType, Predicate, Quantifier,
                                      Sentence, Variable)
     from pytableaux.lang.parsing import Parser
     from pytableaux.lang.writing import LexWriter
+    from pytableaux.tools.abcs import EnumLookup
 
 __all__ = (
     # Classes
@@ -86,6 +88,21 @@ __all__ = (
     'LexAbcT',
     'LexT',
     'TbsT',
+
+    # Subpackage convenience import
+    'Atomic',
+    'Constant',
+    'LexType',
+    'LexWriter',
+    'Operated',
+    'Operator',
+    'Parser',
+    'ParseTable',
+    'Predicate',
+    'Predicated',
+    'Quantified',
+    'Quantifier',
+    'Variable',
 )
 
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
@@ -200,9 +217,12 @@ class Notation(LangCommonEnum):
         self.rendersets = setm()
 
     __slots__ = (
+        'charsets',
+        'default_charset',
+        'DefaultWriter',
         'Parser',
-        'writers', 'DefaultWriter',
-        'rendersets', 'charsets', 'default_charset',
+        'rendersets',
+        'writers',
     )
 
     @classmethod
@@ -343,7 +363,7 @@ class TableStore(metaclass = LangCommonMeta):
         idx = cls._instances[notn]
         if key in idx:
             raise Emsg.DuplicateKey((notn, key))
-        return idx.setdefault(key, cls(data))
+        return idx.setdefault(key, cls(data, (notn, key)))
 
     @classmethod
     def fetch(cls: type[TbsT], notn: Notation, key: str = None, /) -> TbsT:
@@ -384,7 +404,10 @@ class TableStore(metaclass = LangCommonMeta):
             for key in cls.available(notn):
                 cls.fetch(notn, key)
 
-class RenderSet(TableStore):
+
+_RsetSectKT = _enum.Enum|tuple[_enum.Enum, bool]
+
+class RenderSet(TableStore, Mapping[str, Any]):
     'Lexical writer table data class.'
 
     default_fetch_key = 'ascii'
@@ -392,23 +415,43 @@ class RenderSet(TableStore):
     notation: Notation
     "The notation."
 
-    charset: str
-    "The charset name."
-
-    renders: Mapping[Any, Callable[..., str]]
+    renders: Mapping[_RsetSectKT, Callable[..., str]]
     "Render functions."
 
-    strings: Mapping[Any, str]
+    strings: Mapping[_RsetSectKT, str]
     "Fixed strings mapping."
 
-    data: Mapping[str, Any]
+    data: Mapping[str, Mapping[_RsetSectKT, Any]]
 
-    def __init__(self, data: Mapping[str, Any]):
+    keypair: tuple[Notation, str]
+
+    @property
+    def charset(self) -> str:
+        "The charset name."
+        return self['charset']
+
+    @property
+    def fetchkey(self) -> str:
+        return self.keypair[1]
+
+    __slots__ = (
+        '__getitem__',
+        'data',
+        'keypair',
+        'notation',
+        'renders',
+        'strings',
+        'hash',
+    )
+
+    def __init__(self, data: Mapping[str, Any], keypair: tuple[Notation, str], /):
+        self.data = data = dxopy(data, True)
+        self.__getitem__ = data.__getitem__
+        self.keypair = keypair
         self.notation = notn = Notation(data['notation'])
-        self.charset = data['charset']
         self.renders = data.get('renders', EMPTY_MAP)
         self.strings = data.get('strings', EMPTY_MAP)
-        self.data = data
+        self.hash = self._compute_hash(self)
         notn.charsets.add(self.charset)
         notn.rendersets.add(self)
 
@@ -416,6 +459,31 @@ class RenderSet(TableStore):
         if ctype in self.renders:
             return self.renders[ctype](value)
         return self.strings[ctype][value]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __reversed__(self):
+        return iter(self.data)
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return type(self) is type(other) and self.data == other.data
+
+    @classmethod
+    def _compute_hash(cls, r: RenderSet,) -> int:
+        vv = *(*r.renders.values(), *r.strings.values()),
+        ktup = *(*r.renders.keys(), *r.strings.keys()),
+        vtup = *((*v.items(),) if isinstance(v, Mapping) else v for v in vv),
+        return hash((ktup, vtup))
+
 
 #==================================================+
 #  Type aliases -- used a runtime with isinstance  |
@@ -480,3 +548,9 @@ else:
     PredsItemSpec = PredsItemRef = OperCallArg = QuantifiedItem = \
         ParseTableKey = ParseTableValue = object
 
+
+from pytableaux.lang.lex import (Atomic, Constant, LexType, Operated, Operator,
+                                 Predicate, Predicated, Quantified, Quantifier,
+                                 Variable)
+from pytableaux.lang.parsing import Parser, ParseTable
+from pytableaux.lang.writing import LexWriter
