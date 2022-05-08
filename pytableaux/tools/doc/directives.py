@@ -271,7 +271,11 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     def get_csv_data(self):
         if self.generator is None:
             return super().get_csv_data()
-        rows = self.generator.run()
+        try:
+            rows = self.generator.run()
+        except:
+            raise
+
         source = type(self.generator).__name__
         return rstutils.csvlines(rows), source
 

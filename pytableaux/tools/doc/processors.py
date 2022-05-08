@@ -19,23 +19,26 @@ pytableaux.tools.doc.processors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
-import enum
 
+import enum
 import re
-from typing import TYPE_CHECKING
+from enum import Enum
+from typing import TYPE_CHECKING, Any, cast
 
 from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Atomic
+from pytableaux.lang.lex import Atomic, Operator
 from pytableaux.logics import registry
-from pytableaux.tools.doc import (AutodocProcessor, ReplaceProcessor,
-                                  SphinxEvent, docinspect, docparts, rstutils)
+from pytableaux.tools.doc import (AutodocProcessor, ConfKey, ReplaceProcessor,
+                                  SphinxEvent, docinspect, docparts,
+                                  is_enum_member, rstutils)
+from sphinx.ext import autodoc
+from sphinx.ext.autodoc import importer
 from sphinx.util import logging
 
-
 if TYPE_CHECKING:
+    import sphinx_toolbox.more_autodoc.overloads
     from proof.tableaux import Rule
     from sphinx.application import Sphinx
-    import sphinx_toolbox.more_autodoc.overloads
     
 
 __all__ = (
@@ -47,41 +50,90 @@ __all__ = (
 
 logger = logging.getLogger(__name__)
 
-class EnumMemberValue(AutodocProcessor):
 
+
+class AttributeDocumenter(autodoc.AttributeDocumenter):
+
+    def should_suppress_value_header(self) -> bool:
+        if self.config[ConfKey.auto_skip_enum_value] and is_enum_member(self.modname, self.objpath):
+            logger.info(f'Skipping enum member value for {self.objpath}')
+            return True
+        return super().should_suppress_value_header()
+
+
+class EnumMemberValue(AutodocProcessor):
 
     on: None|AutodocProcessor.Record = None
     member: None|enum.Enum = None
 
+    namemap: dict[str, type[Enum]]
+
+    def __init__(self):
+        self.namemap = {}
+
     def applies(self):
-        rec = self.record
+        return is_enum_member(self.record.name)
+        # fullpath = self.record.name.split('.')
+        # if len(fullpath) > 2:
+        #     objpath = [fullpath[-2], fullpath[-1]]
+        #     modname = '.'.join(fullpath[0:-2])
+        #     isenum = is_enum_member(modname, objpath)
+        #     return isenum
+        # else:
+        #     return False
+        # rec = self.record
+        # obj = rec.obj
+        # if isinstance(obj, type) and issubclass(obj, Enum):
+        #     for member in obj:
+        #         self.namemap[f'{rec.name}.{member._name_}'] = obj
+        # if (enumcls := self.namemap.get(rec.name)) is not None:
 
-        if not self.on:
-            if isinstance(rec.obj, enum.EnumMeta):
-                self.on = rec
-            return
 
-        ecls = self.on.obj
 
-        if rec.name.startswith(self.on.name):
-            membname = rec.name.removeprefix(f'{self.on.name}.')
-            try:
-                self.member = ecls[membname]
-            except:
-                pass
-            else:
-                return True
-        else:
-            self.on = None
-        return False
+        #     member = self.member = enumcls(obj)
+        #     print('$MEMBER$  rec.name', rec.name, '__module__', getattr(obj, '__module__', None))#obj: ', obj, '  member: ', member)
+        #     return True
+        # return False
+
+        # if rec.obj is Operator:
+        #     print('!' * 20, rec.obj)
+
+        # if 'pytableaux.lang.lex.Operator' in rec.name:
+        #     print(
+        #         ' --- ', rec.name, ' what: ', rec.what, '  obj: ', rec.obj,
+        #         '  type(obj): ', type(rec.obj),
+        #         '  isinsta'
+        #     )
+        #     print('     on? ', bool(self.on), '  ', self.on)
+        # if not self.on:
+        #     if isinstance(rec.obj, enum.EnumMeta):
+        #         self.on = rec
+        #     return
+
+        # ecls = self.on.obj
+
+        # if rec.name.startswith(self.on.name):
+        #     membname = rec.name.removeprefix(f'{self.on.name}.')
+        #     try:
+        #         self.member = ecls[membname]
+        #     except:
+        #         pass
+        #     else:
+        #         return True
+        # else:
+        #     self.on = None
+        # print(ecls, rec.obj)
+        # return False
 
     def run(self):
-        member = self.member
-        # print(f'{type(member).__name__}  -  {member} | {member.value}')
-        # print('')
-        # print('\n'.join(self.lines))
-        # print('')
-        self.member = None
+        print('$MEMBER$  rec.name', self.record.name)
+        return
+        # member = self.member
+        # hidestr = ':meta hide-value:'
+        # if not self.hastext(hidestr):
+        #     self.lines.extend(['',hidestr,''])
+        # # print(self.lines)
+        # self.member = None
 
 class RuledocInherit(AutodocProcessor):
     'Create docstring lines for an "inheriting only" ``Rule`` class.'
@@ -192,8 +244,12 @@ def setup(app: Sphinx):
 
     app.setup_extension('sphinx.ext.autodoc')
 
+    app.add_config_value(ConfKey.auto_skip_enum_value, True, 'env')
+
+    app.add_autodocumenter(AttributeDocumenter, True)
+
     ev = 'autodoc-process-docstring'
-    app.connect(ev, EnumMemberValue())
+    app.connect(ev, EnumMemberValue(), -1)
     app.connect(ev, RuledocInherit())
     app.connect(ev, RuledocExample())
     app.connect(ev, BuildtrunkExample())

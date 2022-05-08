@@ -21,6 +21,7 @@ pytableaux.tools.doc
 ^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
+from importlib import import_module
 
 import itertools
 import os.path
@@ -28,6 +29,7 @@ import re
 import shutil
 import traceback
 from dataclasses import dataclass
+from enum import Enum
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic, Mapping,
                     Optional)
 
@@ -48,6 +50,7 @@ from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import T
+from sphinx.ext.autodoc.importer import import_object
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
@@ -139,7 +142,7 @@ def app_setup():
 
         helpers[app] = Helper(**opts)
 
-    def finish(app: Sphinx, exception: Exception|None):
+    def finish(app: Sphinx, e: Exception|None):
 
         if app.builder.format == 'html':
             for entry in app.config[ConfKey.htmlcopy]:
@@ -150,6 +153,7 @@ def app_setup():
     return setup
 
 def validate_copy_entry(entry: HtmlCopyEntry):
+
     check.inst(entry, (list, tuple))
     src, dest = entry[0:2]
     eopts = entry[2] if len(entry) > 2 else {}
@@ -158,6 +162,7 @@ def validate_copy_entry(entry: HtmlCopyEntry):
     check.inst(eopts, dict)
 
 def do_copy_entry(app: Sphinx, entry: HtmlCopyEntry):
+
     src = os.path.join(app.srcdir, entry[0])
     dest = os.path.join(app.outdir, entry[1])
     eopts = dict(entry[2]) if len(entry) > 2 else {}
@@ -175,6 +180,7 @@ def app_helper(app: Sphinx) -> Helper:
     return _helpers[app]
 
 if TYPE_CHECKING:
+
     @overload
     def role_entry(rolecls: type[T]) -> RoleItem[T]|None: ...
 
@@ -284,6 +290,7 @@ class ConfKey(str, abcs.Ebc):
     htmlcopy = 'pt_htmlcopy'
     "The config key for html copy actions."
 
+    auto_skip_enum_value = 'autodoc_skip_enum_value'
 def set_classes(opts: dict) -> dict:
     if 'class' in opts:
         if opts['class'] is None:
@@ -306,6 +313,12 @@ class RoleDirectiveMixin(abcs.Abc):
     @property
     def helper(self):
         return app_helper(self.env.app)
+
+    def current_module(self):
+        return import_module(self.env.ref_context['py:module'])
+
+    def current_class(self):
+        return getattr(self.current_module(), self.env.ref_context['py:class'])
 
     def set_classes(self, opts = NOARG, /) -> qset[str]:
         if opts is NOARG:
@@ -368,7 +381,7 @@ class BaseRole(SphinxRole, RoleDirectiveMixin):
 
         return inst
 
-class DirectiveHelper:
+class DirectiveHelper(RoleDirectiveMixin):
 
     arg_parser = staticmethod(spaceargs)
 
@@ -388,6 +401,14 @@ class DirectiveHelper:
             raise inst.error('Wrong number of arguments')
         self.arguments = args
         self.inst = inst
+
+    @property
+    def env(self):
+        return self.inst.env
+
+    @property
+    def options(self):
+        return self.inst.options
 
     @abstract
     def run(self): ...
@@ -418,6 +439,9 @@ class AutodocProcessor(Processor):
 
     __slots__ = 'app', 'lines', 'record'
 
+    def hastext(self, txt:str):
+        return txt in '\n'.join(self.lines)
+
     def applies(self):
         return True
 
@@ -442,6 +466,7 @@ class AutodocProcessor(Processor):
             s = '\n'.join(s)
         return prepare_docstring(s, ignore, tabsize)
 
+
 class ReplaceProcessor(Processor):
 
     __slots__ = (
@@ -459,6 +484,7 @@ class ReplaceProcessor(Processor):
     # See https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
     if TYPE_CHECKING:
+    
         @overload
         def __call__(self, app: Sphinx, docname: str, lines: list[str]):
             'Regex replace for source-read event.'
@@ -487,6 +513,49 @@ class ReplaceProcessor(Processor):
         self.lines = args[-1]
         self.args = args
         self.run()
+
+if TYPE_CHECKING:
+
+    @overload
+    def is_enum_member(modname: str, objpath: list[str]):
+        "Prefered method if info is available."
+
+    @overload
+    def is_enum_member(fullname: str):
+        "Fallback method that tries to guess module path."
+
+def is_enum_member(modname: str, objpath = None):
+
+    if objpath is not None:
+        importinfo = import_object(modname, objpath[0:-1])
+
+    else:
+        fullpath = modname.split('.')
+        if len(fullpath) < 3:
+            return False
+        objpath = [fullpath[-2], fullpath[-1]]
+        modname = '.'.join(fullpath[0:-2])
+        while len(modname):
+            try:
+                importinfo = import_object(modname, objpath[0:-1])
+            except ImportError:
+                parts = modname.split('.')
+                objpath.insert(0, parts.pop())
+                modname = '.'.join(parts)
+            else:
+                break
+        else:
+            return False
+
+    importobj = importinfo[-1]
+    if isinstance(importobj, type) and issubclass(importobj, Enum):
+        try:
+            _ = importobj(objpath[-1])
+        except (ValueError, TypeError) as e:
+            logger.debug(e)
+            return False
+        else:
+            return True
 
 class RoleItem(NameTuple, Generic[T]):
     name: str

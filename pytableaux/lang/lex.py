@@ -32,10 +32,10 @@ from pytableaux import _ENV, __docformat__, tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import (AtomicSpec, BiCoords, IdentType, LangCommonEnum,
                              LangCommonMeta, LexicalAbcMeta, OperandsSpec,
-                             OperatedSpec, OperCallArg, ParameterSpec,
-                             PredicatedSpec, PredicateRef, PredicateSpec,
-                             QuantifiedItem, QuantifiedSpec, SpecType,
-                             SysPredEnumMeta, TriCoords, nosetattr, raiseae)
+                             OperatedSpec, ParameterSpec, PredicatedSpec,
+                             PredicateRef, PredicateSpec, QuantifiedSpec,
+                             SpecType, SysPredEnumMeta, TriCoords, nosetattr,
+                             raiseae)
 from pytableaux.tools import MapProxy, abcs
 from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import lazy, membr, wraps
@@ -47,6 +47,8 @@ from pytableaux.tools.typing import T
 
 if TYPE_CHECKING:
     from typing import overload
+
+    from pytableaux.lang import OperCallArg, QuantifiedItem
 
 __all__ = (
     'Atomic',
@@ -560,9 +562,10 @@ class Operator(LexicalEnum):
     """Operator lexical enum class. Member definitions correspond to
     (`order`, `label`, `arity`, `libname`).
 
+    """
+    
     # .. member-table:: pytableaux.lang.lex.Operator
     #     :columns: order, label, arity, libname
-    """
 
     __slots__ = (
         'arity',
@@ -1070,7 +1073,7 @@ class Predicated(Sentence, Sequence[Parameter]):
         def __getitem__(self, s: slice, /) -> tuple[Parameter, ...]:...
 
 
-class Quantified(Sentence, Sequence[QuantifiedItem]):
+class Quantified(Sentence, Sequence[Quantifier|Variable|Sentence]):
     'Quantified sentence implementation.'
 
     def __init__(self, q: Quantifier, v: Variable, s: Sentence, /):
@@ -1361,8 +1364,12 @@ class Operated(Sentence, Sequence[Sentence]):
 class LexType(LangCommonEnum):
     """
     LexType metadata enum class for concrete types.
-    """
 
+    .. csv-table::
+        :generator: member-table
+        :generator-args: rank cls role maxi
+    
+    """
     __slots__ = (
         'rank',
         'cls',
@@ -1397,7 +1404,7 @@ class LexType(LangCommonEnum):
     #******  Members
 
     Predicate  = (_Ranks['Predicate'],  Predicate,  Predicate,     3, Predicated)
-    ":class:`Predicate` LexType."
+    """:class:`Predicate` LexType."""
 
     Constant   = (_Ranks['Constant'],   Constant,   Parameter,     3, None)
     ":class:`Constant` LexType."
@@ -1576,90 +1583,3 @@ del(
     wraps,
 )
 
-if TYPE_CHECKING:
-
-    Lexical.first()
-
-    LexicalAbc.first()
-
-    LexicalEnum.first()
-    Quantifier.first()
-    Operator.first()
-
-    CoordsItem.first()
-
-    Atomic.first().subscript
-    Atomic.first().next().subscript
-
-    Constant.first().is_constant
-    Constant.first().next().is_constant
-    Constant.first().first().is_constant
-
-    Variable.first().is_variable
-    Variable.first().next().is_variable
-
-    Parameter.first().is_variable
-
-    Predicate.first().refs
-    Predicate.first().next().refs
-
-    Predicated.first().paramset
-    Predicated.first().next().paramset
-    Predicated.first(Predicate(0,0,0)).paramset
-    Predicated.first(Predicate(0,0,0)).next().paramset
-
-    Quantified.first().quantifier
-    Quantified.first().next().quantifier
-    Quantified.first(Quantifier.Existential).quantifier
-    Quantified.first(Quantifier.Existential).next().quantifier
-
-    Quantified.first().sentence.next().negate
-    Quantified.first().sentence.first().negate
-    Quantified.first().sentence.next().next().first().negate
-
-    Operated.first().operator
-    Operated.first().next().operator
-    Operated.first(Operator.Negation).operator
-    Operated.first(Operator.Negation).next().operator
-
-    (Atomic(0,0) & Atomic(1,1)).operator
-    (Atomic(0,0) & Predicated.first()).operator
-    (Atomic(0,0) & Atomic(1,1)).operator
-    (Operated.first() & Quantified.first()).operator
-
-    (~Atomic(0,0)).operator
-
-
-    s1 = Atomic.first()
-    s1.substitute(*Constant.gen(2)).subscript
-
-    s2 = Predicated.first()
-    s2.substitute(*Constant.gen(2)).predicate
-    s2[0].is_variable
-    s2[0:1][1].is_variable
-    for s2_p1 in s2:
-        s2_p1.is_variable
-    for s2_p2 in reversed(s2):
-        s2_p2.is_variable
-    for s2_p3 in iter(s2):
-        s2_p3.is_variable
-
-    s3 = Quantified.first()
-    s3.substitute(*Constant.gen(2)).quantifier
-    s3[0].Existential
-    s3[1].is_variable
-    s3[2].negate
-    s3[0:2][1].ident
-
-    s4 = Operated.first()
-    s4.substitute(*Constant.gen(2)).operator
-
-    list(Predicate.gen(4))[0].refs
-    list(Constant.gen(4))[0].is_constant
-    list(Variable.gen(4))[0].is_variable
-    list(Operator.gen(2))[0].arity
-    list(Quantifier.gen(2))[0].name
-    list(Atomic.gen(4))[0].negate
-    list(Predicated.gen(4))[0].predicate
-    list(Quantified.gen(4))[0].quantifier
-    list(Operated.gen(4))[0].operator

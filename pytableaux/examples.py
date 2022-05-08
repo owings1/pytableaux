@@ -23,7 +23,15 @@ Example arguments
 
 from __future__ import annotations
 
-__all__ = 'aliases', 'arguments', 'argument', 'data', 'preds', 'tabiter', 'titles'
+__all__ = (
+    'aliases',
+    'argument',
+    'arguments',
+    'data',
+    'preds',
+    'tabiter',
+    'titles',
+)
 
 
 from pytableaux import tools

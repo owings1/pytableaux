@@ -21,7 +21,6 @@ pytableaux.lang
 """
 from __future__ import annotations
 
-import enum as _enum
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
                     NamedTuple, Set)
 
@@ -29,15 +28,11 @@ from pytableaux.errors import Emsg
 from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure, dxopy
 from pytableaux.tools.decorators import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import CrdT, LexAbcT, LexT, T, TbsT
+from pytableaux.tools.typing import RsetSectKT, T
 
 if TYPE_CHECKING:
     from typing import Iterator, Sequence, overload
 
-    from pytableaux.lang.lex import (Lexical, LexType, Predicate, Quantifier,
-                                     Sentence, Variable)
-    from pytableaux.lang.parsing import Parser
-    from pytableaux.lang.writing import LexWriter
     from pytableaux.tools.abcs import EnumLookup
 
 __all__ = (
@@ -53,10 +48,6 @@ __all__ = (
     'SysPredEnumMeta',
     'TableStore',
     'TriCoords',
-
-    # Attributes
-    'nosetattr',
-    'raiseae',
 
     # Type aliases
     'PredicateSpec',
@@ -83,15 +74,11 @@ __all__ = (
     'PredsItemSpec',
     'QuantifiedItem',
 
-    # Type variables
-    'CrdT',
-    'LexAbcT',
-    'LexT',
-    'TbsT',
-
     # Subpackage convenience import
+    'Argument',
     'Atomic',
     'Constant',
+    'Lexical',
     'LexType',
     'LexWriter',
     'Operated',
@@ -100,8 +87,10 @@ __all__ = (
     'ParseTable',
     'Predicate',
     'Predicated',
+    'Predicates',
     'Quantified',
     'Quantifier',
+    'Sentence',
     'Variable',
 )
 
@@ -180,9 +169,6 @@ class Notation(LangCommonEnum):
     default: ClassVar[Notation]
     "The default notation."
 
-    @abcs.abcf.after
-    def _(cls): cls.default = cls.polish
-
     charsets: setm[str]
     "All render charsets for the notation's writer classes."
 
@@ -226,7 +212,7 @@ class Notation(LangCommonEnum):
     )
 
     @classmethod
-    def get_common_charsets(cls):
+    def get_common_charsets(cls) -> list[str]:
         "Get charsets common to all notations."
         charsets: set[str] = set(
             charset
@@ -234,7 +220,7 @@ class Notation(LangCommonEnum):
                 for charset in notn.charsets
         )
         for notn in Notation:
-            charsets = charsets.intersection(notn.charsets)
+            charsets.intersection_update(notn.charsets)
         return sorted(charsets)
 
     @closure
@@ -248,25 +234,30 @@ class Notation(LangCommonEnum):
                 super().__setattr__(name, value)
         return setter
 
+    @abcs.abcf.after
+    def _(cls):
+        cls.default = cls.polish
+
+
 class Marking(LangCommonEnum):
     'Miscellaneous marking/punctuation enum.'
 
-    paren_open = abcs.eauto()
+    paren_open = 'paren_open'
     "Open parenthesis marking."
 
-    paren_close = abcs.eauto()
+    paren_close = 'paren_close'
     "Close parenthesis marking."
 
-    whitespace = abcs.eauto()
+    whitespace = 'whitespace'
     "Whitespace marking."
 
-    digit = abcs.eauto()
+    digit = 'digit'
     "Digit marking."
 
-    meta = abcs.eauto()
+    meta = 'meta'
     "Meta marking."
 
-    subscript = abcs.eauto()
+    subscript = 'subscript'
     "Subscript marking."
 
 #==========================+
@@ -352,13 +343,12 @@ class TableStore(metaclass = LangCommonMeta):
 
     default_fetch_key: ClassVar[str]
 
-    _instances: ClassVar[dict[Notation, dict[str, TbsT]]]
+    _instances: ClassVar[dict[Notation, dict[str, TableStore]]]
 
     __slots__ = EMPTY_SET
 
     @classmethod
-    def load(cls: type[TbsT], notn: Notation, key: str, data: Mapping, /) -> TbsT:
-        # check.inst(key, str)
+    def load(cls, notn: Notation, key: str, data: Mapping, /):
         notn = Notation[notn]
         idx = cls._instances[notn]
         if key in idx:
@@ -366,7 +356,7 @@ class TableStore(metaclass = LangCommonMeta):
         return idx.setdefault(key, cls(data, (notn, key)))
 
     @classmethod
-    def fetch(cls: type[TbsT], notn: Notation, key: str = None, /) -> TbsT:
+    def fetch(cls, notn: Notation, key: str = None, /):
         if key is None:
             key = cls.default_fetch_key
         notn = Notation[notn]
@@ -405,9 +395,7 @@ class TableStore(metaclass = LangCommonMeta):
                 cls.fetch(notn, key)
 
 
-_RsetSectKT = _enum.Enum|tuple[_enum.Enum, bool]
-
-class RenderSet(TableStore, Mapping[str, Any]):
+class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
     'Lexical writer table data class.'
 
     default_fetch_key = 'ascii'
@@ -415,13 +403,13 @@ class RenderSet(TableStore, Mapping[str, Any]):
     notation: Notation
     "The notation."
 
-    renders: Mapping[_RsetSectKT, Callable[..., str]]
+    renders: Mapping[RsetSectKT, Callable[..., str]]
     "Render functions."
 
-    strings: Mapping[_RsetSectKT, str]
+    strings: Mapping[RsetSectKT, str]
     "Fixed strings mapping."
 
-    data: Mapping[str, Mapping[_RsetSectKT, Any]]
+    data: Mapping[str, Mapping[RsetSectKT, Any]]
 
     keypair: tuple[Notation, str]
 
@@ -451,7 +439,7 @@ class RenderSet(TableStore, Mapping[str, Any]):
         self.notation = notn = Notation(data['notation'])
         self.renders = data.get('renders', EMPTY_MAP)
         self.strings = data.get('strings', EMPTY_MAP)
-        self.hash = self._compute_hash(self)
+        self.hash = self._compute_hash()
         notn.charsets.add(self.charset)
         notn.rendersets.add(self)
 
@@ -477,13 +465,26 @@ class RenderSet(TableStore, Mapping[str, Any]):
             return True
         return type(self) is type(other) and self.data == other.data
 
-    @classmethod
-    def _compute_hash(cls, r: RenderSet,) -> int:
-        vv = *(*r.renders.values(), *r.strings.values()),
-        ktup = *(*r.renders.keys(), *r.strings.keys()),
+    def _compute_hash(self) -> int:
+        r, s = self.renders, self.strings
+        vv = *(*r.values(), *s.values()),
+        ktup = *(*r.keys(), *s.keys()),
         vtup = *((*v.items(),) if isinstance(v, Mapping) else v for v in vv),
         return hash((ktup, vtup))
 
+    if TYPE_CHECKING:
+
+        @staticmethod
+        @overload
+        def load(notn, key, data: Mapping, /) -> RenderSet: ...
+
+        @staticmethod
+        @overload
+        def fetch(notn, key = None, /) -> RenderSet: ...
+
+if TYPE_CHECKING:
+    RenderSet.fetch(Notation.standard).strings
+    RenderSet.load(Notation.standard, 'ascii', {}).notation
 
 #==================================================+
 #  Type aliases -- used a runtime with isinstance  |
@@ -532,25 +533,33 @@ OperandsSpec = tuple[IdentType, ...]
 OperatedSpec = tuple[str, OperandsSpec]
 "Operated sentence spec type."
 
-if TYPE_CHECKING:
+from pytableaux.lang.lex import Quantifier, Sentence, Variable, Lexical
 
-    # deferred
-    PredsItemSpec = PredicateSpec | Predicate
-    PredsItemRef  = PredicateRef  | Predicate
-    OperCallArg = Iterable[Sentence] | Sentence | OperandsSpec
-    QuantifiedItem = Quantifier | Variable | Sentence
-    ParseTableKey   = LexType|Marking|type[Predicate.System]
-    ParseTableValue = int|Lexical
-else:
+ParseTableValue = int|Lexical
+"ParseTable value type."
 
-    PredicateRef = tuple|str
+QuantifiedItem = Quantifier | Variable | Sentence
+"Quantified item type."
 
-    PredsItemSpec = PredsItemRef = OperCallArg = QuantifiedItem = \
-        ParseTableKey = ParseTableValue = object
+from pytableaux.lang.lex import (Atomic, Constant, Operator,
+                                 Predicate, Predicated)
+
+PredsItemSpec = PredicateSpec | Predicate
+"Predicates store item spec."
+
+PredsItemRef  = PredicateRef  | Predicate
+"Predicates store item ref."
+
+OperCallArg = Iterable[Sentence] | Sentence | OperandsSpec
+"Operator __call__ argument."
 
 
-from pytableaux.lang.lex import (Atomic, Constant, LexType, Operated, Operator,
-                                 Predicate, Predicated, Quantified, Quantifier,
-                                 Variable)
-from pytableaux.lang.parsing import Parser, ParseTable
+from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.writing import LexWriter
+from pytableaux.lang.lex import LexType
+
+ParseTableKey   = LexType|Marking|type[Predicate.System]
+"ParseTable key type."
+
+from pytableaux.lang.lex import Operated, Quantified
+from pytableaux.lang.parsing import Parser, ParseTable

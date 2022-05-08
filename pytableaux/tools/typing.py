@@ -99,6 +99,9 @@ LogicLocatorRef = LogicLookupKey | HasModuleAttr
 #  Generic aliases     |
 #======================+
 
+RsetSectKT = _enum.Enum|tuple[_enum.Enum, bool]
+"RenderSet key type."
+
 if TYPE_CHECKING:
 
     IcmpFunc = Callable[[int, int], bool]
@@ -140,6 +143,7 @@ if TYPE_CHECKING:
     HkConnsTable = dict[type, dict[type, HkConns]]
     "Hook conns dict."
 
+
 else:
 
     IcmpFunc = KeysFunc = TargetsFn = NodeTargetsFn = NodeTargetsGen = \
@@ -179,20 +183,11 @@ Self = TypeVar('Self')
 
 # ---- Bound TypeVars
 
-CrdT = TypeVar('CrdT', bound = 'CoordsItem')
-"Bound to ``CoordsItem``"
-
 EnumT = TypeVar('EnumT', bound = _enum.Enum)
 "Bound to ``Enum``"
 
 F = TypeVar('F', bound = Callable[..., Any])
 "Bound to ``Callable``, decorator"
-
-LexAbcT = TypeVar('LexAbcT', bound = 'LexicalAbc')
-"Bound to ``LexicalAbc``"
-
-LexT = TypeVar('LexT', bound = 'Lexical')
-"Bound to ``Lexical``"
 
 LinkSeqT = TypeVar('LinkSeqT', bound = 'LinkSequence')
 "Bound to ``LinkSequence``"
@@ -229,9 +224,6 @@ SetApiT = TypeVar('SetApiT', bound = 'SetApi')
 
 SetT = TypeVar('SetT', bound = Set)
 "Bound to ``Set``"
-
-TbsT = TypeVar('TbsT', bound = 'TableStore')
-"Bound to ``TableStore``"
 
 TimT = TypeVar('TimT', bound = 'TimingCommon')
 "Bound to ``TimingCommon``"

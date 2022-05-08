@@ -112,6 +112,7 @@ autodoc_default_options = {
     # 'special-members': '__init__',
 }
 
+auto_skip_enum_value = True
 # -----------------------------
 # - sphinx_toolbox More Autodoc
 # -----------------------------

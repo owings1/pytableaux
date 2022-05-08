@@ -685,6 +685,7 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
     def _from_mapping(cls, mapping):
         keypair = (Notation.default, f'_mapping{id(mapping)}')
         return cls(mapping, keypair)
+
 del(
     abstract,
     lazy,

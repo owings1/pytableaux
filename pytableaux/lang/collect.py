@@ -26,9 +26,9 @@ import operator as opr
 from itertools import repeat
 from typing import TYPE_CHECKING, Any, Iterable, SupportsIndex
 
-from pytableaux import tools, __docformat__, EMPTY_SET
+from pytableaux import EMPTY_SET, __docformat__, tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import (LangCommonMeta, PredsItemRef, PredsItemSpec,
+from pytableaux.lang import (LangCommonMeta,
                              raiseae)
 from pytableaux.lang.lex import LexicalAbc, Predicate, Sentence
 from pytableaux.tools.abcs import abcm
@@ -40,6 +40,8 @@ from pytableaux.tools.typing import EnumDictType, IcmpFunc, IndexType
 
 if TYPE_CHECKING:
     from typing import overload
+
+    from pytableaux.lang import PredsItemRef, PredsItemSpec
 
 __all__ = (
     'Argument',
@@ -78,9 +80,13 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
             check.inst(title, str)
         self.title = title
 
-    __slots__ = 'seq', 'title', 'premises', '_hash', 
+    __slots__ = (
+        '_hash',
+        'premises',
+        'seq',
+        'title',
+    )
 
-    sentences: seqf[Sentence]
     premises: seqf[Sentence]
 
     @property
