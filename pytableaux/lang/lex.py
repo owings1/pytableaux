@@ -22,6 +22,7 @@ Lexical classes.
 """
 from __future__ import annotations
 
+import functools
 import operator as opr
 from itertools import chain, repeat
 from types import FunctionType
@@ -257,6 +258,7 @@ class Lexical:
     #******   Behaviors
 
     __delattr__ = raiseae
+
     __setattr__ = nosetattr(object, cls = LexicalAbcMeta)
     __copy__     = abcs.Ebc.__copy__
     __deepcopy__ = abcs.Ebc.__deepcopy__
@@ -271,8 +273,8 @@ class Lexical:
 
     def __init_subclass__(subcls: type[Lexical], /, *,
         lexcopy: bool = False,
-        skipnames = set(tools.dund('init_subclass')),
-        _cpnames = set(tools.dund('copy', 'deepcopy')),
+        skipnames = {tools.dund('init_subclass')},
+        _cpnames = set(map(tools.dund, ('copy', 'deepcopy'))),
         _ftypes = (classmethod, staticmethod, FunctionType),
         **kw
     ):
@@ -437,7 +439,6 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
         super()._on_init(subcls)
         for i, member in enumerate(subcls._seq):
             member.index = i
-
 
 class CoordsItem(LexicalAbc):
     """Common implementation for lexical types that are based on integer
@@ -653,7 +654,6 @@ class Operator(LexicalEnum):
             o.libname: o for o in cls if o.libname is not None
         })
 
-
 #----------------------------------------------------------
 #
 #   Abstract Sentence class.
@@ -733,6 +733,8 @@ class Sentence(LexicalAbc):
             if not isinstance(other, Sentence):
                 return NotImplemented
             return Operated(oper, (self, other))
+        # functools.update_wrapper(f, oper, ('__name__', '__annotations__'))
+        # return f
         return wraps(oper)(f)
 
     __invert__ = libopers_1()
@@ -1367,7 +1369,7 @@ class LexType(LangCommonEnum):
 
     .. csv-table::
         :generator: member-table
-        :generator-args: rank cls role maxi
+        :generator-args: name rank cls role maxi
     
     """
     __slots__ = (
@@ -1399,36 +1401,30 @@ class LexType(LangCommonEnum):
     "The member hash."
 
     classes: ClassVar[qsetf[type[Lexical]]]
-    "Ordered set of all the classes."
+    """Ordered set of all the classes.
+    
+    :meta hide-value:
+    """
 
     #******  Members
 
     Predicate  = (_Ranks['Predicate'],  Predicate,  Predicate,     3, Predicated)
-    """:class:`Predicate` LexType."""
 
     Constant   = (_Ranks['Constant'],   Constant,   Parameter,     3, None)
-    ":class:`Constant` LexType."
 
     Variable   = (_Ranks['Variable'],   Variable,   Parameter,     3, None)
-    ":class:`Variable` LexType."
 
     Quantifier = (_Ranks['Quantifier'], Quantifier, Quantifier, None, Quantified)
-    ":class:`Quantifier` LexType."
 
     Operator   = (_Ranks['Operator'],   Operator,   Operator,   None, Operated)
-    ":class:`Operator` LexType."
 
     Atomic     = (_Ranks['Atomic'],     Atomic,     Sentence,      4, None)
-    ":class:`Atomic` LexType."
 
     Predicated = (_Ranks['Predicated'], Predicated, Sentence,   None, Predicate[1])
-    ":class:`Predicated` LexType."
 
     Quantified = (_Ranks['Quantified'], Quantified, Sentence,   None, Quantifier[1])
-    ":class:`Quantified` LexType."
 
     Operated   = (_Ranks['Operated'],   Operated,   Sentence,   None, Operator[1])
-    ":class:`Operated` LexType."
 
     #******  Call Behavior
 

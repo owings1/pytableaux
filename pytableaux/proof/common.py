@@ -428,7 +428,7 @@ class Branch(SequenceApi[Node], EventEmitter):
 
         # Add to index *before* after_node_add event
         self.__index.add(node)
-        self.emit(BranchEvent.AFTER_NODE_ADD, node, self)
+        self.emit(BranchEvent.AFTER_ADD, node, self)
         return self
 
     def extend(self, nodes: Iterable[Mapping], /) -> Branch:
@@ -455,7 +455,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         if node not in self.__ticked:
             self.__ticked.add(node)
             node.ticked = True
-            self.emit(BranchEvent.AFTER_NODE_TICK, node, self)
+            self.emit(BranchEvent.AFTER_TICK, node, self)
 
     def close(self) -> Branch:
         """Close the branch. Adds a flag node and emits the `AFTER_BRANCH_CLOSE
@@ -467,7 +467,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         if not self.__closed:
             self.__closed = True
             self.append(PropMap.ClosureNode)
-            self.emit(BranchEvent.AFTER_BRANCH_CLOSE, self)
+            self.emit(BranchEvent.AFTER_CLOSE, self)
         return self
 
     def is_ticked(self, node: Node, /) -> bool:

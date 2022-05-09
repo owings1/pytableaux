@@ -292,7 +292,7 @@ class BaseSuite:
         'Return one model.'
         return self.acmm(*args, **kw)[1][0]
 
-    def rule_tab(self, rule:str|RuleT|type[RuleT], bare = False, **kw) -> tuple[RuleT, Tableau]|RuleTab:
+    def rule_tab(self, rule:str|type[RuleT], bare = False, **kw) -> tuple[RuleT, Tableau]|RuleTab:
         'Return (rule, tab) pair.'
         manual = False
         t = self.tab()

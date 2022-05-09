@@ -32,6 +32,7 @@ from pytableaux.lang import Notation
 from pytableaux.lang.writing import LexWriter
 from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure
 from pytableaux.tools.abcs import AbcMeta, abcm
+from pytableaux.tools.hybrids import qset
 from pytableaux.tools.typing import TT
 
 if TYPE_CHECKING:
@@ -215,11 +216,11 @@ class HtmlTabWriter(TemplateTabWriter):
 
     default_charsets = {notn: 'html' for notn in Notation}
 
-    defaults = dict(
+    defaults = MapProxy(dict(
         classes      = (),
         wrap_classes = (),
         inline_css   = False,
-    )
+    ))
     """Option defaults."""
 
     def write(self, tab: Tableau, /, classes: Collection[str] = None) -> str:
@@ -230,10 +231,10 @@ class HtmlTabWriter(TemplateTabWriter):
                 with `classes` option.
         """
         opts = self.opts
-        wrap_classes = ['tableau-wrapper']
-        wrap_classes.extend(opts['wrap_classes'])
-        tab_classes = ['tableau']
-        tab_classes.extend(opts['classes'])
+        wrap_classes = qset(opts['wrap_classes'])
+        wrap_classes.add('tableau-wrapper')
+        tab_classes = qset(opts['classes'])
+        tab_classes.add('tableau')
         if classes is not None:
             tab_classes.extend(classes)
         return self.render('tableau.jinja2',
@@ -274,11 +275,11 @@ class TextTabWriter(TemplateTabWriter):
 
     format = 'text'
 
-    defaults = dict(
+    defaults = MapProxy(dict(
         summary  = True,
         argument = True,
         heading  = True,
-    )
+    ))
     """Default options."""
 
     def write(self, tab: Tableau, /) -> str:

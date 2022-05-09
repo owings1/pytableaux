@@ -20,12 +20,11 @@ pytableaux.tools.doc.docparts
 
 """
 from __future__ import annotations
-from functools import wraps
+from functools import wraps, partial
 
 import html
 import reprlib
 import sys
-from importlib import import_module
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 from pytableaux.lang.collect import Argument
@@ -36,8 +35,9 @@ from pytableaux.logics import registry
 from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.proof.rules import ClosingRule, Rule
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.tools import MapProxy, closure
+from pytableaux.tools import MapProxy, closure, abstract, abcs
 from pytableaux.tools.hybrids import qset
+from pytableaux.tools.doc import Tabler
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -46,39 +46,10 @@ __all__ = (
     'lex_eg_table',
     'member_table',
     'opers_table',
-    'rule_example_tableau',
     'Reprer',
-    'Tabler',
     'trunk_example_tableau',
 )
 
-class Reprer(reprlib.Repr):
-
-    defaults = MapProxy({
-        'rstrole': 'obj',
-    })
-
-    attropts = {
-        'maxlevel', 'maxtuple', 'maxlist', 'maxarray', 'maxdict', 'maxset',
-        'maxfrozenset', 'maxdeque', 'maxstring', 'maxlong', 'maxother',
-    }
-
-    def __init__(self, **opts):
-        super().__init__()
-        self.opts = self.defaults | opts
-        for key, value in self.opts.items():
-            if key in self.attropts:
-                setattr(self, key, value)
-
-    def repr_rst_ref(self, obj, level):
-        return self._fmt_rstrole(obj.__name__)
-
-    repr_LangCommonEnumMeta = repr_LexicalAbcMeta = repr_rst_ref
-
-    def _fmt_rstrole(self, text, /, role = None):
-        if role is None:
-            role = self.opts['rstrole']
-        return f':{role}:`{text}`'
 
 def fmt_raw(obj: Any):
     "No formatting."
@@ -88,17 +59,53 @@ def fmt_literal(s: str):
     "Wrap in double backticks."
     return f'``{s}``'
 
-def rule_example_tableau(rulecls: type[Rule], /, **opts) -> Tableau:
-    "Get a rule's example tableau for documentation."
-    tab = Tableau(registry.locate(rulecls), **opts)
-    rule = tab.rules.get(rulecls)
-    if isinstance(rule, ClosingRule): # TODO: fix for closure rules
-        pass
+def fmt_ref(obj: Any, role = None):
+    if role is None:
+        role = 'obj'
+    if isinstance(obj, type):
+        role = 'class'
+        text = obj.__name__
     else:
-        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
-    b = tab.branch().extend(rule.example_nodes())
-    rule.apply(rule.target(b))
-    return tab.finish()
+        text = str(obj)
+    return f':{role}:`{text}`'
+
+class Reprer(reprlib.Repr, metaclass = abcs.AbcMeta):
+
+    defaults = MapProxy({
+        # 'rstrole': 'obj',
+    })
+
+    attropts = {
+        'maxlevel', 'maxtuple', 'maxlist', 'maxarray', 'maxdict', 'maxset',
+        'maxfrozenset', 'maxdeque', 'maxstring', 'maxlong', 'maxother',
+    }
+
+    # lexclass_types = {type(m.cls) for m in LexType}
+
+    def __init__(self, **opts):
+        super().__init__()
+        self.opts = self.defaults | opts
+        for key, value in self.opts.items():
+            if key in self.attropts:
+                setattr(self, key, value)
+
+    def repr_lexclass(self, obj, level):
+        return fmt_ref(obj, role = 'cls')
+        return self._fmt_rstrole(obj.__name__)
+
+    # repr_LangCommonEnumMeta = repr_LexicalAbcMeta = fmt_ref
+
+    # def _fmt_rstrole(self, text, /, role = None):
+    #     if role is None:
+    #         role = self.opts['rstrole']
+    #     return f':{role}:`{text}`'
+
+    @abcs.abcf.after
+    def _(cls):
+        for m in LexType:
+            setattr(cls, f'repr_{type(m.cls).__name__}', cls.repr_lexclass)
+
+# ------------------------------------------------
 
 def trunk_example_tableau(logic: Any, arg: Argument, /) -> str:
     "Get an example tableau for a logic's build_trunk for documentation."
@@ -111,6 +118,7 @@ def trunk_example_tableau(logic: Any, arg: Argument, /) -> str:
     tab.argument = arg
     return tab.finish()
 
+# ------------------------------------------------
 
 @closure
 def opers_table():
@@ -143,7 +151,7 @@ def opers_table():
         fmt_literal,
         fmt_literal,
         fmt_raw,
-        lambda s: f'{html.unescape(s)} / {html.escape(s)}',
+        fmt_raw,#lambda s: f'{html.unescape(s)} / {html.escape(s)}',
     ]
 
     def datarow(o) -> list[str]:
@@ -188,7 +196,8 @@ def opers_table():
 
             [ notn.name.capitalize(),  charset,  'NY'[canparse] ]
 
-                for (notn, charset, canparse) in sources_info()
+                for (notn, charset, canparse)
+                in sources_info()
             )
         ]
         heads = list(zip(*head_cols))
@@ -210,6 +219,7 @@ def opers_table():
 
     return build
 
+# ------------------------------------------------
 
 def lex_eg_table(columns: list[str], /, *,
     notn = 'standard', charset = 'unicode', maxtuple = 8):
@@ -234,10 +244,15 @@ def lex_eg_table(columns: list[str], /, *,
     """
     lw = LexWriter(notn, charset)
 
-    srepr = Reprer()
-    srepr.maxtuple = maxtuple
+    srepr = Reprer(maxtuple = maxtuple)
+    
 
     header = ['Type', 'Item', *columns]
+    data = [
+        [type(item), item, *map(partial(getattr, item), columns)]
+        for item in (m.cls.first() for m in LexType)
+    ]
+
     body = [
         [item.TYPE.name, lw(item),
             *map(srepr.repr, (getattr(item, name) for name in columns))
@@ -271,65 +286,34 @@ def member_table(owner: Sequence, columns: list[str], /, *, getitem = False):
 
 # ------------------------------------------------
 
-class Tabler(list[list[str]]):
-    header: list[str]
-    body: list[list[str]]
-    meta: dict[str, Any]
-    __slots__ = 'header', 'body', 'meta'
-
-    def __init__(self, body: list[list[str]], header: list[str]|None, /, **meta):
-        self.header = header
-        self.body = body
-        self.meta = meta
-        self.append(header)
-        self.extend(body)
-
-    def repr_apply(self, reprfunc: Callable, /):
-        for row in self:
-            for i, v in enumerate(row):
-                if not isinstance(v, str):
-                    row[i] = reprfunc(v)
-
-    def tb(self, tablefmt = None, *, rp = None, **kw):
-        from tabulate import tabulate as tb
-        if rp:
-            self.repr_apply(rp)
-        return tb(self.body, self.header, tablefmt, **kw)
-
-# ------------------------------------------------
-
 def setup(app: Sphinx):
     "Sphinx setup."
 
-    from pytableaux.tools.doc import DirectiveHelper, directives
+    from pytableaux.tools.doc import directives
 
-    class OperSymTable(DirectiveHelper):
-        run = staticmethod(opers_table)
 
-    class LexEgTable(DirectiveHelper):
+    class OperSymTable(directives.TableGenerator):
+
+        def gentable(self):
+            return opers_table()
+
+    class LexEgTable(directives.TableGenerator):
+
         required_arguments = 1
         optional_arguments = sys.maxsize
-        def run(self):
+
+        def gentable(self):
             return lex_eg_table(self.arguments)
 
-    class MemberTable(DirectiveHelper):
+    class MemberTable(directives.TableGenerator):
 
         required_arguments = 0
         optional_arguments = sys.maxsize
 
-        def run(self):
-            return member_table(
-                self.current_class(),
-                self.arguments
-            )
-            # self.env.ref_context['py:module']
-            # args = self.arguments
-            # if isinstance(args[0], str):
-            #     args[0] = import_module(args[0])
+        def gentable(self):
+            return member_table(self.current_class(), self.arguments)
 
-            # return member_table(*self.args)
-
-    directives.CSVTable.generators.update({
+    directives.table_generators.update({
         'lex-eg-table'   : LexEgTable,
         'oper-sym-table' : OperSymTable,
         'member-table'   : MemberTable,
@@ -344,9 +328,10 @@ def _randgen(src):
     while True:
         yield from src
 
-def prargs(*args):
+def prblock(*args):
     for arg in args:
         print(arg)
+    print('\n')
 
 def main():
     "Terminal main. Print rando tables."
@@ -354,15 +339,17 @@ def main():
     from random import shuffle
 
     import tabulate as Tb
+    from pytableaux.tools.doc.rstutils import csvlines
     from pytableaux.lang import LexType, Operator
     from tabulate import tabulate as tb
     from typing import Iterator
 
     theformats = qset(Tb.tabulate_formats)
     theformats -= {f for f in theformats if
-        'latex' in f or 'html' in f
+        'latex' in f or
+        'html' in f
     }
-    prargs('', theformats, '', '',)
+    prblock('Formats:', theformats)
     fmtit = _randgen(theformats)
    
     lexatrs = ['spec', 'ident', 'sort_tuple']
@@ -391,14 +378,20 @@ def main():
 
     for func, *args in callspec_it():
 
-        tablefmt = next(fmtit)
-        inforow = [func.__name__, tablefmt]
-        info = tb([ inforow ], tablefmt = 'fancy_outline')
-
         table = func(*args)
-        prargs(
-            info, '', '',
-            table.tb(tablefmt), '', '',
+        tablefmt = next(fmtit)
+
+        prblock(tb(
+            [
+                [func.__name__, tablefmt, ', '.join(map(repr,args))]
+            ],
+            ['function', 'format', 'args'],
+            tablefmt = 'fancy_outline'
+        ))
+
+        prblock(
+            # print(csvlines(table)), '', '',
+            table.tb(tablefmt), #'', '',
         )
 
 

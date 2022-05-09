@@ -10,7 +10,7 @@ from pytableaux.proof import TableauxSystem as TabSys
 from pytableaux.proof import filters
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import getkey
-from pytableaux.proof.helpers import FilterHelper, MaxConsts
+from pytableaux.proof.helpers import *
 from pytableaux.proof.rules import ClosingRule, NoopRule, Rule
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof.util import TabEvent, TabFlag, TabStatKey
@@ -81,13 +81,6 @@ class TestTableau(BaseSuite):
         tab.build()
         assert tab.tree.model_id
 
-    def test_getrule_returns_arg_if_rule_instance(self):
-        proof = Tableau('CPL')
-        rule = proof.rules.get('Conjunction')
-        assert isinstance(rule, Rule)
-        r = proof.rules.get(rule)
-        assert isinstance(r, Rule)
-        assert r is rule
 
     def test_after_branch_add_with_nodes_no_parent(self):
 
@@ -381,6 +374,25 @@ class TestFilters(BaseSuite):
         f.rget = getkey#gets.key()
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
+
+class TestHelper(BaseSuite):
+
+    @using(logic = 'FDE')
+    class TestEllispsisHelper(BaseSuite):
+
+        Rcls = EllipsisExampleHelper
+
+        def test_closing_rule_ellipsis(self):
+            tab = self.tab()
+            rule = tab.rules.get('DesignationClosure')
+            helper = self.Rcls(rule)
+            rule.helpers[self.Rcls] = helper
+            b = tab.branch().extend(rule.example_nodes())
+            tab.build()
+            node = b.find(helper.mynode)
+            assert node is not None
+            assert len(b) == 4
+            assert node is b[1]
 
 @using(logic = 'K')
 class Test_K_DefaultNodeFilterRule(BaseSuite):

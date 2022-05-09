@@ -9,7 +9,13 @@ L{FDE} - First Degree Entailment
 
 ------------------------
 
+.. tableau::
+  :logic: FDE
+  :argument: Modus Ponens
+  :format: text
+
 .. automodule:: pytableaux.logics.fde
+
 
     .. _fde-semantics:
 

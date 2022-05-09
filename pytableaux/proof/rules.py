@@ -27,9 +27,7 @@ from pytableaux.lang.lex import (Constant, Operated, Operator, Predicate,
                                  Predicated, Quantified, Quantifier, Sentence)
 from pytableaux.proof import filters
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
-                                      MaxConsts, NodeConsts, NodeCount,
-                                      PredNodes, QuitFlag)
+
 from pytableaux.proof.tableaux import Rule
 from pytableaux.proof.util import adds, group
 from pytableaux.tools import abstract
@@ -53,22 +51,6 @@ __all__ = (
 
 FIRST_CONST_SET = frozenset({Constant.first()})
 
-class NoopRule(Rule):
-    "Rule stub that does not apply."
-
-    def _get_targets(self, branch: Branch, /) -> None:
-        "Returns ``None``."
-        return None
-
-    def _apply(self, target: Target, /):
-        "Noop apply."
-        pass
-
-    @staticmethod
-    def example_nodes():
-        "Returns empty set."
-        return EMPTY_SET
-
 class ClosingRule(Rule):
     'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
     
@@ -84,6 +66,27 @@ class ClosingRule(Rule):
         """For calculating a target's closure score.
         """
         raise NotImplementedError
+
+from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
+                                      MaxConsts, NodeConsts, NodeCount,
+                                      PredNodes, QuitFlag)
+
+
+class NoopRule(Rule):
+    "Rule stub that does not apply."
+
+    def _get_targets(self, branch: Branch, /) -> None:
+        "Returns ``None``."
+        return None
+
+    def _apply(self, target: Target, /):
+        "Noop apply."
+        pass
+
+    @staticmethod
+    def example_nodes():
+        "Returns empty set."
+        return EMPTY_SET
 
 class BaseClosureRule(ClosingRule):
 

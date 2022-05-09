@@ -23,14 +23,12 @@ from __future__ import annotations
 import functools
 from copy import copy
 from itertools import filterfalse
-from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping,
+from typing import (TYPE_CHECKING, Any, Iterable, Iterator, Mapping,
                     Sequence)
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
-from pytableaux.proof import RuleHelper, filters
-from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import Rule
+from pytableaux.proof import RuleHelper, filters, Branch, Node, Target, Rule
 from pytableaux.proof.util import Access, RuleAttr, RuleEvent, TabEvent
 from pytableaux.tools import MapProxy, abstract, closure
 from pytableaux.tools.abcs import abcm, Copyable
@@ -50,6 +48,7 @@ __all__ = (
     'AdzHelper',
     'AplSentCount',
     'BranchTarget',
+    'EllipsisExampleHelper',
     'FilterHelper',
     'MaxConsts',
     'MaxWorlds',
@@ -570,7 +569,7 @@ class FilterHelper(FilterNodeCache):
         "``RuleHelper`` init hook. Verify and merge the `NodeFilters` attribute."
         super().__init_ruleclass__(rulecls, **kw)
         attr = RuleAttr.NodeFilters
-        values = abcm.merge_mroattr(rulecls, attr, supcls = Rule,
+        values = abcm.merge_attr(rulecls, attr, supcls = Rule,
             reverse = False,
             default = EMPTY_QSET,
             transform = qsetf,
@@ -891,15 +890,17 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
 
 # --------------------------------------------------
 
+from pytableaux.proof.rules import ClosingRule
+
 class EllipsisExampleHelper:
-    # TODO: fix for closure rules
+
     mynode = {'ellipsis': True}
     closenodes = []
 
     def __init__(self, rule: Rule,/):
         self.rule = rule
         self.applied: set[Branch] = set()
-        from pytableaux.proof.rules import ClosingRule
+        
         self.isclosure = isinstance(rule, ClosingRule)
         if self.isclosure:
             self.closenodes = list(
@@ -942,16 +943,9 @@ class EllipsisExampleHelper:
     def __before_apply(self, target: Target):
         if self.applied:
             return
-        if self.isclosure:#self.rule.is_closure:
+        if self.isclosure:
             return
-        if False and target.get('adds'):
-            print(target['adds'])
-            adds = list(target['adds'])
-            adds[0] = tuple([self.mynode] + list(adds[0]))
-            target._Target__data['adds'] = adds
-            self.applied.add(target.branch)
-        else:
-            self.__addnode(target.branch)
+        self.__addnode(target.branch)
 
     def __addnode(self, branch: Branch):
         self.applied.add(branch)

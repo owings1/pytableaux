@@ -178,7 +178,11 @@ class check:
 
     @staticmethod
     def subcls(cls: type, typeinfo: _T) -> _T:
-        if not issubclass(cls, typeinfo):
+        try:
+            issub = issubclass(cls, typeinfo)
+        except TypeError:
+            issub = False
+        if not issub:
             raise Emsg.SubclsCheck(cls, typeinfo)
         return cls
 

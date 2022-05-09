@@ -30,7 +30,7 @@ import shutil
 import traceback
 from dataclasses import dataclass
 from enum import Enum
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic, Mapping,
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Container, Generic, Mapping,
                     Optional)
 
 import jinja2
@@ -38,6 +38,7 @@ import sphinx.directives
 from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.roles import _roles
+from pytableaux import logics
 from pytableaux.errors import check
 from pytableaux.lang import Notation
 from pytableaux.lang.collect import Predicates
@@ -86,8 +87,12 @@ __all__ = (
     'role_name',
     'RoleItem',
     'SphinxEvent',
+    'Tabler',
 )
 
+NOARG = object()
+
+# ------------------------------------------------
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +101,8 @@ _helpers: Mapping[Sphinx, Helper] = None
 
 def spaceargs(arg: str, /) -> list[str]:
     return arg.strip().split(' ')
+
+# ------------------------------------------------
 
 @closure
 def app_setup():
@@ -152,6 +159,8 @@ def app_setup():
 
     return setup
 
+# ------------------------------------------------
+
 def validate_copy_entry(entry: HtmlCopyEntry):
 
     check.inst(entry, (list, tuple))
@@ -175,9 +184,13 @@ def do_copy_entry(app: Sphinx, entry: HtmlCopyEntry):
             eopts['ignore'] = shutil.ignore_patterns(*ignore)
     shutil.copytree(src, dest, **eopts)
 
+# ------------------------------------------------
+
 def app_helper(app: Sphinx) -> Helper:
     'Get the helper instance from the Sphinx app instance'
     return _helpers[app]
+
+# ------------------------------------------------
 
 if TYPE_CHECKING:
 
@@ -217,6 +230,8 @@ def role_instance(roleish: type[T]) -> T|None:
 def role_name(roleish: type|RoleFunction) -> str|None:
     'Get loaded role name, by name, instance or type.'
     return role_entry(roleish).name
+
+# ------------------------------------------------
 
 class Helper(abcs.Abc):
 
@@ -276,10 +291,14 @@ class Helper(abcs.Abc):
         "Render a jinja2 template from the template path."
         return self.jenv.get_template(template).render(*args, **kw)
 
+# ------------------------------------------------
+
 class SphinxEvent(str, abcs.Ebc):
     'Custom Sphinx event names.'
 
     IncludeRead = 'include-read'
+
+# ------------------------------------------------
 
 class ConfKey(str, abcs.Ebc):
     'Custom config keys.'
@@ -291,6 +310,7 @@ class ConfKey(str, abcs.Ebc):
     "The config key for html copy actions."
 
     auto_skip_enum_value = 'autodoc_skip_enum_value'
+
 def set_classes(opts: dict) -> dict:
     if 'class' in opts:
         if opts['class'] is None:
@@ -303,12 +323,17 @@ def set_classes(opts: dict) -> dict:
 
 NOARG = object()
 
+# ------------------------------------------------
+
 class RoleDirectiveMixin(abcs.Abc):
 
     env: BuildEnvironment
     option_spec: ClassVar[Mapping[str, Callable]] = EMPTY_MAP
 
     options: dict[str, Any]
+
+    @abstract
+    def run(self): ...
 
     @property
     def helper(self):
@@ -319,6 +344,9 @@ class RoleDirectiveMixin(abcs.Abc):
 
     def current_class(self):
         return getattr(self.current_module(), self.env.ref_context['py:class'])
+
+    def current_logic(self):
+        return logics.registry(self.current_module())
 
     def set_classes(self, opts = NOARG, /) -> qset[str]:
         if opts is NOARG:
@@ -332,18 +360,50 @@ class RoleDirectiveMixin(abcs.Abc):
         if optspec.get('classes', None) is classopt:
             if 'classes' in set_classes(todo):
                 builder['classes'] = todo.pop('classes')
-        try:
-            builder.update({
-                key: optspec[key](value)
-                for key, value in todo.items()
-            })
-        except KeyError:
-            raise
+        builder.update({
+            key: optspec[key](value)
+            for key, value in todo.items()
+        })
         return builder
+
+# ------------------------------------------------
 
 class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
 
     arguments: list[str]
+
+# ------------------------------------------------
+
+class DirectiveHelper(RoleDirectiveMixin):
+
+    arg_parser = staticmethod(spaceargs)
+
+    required_arguments = 0
+    optional_arguments = 0
+
+    inst: BaseDirective
+    arguments: list[str]
+
+    def __init__(self, inst: BaseDirective, rawarg: str, /):
+        if rawarg is None:
+            args = []
+        else:
+            args = self.arg_parser(rawarg)
+        n = len(args)
+        if n < self.required_arguments or n > self.optional_arguments:
+            raise inst.error('Wrong number of arguments')
+        self.arguments = args
+        self.inst = inst
+
+    @property
+    def env(self):
+        return self.inst.env
+
+    @property
+    def options(self):
+        return self.inst.options
+
+# ------------------------------------------------
 
 class BaseRole(SphinxRole, RoleDirectiveMixin):
 
@@ -381,37 +441,7 @@ class BaseRole(SphinxRole, RoleDirectiveMixin):
 
         return inst
 
-class DirectiveHelper(RoleDirectiveMixin):
-
-    arg_parser = staticmethod(spaceargs)
-
-    required_arguments = 0
-    optional_arguments = 0
-
-    inst: BaseDirective
-    arguments: list[str]
-
-    def __init__(self, inst: BaseDirective, rawarg: str, /):
-        if rawarg is None:
-            args = []
-        else:
-            args = self.arg_parser(rawarg)
-        n = len(args)
-        if n < self.required_arguments or n > self.optional_arguments:
-            raise inst.error('Wrong number of arguments')
-        self.arguments = args
-        self.inst = inst
-
-    @property
-    def env(self):
-        return self.inst.env
-
-    @property
-    def options(self):
-        return self.inst.options
-
-    @abstract
-    def run(self): ...
+# ------------------------------------------------
 
 class Processor(abcs.Abc):
 
@@ -426,6 +456,8 @@ class Processor(abcs.Abc):
     @abstract
     def run(self) -> None:
         raise NotImplementedError
+
+# ------------------------------------------------
 
 class AutodocProcessor(Processor):
 
@@ -466,6 +498,7 @@ class AutodocProcessor(Processor):
             s = '\n'.join(s)
         return prepare_docstring(s, ignore, tabsize)
 
+# ------------------------------------------------
 
 class ReplaceProcessor(Processor):
 
@@ -514,6 +547,8 @@ class ReplaceProcessor(Processor):
         self.args = args
         self.run()
 
+# ------------------------------------------------
+
 if TYPE_CHECKING:
 
     @overload
@@ -557,9 +592,42 @@ def is_enum_member(modname: str, objpath = None):
         else:
             return True
 
+# ------------------------------------------------
+
+class Tabler(list[list[str]]):
+
+    header: list[str]
+    body: list[list[str]]
+    meta: dict[str, Any]
+
+    __slots__ = 'header', 'body', 'meta'
+
+    def __init__(self, body: list[list[str]], header: list[str]|None, /, **meta):
+        self.header = header
+        self.body = body
+        self.meta = meta
+        self.append(header)
+        self.extend(body)
+
+    def repr_apply(self, reprfunc: Callable, /):
+        for row in self:
+            for i, v in enumerate(row):
+                if not isinstance(v, str):
+                    row[i] = reprfunc(v)
+
+    def tb(self, tablefmt = None, *, rp = None, **kw):
+        from tabulate import tabulate as tb
+        if rp:
+            self.repr_apply(rp)
+        return tb(self.body, self.header, tablefmt, **kw)
+
+# ------------------------------------------------
+
 class RoleItem(NameTuple, Generic[T]):
     name: str
     inst: T
+
+# ------------------------------------------------
 
 HtmlCopyEntry = tuple[str, str, Optional[dict]]
 
@@ -616,5 +684,14 @@ def attrsopt(arg: str, /) -> list[str]:
     "list of attr-like names"
     return re_nonslug_plus.sub(' ', arg).split(' ')
 
+def choiceopt(choices: Container, /):
+    'Option spec builder for choices.'
+    def opt(arg: str, /) -> str:
+        if arg not in choices:
+            raise ValueError(arg)
+        return arg
+    return opt
 
 del(class_option)
+
+# ------------------------------------------------

@@ -186,7 +186,7 @@ class LexWriter(metaclass = LexWriterMeta):
     def __init_subclass__(subcls: type[LexWriter], **kw):
         'Merge and freeze method map from mro. Sync ``__call__()``.'
         super().__init_subclass__(**kw)
-        abcm.merge_mroattr(
+        abcm.merge_attr(
             subcls, '_methodmap', supcls = __class__, transform = MapProxy
         )
         subcls.__call__ = subcls.write

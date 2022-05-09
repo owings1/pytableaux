@@ -21,10 +21,11 @@ pytableaux.tools
 """
 from __future__ import annotations
 
+import functools
 import keyword
 import re
 from abc import abstractmethod as abstract
-from types import MappingProxyType
+from types import MappingProxyType, FunctionType
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Literal, Mapping
 
 from pytableaux import __docformat__
@@ -43,8 +44,13 @@ __all__ = (
 )
 
 def closure(func: Callable[..., T]) -> T:
-    'Closure decorator calls the argument and returns its return value.'
-    return func()
+    """Closure decorator calls the argument and returns its return value.
+    If the return value is a function, updates its wrapper.
+    """
+    ret = func()
+    if type(ret) is FunctionType:
+        functools.update_wrapper(ret, func)
+    return ret
 
 def classalias(orig: type[T]) -> Callable[[type], type[T]]:
     """Decorator factory for class alias for type hinting.
@@ -73,7 +79,7 @@ if TYPE_CHECKING:
 
 MapProxy = MappingProxyType
 EMPTY_MAP = MapProxy({})
-
+NOARG = object
 @closure
 def classns():
 
@@ -199,13 +205,17 @@ def key0(obj: Any) -> Any:
     'Get key/subscript ``0``.'
     return obj[0]
 
+def key1(obj: Any) -> Any:
+    'Get key/subscript ``1``.'
+    return obj[1]
+
 def noinit(slf: Any = None):
     'Raise `TypeError`.'
     raise TypeError
 
-def dund(*names:str) -> Iterator[str]:
-    "Convert names to dunder format."
-    return map('__{}__'.format, names)
+def dund(name:str) -> Iterator[str]:
+    "Convert name to dunder format."
+    return name if isdund(name) else f'__{name}__'
 
 def isdund(name: str) -> bool:
     'Whether the string is a dunder name string.'
@@ -239,6 +249,13 @@ def sbool(arg: str, /) -> bool:
     "Cast string to boolean, leans toward ``False``."
     return bool(re_boolyes.match(arg))
 
+def getitem(obj, key, default = NOARG, /):
+    try:
+        return obj[key]
+    except (KeyError, IndexError):
+        if default is NOARG:
+            raise
+        return default
 
 @closure
 def dxopy():

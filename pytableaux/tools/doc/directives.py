@@ -22,25 +22,27 @@ from __future__ import annotations
 
 from collections import ChainMap
 from importlib import import_module
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import sphinx.directives.other
 import sphinx.directives.patches
 from docutils import nodes
-from pytableaux import examples, logics, models
-from pytableaux.lang import Notation
+from pytableaux import examples, logics, models, tools
+from pytableaux.lang import Notation, Argument
 from pytableaux.lang.lex import Operator
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import rules, tableaux, writers
+from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.tools.doc import (BaseDirective, DirectiveHelper, SphinxEvent,
-                                  attrsopt, boolopt, classopt, docparts,
+                                  boolopt, classopt, choiceopt, docparts,
                                   opersopt, predsopt, re_comma, rstutils,
                                   stropt)
 from sphinx.util import logging
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
+    from pytableaux.tools.doc.docparts import Tabler
 
 __all__ = (
     'CSVTable',
@@ -56,7 +58,20 @@ logger = logging.getLogger(__name__)
 #    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
 
-divclear_rawhtml = '<div class="clear"></div>'
+class TableGenerator(DirectiveHelper):
+    'Table generator directive helper.'
+
+    @tools.abstract
+    def gentable(self) -> Tabler: ...
+
+    def run(self):
+        table = self.gentable()
+        opts = self.options
+        opts.setdefault('header-rows', len(table.header))
+        return table
+
+table_generators: dict[str, TableGenerator] = {}
+"Table generator registry."
 
 
 class Clear(BaseDirective):
@@ -72,76 +87,116 @@ class Clear(BaseDirective):
 class Tableaud(BaseDirective):
     """Tableau directive.
     
-    Example::
-
-        .. tableau:: CFOL.Conjunction
+    For rule example::
 
         .. tableau::
-             :logic: FDE
-             :example: Modus Ponens
+            :logic: CFOL
+            :rule: Conjunction
+
+    For an argument::
 
         .. tableau::
              :logic: FDE
              :conclusion: B
              :premises: A, A > B
+
+        .. tableau::
+             :logic: FDE
+             :argument: Modus Ponens
     """
 
     optional_arguments = 1
 
     option_spec = dict(
         logic = logics.registry,
-        example = examples.argument,
+
+        argument = examples.argument,
         conclusion = stropt,
         premises = re_comma.split,
         pnotn = Notation,
         preds = predsopt,
+
+        rule = stropt,
+
+        format = choiceopt(writers.registry),
         wnotn = Notation,
+
         classes = classopt,
     )
 
-    opts_with_args = {'wnotn', 'classes'}
+    opts_for_argument = {'argument', 'conclusion', 'premises', 'pnotn', 'preds'}
 
     def run(self):
 
-        classes = self.set_classes()
         opts = self.options
-        ochain = ChainMap(opts, self.helper.opts)
+        opts['classes'] = classes = self.set_classes()
 
-        if len(self.arguments):
-            badopts = set(opts) - self.opts_with_args
-            if badopts:
-                raise self.error(
-                    f'Option not allowed with arguments: {badopts}')
-
-            rulestr, = self.arguments
-            try:
-                logic, rulename = rulestr.split('.')
-                logic = logics.registry(logic)
-                rule = getattr(logic.TabRules, rulename)
-            except Exception as e:
-                logger.error(e)
-                raise self.error(f'Bad rule argument: {rulestr}')
-
-            classes.extend(('example', 'rule'))
-            if issubclass(rule, rules.ClosingRule):
-                classes.append('closure')
-            tab = docparts.rule_example_tableau(rule)
-
+        if 'rule' in opts:
+            if (badopts := self.opts_for_argument & set(opts)):
+                raise self.error(f"Option not allows with 'rule': {badopts}")
+            tab = self.gettab_rule()
         else:
-            parser = Parser(ochain['pnotn'], ochain['preds'])
-            try:
-                if 'example' in opts:
-                    arg = opts['example']
-                    if 'conclusion' in opts:
-                        raise self.error(f"'conclusion' not allowed with 'example'")
-                else:
-                    arg = parser.argument(opts['conclusion'], opts.get('premises'))
-                tab = tableaux.Tableau(opts['logic'], arg)
-            except KeyError as e:
-                raise self.error(f'Missing required option: {e}')
+            tab = self.gettab_argument()
 
-        pw = writers.TabWriter('html', ochain['wnotn'], classes = classes)
-        return [nodes.raw(format = 'html', text = pw(tab.build()))]
+        tab.build()
+
+        wnotn = opts.get('wnotn', self.helper.opts['wnotn'])
+        wfmt = opts.get('format', 'html')
+        writer = writers.TabWriter(wfmt, wnotn, classes = classes)
+
+        output = writer(tab)
+
+        if wfmt == 'html':
+            return [nodes.raw(format = 'html', text = output)]
+        else:
+            classes |= 'tableau',
+            return [nodes.literal_block(text = output, classes = classes)]
+
+    def gettab_rule(self):
+
+        opts = self.options
+        classes = opts['classes']
+        classes |= ['rule', 'example']
+
+        try:
+            tab = tableaux.Tableau(opts['logic'])
+            ref: str = opts['rule']
+            rule = tab.rules.get(ref)
+            
+        except KeyError as e:
+            raise self.error(f'Missing required option: {e}')
+        except AttributeError as e:
+            logger.error(e)
+            raise self.error(f'Bad rule: {e}')
+
+        if isinstance(rule, rules.ClosingRule):
+            classes |= ['closure']
+        else:
+            rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
+
+        tab.branch().extend(rule.example_nodes())
+
+        # rule.apply(rule.target(b))
+        return tab
+
+    def gettab_argument(self):
+
+        opts = self.options
+        arg: Argument
+        try:
+            logic = opts['logic']
+            if 'argument' in opts:
+                if (badopts := ({'conclusion', 'premises'} & set(opts))):
+                    raise self.error(f"Option not allows with 'argument': {badopts}")
+                arg = opts['argument']
+            else:
+                ochain = ChainMap(opts, self.helper.opts)
+                parser = Parser(ochain['pnotn'], ochain['preds'])
+                arg = parser.argument(opts['conclusion'], opts.get('premises'))
+        except KeyError as e:
+            raise self.error(f'Missing required option: {e}')
+
+        return tableaux.Tableau(logic, arg)
 
 class TruthTable(BaseDirective):
     'Truth table (raw html).'
@@ -185,7 +240,7 @@ class TruthTable(BaseDirective):
         context = dict(table = table, lw = lw, classes = classes)
         content = helper.render(template, context)
         if clear:
-            content += divclear_rawhtml
+            content += '<div class="clear"></div>'
 
         return [nodes.raw(format = 'html', text = content)]
 
@@ -235,7 +290,7 @@ class TruthTables(BaseDirective):
         )
         content = '\n'.join(renders)
         if clear:
-            content += divclear_rawhtml
+            content += '<div class="clear"></div>'
 
         return [nodes.raw(format = 'html', text = content)]
 
@@ -243,10 +298,9 @@ class TruthTables(BaseDirective):
 class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     "Override csv-table to allow generator function."
 
-    generators: dict[str, DirectiveHelper] = {}
-
+    generator: TableGenerator|None
     option_spec = dict(sphinx.directives.patches.CSVTable.option_spec) | {
-        'generator'      : generators.__getitem__,
+        'generator'      : table_generators.__getitem__,
         'generator-args' : stropt,
         'classes'        : classopt,
     }
@@ -271,42 +325,12 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     def get_csv_data(self):
         if self.generator is None:
             return super().get_csv_data()
-        try:
-            rows = self.generator.run()
-        except:
-            raise
-
+        
+        table = self.generator.run()
         source = type(self.generator).__name__
-        return rstutils.csvlines(rows), source
 
+        return rstutils.csvlines(table), source
 
-class MemberTable(CSVTable):
-
-    option_spec = CSVTable.option_spec | dict(
-        columns = attrsopt,
-    )
-    defaults = {
-        'header-rows' : 1,
-        'widths'      : 'auto',
-    }
-    required_arguments = 1
-
-    def run(self):
-
-        objref = self.arguments[0].strip()
-
-        obj = import_module(objref)
-        classes = self.set_classes()
-
-
-        members = list(obj)
-        headers = keys = self.options['columns']
-
-        getter = getattr
-        data = [
-            list(getter(member, key) for key in keys)
-            for member in members
-        ]
 
 class Include(sphinx.directives.other.Include, BaseDirective):
     "Override include directive that allows the app to modify content via events."
@@ -333,4 +357,3 @@ def setup(app: Sphinx):
     app.add_directive('tableau', Tableaud)
     app.add_directive('truth-table', TruthTable)
     app.add_directive('truth-tables', TruthTables)
-    

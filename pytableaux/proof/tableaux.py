@@ -24,6 +24,7 @@ pytableaux.proof.tableaux
 """
 from __future__ import annotations
 
+import functools
 import operator as opr
 from collections import deque
 from collections.abc import Set
@@ -37,10 +38,11 @@ from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
 from pytableaux.proof import RuleHelper, RuleMeta
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.util import (BranchEvent, BranchStat, RuleEvent,
-                                   RuleFlag, StepEntry, TabEvent, TabFlag,
-                                   TabStatKey, TabTimers)
-from pytableaux.tools import abstract, closure, isstr
+from pytableaux.proof.util import (BranchEvent, BranchStat, HelperAttr, RuleAttr, RuleEvent,
+                                   RuleState, StepEntry, TabEvent, TabFlag,
+                                   TabStatKey, TabTimers, RuleClassFlag)
+from pytableaux.tools import EMPTY_MAP, abstract, closure, isstr
+from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
@@ -78,15 +80,16 @@ NOGET = object()
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
 
-    _defaults: ClassVar[Mapping[str, Any]] = dict(
+    _defaults: ClassVar[Mapping[str, Any]] = MapProxy(dict(
         is_rank_optim = True,
         nolock = False,
-    )
-    _optkeys: ClassVar[setf[str]]
+    ))
+    _optkeys: ClassVar[setf[str]] = setf(_defaults)
 
+    FLAGS: ClassVar[RuleClassFlag] = RuleClassFlag(0)
     Helpers: ClassVar[qsetf[type[RuleHelper]]] = EMPTY_QSET
     "Helper classes."
-
+    Helpers2 = EMPTY_QSET
     Timers: ClassVar[qsetf[str]] = qsetf(('search', 'apply'))
     "StopWatch names to create in ``timers`` mapping."
 
@@ -117,11 +120,11 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     history: Sequence[Target]
     "The targets applied to."
 
-    flag: RuleFlag
+    state: RuleState
     "The state bit flag."
 
     __slots__ = setf(
-        ('tableau', 'helpers', 'timers', 'opts', 'history', 'flag', '__getitem__')
+        ('tableau', 'helpers', 'timers', 'opts', 'history', 'state', '__getitem__')
     )
 
     __iter__ = None
@@ -133,7 +136,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     def __new__(cls, *args, **kw):
         inst = super().__new__(cls)
-        object.__setattr__(inst, 'flag', RuleFlag.NONE)
+        object.__setattr__(inst, 'state', RuleState.NONE)
         return inst
 
     def __init__(self, tableau: Tableau, /, **opts):
@@ -172,7 +175,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         # flag/lock
         if not self.opts['nolock']:
             tableau.once(TabEvent.AFTER_BRANCH_ADD, self.__lock)
-        self.flag |= RuleFlag.INIT
+        self.state |= RuleState.INIT
 
     @abstract
     def _get_targets(self, branch: Branch, /) -> Sequence[Target]|None:
@@ -258,11 +261,11 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     @closure
     def __setattr__(*, slots = __slots__):
-        LockedVal = RuleFlag.LOCKED.value
+        LockedVal = RuleState.LOCKED.value
         protected: Callable[[str], bool] = slots.__contains__
         def fset(self: Rule, name, value, /):
-            flagv = self.flag.value
-            if flagv and flagv & LockedVal == flagv and protected(name):
+            statev = self.state.value
+            if statev and statev & LockedVal == statev and protected(name):
                 raise Emsg.ReadOnly(self, name)
             super().__setattr__(name, value)
         return fset
@@ -280,15 +283,15 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     @closure
     def __lock():
         sa = object.__setattr__
-        LockedVal = RuleFlag.LOCKED.value
+        LockedVal = RuleState.LOCKED.value
         def lock(self: Rule, *_):
-            flagv = self.flag.value
-            newval = flagv | LockedVal
-            if newval == flagv:
+            statev = self.state.value
+            newval = statev | LockedVal
+            if newval == statev:
                 raise Emsg.IllegalState('Already locked')
             sa(self, 'helpers', MapProxy(self.helpers))
             sa(self, 'timers' , MapProxy(self.timers))
-            sa(self, 'flag'   , RuleFlag(newval))
+            sa(self, 'state'   , RuleState(newval))
         return lock
 
     def __extend_targets(self, targets: Sequence[Target], /):
@@ -330,6 +333,72 @@ class Rule(EventEmitter, metaclass = RuleMeta):
                 return target
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
+
+    # def __init_subclass__(subcls, **kw):
+    #     super().__init_subclass__(**kw)
+
+    #     cls = __class__
+    #     mcls = type(cls)
+    #     print(':clas:', subcls)
+    #     # mromerge = abcm.merge_attr
+    #     subcls.Helpers2 = abcm.merged_attr(subcls, RuleAttr.Helpers, mcls = mcls,
+    #         default = EMPTY_QSET, transform = qsetf,
+    #     )
+    #     if False and subcls.Helpers != Helpers:
+    #         print('-'*20)
+    #         print(subcls)
+    #         print('-'*5)
+    #         print(Helpers)
+    #         print('-'*5)
+    #         print(subcls.Helpers)
+    #         print('-'*20)
+    #     if False:
+    #         setattr(subcls, RuleAttr.Name, subcls.__name__)
+
+    #         ancs = list(abcm.mroiter(subcls, supcls = cls))
+    #         flagsmap = {anc: anc.FLAGS for anc in ancs}
+    #         subcls.FLAGS = functools.reduce(opr.or_, flagsmap.values(), cls.FLAGS)
+
+    #         # Helpers
+    #         Helpers2 = abcm.merged_attr(subcls, RuleAttr.Helpers, mcls = mcls,
+    #             default = EMPTY_QSET, transform = qsetf,
+    #         )
+    #         Helpers = mromerge(subcls, RuleAttr.Helpers, supcls = cls,
+    #             default = EMPTY_QSET, transform = qsetf,
+    #         )
+    #         if Helpers != Helpers2:
+    #             print(Helpers)
+    #             print(Helpers2)
+    #             print(subcls)
+    #             print(list(abcm.mroiter(subcls, supcls = cls)))
+    #             print(list(abcm.mroiter(subcls, mcls = cls)))
+    #         for Helper in Helpers:
+    #             check.subcls(Helper, RuleHelper)
+    #             kwopts = kw.pop(Helper.__name__, EMPTY_MAP)
+    #             finit = getattr(Helper, HelperAttr.InitRuleCls, None)
+    #             # if kwopts or finit is not None:
+    #             if finit is not None:
+    #                 finit(subcls, **kwopts)
+
+
+    #         defaults2 = abcm.merged_attr(subcls, RuleAttr.DefaultOpts, mcls = mcls,
+    #             default = dmap(), transform = MapProxy,
+    #         )
+
+    #         defaults = mromerge(subcls, RuleAttr.DefaultOpts, supcls = cls,
+    #             default = dmap(), transform = MapProxy,
+    #         )
+    #         # if defaults != defaults2:
+    #         #     print(defaults)
+    #         #     print(defaults2)
+    #         #     print(subcls)
+    #         #     print(list(abcm.mroiter(subcls, supcls = cls)))
+    #         #     print(list(abcm.mroiter(subcls, mcls = cls)))
+    #         setattr(subcls, RuleAttr.OptKeys, setf(defaults))
+
+    #         mromerge(subcls, RuleAttr.Timers, supcls = cls,
+    #             default = EMPTY_QSET, transform = qsetf,
+    #         )
 
 # ----------------------------------------------
 
@@ -385,8 +454,8 @@ class TabRuleGroups(SequenceApi[Rule]):
         self._ruleindex.clear()
         self._groupindex.clear()
 
-    def get(self, ref:str|RuleT|type[RuleT], default = NOARG, /) -> RuleT:
-        'Get a rule instance by name, class, or instance of same type.'
+    def get(self, ref: type[RuleT]|str, default = NOARG, /) -> RuleT:
+        'Get a rule instance by name or type.'
         return self._ruleindex_get(self._ruleindex, ref, default)
 
     def names(self) -> list[str]:
@@ -451,27 +520,13 @@ class TabRuleGroups(SequenceApi[Rule]):
             raise Emsg.DuplicateKey(name)
 
     @staticmethod
-    def _ruleindex_get(
-        idx: Mapping[str, Rule], ref: str|RuleT|type[RuleT], default = NOARG, /
-    ) -> RuleT:
-        '''Retrieve a rule instance from the given index, by name, type,
-        or instance of same type.
+    def _ruleindex_get(idx: Mapping[str, Rule], ref: str|type[RuleT], default = NOARG, /) -> RuleT:
+        '''Retrieve a rule instance from the given index, by name or type.
         '''
         try:
             if isinstance(ref, str):
                 return idx[ref]
-            if isinstance(ref, type):
-                rule = idx[check.subcls(ref, Rule).__name__]
-                if ref is type(rule):
-                    return rule
-                raise KeyError
-            if isinstance(ref, Rule):
-                refcls = type(ref)
-                rule = idx[refcls.__name__]
-                if refcls is type(rule):
-                    return rule
-                raise KeyError
-            raise Emsg.InstCheck(ref, (str, type, Rule))
+            return idx[check.subcls(ref, Rule).__name__]
         except KeyError:
             if default is not NOARG:
                 return default
@@ -550,11 +605,11 @@ class RuleGroup(SequenceApi[Rule]):
         self._seq.clear()
         self._ruleindex.clear()
 
-    def get(self, ref:str|RuleT|type[RuleT], default = NOARG, /) -> RuleT:
+    def get(self, ref:str|type[RuleT], default = NOARG, /) -> RuleT:
         """Get a member instance by name, type, or instance of same type.
 
         Args:
-          ref: A ``Rule`` class, class name, or instance.
+          ref: A :class:`Rule` class or name.
           default: A value to return if rule not found.
 
         Returns:
@@ -778,9 +833,9 @@ class Tableau(Sequence[Branch], EventEmitter):
         # Events init
         super().__init__(*TabEvent)
         self.__branch_listeners = MapProxy({
-            BranchEvent.AFTER_BRANCH_CLOSE : self.__after_branch_close,
-            BranchEvent.AFTER_NODE_ADD     : self.__after_node_add,
-            BranchEvent.AFTER_NODE_TICK    : self.__after_node_tick,
+            BranchEvent.AFTER_CLOSE : self.__after_branch_close,
+            BranchEvent.AFTER_ADD   : self.__after_node_add,
+            BranchEvent.AFTER_TICK  : self.__after_node_tick,
         })
 
         # Protected attributes

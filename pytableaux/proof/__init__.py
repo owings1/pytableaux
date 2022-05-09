@@ -41,9 +41,16 @@ if TYPE_CHECKING:
     from pytableaux.proof.tableaux import Rule, Tableau, TabRuleGroups
 
 __all__ = (
-    'TableauxSystem',
+    'Branch',
+    'ClosingRule',
+    'Node',
     'RuleHelper',
     'RuleMeta',
+    'Tableau',
+    'TableauxSystem',
+    'TabWriter',
+    'Target',
+    'Rule'
 )
 
 class TableauxSystem(metaclass = AbcMeta):
@@ -184,11 +191,13 @@ class RuleMeta(AbcMeta):
 
         Class = super().__new__(cls, clsname, bases, ns, **kw)
 
-        mromerge = abcm.merge_mroattr
+        mromerge = abcm.merge_attr
 
         # name
         setattr(Class, RuleAttr.Name, clsname)
-
+    #         ancs = list(abcm.mroiter(subcls, supcls = cls))
+    #         flagsmap = {anc: anc.FLAGS for anc in ancs}
+    #         subcls.FLAGS = functools.reduce(opr.or_, flagsmap.values(), cls.FLAGS)
         # _defaults
         defaults = mromerge(Class, RuleAttr.DefaultOpts, mcls = cls,
             default = dmap(), transform = MapProxy,
@@ -206,13 +215,15 @@ class RuleMeta(AbcMeta):
             default = EMPTY_QSET, transform = qsetf,
         )
         for Helper in Helpers:
-            check.subcls(Helper, RuleHelper)
+            # check.subcls(Helper, RuleHelper)
             kwopts = helper.get(Helper, EMPTY_MAP)
             finit = getattr(Helper, HelperAttr.InitRuleCls, None)
-            if finit is None:
-                if kwopts:
-                    raise TypeError(f'Unexpected opts for helper {Helper}: {kwopts}')
-            else:
+            if kwopts or finit:
                 finit(Class, **kwopts)
 
         return Class
+
+from pytableaux.proof.writers import TabWriter
+from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof.tableaux import Tableau, Rule
+from pytableaux.proof.rules import ClosingRule

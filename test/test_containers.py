@@ -40,7 +40,7 @@ class Test_abcm(BaseSuite):
             x = 'B2',
         class C(B2, B1):
             pass
-        res = abcm.merged_mroattr(C, 'x', default = qset(), oper=opr.or_, supcls=A)
+        res = abcm.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
         assert tuple(res) == ('A', 'B1', 'B2')
 
 class Test_seqf(BaseSuite):

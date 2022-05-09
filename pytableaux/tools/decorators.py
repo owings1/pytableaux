@@ -23,13 +23,16 @@ from __future__ import annotations
 
 import functools
 import operator as opr
-from collections import defaultdict
+from collections import ChainMap, defaultdict
+from collections.abc import Mapping
 from inspect import Signature
 from keyword import iskeyword
+import sys
 from types import DynamicClassAttribute as dynca
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Concatenate,
-                    Generic, Iterable, Iterator, Mapping)
+                    Generic, Iterable, Iterator)
 
+import traceback
 # Allowed local imports:
 #  - errors
 #  - tools.abcs
@@ -37,8 +40,8 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Concatenate,
 #  - tools.typing
 from pytableaux import __docformat__
 from pytableaux.errors import check
-from pytableaux.tools import MapProxy, abstract, abcs
-from pytableaux.tools.abcs import Abc, abcf, abcm
+from pytableaux.tools import MapProxy, abstract, abcs, dund, getitem
+from pytableaux.tools.abcs import abcf, abcm
 from pytableaux.tools.typing import RT, F, P, Self, T, _property
 
 if TYPE_CHECKING:
@@ -56,20 +59,14 @@ __all__ = (
 
 EMPTY = ()
 WRASS = functools.WRAPPER_ASSIGNMENTS
+WRASS_SET = frozenset(WRASS)
 
-class _noexcept(Exception): __new__ = None
+# class _noexcept(Exception): __new__ = None
 
-# _valfilter = _ftpartial(filter, opr.itemgetter(1))
-
-def _valfilter(it: Iterable[T], /, *, getter = opr.itemgetter(1)) -> Iterator[T]:
-    return filter(getter, it)
-
-def _getmixed(obj, k, default = None):
-    try: return obj[k]
-    except TypeError:
-        return getattr(obj, k, default)
-    except KeyError:
-        return default
+def select_fget(obj):
+    if callable(getattr(obj, '__getitem__', None)):
+        return getitem
+    return getattr
 
 def _thru(obj, *_):
     return obj
@@ -97,6 +94,18 @@ def _checkcallable2(obj):
         return _methcaller(obj)
     return check.callable(obj)
 
+def _prevmodule(thisname = __name__, /):
+    f = sys._getframe()
+    while (f := f.f_back) is not None:
+        val = f.f_globals.get('__name__', '__main__')
+        if val != thisname:
+            return val
+
+    # sys._getframe().f_back.f_back
+    # val = sys._getframe(2).f_globals.get('__name__', '__main__')
+    # if val != __name__:
+    #     return val
+
 class BaseMember(Generic[T], metaclass = abcs.AbcMeta):
 
     __slots__ = '__name__', '__qualname__', '__owner'
@@ -104,8 +113,11 @@ class BaseMember(Generic[T], metaclass = abcs.AbcMeta):
     def __set_name__(self, owner: T, name):
         self.owner = owner
         self.name = name
-        for hook in self._sethooks:
-            hook(self, owner, name)
+        self.sethook(owner, name)
+        # for hook in self._sethooks:
+        #     hook(self, owner, name)
+    def sethook(self, owner, name):
+        pass
 
     @property
     def owner(self) -> T:
@@ -138,18 +150,20 @@ class BaseMember(Generic[T], metaclass = abcs.AbcMeta):
             return object.__repr__(self)
         return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
 
-    _sethooks = EMPTY
+    # _sethooks = EMPTY
 
-    def __init_subclass__(subcls, **kw):
-        super().__init_subclass__(**kw)
-        hooks = dict.fromkeys(abcm.merge_mroattr(subcls, '_sethooks',
-            oper = opr.add, supcls = __class__
-        ))
-        hook = getattr(subcls, 'sethook', None)
-        if hook:
-            hooks[hook] = None
-            delattr(subcls, 'sethook')
-        subcls._sethooks = tuple(hooks)
+    # def __init_subclass__(subcls, **kw):
+    #     super().__init_subclass__(**kw)
+    #     hooks = dict.fromkeys(abcm.merge_attr(subcls, '_sethooks',
+    #         oper = opr.add, supcls = __class__
+    #     ))
+    #     hook = getattr(subcls, 'sethook', None)
+    #     if hook:
+    #         hooks[hook] = None
+    #         delattr(subcls, 'sethook')
+    #     subcls._sethooks = tuple(hooks)
+    #     if len(hooks) > 1:
+    #         raise TypeError(subcls)
 
 class Twofer(Generic[F], metaclass = abcs.AbcMeta):
 
@@ -195,7 +209,13 @@ class membr(BaseMember[T], Generic[T, RT]):
         self.cbak = cb, args, kw
 
     def sethook(self, owner: T, name):
-        setattr(owner, name, wraps(self)(self())) # type: ignore
+        setattr(owner, name,
+            # wraps(self,
+            #     exclude = {'module'},
+            # )(
+                self()
+            # )
+        ) # type: ignore
 
     def __call__(self):
         cb, args, kw = self.cbak
@@ -218,7 +238,7 @@ class operd:
 
     class Base(BaseMember, Callable):
 
-        __slots__ = 'oper', 'info'
+        __slots__ = 'oper', 'info', 'wrap'
 
         oper: Callable
         info: Callable|Mapping|None
@@ -226,18 +246,12 @@ class operd:
         def __init__(self, oper: Callable, info: Callable|Mapping = None):
             self.oper = oper
             self.info = info
+            self.wrap = wraps(info).update(oper)
 
         def sethook(self, owner, name):
             if self.info is None:
                 self.info = self
             setattr(owner, name, self())
-
-        def _getinfo(self, info: Callable|Mapping = None, /) -> Callable|Mapping:
-            if info is None:
-                if self.info is None:
-                    return self.oper
-                return self.info
-            return info
 
     class apply(Base):
         """Create a function or method from an operator, or other
@@ -247,7 +261,7 @@ class operd:
         __slots__ = EMPTY
 
         def __call__(self, info: Callable|Mapping = None):
-            info = self._getinfo(info)
+            self.wrap.update(info)
             oper = check.callable(self.oper)
             n = len(Signature.from_callable(oper).parameters)
             if n == 1:
@@ -256,7 +270,7 @@ class operd:
                 def fapply(lhs, rhs): return oper(lhs, rhs)
             else:
                 def fapply(*args): return oper(*args)
-            return wraps(info)(fapply)
+            return self.wrap(fapply)
 
     class reduce(Base):
         """Create a reducing method using functools.reduce to apply
@@ -295,11 +309,10 @@ class operd:
             self.finit = _checkcallable2(finit)
 
         def __call__(self, info: Callable|Mapping = None):
-            info = self._getinfo(info)
             oper, freturn, finit = map(check.callable,
                 (self.oper, self.freturn, self.finit),
             )
-            @wraps(info)
+            @self.wrap.update(info)
             def freduce(self, *operands):
                 return freturn(self, functools.reduce(oper, operands, finit(self)))
             return freduce
@@ -324,21 +337,32 @@ class operd:
         __slots__ = EMPTY
 
         def __call__(self, info: Callable|Mapping = None):
-            info = self._getinfo(info)
             oper = check.callable(self.oper)
-            @wraps(info)
+            @self.wrap.update(info)
             def f(self, *args):
                 for arg in args: oper(self, arg)
             return f
 
-class wraps(BaseMember):
+class wraps(dict[str, str]):
 
-    __slots__ = '_initial', '_adds'
+    __slots__ = 'only', 'original',
 
-    def __init__(self, fin: Callable|Mapping):
-        'Initialize argument, intial input function that will be decorated.'
-        self._adds = {}
-        self._initial = self.read(fin)
+    def __init__(self, fin: Callable|Mapping, only = WRASS_SET, exclude = (), **kw):
+        'Initialize argument, initial input function that will be decorated.'
+        self.original = fin
+        only = set(map(dund, only))
+        only.difference_update(map(dund, exclude))
+        only.intersection_update(WRASS_SET)
+        self.only = only
+        if kw:
+            kw = {dund(k): kw[k] for k in kw}
+            kw = dict(self.read(kw))
+        super().update(self.read(fin), **kw)
+        if (k := '__module__') in only and k not in self:
+            if (v := getattr(fin, '__objclass__', None)):
+                self.setdefault(k, v)
+            else:
+                self.setdefault(k, _prevmodule())
 
     def __call__(self, fout: F) -> F:
         'Decorate function. Receives the wrapper function and updates its attributes.'
@@ -349,61 +373,71 @@ class wraps(BaseMember):
             self.write(fout)
         return fout
 
-    @staticmethod
-    def read(data):
-        return dict(
-            _valfilter((k, _getmixed(data, k)) for k in WRASS)
-        )
-
-    def update(self, data = None, /, **kw) -> wraps:
-        data = self.read(data) | self.read(kw)
-        adds = self._adds
-        initial = self._initial
-        skip = {'__doc__', '__annotations__'}
-        for attr, val in _valfilter((k, data.get(k)) for k in WRASS):
-            if attr in skip:
-                if initial.get(attr):
-                    continue
-            adds[attr] = val
-        return self
-
-    def merged(self):
-        adds = self._adds
-        initial = self._initial
-        return dict(
-            _valfilter((k, initial.get(k, adds.get(k))) for k in WRASS)
-        )
+    def read(self, obj):
+        "Read relevant attributes from object/mapping."
+        get = select_fget(obj)
+        for name in self.only:
+            if (value := get(obj, name, None)):
+                yield name, value
 
     def write(self, obj: F) -> F:
-        for attr, val in self.merged().items():
+        "Write wrapped attributes to a wrapper."
+        for attr, val in self.items():
             setattr(obj, attr, val)
+        obj.__wrapped__ = self.original
         return obj
 
+    def update(self, obj = None, /, **kw):
+        """Read from an object/mapping and update relevant values. Any attributes
+        already present are ignored. Returns self.
+        """
+        for o in obj, kw:
+            if o is not None:
+                for attr, val in self.read(o):
+                    if attr not in self:
+                        self[attr] = val
+        return self
+
+    def setdefault(self, key, value):
+        "Override value if key is relevant and value is not empty."
+        if key in self.only:
+            if value:
+                self[key] = value
+                return value
+            return self[key]
+            
+    def __setitem__(self, key, value):
+        if key in self or key not in self.only:
+            raise KeyError(key)
+        super().__setitem__(key, value)
+
+    def __repr__(self):
+        return f'{type(self).__name__}({dict(self)})'
+
 class raisr(BaseMember):
-    """Creates an object that raises the exception when called. When
-    `__set_name__` is called, creates a new function. Not to be used
-    as a decorator.
+    """Factory for raising an error. Not to be used as a decorator.
     """
 
-    __slots__ = 'errtype', 'eargs', 'ekw'
+    __slots__ = 'wrap', 'Error'
 
-    def __init__(self, errtype: type[Exception], *eargs, **ekw):
-        self.errtype = check.subcls(errtype, Exception)
-        self.eargs = eargs
-        self.ekw = ekw
+    def __init__(self, Error: type[Exception], /):
+        self.Error = check.subcls(Error, Exception)
 
-    def __call__(self, *args, **kw):
-        raise self.errtype(*self.eargs, *args[0:1], **self.ekw)
+    def __call__(self):
+        Error = self.Error
+        def f(self, *args, **_):
+            raise Error(*args[0:1])
+        f.__doc__ = f'Raises {Error.__name__}'
+        return f
 
     def sethook(self, owner, name):
-        eargs = self.eargs
-        errtype = self.errtype
-        ekw = self.ekw
-        @wraps(self)
-        def f(*args, **kw):
-            raise errtype(*eargs, *args[0:1], **ekw)
-        f.__doc__ = 'Raises %s' % errtype.__name__
-        setattr(owner, name, f)
+        wrap = wraps(getattr(owner.__bases__[0], name, None),
+            name = name,
+            module = owner.__module__,
+            qualname = f'{owner.__qualname__}.{name}',
+        )
+        setattr(owner, name, wrap(self()))
+
 
 class lazy:
 

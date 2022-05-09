@@ -184,7 +184,7 @@ class HookProvider(HkProviderInfo, metaclass = abcs.AbcMeta, skiphooks = True):
         flatten = cls.hookattrs
         set_opers = dict(__sub__ = cls.excluding, __and__ = cls.only)
 
-        for opername in dund('or', 'and', 'sub', 'xor'):
+        for opername in map(dund, ('or', 'and', 'sub', 'xor')):
 
             @closure
             def f():
@@ -439,8 +439,10 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
         import copy
         def copyfunc(f: FunctionType, ownerqn: str = None, /, *,
             fcopy: Callable[[T], T] = copy.copy,
-            A_NEW: tuple[str, ...] = (*dund('code', 'globals', 'name', 'defaults', 'closure'),),
-            A_CPY: tuple[str, ...] = (*dund('annotations', 'dict', 'doc', 'kwdefaults'),),
+            A_NEW: tuple[str, ...] = tuple(map(dund,
+                ('code', 'globals', 'name', 'defaults', 'closure'))),
+            A_CPY: tuple[str, ...] = tuple(map(dund,
+                ('annotations', 'dict', 'doc', 'kwdefaults'))),
             A_DEL: tuple[str, ...]  = (abcs.Astr.hookinfo,),
             NOGET: object = object(),
         ) -> FunctionType:

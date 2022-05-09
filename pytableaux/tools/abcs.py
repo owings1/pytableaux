@@ -694,7 +694,7 @@ class abcm:
 
     @staticmethod
     def annotated_attrs(obj) -> dict[str, tuple]:
-        'Evaluate annotions of type Annotated.'
+        'Evaluate annotions of type :obj:`typing.Annotated`.'
         # This is called infrequently, so we import lazily.
         from typing import Annotated, get_args, get_origin, get_type_hints
         hints = get_type_hints(obj, include_extras = True)
@@ -719,27 +719,72 @@ class abcm:
         return True
 
     @staticmethod
-    def merge_mroattr(subcls: type, name: str, *args,
+    def merge_attr(obj, name: str, it = None, /, *,
         setter: Callable[[type, str, Any], Any] = setattr, **kw
     ):
-        value = abcm.merged_mroattr(subcls, name, *args, **kw)
-        setter(subcls, name, value)
+        """Merge an object's attribute, either from objects, or an mro.
+
+        Args:
+            obj: The object to update.
+            
+            .. note:: Additional arguments are passed to :attr:`merged_attr`.
+       
+        Keyword Args:
+            setter (Callable): The function to set the attribute, default
+                is :obj:`setattr`.
+        
+        See Also:
+
+        """
+        if it is None:
+            check.inst(kw.setdefault('cls', obj), type)
+        value = abcm.merged_attr(name, it, **kw)
+        setter(obj, name, value)
         return value
 
     @staticmethod
-    def merged_mroattr(subcls: type, name: str, /,
-        default: T = NOARG,
-        oper = opr.or_,
-        *,
-        initial: T = NOARG,
-        transform: Callable[[T], RT] = tools.thru,
+    def merged_attr(name: str, it: Iterable = None, /, *,
+        oper: Callable[[Any, Any], RT] = opr.or_,
+        initial:RT|Any = NOARG,
+        default:RT|Any = NOARG,
+        transform: Callable[[Any], RT] = tools.thru,
+        getitem: bool = False,
         **iteropts
     ) -> RT:
-        it = abcm.mroiter(subcls, **iteropts)
-        if default is NOARG:
-            it = (getattr(c, name) for c in it)
+        """Get merged attribute value, either from objects, or an mro.
+
+        Args:
+            name: The attribute/key name.
+            it: The iterable of objects. If ``None``, :attr:`mroiter` is
+                called with `**iteropts`.
+
+        Keyword Args:
+            oper (Callable): The reduce operator, default is :obj:`operator.or_`.
+            initial (Any): The initial reduce value. From :func:`functools.reduce`:
+                If initial is present, it is placed before the items of the
+                iterable in the calculation, and serves as a default when
+                the iterable is empty.
+            default (Any): The default value for each object in the iterable.
+              If not present, `initial` is used if present.
+            transform (Callable): A type or callable to transform the final value.
+            getitem (bool): Whether to use subscript instead of :obj:`getattr`.
+
+        Returns:
+            The merged value.                
+        """
+        if it is None:
+            # check.inst(cls, type)
+            it = abcm.mroiter(**iteropts)
+        elif iteropts:
+            raise TypeError(f'Unexpected kwargs: {list(iteropts)}')
+        if getitem:
+            getter = tools.getitem
         else:
-            it = (getattr(c, name, default) for c in it)
+            getter = getattr
+        if default is NOARG:
+            it = (getter(c, name) for c in it)
+        else:
+            it = (getter(c, name, default) for c in it)
             if initial is NOARG:
                 initial = default
         if initial is NOARG:
@@ -749,11 +794,15 @@ class abcm:
         return transform(value)
 
     @staticmethod
-    def mroiter(subcls: type, /, supcls: type|tuple[type, ...] = None, *,
-        mcls: type|tuple[type, ...] = None, reverse: bool = True,
+    def mroiter(cls: type,
+        supcls: type[T]|tuple[type, ...] = None, *,
+        mcls: type|tuple[type, ...] = None,
+        reverse: bool = True,
         start: SupportsIndex = None, stop: SupportsIndex = None,
-    ) -> Iterator[type]:
-        it = subcls.mro()
+    ) -> Iterator[type[T]]:
+        """Returns an iterator for a class's mro.
+        """
+        it = cls.mro()
         if reverse:
             it = reversed(it)
         else:

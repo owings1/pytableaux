@@ -110,9 +110,9 @@ class PropMap(ItemMapEnum):
 
 class BranchEvent(Ebc):
     'Branch events.'
-    AFTER_BRANCH_CLOSE = eauto()
-    AFTER_NODE_ADD     = eauto()
-    AFTER_NODE_TICK    = eauto()
+    AFTER_CLOSE = eauto()
+    AFTER_ADD   = eauto()
+    AFTER_TICK  = eauto()
 
 #******  Helper Enum
 
@@ -156,7 +156,7 @@ class RuleEvent(Ebc):
     BEFORE_APPLY = eauto()
     AFTER_APPLY  = eauto()
 
-class RuleFlag(FlagEnum):
+class RuleState(FlagEnum):
     'Rule state bit flags.'
 
     __slots__ = 'value', '_value_'
@@ -164,6 +164,15 @@ class RuleFlag(FlagEnum):
     NONE   = 0
     INIT   = 1
     LOCKED = 2
+
+class RuleClassFlag(FlagEnum):
+    "WIP: Rule class feature flags."
+
+    __slots__ = 'value', '_value_'
+
+    Modal = 4
+    RankOptimSupported = 8
+
 
 #******  Tableau Enum
 
