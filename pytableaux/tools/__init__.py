@@ -213,7 +213,7 @@ def noinit(slf: Any = None):
     'Raise `TypeError`.'
     raise TypeError
 
-def dund(name:str) -> Iterator[str]:
+def dund(name:str) -> str:
     "Convert name to dunder format."
     return name if isdund(name) else f'__{name}__'
 
@@ -225,6 +225,11 @@ def isdund(name: str) -> bool:
         name[2] != '_' and
         name[-3] != '_'
     )
+
+def undund(name:str) -> str:
+    if isdund(name):
+        return name[2:-2]
+    return name
 
 def isint(obj: Any) -> bool:
     'Whether the argument is an ``int`` instance'
