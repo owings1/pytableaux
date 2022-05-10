@@ -36,7 +36,7 @@ from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.tools import MapProxy, abcs
 from pytableaux.tools.doc import BaseRole, classopt, nodeopt, predsopt
-from pytableaux.tools.doc.extension import Helper
+from pytableaux.tools.doc.extension import ConfKey
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.typing import F
 from sphinx.util import logging
@@ -170,9 +170,9 @@ class lexdress(BaseRole):
 
     opt_defaults = MapProxy(dict({'class': None},
         node = nodes.inline,
-        wnotn = Helper.defaults['wnotn'],
-        pnotn = Helper.defaults['pnotn'],
-        preds = Predicates(Helper.defaults['preds']),
+        # wnotn = Helper.defaults['wnotn'],
+        # pnotn = Helper.defaults['pnotn'],
+        # preds = Predicates(Helper.defaults['preds']),
         classes = qsetf(['lexitem']),
     ))
 
@@ -187,8 +187,10 @@ class lexdress(BaseRole):
         opts = ChainMap(self.options, self.opt_defaults)
 
         nodecls = opts['node']
-        parser = Parser(opts['pnotn'], preds := opts['preds'])
-        lw = LexWriter(opts['wnotn'], 'unicode')
+        pnotn = opts.get('pnotn', self.config[ConfKey.pnotn])
+        preds = Predicates(opts.get('preds', self.config[ConfKey.preds]))
+        parser = Parser(pnotn, preds)
+        lw = LexWriter(opts.get('wnotn', self.config[ConfKey.wnotn]), 'unicode')
 
         text = self.text
 

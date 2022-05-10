@@ -161,9 +161,9 @@ overloads_location = [ 'signature',
 #
 extensions.append('pytableaux.tools.doc.extension')
 
-pt_options = dict(
+# pt_options = dict(
 
-)
+# )
 
 pt_htmlcopy = [
     (

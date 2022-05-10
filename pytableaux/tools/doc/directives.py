@@ -27,22 +27,24 @@ import sphinx.directives.other
 import sphinx.directives.patches
 from docutils import nodes
 from pytableaux import examples, logics, models, tools
-from pytableaux.lang import Notation, Argument
+from pytableaux.lang import Argument, Notation
 from pytableaux.lang.lex import Operator
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import rules, tableaux, writers
 from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.tools.doc import (BaseDirective, DirectiveHelper, SphinxEvent,
-                                  boolopt, classopt, choiceopt, 
-                                  opersopt, predsopt, re_comma, rstutils,
-                                  stropt)
+                                  boolopt, choiceopt, classopt, opersopt,
+                                  predsopt, re_comma, rstutils, stropt)
+from pytableaux.tools.doc.extension import ConfKey
 from sphinx.util import logging
 
 if TYPE_CHECKING:
-    from sphinx.application import Sphinx
-    from pytableaux.tools.doc.docparts import Tabler
     from typing import Any
+
+    import sphinx.config
+    from pytableaux.tools.doc.docparts import Tabler
+    from sphinx.application import Sphinx
 
 __all__ = (
     'CSVTable',
@@ -72,16 +74,6 @@ class TableGenerator(DirectiveHelper):
 
 table_generators: dict[str, TableGenerator] = {}
 "Table generator registry."
-
-
-class Clear(BaseDirective):
-    option_spec = dict(
-        classes = classopt,
-    )
-    def run(self):
-        classes = self.set_classes()
-        classes.append('clear')
-        return [nodes.container(classes = classes)]
 
 
 class Tableaud(BaseDirective):
@@ -140,7 +132,7 @@ class Tableaud(BaseDirective):
 
         tab.build()
 
-        wnotn = opts.get('wnotn', self.helper.opts['wnotn'])
+        wnotn = opts.get('wnotn', self.config[ConfKey.wnotn])
         wfmt = opts.get('format', 'html')
         writer = writers.TabWriter(wfmt, wnotn, classes = classes)
 
@@ -262,21 +254,22 @@ class TruthTables(BaseDirective):
     def run(self):
 
         classes = self.set_classes()
-        helper = self.helper
-        opts = helper.opts
-        hopts = helper.opts
-        ochain = ChainMap(opts, hopts)
-
+        # helper = self.helper
+        # opts = helper.opts
+        # hopts = helper.opts
+        # ochain = ChainMap(opts, hopts)
+        opts = self.options
         logic = logics.registry(self.arguments[0])
         model: models.BaseModel = logic.Model()
         opers = opts.get('operators')
         if opers is None:
             opers = sorted(model.truth_functional_operators)
 
-        lw = LexWriter(ochain['wnotn'], 'html')
+        wnotn = opts.get('wnotn', self.config[ConfKey.wnotn])
+        lw = LexWriter(wnotn, 'html')
 
-        template = opts.get('template', hopts['truth_table_template'])
-        reverse = opts.get('reverse', hopts['truth_table_reverse'])
+        template = opts.get('template', self.config[ConfKey.truth_table_template])
+        reverse = opts.get('reverse', self.config[ConfKey.truth_table_reverse])
         clear = opts.get('clear', True)
 
         tables = (
@@ -285,7 +278,7 @@ class TruthTables(BaseDirective):
         )
         context = dict(lw = lw, classes = classes)
         renders = (
-            helper.render(template, context, table = table)
+            self.render(template, context, table = table)
             for table in tables
         )
         content = '\n'.join(renders)
@@ -294,6 +287,8 @@ class TruthTables(BaseDirective):
 
         return [nodes.raw(format = 'html', text = content)]
 
+    def render(self, template, *args, **kw):
+        return self.jenv.get_template(template).render(*args, **kw)
 
 class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     "Override csv-table to allow generator function."
@@ -349,11 +344,18 @@ class Include(sphinx.directives.other.Include, BaseDirective):
     def faux_parser(self):
         return self
 
+
+
+    # config[ConfKey.jenv].loader.searchpath = paths
+
 def setup(app: Sphinx):
+
+    app.add_config_value(ConfKey.truth_table_template, 'truth_table.jinja2', 'env', [str])
+    app.add_config_value(ConfKey.truth_table_reverse, True, 'env', [bool])
     app.add_event(SphinxEvent.IncludeRead)
     app.add_directive('include',   Include, override = True)
     app.add_directive('csv-table', CSVTable, override = True)
-    app.add_directive('clear', Clear)
     app.add_directive('tableau', Tableaud)
     app.add_directive('truth-table', TruthTable)
     app.add_directive('truth-tables', TruthTables)
+

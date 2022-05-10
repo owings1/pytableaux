@@ -22,6 +22,7 @@ pytableaux.tools.doc
 """
 from __future__ import annotations
 
+import os
 import re
 import traceback
 from dataclasses import dataclass
@@ -30,6 +31,7 @@ from importlib import import_module
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Container, Generic,
                     Mapping)
 
+import jinja2
 import sphinx.directives
 from docutils import nodes
 from docutils.parsers.rst.directives import class_option
@@ -37,7 +39,7 @@ from docutils.parsers.rst.roles import _roles
 from pytableaux import logics
 from pytableaux.lang import Operator, Predicates
 from pytableaux.tools import EMPTY_MAP, MapProxy, NameTuple, abcs, abstract
-from pytableaux.tools.doc.extension import Helper, helpers
+from pytableaux.tools.doc.extension import ConfKey
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
@@ -94,32 +96,41 @@ class SphinxEvent(str, abcs.Ebc):
 
 # ------------------------------------------------
 
-class ConfKey(str, abcs.Ebc):
-    'Custom config keys.'
+APPSTATE = {}
 
-    options = 'pt_options'
-    "The config key for helper options."
+def setup(app: Sphinx):
 
-    htmlcopy = 'pt_htmlcopy'
-    "The config key for html copy actions."
+    APPSTATE[app] = {}
 
-    auto_skip_enum_value = 'autodoc_skip_enum_value'
+    app.connect('config-inited', _init_jenv)
 
+    def clear_stat(app, e: Exception|None):
+        del(APPSTATE[app])
+
+    app.connect('build-finished', clear_stat)
+
+def _init_jenv(app: Sphinx, config: sphinx.config.Config):
+
+    paths = [
+        os.path.join(app.srcdir, tp) for tp in
+        config[ConfKey.templates_path]
+    ]
+    APPSTATE[app][jinja2.Environment]  = jinja2.Environment(
+            loader = jinja2.FileSystemLoader(paths),
+            trim_blocks = True,
+            lstrip_blocks = True,
+        )
 # ------------------------------------------------
 
-class RoleDirectiveMixin(abcs.Abc):
+class AppEnvMixin(abcs.Abc):
 
+    app: Sphinx
     env: BuildEnvironment
-    option_spec: ClassVar[Mapping[str, Callable]] = EMPTY_MAP
-
-    options: dict[str, Any]
-
-    @abstract
-    def run(self): ...
+    config: sphinx.config.Config
 
     @property
-    def helper(self) -> Helper:
-        return helpers[self.env.app]
+    def jenv(self) -> jinja2.Environment:
+        return APPSTATE[self.app][jinja2.Environment]
 
     def current_module(self):
         return import_module(self.env.ref_context['py:module'])
@@ -129,6 +140,14 @@ class RoleDirectiveMixin(abcs.Abc):
 
     def current_logic(self):
         return logics.registry(self.current_module())
+
+# ------------------------------------------------
+
+class RoleDirectiveMixin(AppEnvMixin):
+
+    option_spec: ClassVar[Mapping[str, Callable]] = EMPTY_MAP
+
+    options: dict[str, Any]
 
     def set_classes(self, opts = NOARG, /) -> qset[str]:
         if opts is NOARG:
@@ -148,11 +167,18 @@ class RoleDirectiveMixin(abcs.Abc):
         })
         return builder
 
+    @abstract
+    def run(self): ...
+
 # ------------------------------------------------
 
 class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
 
     arguments: list[str]
+
+    @property
+    def app(self) -> Sphinx:
+        return self.env.app
 
 # ------------------------------------------------
 
@@ -185,6 +211,10 @@ class DirectiveHelper(RoleDirectiveMixin):
         return self.inst.env
 
     @property
+    def app(self):
+        return self.inst.app
+
+    @property
     def options(self):
         return self.inst.options
 
@@ -194,9 +224,9 @@ class BaseRole(SphinxRole, RoleDirectiveMixin):
 
     patterns: ClassVar[dict[str, str|re.Pattern]] = {}
 
-    def __init__(self):
-        pass
-        self.options = {'class': None}
+    @property
+    def app(self) -> Sphinx:
+        return self.env.app
 
     def wrapped(self, name: str, newopts: Mapping, newcontent: list[str] = [], /):
         "Wrapper for ad-hoc customized roles."
@@ -228,15 +258,17 @@ class BaseRole(SphinxRole, RoleDirectiveMixin):
 
 # ------------------------------------------------
 
-class Processor(abcs.Abc):
+class Processor(AppEnvMixin):
 
     __slots__ = EMPTY_SET
 
-    app: Sphinx
+    @property
+    def env(self) -> BuildEnvironment:
+        return self.app.env
 
     @property
-    def helper(self) -> Helper:
-        return helpers[self.app]
+    def config(self) -> sphinx.config.Config:
+        return self.app.config
 
     @abstract
     def run(self) -> None:
@@ -334,7 +366,7 @@ class ReplaceProcessor(Processor):
 
 # ------------------------------------------------
 
-class Tabler(list[list[str]]):
+class Tabler(list[list[str]], abcs.Abc):
 
     header: list[str]
     body: list[list[str]]
@@ -349,7 +381,7 @@ class Tabler(list[list[str]]):
         self.append(header)
         self.extend(body)
 
-    def repr_apply(self, reprfunc: Callable, /) -> Tabler:
+    def apply_repr(self, reprfunc: Callable, /) -> Tabler:
         for row in self:
             for i, v in enumerate(row):
                 if not isinstance(v, str):
@@ -359,7 +391,7 @@ class Tabler(list[list[str]]):
     def tb(self, tablefmt = None, *, rp = None, **kw):
         from tabulate import tabulate as tb
         if rp:
-            self.repr_apply(rp)
+            self.apply_repr(rp)
         return tb(self.body, self.header, tablefmt, **kw)
 
 # ------------------------------------------------

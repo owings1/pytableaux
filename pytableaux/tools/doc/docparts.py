@@ -24,6 +24,7 @@ from functools import wraps, partial
 
 import html
 import reprlib
+import re
 import sys
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
@@ -69,41 +70,61 @@ def fmt_ref(obj: Any, role = None):
         text = str(obj)
     return f':{role}:`{text}`'
 
-class Reprer(reprlib.Repr, metaclass = abcs.AbcMeta):
 
-    defaults = MapProxy({
-        # 'rstrole': 'obj',
-    })
+class Reprer(reprlib.Repr, dict, metaclass = abcs.AbcMeta):
 
-    attropts = {
-        'maxlevel', 'maxtuple', 'maxlist', 'maxarray', 'maxdict', 'maxset',
-        'maxfrozenset', 'maxdeque', 'maxstring', 'maxlong', 'maxother',
-    }
+    defaults = MapProxy(dict(
 
-    # lexclass_types = {type(m.cls) for m in LexType}
+        maxlevel =     6 * 2,
+        maxtuple =     6 * 2,
+        maxlist  =     6 * 2,
+        maxarray =     5 * 2,
+        maxdict  =     4 * 2,
+        maxset   =     6 * 2,
+        maxfrozenset = 6 * 2,
+        maxdeque =     6 * 2,
+        maxstring =   30 * 2,
+        maxlong   =   40 * 2,
+        maxother  =   30 * 2,
+
+        lw = repr,
+    ))
+
+    attropts = set(defaults)
+
+    lw: Callable
 
     def __init__(self, **opts):
-        super().__init__()
+        self.instmap = {}
+        self.instconds = self.instmap.items()
         self.opts = self.defaults | opts
         for key, value in self.opts.items():
             if key in self.attropts:
                 setattr(self, key, value)
 
+    def repr1(self, x, level):
+        try:
+            f = self[type(x)]
+        except KeyError:
+            for info, f in self.instconds:
+                if isinstance(x, info):
+                    return f(x)
+        else:
+            return f(x)
+        return super().repr1(x, level)
+
     def repr_lexclass(self, obj, level):
         return fmt_ref(obj, role = 'cls')
-        return self._fmt_rstrole(obj.__name__)
 
-    # repr_LangCommonEnumMeta = repr_LexicalAbcMeta = fmt_ref
-
-    # def _fmt_rstrole(self, text, /, role = None):
-    #     if role is None:
-    #         role = self.opts['rstrole']
-    #     return f':{role}:`{text}`'
+    def repr_lexical(self, obj, level):
+        return self.lw(obj)
 
     @abcs.abcf.after
     def _(cls):
+        fmc = 'repr_{0.__name__}'.format
         for m in LexType:
-            setattr(cls, f'repr_{type(m.cls).__name__}', cls.repr_lexclass)
+            setattr(cls, fmc(type(m.cls)), cls.repr_lexclass)
+            setattr(cls, fmc(m.cls), cls.repr_lexical)
 
 # ------------------------------------------------
 
@@ -221,7 +242,7 @@ def opers_table():
 
 # ------------------------------------------------
 
-def lex_eg_table(columns: list[str], /, *,
+def lex_eg_table(columns: list[str], /, *, _ = 2,
     notn = 'standard', charset = 'unicode', maxtuple = 8):
     "lexical item attribute examples."
 
@@ -252,9 +273,14 @@ def lex_eg_table(columns: list[str], /, *,
         [type(item), item, *map(partial(getattr, item), columns)]
         for item in (m.cls.first() for m in LexType)
     ]
-    table = Tabler(data, data)
-    table.repr_apply(srepr.repr)
-    return table
+
+
+    t = Tabler(data, header)
+    if _ == 1:
+        return t
+    if _ == 2:
+        return t.apply_repr(srepr.repr)
+
 
     body = [
 
@@ -285,7 +311,7 @@ def member_table(owner: Sequence, columns: list[str], /, *, getitem = False):
     ]
 
     table = Tabler(body, header)
-    table.repr_apply(srepr.repr)
+    table.apply_repr(srepr.repr)
     return table
 
 # ------------------------------------------------
@@ -363,17 +389,18 @@ def main():
         tuple[Callable[..., Tabler], Any,]
     ]:
         callspecs = [
-            (opers_table,),
 
-            (lex_eg_table, lexatrs[0:2]),
+            # (opers_table,),
+
+            # (lex_eg_table, lexatrs[0:2]),
 
             *((lex_eg_table, [name]) for name in lexatrs),
 
-            (member_table, Operator, [
-                'name','order', 'label', 'arity', 'libname']),
+            # (member_table, Operator, [
+            #     'name','order', 'label', 'arity', 'libname']),
 
-            (member_table, LexType, [
-                'name', 'rank', 'cls', 'role', 'maxi'])
+            # (member_table, LexType, [
+            #     'name', 'rank', 'cls', 'role', 'maxi'])
         ]
 
         shuffle(callspecs)

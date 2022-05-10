@@ -23,11 +23,14 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any, cast
 
-from pytableaux.lang import Argument, Atomic
+from pytableaux.lang import Argument, Atomic, RenderSet, LexWriter, Marking
 from pytableaux.logics import registry
-from pytableaux.tools.doc import (AutodocProcessor, ConfKey, ReplaceProcessor,
+from pytableaux.proof import writers, Tableau
+from pytableaux.proof.helpers import EllipsisExampleHelper
+from pytableaux.tools.doc import (AutodocProcessor, ReplaceProcessor,
                                   SphinxEvent, docinspect, docparts,
                                   is_enum_member, rstutils)
+from pytableaux.tools.doc.extension import ConfKey
 from sphinx.ext import autodoc
 from sphinx.util import logging
 
@@ -35,6 +38,7 @@ if TYPE_CHECKING:
     import sphinx_toolbox.more_autodoc.overloads
     from proof.tableaux import Rule
     from sphinx.application import Sphinx
+    import sphinx.config
     
 
 __all__ = (
@@ -114,29 +118,65 @@ class BuildtrunkExample(AutodocProcessor):
 
     argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
-    @property
-    def pw(self):
-        return self.helper.pwtrunk
+    # @property
+    # def pw(self):
+    #     return self.helper.pwtrunk
 
-    @property
-    def lw(self):
-        return self.pw.lw
+    # @property
+    # def lw(self):
+    #     return self.pw.lw
 
     def run(self):
-        rec = self.record
-        logic = registry.locate(rec.obj)
+        classes = ('example', 'build-trunk')
+
+        logic = registry.locate(self.record.obj)
+        notn = self.app.config[ConfKey.wnotn]
+        lw = LexWriter(notn, renderset = self.get_renderset(notn),)
+        pw = writers.TabWriter('html', lw = lw, classes = classes)
         arg = self.argument
-        tab = docparts.trunk_example_tableau(logic, arg)
+
+        tab = Tableau(registry.locate(logic))
+        # Pluck a rule.
+        rule = tab.rules.groups[1][0]
+        # Inject the helper.
+        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
+        # Build trunk.
+        tab.argument = arg
+
+        tab.finish()
         self += 'Example:'
-        rawlines = self.arghtml().splitlines()
-        rawlines.extend(self.pw(tab).splitlines())
+        rawlines = self.arghtml(arg, lw).splitlines()
+        rawlines.extend(pw(tab).splitlines())
         self.lines.extend(rstutils.rawblock(rawlines))
 
-    def arghtml(self):
-        arg = self.argument
-        pstr = '</i> ... <i>'.join(map(self.lw, arg.premises))
-        argstr = f'Argument: <i>{pstr}</i> &there4; <i>{self.lw(arg.conclusion)}</i>'
+    def arghtml(self, arg: Argument, lw: LexWriter):
+        pstr = '</i> ... <i>'.join(map(lw, arg.premises))
+        argstr = f'Argument: <i>{pstr}</i> &there4; <i>{lw(arg.conclusion)}</i>'
         return argstr
+
+    @classmethod
+    def get_renderset(cls, notn):
+        # Make a RenderSet that renders subscript 2 as 'n'.
+        rskey = f'{__name__}.trunk'
+        try:
+            return RenderSet.fetch(notn, rskey)
+        except KeyError:
+            pass
+        # Btw, for unicode it would be chr(0x2099)
+        prev = RenderSet.fetch(notn, 'html')
+        def rendersub(sub):
+            s = prev.string(Marking.subscript, sub)
+            if sub == 2:
+                s = s.replace('2', 'n')
+            return s
+        data = dict(
+            notation = prev.notation,
+            charset = prev.charset,
+            renders = dict(prev.data['renders']),
+            strings = prev.data['strings']
+        )
+        data['renders'][Marking.subscript] = rendersub
+        return RenderSet.load(notn, rskey, data)
 
 class RolewrapReplace(ReplaceProcessor):
 
@@ -184,7 +224,7 @@ class RolewrapReplace(ReplaceProcessor):
 def setup(app: Sphinx):
 
     app.setup_extension('sphinx.ext.autodoc')
-    app.add_config_value(ConfKey.auto_skip_enum_value, True, 'env')
+    app.add_config_value(ConfKey.auto_skip_enum_value, True, 'env', [bool])
     app.add_autodocumenter(AttributeDocumenter, True)
 
     ev = 'autodoc-process-docstring'
@@ -201,3 +241,4 @@ def setup(app: Sphinx):
         app.connect(SphinxEvent.IncludeRead, inst)
         app.connect('source-read', inst)
         app.connect('autodoc-process-docstring', inst)
+
