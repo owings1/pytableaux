@@ -193,9 +193,8 @@ class check:
         return obj
 
 # Some external assembly required.
-
 class EmsgBase:
-
+    __slots__ = ()
     def __init__(self, cls: type[_ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):
             cls = type(cls[0], cls[1:], {})
@@ -209,13 +208,10 @@ class EmsgBase:
         def razr(*args):
             raise self._makeas(self.cls, args)
         self.razr = razr
-
     def __call__(self, *args):
         return self._makeas(self.cls, args)
-
     def _makeas(self, cls: type[_ExT], args: tuple) -> _ExT:
         return cls(*self._getargs(args))
-
     def _getargs(self, args: tuple):
         alen = len(self.fns)
         if alen == 0 or len(args) < alen:
@@ -224,7 +220,14 @@ class EmsgBase:
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
 
+from pytableaux.tools import clsns;
 
+class e(clsns):
+    __slots__ = ()
+    def __init__(self, *a): pass
+    def __call__(self): pass
+    def _makeas(self): pass
+    def _getargs(self ): pass
 
 __all__ = 'check', 'Emsg', *(
     name for name, value in locals().items()

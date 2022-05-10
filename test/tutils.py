@@ -16,7 +16,7 @@ from pytableaux.models import BaseModel
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof.rules import ClosingRule, Rule
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.tools.abcs import abcm
+from pytableaux.tools import abcs
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.typing import TT, F, RuleT, T
 
@@ -132,7 +132,7 @@ def get_subclasses(supcls: type[T]) -> qset[type[T]]:
     while len(todo):
         for child in filterfalse(classes.__contains__, todo.pop().__subclasses__()):
             todo.append(child)
-            if not abcm.isabstract(child):
+            if not abcs.isabstract(child):
                 classes.append(child)
     return classes
 

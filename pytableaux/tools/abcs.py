@@ -27,32 +27,31 @@ import functools
 import itertools
 import operator as opr
 from collections.abc import Set
+from enum import auto as eauto
 from typing import (TYPE_CHECKING, Any, Callable, Collection, Hashable,
                     Iterable, Iterator, Mapping, Sequence, SupportsIndex)
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import MapProxy
-from pytableaux.tools.typing import (RT, TT, EnumDictType, EnumT, F,
-                                     HkProviderInfo, HkUserInfo, KeysFunc,
-                                     NotImplType, Self, T, T1)
+from pytableaux.tools.typing import RT, TT, EnumDictType, EnumT, F, T
 
 if TYPE_CHECKING:
     from typing import overload
 
     from pytableaux.tools.hooks import hookutil
-    from pytableaux.tools.typing import iter
+    from pytableaux.tools.typing import (HkProviderInfo, HkUserInfo, KeysFunc,
+                                         NotImplType, Self, iter)
+                                     
 
 __all__ = (
     'Abc',
     'abcf',
-    'abcm',
     'AbcMeta',
     'Astr',
     'Copyable',
     'eauto',
     'Ebc',
-    'ebcm',
     'EbcMeta',
     'EnumLookup',
     'Eset',
@@ -64,11 +63,12 @@ __all__ = (
 EMPTY = ()
 NOARG = object()
 
-if TYPE_CHECKING:
-    @tools.classalias(_enum.auto)
-    class eauto:...
-else:
-    eauto = _enum.auto
+
+def is_enumcls(obj: Any) -> bool:
+    return isinstance(obj, type) and issubclass(obj, _enum.Enum)
+
+def em_mixins(Class: type[_enum.Enum]) -> tuple[type, ...]:
+    return *itertools.filterfalse(is_enumcls, Class.__bases__),
 
 class Eset(frozenset, _enum.Enum):
     'Enum meta enumeration.'
@@ -83,88 +83,66 @@ class Eset(frozenset, _enum.Enum):
 
     clean_methods = hook_methods.copy()
 
-class ebcm:
-    'Static Enum meta utils.'
+def _em_fix_name_value(Class: type[EnumT], /) -> type[EnumT]:
 
-    __new__ = NotImplemented
+    # cache attribute for flag enum.
+    if callable(getattr(Class, '__invert__', None)):
+        Class._invert_ = None # type: ignore
 
-    @staticmethod
-    def fix_name_value(Class: type[EnumT], /) -> type[EnumT]:
+    # Clear DynCa from class layout
+    Class.name  = None # type: ignore
+    Class.value = None # type: ignore
 
-        # cache attribute for flag enum.
-        if callable(getattr(Class, '__invert__', None)):
-            Class._invert_ = None # type: ignore
+    # Assign name & value directly.
+    for member in Class:
+        member.name = member._name_
+        member.value = member._value_
+    
+    # Compatible as decorator.
+    return Class
 
-        # Clear DynCa from class layout
-        Class.name  = None # type: ignore
-        Class.value = None # type: ignore
+def _em_clean_methods(Class: type[EnumT], /, *,
+    deleter: Callable[[type, str], Any] = type.__delattr__
+) -> type[EnumT]:
+    for hname in filter(Class.__dict__.__contains__, Eset.clean_methods):
+        deleter(Class, hname)
+    return Class
 
-        # Assign name & value directly.
-        for member in Class:
-            member.name = member._name_
-            member.value = member._value_
-        
-        # Compatible as decorator.
-        return Class
-
-    @staticmethod
-    def buildseq(Class: type[EnumT], /) -> tuple[EnumT, ...]:
-        return tuple(
-            map(Class._member_map_.__getitem__, Class._member_names_)
-        )
-
-    @staticmethod
-    def clean_methods(Class: type[EnumT], /, *,
-        deleter: Callable[[type, str], Any] = type.__delattr__
-    ) -> type[EnumT]:
-        for hname in filter(Class.__dict__.__contains__, Eset.clean_methods):
-            deleter(Class, hname)
-        return Class
-
-    @staticmethod
-    def is_enumcls(obj: Any) -> bool:
-        return isinstance(obj, type) and issubclass(obj, _enum.Enum)
-
-    @staticmethod
-    def mixins(Class: type[_enum.Enum]) -> tuple[type, ...]:
-        return *itertools.filterfalse(ebcm.is_enumcls, Class.__bases__),
-
-    @staticmethod
-    def rebase(oldcls: type[EnumT], *bases: type, ns: Mapping = None, metaclass: type = None, **kw) -> type[EnumT]:
-        'Rebase an enum class with the same member data.'
-        # Get metaclass.
-        if metaclass is None:
-            # Try the metaclass of the last enum class in the new bases.
-            it = filter(ebcm.is_enumcls, reversed(bases))
-            try:
-                metaclass = type(next(it))
-            except StopIteration:
-                # Fall back on the old metaclass.
-                metaclass = type(oldcls)
-        # Validate metaclass.
-        metaclass = check.subcls(check.inst(metaclass, type), _enum.EnumMeta)
-        # New bases.
+def _em_rebase(oldcls: type[EnumT], *bases: type, ns: Mapping = None, metaclass: type = None, **kw) -> type[EnumT]:
+    'Rebase an enum class with the same member data.'
+    # Get metaclass.
+    if metaclass is None:
+        # Try the metaclass of the last enum class in the new bases.
+        it = filter(is_enumcls, reversed(bases))
+        try:
+            metaclass = type(next(it))
+        except StopIteration:
+            # Fall back on the old metaclass.
+            metaclass = type(oldcls)
+    # Validate metaclass.
+    metaclass = check.subcls(check.inst(metaclass, type), _enum.EnumMeta)
+    # New bases.
+    if not len(bases):
+        # If no new bases passed, try the last enum class of the old bases.
+        it = filter(is_enumcls, reversed(oldcls.__bases__))
+        bases = tuple(itertools.islice(it, 1))
         if not len(bases):
-            # If no new bases passed, try the last enum class of the old bases.
-            it = filter(ebcm.is_enumcls, reversed(oldcls.__bases__))
-            bases = tuple(itertools.islice(it, 1))
-            if not len(bases):
-                # Fall back on built-in Enum.
-                bases = (_enum.Enum,)
-        # Reuse old non-enum bases.
-        bases = ebcm.mixins(oldcls) + bases
-        # Class name.
-        clsname = oldcls.__name__
-        # Prepare class dict.
-        cdict = metaclass.__prepare__(clsname, bases, **kw)
-        # Add member data from old class. Use _member_map_ to include aliases.
-        for mname, m in oldcls._member_map_.items():
-            # Use __setitem__, not update, else EnumDict won't work.
-            cdict[mname] = m._value_
-        if ns is not None:
-            cdict.update(ns)
-        # Create class.
-        return metaclass(clsname, bases, cdict, **kw)
+            # Fall back on built-in Enum.
+            bases = (_enum.Enum,)
+    # Reuse old non-enum bases.
+    bases = em_mixins(oldcls) + bases
+    # Class name.
+    clsname = oldcls.__name__
+    # Prepare class dict.
+    cdict = metaclass.__prepare__(clsname, bases, **kw)
+    # Add member data from old class. Use _member_map_ to include aliases.
+    for mname, m in oldcls._member_map_.items():
+        # Use __setitem__, not update, else EnumDict won't work.
+        cdict[mname] = m._value_
+    if ns is not None:
+        cdict.update(ns)
+    # Create class.
+    return metaclass(clsname, bases, cdict, **kw)
 
 class EnumLookup(Mapping[Any, T]):
     'Enum member lookup index.'
@@ -234,7 +212,7 @@ class EnumLookup(Mapping[Any, T]):
         return reversed(self._mapping)
 
     def _asdict(self) -> dict[Any, T]:
-        'Compatibility for JSON serialization.'
+        # Compatibility for JSON serialization.
         return dict(self)
 
     def __setattr__(self, name, value):
@@ -356,7 +334,7 @@ class EbcMeta(_enum.EnumMeta):
     ):
         if not skipabcm:
             # Run generic Abc init hooks.
-            abcm.nsinit(ns, bases, skipflags = skipflags)
+            nsinit(ns, bases, skipflags = skipflags)
 
         forbid = Eset.reserve_names.intersection(ns)
         if forbid:
@@ -366,11 +344,11 @@ class EbcMeta(_enum.EnumMeta):
         Class = super().__new__(cls, clsname, bases, ns, **kw)
 
         # Store mixin bases
-        Class._mixin_bases_ = ebcm.mixins(Class)
+        Class._mixin_bases_ = em_mixins(Class)
 
         if not skipabcm:
             # Run generic Abc after hooks.
-            abcm.clsafter(Class, ns, skipflags = skipflags)
+            clsafter(Class, ns, skipflags = skipflags)
 
         # Freeze Enum class attributes.
         Class._member_map_ = Class.__members__ = MapProxy(Class._member_map_)
@@ -386,10 +364,12 @@ class EbcMeta(_enum.EnumMeta):
             return Class
 
         # Store the fixed member sequence. Necessary for iterating.
-        Class._seq = ebcm.buildseq(Class)
+        Class._seq = tuple(
+            map(Class._member_map_.__getitem__, Class._member_names_)
+        )
 
         # Performance tweaks.
-        ebcm.fix_name_value(Class)
+        _em_fix_name_value(Class)
 
         # Init hook to process members before index is created.
         Class._on_init(Class)
@@ -402,7 +382,7 @@ class EbcMeta(_enum.EnumMeta):
         Class._after_init()
 
         # Cleanup.
-        ebcm.clean_methods(Class)
+        _em_clean_methods(Class)
 
         return Class
 
@@ -634,198 +614,185 @@ class abcf(FlagEnum, skipflags = True, skipabcm = True):
 #       Abc Meta
 #_____________________________________________________________________________
 
-class abcm:
-    'Static Abc meta util functions.'
+def nsinit(ns: dict, bases: tuple[type, ...], /, skipflags: bool = False) -> None:
+    'Class namespace prepare routine.'
+    # iterate over copy since hooks may modify ns.
+    if not skipflags:
+        for member in tuple(ns.values()):
+            mf = abcf.read(member)
+            if mf.before in mf:
+                member(ns, bases)
+    # cast slots to a set
+    slots = ns.get('__slots__')
+    if isinstance(slots, Iterable) and not isinstance(slots, Set):
+        ns['__slots__'] = frozenset(slots)
 
-    __new__ = NotImplemented
+def clsafter(Class: TT, ns: Mapping = None, /, skipflags: bool = False,
+    deleter: Callable[[type, str], Any] = type.__delattr__) -> TT:
+    'After class init routine. Usable as standalone class decorator.'
+    if ns is None:
+        ns = Class.__dict__.copy()
+    todelete = set()
+    if not skipflags:
+        for name, member in ns.items():
+            # Finish calling the 'after' hooks before anything else, since
+            # they might modify other meta config.
+            mf = abcf.read(member)
+            if mf is not mf.blank and mf in mf._cleanable:
+                if mf.after in mf:
+                    member(Class)
+                todelete.add(name)
+    for name in todelete:
+        deleter(Class, name)
+    return Class
 
-    if TYPE_CHECKING:
+def isabstract(obj) -> bool:
+    "Whether a class or method is abstract."
+    if isinstance(obj, type):
+        return bool(len(getattr(obj, '__abstractmethods__', Eset.Empty)))
+    return bool(getattr(obj, '__isabstractmethod__', False))
 
-        @tools.classalias(abcf)
-        class f: pass
+def annotated_attrs(obj) -> dict[str, tuple]:
+    'Evaluate annotions of type :obj:`typing.Annotated`.'
+    # This is called infrequently, so we import lazily.
+    from typing import Annotated, get_args, get_origin, get_type_hints
+    hints = get_type_hints(obj, include_extras = True)
+    return {
+        k: get_args(v) for k,v in hints.items()
+        if get_origin(v) is Annotated
+    }
 
-        @tools.classalias(frozenset)
-        class _frozenset: pass
-
-    else:
-        f = abcf
-        _frozenset = frozenset
-
-    @staticmethod
-    def nsinit(ns: dict, bases: tuple[type, ...], /, skipflags: bool = False) -> None:
-        'Class namespace prepare routine.'
-        # iterate over copy since hooks may modify ns.
-        if not skipflags:
-            for member in tuple(ns.values()):
-                mf = abcf.read(member)
-                if mf.before in mf:
-                    member(ns, bases)
-        # cast slots to a set
-        slots = ns.get('__slots__')
-        if isinstance(slots, Iterable) and not isinstance(slots, Set):
-            ns['__slots__'] = abcm._frozenset(slots)
-
-    @staticmethod
-    def clsafter(Class: TT, ns: Mapping = None, /, skipflags: bool = False,
-        deleter: Callable[[type, str], Any] = type.__delattr__
-    ) -> TT:
-        'After class init routine. Usable as standalone class decorator.'
-        if ns is None:
-            ns = Class.__dict__.copy()
-        todelete = set()
-        if not skipflags:
-            for name, member in ns.items():
-                # Finish calling the 'after' hooks before anything else, since
-                # they might modify other meta config.
-                mf = abcf.read(member)
-                if mf is not mf.blank and mf in mf._cleanable:
-                    if mf.after in mf:
-                        member(Class)
-                    todelete.add(name)
-        for name in todelete:
-            deleter(Class, name)
-        return Class
-
-    @staticmethod
-    def isabstract(obj) -> bool:
-        if isinstance(obj, type):
-            return bool(len(getattr(obj, '__abstractmethods__', Eset.Empty)))
-        return bool(getattr(obj, '__isabstractmethod__', False))
-
-    @staticmethod
-    def annotated_attrs(obj) -> dict[str, tuple]:
-        'Evaluate annotions of type :obj:`typing.Annotated`.'
-        # This is called infrequently, so we import lazily.
-        from typing import Annotated, get_args, get_origin, get_type_hints
-        hints = get_type_hints(obj, include_extras = True)
-        return {
-            k: get_args(v) for k,v in hints.items()
-            if get_origin(v) is Annotated
-        }
-
-    @staticmethod
-    def check_mrodict(mro: Sequence[type], *names: str) -> NotImplType|bool:
-        'Check whether methods are implemented for dynamic subclassing.'
-        if len(names) and not len(mro):
+def check_mrodict(mro: Sequence[type], *names: str) -> NotImplType|bool:
+    'Check whether methods are implemented for dynamic subclassing.'
+    if len(names) and not len(mro):
+        return NotImplemented
+    for name in names:
+        for base in mro:
+            if name in base.__dict__:
+                if base.__dict__[name] is None:
+                    return NotImplemented
+                break
+        else:
             return NotImplemented
-        for name in names:
-            for base in mro:
-                if name in base.__dict__:
-                    if base.__dict__[name] is None:
-                        return NotImplemented
-                    break
-            else:
-                return NotImplemented
-        return True
+    return True
 
-    @staticmethod
-    def merge_attr(obj, name: str, it = None, /, *,
-        setter: Callable[[type, str, Any], Any] = setattr, **kw
-    ):
-        """Merge an object's attribute, either from objects, or an mro.
+def merge_attr(obj, name: str, it = None, /, *,
+    setter: Callable[[type, str, Any], Any] = setattr, **kw
+):
+    """Merge an object's attribute, either from objects, or an mro.
 
-        Args:
-            obj: The object to update.
-            
-            .. note:: Additional arguments are passed to :attr:`merged_attr`.
-       
-        Keyword Args:
-            setter (Callable): The function to set the attribute, default
-                is :obj:`setattr`.
+    Args:
+        obj: The object to update.
+    
+    Keyword Args:
+        setter (Callable): The function to set the attribute, default
+            is :obj:`setattr`.
         
-        See Also:
+    .. note:: Additional arguments are passed to :attr:`merged_attr`.
 
-        """
-        if it is None:
-            check.inst(kw.setdefault('cls', obj), type)
-        value = abcm.merged_attr(name, it, **kw)
-        setter(obj, name, value)
-        return value
+    """
+    if it is None:
+        check.inst(kw.setdefault('cls', obj), type)
+    value = merged_attr(name, it, **kw)
+    setter(obj, name, value)
+    return value
 
-    @staticmethod
-    def merged_attr(name: str, it: Iterable = None, /, *,
-        oper: Callable[[Any, Any], RT] = opr.or_,
-        initial:RT|Any = NOARG,
-        default:RT|Any = NOARG,
-        transform: Callable[[Any], RT] = tools.thru,
-        getitem: bool = False,
-        **iteropts
-    ) -> RT:
-        """Get merged attribute value, either from objects, or an mro.
+def merged_attr(name: str, it: Iterable = None, /, *,
+    oper: Callable[[Any, Any], RT] = opr.or_,
+    initial:RT|Any = NOARG,
+    default:RT|Any = NOARG,
+    transform: Callable[[Any], RT] = tools.thru,
+    getitem: bool = False,
+    **iteropts
+) -> RT:
+    """Get merged attribute value, either from objects, or an mro.
 
-        Args:
-            name: The attribute/key name.
-            it: The iterable of objects. If ``None``, :attr:`mroiter` is
-                called with `**iteropts`.
+    Args:
+        name: The attribute/key name.
+        it: The iterable of objects. If ``None``, :attr:`mroiter` is
+            called with `**iteropts`.
 
-        Keyword Args:
-            oper (Callable): The reduce operator, default is :obj:`operator.or_`.
-            initial (Any): The initial reduce value. From :func:`functools.reduce`:
-                If initial is present, it is placed before the items of the
-                iterable in the calculation, and serves as a default when
-                the iterable is empty.
-            default (Any): The default value for each object in the iterable.
-              If not present, `initial` is used if present.
-            transform (Callable): A type or callable to transform the final value.
-            getitem (bool): Whether to use subscript instead of :obj:`getattr`.
+    Keyword Args:
+        oper (Callable): The reduce operator, default is :obj:`operator.or_`.
+        initial (Any): The initial reduce value. From :func:`functools.reduce`:
+            If initial is present, it is placed before the items of the
+            iterable in the calculation, and serves as a default when
+            the iterable is empty.
+        default (Any): The default value for each object in the iterable.
+            If not present, `initial` is used if present.
+        transform (Callable): A type or callable to transform the final value.
+        getitem (bool): Whether to use subscript instead of :obj:`getattr`.
 
-        Returns:
-            The merged value.                
-        """
-        if it is None:
-            # check.inst(cls, type)
-            it = abcm.mroiter(**iteropts)
-        elif iteropts:
-            raise TypeError(f'Unexpected kwargs: {list(iteropts)}')
-        if getitem:
-            getter = tools.getitem
-        else:
-            getter = getattr
-        if default is NOARG:
-            it = (getter(c, name) for c in it)
-        else:
-            it = (getter(c, name, default) for c in it)
-            if initial is NOARG:
-                initial = default
+    Returns:
+        The merged value.                
+    """
+    if it is None:
+        # check.inst(cls, type)
+        it = mroiter(**iteropts)
+    elif iteropts:
+        raise TypeError(f'Unexpected kwargs: {list(iteropts)}')
+    if getitem:
+        getter = tools.getitem
+    else:
+        getter = getattr
+    if default is NOARG:
+        it = (getter(c, name) for c in it)
+    else:
+        it = (getter(c, name, default) for c in it)
         if initial is NOARG:
-            value = functools.reduce(oper, it)
-        else:
-            value = functools.reduce(oper, it, initial)
-        return transform(value)
+            initial = default
+    if initial is NOARG:
+        value = functools.reduce(oper, it)
+    else:
+        value = functools.reduce(oper, it, initial)
+    return transform(value)
 
-    @staticmethod
-    def mroiter(cls: type,
-        supcls: type[T]|tuple[type, ...] = None, *,
-        mcls: type|tuple[type, ...] = None,
-        reverse: bool = True,
-        start: SupportsIndex = None, stop: SupportsIndex = None,
-    ) -> Iterator[type[T]]:
-        """Returns an iterator for a class's mro.
-        """
-        it = cls.mro()
-        if reverse:
-            it = reversed(it)
-        else:
-            it = iter(it)
-        if mcls is not None:
-            it = filter(lambda c: isinstance(c, mcls), it)
-        if supcls is not None:
-            it = filter(lambda c: issubclass(c, supcls), it)
-        if start is not None or stop is not None:
-            it = itertools.islice(it, start, stop) # type: ignore
-        return it
+def mroiter(cls: type, *,
+    supcls: type[T]|tuple[type, ...] = None,
+    mcls: type|tuple[type, ...] = None,
+    reverse: bool = True,
+    start: SupportsIndex = None,
+    stop: SupportsIndex = None,
+) -> Iterator[type[T]]:
+    """Returns an iterator for a class's mro with filters.
 
-    @staticmethod
-    def hookable(*hooks: str, attr = Astr.hookinfo):
-        'Decorator factory for specifying available hooks (provider).'
-        def decorator(func: F) -> F:
-            value = getattr(func, attr, None)
-            if value is None:
-                value = set()
-                setattr(func, attr, value)
-            value.update(hooks)
-            return func
-        return decorator
+    Args:
+        cls: The base class.
+
+    Keyword Args:
+        supcls (type): The class(es) of which members must be a subclass.
+        mcls (type): The metaclass(es) of which members must be an instance.
+        reverse (bool): Start from the top with :obj:`object`. Default ``True``.
+        start (int): An index from which to start.
+        stop (int): An index at which to stop.
+    
+    Returns:
+        An iterator.
+    """
+    it = cls.mro()
+    if reverse:
+        it = reversed(it)
+    else:
+        it = iter(it)
+    if mcls is not None:
+        it = filter(lambda c: isinstance(c, mcls), it)
+    if supcls is not None:
+        it = filter(lambda c: issubclass(c, supcls), it)
+    if start is not None or stop is not None:
+        it = itertools.islice(it, start, stop) # type: ignore
+    return it
+
+@staticmethod
+def hookable(*hooks: str, attr = Astr.hookinfo):
+    'Decorator factory for specifying available hooks (provider).'
+    def decorator(func: F) -> F:
+        value = getattr(func, attr, None)
+        if value is None:
+            value = set()
+            setattr(func, attr, value)
+        value.update(hooks)
+        return func
+    return decorator
 
 class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
@@ -837,11 +804,11 @@ class AbcMeta(_abc.ABCMeta):
         hookinfo: HkProviderInfo = None,
         **kw
     ):
-        abcm.nsinit(ns, bases, skipflags = skipflags)
+        nsinit(ns, bases, skipflags = skipflags)
         Class = super().__new__(cls, clsname, bases, ns, **kw)
         if not skiphooks:
             hookutil.init_user(Class, hooks)
-        abcm.clsafter(Class, ns, skipflags = skipflags)
+        clsafter(Class, ns, skipflags = skipflags)
         if not skiphooks:
             hookutil.init_provider(Class, hookinfo)
         return Class
@@ -889,7 +856,7 @@ class Copyable(metaclass = AbcMeta, skiphooks = True):
     def __subclasshook__(cls, subcls: type):
         if cls is not __class__:
             return NotImplemented
-        return abcm.check_mrodict(subcls.mro(), '__copy__', 'copy')
+        return check_mrodict(subcls.mro(), '__copy__', 'copy')
 
     def __init_subclass__(subcls: type[Copyable], immutcopy: bool = False, **kw):
         "Subclass init hook. Set `__copy__()` to `copy()`."
@@ -923,9 +890,13 @@ class IntFlag(int, FlagEnum):
 #       Rebases
 #_____________________________________________________________________________
 
-Eset = ebcm.rebase(Eset, Ebc)
+from pytableaux import errors
+
+Eset = _em_rebase(Eset, Ebc)
+Emsg = errors.Emsg = _em_rebase(Emsg, errors.EmsgBase, Ebc)
 
 del(
+    errors.EmsgBase,
     _abc,
     opr,
 )

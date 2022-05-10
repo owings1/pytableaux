@@ -88,6 +88,27 @@ from parents.
 The default is True.
 """
 
+autodoc_typehints = 'none'
+"""
+This value controls how to represent typehints. The setting takes the
+following values:
+
+* 'signature' - Show typehints in the signature (default)
+
+* 'description' - Show typehints as content of the function or method.
+    The typehints of overloaded functions or methods will still be
+    represented in the signature.
+
+* 'none' - Do not show typehints
+
+* 'both' - Show typehints in the signature and as content of the
+    function or method.
+
+Overloaded functions or methods will not have typehints included in
+the description because it is impossible to accurately represent all
+possible overloads as a list of parameters.
+"""
+
 autodoc_typehints_format = 'short'
 """
 This value controls the format of typehints. The setting takes the

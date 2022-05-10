@@ -448,32 +448,21 @@ class NoSetAttr(BaseMember):
         cls = None,
     ))
 
-    __slots__ = (
-        '_cache',
-        '_isroot',
-        'defaults',
-        'enabled',
-    )
-    defaults: Mapping
+    __slots__ =  'cache', 'defaults', 'enabled',
 
-    _isroot: bool
-    "Skip the first `__set_name__` hook."
+    defaults: dict[str, Any]
 
-    _cache: dict
+    cache: dict[Any, dict]
 
-    def __init__(self, /, *, enabled: bool = True, root: bool = False, **defaults):
+    def __init__(self, /, *, enabled: bool = True, **defaults):
         self.enabled = bool(enabled)
-        self._isroot = bool(root)
         self.defaults = self._defaults | defaults
-        self._cache = defaultdict(dict)
+        self.cache = defaultdict(dict)
 
-    def __call__(self, basecls: type, **opts):
-        return self._make(
-            basecls.__setattr__,
-            *map((self.defaults | opts).get, ('efmt', 'attr', 'cls'))
-        )
+    def __call__(self, base: type, **opts):
+        return self._make(base.__setattr__, **(self.defaults | opts))
 
-    def _make(self, sa: F, efmt: Callable[[str, Any], str], attr: str|None, cls: bool|type|None, /) -> F:
+    def _make(self, sa: F, /, efmt: Callable[[str, Any], str], attr: str|None, cls: bool|type|None) -> F:
         if attr:
             if cls is True:
                 check = self._clschecker(attr)
@@ -493,42 +482,33 @@ class NoSetAttr(BaseMember):
         return wraps(sa)(f)
 
     @abcs.abcf.temp
-    def cache(func: F) -> F:
+    def cached(func: F) -> F:
         @wraps(func)
         def f(self: NoSetAttr, *args):
+            cache = self.cache[func]
             try:
-                value = self._cache[func][args]
+                return cache[args]
             except KeyError:
-                value = self._cache[func][args] = func(self, *args)
-            return value
+                return cache.setdefault(args, func(self, *args))
         return f
 
-    @cache
+    @cached
     def _fixedchecker(self, attr, obj):
-        def check(self):
-            return getattr(obj, attr, False)
-        return check
+        return lambda _: getattr(obj, attr, False)
 
-    @cache
+    @cached
     def _callchecker(self, attr, fget):
-        def check(obj):
-            return getattr(fget(obj), attr, False)
-        return check
+        return lambda obj: getattr(fget(obj), attr, False)
 
-    @cache
+    @cached
     def _clschecker(self, attr):
         return self._callchecker(type, attr)
 
-    @cache
+    @cached
     def _selfchecker(self, attr):
-        def check(obj):
-            return getattr(obj, attr, False)
-        return check
+        return lambda obj: getattr(obj, attr, False)
 
     def sethook(self, owner, name):
-        if self._isroot:
-            self._isroot = False
-            return
         func = self(owner.__bases__[0])
         func.__name__ = name
         func.__qualname__ = self.__qualname__

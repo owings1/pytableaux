@@ -12,7 +12,6 @@ Base classes
 
 .. autoclass:: Lexical()
     :members:
-    :special-members: __delattr__
 
 .. autoclass:: LexicalEnum()
     :members:

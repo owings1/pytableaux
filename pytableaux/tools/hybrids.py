@@ -27,8 +27,7 @@ from typing import TYPE_CHECKING, Iterable, Iterator, SupportsIndex
 
 from pytableaux.errors import (DuplicateValueError, Emsg,
                                check)
-from pytableaux.tools import abstract
-from pytableaux.tools.abcs import abcm
+from pytableaux.tools import abstract, abcs
 from pytableaux.tools.sequences import (EMPTY_SEQ, MutableSequenceApi,
                                         SequenceApi, seqf, seqm, slicerange)
 from pytableaux.tools.sets import EMPTY_SET, MutableSetApi, SetApi, setf, setm
@@ -250,7 +249,7 @@ class qset(MutableSequenceSet[VT]):
         self._seq_.clear()
         self._set_.clear()
 
-    @abcm.hookable('cast', 'check', 'done')
+    @abcs.hookable('cast', 'check', 'done')
     def insert(self, index: SupportsIndex, value, /, *,
         cast = None, check = None, done = None
     ):
@@ -276,7 +275,7 @@ class qset(MutableSequenceSet[VT]):
         if done is not None:
             done(self, (value,), EMPTY_SET)
 
-    @abcm.hookable('check', 'done')
+    @abcs.hookable('check', 'done')
     def __delitem__(self, key: SupportsIndex|slice, /, *,
         check = None, done = None
     ):
@@ -313,7 +312,7 @@ class qset(MutableSequenceSet[VT]):
         @overload
         def __setitem__(self, key: slice, value: Collection[VT]):...
 
-    @abcm.hookable('cast')
+    @abcs.hookable('cast')
     def __setitem__(self, key: IndexType, value, /, *,
         cast: Callable[[Any], VT] = None
     ):
@@ -337,7 +336,7 @@ class qset(MutableSequenceSet[VT]):
 
         raise Emsg.InstCheck(key, (slice, SupportsIndex))
 
-    @abcm.hookable('check', 'done')
+    @abcs.hookable('check', 'done')
     def __setitem_index__(self, index: SupportsIndex, arriving, /, *,
         check: Callable = None, done: Callable = None,
     ):
@@ -375,7 +374,7 @@ class qset(MutableSequenceSet[VT]):
         if done is not None:
             done(self, (arriving,), (leaving,))
 
-    @abcm.hookable('check', 'done')
+    @abcs.hookable('check', 'done')
     def __setitem_slice__(self, slice_: slice, arriving: Collection[VT], /, *,
         check: Callable = None, done: Callable = None,
     ):
@@ -420,5 +419,4 @@ class qset(MutableSequenceSet[VT]):
 
 del(
     abstract,
-    abcm,
 )

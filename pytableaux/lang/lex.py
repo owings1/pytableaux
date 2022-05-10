@@ -38,7 +38,6 @@ from pytableaux.lang import (AtomicSpec, BiCoords, IdentType, LangCommonEnum,
                              SpecType, SysPredEnumMeta, TriCoords, nosetattr,
                              raiseae)
 from pytableaux.tools import MapProxy, abcs
-from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import lazy, membr, wraps
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.mappings import DequeCache, dmap
@@ -91,7 +90,7 @@ _Ranks: Mapping[str, int] = MapProxy(dict(
 #
 #----------------------------------------------------------
 
-@abcm.clsafter
+@abcs.clsafter
 class Lexical:
     """Base Lexical interface.
     """
@@ -237,7 +236,7 @@ class Lexical:
 
         return orderitems
 
-    @abcm.f.temp
+    @abcs.abcf.temp
     @membr.defer
     def ordr(member: membr):
         cmpoper = getattr(opr, member.name)
@@ -717,7 +716,7 @@ class Sentence(LexicalAbc):
             return Atomic.first()
         raise TypeError(f'Abstract type {cls}')
 
-    @abcm.f.temp
+    @abcs.abcf.temp
     @membr.defer
     def libopers_1(member: membr):
         oper = Operator.lib_opmap[member.name]
@@ -725,7 +724,7 @@ class Sentence(LexicalAbc):
             return Operated(oper, self)
         return wraps(oper)(f)
 
-    @abcm.f.temp
+    @abcs.abcf.temp
     @membr.defer
     def libopers_2(member: membr):
         oper = Operator.lib_opmap[member.name]
@@ -1433,7 +1432,7 @@ class LexType(LangCommonEnum):
 
     #******  Equality, Ordering, & Comparison
 
-    @abcm.f.temp
+    @abcs.abcf.temp
     @membr.defer
     def ordr(member: membr):
         oper = getattr(opr, member.name)
@@ -1530,7 +1529,7 @@ def metacall():
             if (
                 # If a concrete LexType raised the error, or the class is
                 # abstract, propagate.
-                cls in LexType or abcm.isabstract(cls) or
+                cls in LexType or abcs.isabstract(cls) or
 
                 # Creating from spec supports only length 1.
                 len(spec) != 1

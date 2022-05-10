@@ -31,7 +31,7 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang import (LangCommonMeta,
                              raiseae)
 from pytableaux.lang.lex import LexicalAbc, Predicate, Sentence
-from pytableaux.tools.abcs import abcm
+from pytableaux.tools import abcs
 from pytableaux.tools.decorators import lazy, membr, wraps
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmap
@@ -114,7 +114,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     # equal, and their premises are equal (and in the same order). The
     # title is not considered in equality.
 
-    @abcm.f.temp
+    @abcs.abcf.temp
     @tools.closure
     def ordr():
 
@@ -270,7 +270,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
     def specs(self):
         return tuple(p.spec for p in self)
 
-    @abcm.f.temp
+    @abcs.abcf.temp
     @qset.hook('done')
     def after_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
         'Implement after change (done) hook. Update lookup index.'
@@ -323,10 +323,10 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
                 setattr(Predicate, pred.name, pred)
             Predicate.System = cls
 
-        @abcm.f.before
+        @abcs.abcf.before
         def expand(ns: EnumDictType, bases, **kw):
             'Inject members from annotations in Predicate.System class.'
-            annots = abcm.annotated_attrs(Predicate.System)
+            annots = abcs.annotated_attrs(Predicate.System)
             members = {
                 name: spec for name, (vtype, spec)
                 in annots.items() if vtype is Predicate
@@ -336,7 +336,6 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
 
 
 del(
-    abcm,
     lazy,
     membr,
     opr,

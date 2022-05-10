@@ -149,7 +149,7 @@ class Parser(metaclass = ParserMeta):
     def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
         'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
         super().__init_subclass__(**kw)
-        abcs.abcm.merge_attr(subcls, '_defaults', supcls = __class__)
+        abcs.merge_attr(subcls, '_defaults', supcls = __class__)
         subcls._optkeys = subcls._defaults.keys()
         subcls.__call__ = subcls.parse
         if primary:

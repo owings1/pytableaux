@@ -1,3 +1,5 @@
+{% set stats = tab.stats %}
+{% set logic = tab.logic %}
 {% set desc = [logic.name, logic.Meta.title]|join(' - ') %}
 {% set col1len = 17 %}
 {% set col2len = desc|length %}
@@ -14,22 +16,3 @@
 |          Nodes | {{ f | format(stats.distinct_nodes) }}|
 |          Steps | {{ f | format(stats.steps) }}|
 +{{ '-' * rowlen }}+
-
-{% if argument %}
-{% set col1len = 3 %}
-{% set col2len = ((premises + (conclusion,))|map('length')|list + [8])|max %}
-{% set f = "%-" + ((col2len)|string) + 's' %}
-{% set rowlen = col1len + col2len + 3 %}
-{% set rowline = '-' * rowlen %}
-+{{ '-' * rowlen }}+
-| Argument {{ ' ' * (rowlen - 10) }}|
-|{{ '=' * rowlen }}|
-{% for premise in premises -%}
-    | [P]  {{ f | format(premise) }}|
-{% endfor -%}
-{% if premises -%}
-    |{{ '-' * rowlen }}|
-{% endif -%}
-| [C]  {{ f | format(conclusion) }}|
-+{{ '-' * rowlen }}+
-{% endif -%}

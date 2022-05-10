@@ -23,19 +23,19 @@ from __future__ import annotations
 import functools
 from copy import copy
 from itertools import filterfalse
-from typing import (TYPE_CHECKING, Any, Iterable, Iterator, Mapping,
-                    Sequence)
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
-from pytableaux.proof import RuleHelper, filters, Branch, Node, Target, Rule
+from pytableaux.proof import Branch, Node, Rule, RuleHelper, Target, filters
 from pytableaux.proof.util import Access, RuleAttr, RuleEvent, TabEvent
-from pytableaux.tools import MapProxy, abstract, closure
-from pytableaux.tools.abcs import abcm, Copyable
+from pytableaux.tools import MapProxy, abcs, abstract, closure
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import KT, VT, T, FiltersDict, TargetsFn, NodeTargetsFn, NodeTargetsGen, NodePredFunc
+from pytableaux.tools.typing import (KT, VT, FiltersDict, NodePredFunc,
+                                     NodeTargetsFn, NodeTargetsGen, T,
+                                     TargetsFn)
 
 if TYPE_CHECKING:
     from typing import overload
@@ -98,7 +98,7 @@ class AdzHelper(RuleHelper):
                     break
         return close_count / min(1, len(target['adds']))
 
-class BranchCache(dmap[Branch, T], Copyable, RuleHelper):
+class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
 
     _valuetype: type[T] = bool
 
@@ -452,7 +452,7 @@ class FilterNodeCache(BranchCache[set[Node]]):
     def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
         "``RuleHelper`` init hook. Verify `ignore_ticked` attribute."
         super().__init_ruleclass__(rulecls, **kw)
-        if not abcm.isabstract(rulecls):
+        if not abcs.isabstract(rulecls):
             if not hasattr(rulecls, RuleAttr.IgnoreTicked):
                 raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked)
 
@@ -569,7 +569,7 @@ class FilterHelper(FilterNodeCache):
         "``RuleHelper`` init hook. Verify and merge the `NodeFilters` attribute."
         super().__init_ruleclass__(rulecls, **kw)
         attr = RuleAttr.NodeFilters
-        values = abcm.merge_attr(rulecls, attr, supcls = Rule,
+        values = abcs.merge_attr(rulecls, attr, supcls = Rule,
             reverse = False,
             default = EMPTY_QSET,
             transform = qsetf,
@@ -578,7 +578,7 @@ class FilterHelper(FilterNodeCache):
             for Filter in values:
                 check.subcls(check.inst(Filter, type), filters.NodeCompare)
         else:
-            if not abcm.isabstract(rulecls):
+            if not abcs.isabstract(rulecls):
                 import warnings
                 warnings.warn(
                     f"EMPTY '{attr}' attribute for {rulecls}. "
@@ -891,6 +891,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
 # --------------------------------------------------
 
 from pytableaux.proof.rules import ClosingRule
+
 
 class EllipsisExampleHelper:
 

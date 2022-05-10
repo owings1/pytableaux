@@ -26,7 +26,7 @@ from typing import (TYPE_CHECKING, Collection, Generic, Iterable, Iterator,
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg
 from pytableaux.errors import check as echeck
-from pytableaux.tools.abcs import Copyable, IntEnum, abcm
+from pytableaux.tools import abcs
 from pytableaux.tools.hooks import HookProvider
 from pytableaux.tools.hybrids import MutableSequenceSet
 from pytableaux.tools.sequences import (MutableSequenceApi, SequenceApi,
@@ -47,7 +47,7 @@ __all__ = (
     'linqset',
 )
 
-class LinkRel(IntEnum):
+class LinkRel(abcs.IntEnum):
     'Link directional/subscript enum.'
 
     prev = -1
@@ -59,7 +59,7 @@ class LinkRel(IntEnum):
     next = 1
     "Indicates `next` attribute, or `after` position."
 
-class Link(Generic[VT], Copyable):
+class Link(Generic[VT], abcs.Copyable):
     'Link value container.'
 
     value: VT
@@ -332,7 +332,7 @@ class linkseq(LinkSequence[VT], MutableSequenceApi[VT]):
     def __len__(self):
         return self.__len
 
-    @abcm.hookable('cast', 'check')
+    @abcs.hookable('cast', 'check')
     def insert(self, index: SupportsIndex, value: VT, /, *,
         cast = None, check = None
     ):
@@ -379,7 +379,7 @@ class linkseq(LinkSequence[VT], MutableSequenceApi[VT]):
 
         raise Emsg.InstCheck(i, (SupportsIndex, slice))
 
-    @abcm.hookable('cast', 'check')
+    @abcs.hookable('cast', 'check')
     def __setitem__(self, i: IndexType, value: VT|Collection[VT],
         /, *, cast = None, check = None):
         "Set value(s) by index/slice."
@@ -533,7 +533,7 @@ class linqset(linkseq[VT], MutableSequenceSet[VT],
 
     #******  New public methods
 
-    @abcm.hookable('cast')
+    @abcs.hookable('cast')
     def wedge(self, value: VT, neighbor: VT, rel: Literal[-1]|Literal[1], /, *,
         cast = None
     ) -> None:
@@ -614,7 +614,7 @@ class linqset(linkseq[VT], MutableSequenceSet[VT],
 
     #******  Duplicate check hook
 
-    @abcm.hookable('check')
+    @abcs.hookable('check')
     @linkseq.hook('check')
     def __check(self, arrivals: Collection[VT], departures: Collection[VT], 
         /, *, check = None):

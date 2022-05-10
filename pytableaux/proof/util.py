@@ -185,6 +185,7 @@ class TabEvent(Ebc):
     AFTER_NODE_TICK     = eauto()
     AFTER_TRUNK_BUILD   = eauto()
     BEFORE_TRUNK_BUILD  = eauto()
+    AFTER_FINISH        = eauto()
 
 class TabStatKey(Ebc):
     'Tableau ``stat()`` keys.'

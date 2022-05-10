@@ -24,10 +24,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Mapping
 
 from pytableaux import _ENV, __docformat__
-from pytableaux.errors import check
 from pytableaux.proof.util import HelperAttr, RuleAttr
-from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure
-from pytableaux.tools.abcs import AbcMeta, abcm
+from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure, abcs
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setf
@@ -53,7 +51,7 @@ __all__ = (
     'Rule'
 )
 
-class TableauxSystem(metaclass = AbcMeta):
+class TableauxSystem(metaclass = abcs.AbcMeta):
     'Tableaux system base class.'
 
     @classmethod
@@ -93,7 +91,7 @@ class TableauxSystem(metaclass = AbcMeta):
         for classes in Rules.rule_groups:
             rules.groups.create().extend(classes)
 
-class RuleHelper(metaclass = AbcMeta):
+class RuleHelper(metaclass = abcs.AbcMeta):
     'Rule helper interface.'
 
     __slots__ = EMPTY_SET
@@ -132,7 +130,7 @@ class RuleHelper(metaclass = AbcMeta):
 
         # ---------------------
         def insp_rule(subcls: type):
-            yield abcm.check_mrodict(subcls.__mro__, name := 'rule')
+            yield abcs.check_mrodict(subcls.__mro__, name := 'rule')
             yield is_descriptor(getattr(subcls, name))
 
         def insp_init(subcls: type):
@@ -143,7 +141,7 @@ class RuleHelper(metaclass = AbcMeta):
             yield is_positional(params[1])
 
         def insp_init_ruleclass(subcls: type):
-            yield abcm.check_mrodict(subcls.__mro__, name := HelperAttr.InitRuleCls)
+            yield abcs.check_mrodict(subcls.__mro__, name := HelperAttr.InitRuleCls)
             yield callable(value := getattr(subcls, name))
             yield len(params := get_params(value)) > 1
             yield is_positional(params[1])
@@ -178,7 +176,7 @@ class RuleHelper(metaclass = AbcMeta):
         return hook_cached
 
 
-class RuleMeta(AbcMeta):
+class RuleMeta(abcs.AbcMeta):
     """Rule meta class."""
 
     @classmethod
@@ -191,27 +189,27 @@ class RuleMeta(AbcMeta):
 
         Class = super().__new__(cls, clsname, bases, ns, **kw)
 
-        mromerge = abcm.merge_attr
+        merge = abcs.merge_attr
 
         # name
         setattr(Class, RuleAttr.Name, clsname)
-    #         ancs = list(abcm.mroiter(subcls, supcls = cls))
+    #         ancs = list(abcs.mroiter(subcls, supcls = cls))
     #         flagsmap = {anc: anc.FLAGS for anc in ancs}
     #         subcls.FLAGS = functools.reduce(opr.or_, flagsmap.values(), cls.FLAGS)
         # _defaults
-        defaults = mromerge(Class, RuleAttr.DefaultOpts, mcls = cls,
+        defaults = merge(Class, RuleAttr.DefaultOpts, mcls = cls,
             default = dmap(), transform = MapProxy,
         )
         # _optkeys
         setattr(Class, RuleAttr.OptKeys, setf(defaults))
 
         # Timers
-        mromerge(Class, RuleAttr.Timers, mcls = cls,
+        merge(Class, RuleAttr.Timers, mcls = cls,
             default = EMPTY_QSET, transform = qsetf,
         )
 
         # Helpers
-        Helpers = mromerge(Class, RuleAttr.Helpers, mcls = cls,
+        Helpers = merge(Class, RuleAttr.Helpers, mcls = cls,
             default = EMPTY_QSET, transform = qsetf,
         )
         for Helper in Helpers:

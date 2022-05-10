@@ -30,8 +30,7 @@ from pytableaux.lang import LangCommonMeta, Marking, Notation, RenderSet
 from pytableaux.lang.lex import (Atomic, Constant, CoordsItem, Lexical,
                                  LexType, Operated, Operator, Predicate,
                                  Predicated, Quantified)
-from pytableaux.tools import MapProxy, abstract, closure
-from pytableaux.tools.abcs import abcm
+from pytableaux.tools import MapProxy, abstract, closure, abcs
 from pytableaux.tools.sets import EMPTY_SET
 
 if TYPE_CHECKING:
@@ -186,7 +185,7 @@ class LexWriter(metaclass = LexWriterMeta):
     def __init_subclass__(subcls: type[LexWriter], **kw):
         'Merge and freeze method map from mro. Sync ``__call__()``.'
         super().__init_subclass__(**kw)
-        abcm.merge_attr(
+        abcs.merge_attr(
             subcls, '_methodmap', supcls = __class__, transform = MapProxy
         )
         subcls.__call__ = subcls.write

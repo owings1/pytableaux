@@ -38,11 +38,10 @@ from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
 from pytableaux.proof import RuleHelper, RuleMeta
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.util import (BranchEvent, BranchStat, HelperAttr, RuleAttr, RuleEvent,
+from pytableaux.proof.util import (BranchEvent, BranchStat, RuleEvent,
                                    RuleState, StepEntry, TabEvent, TabFlag,
                                    TabStatKey, TabTimers, RuleClassFlag)
 from pytableaux.tools import EMPTY_MAP, abstract, closure, isstr
-from pytableaux.tools.abcs import abcm
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
@@ -87,9 +86,10 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     _optkeys: ClassVar[setf[str]] = setf(_defaults)
 
     FLAGS: ClassVar[RuleClassFlag] = RuleClassFlag(0)
+
     Helpers: ClassVar[qsetf[type[RuleHelper]]] = EMPTY_QSET
     "Helper classes."
-    Helpers2 = EMPTY_QSET
+
     Timers: ClassVar[qsetf[str]] = qsetf(('search', 'apply'))
     "StopWatch names to create in ``timers`` mapping."
 
@@ -235,6 +235,21 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         """
         return self.tableau.branch(parent)
 
+    def stats(self) -> dict[str, Any]:
+        "Compute the rule stats."
+        dict(
+            name    = self.name,
+            applied = len(self.history),
+            timers  = {
+                name : dict(
+                    duration_ms  = timer.elapsed_ms(),
+                    duration_avg = timer.elapsed_avg(),
+                    count        = timer.count,
+                )
+                for name, timer in self.timers.items()
+            },
+        )
+
     @classmethod
     def test(cls, /, *, noassert = False):
         """Run a simple test on the rule."""
@@ -333,72 +348,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
                 return target
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
-
-    # def __init_subclass__(subcls, **kw):
-    #     super().__init_subclass__(**kw)
-
-    #     cls = __class__
-    #     mcls = type(cls)
-    #     print(':clas:', subcls)
-    #     # mromerge = abcm.merge_attr
-    #     subcls.Helpers2 = abcm.merged_attr(subcls, RuleAttr.Helpers, mcls = mcls,
-    #         default = EMPTY_QSET, transform = qsetf,
-    #     )
-    #     if False and subcls.Helpers != Helpers:
-    #         print('-'*20)
-    #         print(subcls)
-    #         print('-'*5)
-    #         print(Helpers)
-    #         print('-'*5)
-    #         print(subcls.Helpers)
-    #         print('-'*20)
-    #     if False:
-    #         setattr(subcls, RuleAttr.Name, subcls.__name__)
-
-    #         ancs = list(abcm.mroiter(subcls, supcls = cls))
-    #         flagsmap = {anc: anc.FLAGS for anc in ancs}
-    #         subcls.FLAGS = functools.reduce(opr.or_, flagsmap.values(), cls.FLAGS)
-
-    #         # Helpers
-    #         Helpers2 = abcm.merged_attr(subcls, RuleAttr.Helpers, mcls = mcls,
-    #             default = EMPTY_QSET, transform = qsetf,
-    #         )
-    #         Helpers = mromerge(subcls, RuleAttr.Helpers, supcls = cls,
-    #             default = EMPTY_QSET, transform = qsetf,
-    #         )
-    #         if Helpers != Helpers2:
-    #             print(Helpers)
-    #             print(Helpers2)
-    #             print(subcls)
-    #             print(list(abcm.mroiter(subcls, supcls = cls)))
-    #             print(list(abcm.mroiter(subcls, mcls = cls)))
-    #         for Helper in Helpers:
-    #             check.subcls(Helper, RuleHelper)
-    #             kwopts = kw.pop(Helper.__name__, EMPTY_MAP)
-    #             finit = getattr(Helper, HelperAttr.InitRuleCls, None)
-    #             # if kwopts or finit is not None:
-    #             if finit is not None:
-    #                 finit(subcls, **kwopts)
-
-
-    #         defaults2 = abcm.merged_attr(subcls, RuleAttr.DefaultOpts, mcls = mcls,
-    #             default = dmap(), transform = MapProxy,
-    #         )
-
-    #         defaults = mromerge(subcls, RuleAttr.DefaultOpts, supcls = cls,
-    #             default = dmap(), transform = MapProxy,
-    #         )
-    #         # if defaults != defaults2:
-    #         #     print(defaults)
-    #         #     print(defaults2)
-    #         #     print(subcls)
-    #         #     print(list(abcm.mroiter(subcls, supcls = cls)))
-    #         #     print(list(abcm.mroiter(subcls, mcls = cls)))
-    #         setattr(subcls, RuleAttr.OptKeys, setf(defaults))
-
-    #         mromerge(subcls, RuleAttr.Timers, supcls = cls,
-    #             default = EMPTY_QSET, transform = qsetf,
-    #         )
 
 # ----------------------------------------------
 
@@ -1067,6 +1016,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             with self.timers.tree:
                 self.tree = self._build_tree(self)
         self.stats = self.__compute_stats()
+        self.emit(TabEvent.AFTER_FINISH, self)
         return self
 
     def branching_complexity(self, node: Node, /) -> int:
@@ -1313,7 +1263,7 @@ class Tableau(Sequence[Branch], EventEmitter):
                         'apply',
                     )
             ),
-            rules = tuple(map(self.__compute_rule_stats, self.rules)),
+            #rules = tuple(map(self.__compute_rule_stats, self.rules)),
         )
 
     def __compute_rule_stats(self, rule: Rule, /) -> dict[str, Any]:

@@ -202,7 +202,7 @@ class WebApp(EventEmitter):
             Quantifier = Quantifier,
             Predicate  = Predicate,
             ParseTable = ParseTable,
-            Json       = json,
+            toJson     = tojson,
 
             logics         = logics_map,
             example_args   = example_args,

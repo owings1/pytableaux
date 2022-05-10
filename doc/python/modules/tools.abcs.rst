@@ -3,9 +3,5 @@
 .. contents:: :local:
 
 .. automodule:: pytableaux.tools.abcs
-    
-    .. autoclass:: abcm()
-        :members:
-        :exclude-members: hookable
-
+    :members:
 

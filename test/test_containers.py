@@ -6,6 +6,7 @@ from pytest import raises
 from pytableaux.errors import *
 from pytableaux.lang.lex import *
 
+from pytableaux.tools import abcs
 from pytableaux.tools.abcs import *
 from pytableaux.tools.events import EventsListeners, Listeners
 from pytableaux.tools.hybrids import *
@@ -26,7 +27,7 @@ def subclasses(supcls: type[T]) -> qset[type[T]]:
     while len(todo):
         for child in filterfalse(classes.__contains__, todo.pop().__subclasses__()):
             todo.append(child)
-            if not abcm.isabstract(child):
+            if not abcs.isabstract(child):
                 classes.append(child)
     return classes
 
@@ -40,7 +41,7 @@ class Test_abcm(BaseSuite):
             x = 'B2',
         class C(B2, B1):
             pass
-        res = abcm.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
+        res = abcs.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
         assert tuple(res) == ('A', 'B1', 'B2')
 
 class Test_seqf(BaseSuite):

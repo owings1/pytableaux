@@ -47,12 +47,10 @@ def _():
 
     # Rebase errors.Emsg
 
-    from pytableaux.tools.abcs import ebcm, Ebc
-    errors.Emsg = ebcm.rebase(errors.Emsg, errors.EmsgBase, Ebc)
-    abcs.Emsg = errors.Emsg
+    # errors.Emsg = abcs.Emsg = abcs._em_rebase(errors.Emsg, errors.EmsgBase, abcs.Ebc)
 
-    errors.EmsgBase = None
-    del(errors.EmsgBase)
+    # errors.EmsgBase = None
+    # del(errors.EmsgBase)
 
 # ----- env
 
@@ -83,13 +81,6 @@ del(dataclasses,_Settings)
 import pytableaux.tools.decorators
 import pytableaux.tools.sets
 from pytableaux.tools.sets import EMPTY_SET
-
-@tools.closure
-def _():
-    # Back patch abcm._frozenset
-
-    from pytableaux.tools.abcs import abcm
-    abcm._frozenset = pytableaux.tools.sets.setf
 
 import pytableaux.tools.timing
 import pytableaux.tools.mappings
@@ -130,7 +121,7 @@ def _():
         c._readonly = True
 
     lex.nosetattr.enabled = True
-    lex.nosetattr._cache.clear()
+    lex.nosetattr.cache.clear()
 
     del(lex.nosetattr,)
 

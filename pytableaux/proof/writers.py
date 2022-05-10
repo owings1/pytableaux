@@ -30,8 +30,7 @@ from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import Notation
 from pytableaux.lang.writing import LexWriter
-from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure
-from pytableaux.tools.abcs import AbcMeta, abcm
+from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure, abcs
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.typing import TT
 
@@ -77,7 +76,7 @@ def register():
         """
 
         check.subcls(wcls, TabWriter)
-        if abcm.isabstract(wcls):
+        if abcs.isabstract(wcls):
             raise TypeError(f'Cannot register abstract class: {wcls}')
 
         fmt = wcls.format
@@ -89,7 +88,7 @@ def register():
 
     return register
 
-class TabWriterMeta(AbcMeta):
+class TabWriterMeta(abcs.AbcMeta):
 
     DefaultFormat: ClassVar[str] = 'text'
 
@@ -197,7 +196,7 @@ class TemplateTabWriter(TabWriter):
 
     def __init_subclass__(subcls: type[TemplateTabWriter], **kw):
         super().__init_subclass__(**kw)
-        if abcm.isabstract(subcls):
+        if abcs.isabstract(subcls):
             return
         if getattr(subcls, '_jenv', None) is None:
             if 'loader' not in subcls.jinja_opts:
@@ -276,23 +275,21 @@ class TextTabWriter(TemplateTabWriter):
     format = 'text'
 
     defaults = MapProxy(dict(
-        summary  = True,
-        argument = True,
-        heading  = True,
+        summary  = False,
+        argument = False,
+        title    = False,
     ))
     """Default options."""
 
     def write(self, tab: Tableau, /) -> str:
         strs = deque()
         opts = self.opts
+        if opts['title']:
+            strs.append(self._write_title(tab))
         if opts['summary']:
-            strs.append(self.render('summary.jinja2', self._get_argstrs(tab.argument),
-                stats    = tab.stats,
-                logic    = tab.logic,
-                argument = tab.argument,
-            ))
-        if opts['heading']:
-            strs.append(self.render('heading.jinja2', logic = tab.logic))
+            strs.append(self._write_summary(tab))
+        if tab.argument and opts['argument']:
+            strs.append(self._write_argument(tab.argument))
         template = self._jenv.get_template('nodes.jinja2', None, dict(lw = self.lw))
         strs.append(self._write_structure(tab.tree, template))
         return '\n'.join(strs)
@@ -313,10 +310,23 @@ class TextTabWriter(TemplateTabWriter):
                 append(next_pfx)
         return '\n'.join(lines)
 
-    def _get_argstrs(self, arg: Argument|None, /) -> dict[str, tuple[str, ...]|str|None]:
-        if arg is None:
-            return dict(premises = None, conclusion = None)
-        return dict(
-            premises = tuple(map(lw := self.lw, arg.premises)),
+    def _write_title(self, tab: Tableau, /) -> str:
+        return self.render('title.jinja2', logic = tab.logic)
+
+    def _write_argument(self, arg: Argument, /) -> str:
+        lw = self.lw
+        return self.render('argument.jinja2', 
+            premises = tuple(map(lw, arg.premises)),
             conclusion = lw(arg.conclusion),
         )
+
+    def _write_summary(self, tab: Tableau, /) -> str:
+        return self.render('summary.jinja2', tab = tab)
+
+    # def _get_argstrs(self, arg: Argument|None, /) -> dict[str, tuple[str, ...]|str|None]:
+    #     if arg is None:
+    #         return dict(premises = None, conclusion = None)
+    #     return dict(
+    #         premises = tuple(map(lw := self.lw, arg.premises)),
+    #         conclusion = lw(arg.conclusion),
+    #     )
