@@ -21,8 +21,7 @@ pytableaux.tools.doc.directives
 from __future__ import annotations
 
 from collections import ChainMap
-from importlib import import_module
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import sphinx.directives.other
 import sphinx.directives.patches
@@ -35,7 +34,7 @@ from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import rules, tableaux, writers
 from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.tools.doc import (BaseDirective, DirectiveHelper, SphinxEvent,
-                                  boolopt, classopt, choiceopt, docparts,
+                                  boolopt, classopt, choiceopt, 
                                   opersopt, predsopt, re_comma, rstutils,
                                   stropt)
 from sphinx.util import logging
@@ -43,6 +42,7 @@ from sphinx.util import logging
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
     from pytableaux.tools.doc.docparts import Tabler
+    from typing import Any
 
 __all__ = (
     'CSVTable',

@@ -35,7 +35,8 @@ from pytableaux.lang.lex import LexType, Predicate
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.tools import MapProxy, abcs
-from pytableaux.tools.doc import BaseRole, Helper, classopt, nodeopt, predsopt
+from pytableaux.tools.doc import BaseRole, classopt, nodeopt, predsopt
+from pytableaux.tools.doc.extension import Helper
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.typing import F
 from sphinx.util import logging

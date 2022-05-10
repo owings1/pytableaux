@@ -131,6 +131,12 @@ autodoc_default_options = {
     'exclude-members': 'for_json',
     # 'no-value': True,
     # 'special-members': '__init__',
+
+    # For modules, __all__ will be respected when looking for members
+    # unless you give the ignore-module-all flag option.
+    # Without ignore-module-all, the order of the members will also
+    # be the order in __all__.
+    'ignore-module-all': True,
 }
 
 auto_skip_enum_value = True
@@ -146,7 +152,6 @@ auto_skip_enum_value = True
 overloads_location = [ 'signature',
                        'top',
                       'bottom'][  2 ]
-
 
 
 # -------------------

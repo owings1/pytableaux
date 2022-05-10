@@ -1,52 +1,59 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
+=================================
+:mod:`pytableaux.proof.tableaux`
+=================================
 
-.. contents:: :local:
+.. module:: pytableaux.proof.tableaux
 
-.. automodule:: pytableaux.proof.tableaux
+classes
+-------
 
-    .. autoclass:: Rule
+.. autoclass:: Rule
+    :members:
 
-    .. autoclass:: Tableau
+.. autoclass:: Tableau
 
-        .. autoattribute:: argument
+    .. autoattribute:: argument
 
-        .. autoattribute:: logic
+    .. autoattribute:: logic
 
-        .. autoattribute:: finished
+    .. autoattribute:: finished
 
-        .. autoattribute:: valid
+    .. autoattribute:: valid
 
-        .. autoattribute:: invalid
+    .. autoattribute:: invalid
 
-        .. autoattribute:: completed
+    .. autoattribute:: completed
 
-        .. autoattribute:: premature
+    .. autoattribute:: premature
 
-        .. autoattribute:: id
+    .. autoattribute:: id
 
-        .. autoattribute:: history
+    .. autoattribute:: history
 
-        .. autoattribute:: rules
+    .. autoattribute:: rules
 
-        .. autoattribute:: open
+    .. autoattribute:: open
 
-        .. autoattribute:: tree
+    .. autoattribute:: tree
 
-        .. automethod:: build
+    .. automethod:: build
 
-        .. automethod:: step
+    .. automethod:: step
 
-        .. automethod:: branch
+    .. automethod:: branch
 
-        .. automethod:: add
+    .. automethod:: add
 
-        .. automethod:: finish
+    .. automethod:: finish
 
-    .. autoclass:: TreeStruct
-        :members:
+.. autoclass:: TreeStruct
+    :members:
 
-    .. autoclass:: TabRuleGroups
-    
-    .. autoclass:: RuleGroups
-    
-    .. autoclass:: RuleGroup
+.. autoclass:: TabRuleGroups
+    :members:
+
+.. autoclass:: RuleGroups
+    :members:
+
+.. autoclass:: RuleGroup
+    :members:

@@ -20,19 +20,15 @@ pytableaux.tools.doc.processors
 """
 from __future__ import annotations
 
-import enum
 import re
-from enum import Enum
 from typing import TYPE_CHECKING, Any, cast
 
-from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Atomic, Operator
+from pytableaux.lang import Argument, Atomic
 from pytableaux.logics import registry
 from pytableaux.tools.doc import (AutodocProcessor, ConfKey, ReplaceProcessor,
                                   SphinxEvent, docinspect, docparts,
                                   is_enum_member, rstutils)
 from sphinx.ext import autodoc
-from sphinx.ext.autodoc import importer
 from sphinx.util import logging
 
 if TYPE_CHECKING:

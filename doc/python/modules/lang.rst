@@ -1,24 +1,41 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
+============================================
+:mod:`pytableaux.lang` package
+============================================
 
-.. contents:: :local:
+.. toctree::
+    :caption: Modules
+    :maxdepth: 1
+    :glob:
 
-.. automodule:: pytableaux.lang
-    :members: PredicateRef
+    lang.*
 
-    .. autoclass:: Notation
-        :members:
 
-    .. autoclass:: Marking
-        :members:
+.. module:: pytableaux.lang
 
-    .. autoclass:: BiCoords
-        :members:
 
-    .. autoclass:: TriCoords
-        :members:
-    
-    .. autoclass:: TableStore
-        :members:
-    
-    .. autoclass:: RenderSet
-        :members:
+classes
+-------
+
+.. autoclass:: Notation
+    :members:
+
+.. autoclass:: Marking
+    :members:
+
+.. autoclass:: BiCoords
+    :members:
+
+.. autoclass:: TriCoords
+    :members:
+
+.. autoclass:: TableStore
+    :members:
+
+.. autoclass:: RenderSet
+    :members:
+
+types
+------
+
+.. attribute:: PredicateRef
+

@@ -45,9 +45,8 @@ if TYPE_CHECKING:
     from typing import overload
 
 __all__ = (
-    'Marking',
-    'Notation',
     'Parser',
+    'ParseContext',
     'ParserMeta',
     'ParseTable',
     'PolishParser',
@@ -70,7 +69,40 @@ class ParserMeta(LangCommonMeta):
         return super().__call__(*args, **kw)
 
 class Parser(metaclass = ParserMeta):
-    'Parser interface and coordinator.'
+    """Parser interface and coordinator.
+
+    To create a parser for a notation::
+
+        from pytableaux.lang import *
+
+        Parser('standard') # or 'polish'
+    
+    Or use the :class:`Notation` enum class::
+
+        Parser(Notation.standard)
+
+        Notation.standard.Parser()
+
+    To parse :class:`Predicated` sentences, the parser must know the predicate's
+    `arity`. For this, pass a :class:`Predicates` object with the predicates::
+
+        preds = Predicates(((0, 0, 1), (1, 0, 2)))
+        parser = Parser('standard', preds)
+        parser('Fa & Gab') # or parser.parse(...)
+    
+    """
+
+    """
+
+
+    Calling ``Parser()`` without any arguments returns an instance of the
+    default parser class of the default notation. Thus, these are equivalent::
+    
+        Parser()
+    
+        Notation.default.Parser()
+    
+    """
 
     __slots__ = 'table', 'preds', 'opts'
 
@@ -116,6 +148,13 @@ class Parser(metaclass = ParserMeta):
 
         Raises:
             ParseError: if input cannot be parsed.
+        
+        Examples::
+
+            parser.parse('A V B')
+
+            parser('A V B')
+
         """
         raise NotImplementedError
 
@@ -139,6 +178,12 @@ class Parser(metaclass = ParserMeta):
         Raises:
             ParseError: if input cannot be parsed.
             TypeError: for bad argument types.
+        
+        Examples::
+
+            parser.argument('A V ~A')
+
+            parser.argument('A', (('A > B', '~B')))
         """
         return Argument(
             self(conclusion),

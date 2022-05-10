@@ -1,6 +1,36 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
-
-.. contents:: :local:
+============================
+:mod:`pytableaux.errors`
+============================
 
 .. automodule:: pytableaux.errors
-    :members:
+    :show-inheritance:
+
+    .. autoclass::  IllegalStateError
+
+    .. autoclass::  RequestDataError
+
+    .. autoclass::  TimeoutError
+
+    .. autoclass::  ParseError
+
+    .. autoclass::  UnboundVariableError
+
+    .. autoclass::  BoundVariableError
+
+    .. autoclass::  MissingAttributeError
+
+    .. autoclass::  AttributeConflictError
+
+    .. autoclass::  DuplicateKeyError
+
+    .. autoclass::  MissingKeyError
+
+    .. autoclass::  DuplicateValueError
+
+    .. autoclass::  MissingValueError
+
+    .. autoclass::  ConfigError
+
+    .. autoclass::  ModelValueError
+
+    .. autoclass::  DenotationError

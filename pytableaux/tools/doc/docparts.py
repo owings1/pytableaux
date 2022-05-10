@@ -252,8 +252,12 @@ def lex_eg_table(columns: list[str], /, *,
         [type(item), item, *map(partial(getattr, item), columns)]
         for item in (m.cls.first() for m in LexType)
     ]
+    table = Tabler(data, data)
+    table.repr_apply(srepr.repr)
+    return table
 
     body = [
+
         [item.TYPE.name, lw(item),
             *map(srepr.repr, (getattr(item, name) for name in columns))
         ]

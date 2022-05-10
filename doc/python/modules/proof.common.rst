@@ -1,6 +1,6 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
-
-.. contents:: :local:
+=================================
+:mod:`pytableaux.proof.common`
+=================================
 
 .. automodule:: pytableaux.proof.common
 

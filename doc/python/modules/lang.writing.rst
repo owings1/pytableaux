@@ -1,8 +1,11 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
+=================================
+:mod:`pytableaux.lang.writing`
+=================================
 
-.. contents:: :local:
+.. module:: pytableaux.lang.writing
 
-.. automodule:: pytableaux.lang.writing
+classes
+-------
 
-    .. autoclass:: LexWriter
-        :members: write
+.. autoclass:: LexWriter
+    :members: write

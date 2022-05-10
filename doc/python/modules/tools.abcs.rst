@@ -1,6 +1,7 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
+=================================
+:mod:`pytableaux.tools.abcs`
+=================================
 
-.. contents:: :local:
 
 .. automodule:: pytableaux.tools.abcs
     :members:

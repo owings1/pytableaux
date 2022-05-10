@@ -21,32 +21,23 @@ pytableaux.tools.doc
 ^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
-from importlib import import_module
 
-import itertools
-import os.path
 import re
-import shutil
 import traceback
 from dataclasses import dataclass
 from enum import Enum
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Container, Generic, Mapping,
-                    Optional)
+from importlib import import_module
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Container, Generic,
+                    Mapping)
 
-import jinja2
 import sphinx.directives
 from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.roles import _roles
 from pytableaux import logics
-from pytableaux.errors import check
-from pytableaux.lang import Notation
-from pytableaux.lang.collect import Predicates
-from pytableaux.lang.lex import Operator
-from pytableaux.lang.writing import LexWriter, RenderSet
-from pytableaux.proof import writers
-from pytableaux.tools import (EMPTY_MAP, MapProxy, NameTuple, abcs, abstract,
-                              closure)
+from pytableaux.lang import Operator, Predicates
+from pytableaux.tools import EMPTY_MAP, MapProxy, NameTuple, abcs, abstract
+from pytableaux.tools.doc.extension import Helper, helpers
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
@@ -92,204 +83,7 @@ __all__ = (
 
 NOARG = object()
 
-# ------------------------------------------------
-
 logger = logging.getLogger(__name__)
-
-_helpers: Mapping[Sphinx, Helper] = None
-"The Shinx application ``Helper`` instances."
-
-def spaceargs(arg: str, /) -> list[str]:
-    return arg.strip().split(' ')
-
-# ------------------------------------------------
-
-@closure
-def app_setup():
-
-    global _helpers
-
-    helpers: dict[Sphinx, Helper]  = {}
-    _helpers = MapProxy(helpers)
-
-    def setup(app: Sphinx):
-        'Setup the Sphinx application.'
-
-        app.add_config_value(ConfKey.options, {}, 'env', [dict])
-        app.add_config_value(ConfKey.htmlcopy, [], 'env', [list[HtmlCopyEntry]])
-
-        from pytableaux.tools.doc import (directives, docparts, processors,
-                                          roles)
-        directives.setup(app)
-        docparts.setup(app)
-        processors.setup(app)
-        roles.setup(app)
-
-        app.connect('config-inited', init)
-        app.connect('build-finished', finish)
-
-    def init(app: Sphinx, config: sphinx.config.Config):
-
-        if app in helpers:
-            raise ValueError(f"app already initialized.")
-
-        for entry in config[ConfKey.htmlcopy]:
-            validate_copy_entry(entry)
-
-        opts = dict(config[ConfKey.options])
-
-        # Add app templates_path to search path.
-        opts['templates_path'] = [
-            os.path.join(app.srcdir, tp)
-            for tp in itertools.chain(
-                opts.get('templates_path', ()),
-                config['templates_path'],
-            )
-        ]
-
-        helpers[app] = Helper(**opts)
-
-    def finish(app: Sphinx, e: Exception|None):
-
-        if app.builder.format == 'html':
-            for entry in app.config[ConfKey.htmlcopy]:
-                do_copy_entry(app, entry)
-
-        del helpers[app]
-
-    return setup
-
-# ------------------------------------------------
-
-def validate_copy_entry(entry: HtmlCopyEntry):
-
-    check.inst(entry, (list, tuple))
-    src, dest = entry[0:2]
-    eopts = entry[2] if len(entry) > 2 else {}
-    check.inst(src, str)
-    check.inst(dest, str)
-    check.inst(eopts, dict)
-
-def do_copy_entry(app: Sphinx, entry: HtmlCopyEntry):
-
-    src = os.path.join(app.srcdir, entry[0])
-    dest = os.path.join(app.outdir, entry[1])
-    eopts = dict(entry[2]) if len(entry) > 2 else {}
-    eopts.setdefault('dirs_exist_ok', True)
-    ignore = eopts.get('ignore')
-    if ignore is not None:
-        if not callable(ignore):
-            if isinstance(ignore, str):
-                ignore = ignore,
-            eopts['ignore'] = shutil.ignore_patterns(*ignore)
-    shutil.copytree(src, dest, **eopts)
-
-# ------------------------------------------------
-
-def app_helper(app: Sphinx) -> Helper:
-    'Get the helper instance from the Sphinx app instance'
-    return _helpers[app]
-
-# ------------------------------------------------
-
-if TYPE_CHECKING:
-
-    @overload
-    def role_entry(rolecls: type[T]) -> RoleItem[T]|None: ...
-
-    @overload
-    def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
-
-    @overload
-    def role_entry(roleish: str) -> RoleItem[RoleFunction]|None: ...
-
-def role_entry(roleish):
-    'Get loaded role name and instance, by name, instance or type.'
-    idx: dict = _roles
-    if isinstance(roleish, str):
-        inst = idx.get(roleish)
-        if inst is None:
-            return None
-        name = roleish
-    else:
-        checktype = isinstance(roleish, type)
-        for name, inst in idx.items():
-            if checktype:
-                if type(inst) is roleish:
-                    break
-            elif inst is roleish:
-                break
-        else:
-            return None
-    return RoleItem(name, inst)
-
-def role_instance(roleish: type[T]) -> T|None:
-    'Get loaded role instance, by name, instance or type.'
-    return role_entry(roleish).inst
-
-def role_name(roleish: type|RoleFunction) -> str|None:
-    'Get loaded role name, by name, instance or type.'
-    return role_entry(roleish).name
-
-# ------------------------------------------------
-
-class Helper(abcs.Abc):
-
-    __slots__ = (
-        'jenv',
-        'opts',
-        'pwtrunk',
-    )
-
-    defaults = dict(
-        wnotn = 'standard',
-        pnotn = 'standard',
-        preds = ((0,0,1), (1,0,1), (2,0,1)),
-        truth_table_template = 'truth_table.jinja2',
-        truth_table_reverse = True,
-        templates_path = (),
-    )
-
-    def __init__(self, **opts):
-        self.reconfigure(opts)
-
-    def reconfigure(self, opts: dict):
-
-        self.opts = opts = dict(self.defaults) | opts
-
-        self.jenv = jinja2.Environment(
-            loader = jinja2.FileSystemLoader(opts['templates_path']),
-            trim_blocks = True,
-            lstrip_blocks = True,
-        )
-
-        opts['preds'] = Predicates(opts['preds'])
-
-        wnotn = Notation(opts['wnotn'])
-
-        # Make a RenderSet that renders subscript 2 as 'n'.
-        rskey = f'{type(self).__qualname__}.trunk'
-        try:
-            rstrunk = RenderSet.fetch(wnotn, rskey)
-        except KeyError:
-            rshtml = RenderSet.fetch(wnotn, 'html')
-            rstrunk = RenderSet.load(wnotn, rskey, dict(rshtml.data,
-                name = f'{wnotn.name}.{rskey}',
-                renders = dict(rshtml.renders,
-                    subscript = lambda sub: (
-                        '<sub>%s</sub>' % ('n' if sub == 2 else sub)
-                    )
-                )
-            ))
-
-        self.pwtrunk = writers.TabWriter('html',
-            lw = LexWriter(wnotn, renderset = rstrunk),
-            classes = ('example', 'build-trunk'),
-        )
-
-    def render(self, template: str, *args, **kw) -> str:
-        "Render a jinja2 template from the template path."
-        return self.jenv.get_template(template).render(*args, **kw)
 
 # ------------------------------------------------
 
@@ -311,18 +105,6 @@ class ConfKey(str, abcs.Ebc):
 
     auto_skip_enum_value = 'autodoc_skip_enum_value'
 
-def set_classes(opts: dict) -> dict:
-    if 'class' in opts:
-        if opts['class'] is None:
-            del(opts['class'])
-        else:
-            if 'classes' in opts:
-                raise TypeError(f"both 'class' and 'classes' in options: {opts}")
-            opts['classes'] = opts.pop('class')
-    return opts
-
-NOARG = object()
-
 # ------------------------------------------------
 
 class RoleDirectiveMixin(abcs.Abc):
@@ -336,8 +118,8 @@ class RoleDirectiveMixin(abcs.Abc):
     def run(self): ...
 
     @property
-    def helper(self):
-        return app_helper(self.env.app)
+    def helper(self) -> Helper:
+        return helpers[self.env.app]
 
     def current_module(self):
         return import_module(self.env.ref_context['py:module'])
@@ -376,10 +158,13 @@ class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
 
 class DirectiveHelper(RoleDirectiveMixin):
 
-    arg_parser = staticmethod(spaceargs)
 
     required_arguments = 0
     optional_arguments = 0
+
+    @staticmethod
+    def arg_parser(arg: str, /) -> list[str]:
+        return arg.strip().split(' ')
 
     inst: BaseDirective
     arguments: list[str]
@@ -451,7 +236,7 @@ class Processor(abcs.Abc):
 
     @property
     def helper(self) -> Helper:
-        return app_helper(self.app)
+        return helpers[self.app]
 
     @abstract
     def run(self) -> None:
@@ -549,6 +334,36 @@ class ReplaceProcessor(Processor):
 
 # ------------------------------------------------
 
+class Tabler(list[list[str]]):
+
+    header: list[str]
+    body: list[list[str]]
+    meta: dict[str, Any]
+
+    __slots__ = 'header', 'body', 'meta'
+
+    def __init__(self, body: list[list[str]], header: list[str]|None, /, **meta):
+        self.header = header
+        self.body = body
+        self.meta = meta
+        self.append(header)
+        self.extend(body)
+
+    def repr_apply(self, reprfunc: Callable, /) -> Tabler:
+        for row in self:
+            for i, v in enumerate(row):
+                if not isinstance(v, str):
+                    row[i] = reprfunc(v)
+        return self
+
+    def tb(self, tablefmt = None, *, rp = None, **kw):
+        from tabulate import tabulate as tb
+        if rp:
+            self.repr_apply(rp)
+        return tb(self.body, self.header, tablefmt, **kw)
+
+# ------------------------------------------------
+
 if TYPE_CHECKING:
 
     @overload
@@ -592,44 +407,9 @@ def is_enum_member(modname: str, objpath = None):
         else:
             return True
 
-# ------------------------------------------------
-
-class Tabler(list[list[str]]):
-
-    header: list[str]
-    body: list[list[str]]
-    meta: dict[str, Any]
-
-    __slots__ = 'header', 'body', 'meta'
-
-    def __init__(self, body: list[list[str]], header: list[str]|None, /, **meta):
-        self.header = header
-        self.body = body
-        self.meta = meta
-        self.append(header)
-        self.extend(body)
-
-    def repr_apply(self, reprfunc: Callable, /):
-        for row in self:
-            for i, v in enumerate(row):
-                if not isinstance(v, str):
-                    row[i] = reprfunc(v)
-
-    def tb(self, tablefmt = None, *, rp = None, **kw):
-        from tabulate import tabulate as tb
-        if rp:
-            self.repr_apply(rp)
-        return tb(self.body, self.header, tablefmt, **kw)
 
 # ------------------------------------------------
 
-class RoleItem(NameTuple, Generic[T]):
-    name: str
-    inst: T
-
-# ------------------------------------------------
-
-HtmlCopyEntry = tuple[str, str, Optional[dict]]
 
 re_space = re.compile(r'\s')
 
@@ -695,3 +475,59 @@ def choiceopt(choices: Container, /):
 del(class_option)
 
 # ------------------------------------------------
+
+
+def set_classes(opts: dict) -> dict:
+    if 'class' in opts:
+        if opts['class'] is None:
+            del(opts['class'])
+        else:
+            if 'classes' in opts:
+                raise TypeError(f"both 'class' and 'classes' in options: {opts}")
+            opts['classes'] = opts.pop('class')
+    return opts
+
+# ------------------------------------------------
+
+class RoleItem(NameTuple, Generic[T]):
+    name: str
+    inst: T
+
+if TYPE_CHECKING:
+
+    @overload
+    def role_entry(rolecls: type[T]) -> RoleItem[T]|None: ...
+
+    @overload
+    def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
+
+    @overload
+    def role_entry(roleish: str) -> RoleItem[RoleFunction]|None: ...
+
+def role_entry(roleish):
+    'Get loaded role name and instance, by name, instance or type.'
+    idx: dict = _roles
+    if isinstance(roleish, str):
+        inst = idx.get(roleish)
+        if inst is None:
+            return None
+        name = roleish
+    else:
+        checktype = isinstance(roleish, type)
+        for name, inst in idx.items():
+            if checktype:
+                if type(inst) is roleish:
+                    break
+            elif inst is roleish:
+                break
+        else:
+            return None
+    return RoleItem(name, inst)
+
+def role_instance(roleish: type[T]) -> T|None:
+    'Get loaded role instance, by name, instance or type.'
+    return role_entry(roleish).inst
+
+def role_name(roleish: type|RoleFunction) -> str|None:
+    'Get loaded role name, by name, instance or type.'
+    return role_entry(roleish).name

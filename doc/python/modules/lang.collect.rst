@@ -1,9 +1,12 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
+===============================
+:mod:`pytableaux.lang.collect` 
+===============================
 
-.. contents:: :local:
+.. module:: pytableaux.lang.collect
 
-.. automodule:: pytableaux.lang.collect
+classes
+-------
 
-    .. autoclass:: Argument
+.. autoclass:: Argument
 
-    .. autoclass:: Predicates
+.. autoclass:: Predicates

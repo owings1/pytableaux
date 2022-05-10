@@ -1,11 +1,20 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
+=================================
+:mod:`pytableaux.proof.writers`
+=================================
 
-.. contents:: :local:
 
-.. automodule:: pytableaux.proof.writers
-    :members: registry, register
+.. module:: pytableaux.proof.writers
+
+classes
+-------
     
-    .. autoclass:: TabWriter()
-        :members:
+.. autoclass:: TabWriter()
+    :members:
 
+registry
+---------
 
+.. autofunction:: register
+
+.. autoattribute:: pytableaux.proof.writers::registry
+    :no-value:

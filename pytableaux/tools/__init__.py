@@ -171,6 +171,7 @@ def dxopy():
 @closure
 def NameTuple():
     class NameTuple:
+        pass
         """A NamedTuple that accepts Generic aliases for type checking.
 
         Usage::
@@ -229,6 +230,7 @@ def NameTuple():
 @closure
 def clsns():
     class clsns:
+        pass
         """A base class that produces a useful dict of a class body.
 
         Decorator usage::

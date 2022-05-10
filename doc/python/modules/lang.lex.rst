@@ -1,5 +1,5 @@
 ==============================================
-:mod:`pytableaux.lang.lex` — Lexical classes
+:mod:`pytableaux.lang.lex` 
 ==============================================
 
 .. module:: pytableaux.lang.lex

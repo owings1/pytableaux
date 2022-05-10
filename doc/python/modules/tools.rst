@@ -1,5 +1,5 @@
 ============================================
-:mod:`pytableaux.proof` package
+:mod:`pytableaux.tools` package
 ============================================
 
 .. toctree::
@@ -7,12 +7,7 @@
     :maxdepth: 1
     :glob:
 
-    proof.*
+    tools.*
 
-classes
--------
-
-.. module:: pytableaux.proof
-
-.. autoclass:: TableauxSystem
+.. automodule:: pytableaux.tools
     :members:

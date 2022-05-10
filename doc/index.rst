@@ -35,6 +35,11 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   python/intro
+
+.. toctree::
+   :maxdepth: 3
+
    python/index
 
 Indices and tables
