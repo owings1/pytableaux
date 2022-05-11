@@ -15,9 +15,11 @@
     font-family: Charmonman;
     font-weight: bold;
 }
+.metawrite.logic_name,
 table.lex-eg-table tr > td:last-child {
     font-family: SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,Courier,monospace
 }
+
 
 /* font-size */
 table.truth-table th.operator-name {
@@ -32,9 +34,6 @@ table.truth-table th.operator-symbol {
 }
 .logic_name.subsup > .main {
     font-size: 115%;
-}
-.tableau.rule.example {
-    font-size: 120%;
 }
 
 /* line-height */
@@ -59,8 +58,26 @@ p.definiendum {
     font-variant: small-caps;
 }
 
+
+.example.tableau {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+}
+
+.build-trunk.prolog .argument {
+    padding: 10px;
+    margin: 0 10px;
+}
+
+.build-trunk.tableau {
+    padding-top: 25px;
+}
+
+
+
 /* text-align */
-p.definition.center {
+p.definition.center,
+.build-trunk-prolog {
     text-align: center;
 }
 table.truth-table tr > th.value-header.column,
@@ -130,15 +147,16 @@ p.definiendum {
 
 /* border */
 table.truth-table tr > th.value-header.row,
-table.truth-table th.operator-symbol.arity-1 {
+table.truth-table > tbody > tr > th.operator-symbol.arity-1 {
     border-bottom: 1px solid black;
 }
-table.truth-table tr >th.value-header.column {
+table.truth-table tr > th.value-header.column {
     border-right: 1px solid black;
 }
 
 /* padding */
-table.truth-table td {
+table.truth-table td,
+.build-trunk-prolog .argument {
     padding: 10px;
 }
 p.definition,

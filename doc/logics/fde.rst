@@ -9,10 +9,10 @@ L{FDE} - First Degree Entailment
 
 ------------------------
 
-.. tableau::
-  :logic: FDE
-  :argument: Modus Ponens
-  :format: text
+..  tableau:
+..   :logic: FDE
+..   :argument: Modus Ponens
+..   :format: text
 
 .. automodule:: pytableaux.logics.fde
 
@@ -61,7 +61,30 @@ L{FDE} - First Degree Entailment
 
     .. include:: include/truth_table_blurb.rst
 
-    .. truth-tables:: FDE
+    .. truth-tables::
+      :operators: Negation, Conjunction, Disjunction
+
+    The `Material Conditional` :s:`>` is definable in terms of disjunction:
+    
+    .. cssclass:: definition
+    
+      :s:`A > B` :math:`:=` :s:`~A V B`
+
+    Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+    and :s:`&`:
+
+    .. cssclass:: definition
+    
+      :s:`A < B` :math:`:=` :s:`(A > B) & (B > A)`
+
+    .. truth-tables::
+      :operators: MaterialConditional, MaterialBiconditional
+ 
+    L{FDE} does not have separate `Assertion` or `Conditional` operators,
+    but we include tables and rules for them, for cross-compatibility.
+
+    .. truth-tables::
+      :operators: Assertion, Conditional, Biconditional
 
     .. _fde-predication:
 
@@ -122,13 +145,44 @@ L{FDE} - First Degree Entailment
     Tableaux
     ========
 
-    .. autoclass:: TableauxSystem
-        :members:
+    Nodes
+    -----
+
+    Nodes for L{FDE} include a *designation* marker: |[+]| for *designated*, and |[-]|
+    for *undesignated*.
+
+    Trunk
+    -----
+
+    To build the trunk for an argument, add a designated node for each premise, and
+    an undesignated node for the conclusion.
+
+    .. tableau::
+      :build-trunk:
+      :prolog:
+    
+    Branches
+    --------
+
+    A branch is **closed** iff the same sentence appears on both a designated node,
+    and undesignated node.
+    
+    
+    .. tableau::
+      :rule: DesignationClosure
+    
+    This allows for both a sentence and its negation to appear as *designated*
+    on an open branch (or both as *undesignated*).
 
     .. _fde-rules:
 
     Rules
     -----
+
+    In general, rules for connectives consist of four rules per connective:
+    a designated rule, an undesignated rule, a negated designated rule, and a negated
+    undesignated rule. The special case of negation has a total of two rules which apply
+    to double negation only, one designated rule, and one undesignated rule.
 
     .. autoclass:: TabRules
         :members:
@@ -173,3 +227,5 @@ L{FDE} - First Degree Entailment
 .. _An Introduction to Non-Classical Logic: https://www.google.com/books/edition/_/rMXVbmAw3YwC?hl=en
 .. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
+
+

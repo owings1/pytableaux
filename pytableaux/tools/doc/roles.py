@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import functools
 import re
-from collections import ChainMap
 from typing import TYPE_CHECKING
 
 import sphinx.roles
@@ -74,10 +73,14 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
     warn_dangling = True # False
 
     def __init__(self, **_) -> None:
+        if not re.match(self.patterns['logicref'], '{@FDE}'):
+            logger.error(f'PATTERN BROKEN!! for {type(self).__name__}')
+            logger.error(self.patterns['logicref'])
         pass
 
     _logic_union = '|'.join(
-        sorted(logics.registry.all(), key = len, reverse = True)
+        sorted((n.split('.')[-1].upper() for n in logics.registry.all()), key = len, reverse = True)
+        # sorted(logics.registry.all(), key = len, reverse = True)
         # sorted(docinspect.get_logic_names(), key = len, reverse = True)
     )
     patterns = dict(
@@ -89,14 +92,15 @@ class refplus(sphinx.roles.XRefRole, BaseRole):
 
     @rolerun
     def run(self):
-        def _log():
-            logger.info(
-                f'rawtext={repr(self.rawtext)}, '
-                f'text={repr(self.text)}, '
-                f'title={repr(self.title)}, '
-                f'target={repr(self.target)}'
-            )
-        
+        # raise TypeError
+        # def _log():
+        #     logger.info(
+        #         f'rawtext={repr(self.rawtext)}, '
+        #         f'text={repr(self.text)}, '
+        #         f'title={repr(self.title)}, '
+        #         f'target={repr(self.target)}'
+        #     )
+        # _log()
         self.classes = list(self._classes)
 
         lrmatch = re.match(self.patterns['logicref'], self.text)
@@ -170,9 +174,6 @@ class lexdress(BaseRole):
 
     opt_defaults = MapProxy(dict({'class': None},
         node = nodes.inline,
-        # wnotn = Helper.defaults['wnotn'],
-        # pnotn = Helper.defaults['pnotn'],
-        # preds = Predicates(Helper.defaults['preds']),
         classes = qsetf(['lexitem']),
     ))
 
@@ -183,14 +184,15 @@ class lexdress(BaseRole):
         classes = self.set_classes()
         classes.update(self.opt_defaults['classes'])
 
-        preds: Predicates
-        opts = ChainMap(self.options, self.opt_defaults)
+        opts = self.options
+        conf = self.config
 
-        nodecls = opts['node']
-        pnotn = opts.get('pnotn', self.config[ConfKey.pnotn])
-        preds = Predicates(opts.get('preds', self.config[ConfKey.preds]))
+        nodecls = opts.get('node', self.opt_defaults['node'])
+        pnotn = opts.get('pnotn', conf[ConfKey.pnotn])
+        wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
+        preds = Predicates(opts.get('preds', conf[ConfKey.preds]))
         parser = Parser(pnotn, preds)
-        lw = LexWriter(opts.get('wnotn', self.config[ConfKey.wnotn]), 'unicode')
+        lw = LexWriter(wnotn, 'unicode')
 
         text = self.text
 

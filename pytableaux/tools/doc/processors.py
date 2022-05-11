@@ -19,26 +19,34 @@ pytableaux.tools.doc.processors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
+import os
 
 import re
-from typing import TYPE_CHECKING, Any, cast
+import shutil
+from typing import TYPE_CHECKING, Optional
+from pytableaux.errors import check
 
-from pytableaux.lang import Argument, Atomic, RenderSet, LexWriter, Marking
+from pytableaux.lang import LexWriter
 from pytableaux.logics import registry
-from pytableaux.proof import writers, Tableau
-from pytableaux.proof.helpers import EllipsisExampleHelper
+# from pytableaux.proof import Tableau, writers
+# from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.tools.doc import (AutodocProcessor, ReplaceProcessor,
-                                  SphinxEvent, docinspect, docparts,
-                                  is_enum_member, rstutils)
+                                  SphinxEvent, docinspect, is_enum_member,
+                                #   rstutils,
+                                  )
+from pytableaux.tools.doc import Processor
+from pytableaux.tools.doc.directives import TableauDirective
 from pytableaux.tools.doc.extension import ConfKey
 from sphinx.ext import autodoc
 from sphinx.util import logging
 
 if TYPE_CHECKING:
+    from typing import Any
+
     import sphinx_toolbox.more_autodoc.overloads
     from proof.tableaux import Rule
     from sphinx.application import Sphinx
-    import sphinx.config
+    from sphinx.config import Config
     
 
 __all__ = (
@@ -114,69 +122,69 @@ class BuildtrunkExample(AutodocProcessor):
     'Append docstring with html build trunk example.'
 
     def applies(self):
-        return docinspect.is_concrete_build_trunk(self.record.obj)
+        return docinspect.is_concrete_build_trunk(self.record.obj) and not self.hastext(':build-trunk:')
 
-    argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
+    # argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
-    # @property
-    # def pw(self):
-    #     return self.helper.pwtrunk
-
-    # @property
-    # def lw(self):
-    #     return self.pw.lw
 
     def run(self):
-        classes = ('example', 'build-trunk')
-
         logic = registry.locate(self.record.obj)
-        notn = self.app.config[ConfKey.wnotn]
-        lw = LexWriter(notn, renderset = self.get_renderset(notn),)
-        pw = writers.TabWriter('html', lw = lw, classes = classes)
-        arg = self.argument
+        self += f"""
+        .. tableau::
+            :logic: {logic.name}
+            :build-trunk:
+            :prolog:
+        """
+        # classes = ('example', 'build-trunk')
 
-        tab = Tableau(registry.locate(logic))
-        # Pluck a rule.
-        rule = tab.rules.groups[1][0]
-        # Inject the helper.
-        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
-        # Build trunk.
-        tab.argument = arg
+        # logic = registry.locate(self.record.obj)
+        # notn = self.app.config[ConfKey.wnotn]
+        # lw = LexWriter(notn, renderset = TableauDirective.get_trunk_renderset(notn, 'html'),)
+        # pw = writers.TabWriter('html', lw = lw, classes = classes)
+        # arg = self.argument
 
-        tab.finish()
-        self += 'Example:'
-        rawlines = self.arghtml(arg, lw).splitlines()
-        rawlines.extend(pw(tab).splitlines())
-        self.lines.extend(rstutils.rawblock(rawlines))
+        # tab = Tableau(registry.locate(logic))
+        # # Pluck a rule.
+        # rule = tab.rules.groups[1][0]
+        # # Inject the helper.
+        # rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
+        # # Build trunk.
+        # tab.argument = arg
 
-    def arghtml(self, arg: Argument, lw: LexWriter):
-        pstr = '</i> ... <i>'.join(map(lw, arg.premises))
-        argstr = f'Argument: <i>{pstr}</i> &there4; <i>{lw(arg.conclusion)}</i>'
-        return argstr
+        # arg = TableauDirective.trunk_argument
+        # lw2 = LexWriter(notn,
+        #     renderset = TableauDirective.get_trunk_renderset(notn, 'unicode')
+        # )
+        # tab.finish()
+        # c, p1, p2 = map(lw2, arg)
+        # '…'
+        # self += f"""
 
-    @classmethod
-    def get_renderset(cls, notn):
-        # Make a RenderSet that renders subscript 2 as 'n'.
-        rskey = f'{__name__}.trunk'
-        try:
-            return RenderSet.fetch(notn, rskey)
-        except KeyError:
-            pass
-        # Btw, for unicode it would be chr(0x2099)
-        prev = RenderSet.fetch(notn, 'html')
-        def rendersub(sub):
-            s = prev.string(Marking.subscript, sub)
-            if sub == 2:
-                s = s.replace('2', 'n')
-            return s
-        data = dict(
-            notation = prev.notation,
-            charset = prev.charset,
-            renders = dict(prev.data['renders']),
-            strings = prev.data['strings']
-        )
-        data['renders'][Marking.subscript] = rendersub
-        return RenderSet.load(notn, rskey, data)
+        # .. cssclass: leadin-box
+
+        # *For the argument*:
+    
+        #     *{p1}* ... *{p2}* ∴ *{c}*
+
+        # *build*:
+        # self += f"""
+        # .. tableau::
+        #     :logic: {logic.name}
+        #     :build-trunk:
+        #     :prolog:
+        # """
+
+        # rawlines = self.arghtml(arg, lw).splitlines()
+        # rawlines = pw(tab).splitlines()
+        # self.lines.extend(rstutils.rawblock(rawlines))
+
+    # def arghtml(self, arg: Argument, lw: LexWriter):
+    #     pstr = '</i> ... <i>'.join(map(lw, arg.premises))
+    #     argstr = f'Argument: <i>{pstr}</i> ∴ <i>{lw(arg.conclusion)}</i>'
+    #     return argstr
+
+# ------------------------------------------------
+
 
 class RolewrapReplace(ReplaceProcessor):
 
@@ -217,7 +225,50 @@ class RolewrapReplace(ReplaceProcessor):
                     defns.append((pat, rep))
 
         self._defns = defns
+        print(defns)
         return defns
+
+# ------------------------------------------------
+
+class CopyFileTree(Processor):
+
+
+    def __init__(self, app: Sphinx, config: Config):
+        self.app = app
+        self.validate()
+        app.connect('build-finished', self)
+
+    def __call__(self, app: Sphinx, e: Exception|None):
+        if e is None:
+            self.app = app
+            self.run()
+    
+    def validate(self):
+
+        for entry in self.config[ConfKey.copy_file_tree]:
+            check.inst(entry, (list, tuple))
+            src, dest = entry[0:2]
+            check.inst(src, str)
+            check.inst(dest, str)
+            if len(entry) > 2:
+                check.inst(entry[2], dict)
+
+    def run(self):
+
+        app = self.app
+
+        for entry in app.config[ConfKey.copy_file_tree]:
+            src = os.path.join(app.srcdir, entry[0])
+            dest = os.path.join(app.outdir, entry[1])
+            eopts = dict(entry[2]) if len(entry) > 2 else {}
+            eopts.setdefault('dirs_exist_ok', True)
+            ignore = eopts.get('ignore')
+            if ignore is not None:
+                if not callable(ignore):
+                    if isinstance(ignore, str):
+                        ignore = ignore,
+                    eopts['ignore'] = shutil.ignore_patterns(*ignore)
+            shutil.copytree(src, dest, **eopts)
 
 # ------------------------------------------------
 
@@ -241,4 +292,8 @@ def setup(app: Sphinx):
         app.connect(SphinxEvent.IncludeRead, inst)
         app.connect('source-read', inst)
         app.connect('autodoc-process-docstring', inst)
-
+    
+    app.add_config_value(ConfKey.copy_file_tree, [], 'env',
+        [list[tuple[str, str, Optional[dict]]]]
+    )
+    app.connect('config-inited', CopyFileTree)

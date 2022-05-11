@@ -35,6 +35,7 @@ import jinja2
 import sphinx.directives
 from docutils import nodes
 from docutils.parsers.rst.directives import class_option
+from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
 from pytableaux import logics
 from pytableaux.lang import Operator, Predicates
@@ -53,6 +54,7 @@ if TYPE_CHECKING:
     from typing import overload
 
     import sphinx.config
+    from sphinx.config import Config
     from sphinx.application import Sphinx
     from sphinx.environment import BuildEnvironment
     from sphinx.util.typing import RoleFunction
@@ -68,6 +70,7 @@ __all__ = (
     'ConfKey',
     'DirectiveHelper',
     'Helper',
+    'flagopt',
     'nodeopt',
     'opersopt',
     'predsopt',
@@ -140,6 +143,11 @@ class AppEnvMixin(abcs.Abc):
 
     def current_logic(self):
         return logics.registry(self.current_module())
+
+class RenderMixin(AppEnvMixin):
+
+    def render(self, template, *args, **kw):
+        return self.jenv.get_template(template).render(*args, **kw)
 
 # ------------------------------------------------
 
@@ -215,6 +223,10 @@ class DirectiveHelper(RoleDirectiveMixin):
         return self.inst.app
 
     @property
+    def config(self):
+        return self.inst.config
+
+    @property
     def options(self):
         return self.inst.options
 
@@ -227,6 +239,9 @@ class BaseRole(SphinxRole, RoleDirectiveMixin):
     @property
     def app(self) -> Sphinx:
         return self.env.app
+
+    def __init__(self):
+        self.options = {'class': None}
 
     def wrapped(self, name: str, newopts: Mapping, newcontent: list[str] = [], /):
         "Wrapper for ad-hoc customized roles."
@@ -364,7 +379,9 @@ class ReplaceProcessor(Processor):
         self.args = args
         self.run()
 
+
 # ------------------------------------------------
+
 
 class Tabler(list[list[str]], abcs.Abc):
 
@@ -453,6 +470,8 @@ re_nonslug_plus = re.compile(r'[^a-zA-Z0-9_-]+')
 if TYPE_CHECKING:
     @overload
     def classopt(arg: Any) -> list[str]: ...
+    @overload
+    def flagopt(arg: Any) -> None: ...
 
 classopt = class_option
 

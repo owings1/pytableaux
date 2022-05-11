@@ -20,22 +20,20 @@ pytableaux.tools.doc.directives
 """
 from __future__ import annotations
 
-from collections import ChainMap
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import sphinx.directives.other
 import sphinx.directives.patches
 from docutils import nodes
 from pytableaux import examples, logics, models, tools
-from pytableaux.lang import Argument, Notation
-from pytableaux.lang.lex import Operator
-from pytableaux.lang.parsing import Parser
-from pytableaux.lang.writing import LexWriter
-from pytableaux.proof import rules, tableaux, writers
+from pytableaux.lang import (Atomic, Argument, LexWriter, Marking, Notation, Operator, Parser,
+                             Predicates, RenderSet)
+from pytableaux.proof import rules, writers, Tableau, TabWriter
 from pytableaux.proof.helpers import EllipsisExampleHelper
-from pytableaux.tools.doc import (BaseDirective, DirectiveHelper, SphinxEvent,
-                                  boolopt, choiceopt, classopt, opersopt,
-                                  predsopt, re_comma, rstutils, stropt)
+from pytableaux.tools.doc import (BaseDirective, DirectiveHelper, RenderMixin,
+                                  SphinxEvent, boolopt, choiceopt, classopt,
+                                  flagopt, opersopt, predsopt, re_comma,
+                                  rstutils, stropt)
 from pytableaux.tools.doc.extension import ConfKey
 from sphinx.util import logging
 
@@ -43,13 +41,13 @@ if TYPE_CHECKING:
     from typing import Any
 
     import sphinx.config
-    from pytableaux.tools.doc.docparts import Tabler
+    from pytableaux.tools.doc import Tabler
     from sphinx.application import Sphinx
 
 __all__ = (
     'CSVTable',
     'Include',
-    'Tableaud',
+    'TableauDirective',
     'TruthTable',
     'TruthTables',
 )
@@ -76,14 +74,9 @@ table_generators: dict[str, TableGenerator] = {}
 "Table generator registry."
 
 
-class Tableaud(BaseDirective):
+class TableauDirective(BaseDirective):
     """Tableau directive.
     
-    For rule example::
-
-        .. tableau::
-            :logic: CFOL
-            :rule: Conjunction
 
     For an argument::
 
@@ -95,154 +88,251 @@ class Tableaud(BaseDirective):
         .. tableau::
              :logic: FDE
              :argument: Modus Ponens
+    
+    For rule example::
+
+        .. tableau::
+            :logic: CFOL
+            :rule: Conjunction
+    
+    For a build_trunk example::
+
+        .. tableau::
+            :logic: FDE
+            :build-trunk:
     """
 
     optional_arguments = 1
 
     option_spec = dict(
-        logic = logics.registry,
 
+        logic = logics.registry,
+        format = choiceopt(writers.registry),
+        wnotn = Notation,
+        classes = classopt,
+
+        # argument mode
         argument = examples.argument,
         conclusion = stropt,
         premises = re_comma.split,
         pnotn = Notation,
         preds = predsopt,
 
+        # rule mode
         rule = stropt,
 
-        format = choiceopt(writers.registry),
-        wnotn = Notation,
+        # build-trunk mode
+        **{'build-trunk': flagopt,},
+        prolog = flagopt,
 
-        classes = classopt,
+
     )
 
+    modes = {
+        'rule'        : {'rule'},
+        'build-trunk' : {'build-trunk', 'prolog'},
+        'argument'    : {'argument', 'conclusion', 'premises', 'pnotn', 'preds'},
+    }
     opts_for_argument = {'argument', 'conclusion', 'premises', 'pnotn', 'preds'}
+    trunk_argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
     def run(self):
 
         opts = self.options
+        conf = self.config
         opts['classes'] = classes = self.set_classes()
+        nlist = []
 
-        if 'rule' in opts:
-            if (badopts := self.opts_for_argument & set(opts)):
-                raise self.error(f"Option not allows with 'rule': {badopts}")
-            tab = self.gettab_rule()
-        else:
+        if 'logic' not in opts:
+            opts['logic'] = self.current_logic()
+
+        wfmt = opts.setdefault('format', 'html')
+        wnotn = opts['wnotn'] = Notation[opts.get('wnotn', conf[ConfKey.wnotn])]
+
+        charset = writers.registry[wfmt].default_charsets[wnotn]
+        renderset = RenderSet.fetch(wnotn, charset)
+
+        mode = self._check_options_mode()
+
+        if mode == 'argument':
             tab = self.gettab_argument()
+        else:
+            classes |= mode, 'example'
+
+            if mode == 'rule':
+                tab = self.gettab_rule()
+            else:
+                assert mode == 'build-trunk'
+                tab =  self.gettab_trunk()
+                if 'prolog' in opts:
+                    nlist.append(nodes.container('',
+                        *self.getnodes_trunk_prolog(),
+                        classes = classes + ['prolog'],
+                    ))
+                # change renderset
+                renderset = self.get_trunk_renderset(wnotn, charset)
+
+        lw = LexWriter(wnotn, renderset = renderset)
 
         tab.build()
-
-        wnotn = opts.get('wnotn', self.config[ConfKey.wnotn])
-        wfmt = opts.get('format', 'html')
-        writer = writers.TabWriter(wfmt, wnotn, classes = classes)
+        writer = TabWriter(wfmt, lw = lw, classes = classes)
 
         output = writer(tab)
 
         if wfmt == 'html':
-            return [nodes.raw(format = 'html', text = output)]
+            nlist.append(nodes.raw(format = 'html', text = output))
         else:
             classes |= 'tableau',
-            return [nodes.literal_block(text = output, classes = classes)]
+            nlist.append(nodes.literal_block(text = output, classes = classes))
+
+        return nlist
+
 
     def gettab_rule(self):
 
         opts = self.options
-        classes = opts['classes']
-        classes |= ['rule', 'example']
 
-        try:
-            tab = tableaux.Tableau(opts['logic'])
-            ref: str = opts['rule']
-            rule = tab.rules.get(ref)
-            
-        except KeyError as e:
-            raise self.error(f'Missing required option: {e}')
-        except AttributeError as e:
-            logger.error(e)
-            raise self.error(f'Bad rule: {e}')
+        tab = Tableau(opts['logic'])
+        rule = tab.rules.get(opts['rule'])
 
-        if isinstance(rule, rules.ClosingRule):
-            classes |= ['closure']
-        else:
+        # if isinstance(rule, rules.ClosingRule):
+        #     classes |= ['closure']
+        # else:
+        #     pass
+        if not isinstance(rule, rules.ClosingRule):
             rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
 
         tab.branch().extend(rule.example_nodes())
 
-        # rule.apply(rule.target(b))
         return tab
 
     def gettab_argument(self):
 
         opts = self.options
-        arg: Argument
+        conf = self.config
         try:
-            logic = opts['logic']
             if 'argument' in opts:
                 if (badopts := ({'conclusion', 'premises'} & set(opts))):
-                    raise self.error(f"Option not allows with 'argument': {badopts}")
+                    raise self.error(f"Option not allowed with 'argument': {badopts}")
                 arg = opts['argument']
             else:
-                ochain = ChainMap(opts, self.helper.opts)
-                parser = Parser(ochain['pnotn'], ochain['preds'])
+                pnotn = opts.get('pnotn', conf[ConfKey.pnotn])
+                preds = Predicates(opts.get('preds', conf[ConfKey.preds]))
+                parser = Parser(pnotn, preds)
                 arg = parser.argument(opts['conclusion'], opts.get('premises'))
         except KeyError as e:
             raise self.error(f'Missing required option: {e}')
 
-        return tableaux.Tableau(logic, arg)
+        return Tableau(opts['logic'], arg)
 
-class TruthTable(BaseDirective):
-    'Truth table (raw html).'
+    def gettab_trunk(self):
+        tab = Tableau(self.options['logic'])
+        # Pluck a rule.
+        rule = tab.rules.groups[1][0]
+        # Inject the helper.
+        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
+        # Build trunk.
+        tab.argument = self.trunk_argument
+        return tab
 
-    #: <Logic>.<Operator>
-    required_arguments = 1
+    def getnodes_trunk_prolog(self):
+        # HTML subscripts don't get escaped
+        notn = self.options['wnotn']
+        renderset = self.get_trunk_renderset(notn, 'unicode')
+        lw = LexWriter(notn, renderset = renderset)
+        c, p1, p2 = map(lw, self.trunk_argument)
+        return nodes.container('',
+            nodes.inline('', text = 'For the argument'),
+            nodes.inline('', text = f'{p1} ... {p2} ∴ {c}', classes = ['argument']),
+            nodes.inline('', text = 'add:')
+        )
 
-    option_spec = dict(
-        wnotn = Notation,
-        template = stropt,
-        reverse = boolopt,
-        clear = boolopt,
-        classes = classopt,
-    )
-
-    def run(self):
-
-        classes = self.set_classes()
-        opts = self.options
-        helper = self.helper
-        hopts = helper.opts
-        ochain = ChainMap(opts, hopts)
-
-        argstr, = self.arguments
+    @classmethod
+    def get_trunk_renderset(cls, notn, charset):
+        # Make a RenderSet that renders subscript 2 as 'n'.
+        rskey = f'{__name__}.{charset}.trunk'
         try:
-            logic, oper = argstr.split('.')
-            logic = logics.registry(logic)
-            model: models.BaseModel = logic.Model()
-            oper = Operator(oper)
-        except Exception as e:
-            logger.error(e)
-            raise self.error(f'Bad operator argument: {argstr}')
+            return RenderSet.fetch(notn, rskey)
+        except KeyError:
+            pass
+        prev = RenderSet.fetch(notn, charset)
+        def rendersub(sub):
+            if sub == 2:
+                sub = 'n'
+            return prev.string(Marking.subscript, sub)
+        data = dict(prev.data)
+        data.update(renders = dict(data['renders']) | {
+            Marking.subscript: rendersub
+        })
+        return RenderSet.load(notn, rskey, data)
 
-        lw = LexWriter(ochain['wnotn'], 'html')
+    def _check_options_mode(self) -> Literal['argument']|Literal['rule']|Literal['build-trunk']:
+        opts = self.options
+        for mode in ('rule', 'build-trunk'):
+            if mode in opts:
+                break
+        else:
+            return 'argument'
+        badopts = self.modes['argument'] & set(opts)
+        if mode == 'rule' and 'build-trunk' in opts:
+            badopts.add('build-trunk')
+        if badopts:
+            raise self.error(f"Option(s) not allowed with '{mode}': {badopts}")
+        return mode
 
-        template = opts.get('template', hopts['truth_table_template'])
-        reverse = opts.get('reverse', hopts['truth_table_reverse'])
-        clear = opts.get('clear', True)
+# class TruthTable(BaseDirective, RenderMixin):
+#     'Truth table (raw html).'
 
-        table = model.truth_table(oper, reverse = reverse)
-        context = dict(table = table, lw = lw, classes = classes)
-        content = helper.render(template, context)
-        if clear:
-            content += '<div class="clear"></div>'
+#     #: <Logic>.<Operator>
+#     required_arguments = 1
 
-        return [nodes.raw(format = 'html', text = content)]
+#     option_spec = dict(
+#         wnotn = Notation,
+#         template = stropt,
+#         reverse = boolopt,
+#         clear = boolopt,
+#         classes = classopt,
+#     )
 
-class TruthTables(BaseDirective):
+#     def run(self):
+
+#         classes = self.set_classes()
+#         opts = self.options
+#         conf = self.config
+
+#         argstr, = self.arguments
+#         try:
+#             logic, oper = argstr.split('.')
+#             logic = logics.registry(logic)
+#             model: models.BaseModel = logic.Model()
+#             oper = Operator(oper)
+#         except Exception as e:
+#             logger.error(e)
+#             raise self.error(f'Bad operator argument: {argstr}')
+
+#         wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
+#         lw = LexWriter(wnotn, 'html')
+
+#         template = opts.get('template', conf[ConfKey.truth_table_template])
+#         reverse = opts.get('reverse', conf[ConfKey.truth_table_reverse])
+#         clear = opts.get('clear', True)
+
+#         table = model.truth_table(oper, reverse = reverse)
+#         context = dict(table = table, lw = lw, classes = classes)
+#         content = self.render(template, context)
+#         if clear:
+#             content += '<div class="clear"></div>'
+
+#         return [nodes.raw(format = 'html', text = content)]
+
+class TruthTables(BaseDirective, RenderMixin):
     'Truth tables (raw html) of all operators.'
 
     #: Logic
-    required_arguments = 1
+    # optional_arguments = 1
 
     option_spec = dict(
+        logic = logics.registry,
         operators = opersopt,
         wnotn = Notation,
         template = stropt,
@@ -254,22 +344,27 @@ class TruthTables(BaseDirective):
     def run(self):
 
         classes = self.set_classes()
-        # helper = self.helper
-        # opts = helper.opts
-        # hopts = helper.opts
-        # ochain = ChainMap(opts, hopts)
         opts = self.options
-        logic = logics.registry(self.arguments[0])
-        model: models.BaseModel = logic.Model()
+        conf = self.config
+
+        if 'logic' not in opts:
+            opts['logic'] = self.current_logic()
+
+        # if len(self.arguments):
+        #     logic = logics.registry(self.arguments[0])
+        # else:
+        #     logic = self.current_logic()
+
+        model: models.BaseModel = opts['logic'].Model()
         opers = opts.get('operators')
         if opers is None:
             opers = sorted(model.truth_functional_operators)
 
-        wnotn = opts.get('wnotn', self.config[ConfKey.wnotn])
+        wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
         lw = LexWriter(wnotn, 'html')
 
-        template = opts.get('template', self.config[ConfKey.truth_table_template])
-        reverse = opts.get('reverse', self.config[ConfKey.truth_table_reverse])
+        template = opts.get('template', conf[ConfKey.truth_table_template])
+        reverse = opts.get('reverse', conf[ConfKey.truth_table_reverse])
         clear = opts.get('clear', True)
 
         tables = (
@@ -286,9 +381,6 @@ class TruthTables(BaseDirective):
             content += '<div class="clear"></div>'
 
         return [nodes.raw(format = 'html', text = content)]
-
-    def render(self, template, *args, **kw):
-        return self.jenv.get_template(template).render(*args, **kw)
 
 class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     "Override csv-table to allow generator function."
@@ -346,16 +438,20 @@ class Include(sphinx.directives.other.Include, BaseDirective):
 
 
 
-    # config[ConfKey.jenv].loader.searchpath = paths
-
 def setup(app: Sphinx):
+
+    app.add_config_value(ConfKey.wnotn,'standard', 'env', [str, Notation])
+    app.add_config_value(ConfKey.pnotn, 'standard', 'env', [str, Notation])
+    app.add_config_value(ConfKey.preds,
+        ((0,0,1), (1,0,1), (2,0,1)), 'env', [tuple, Predicates])
 
     app.add_config_value(ConfKey.truth_table_template, 'truth_table.jinja2', 'env', [str])
     app.add_config_value(ConfKey.truth_table_reverse, True, 'env', [bool])
+
     app.add_event(SphinxEvent.IncludeRead)
     app.add_directive('include',   Include, override = True)
     app.add_directive('csv-table', CSVTable, override = True)
-    app.add_directive('tableau', Tableaud)
-    app.add_directive('truth-table', TruthTable)
+    app.add_directive('tableau', TableauDirective)
+    # app.add_directive('truth-table', TruthTable)
     app.add_directive('truth-tables', TruthTables)
 

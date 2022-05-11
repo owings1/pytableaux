@@ -24,7 +24,6 @@ pytableaux.proof.tableaux
 """
 from __future__ import annotations
 
-import functools
 import operator as opr
 from collections import deque
 from collections.abc import Set
@@ -38,9 +37,9 @@ from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
 from pytableaux.proof import RuleHelper, RuleMeta
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.util import (BranchEvent, BranchStat, RuleEvent,
-                                   RuleState, StepEntry, TabEvent, TabFlag,
-                                   TabStatKey, TabTimers, RuleClassFlag)
+from pytableaux.proof.util import (BranchEvent, BranchStat, RuleClassFlag,
+                                   RuleEvent, RuleState, StepEntry, TabEvent,
+                                   TabFlag, TabStatKey, TabTimers)
 from pytableaux.tools import EMPTY_MAP, abstract, closure, isstr
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
@@ -1200,7 +1199,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
         Args:
             results: A list/tuple of (Rule, dict) pairs.
-        
+
         Returns:
             The highest scoring element.
         """
@@ -1240,7 +1239,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             distinct_nodes = None
         timers = self.timers
         return dict(
-            id              = self.id,
+            # id              = self.id,
             result          = self.__result_word(),
             branches        = len(self),
             open_branches   = len(self.open),

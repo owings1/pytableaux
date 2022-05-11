@@ -33,7 +33,7 @@ always results in a classical value (V{T} or V{F}).
 
     .. include:: include/truth_table_blurb.rst
 
-    .. truth-tables:: B3E
+    .. truth-tables::
 
     Note that the Conditional operator :s:`$` is definable in terms of
     the Assertion operator :s:`*`:

@@ -244,15 +244,14 @@ class HtmlTabWriter(TemplateTabWriter):
             tab_classes = tab_classes,
         )
 
-    @classmethod
-    def attachments(cls, /) -> dict[str, str]:
+    def attachments(self, /) -> dict[str, str]:
         """
         Returns:
             A dict with:
               - `css`: The static css.
         """
         return dict(
-            css = cls.render('static/tableau.css')
+            css = self.render('static/tableau.css')
         )
 
     # classes:

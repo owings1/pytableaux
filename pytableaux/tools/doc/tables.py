@@ -20,25 +20,23 @@ pytableaux.tools.doc.docparts
 
 """
 from __future__ import annotations
-from functools import wraps, partial
 
 import html
-import reprlib
 import re
+import reprlib
 import sys
+from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
-from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import LexType, Operator
 from pytableaux.lang.parsing import ParseTable
 from pytableaux.lang.writing import LexWriter, RenderSet
 from pytableaux.logics import registry
-from pytableaux.proof.helpers import EllipsisExampleHelper
-from pytableaux.proof.rules import ClosingRule, Rule
-from pytableaux.proof.tableaux import Tableau
-from pytableaux.tools import MapProxy, closure, abstract, abcs
+from pytableaux.tools import MapProxy, abcs, closure
+from pytableaux.tools.doc import Tabler, directives
+from pytableaux.tools.doc.directives import TableGenerator
+from pytableaux.tools.doc.extension import ConfKey
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.doc import Tabler
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -46,9 +44,8 @@ if TYPE_CHECKING:
 __all__ = (
     'lex_eg_table',
     'member_table',
-    'opers_table',
+    'oper_sym_table',
     'Reprer',
-    'trunk_example_tableau',
 )
 
 
@@ -76,13 +73,13 @@ class Reprer(reprlib.Repr, dict, metaclass = abcs.AbcMeta):
     defaults = MapProxy(dict(
 
         maxlevel =     6 * 2,
-        maxtuple =     6 * 2,
-        maxlist  =     6 * 2,
-        maxarray =     5 * 2,
-        maxdict  =     4 * 2,
-        maxset   =     6 * 2,
-        maxfrozenset = 6 * 2,
-        maxdeque =     6 * 2,
+        maxtuple =     6 * 4,
+        maxlist  =     6 * 4,
+        maxarray =     5 * 4,
+        maxdict  =     4 * 4,
+        maxset   =     6 * 4,
+        maxfrozenset = 6 * 4,
+        maxdeque =     6 * 4,
         maxstring =   30 * 2,
         maxlong   =   40 * 2,
         maxother  =   30 * 2,
@@ -101,6 +98,8 @@ class Reprer(reprlib.Repr, dict, metaclass = abcs.AbcMeta):
         for key, value in self.opts.items():
             if key in self.attropts:
                 setattr(self, key, value)
+
+    __call__ = reprlib.Repr.repr
 
     def repr1(self, x, level):
         try:
@@ -127,22 +126,10 @@ class Reprer(reprlib.Repr, dict, metaclass = abcs.AbcMeta):
             setattr(cls, fmc(m.cls), cls.repr_lexical)
 
 # ------------------------------------------------
-
-def trunk_example_tableau(logic: Any, arg: Argument, /) -> str:
-    "Get an example tableau for a logic's build_trunk for documentation."
-    tab = Tableau(registry.locate(logic))
-    # Pluck a rule.
-    rule = tab.rules.groups[1][0]
-    # Inject the helper.
-    rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
-    # Build trunk.
-    tab.argument = arg
-    return tab.finish()
-
 # ------------------------------------------------
 
 @closure
-def opers_table():
+def oper_sym_table():
 
     # Source tables
     sources = (
@@ -240,10 +227,18 @@ def opers_table():
 
     return build
 
+class OperSymTable(TableGenerator):
+
+    def gentable(self):
+        return oper_sym_table()
+
+directives.table_generators['oper-sym-table'] = OperSymTable
+
+# ------------------------------------------------
 # ------------------------------------------------
 
-def lex_eg_table(columns: list[str], /, *, _ = 2,
-    notn = 'standard', charset = 'unicode', maxtuple = 8):
+def lex_eg_table(columns: list[str], /, *, 
+    notn = 'standard', charset = 'unicode',):
     "lexical item attribute examples."
 
     """
@@ -263,10 +258,7 @@ def lex_eg_table(columns: list[str], /, *, _ = 2,
     │ Operated   │ ○A     │ (90, 50, 10, 60, 0, 0)             │
     ╘════════════╧════════╧════════════════════════════════════╛
     """
-    lw = LexWriter(notn, charset)
-
-    srepr = Reprer(maxtuple = maxtuple)
-    
+    reprer = Reprer(lw = LexWriter(notn, charset))
 
     header = ['Type', 'Item', *columns]
     data = [
@@ -274,25 +266,23 @@ def lex_eg_table(columns: list[str], /, *, _ = 2,
         for item in (m.cls.first() for m in LexType)
     ]
 
+    return Tabler(data, header).apply_repr(reprer)
 
-    t = Tabler(data, header)
-    if _ == 1:
-        return t
-    if _ == 2:
-        return t.apply_repr(srepr.repr)
+class LexEgTable(TableGenerator):
 
+    required_arguments = 1
+    optional_arguments = sys.maxsize
 
-    body = [
+    def gentable(self):
+        conf = self.config
+        kwargs = dict(
+            notn = conf[ConfKey.wnotn]
+        )
+        return lex_eg_table(self.arguments, **kwargs)
 
-        [item.TYPE.name, lw(item),
-            *map(srepr.repr, (getattr(item, name) for name in columns))
-        ]
-        for item in [
-            m.cls.first() for m in LexType
-        ]
-    ]
-    return Tabler(body, header)
+directives.table_generators['lex-eg-table'] = LexEgTable
 
+# ------------------------------------------------
 # ------------------------------------------------
 
 def member_table(owner: Sequence, columns: list[str], /, *, getitem = False):
@@ -310,44 +300,23 @@ def member_table(owner: Sequence, columns: list[str], /, *, getitem = False):
         for m in owner
     ]
 
-    table = Tabler(body, header)
-    table.apply_repr(srepr.repr)
-    return table
+    return Tabler(body, header).apply_repr(srepr)
+
+class MemberTable(TableGenerator):
+
+    required_arguments = 0
+    optional_arguments = sys.maxsize
+
+    def gentable(self):
+        return member_table(self.current_class(), self.arguments)
+
+directives.table_generators['member-table'] = MemberTable
 
 # ------------------------------------------------
 
 def setup(app: Sphinx):
     "Sphinx setup."
-
-    from pytableaux.tools.doc import directives
-
-
-    class OperSymTable(directives.TableGenerator):
-
-        def gentable(self):
-            return opers_table()
-
-    class LexEgTable(directives.TableGenerator):
-
-        required_arguments = 1
-        optional_arguments = sys.maxsize
-
-        def gentable(self):
-            return lex_eg_table(self.arguments)
-
-    class MemberTable(directives.TableGenerator):
-
-        required_arguments = 0
-        optional_arguments = sys.maxsize
-
-        def gentable(self):
-            return member_table(self.current_class(), self.arguments)
-
-    directives.table_generators.update({
-        'lex-eg-table'   : LexEgTable,
-        'oper-sym-table' : OperSymTable,
-        'member-table'   : MemberTable,
-    })
+    pass
 
 # ------------------------------------------------
 
@@ -367,12 +336,12 @@ def main():
     "Terminal main. Print rando tables."
 
     from random import shuffle
+    from typing import Iterator
 
     import tabulate as Tb
-    from pytableaux.tools.doc.rstutils import csvlines
     from pytableaux.lang import LexType, Operator
+    # from pytableaux.tools.doc.rstutils import csvlines
     from tabulate import tabulate as tb
-    from typing import Iterator
 
     theformats = qset(Tb.tabulate_formats)
     theformats -= {f for f in theformats if
@@ -390,17 +359,17 @@ def main():
     ]:
         callspecs = [
 
-            # (opers_table,),
+            (oper_sym_table,),
 
-            # (lex_eg_table, lexatrs[0:2]),
+            (lex_eg_table, lexatrs[0:2]),
 
             *((lex_eg_table, [name]) for name in lexatrs),
 
-            # (member_table, Operator, [
-            #     'name','order', 'label', 'arity', 'libname']),
+            (member_table, Operator, [
+                'name','order', 'label', 'arity', 'libname']),
 
-            # (member_table, LexType, [
-            #     'name', 'rank', 'cls', 'role', 'maxi'])
+            (member_table, LexType, [
+                'name', 'rank', 'cls', 'role', 'maxi'])
         ]
 
         shuffle(callspecs)

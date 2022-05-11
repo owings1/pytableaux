@@ -468,12 +468,6 @@ class Model(BaseModel[ValueFDE]):
         return func_mapper
 
 class TableauxSystem(BaseSystem):
-    """
-    Nodes for FDE have a boolean *designation* property, and a branch is closed iff
-    the same sentence appears on both a designated and undesignated node. This allows
-    for both a sentence and its negation to appear as designated (xor undesignated)
-    on an open branch.
-    """
 
     # operator => negated => designated
     branchables = {
@@ -512,10 +506,6 @@ class TableauxSystem(BaseSystem):
 
     @classmethod
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
-        """
-        To build the trunk for an argument, add a designated node for each premise, and
-        an undesignated node for the conclusion.
-        """
         append = tab.branch().append
         for premise in arg.premises:
             append(sdnode(premise, True))
@@ -578,10 +568,7 @@ class ConjunctionReducingRule(OperatorNodeRule):
 
 class TabRules:
     """
-    In general, rules for connectives consist of four rules per connective:
-    a designated rule, an undesignated rule, a negated designated rule, and a negated
-    undesignated rule. The special case of negation has a total of two rules which apply
-    to double negation only, one designated rule, and one undesignated rule.
+
     """
 
     class DesignationClosure(rules.BaseClosureRule):

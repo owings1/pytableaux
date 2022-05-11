@@ -40,7 +40,7 @@ L{LP} is a 3-valued logic (V{T}, V{F}, and V{B}). It can be understood as
 
     .. include:: include/truth_table_blurb.rst
 
-    .. truth-tables:: LP
+    .. truth-tables::
 
     .. _lp-predication:
 

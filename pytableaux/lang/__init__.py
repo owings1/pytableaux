@@ -260,6 +260,9 @@ class Marking(LangCommonEnum):
     subscript = 'subscript'
     "Subscript marking."
 
+    tableau = 'tableau'
+    "Tableau marking."
+
 #==========================+
 #  Aux classes             |
 #==========================+

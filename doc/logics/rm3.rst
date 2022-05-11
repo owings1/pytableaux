@@ -31,7 +31,7 @@ It is similar to {@LP}, with a different conditional operator.
 
     .. include:: include/truth_table_blurb.rst
 
-    .. truth-tables:: RM3
+    .. truth-tables::
 
     .. _rm3-consequence:
 

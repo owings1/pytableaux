@@ -140,6 +140,9 @@ autodoc_default_options = {
 }
 
 auto_skip_enum_value = True
+
+
+
 # -----------------------------
 # - sphinx_toolbox More Autodoc
 # -----------------------------
@@ -161,11 +164,9 @@ overloads_location = [ 'signature',
 #
 extensions.append('pytableaux.tools.doc.extension')
 
-# pt_options = dict(
 
-# )
 
-pt_htmlcopy = [
+copy_file_tree = [
     (
         f'{package.root}/web/static/css/fonts/charmonman',
         '_static/fonts/charmonman',
@@ -190,6 +191,23 @@ intersphinx_mapping = dict(
     )
 )
 
+# -------------------
+# -  Prolog/Epilog
+# -------------------
+#
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-rst_prolog
+#
+#
+rst_epilog = """
+.. |[+]| unicode:: 0x2295
+.. |[-]| unicode:: 0x2296
+.. |(x)| unicode:: 0x2297
+"""
+
+
+rst_prolog = """
+
+"""
 
 # -------------------
 # -  Smartquote

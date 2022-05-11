@@ -42,7 +42,7 @@ from :ref:`CFOL`, as well as more well-known many-valued systems.
             as in :ref:`K3 <K3>`, but conjunction is quite different, which is defined
             in terms of disjunction in the standard way as :s:`~(~A V ~B)`.
 
-            .. truth-tables:: P3
+            .. truth-tables::
 
         .. method:: value_of_predicated(sentence)
 

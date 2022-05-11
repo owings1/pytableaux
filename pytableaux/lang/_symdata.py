@@ -20,6 +20,8 @@ pytableaux.lang._symdata
 
 """
 from __future__ import annotations
+
+import re
 from typing import Any, Callable, Mapping
 
 from pytableaux.tools import closure
@@ -132,29 +134,88 @@ def rendersets():
 
     from html import unescape as html_unescape
 
-    from pytableaux.lang import Marking, Notation
-    from pytableaux.lang.lex import LexType, Operator, Predicate, Quantifier
+    from pytableaux.lang import (LexType, Marking, Notation, Operator,
+                                 Predicate, Quantifier)
     from pytableaux.tools import MapProxy
 
     def dunesc(d: dict, inplace = False) -> None:
         return dtransform(html_unescape, d, typeinfo = str, inplace = inplace)
 
-    def unisub(sub: int) -> str:
-        # ₀₁₂₃₄₅₆₇₈₉
-        return ''.join(chr(0x2080 + int(d)) for d in str(sub))
+    @closure
+    def unisub():
 
+        # Unicode subscript.
+
+        # The easy way -- supports digits only, else fails.
+
+        def unisub1(sub: int) -> str:
+            return ''.join(chr(0x2080 + int(d)) for d in str(sub))
+
+
+        # The other way -- supports some non-digits, else converts to string.
+
+        # Char mapping.
+        unisubs = MapProxy(dict((k, chr(v)) for k, v in (
+            item for it in (
+                zip('0123456789',    range(0x2080, 0x2089)),
+                zip('+_=()',         range(0x208A, 0x208E)),
+                zip('aeoxəhklmnpst', range(0x2090, 0x209c)),
+            ) for item in it))
+        )
+        getsub = unisubs.__getitem__
+        # Regex to check so that all or none will be converted.
+        nonsub = re.compile("[^%s]" % ''.join(unisubs)).search
+
+        def unisub2(sub):
+            if nonsub(src := str(sub)):
+                return src
+            return ''.join(map(getsub, src))
+
+        return unisub2
+
+    # html subscript
+    htmlsub = '<sub>{}</sub>'.format
+
+    # rst subscript
+    rstsub = ':sub:`{}`'.format
+
+    # meta chars
     asciimeta = MapProxy(dict(
         conseq    = '|-',
         nonconseq = '|/-',
+        therefore = ':.',
+        ellipsis  = '...',
     ))
-    htmsub = '<sub>%d</sub>'.__mod__
+    htmlmeta = MapProxy(dict(
+        conseq    = '&vdash;',
+        nonconseq = '&nvdash;',
+        therefore = '&there4;',
+        ellipsis  = '&hellip;',
+    ))
+    
+    # tab symbols
+    asciitab = MapProxy(dict(
+        designated   = '[+]',
+        undesignated = '[-]',
+        closed       = '(x)',
+    ))
+    htmltab = MapProxy(dict(
+        designated   = '&oplus;',  # '\2295'
+        undesignated = '&ominus;', # '\2296'
+        closed       = '&otimes;', # '\2297'
+    ))
 
     data = {notn: {} for notn in Notation}
+
+    Notation.polish
+    '---------------'
+
+    # Start with html, and most things can be unescaped.
 
     data[Notation.polish]['html'] = prev = dict(
         notation = Notation.polish,
         charset  = 'html',
-        renders  = {Marking.subscript: htmsub},
+        renders  = {Marking.subscript: htmlsub},
         strings = {
             LexType.Atomic   : tuple('abcde'),
             LexType.Operator : {
@@ -184,10 +245,8 @@ def rendersets():
             Marking.paren_open  : (NotImplemented,),
             Marking.paren_close : (NotImplemented,),
             Marking.whitespace  : (' ',),
-            Marking.meta: dict(
-                conseq    = '&vdash;',
-                nonconseq = '&nvdash;',
-            ),
+            Marking.meta: htmlmeta,
+            Marking.tableau: htmltab,
         },
     )
 
@@ -197,16 +256,24 @@ def rendersets():
         strings  = dunesc(prev['strings']),
     ))
 
+    data[Notation.polish]['unicode.rst'] = prev = dmerged(prev, dict(
+        charset  = 'unicode',
+        renders  = {Marking.subscript: rstsub},
+    ))
+
     data[Notation.polish]['ascii'] = dmerged(prev, dict(
         charset  = 'ascii',
         renders  = {Marking.subscript: str},
-        strings  = {Marking.meta: asciimeta},
+        strings  = {Marking.meta: asciimeta, Marking.tableau: asciitab},
     ))
+
+    Notation.standard
+    '---------------'
 
     data[Notation.standard]['html'] = prev = dict(
         notation = Notation.standard,
         charset  = 'html',
-        renders  = {Marking.subscript: htmsub},
+        renders  = {Marking.subscript: htmlsub},
         strings = {
             LexType.Atomic   : tuple('ABCDE'),
             LexType.Operator : {
@@ -236,10 +303,8 @@ def rendersets():
             Marking.paren_open   : ('(',),
             Marking.paren_close  : (')',),
             Marking.whitespace   : (' ',),
-            Marking.meta: dict(
-                conseq    = '&vdash;',
-                nonconseq = '&nvdash;',
-            ),
+            Marking.meta: htmlmeta,
+            Marking.tableau: htmltab,
         },
     )
 
@@ -247,6 +312,11 @@ def rendersets():
         charset  = 'unicode',
         renders  = {Marking.subscript: unisub},
         strings  = dunesc(prev['strings']),
+    ))
+
+    data[Notation.standard]['unicode.rst'] = prev = dmerged(prev, dict(
+        charset  = 'unicode',
+        renders  = {Marking.subscript: rstsub},
     ))
 
     data[Notation.standard]['ascii'] = dmerged(prev, dict(
@@ -272,7 +342,8 @@ def rendersets():
             (LexType.Predicate, True) : {
                 (Operator.Negation, Predicate.System.Identity): '!=',
             },
-            Marking.meta: asciimeta
+            Marking.meta: asciimeta,
+            Marking.tableau: asciitab,
         },
     ))
 

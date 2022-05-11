@@ -41,6 +41,9 @@ __all__ = (
     'BaseModel',
     'Mval',
     'ValueFDE',
+    'ValueK3',
+    'ValueLP',
+    'ValueCPL',
 )
 
 class Mval(Ebc):
