@@ -380,6 +380,7 @@ class TestHelper(BaseSuite):
     @using(logic = 'FDE')
     class TestEllispsisHelper(BaseSuite):
 
+        from pytableaux.tools.doc.misc import EllipsisExampleHelper
         Rcls = EllipsisExampleHelper
 
         def test_closing_rule_ellipsis(self):

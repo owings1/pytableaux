@@ -275,6 +275,8 @@ class TestMappingApi(BaseSuite):
                 exp = dict(TreeStruct())
             elif cls is dmapattr:
                 exp = dict()
+            elif (f := getattr(cls, '__dataclass_fields__', None)):
+                exp = dict(zip(f, f))
             else:
                 # ParseTable needs [str, item] structure.
                 # Target requires branch key.
