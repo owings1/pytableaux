@@ -49,7 +49,7 @@ def crunch(v):
 
 class Model(K3W.Model):
     """
-    A L{B3E} model is just like a :ref:`K3W <K3W>` with different tables for
+    A L{B3E} model is just like :refp:`{@K3W}` with different tables for
     some of the connectives.
     """
 
@@ -89,8 +89,8 @@ class TableauxSystem(FDE.TableauxSystem):
 
 class TabRules:
     """
-    The closure rules for L{B3E} are the FDE closure rule, and the K3 closure rule.
-    The operator rules are mostly a mix of L{FDE} and :ref:`K3W <K3W>`
+    The closure rules for L{B3E} are the L{FDE} closure rule, and the {@K3} closure rule.
+    The operator rules are mostly a mix of L{FDE} and {@K3W}
     rules, but with different rules for the assertion, conditional and
     biconditional operators.
     """

@@ -19,24 +19,18 @@ pytableaux.tools.doc.processors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
-import os
 
+import os
 import re
 import shutil
 from typing import TYPE_CHECKING, Optional
-from pytableaux.errors import check
 
-from pytableaux.lang import LexWriter
+from pytableaux.errors import check
 from pytableaux.logics import registry
-# from pytableaux.proof import Tableau, writers
-# from pytableaux.proof.helpers import EllipsisExampleHelper
-from pytableaux.tools.doc import (AutodocProcessor, ReplaceProcessor,
-                                  SphinxEvent, docinspect, is_enum_member,
-                                #   rstutils,
-                                  )
-from pytableaux.tools.doc import Processor
-from pytableaux.tools.doc.directives import TableauDirective
-from pytableaux.tools.doc.extension import ConfKey
+from pytableaux.tools import closure
+from pytableaux.tools.doc import (AutodocProcessor, ConfKey, Processor,
+                                  ReplaceProcessor, SphinxEvent, docinspect,
+                                  is_enum_member)
 from sphinx.ext import autodoc
 from sphinx.util import logging
 
@@ -81,7 +75,6 @@ class AttributeDocumenter(autodoc.AttributeDocumenter):
 #         return is_enum_member(self.record.name)
 
 #     def run(self):
-#         # print('$MEMBER$  rec.name', self.record.name)
 #         return
 
 class RuledocInherit(AutodocProcessor):
@@ -101,7 +94,7 @@ class RuledocInherit(AutodocProcessor):
         self += base.__doc__
 
 class RuledocExample(AutodocProcessor):
-    'Append docstring with html rule example.'
+    'Prepend docstring with html rule example.'
 
     def applies(self):
         return docinspect.is_concrete_rule(self.record.obj)
@@ -109,23 +102,22 @@ class RuledocExample(AutodocProcessor):
     def run(self):
         obj: type[Rule] = self.record.obj
         logic = registry.locate(obj)
+        lines = self.lines.copy()
+        self.lines.clear()
         self += f"""
-        Example:
-        
         .. tableau::
             :logic: {logic.name}
             :rule: {obj.name}
         """
-        # self.lines.extend(rstutils.rawblock(self.pw(tab, classes = classes)))
+        self += lines
+        
 
 class BuildtrunkExample(AutodocProcessor):
-    'Append docstring with html build trunk example.'
+    'Append docstring with html build_trunk example.'
 
     def applies(self):
-        return docinspect.is_concrete_build_trunk(self.record.obj) and not self.hastext(':build-trunk:')
-
-    # argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
-
+        return (docinspect.is_concrete_build_trunk(self.record.obj) and
+                not self.hastext(':build-trunk:'))
 
     def run(self):
         logic = registry.locate(self.record.obj)
@@ -135,56 +127,8 @@ class BuildtrunkExample(AutodocProcessor):
             :build-trunk:
             :prolog:
         """
-        # classes = ('example', 'build-trunk')
-
-        # logic = registry.locate(self.record.obj)
-        # notn = self.app.config[ConfKey.wnotn]
-        # lw = LexWriter(notn, renderset = TableauDirective.get_trunk_renderset(notn, 'html'),)
-        # pw = writers.TabWriter('html', lw = lw, classes = classes)
-        # arg = self.argument
-
-        # tab = Tableau(registry.locate(logic))
-        # # Pluck a rule.
-        # rule = tab.rules.groups[1][0]
-        # # Inject the helper.
-        # rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
-        # # Build trunk.
-        # tab.argument = arg
-
-        # arg = TableauDirective.trunk_argument
-        # lw2 = LexWriter(notn,
-        #     renderset = TableauDirective.get_trunk_renderset(notn, 'unicode')
-        # )
-        # tab.finish()
-        # c, p1, p2 = map(lw2, arg)
-        # '…'
-        # self += f"""
-
-        # .. cssclass: leadin-box
-
-        # *For the argument*:
-    
-        #     *{p1}* ... *{p2}* ∴ *{c}*
-
-        # *build*:
-        # self += f"""
-        # .. tableau::
-        #     :logic: {logic.name}
-        #     :build-trunk:
-        #     :prolog:
-        # """
-
-        # rawlines = self.arghtml(arg, lw).splitlines()
-        # rawlines = pw(tab).splitlines()
-        # self.lines.extend(rstutils.rawblock(rawlines))
-
-    # def arghtml(self, arg: Argument, lw: LexWriter):
-    #     pstr = '</i> ... <i>'.join(map(lw, arg.premises))
-    #     argstr = f'Argument: <i>{pstr}</i> ∴ <i>{lw(arg.conclusion)}</i>'
-    #     return argstr
 
 # ------------------------------------------------
-
 
 class RolewrapReplace(ReplaceProcessor):
 
@@ -221,17 +165,17 @@ class RolewrapReplace(ReplaceProcessor):
                 rep = f':{name}:'r'`\1`'
                 for patname in patnames:
                     pat = rolecls.patterns[patname]
-                    pat = re.compile(r'(?<!`)' + rolecls.patterns[patname])
+                    if not isinstance(pat, str):
+                        pat = pat.pattern
+                    pat = re.compile(r'(?<!`)' + pat)
                     defns.append((pat, rep))
 
         self._defns = defns
-        print(defns)
         return defns
 
 # ------------------------------------------------
 
 class CopyFileTree(Processor):
-
 
     def __init__(self, app: Sphinx, config: Config):
         self.app = app
@@ -272,6 +216,7 @@ class CopyFileTree(Processor):
 
 # ------------------------------------------------
 
+
 def setup(app: Sphinx):
 
     app.setup_extension('sphinx.ext.autodoc')
@@ -297,3 +242,12 @@ def setup(app: Sphinx):
         [list[tuple[str, str, Optional[dict]]]]
     )
     app.connect('config-inited', CopyFileTree)
+
+
+
+# from sphinx.transforms import post_transforms
+# class ReferencesResolver(post_transforms.ReferencesResolver):
+#     def run(self, **kw):
+#         # self.document.findall(addnodes.pending_xref)
+#         pass
+# app.add_post_transform(ReferencesResolver)

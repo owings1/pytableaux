@@ -128,12 +128,14 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
                 - local ID (lowercase last part of ``module.__name__``)
                 - The module's ``.name`` attribute
                 - Module object
+
+            default: A default value to suppress error.
         
         Returns:
             The logic module
         
         Raises:
-            ValueError: if not found.
+            ModuleNotFoundError: if not found.
             TypeError: on bad key argument.
         """
         try:
@@ -180,15 +182,23 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
         self.add(module)
         return module
 
-    get = __call__
+    def get(self, ref: LogicLookupKey, default = NOARG, /):
+        try:
+            return self(ref)
+        except ModuleNotFoundError:
+            if default is NOARG:
+                raise
+            return default
 
-    def locate(self, ref: LogicLocatorRef, /) -> LogicModule:
+
+    def locate(self, ref: LogicLocatorRef, default = NOARG, /) -> LogicModule:
         """Like ``.get()`` but also searches the ``__module__`` attribute of
         classes, methods, and functions to locate the logic in which it was defined.
 
         Args:
             ref: A ``key`` accepted by ``.get()``, or a class, method, or function
                 defined in a logic module.
+            default: A default value to suppress error.
         
         Returns:
             The logic module
@@ -198,9 +208,15 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             TypeError: on bad key argument.
         """
         check.inst(ref, LogicLocatorRef)
-        if isinstance(ref, LogicLookupKey):
-            return self(ref)
-        return self(ref.__module__.lower())
+        try:
+            if isinstance(ref, LogicLookupKey):
+                return self(ref)
+            return self(ref.__module__.lower())
+        except ValueError:
+            if default is NOARG:
+                raise
+            return default
+
 
     def all(self) -> Iterator[str]:
         for package in self.packages:

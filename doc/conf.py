@@ -162,7 +162,7 @@ overloads_location = [ 'signature',
 # -------------------
 #
 #
-extensions.append('pytableaux.tools.doc.extension')
+extensions.append('pytableaux.tools.doc')
 
 
 
@@ -206,7 +206,11 @@ rst_epilog = """
 
 
 rst_prolog = """
+.. testsetup:: *
 
+    import logics
+    from pytableaux.lang import *
+    from pytableaux.proof import *
 """
 
 # -------------------
@@ -265,6 +269,7 @@ htmlhelp_basename = 'pytableauxdoc'
 # directories to ignore when looking for source files.
 exclude_patterns = [
     '_build',
+    'node_modules',
     '**/include/*',
 ]
 

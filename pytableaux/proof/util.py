@@ -210,6 +210,7 @@ class TabFlag(FlagEnum):
     FINISHED    = 8
     TIMED_OUT   = 16
     TRUNK_BUILT = 32
+    TIMING_INACCURATE = 64
 
 #******  Auxilliary Classes
 class StepEntry(NamedTuple):

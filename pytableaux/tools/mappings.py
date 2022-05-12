@@ -20,7 +20,7 @@ pytableaux.tools.mappings
 
 """
 from __future__ import annotations
-
+import dataclasses
 from collections import defaultdict, deque
 from collections.abc import Iterator, Mapping, MutableMapping, Set
 from itertools import chain, filterfalse
@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, isattrstr
+from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, isattrstr, closure
 from pytableaux.tools.decorators import membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.typing import KT, VT, NotImplType, T
@@ -371,6 +371,7 @@ class KeySetAttr(metaclass = abcs.AbcMeta):
         'Return whether it is ok to set the attribute name.'
         return not hasattr(cls, name)
 
+
 class dmapattr(KeySetAttr, dmap[KT, VT]):
     "Dict attr dmap base class."
 
@@ -381,6 +382,15 @@ class dmapattr(KeySetAttr, dmap[KT, VT]):
             self.update(it)
         if len(kw):
             self.update(kw)
+
+    def __init_subclass__(subcls):
+        if subcls._from_mapping is __class__._from_mapping:
+            if (params := getattr(subcls, '__dataclass_params__', None)) is not None:
+                if params.init:
+                    subcls._from_mapping = classmethod(_kw_from_mapping)
+
+def _kw_from_mapping(cls, mapping):
+    return cls(**mapping)
 
 class dmapns(dmapattr[KT, VT]):
     "Dict attr namespace with __dict__ slot and liberal key approval."
@@ -718,6 +728,8 @@ def _opcache():
             return lambda: list(names)
 
     return opercache
+
+
 
 del(
     membr,

@@ -15,13 +15,15 @@
     font-family: Charmonman;
     font-weight: bold;
 }
-.metawrite.logic_name,
-table.lex-eg-table tr > td:last-child {
-    font-family: SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,Courier,monospace
+div[class^=highlight] .pre {
+    font-family: SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,Courier,monospace;
 }
 
-
 /* font-size */
+
+.tableau-wrapper .prolog .argument {
+    font-size: initial;
+}
 table.truth-table th.operator-name {
     font-size: 90%;
 }
@@ -35,15 +37,29 @@ table.truth-table th.operator-symbol {
 .logic_name.subsup > .main {
     font-size: 115%;
 }
+.tableau-wrapper .prolog {
+    font-size: 85%;
+}
 
 /* line-height */
+
+.tableau {
+    line-height: initial;
+}
 p.definition,
 p.consequence,
 p.definiens {
     line-height: 24px;
 }
+div[class^=highlight] .pre {
+    line-height: 1.4;
+}
+.tableau-wrapper .prolog {
+    line-height: 1;
+}
 
 /* font-weight */
+
 table.truth-table > thead > tr > th.operator-name {
     font-weight: normal;
 }
@@ -53,31 +69,25 @@ p.definiendum {
     font-weight: bold;
 }
 
+/* font-style */
+
+
+
 /* font-variant */
+
 .smallcaps, .small-caps {
     font-variant: small-caps;
 }
 
+/* overflow */
 
-.example.tableau {
-    margin-bottom: 20px;
-    padding-bottom: 20px;
+div[class^=highlight] .pre {
+    overflow: auto;
 }
-
-.build-trunk.prolog .argument {
-    padding: 10px;
-    margin: 0 10px;
-}
-
-.build-trunk.tableau {
-    padding-top: 25px;
-}
-
-
 
 /* text-align */
-p.definition.center,
-.build-trunk-prolog {
+
+p.definition.center {
     text-align: center;
 }
 table.truth-table tr > th.value-header.column,
@@ -86,11 +96,16 @@ table.truth-table th.operator-symbol.arity-2 {
 }
 
 /* white-space */
+
+div[class^=highlight] .pre,
 table.lex-eg-table tr > td:last-child {
     white-space: pre;
 }
+
 /* display */
-p.definiendum {
+
+p.definiendum,
+div[class^=highlight] .pre {
     display: block;
 }
 table.flex-last tr > td:last-child,
@@ -118,8 +133,15 @@ table.lex-eg-table tr > td:last-child {
 }
 
 /* margin */
+
+div[class^=highlight] .pre {
+    margin: 0;
+}
 p.definition > em {
     margin-right: 10px;
+}
+.tableau-wrapper {
+    margin-bottom: 20px;
 }
 p.definition,
 p.consequence,
@@ -145,7 +167,32 @@ p.definiendum {
     margin-bottom: 0 !important;
 }
 
+
+/* padding */
+
+.tableau-wrapper .prolog {
+    padding-left: 10px;
+    padding-top: 10px;
+}
+table.truth-table td,
+.tableau-wrapper,
+.tableau-wrapper .prolog .argument {
+    padding: 10px;
+}
+p.definition,
+p.consequence,
+p.definiens,
+div[class^=highlight] .pre {
+    padding: 12px;
+}
+p.definiendum {
+    padding: 6px 12px;
+}
+
+
+
 /* border */
+
 table.truth-table tr > th.value-header.row,
 table.truth-table > tbody > tr > th.operator-symbol.arity-1 {
     border-bottom: 1px solid black;
@@ -153,19 +200,10 @@ table.truth-table > tbody > tr > th.operator-symbol.arity-1 {
 table.truth-table tr > th.value-header.column {
     border-right: 1px solid black;
 }
-
-/* padding */
-table.truth-table td,
-.build-trunk-prolog .argument {
-    padding: 10px;
-}
-p.definition,
-p.consequence,
-p.definiens {
-    padding: 12px;
-}
-p.definiendum {
-    padding: 6px 12px;
+.highlight,
+.tableau-wrapper {
+    border: 1px solid #ac9;
+    border-radius: 3px;
 }
 
 /* background */
@@ -176,4 +214,8 @@ p.definiens {
 }
 p.definiendum {
     background: #6ab0de85;
+}
+.highlight,
+.tableau-wrapper {
+    background-color: #eeffcc;
 }

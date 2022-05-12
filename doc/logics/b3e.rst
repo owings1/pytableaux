@@ -38,9 +38,9 @@ always results in a classical value (V{T} or V{F}).
     Note that the Conditional operator :s:`$` is definable in terms of
     the Assertion operator :s:`*`:
     
-    .. cssclass:: definition
+    .. sentence::
     
-      :s:`A $ B` :math:`:=` :s:`~*A V *B`
+      A $ B := ~*A V *B
 
     .. _b3e-external-connectives:
 
@@ -117,8 +117,6 @@ always results in a classical value (V{T} or V{F}).
 
     Rules
     -----
-
-    .. cssclass:: tableaux-rules
 
     .. autoclass:: TabRules
         :members:

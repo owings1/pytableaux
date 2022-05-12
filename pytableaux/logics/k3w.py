@@ -41,7 +41,7 @@ class Meta:
 
 class Model(K3.Model):
     """
-    A L{K3W} model is just like a :ref:`K3 model <k3-model>` with different tables for
+    A L{K3W} model is just like a {@K3 model} with different tables for
     some of the connectives.
     """
 

@@ -257,7 +257,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         branch = tab.branch()
         branch.extend(nodes := rule.example_nodes())
         result = tab.step()
-        tab.build()
+        tab.finish()
         if not noassert:
             assert len(rule.history) > 0
         return dmapns(
@@ -529,6 +529,7 @@ class RuleGroup(SequenceApi[Rule]):
         rule = value(root._tab, **root._tab.opts)
         self._seq.append(rule)
         root._ruleindex[name] = self._ruleindex[name] = rule
+        rule.on(RuleEvent.AFTER_APPLY, self._root._tab._after_rule_apply)
 
     def extend(self, values: Iterable[type[Rule]], /):
         """Append multiple rules.
@@ -936,7 +937,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             if entry is not None:
                 entry.rule.apply(entry.target)
                 entry.duration.inc(timer.elapsed_ms())
-                self.__history.append(entry)
+                # self.__history.append(entry)
             else:
                 self.finish()
         return entry
@@ -982,12 +983,14 @@ class Tableau(Sequence[Branch], EventEmitter):
         # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
         # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
         nodes = tuple(branch) if branch.parent is None else EMPTY_SET
+        # This means we need to start listening before we emit. There
+        # could be the possibility of recursion.
+        branch.on(self.__branch_listeners)
         self.emit(TabEvent.AFTER_BRANCH_ADD, branch)
         if len(nodes):
             afteradd = self.__after_node_add
             for node in nodes:
                 afteradd(node, branch)
-        branch.on(self.__branch_listeners)
         return self
 
     def finish(self) -> Tableau:
@@ -1140,6 +1143,12 @@ class Tableau(Sequence[Branch], EventEmitter):
         stat[TabStatKey.FLAGS] |= TabFlag.TICKED
         self.emit(TabEvent.AFTER_NODE_TICK, node, branch)
 
+    def _after_rule_apply(self, target: Target):
+        try:
+            self.__history.append(target._entry)
+        except AttributeError:
+            self.__history.append(StepEntry(target.rule, target, Counter()))
+            self.__flag |= TabFlag.TIMING_INACCURATE
     # *** Util
 
     def __get_group_application(self, branch: Branch, group: RuleGroup, /) -> StepEntry:
@@ -1170,6 +1179,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             target = rule.target(branch)
             if target is not None:
                 entry = StepEntry(rule, target, Counter())
+                target._entry = entry
                 if not is_group_optim:
                     target.update(
                         group_score         = None,
@@ -1265,20 +1275,20 @@ class Tableau(Sequence[Branch], EventEmitter):
             #rules = tuple(map(self.__compute_rule_stats, self.rules)),
         )
 
-    def __compute_rule_stats(self, rule: Rule, /) -> dict[str, Any]:
-        'Compute the stats for a rule after the tableau is finished.'
-        return dict(
-            name    = rule.name,
-            applied = len(rule.history),
-            timers  = {
-                name : dict(
-                    duration_ms  = timer.elapsed_ms(),
-                    duration_avg = timer.elapsed_avg(),
-                    count        = timer.count,
-                )
-                for name, timer in rule.timers.items()
-            },
-        )
+    # def __compute_rule_stats(self, rule: Rule, /) -> dict[str, Any]:
+    #     'Compute the stats for a rule after the tableau is finished.'
+    #     return dict(
+    #         name    = rule.name,
+    #         applied = len(rule.history),
+    #         timers  = {
+    #             name : dict(
+    #                 duration_ms  = timer.elapsed_ms(),
+    #                 duration_avg = timer.elapsed_avg(),
+    #                 count        = timer.count,
+    #             )
+    #             for name, timer in rule.timers.items()
+    #         },
+    #     )
 
     def __check_timeout(self):
         timeout = self.opts['build_timeout']

@@ -7,7 +7,9 @@
     {% include 'tableau.css' %}
 </style>
 {%- endif %}
+{%- if opts.wrapper -%}
 <div class="{{ wrap_classes|join(' ')|e }}">
+{%- endif %}
     <div id="tableau_{{ tab.id }}"{#
     #} class="{{ tab_classes|join(' ')|e }}"{#
     #} data-step="{{ tab.history|length }}"{#
@@ -16,4 +18,6 @@
         {{ sw(tab.tree) }}
     </div>
     <div class="clear"></div>
+{%- if opts.wrapper -%}
 </div>
+{%- endif %}

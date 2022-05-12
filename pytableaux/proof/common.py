@@ -45,6 +45,7 @@ if TYPE_CHECKING:
 
     from pytableaux.models import BaseModel
     from pytableaux.proof.tableaux import Rule
+    from pytableaux.proof.util import StepEntry
 
 __all__ = (
     'Branch',
@@ -621,11 +622,16 @@ class Target(dmapattr[str, Any]):
     world  : int
     world1 : int
     world2 : int
+    _entry : StepEntry
 
-    __slots__ = setf({
+    __slots__ = (
         'branch', 'constant', 'designated', 'flag', 'node', 'nodes', 'rule',
         'sentence', 'world', 'world1', 'world2',
-    })
+        '_entry',
+    )
+
+    # For dmapattr
+    _keyattr_ok = staticmethod(setf(__slots__).__contains__)
 
     def __init__(self, it: Iterable = None, /, **kw):
         if it is not None:
@@ -641,9 +647,6 @@ class Target(dmapattr[str, Any]):
         if 'node'   in self: return 'Node'
         if 'branch' in self: return 'Branch'
         raise ValueError
-
-    # For dmapattr
-    _keyattr_ok = staticmethod(__slots__.__contains__)
 
     def __setitem__(self, key: str, value: Any):
         if self._keyattr_ok(key):

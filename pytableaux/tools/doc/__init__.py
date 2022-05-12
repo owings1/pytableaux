@@ -16,6 +16,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ------------------
+#
+# Python domain:
+#    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain
+#
+# Autodoc directives:
+#    https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#directives
+#
+# Built-in roles:
+#    https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html
+#
+# Sphinx events:
+#    https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
+#
+# Docutils doctree:
+#    https://docutils.sourceforge.io/docs/ref/doctree.html
+#
+# Font (GPL):
+#    http://www.gust.org.pl/projects/e-foundry/tg-math/download/index_html#Bonum_Math
+#
+# Creating  Directives:
+#    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 """
 pytableaux.tools.doc
 ^^^^^^^^^^^^^^^^^^^^
@@ -33,6 +54,7 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Container, Generic,
 
 import jinja2
 import sphinx.directives
+import sphinx.directives.code
 from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
@@ -40,7 +62,6 @@ from docutils.parsers.rst.roles import _roles
 from pytableaux import logics
 from pytableaux.lang import Operator, Predicates
 from pytableaux.tools import EMPTY_MAP, MapProxy, NameTuple, abcs, abstract
-from pytableaux.tools.doc.extension import ConfKey
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
@@ -54,8 +75,8 @@ if TYPE_CHECKING:
     from typing import overload
 
     import sphinx.config
-    from sphinx.config import Config
     from sphinx.application import Sphinx
+    from sphinx.config import Config
     from sphinx.environment import BuildEnvironment
     from sphinx.util.typing import RoleFunction
 
@@ -69,8 +90,8 @@ __all__ = (
     'cleanws',
     'ConfKey',
     'DirectiveHelper',
-    'Helper',
     'flagopt',
+    'Helper',
     'nodeopt',
     'opersopt',
     'predsopt',
@@ -97,43 +118,74 @@ class SphinxEvent(str, abcs.Ebc):
 
     IncludeRead = 'include-read'
 
+class ConfKey(str, abcs.Ebc):
+    'Custom config keys.'
+
+    copy_file_tree = 'copy_file_tree'
+    "The config key for file tree copy actions."
+
+    auto_skip_enum_value = 'autodoc_skip_enum_value'
+
+    wnotn = 'write_notation'
+    pnotn = 'parse_notation'
+    preds = 'parse_predicates'
+
+    truth_table_template = 'truth_table_template'
+    truth_table_reverse = 'truth_table_reverse'
+
+    templates_path = 'templates_path'
+
 # ------------------------------------------------
 
-APPSTATE = {}
+APPSTATE: dict[Sphinx, dict] = {}
+"Storage for stateful info for Sphinx app. Removed on build-finished."
 
 def setup(app: Sphinx):
 
+    from pytableaux.tools.doc import (directives, extnodes, processors, roles,
+                                      tables)
+
     APPSTATE[app] = {}
-
-    app.connect('config-inited', _init_jenv)
-
-    def clear_stat(app, e: Exception|None):
+    app.connect('config-inited', init_app)
+    def clear_state(app, e: Exception|None):
         del(APPSTATE[app])
+    app.connect('build-finished', clear_state)
 
-    app.connect('build-finished', clear_stat)
+    extnodes.setup(app)
+    directives.setup(app)
+    tables.setup(app)
+    processors.setup(app)
+    roles.setup(app)
 
-def _init_jenv(app: Sphinx, config: sphinx.config.Config):
+def init_app(app: Sphinx, config: Config):
 
     paths = [
         os.path.join(app.srcdir, tp) for tp in
         config[ConfKey.templates_path]
     ]
     APPSTATE[app][jinja2.Environment]  = jinja2.Environment(
-            loader = jinja2.FileSystemLoader(paths),
-            trim_blocks = True,
-            lstrip_blocks = True,
-        )
+        loader = jinja2.FileSystemLoader(paths),
+        trim_blocks = True,
+        lstrip_blocks = True,
+    )
+
+
 # ------------------------------------------------
 
 class AppEnvMixin(abcs.Abc):
 
     app: Sphinx
     env: BuildEnvironment
-    config: sphinx.config.Config
+    config: Config
+
+    @property
+    def appstate(self) -> dict:
+        return APPSTATE[self.app]
 
     @property
     def jenv(self) -> jinja2.Environment:
-        return APPSTATE[self.app][jinja2.Environment]
+        "jinja2 Environment"
+        return self.appstate[jinja2.Environment]
 
     def current_module(self):
         return import_module(self.env.ref_context['py:module'])
@@ -148,6 +200,7 @@ class RenderMixin(AppEnvMixin):
 
     def render(self, template, *args, **kw):
         return self.jenv.get_template(template).render(*args, **kw)
+
 
 # ------------------------------------------------
 
@@ -187,6 +240,7 @@ class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
     @property
     def app(self) -> Sphinx:
         return self.env.app
+
 
 # ------------------------------------------------
 
@@ -282,7 +336,7 @@ class Processor(AppEnvMixin):
         return self.app.env
 
     @property
-    def config(self) -> sphinx.config.Config:
+    def config(self) -> Config:
         return self.app.config
 
     @abstract
@@ -334,13 +388,6 @@ class AutodocProcessor(Processor):
 
 class ReplaceProcessor(Processor):
 
-    __slots__ = (
-        'args',
-        'event',
-        'lines',
-        'mode',
-    )
-
     event: str
     mode: str
     lines: list[str]
@@ -379,9 +426,7 @@ class ReplaceProcessor(Processor):
         self.args = args
         self.run()
 
-
 # ------------------------------------------------
-
 
 class Tabler(list[list[str]], abcs.Abc):
 
@@ -451,7 +496,7 @@ def is_enum_member(modname: str, objpath = None):
         try:
             _ = importobj(objpath[-1])
         except (ValueError, TypeError) as e:
-            logger.debug(e)
+            # logger.debug(e)
             return False
         else:
             return True
@@ -492,23 +537,33 @@ def stropt(arg: str, /) -> str:
         arg = ''
     return arg
 
+def flagorstr(arg: str, /) -> str:
+    if arg is None:
+        ...
 def cleanws(arg: str, /) -> str:
     "Option spec to remove all whitespace."
     return re_space.sub('', arg)
 
 def predsopt(arg: str, /) -> Predicates:
-    "Option spec for list of predicate specs."
+    """Option spec for list of predicate specs.
+    
+    Example::
+    
+        0,0,1 : 1,0,2
+    """
     return Predicates(
         tuple(map(int, spec.split(':')))
         for spec in re_comma.split(cleanws(arg))
     )
 
 def opersopt(arg: str, /) -> tuple[Operator, ...]:
+    """Operators list, from comma-separated input."""
     return tuple(map(Operator,
         (s.strip() for s in re_comma.split(arg))
     ))
 
 def nodeopt(arg: str, /):
+    """A docutils node from a name, e.g. 'inline'."""
     return getattr(nodes, arg)
 
 def attrsopt(arg: str, /) -> list[str]:
@@ -582,3 +637,5 @@ def role_instance(roleish: type[T]) -> T|None:
 def role_name(roleish: type|RoleFunction) -> str|None:
     'Get loaded role name, by name, instance or type.'
     return role_entry(roleish).name
+
+

@@ -9,13 +9,7 @@ L{FDE} - First Degree Entailment
 
 ------------------------
 
-..  tableau:
-..   :logic: FDE
-..   :argument: Modus Ponens
-..   :format: text
-
 .. automodule:: pytableaux.logics.fde
-
 
     .. _fde-semantics:
 
@@ -66,16 +60,16 @@ L{FDE} - First Degree Entailment
 
     The `Material Conditional` :s:`>` is definable in terms of disjunction:
     
-    .. cssclass:: definition
+    .. sentence::
     
-      :s:`A > B` :math:`:=` :s:`~A V B`
+      A > B := ~A V B
 
     Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
     and :s:`&`:
 
-    .. cssclass:: definition
+    .. sentence::
     
-      :s:`A < B` :math:`:=` :s:`(A > B) & (B > A)`
+      A < B := (A > B) & (B > A)
 
     .. truth-tables::
       :operators: MaterialConditional, MaterialBiconditional
@@ -170,9 +164,11 @@ L{FDE} - First Degree Entailment
     
     .. tableau::
       :rule: DesignationClosure
-    
+      :legend:
+
     This allows for both a sentence and its negation to appear as *designated*
     on an open branch (or both as *undesignated*).
+
 
     .. _fde-rules:
 
@@ -186,6 +182,7 @@ L{FDE} - First Degree Entailment
 
     .. autoclass:: TabRules
         :members:
+        :exclude-members: DesignationClosure
 
     Notes
     =====

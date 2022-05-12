@@ -33,9 +33,8 @@ from pytableaux.lang.parsing import ParseTable
 from pytableaux.lang.writing import LexWriter, RenderSet
 from pytableaux.logics import registry
 from pytableaux.tools import MapProxy, abcs, closure
-from pytableaux.tools.doc import Tabler, directives
+from pytableaux.tools.doc import Tabler, directives, ConfKey
 from pytableaux.tools.doc.directives import TableGenerator
-from pytableaux.tools.doc.extension import ConfKey
 from pytableaux.tools.hybrids import qset
 
 if TYPE_CHECKING:
@@ -340,7 +339,6 @@ def main():
 
     import tabulate as Tb
     from pytableaux.lang import LexType, Operator
-    # from pytableaux.tools.doc.rstutils import csvlines
     from tabulate import tabulate as tb
 
     theformats = qset(Tb.tabulate_formats)

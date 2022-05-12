@@ -32,7 +32,28 @@ as {@FDE} without the V{B} value.
     .. include:: include/truth_table_blurb.rst
 
     .. truth-tables::
+      :operators: Negation, Conjunction, Disjunction
 
+    The `Material Conditional` :s:`>` is definable in terms of disjunction
+    in the usual way:
+    
+    .. sentence::
+    
+      A > B := ~A V B
+
+    Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+    and :s:`&`:
+
+    .. sentence::
+
+      A < B := (A > B) & (B > A)
+
+    .. truth-tables::
+      :operators: MaterialConditional, MaterialBiconditional
+ 
+    L{FDE} does not have separate `Assertion` or `Conditional` operators,
+    but we include tables and rules for them, for cross-compatibility.
+    
     .. _k3-predication:
 
     Predication

@@ -43,20 +43,20 @@ these values is:
 
         .. method:: value_of_predicated(sentence)
 
-            Predication is the same as :ref:`K3 <k3-model>`, defined in terms of a
+            Predication is the same as {@K3 model}, defined in terms of a
             predicate's *extenstion* and *anti-extension*.
 
             .. include:: include/k3/m.predication.rst
 
         .. method:: value_of_existential(sentence)
 
-            Existential quantification is defined just as in :ref:`K3 <k3-model>`:
+            Existential quantification is defined just as in {@K3 model}:
 
             .. include:: include/k3/m.existential.rst
 
         .. method:: value_of_universal(sentence)
 
-            Universal quantification is defined just as in :ref:`K3 <k3-model>`:
+            Universal quantification is defined just as in {@K3 model}:
 
             .. include:: include/k3/m.existential.rst
 

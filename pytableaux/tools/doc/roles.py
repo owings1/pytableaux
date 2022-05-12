@@ -25,25 +25,25 @@ import functools
 import re
 from typing import TYPE_CHECKING
 
-import sphinx.roles
 from docutils import nodes
 from pytableaux import logics
-from pytableaux.lang import Notation
-from pytableaux.lang.collect import Predicates
-from pytableaux.lang.lex import LexType, Predicate
-from pytableaux.lang.parsing import Parser
-from pytableaux.lang.writing import LexWriter
+from pytableaux.lang import (LexType, LexWriter, Notation, Parser, Predicate,
+                             Predicates)
 from pytableaux.tools import MapProxy, abcs
-from pytableaux.tools.doc import BaseRole, classopt, nodeopt, predsopt
-from pytableaux.tools.doc.extension import ConfKey
-from pytableaux.tools.hybrids import qsetf
+from pytableaux.tools.doc import BaseRole, classopt, nodeopt, predsopt, ConfKey
+from pytableaux.tools.hybrids import qsetf, qset
 from pytableaux.tools.typing import F
+from sphinx.errors import NoUri
 from sphinx.util import logging
+from sphinx.util.docutils import ReferenceRole
 
 if TYPE_CHECKING:
+    from docutils.nodes import Element, Node, system_message
     from sphinx.application import Sphinx
+    from sphinx.transforms import post_transforms
+    from sphinx.environment import BuildEnvironment
 
-__all__ = ('lexdress', 'metadress', 'refplus',)
+__all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
 
 logger = logging.getLogger(__name__)
 
@@ -61,96 +61,136 @@ def rolerun(func: F) -> F:
         return ret
     return run
 
-class refplus(sphinx.roles.XRefRole, BaseRole):
+class refplus(
+    # sphinx.roles.XRefRole,
+    ReferenceRole,
+    BaseRole,
+):
 
+    section: str
+    anchor: str
+    logicname: str 
+    lrmatch = None
+
+    # name = 
     refdomain = 'std'
     reftype = 'ref'
+
     _classes = 'xref', refdomain, f'{refdomain}-{reftype}'
 
-    innernodeclass = nodes.inline
-    fix_parens = False
-    lowercase = True #False
-    warn_dangling = True # False
+    # innernodeclass = nodes.literal
+    # innernodeclass = nodes.inline
+    # lowercase = False
+    warn_dangling = True
 
-    def __init__(self, **_) -> None:
-        if not re.match(self.patterns['logicref'], '{@FDE}'):
-            logger.error(f'PATTERN BROKEN!! for {type(self).__name__}')
-            logger.error(self.patterns['logicref'])
+    def __init__(self):
+        # {'class': None}         
+        self.options ={}
+        # self.env.domains[].domain.resolve_xref(self.env, refdoc, self.app.builder, typ, target, node, contnode)
+
+    @rolerun
+    def run(self):
+        self.classes = qset(self._classes)
+        
+        if self._logic_ref():
+            self.classes |= 'logicref', 'internal'
+
+            mmnn = metadress.logicname_node(self.logicname)
+
+            node = nodes.reference(self.rawtext, '',
+                refuri = self.refuri,
+                logicname = self.logicname,
+                target = self.target,
+                title = self.title,
+                refdomain = self.refdomain,
+                reftype = self.reftype,
+                classes = self.classes,
+            )
+
+            a, b = self.title, mmnn.astext()
+            if a == b:
+                node += mmnn
+            else:
+                prefix = f'{b} '
+                if a.startswith(prefix):
+                    node += mmnn
+                    node += nodes.inline(text = a.removeprefix(b))
+                else:
+                    node += nodes.inline(text = a)
+
+            return [node], []
+
+        else:
+            if self.has_explicit_title:
+                fallback_text = self.title
+            else:
+                fallback_text = self.text
+            logger.warning(NoUri(f"From text: {self.text}"))
+            return [nodes.inline(text = fallback_text)], []
+
+    def nodeclass(self, rawtext, **options):
         pass
+        # a = nodes.inline(rawtext, **options)
+        # if self.logicname:
+        #     APPSTATE[self.app][refplus][a] = metadress.logicname_node(self.logicname)
+        # return a
+
+    # def result_nodes(self, document: nodes.document, env: BuildEnvironment, node: Element,
+    #     is_ref: bool) -> tuple[list[Node], list[system_message]]:
+    #     return [node], []
+
+    def _logic_ref(self):
+        lrmatch = self.patterns['logicref'].match(self.text)
+        if not lrmatch:
+            return
+        m = lrmatch.groupdict()
+        self.logicname = str(m['name'])
+        self.section = str(m['sect'])
+        self.anchor = str(m['anchor'])
+        if self.section is None:
+            self.title = self.logicname
+        else:
+            self.title = f'{self.logicname} {self.section}'.strip()
+
+        self.has_explicit_title = True
+
+        if self.anchor is None:
+            if self.section is None:
+                self.target = self.logicname
+            else:
+                self.target = '-'.join(re.split(r'\s+', self.title.lower()))
+        else:
+            self.target = self.anchor[1:-1]
+        self.target = self.target.lower()
+        self.text = f'{self.title} <{self.target}>'
+
+        self.refuri = f'{self.logicname.lower()}.html#{self.target}'
+
+        return True
 
     _logic_union = '|'.join(
-        sorted((n.split('.')[-1].upper() for n in logics.registry.all()), key = len, reverse = True)
-        # sorted(logics.registry.all(), key = len, reverse = True)
-        # sorted(docinspect.get_logic_names(), key = len, reverse = True)
+        sorted((n.split('.')[-1].upper() for n in 
+        logics.registry.all()), key = len, reverse = True)
     )
     patterns = dict(
-        logicref = (
+        logicref = re.compile(
             r'({@(?P<name>%s)' % _logic_union +
             r'(?:\s+(?P<sect>[\sa-zA-Z-]+)?(?P<anchor><.*?>)?)?})'
         )
     )
 
-    @rolerun
-    def run(self):
-        # raise TypeError
-        # def _log():
-        #     logger.info(
-        #         f'rawtext={repr(self.rawtext)}, '
-        #         f'text={repr(self.text)}, '
-        #         f'title={repr(self.title)}, '
-        #         f'target={repr(self.target)}'
-        #     )
-        # _log()
-        self.classes = list(self._classes)
+    def _checkregex(self):
+        if not re.match(self.patterns['logicref'], '{@FDE}'):
+            logger.error(f'PATTERN BROKEN!! for {type(self).__name__}')
+            logger.error(self.patterns['logicref'])
 
-        lrmatch = re.match(self.patterns['logicref'], self.text)
-        if lrmatch:
-            self.logicname = lrmatch.group('name')
-            self._logic_ref(**lrmatch.groupdict())
-        else:
-            self.logicname = None
-
-        if self.disabled:
-            ret = self.create_non_xref_node()
-        else:
-            ret = self.create_xref_node()
-
-        if lrmatch:
-            ...
-        return ret
-
-    def _logic_ref(self, *, name: str, sect: str|None, anchor: str|None):
-        # Link to a logic:
-        #   {@K3}        -> K3 <K3>`
-        #   {@FDE Model} -> `FDE Model <fde-model>`
-        if sect is None:
-            self.title = name
-        else:
-            self.title = f'{name} {sect}'.strip()
-        self.has_explicit_title = True
-        if anchor is None:
-            if sect is None:
-                self.target = name
-            else:
-                self.target = '-'.join(re.split(r'\s+', self.title.lower()))
-        else:
-            self.target = anchor[1:-1]
-        self.text = f'{self.title} <{self.target}>'
-        self.rawtext = f":{self.name}:`{self.text}`"
-        if False:
-            logger.info(
-                f'name={repr(name)}, '
-                f'sect={repr(sect)}, '
-                f'anchor={repr(anchor)}, '
-                f'self.title={repr(self.title)}, '
-                f'self.target={repr(self.target)}, '
-                f'self.text={repr(self.text)}, '
-                f'self.rawtext={repr(self.rawtext)}, '
-            )
-        
-        self.classes.append('logicref')
-
-
+    def _debug(self):
+        logger.info(
+            f'rawtext={self.rawtext}, text={self.text}, '
+            f'logicname={self.name}, section={self.section}, anchor={self.anchor}, '
+            f'title={self.title}, self.target={self.target}'
+        )
+    
 class _Ctype(frozenset, abcs.Ebc):
     valued = {
         LexType.Operator, LexType.Quantifier, Predicate.System
@@ -416,12 +456,16 @@ def setup(app: Sphinx):
     #        :class: code
     #
 
+    logics.registry.import_all()
+
     app.add_role('s', role_s := lexdress())
     app.add_role(name_sc := 'sc', role_s.wrapped(name_sc, dict(
         node = 'literal',
         classes = ['code'],
     )))
 
-
     app.add_role('m', metadress())
     app.add_role('refp', refplus())
+    APPSTATE[app][refplus] = {}
+
+from pytableaux.tools.doc import APPSTATE

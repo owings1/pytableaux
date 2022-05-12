@@ -64,7 +64,7 @@ def register():
     regtable: dict[str, type[TabWriter]] = {}
     registry = MapProxy(regtable)
 
-    def register(wcls: type[TabWriter],/):
+    def register(wcls: type[TabWriter],/, *, force: bool = False):
         """Register a ``TabWriter`` class. Returns the argument, so it can be
         used as a decorator.
 
@@ -80,7 +80,7 @@ def register():
             raise TypeError(f'Cannot register abstract class: {wcls}')
 
         fmt = wcls.format
-        if fmt in registry:
+        if not force and fmt in registry:
             raise KeyError(f"Format {fmt} already registered")
         regtable[fmt] = wcls
 
@@ -216,13 +216,13 @@ class HtmlTabWriter(TemplateTabWriter):
     default_charsets = {notn: 'html' for notn in Notation}
 
     defaults = MapProxy(dict(
+        wrapper      = True,
         classes      = (),
         wrap_classes = (),
         inline_css   = False,
     ))
-    """Option defaults."""
 
-    def write(self, tab: Tableau, /, classes: Collection[str] = None) -> str:
+    def write(self, tab: Tableau, /, *, classes: Collection[str] = None) -> str:
         """"
         Args:
             tab: The tableaux instance.
@@ -274,21 +274,21 @@ class TextTabWriter(TemplateTabWriter):
     format = 'text'
 
     defaults = MapProxy(dict(
-        summary  = False,
-        argument = False,
-        title    = False,
+        # summary  = False,
+        # argument = False,
+        # title    = False,
     ))
     """Default options."""
 
     def write(self, tab: Tableau, /) -> str:
         strs = deque()
         opts = self.opts
-        if opts['title']:
-            strs.append(self._write_title(tab))
-        if opts['summary']:
-            strs.append(self._write_summary(tab))
-        if tab.argument and opts['argument']:
-            strs.append(self._write_argument(tab.argument))
+        # if opts['title']:
+        #     strs.append(self._write_title(tab))
+        # if opts['summary']:
+        #     strs.append(self._write_summary(tab))
+        # if tab.argument and opts['argument']:
+        #     strs.append(self._write_argument(tab.argument))
         template = self._jenv.get_template('nodes.jinja2', None, dict(lw = self.lw))
         strs.append(self._write_structure(tab.tree, template))
         return '\n'.join(strs)
@@ -309,18 +309,18 @@ class TextTabWriter(TemplateTabWriter):
                 append(next_pfx)
         return '\n'.join(lines)
 
-    def _write_title(self, tab: Tableau, /) -> str:
-        return self.render('title.jinja2', logic = tab.logic)
+    # def _write_title(self, tab: Tableau, /) -> str:
+    #     return self.render('title.jinja2', logic = tab.logic)
 
-    def _write_argument(self, arg: Argument, /) -> str:
-        lw = self.lw
-        return self.render('argument.jinja2', 
-            premises = tuple(map(lw, arg.premises)),
-            conclusion = lw(arg.conclusion),
-        )
+    # def _write_argument(self, arg: Argument, /) -> str:
+    #     lw = self.lw
+    #     return self.render('argument.jinja2', 
+    #         premises = tuple(map(lw, arg.premises)),
+    #         conclusion = lw(arg.conclusion),
+    #     )
 
-    def _write_summary(self, tab: Tableau, /) -> str:
-        return self.render('summary.jinja2', tab = tab)
+    # def _write_summary(self, tab: Tableau, /) -> str:
+    #     return self.render('summary.jinja2', tab = tab)
 
     # def _get_argstrs(self, arg: Argument|None, /) -> dict[str, tuple[str, ...]|str|None]:
     #     if arg is None:
