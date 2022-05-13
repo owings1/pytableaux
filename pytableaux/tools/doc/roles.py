@@ -128,39 +128,28 @@ class refplus(
             logger.warning(NoUri(f"From text: {self.text}"))
             return [nodes.inline(text = fallback_text)], []
 
-    def nodeclass(self, rawtext, **options):
-        pass
-        # a = nodes.inline(rawtext, **options)
-        # if self.logicname:
-        #     APPSTATE[self.app][refplus][a] = metadress.logicname_node(self.logicname)
-        # return a
-
-    # def result_nodes(self, document: nodes.document, env: BuildEnvironment, node: Element,
-    #     is_ref: bool) -> tuple[list[Node], list[system_message]]:
-    #     return [node], []
-
     def _logic_ref(self):
         lrmatch = self.patterns['logicref'].match(self.text)
         if not lrmatch:
             return
         m = lrmatch.groupdict()
-        self.logicname = str(m['name'])
-        self.section = str(m['sect'])
-        self.anchor = str(m['anchor'])
-        if self.section is None:
-            self.title = self.logicname
-        else:
+        self.logicname = m['name']
+        self.section = m['sect']
+        self.anchor = m['anchor']
+        if self.section:
             self.title = f'{self.logicname} {self.section}'.strip()
+        else:
+            self.title = self.logicname
 
         self.has_explicit_title = True
 
-        if self.anchor is None:
-            if self.section is None:
+        if self.anchor:
+            self.target = self.anchor[1:-1]
+        else:
+            if self.section:
                 self.target = self.logicname
             else:
                 self.target = '-'.join(re.split(r'\s+', self.title.lower()))
-        else:
-            self.target = self.anchor[1:-1]
         self.target = self.target.lower()
         self.text = f'{self.title} <{self.target}>'
 

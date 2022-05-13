@@ -66,7 +66,6 @@ from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import T
-from sphinx.ext.autodoc.importer import import_object
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
@@ -81,8 +80,6 @@ if TYPE_CHECKING:
     from sphinx.util.typing import RoleFunction
 
 __all__ = (
-    'app_helper',
-    'app_setup',
     'AutodocProcessor',
     'BaseDirective',
     'BaseRole',
@@ -91,7 +88,6 @@ __all__ = (
     'ConfKey',
     'DirectiveHelper',
     'flagopt',
-    'Helper',
     'nodeopt',
     'opersopt',
     'predsopt',
@@ -456,50 +452,6 @@ class Tabler(list[list[str]], abcs.Abc):
             self.apply_repr(rp)
         return tb(self.body, self.header, tablefmt, **kw)
 
-# ------------------------------------------------
-
-if TYPE_CHECKING:
-
-    @overload
-    def is_enum_member(modname: str, objpath: list[str]):
-        "Prefered method if info is available."
-
-    @overload
-    def is_enum_member(fullname: str):
-        "Fallback method that tries to guess module path."
-
-def is_enum_member(modname: str, objpath = None):
-
-    if objpath is not None:
-        importinfo = import_object(modname, objpath[0:-1])
-
-    else:
-        fullpath = modname.split('.')
-        if len(fullpath) < 3:
-            return False
-        objpath = [fullpath[-2], fullpath[-1]]
-        modname = '.'.join(fullpath[0:-2])
-        while len(modname):
-            try:
-                importinfo = import_object(modname, objpath[0:-1])
-            except ImportError:
-                parts = modname.split('.')
-                objpath.insert(0, parts.pop())
-                modname = '.'.join(parts)
-            else:
-                break
-        else:
-            return False
-
-    importobj = importinfo[-1]
-    if isinstance(importobj, type) and issubclass(importobj, Enum):
-        try:
-            _ = importobj(objpath[-1])
-        except (ValueError, TypeError) as e:
-            # logger.debug(e)
-            return False
-        else:
-            return True
 
 
 # ------------------------------------------------

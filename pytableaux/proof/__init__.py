@@ -20,8 +20,9 @@ pytableaux.proof
 
 """
 from __future__ import annotations
+from collections import deque
 
-from typing import TYPE_CHECKING, Any, Callable, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence
 
 from pytableaux import _ENV, __docformat__
 from pytableaux.proof.util import HelperAttr, RuleAttr
@@ -97,12 +98,14 @@ class RuleHelper(metaclass = abcs.AbcMeta):
     __slots__ = EMPTY_SET
 
     rule: Rule
+    config: Any
 
-    @abstract
-    def __init__(self, rule: Rule,/): ...
+    def __init__(self, rule: Rule, /):
+        self.rule = rule
+        self.config = rule.Helpers.get(type(self))
 
     @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule], /):
+    def configure_rule(cls, rulecls: type[Rule], /):
         """``RuleHelper`` hook for initializing & verifiying a ``Rule`` class.
         
         Args:
@@ -140,7 +143,7 @@ class RuleHelper(metaclass = abcs.AbcMeta):
                 yield len(params := get_params(value)) > 1
             yield is_positional(params[1])
 
-        def insp_init_ruleclass(subcls: type):
+        def insp_configure_rule(subcls: type):
             yield abcs.check_mrodict(subcls.__mro__, name := HelperAttr.InitRuleCls)
             yield callable(value := getattr(subcls, name))
             yield len(params := get_params(value)) > 1
@@ -150,7 +153,7 @@ class RuleHelper(metaclass = abcs.AbcMeta):
         inspections = (
             insp_rule,
             insp_init,
-            # insp_init_ruleclass,
+            # insp_configure_rule,
         )
 
         def compute(subcls: type):
@@ -183,45 +186,81 @@ class RuleMeta(abcs.AbcMeta):
     def __prepare__(cls, clsname: str, bases: tuple[type, ...], **kw) -> dict[str, Any]:
         return dict(__slots__ = EMPTY_SET)
 
-    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, *,
-        helper: Mapping[type[RuleHelper], Mapping[str, Any]] = {}, **kw
-    ):
+    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, **kw):
 
         Class = super().__new__(cls, clsname, bases, ns, **kw)
-
-        merge = abcs.merge_attr
-
         # name
         setattr(Class, RuleAttr.Name, clsname)
     #         ancs = list(abcs.mroiter(subcls, supcls = cls))
     #         flagsmap = {anc: anc.FLAGS for anc in ancs}
     #         subcls.FLAGS = functools.reduce(opr.or_, flagsmap.values(), cls.FLAGS)
         # _defaults
-        defaults = merge(Class, RuleAttr.DefaultOpts, mcls = cls,
+        defaults = abcs.merge_attr(Class, RuleAttr.DefaultOpts, mcls = cls,
             default = dmap(), transform = MapProxy,
         )
         # _optkeys
         setattr(Class, RuleAttr.OptKeys, setf(defaults))
 
         # Timers
-        merge(Class, RuleAttr.Timers, mcls = cls,
+        abcs.merge_attr(Class, RuleAttr.Timers, mcls = cls,
             default = EMPTY_QSET, transform = qsetf,
         )
 
-        # Helpers
-        Helpers = merge(Class, RuleAttr.Helpers, mcls = cls,
-            default = EMPTY_QSET, transform = qsetf,
-        )
-        for Helper in Helpers:
-            # check.subcls(Helper, RuleHelper)
-            kwopts = helper.get(Helper, EMPTY_MAP)
-            finit = getattr(Helper, HelperAttr.InitRuleCls, None)
-            if kwopts or finit:
-                finit(Class, **kwopts)
+        configs = {}
+
+        for helpercls in abcs.mroiter(Class, mcls = cls):
+            v = getattr(helpercls, RuleAttr.Helpers, EMPTY_MAP)
+            if isinstance(v, type):
+                configs[v] = None
+            elif isinstance(v, Sequence):
+                configs.update((v, None) for v in v)
+            else:
+                configs.update(v)
+
+        setattr(Class, RuleAttr.Helpers, MapProxy(configs))
+        for helpercls in configs:
+            setup = getattr(helpercls, HelperAttr.InitRuleCls, None)
+            if setup:
+                configs[helpercls] = setup(Class)
+        # setattr(Class, RuleAttr.Helpers, MapProxy(configs))
 
         return Class
+
+def demodalize_rules(Rules: Iterable[type[Rule]]) -> None:
+    """Remove ``Modal`` filter from ``NodeFilters``, and clear `modal` attribute.
+    
+    Args:
+        Rules: Iterable of rule classes.
+    """
+    attr = RuleAttr.NodeFilters
+    rmfilters = {filters.ModalNode}
+    classes: deque[type[Rule]] = deque()
+    for rulecls in Rules:
+        ischange = False
+        value = getattr(rulecls, attr, None)
+        if value is not None and len(value & rmfilters):
+            ischange = True
+            value -= rmfilters
+            setattr(rulecls, attr, value)
+        if getattr(rulecls, RuleAttr.Modal, None) is not None:
+            setattr(rulecls, RuleAttr.Modal, None)
+            ischange = True
+        if ischange:
+            classes.append(rulecls)
+   
+    attr = RuleAttr.Helpers
+    for rulecls in classes:
+        configs = {}
+        for Helper, old in getattr(rulecls, attr).items():
+            setup = getattr(Helper, HelperAttr.InitRuleCls, None)
+            if setup:
+                configs[Helper] = setup(rulecls)
+            else:
+                configs[Helper] = old
+        setattr(rulecls, attr, MapProxy(configs))
 
 from pytableaux.proof.writers import TabWriter
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.tableaux import Tableau, Rule
 from pytableaux.proof.rules import ClosingRule
+from pytableaux.proof import filters

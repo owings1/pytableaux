@@ -239,6 +239,7 @@ class TestMappingApi(BaseSuite):
         from pytableaux.proof.helpers import BranchCache
         from pytableaux.proof.tableaux import TreeStruct
         from pytableaux.web.util import AppMetrics
+        from pytableaux.tools.doc import AutodocProcessor
 
         rule = self.rule_tab('Conjunction').rule
 
@@ -259,8 +260,15 @@ class TestMappingApi(BaseSuite):
             AppMetrics,
         )
 
+        skip = {
+            AutodocProcessor.Record
+        }
         for cls in classes:
-
+            if cls in skip:
+    
+                # elif (f := getattr(cls, '__dataclass_fields__', None)):
+                # exp = dict(zip(f, f))
+                continue
             if cls is AppMetrics:
                 # AppMetrics copies the metrics, which makes equality fail.
                 exp = dict(AppMetrics._from_mapping({}))
@@ -275,8 +283,6 @@ class TestMappingApi(BaseSuite):
                 exp = dict(TreeStruct())
             elif cls is dmapattr:
                 exp = dict()
-            elif (f := getattr(cls, '__dataclass_fields__', None)):
-                exp = dict(zip(f, f))
             else:
                 # ParseTable needs [str, item] structure.
                 # Target requires branch key.

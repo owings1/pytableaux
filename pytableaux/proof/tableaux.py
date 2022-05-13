@@ -86,8 +86,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     FLAGS: ClassVar[RuleClassFlag] = RuleClassFlag(0)
 
-    Helpers: ClassVar[qsetf[type[RuleHelper]]] = EMPTY_QSET
-    "Helper classes."
+    Helpers: ClassVar[Mapping[type[RuleHelper], Any]] = {}
+    "Helper classes mapped to their settings."
 
     Timers: ClassVar[qsetf[str]] = qsetf(('search', 'apply'))
     "StopWatch names to create in ``timers`` mapping."
@@ -122,9 +122,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     state: RuleState
     "The state bit flag."
 
-    __slots__ = setf(
-        ('tableau', 'helpers', 'timers', 'opts', 'history', 'state', '__getitem__')
-    )
+    __slots__ = ('tableau', 'helpers', 'timers', 'opts', 'history',
+        'state', '__getitem__')
 
     __iter__ = None
 
@@ -276,7 +275,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     @closure
     def __setattr__(*, slots = __slots__):
         LockedVal = RuleState.LOCKED.value
-        protected: Callable[[str], bool] = slots.__contains__
+        protected: Callable[[str], bool] = set(slots).__contains__
         def fset(self: Rule, name, value, /):
             statev = self.state.value
             if statev and statev & LockedVal == statev and protected(name):
@@ -286,7 +285,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     @closure
     def __delattr__(*, slots = __slots__):
-        protected: Callable[[str], bool] = slots.__contains__
+        protected: Callable[[str], bool] = set(slots).__contains__
         def fdel(self: Rule, name,/):
             if protected(name):
                 raise Emsg.ReadOnly(self, name)
@@ -529,7 +528,7 @@ class RuleGroup(SequenceApi[Rule]):
         rule = value(root._tab, **root._tab.opts)
         self._seq.append(rule)
         root._ruleindex[name] = self._ruleindex[name] = rule
-        rule.on(RuleEvent.AFTER_APPLY, self._root._tab._after_rule_apply)
+        rule.on(RuleEvent.AFTER_APPLY, root._tab._after_rule_apply)
 
     def extend(self, values: Iterable[type[Rule]], /):
         """Append multiple rules.
@@ -1471,102 +1470,73 @@ class TreeStruct(dmapns):
     children: list[TreeStruct]
     "The child structures."
 
-    leaf: bool
+    leaf: bool = False
     "Whether this is a terminal (childless) structure."
 
-    closed: bool
+    closed: bool = False
     "Whether this is a terminal structure that is closed."
 
-    open: bool
+    open: bool = False
     "Whether this is a terminal structure that is open."
 
-    left: int
+    left: int = None
     "The pre-ordered tree left value."
 
-    right: int
+    right: int = None
     "The pre-ordered tree right value."
 
-    descendant_node_count: int
+    descendant_node_count: int = 0
     "The total node count of all descendants."
 
-    structure_node_count: int
+    structure_node_count: int = 0
     "The node count plus descendant node count."
 
-    depth: int
+    depth: int = 0
     "The depth of this structure (ancestor structure count)."
 
-    has_open: bool
+    has_open: bool = False
     "Whether this structure or a descendant is open."
 
-    has_closed: bool
+    has_closed: bool = False
     "Whether this structure or a descendant is closed."
 
     closed_step: int|None
     "If closed, the step number at which it closed."
 
-    step: int
+    step: int = None
     "The step number at which this structure first appears."
 
-    width: int
+    width: int = 0
     "The number of descendant terminal structures, or 1."
 
-    balanced_line_width: float
+    balanced_line_width: float = 0.0
     """0.5x the width of the first child structure, plus 0.5x the
     width of the last child structure (if distinct from the first),
     plus the sum of the widths of the other (distinct) children.
     """
 
-    balanced_line_margin: float
+    balanced_line_margin: float = 0.0
     """0.5x the width of the first child structure divided by the
     width of this structure.
     """
 
-    branch_id: int|None
+    branch_id: int|None = None
     "The branch id, only set for leaves"
 
-    model_id: int|None
+    model_id: int|None = None
     "The model id, if exists, only set for leaves"
 
-    is_only_branch: bool
+    is_only_branch: bool = False
     "Whether this is the one and only branch"
 
-    branch_step: int
+    branch_step: int = None
     "The step at which the branch was added"
 
     def __init__(self):
-        # self.root = None
 
         self.nodes = []
         self.ticksteps = []
         self.children = []
-
-        # self.left = None
-        # self.right = None
-        # self.depth = None
-        # self.structure_node_count = 0
-        self.descendant_node_count = 0
-
-        self.leaf = False
-        self.closed = False
-        self.open = False
-        self.has_open = False
-        self.has_closed = False
-        self.closed_step = None
-        self.step = None
-        self.is_only_branch = False
-        self.branch_step = None
-
-        self.width = 0
-        # self.balanced_line_width = None
-        # self.balanced_line_margin = None
-
-        self.branch_id = None
-        self.model_id = None
-
-        # if values is not None:
-        #     self.update(values)
-        # if len(kw):
-        #     self.update(kw)
 
         self.id = id(self)
 

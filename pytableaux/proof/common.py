@@ -90,14 +90,10 @@ class Node(MapCover):
             sa(self, '_cov_mapping', mapping)
         return init
 
-    @tools.closure
-    def copy():
-        sa = object.__setattr__
-        def copy(self: Node) -> Node:
-            inst = object.__new__(type(self))
-            sa(inst, '_cov_mapping', self._cov_mapping)
-            return inst
-        return copy
+    def copy(self: Node) -> Node:
+        inst = object.__new__(type(self))
+        object.__setattr__(inst, '_cov_mapping', self._cov_mapping)
+        return inst
 
     @property
     def id(self) -> int:
@@ -625,13 +621,14 @@ class Target(dmapattr[str, Any]):
     _entry : StepEntry
 
     __slots__ = (
-        'branch', 'constant', 'designated', 'flag', 'node', 'nodes', 'rule',
+        'rule', 'branch', 'constant', 'designated', 'flag', 'node', 'nodes',
         'sentence', 'world', 'world1', 'world2',
-        '_entry',
     )
 
     # For dmapattr
     _keyattr_ok = staticmethod(setf(__slots__).__contains__)
+
+    __slots__ += '_entry',
 
     def __init__(self, it: Iterable = None, /, **kw):
         if it is not None:
@@ -669,8 +666,8 @@ class Target(dmapattr[str, Any]):
         return f'<{type(self).__name__} {props}>'
 
     def _names(self) -> Iterator[str]:
-        get = self.get
-        return (name for name in self.__slots__ if get(name) is not None)
+        return (name for name in self.__slots__
+            if self._keyattr_ok(name))
 
 
 del(

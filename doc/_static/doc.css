@@ -19,6 +19,17 @@ div[class^=highlight] .pre {
     font-family: SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,Courier,monospace;
 }
 
+
+.tableau-wrapper .rule-legend {
+    position: absolute;
+    border: 1px solid #ccc;
+    padding: 0 8px;
+    font-size: 20px;
+    background-color: white;
+}
+.tableau-wrapper .rule-legend .legend-item {
+    padding: 0 2px;
+}
 /* font-size */
 
 .tableau-wrapper .prolog .argument {

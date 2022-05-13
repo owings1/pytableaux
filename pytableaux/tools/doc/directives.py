@@ -32,12 +32,12 @@ from pytableaux import examples, logics, models, tools
 from pytableaux.lang import (Argument, Atomic, LexWriter, Marking, Notation,
                              Parser, Predicates, RenderSet)
 from pytableaux.proof import Tableau, TabWriter, writers
-from pytableaux.proof.helpers import EllipsisExampleHelper
 from pytableaux.tools.doc import (BaseDirective, ConfKey, DirectiveHelper,
                                   RenderMixin, SphinxEvent, boolopt, choiceopt,
-                                  classopt, extnodes, flagopt, misc, opersopt,
+                                  classopt, extnodes, flagopt, opersopt,
                                   predsopt, re_comma, roles, stropt)
 from pytableaux.tools.doc.extnodes import block
+from pytableaux.tools.doc.misc import EllipsisExampleHelper, rule_legend
 from sphinx.util import logging
 
 if TYPE_CHECKING:
@@ -78,7 +78,6 @@ class TableGenerator(DirectiveHelper):
 
 table_generators: dict[str, TableGenerator] = {}
 "Table generator registry."
-
 
 
 class SentenceBlock(BaseDirective):
@@ -268,7 +267,10 @@ class TableauDirective(BaseDirective):
             if mode == 'rule':
                 tab = self.gettab_rule()
                 rule = tab.rules.get(opts['rule'])
-
+                if 'legend' in opts:
+                    n = nodes.container(classes = ['rule-legend'])
+                    n += self.getnodes_rule_legend(rule)
+                    nlist.append(n)
             else:
                 assert mode == 'build-trunk'
                 tab =  self.gettab_trunk()
@@ -279,9 +281,9 @@ class TableauDirective(BaseDirective):
                 # change renderset
                 renderset = self.get_trunk_renderset(wnotn, charset)
 
-        lw = LexWriter(wnotn, renderset = renderset)
         writer = TabWriter(wformat,
-            lw = lw, classes = classes, wrapper = False
+            lw = LexWriter(wnotn, renderset = renderset),
+            classes = classes, wrapper = False
         )
 
         if mode == 'rule':
@@ -297,10 +299,6 @@ class TableauDirective(BaseDirective):
         else:
             classes |= 'tableau',
             nlist.append(nodes.literal_block(text = output, classes = classes))
-
-        if 'legend' in opts:
-            if mode == 'rule':
-                nlist.extend(self.getnodes_rule_legend(rule))
 
         cont = nodes.container(
             classes = ['tableau-wrapper'] + classes
@@ -341,23 +339,38 @@ class TableauDirective(BaseDirective):
         # Pluck a rule.
         rule = tab.rules.groups[1][0]
         # Inject the helper.
-        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
+        helper = EllipsisExampleHelper(rule)
+        rule.helpers[type(helper)] = helper
         # Build trunk.
         tab.argument = self.trunk_data['arg']
         return tab
 
     def getnodes_rule_legend(self, rule):
-        nn=[]
+        nn = []
         opts = self.options
+        legend = rule_legend(rule)
+        lw = LexWriter(opts['wnotn'], 'unicode')
+        renderset = lw.renderset
+        for name, value in legend:
+            if lw.canwrite(value):
+                text = lw(value)
+            else:
+                try:
+                    text = renderset.string(Marking.tableau, (name, value))
+                except KeyError:
+                    raise self.error(
+                        f'Unwriteable legend item: {(name, value)} for {rule}')
+            nn.append(nodes.inline(text, text, classes = ['legend-item', name]))
+ 
         cont = nodes.container()
-        ref = roles.refplus()
+        # ref = roles.refplus()
         # si = self.get_source_info()
-        n = nodes.caption()
+        # n = nodes.caption()
         # r = ref('ref', f':ref:`{rule.name}`', rule.name, si[1], self.state.inliner, {}, {})
-        self.state.inliner
-        n += nodes.literal(text = rule.name)
-        cont += n
-        nn.append(cont)
+        # self.state.inliner
+        # n += nodes.literal(text = rule.name)
+        # cont += n
+        # nn.append(cont)
         return nn
 
     def getnodes_trunk_prolog(self):
@@ -418,6 +431,8 @@ class TableauDirective(BaseDirective):
         if badopts:
             raise self.error(f"Option(s) not allowed with '{mode}': {badopts}")
         return mode
+
+
 
 
 class TruthTables(BaseDirective, RenderMixin):

@@ -30,6 +30,7 @@ from pytableaux.lang.lex import Constant, Predicated, Sentence
 from pytableaux.proof import Branch, Node, Rule, RuleHelper, Target, filters
 from pytableaux.proof.util import Access, RuleAttr, RuleEvent, TabEvent
 from pytableaux.tools import MapProxy, abcs, abstract, closure
+from pytableaux.tools.decorators import wraps
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setm
@@ -48,7 +49,6 @@ __all__ = (
     'AdzHelper',
     'AplSentCount',
     'BranchTarget',
-    'EllipsisExampleHelper',
     'FilterHelper',
     'MaxConsts',
     'MaxWorlds',
@@ -61,10 +61,11 @@ __all__ = (
     'WorldIndex',
 )
 
+NOGET = object()
+
 class AdzHelper(RuleHelper):
 
-    __slots__ = 'rule', 'closure_rules'
-    rule: Rule
+    __slots__ = 'rule', 'config', 'closure_rules'
 
     def __init__(self, rule: Rule,/):
         self.rule = rule
@@ -102,20 +103,22 @@ class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
 
     _valuetype: type[T] = bool
 
-    __slots__ = 'rule',
-    rule: Rule
+    __slots__ = 'rule', 'config'
 
-    def __new__(cls, rule: Rule,/):
-        inst = super().__new__(cls)
-        inst.rule = rule
-        return inst
+    # def __new__(cls, rule: Rule,/):
+    #     inst = super().__new__(cls)
+    #     inst.rule = rule
+    #     return inst
 
     def __init__(self, rule: Rule,/):
+        RuleHelper.__init__(self, rule)
         self.listen_on(rule, rule.tableau)
 
     def copy(self, /, *, listeners:bool = False):
         cls = type(self)
-        inst = cls.__new__(cls, self.rule)
+        inst = cls.__new__(cls)
+        inst.rule = self.rule
+        inst.config = self.config
         if listeners:
             self.listen_on(self.rule, self.rule.tableau)
         inst.update(self)
@@ -162,7 +165,7 @@ class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
         return NotImplemented
 
     @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule]):
+    def configure_rule(cls, rulecls: type[Rule]):
         pass
 
 class BranchDictCache(BranchCache[dmap[KT, VT]]):
@@ -222,16 +225,15 @@ class BranchValueHook(BranchCache[VT]):
     """
     _valuetype = type(None)
     hook_method_name = '_branch_value_hook'
+    __slots__ = 'hook',
 
     if TYPE_CHECKING:
         @overload
         def hook(self, node: Node, branch: Branch,/) -> VT|None:...
 
-    __slots__ = 'hook',
-
     def __init__(self, rule: Rule, /):
-        self.hook = getattr(rule, self.hook_method_name)
         super().__init__(rule)
+        self.hook = getattr(rule, self.hook_method_name)
 
     def listen_on(self, rule: Rule, tableau: Tableau, /):
         super().listen_on(rule, tableau)
@@ -249,8 +251,8 @@ class BranchValueHook(BranchCache[VT]):
             self[branch] = res
 
     @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
-        super().__init_ruleclass__(rulecls, **kw)
+    def configure_rule(cls, rulecls: type[Rule], **kw):
+        super().configure_rule(rulecls, **kw)
         name = cls.hook_method_name
         value = getattr(rulecls, name, None)
         if value is None:
@@ -369,8 +371,8 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
             self[branch][Access.fornode(node)] = node
 
     def __init__(self, rule: Rule,/):
-        self.nodes = self.Nodes(rule)
         super().__init__(rule)
+        self.nodes = self.Nodes(rule)
 
     def copy(self, /, *, listeners: bool = False):
         inst: WorldIndex = super().copy(listeners = listeners)
@@ -449,9 +451,9 @@ class FilterNodeCache(BranchCache[set[Node]]):
         self[branch].discard(node)
 
     @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
+    def configure_rule(cls, rulecls: type[Rule], **kw):
         "``RuleHelper`` init hook. Verify `ignore_ticked` attribute."
-        super().__init_ruleclass__(rulecls, **kw)
+        super().configure_rule(rulecls, **kw)
         if not abcs.isabstract(rulecls):
             if not hasattr(rulecls, RuleAttr.IgnoreTicked):
                 raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked)
@@ -461,7 +463,7 @@ class PredNodes(FilterNodeCache):
     __slots__ = EMPTY_SET
 
     def __call__(self, node: Node, _):
-        return isinstance(node.get('sentence'), Predicated)
+        return type(node.get('sentence')) is Predicated
 
 class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``
@@ -480,9 +482,9 @@ class FilterHelper(FilterNodeCache):
     _garbage: setm[tuple[Branch, Node]]
 
     def __init__(self, rule: Rule,/):
-        self._garbage = setm()
-        self.filters, self.pred = self._build_filters_pred(rule)
         super().__init__(rule)
+        self._garbage = setm()
+        self.filters, self.pred = self.config#rule.Helpers[type(self)] # self._build_filters_pred(rule)
 
     def copy(self, /, *, listeners:bool = False):
         inst: FilterHelper = super().copy(listeners = listeners)
@@ -490,16 +492,6 @@ class FilterHelper(FilterNodeCache):
         inst.filters = self.filters
         inst.pred = self.pred
         return inst
-
-    @staticmethod
-    def _build_filters_pred(rule: Rule) -> tuple[FiltersDict, NodePredFunc]:
-        filters = MapProxy(dict(zip(
-            types := getattr(rule, RuleAttr.NodeFilters),
-            funcs := tuple(ftype(rule) for ftype in types)
-        )))
-        def pred(node, /):
-            return all(f(node) for f in funcs)
-        return filters, pred
 
     def filter(self, node: Node, branch: Branch, /) -> bool:
         """Whether the node passes the filter. If `ignore_ticked` is `True`,
@@ -509,7 +501,7 @@ class FilterHelper(FilterNodeCache):
         Args:
             node: The node.
             branch: The node's branch.
-        
+
         Return:
             Whether the node meets the filter conditions and `ignore_ticked`
             setting.
@@ -565,25 +557,48 @@ class FilterHelper(FilterNodeCache):
         )
 
     @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
-        "``RuleHelper`` init hook. Verify and merge the `NodeFilters` attribute."
-        super().__init_ruleclass__(rulecls, **kw)
+    def configure_rule(cls, rulecls: type[Rule], **kw) -> tuple[FiltersDict, NodePredFunc]|None:
+        """``RuleHelper`` init hook.
+        
+        * Verify `NodeFilters`.
+        * For non-abstract classes, merge `NodeFilters` and create config.
+        """
+        super().configure_rule(rulecls, **kw)
         attr = RuleAttr.NodeFilters
-        values = abcs.merge_attr(rulecls, attr, supcls = Rule,
+        setattr(rulecls, attr, qsetf(getattr(rulecls, attr, EMPTY_SET)))
+        classes = abcs.merged_attr(attr,
+            cls = rulecls,
+            supcls = Rule,
             reverse = False,
             default = EMPTY_QSET,
             transform = qsetf,
         )
-        if values:
-            for Filter in values:
+        isabstract = abcs.isabstract(rulecls)
+        if classes:
+            for Filter in classes:
                 check.subcls(check.inst(Filter, type), filters.NodeCompare)
+            if not isabstract:
+                setattr(rulecls, attr, classes)
+                return cls.build_filters_pred(rulecls)
         else:
-            if not abcs.isabstract(rulecls):
+            if not isabstract:
                 import warnings
                 warnings.warn(
                     f"EMPTY '{attr}' attribute for {rulecls}. "
                     "All nodes will be cached."
                 )
+
+    @staticmethod
+    def build_filters_pred(rule: Rule, types: Iterable[type[filters.NodeCompare]] = None,/) -> tuple[FiltersDict, NodePredFunc]:
+        if types is None:
+            types = getattr(rule, RuleAttr.NodeFilters)
+        filters = MapProxy(dict(zip(
+            types,
+            funcs := tuple(ftype(rule) for ftype in types)
+        )))
+        def pred(node, /):
+            return all(f(node) for f in funcs)
+        return filters, pred
 
     @classmethod
     @closure
@@ -600,7 +615,7 @@ class FilterHelper(FilterNodeCache):
             Returns a flat tuple of targets.
             """
             node_targets_gen = make_targets_iter(node_targets_fn)
-            @functools.wraps(node_targets_gen)
+            @wraps(node_targets_gen)
             def get_targets_filtered(rule: Rule, branch: Branch, /):
                 helper = rule[cls]
                 helper.gc()
@@ -611,7 +626,7 @@ class FilterHelper(FilterNodeCache):
             return Target(it, rule = r, branch = b, node = n)
 
         def make_targets_iter(node_targets_fn: NodeTargetsFn) -> NodeTargetsGen:
-            @functools.wraps(node_targets_fn)
+            @wraps(node_targets_fn)
             def targets_gen(rule: Rule, nodes: Iterable[Node], branch: Branch, /):
                 for node in nodes:
                     results = node_targets_fn(rule, node, branch)
@@ -653,9 +668,9 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
     __slots__ = 'consts', 'filter',
 
     def __init__(self, rule: Rule,/):
+        super().__init__(rule)
         self.filter = rule.helpers[FilterHelper]
         self.consts = self.Consts(rule)
-        super().__init__(rule)
 
     def listen_on(self, rule: Rule, tableau: Tableau, /):
         super().listen_on(rule, tableau)
@@ -716,11 +731,12 @@ class MaxConsts(dict[Branch, int], RuleHelper):
     """
     __slots__ = (
         'rule',
+        'config',
         'world_consts',
     )
 
     def __init__(self, rule: Rule, /):
-        self.rule = rule
+        RuleHelper.__init__(self, rule)
         self.world_consts = WorldConsts(rule)
         self.listen_on(rule, rule.tableau)
 
@@ -797,7 +813,7 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         return max(1, len(branch.constants)) * max(1, node_needed_constants) + 1
 
     def _compute_needed_constants_for_node(self, node: Node,/) -> int:
-        s: Sentence = node.get('sentence')
+        s = node.get('sentence')
         return len(s.quantifiers) if s else 0
 
 class MaxWorlds(dict[Branch, int], RuleHelper):
@@ -806,6 +822,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
     """
     __slots__ = (
         'rule',
+        'config',
         '_modals',
         '_modal_opfilter',
     )
@@ -813,7 +830,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
     _modals: dict[Sentence, int]
 
     def __init__(self, rule: Rule,/):
-        self.rule = rule
+        RuleHelper.__init__(self, rule)
         self._modal_opfilter = getattr(rule, RuleAttr.ModalOperators).__contains__
         self._modals: dict[Sentence, int] = {}
         self.listen_on(rule, rule.tableau)
@@ -881,73 +898,8 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         )
 
     @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
+    def configure_rule(cls, rulecls: type[Rule], **kw):
         "``RuleHelper`` init hook. Set the `modal_operators` attribute."
-        super().__init_ruleclass__(rulecls, **kw)
+        super().configure_rule(rulecls, **kw)
         if not hasattr(rulecls, RuleAttr.ModalOperators):
             raise Emsg.MissingAttribute(RuleAttr.ModalOperators)
-
-
-# --------------------------------------------------
-
-from pytableaux.proof.rules import ClosingRule
-
-
-class EllipsisExampleHelper:
-
-    mynode = {'ellipsis': True}
-    closenodes = []
-
-    def __init__(self, rule: Rule,/):
-        self.rule = rule
-        self.applied: set[Branch] = set()
-        
-        self.isclosure = isinstance(rule, ClosingRule)
-        if self.isclosure:
-            self.closenodes = list(
-                dict(n)
-                for n in reversed(rule.example_nodes())
-            )
-        self.istrunk = False
-        rule.tableau.on({
-            TabEvent.BEFORE_TRUNK_BUILD : self.__before_trunk_build,
-            TabEvent.AFTER_TRUNK_BUILD  : self.__after_trunk_build,
-            TabEvent.AFTER_BRANCH_ADD   : self.__after_branch_add,
-            TabEvent.AFTER_NODE_ADD     : self.__after_node_add,
-        })
-        rule.on(RuleEvent.BEFORE_APPLY, self.__before_apply)
-
-    def __before_trunk_build(self, *_):
-        self.istrunk = True
-
-    def __after_trunk_build(self, *_):
-        self.istrunk = False
-
-    def __after_branch_add(self, branch: Branch):
-        if self.applied:
-            return
-        if len(self.closenodes) == 1:
-            self.__addnode(branch)        
-
-    def __after_node_add(self, node: Node, branch: Branch):
-        if self.applied:
-            return
-        if node.meets(self.mynode) or node.is_closure:
-            return
-        if self.istrunk:
-            self.__addnode(branch)
-        elif self.closenodes and node.meets(self.closenodes[-1]):
-            self.closenodes.pop()
-            if len(self.closenodes) == 1:
-                self.__addnode(branch)
-
-    def __before_apply(self, target: Target):
-        if self.applied:
-            return
-        if self.isclosure:
-            return
-        self.__addnode(target.branch)
-
-    def __addnode(self, branch: Branch):
-        self.applied.add(branch)
-        branch.add(self.mynode)

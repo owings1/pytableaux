@@ -194,16 +194,16 @@ def rendersets():
     ))
     
     # tab symbols
-    asciitab = MapProxy(dict(
-        designated   = '[+]',
-        undesignated = '[-]',
-        closed       = '(x)',
-    ))
-    htmltab = MapProxy(dict(
-        designated   = '&oplus;',  # '\2295'
-        undesignated = '&ominus;', # '\2296'
-        closed       = '&otimes;', # '\2297'
-    ))
+    asciitab = MapProxy({
+        ('designation', True) :  '[+]',
+        ('designation', False):  '[-]',
+        ('closure', None) : '(x)'
+    })
+    htmltab = MapProxy({
+        ('designation', True) :  '&oplus;',  # '\2295'
+        ('designation', False):  '&ominus;', # '\2296'
+        ('closure', None)  : '&otimes;' # '\2297'
+    })
 
     data = {notn: {} for notn in Notation}
 
@@ -360,9 +360,9 @@ def dmerged():
         'Basic dict merge copy, recursive for dict value.'
         c = {}
         for key, value in b.items():
-            if isinstance(value, dict):
+            if isinstance(value, Mapping):
                 avalue = a.get(key)
-                if isinstance(avalue, dict):
+                if isinstance(avalue, Mapping):
                     c[key] = merger(a[key], value)
                 else:
                     c[key] = dcopy(value)
@@ -389,7 +389,7 @@ def dtransform():
 
     def _true(_): True
 
-    def api(transformer: Callable[[Any], Any], a: dict, /,
+    def api(transformer: Callable[[Any], Any], a: Mapping, /,
         typeinfo: type|tuple[type, ...] = dict,
         inplace = False,
     ) -> dict:
@@ -402,13 +402,13 @@ def dtransform():
         if not inplace:
             return res
 
-    def runner(f, pred, inplace, a: dict):
+    def runner(f, pred, inplace, a: Mapping):
         if inplace:
             b = a
         else:
             b = {}
         for k, v in a.items():
-            if isinstance(v, dict):
+            if isinstance(v, Mapping):
                 b[k] = runner(f, pred, inplace, v)
             elif pred(v):
                 b[k] = f(v)

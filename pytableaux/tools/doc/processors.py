@@ -29,8 +29,7 @@ from pytableaux.errors import check
 from pytableaux.logics import registry
 from pytableaux.tools import closure
 from pytableaux.tools.doc import (AutodocProcessor, ConfKey, Processor,
-                                  ReplaceProcessor, SphinxEvent, docinspect,
-                                  is_enum_member)
+                                  ReplaceProcessor, SphinxEvent, misc)
 from sphinx.ext import autodoc
 from sphinx.util import logging
 
@@ -56,32 +55,16 @@ logger = logging.getLogger(__name__)
 class AttributeDocumenter(autodoc.AttributeDocumenter):
 
     def should_suppress_value_header(self) -> bool:
-        if self.config[ConfKey.auto_skip_enum_value] and is_enum_member(self.modname, self.objpath):
+        if self.config[ConfKey.auto_skip_enum_value] and misc.is_enum_member(self.modname, self.objpath):
             logger.debug(f'Skipping enum member value for {self.objpath}')
             return True
         return super().should_suppress_value_header()
-
-# class EnumMemberValue(AutodocProcessor):
-
-#     on: None|AutodocProcessor.Record = None
-#     member: None|enum.Enum = None
-
-#     namemap: dict[str, type[Enum]]
-
-#     def __init__(self):
-#         self.namemap = {}
-
-#     def applies(self):
-#         return is_enum_member(self.record.name)
-
-#     def run(self):
-#         return
 
 class RuledocInherit(AutodocProcessor):
     'Create docstring lines for an "inheriting only" ``Rule`` class.'
 
     def applies(self):
-        return docinspect.is_transparent_rule(self.record.obj)
+        return misc.is_transparent_rule(self.record.obj)
 
     def run(self):
         obj: type[Rule] = self.record.obj
@@ -94,20 +77,21 @@ class RuledocInherit(AutodocProcessor):
         self += base.__doc__
 
 class RuledocExample(AutodocProcessor):
-    'Prepend docstring with html rule example.'
+    'Prepend docstring with rule example and legend.'
 
     def applies(self):
-        return docinspect.is_concrete_rule(self.record.obj)
+        return misc.is_concrete_rule(self.record.obj)
 
     def run(self):
-        obj: type[Rule] = self.record.obj
-        logic = registry.locate(obj)
+        rule: type[Rule] = self.record.obj
+        logic = registry.locate(rule)
         lines = self.lines.copy()
         self.lines.clear()
         self += f"""
         .. tableau::
             :logic: {logic.name}
-            :rule: {obj.name}
+            :rule: {rule.name}
+            :legend:
         """
         self += lines
         
@@ -116,7 +100,7 @@ class BuildtrunkExample(AutodocProcessor):
     'Append docstring with html build_trunk example.'
 
     def applies(self):
-        return (docinspect.is_concrete_build_trunk(self.record.obj) and
+        return (misc.is_concrete_build_trunk(self.record.obj) and
                 not self.hastext(':build-trunk:'))
 
     def run(self):
@@ -245,6 +229,21 @@ def setup(app: Sphinx):
 
 
 
+# class EnumMemberValue(AutodocProcessor):
+
+#     on: None|AutodocProcessor.Record = None
+#     member: None|enum.Enum = None
+
+#     namemap: dict[str, type[Enum]]
+
+#     def __init__(self):
+#         self.namemap = {}
+
+#     def applies(self):
+#         return is_enum_member(self.record.name)
+
+#     def run(self):
+#         return
 # from sphinx.transforms import post_transforms
 # class ReferencesResolver(post_transforms.ReferencesResolver):
 #     def run(self, **kw):

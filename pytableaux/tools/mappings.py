@@ -20,8 +20,8 @@ pytableaux.tools.mappings
 
 """
 from __future__ import annotations
-import dataclasses
 from collections import defaultdict, deque
+import dataclasses
 from collections.abc import Iterator, Mapping, MutableMapping, Set
 from itertools import chain, filterfalse
 from operator import not_, truth
@@ -383,14 +383,29 @@ class dmapattr(KeySetAttr, dmap[KT, VT]):
         if len(kw):
             self.update(kw)
 
-    def __init_subclass__(subcls):
-        if subcls._from_mapping is __class__._from_mapping:
-            if (params := getattr(subcls, '__dataclass_params__', None)) is not None:
-                if params.init:
-                    subcls._from_mapping = classmethod(_kw_from_mapping)
+    # def __init_subclass__(subcls, **kw):
+    #     super().__init_subclass__(**kw)
+    #     print(subcls)
+    #     a = subcls._from_mapping.__func__
+    #     b =  __class__._from_mapping.__func__
+    #     print(a, b, a is b)
+    #     a = subcls._from_iterable.__func__
+    #     b = __class__._from_iterable.__func__
+    #     x =  getattr(subcls, '__dataclass_params__', None)
+    #     print(a is b, x is not None, issubclass(subcls, dataclasses))
+    #     if (subcls._from_mapping.__func__ is __class__._from_mapping.__func__ and
+    #         subcls._from_iterable.__func__ is __class__._from_iterable.__func__ and
+    #         (params := getattr(subcls, '__dataclass_params__', None)) is not None
+    #     ):
+    #         if params.init:
+    #             subcls._from_mapping = classmethod(_kw_from_mapping)
+    #             subcls._from_iterable = classmethod(_kw_from_iterable)
 
 def _kw_from_mapping(cls, mapping):
     return cls(**mapping)
+
+def _kw_from_iterable(cls, it):
+    return cls(**dict(it))
 
 class dmapns(dmapattr[KT, VT]):
     "Dict attr namespace with __dict__ slot and liberal key approval."

@@ -20,6 +20,7 @@ pytableaux.proof.util
 
 """
 from __future__ import annotations
+from collections import deque
 
 from typing import TYPE_CHECKING, Any, Iterable, Mapping, NamedTuple
 
@@ -83,28 +84,31 @@ def anode(w1: int, w2: int):
     'Make an Access node dict.'
     return Access(w1, w2)._asdict()
 
-def demodalize_rules(Rules: Iterable[type[Rule]]) -> None:
-    """Remove ``Modal`` filter from ``NodeFilters``, and clear `modal` attribute.
-    
-    Args:
-        Rules: Iterable of rule classes."""
-    from pytableaux.proof import filters
-    filtersattr = RuleAttr.NodeFilters
-    rmfilters = {filters.ModalNode}
-    for rulecls in Rules:
-        value = getattr(rulecls, filtersattr, None)
-        if value is not None and len(value & rmfilters):
-            value -= rmfilters
-            setattr(rulecls, filtersattr, value)
-        if getattr(rulecls, 'modal', None) is not None:
-            rulecls.modal = None
+
+class ProofAttr(str, Ebc): pass
+        
+class NodeAttr(ProofAttr):
+
+    designation = 'designated'
+    closure = 'closure'
+    flag    = 'flag'
+    is_flag = 'is_flag'
+    world   = 'world'
 
 
 class PropMap(ItemMapEnum):
 
-    NodeDefaults = dict(world = None, designated = None)
+    NodeDefaults = {
+        NodeAttr.designation: None,
+        NodeAttr.world: None,
+    }
 
-    ClosureNode = dict(is_flag = True, flag = 'closure')
+    ClosureNode = {
+        NodeAttr.closure: True,
+        NodeAttr.flag: NodeAttr.closure,
+        NodeAttr.is_flag: True
+    },
+
 
 #******  Branch Enum
 
@@ -119,7 +123,7 @@ class BranchEvent(Ebc):
 class HelperAttr(str, Ebc):
     'Special ``RuleHelper`` class attribute names.'
 
-    InitRuleCls = '__init_ruleclass__'
+    InitRuleCls = 'configure_rule'
 
 #******  Rule Enum
 
@@ -149,6 +153,9 @@ class RuleAttr(str, Ebc):
 
     ModalOperators = 'modal_operators'
     "For `MaxWorlds` helper."
+
+    Modal = 'modal'
+    "Modal flag."
 
 class RuleEvent(Ebc):
     'Rule events.'
@@ -220,6 +227,9 @@ class StepEntry(NamedTuple):
     target : Target
     #: The duration counter.
     duration: Counter
+
+    def __repr__(self):
+        return f'<StepEntry:{id(self)}:{self.rule.name}:{self.target.type}>'
 
 class Access(NamedTuple):
 

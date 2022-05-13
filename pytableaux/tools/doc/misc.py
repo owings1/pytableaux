@@ -21,17 +21,204 @@ pytableaux.tools.doc.rstutils
 """
 from __future__ import annotations
 
+import re
+from inspect import getsource
 from typing import TYPE_CHECKING
-
-from pytableaux.proof import ClosingRule
-from pytableaux.proof.util import RuleEvent, TabEvent
+import enum
+from pytableaux import proof
+from pytableaux.lang import Operator, Quantifier
+from pytableaux.logics import LogicLocatorRef, registry
+from pytableaux.proof import TableauxSystem as TabSys
+from pytableaux.proof import ClosingRule, Rule, helpers, Branch
+from pytableaux.proof.util import RuleEvent, TabEvent, NodeAttr
+from pytableaux.tools.abcs import isabstract
+from sphinx.ext.autodoc.importer import import_object
 
 if TYPE_CHECKING:
-    from pytableaux.proof import Branch, Node, Rule, Target
+    from pytableaux.proof import Node, Rule, Target
+    from typing import Any, overload
 
 __all__ = (
     'EllipsisExampleHelper',
+    'get_logic_names',
+    'is_concrete_build_trunk',
+    'is_concrete_rule',
+    'is_transparent_rule',
 )
+
+# def get_logic_names(logic_docdir: str = None, suffix: str = '.rst', /) -> set[str]:
+#     'Get all logic names with a .rst document in the doc dir.'
+#     if logic_docdir is None:
+#         logic_docdir = os.path.abspath(
+#             os.path.join(os.path.dirname(__file__), '../../../doc/logics')
+#         )
+#     return set(
+#         os.path.basename(file).removesuffix(suffix).upper()
+#         for file in os.listdir(logic_docdir)
+#         if file.endswith(suffix)
+#     )
+
+def is_concrete_rule(obj: Any, /) -> bool:
+    return _is_rulecls(obj) and obj not in (Rule, ClosingRule)
+
+def is_concrete_build_trunk(obj: Any, /,):
+    return TabSys.build_trunk in _methmro(obj) and not isabstract(obj)
+    # return obj is not TabSys.build_trunk and TabSys.build_trunk in _methmro(obj)
+
+def is_transparent_rule(obj: Any) -> bool:
+    """Whether a rule class:
+        - is included in TabRules groups for the module it belongs to
+        - inherits from a rule class that belongs to another logic module
+        - the parent class is in the other logic's rule goups
+        - there is no implementation besides pass
+        - there is no docblock
+    """
+    return (
+        _is_rulecls(obj) and
+        _is_nodoc(obj) and
+        _is_nocode(obj) and
+        _rule_is_self_grouped(obj) and
+        _rule_is_parent_grouped(obj)
+    )
+
+
+def rule_legend(rule: type[Rule]|Rule):
+
+    if isinstance(rule, Rule):
+        rule = type(rule)
+
+    legend = {}
+
+    if (oper := getattr(rule, 'operator', None)):
+        legend['operator'] = Operator[oper]
+    elif (quan := getattr(rule, 'quantifier', None)):
+        legend['quantifier'] = Quantifier[quan]
+
+    if (des := getattr(rule, 'designation', None)) is not None:
+        legend['designation'] = des
+
+    if (issubclass(rule, ClosingRule)):
+        legend['closure'] = None
+
+    return tuple(legend.items())
+
+# ------------------------------------------------
+
+if TYPE_CHECKING:
+
+    @overload
+    def is_enum_member(modname: str, objpath: list[str]):
+        "Prefered method if info is available."
+
+    @overload
+    def is_enum_member(fullname: str):
+        "Fallback method that tries to guess module path."
+
+def is_enum_member(modname: str, objpath = None):
+
+    if objpath is not None:
+        importinfo = import_object(modname, objpath[0:-1])
+
+    else:
+        fullpath = modname.split('.')
+        if len(fullpath) < 3:
+            return False
+        objpath = [fullpath[-2], fullpath[-1]]
+        modname = '.'.join(fullpath[0:-2])
+        while len(modname):
+            try:
+                importinfo = import_object(modname, objpath[0:-1])
+            except ImportError:
+                parts = modname.split('.')
+                objpath.insert(0, parts.pop())
+                modname = '.'.join(parts)
+            else:
+                break
+        else:
+            return False
+
+    importobj = importinfo[-1]
+    if isinstance(importobj, type) and issubclass(importobj, enum.Enum):
+        try:
+            _ = importobj(objpath[-1])
+        except (ValueError, TypeError) as e:
+            return False
+        else:
+            return True
+
+
+def _is_rulecls(obj: Any) -> bool:
+    'Wether obj is a rule class.'
+    return isinstance(obj, type) and issubclass(obj, Rule)
+
+def _is_nodoc(obj: Any) -> bool:
+    return not bool(getattr(obj, '__doc__', None))
+
+def _is_nocode(obj: Any) -> bool:
+    'Try to determine if obj has no "effective" code.'
+    isblock = False
+    isfirst = True
+    pat = rf'^(class|def) {obj.__name__}(\([a-zA-Z0-9_.]+\))?:$'
+    try:
+        it = filter(len, map(str.strip, getsource(obj).split('\n')))
+    except:
+        return False
+    for line in it:
+        if isfirst:
+            isfirst = False
+            m = re.findall(pat, line)
+            if not m:
+                return False
+            continue
+        if line.startswith('#'):
+            continue
+        if line == 'pass':
+            continue
+        if line.startswith('"""'):
+            # not perfect, but more likely to produce false negatives
+            # than false positives
+            isblock = not isblock
+            continue
+        if isblock:
+            continue
+        return False
+    return True
+
+def _rule_is_grouped(rule: type[Rule], logic: LogicLocatorRef) -> bool:
+    'Whether the rule class is grouped in the TabRules of the given logic.'
+    if not _is_rulecls(rule):
+        return False
+    try:
+        logic = registry.locate(logic)
+    except:
+        return False
+    tabrules = logic.TabRules
+    if rule in tabrules.closure_rules:
+        return True
+    for grp in tabrules.rule_groups:
+        if rule in grp:
+            return True
+    return False
+
+def _rule_is_self_grouped(rule: type[Rule]) -> bool:
+    'Whether the Rule class is grouped in the TabRules of its own logic.'
+    logic = registry.locate(rule)
+    return _rule_is_grouped(rule, logic)
+
+def _rule_is_parent_grouped(rule: type[Rule]) -> bool:
+    "Whether the Rule class's parent is grouped in its own logic."
+    if not isinstance(rule, type):
+        return False
+    return _rule_is_self_grouped(rule.mro()[1])
+
+def _methmro(meth: Any) -> list[str]:
+    """Get the methods of the same name of the mro (safe) of the class the
+    method is bound to."""
+    try:
+        it = (getattr(c, meth.__name__, None) for c in meth.__self__.__mro__)
+    except:
+        return []
+    return list(filter(None, it))
 
 class EllipsisExampleHelper:
 
