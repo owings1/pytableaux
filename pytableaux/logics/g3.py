@@ -29,7 +29,7 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'G3'
 
-class Meta:
+class Meta(K3.Meta):
     title    = 'Gödel 3-valued logic'
     category = 'Many-valued'
     description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
@@ -40,6 +40,7 @@ class Meta:
         'non-modal',
         'first-order',
     )
+    native_operators = L3.Meta.native_operators
 
 class Model(L3.Model):
     """
@@ -70,6 +71,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The closure rules for L{G3} are the L{FDE} closure rule, and the L{K3} closure rule.

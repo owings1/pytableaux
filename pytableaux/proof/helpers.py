@@ -29,7 +29,7 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
 from pytableaux.proof import Branch, Node, Rule, RuleHelper, Target, filters
 from pytableaux.proof.util import Access, RuleAttr, RuleEvent, TabEvent
-from pytableaux.tools import MapProxy, abcs, abstract, closure
+from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract, closure
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
@@ -164,9 +164,6 @@ class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
     def _from_iterable(cls, it):
         return NotImplemented
 
-    @classmethod
-    def configure_rule(cls, rulecls: type[Rule]):
-        pass
 
 class BranchDictCache(BranchCache[dmap[KT, VT]]):
     'Copies each K->V item for parent branch via copy(V).'
@@ -251,12 +248,12 @@ class BranchValueHook(BranchCache[VT]):
             self[branch] = res
 
     @classmethod
-    def configure_rule(cls, rulecls: type[Rule], **kw):
-        super().configure_rule(rulecls, **kw)
-        name = cls.hook_method_name
-        value = getattr(rulecls, name, None)
+    def configure_rule(cls, rulecls: type[Rule], config, **kw):
+        super().configure_rule(rulecls, config, **kw)
+        hookname = cls.hook_method_name
+        value = getattr(rulecls, hookname, None)
         if value is None:
-            raise Emsg.MissingAttribute(name, rulecls)
+            raise Emsg.MissingAttribute(hookname, rulecls)
         check.callable(value)
 
 class BranchTarget(BranchValueHook[Target]):
@@ -451,9 +448,9 @@ class FilterNodeCache(BranchCache[set[Node]]):
         self[branch].discard(node)
 
     @classmethod
-    def configure_rule(cls, rulecls: type[Rule], **kw):
+    def configure_rule(cls, rulecls: type[Rule], config, **kw):
         "``RuleHelper`` init hook. Verify `ignore_ticked` attribute."
-        super().configure_rule(rulecls, **kw)
+        super().configure_rule(rulecls, config, **kw)
         if not abcs.isabstract(rulecls):
             if not hasattr(rulecls, RuleAttr.IgnoreTicked):
                 raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked)
@@ -557,28 +554,30 @@ class FilterHelper(FilterNodeCache):
         )
 
     @classmethod
-    def configure_rule(cls, rulecls: type[Rule], **kw) -> tuple[FiltersDict, NodePredFunc]|None:
+    def configure_rule(cls, rulecls: type[Rule], config, **kw) -> tuple[FiltersDict, NodePredFunc]|None:
         """``RuleHelper`` init hook.
         
         * Verify `NodeFilters`.
         * For non-abstract classes, merge `NodeFilters` and create config.
         """
-        super().configure_rule(rulecls, **kw)
+        super().configure_rule(rulecls, config, **kw)
         attr = RuleAttr.NodeFilters
-        setattr(rulecls, attr, qsetf(getattr(rulecls, attr, EMPTY_SET)))
-        classes = abcs.merged_attr(attr,
-            cls = rulecls,
-            supcls = Rule,
-            reverse = False,
-            default = EMPTY_QSET,
-            transform = qsetf,
-        )
+        configs = {}
+        for relcls in abcs.mroiter(cls = rulecls, supcls = Rule, reverse = False):
+            v = getattr(relcls, attr, EMPTY_MAP)
+            if isinstance(v, Sequence):
+                for fcls in v:
+                    configs.setdefault(fcls, None)
+            else:
+                for fcls, flag in dict(v).items():
+                    configs.setdefault(fcls, flag)
+
         isabstract = abcs.isabstract(rulecls)
-        if classes:
-            for Filter in classes:
-                check.subcls(check.inst(Filter, type), filters.NodeCompare)
+        if configs:
+            for fcls in configs:
+                check.subcls(check.inst(fcls, type), filters.NodeCompare)
             if not isabstract:
-                setattr(rulecls, attr, classes)
+                setattr(rulecls, attr, configs)
                 return cls.build_filters_pred(rulecls)
         else:
             if not isabstract:
@@ -589,12 +588,12 @@ class FilterHelper(FilterNodeCache):
                 )
 
     @staticmethod
-    def build_filters_pred(rule: Rule, types: Iterable[type[filters.NodeCompare]] = None,/) -> tuple[FiltersDict, NodePredFunc]:
-        if types is None:
-            types = getattr(rule, RuleAttr.NodeFilters)
+    def build_filters_pred(rule: Rule,/) -> tuple[FiltersDict, NodePredFunc]:
+        configs = getattr(rule, RuleAttr.NodeFilters)
+        types = tuple(fcls for fcls, flag in configs.items()
+            if flag is not NotImplemented)
         filters = MapProxy(dict(zip(
-            types,
-            funcs := tuple(ftype(rule) for ftype in types)
+            types, funcs := tuple(ftype(rule) for ftype in types)
         )))
         def pred(node, /):
             return all(f(node) for f in funcs)
@@ -898,8 +897,8 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         )
 
     @classmethod
-    def configure_rule(cls, rulecls: type[Rule], **kw):
+    def configure_rule(cls, rulecls: type[Rule], config, **kw):
         "``RuleHelper`` init hook. Set the `modal_operators` attribute."
-        super().configure_rule(rulecls, **kw)
+        super().configure_rule(rulecls, config, **kw)
         if not hasattr(rulecls, RuleAttr.ModalOperators):
             raise Emsg.MissingAttribute(RuleAttr.ModalOperators)

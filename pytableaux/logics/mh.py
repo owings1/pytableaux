@@ -29,20 +29,14 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'MH'
 
-class Meta:
+class Meta(K3.Meta):
     title       = 'Paracomplete Hybrid Logic'
-    category    = 'Many-valued'
     description = (
         'Three-valued logic (True, False, Neither) with non-standard disjunction, '
         'and a classical-like conditional'
     )
     category_order = 70
-    tags = (
-        'many-valued',
-        'gappy',
-        'non-modal',
-        'first-order',
-    )
+    native_operators = FDE.Meta.native_operators + (Oper.Conditional, Oper.Biconditional)
 
 class Model(K3.Model):
 
@@ -104,6 +98,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The closure rules for MH are the FDE closure rule and the K3 closure rule.

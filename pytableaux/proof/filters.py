@@ -70,6 +70,8 @@ def getkey_safe(obj: Any, key: Any) -> Any:
     except KeyError:
         return None
 
+# class SkipFilter(Exception): pass
+
 BoolCompFunc = Callable[[Any, Any], bool]
 "Function that returns a boolean for any two arguments."
 

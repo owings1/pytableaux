@@ -27,17 +27,11 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'K3W'
 
-class Meta:
+class Meta(K3.Meta):
     title       = 'Weak Kleene 3-valued logic'
-    category    = 'Many-valued'
     description = 'Three-valued logic with values T, F, and N'
     category_order = 30
-    tags = (
-        'many-valued',
-        'gappy',
-        'non-modal',
-        'first-order',
-    )
+
 
 class Model(K3.Model):
     """
@@ -94,6 +88,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The Tableaux System for L{K3W} contains the FDE closure rule, and the L{K3} closure

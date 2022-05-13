@@ -30,7 +30,7 @@ from pytableaux.tools.sets import setf
 
 name = 'K3'
 
-class Meta:
+class Meta(FDE.Meta):
     title       = 'Strong Kleene 3-valued logic'
     category    = 'Many-valued'
     description = 'Three-valued logic (T, F, N)'
@@ -59,6 +59,7 @@ class TableauxSystem(FDE.TableauxSystem):
     """
     pass
         
+@TableauxSystem.initialize
 class TabRules:
     """
     The rules for L{K3} comprise all the {@FDE rules}, plus an additional

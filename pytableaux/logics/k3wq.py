@@ -29,17 +29,11 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'K3WQ'
 
-class Meta:
+class Meta(K3W.Meta):
     title       = 'Weak Kleene 3-valued alternate-quantifier logic'
-    category    = 'Many-valued'
     description = 'Three-valued logic with values T, F, and N, with alternate quantification'
     category_order = 40
-    tags = (
-        'many-valued',
-        'gappy',
-        'non-modal',
-        'first-order',
-    )
+
 
 class Model(K3W.Model):
     """
@@ -115,6 +109,7 @@ class TableauxSystem(FDE.TableauxSystem):
     designation markers, and building the trunk in the same way.
     """
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The Tableaux System for K3WQ contains the `FDE closure rule`_, and the

@@ -29,16 +29,11 @@ from pytableaux.proof.util import adds, anode, group, swnode
 
 name = 'D'
 
-class Meta:
+class Meta(K.Meta):
     title       = 'Deontic Normal Modal Logic'
-    category    = 'Bivalent Modal'
     description = 'Normal modal logic with a serial access relation'
     category_order = 2
-    tags = (
-        'bivalent',
-        'modal',
-        'first-order',
-    )
+
 
 class Model(K.Model):
     """
@@ -64,6 +59,7 @@ class TableauxSystem(K.TableauxSystem):
     """
     pass
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The Tableaux Rules for L{D} contain the rules for :ref:`K <K>`, as well as

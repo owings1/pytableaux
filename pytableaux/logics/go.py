@@ -31,17 +31,11 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'GO'
 
-class Meta:
+class Meta(K3.Meta):
     title       = 'Gappy Object 3-valued Logic'
-    category    = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
     category_order = 60
-    tags = (
-        'many-valued',
-        'gappy',
-        'non-modal',
-        'first-order',
-    )
+    native_operators = FDE.Meta.native_operators + (Oper.Conditional, Oper.Biconditional)
 
 def gap(v):
     return min(v, 1 - v)
@@ -149,6 +143,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The closure rules for GO are the FDE closure rule, and the K3 closure rule.

@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 __all__ = (
     'adds',
     'anode',
+    'snode',
     'BranchEvent',
     'group',
     'RuleEvent',
@@ -70,6 +71,10 @@ def adds(*groups: tuple[dict, ...], **kw) -> dict[str, tuple[dict, ...]|Any]:
     """
     return dict(adds = groups, **kw)
 
+def snode(s: Sentence):
+    'Make a sentence node dict.'
+    return dict(sentence = s)
+
 def sdnode(s: Sentence, d: bool):
     'Make a sentence/designated node dict.'
     return dict(sentence = s, designated = d)
@@ -85,8 +90,11 @@ def anode(w1: int, w2: int):
     return Access(w1, w2)._asdict()
 
 
-class ProofAttr(str, Ebc): pass
-        
+class ProofAttr(str, Ebc):
+
+    def __str__(self):
+        return self.value
+
 class NodeAttr(ProofAttr):
 
     designation = 'designated'

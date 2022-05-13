@@ -30,9 +30,8 @@ from pytableaux.tools.sets import setf
 
 name = 'LP'
 
-class Meta:
+class Meta(FDE.Meta):
     title       = 'Logic of Paradox'
-    category    = 'Many-valued'
     description = 'Three-valued logic (T, F, B)'
     category_order = 100
     tags = (
@@ -54,14 +53,13 @@ class Model(FDE.Model, BaseModel[ValueLP]):
 
     unassigned_value = Value.F
 
-Model.truth_function
-
 class TableauxSystem(FDE.TableauxSystem):
     """
     L{LP}'s Tableaux System inherits directly from the {@FDE system},
     employing designation markers, and building the trunk in the same way.
     """
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The Tableaux System for L{LP} contains all the rules from L{FDE}, as

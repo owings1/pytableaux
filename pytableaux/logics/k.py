@@ -27,6 +27,7 @@ from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
+from pytableaux.logics import fde as FDE
 from pytableaux.models import BaseModel, ValueCPL
 from pytableaux.proof import TableauxSystem as BaseSystem
 from pytableaux.proof import filters, rules
@@ -39,6 +40,7 @@ from pytableaux.proof.util import Access, adds, group, swnode
 from pytableaux.tools import closure
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools.typing import LogicType
 
 name = 'K'
 
@@ -52,6 +54,7 @@ class Meta:
         'modal',
         'first-order',
     )
+    native_operators = FDE.Meta.native_operators + (Operator.Possibility, Operator.Necessity)
 
 def substitute_params(params, old_value, new_value):
     return tuple(new_value if p == old_value else p for p in params)
@@ -92,7 +95,6 @@ class Model(BaseModel[ValueCPL]):
     @staticmethod
     @closure
     def truth_function(Value = Value):
-        from pytableaux.logics import fde as FDE
         model = FDE.Model()
         model.Value = Value
         return cast(
@@ -692,7 +694,8 @@ class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
     'Convenience mixin class for most common rules.'
     pass
 
-class TabRules:
+@TableauxSystem.initialize
+class TabRules(LogicType.TabRules):
     """
     Rules for modal operators employ *world* indexes as well access-type
     nodes. The world indexes are transparent for the rules for classical

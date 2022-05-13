@@ -197,12 +197,12 @@ def rendersets():
     asciitab = MapProxy({
         ('designation', True) :  '[+]',
         ('designation', False):  '[-]',
-        ('closure', None) : '(x)'
+        ('closure', True) : '(x)'
     })
     htmltab = MapProxy({
         ('designation', True) :  '&oplus;',  # '\2295'
         ('designation', False):  '&ominus;', # '\2296'
-        ('closure', None)  : '&otimes;' # '\2297'
+        ('closure', True)  : '&otimes;' # '\2297'
     })
 
     data = {notn: {} for notn in Notation}
@@ -277,7 +277,7 @@ def rendersets():
         strings = {
             LexType.Atomic   : tuple('ABCDE'),
             LexType.Operator : {
-                Operator.Assertion             : '&#9675;' ,
+                Operator.Assertion             : '&#9900;' ,#'&#9675;' ,
                 Operator.Negation              : '&not;'   ,
                 Operator.Conjunction           : '&and;'   ,
                 Operator.Disjunction           : '&or;'    ,

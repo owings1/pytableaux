@@ -27,7 +27,7 @@ from pytableaux.tools.abcs import Abc, abcf
 
 name = 'CFOL'
 
-class Meta:
+class Meta(CPL.Meta):
     title       = 'Classical First Order Logic'
     category    = 'Bivalent'
     description = 'Standard bivalent logic with full first-order quantification'
@@ -56,22 +56,12 @@ class TableauxSystem(CPL.TableauxSystem):
     CFOL's Tableaux System inherits directly from :ref:`CPL <CPL>`'s.
     """
 
+@TableauxSystem.initialize
 class TabRules(Abc):
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,
     including the CPL closure rules, and adds additional rules for the quantifiers.
     """
-
-    @abcf.after
-    def clearmodal(cls):
-        'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from itertools import chain
-
-        from pytableaux.proof import demodalize_rules
-        demodalize_rules(chain(
-            cls.closure_rules,
-            chain.from_iterable(cls.rule_groups)
-        ))
 
     class ContradictionClosure(CPL.TabRules.ContradictionClosure):
         pass
@@ -127,21 +117,21 @@ class TabRules(Abc):
     class BiconditionalNegated(CPL.TabRules.BiconditionalNegated):
         pass
 
-    class Existential(K.TabRules.Existential):
+    class Existential(K.TabRules.Existential, modal = False):
         """
         From an unticked existential node *n* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node to *b* with the substitution
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
 
-    class ExistentialNegated(K.TabRules.ExistentialNegated):
+    class ExistentialNegated(K.TabRules.ExistentialNegated, modal = False):
         """
         From an unticked negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
         node to *b* over *v* into the negation of *s*, then tick *n*.
         """
 
-    class Universal(K.TabRules.Universal):
+    class Universal(K.TabRules.Universal, modal = False):
         """
         From a universal node on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -149,7 +139,7 @@ class TabRules(Abc):
         *b*. The node *n* is never ticked.
         """
 
-    class UniversalNegated(K.TabRules.UniversalNegated):
+    class UniversalNegated(K.TabRules.UniversalNegated, modal = False):
         """
         From an unticked negated universal node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add an existentially

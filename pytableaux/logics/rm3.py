@@ -28,9 +28,8 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'RM3'
 
-class Meta:
+class Meta(LP.Meta):
     title       = 'R-mingle 3'
-    category    = 'Many-valued'
     description = (
         'Three-valued logic (True, False, Both) with a primitive '
         'Conditional operator'
@@ -42,6 +41,7 @@ class Meta:
         'non-modal',
         'first-order',
     )
+    native_operators = FDE.Meta.native_operators + (Oper.Conditional, Oper.Biconditional)
 
 class Model(LP.Model):
     """
@@ -68,6 +68,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The closure rules for RM3 are the FDE closure rule, and the LP closure rule.

@@ -30,17 +30,11 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'P3'
 
-class Meta:
+class Meta(K3.Meta):
     title       = 'Post 3-valued logic'
-    category    = 'Many-valued'
     description = 'Emil Post three-valued logic (T, F, and N) with mirror-image negation'
     category_order = 120
-    tags = (
-        'many-valued',
-        'gappy',
-        'non-modal',
-        'first-order',
-    )
+
 
 class Model(K3.Model):
     """
@@ -127,6 +121,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The Tableaux System for L{P3} contains the FDE closure rule, and the

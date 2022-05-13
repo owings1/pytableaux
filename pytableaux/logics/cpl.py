@@ -19,13 +19,15 @@
 #
 # pytableaux - Classical Predicate Logic
 from __future__ import annotations
+from typing import TYPE_CHECKING
 
-from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Operated, Quantified, Sentence
+from pytableaux.lang import Operated, Quantified, Sentence, Operator
 from pytableaux.logics import k as K
-from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.tableaux import Tableau
-from pytableaux.tools.abcs import Abc, abcf
+from pytableaux.proof import Branch, Node, Tableau
+from pytableaux.proof.util import snode
+
+if TYPE_CHECKING:
+    from pytableaux.lang import Argument
 
 name = 'CPL'
 
@@ -37,6 +39,10 @@ class Meta:
     tags = (
         'bivalent',
         'non-modal',
+    )
+    native_operators = (
+        Operator.Negation, Operator.Conjunction, Operator.Disjunction,
+        Operator.MaterialConditional, Operator.MaterialBiconditional,
     )
 
 class Model(K.Model):
@@ -74,13 +80,13 @@ class TableauxSystem(K.TableauxSystem):
         To build the trunk for an argument, add a node for each premise, and
         a node with the negation of the conclusion.        
         """
-        add = tab.branch().append
-        for premise in arg.premises:
-            add(dict(sentence = premise))
-        add(dict(sentence = ~arg.conclusion))
+        b = tab.branch()
+        b.extend(map(snode, arg.premises))
+        b.append(snode(~arg.conclusion))
 
 
-class TabRules(Abc):
+@TableauxSystem.initialize
+class TabRules:
     """
     In general, rules for connectives consist of two rules per connective:
     a "plain" rule, and a negated rule. The special case of negation has only
@@ -88,18 +94,7 @@ class TabRules(Abc):
     predicate.
     """
 
-    @abcf.after
-    def clearmodal(cls):
-        'Remove Modal filter from NodeFilters, and clear modal attribute.'
-        from itertools import chain
-
-        from pytableaux.proof import demodalize_rules
-        demodalize_rules(chain(
-            cls.closure_rules,
-            chain.from_iterable(cls.rule_groups)
-        ))
-
-    class ContradictionClosure(K.TabRules.ContradictionClosure):
+    class ContradictionClosure(K.TabRules.ContradictionClosure, modal = False):
         """
         A branch is closed if a sentence and its negation appear on the branch.
         """
@@ -108,62 +103,62 @@ class TabRules(Abc):
             if s is not None:
                 return branch.find(dict(sentence = s.negative()))
 
-    class SelfIdentityClosure(K.TabRules.SelfIdentityClosure):
+    class SelfIdentityClosure(K.TabRules.SelfIdentityClosure, modal = False):
         """
         A branch is closed if a sentence of the form :s:`~ a = a` appears on the branch.
         """
 
-    class NonExistenceClosure(K.TabRules.NonExistenceClosure):
+    class NonExistenceClosure(K.TabRules.NonExistenceClosure, modal = False):
         """
         A branch is closed if a sentence of the form :s:`~!a` appears on the branch.
         """
 
-    class DoubleNegation(K.TabRules.DoubleNegation):
+    class DoubleNegation(K.TabRules.DoubleNegation, modal = False):
         """
         From an unticked double negation node *n* on a branch *b*, add a
         node to *b* with the double-negatum of *n*, then tick *n*.
         """
 
-    class Assertion(K.TabRules.Assertion):
+    class Assertion(K.TabRules.Assertion, modal = False):
         """
         From an unticked assertion node *n* on a branch *b*,
         add a node to *b* with the operand of *n*, then tick *n*.
         """
 
-    class AssertionNegated(K.TabRules.AssertionNegated):
+    class AssertionNegated(K.TabRules.AssertionNegated, modal = False):
         """
         From an unticked, negated assertion node *n* on a branch *b*,
         add a node to *b* with the negation of the assertion of *n*,
         then tick *n*.
         """
 
-    class Conjunction(K.TabRules.Conjunction):
+    class Conjunction(K.TabRules.Conjunction, modal = False):
         """
         From an unticked conjunction node *n* on a branch *b*, for each conjunct,
         add a node to *b* with the conjunct, then tick *n*.
         """
 
-    class ConjunctionNegated(K.TabRules.ConjunctionNegated):
+    class ConjunctionNegated(K.TabRules.ConjunctionNegated, modal = False):
         """
         From an unticked negated conjunction node *n* on a branch *b*, for each
         conjunct, make a new branch *b'* from *b* and add a node with the negation of
         the conjunct to *b*, then tick *n*.
         """
 
-    class Disjunction(K.TabRules.Disjunction):
+    class Disjunction(K.TabRules.Disjunction, modal = False):
         """
         From an unticked disjunction node *n* on a branch *b*, for each disjunct,
         make a new branch *b'* from *b* and add a node with the disjunct to *b'*,
         then tick *n*.
         """
 
-    class DisjunctionNegated(K.TabRules.DisjunctionNegated):
+    class DisjunctionNegated(K.TabRules.DisjunctionNegated, modal = False):
         """
         From an unticked negated disjunction node *n* on a branch *b*, for each
         disjunct, add a node with the negation of the disjunct to *b*, then tick *n*.
         """
 
-    class MaterialConditional(K.TabRules.MaterialConditional):
+    class MaterialConditional(K.TabRules.MaterialConditional, modal = False):
         """
         From an unticked material conditional node *n*on a branch *b*, make two
         new branches *b'* and *b''* from *b*, add a node with the negation of the
@@ -171,14 +166,14 @@ class TabRules(Abc):
         *n*.
         """
 
-    class MaterialConditionalNegated(K.TabRules.MaterialConditionalNegated):
+    class MaterialConditionalNegated(K.TabRules.MaterialConditionalNegated, modal = False):
         """
         From an unticked negated material conditional node *n* on a branch *b*,
         add two nodes to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
 
-    class MaterialBiconditional(K.TabRules.MaterialBiconditional):
+    class MaterialBiconditional(K.TabRules.MaterialBiconditional, modal = False):
         """
         From an unticked material biconditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add two nodes to *b'*, one with
@@ -187,7 +182,7 @@ class TabRules(Abc):
         then tick *n*.
         """
 
-    class MaterialBiconditionalNegated(K.TabRules.MaterialBiconditionalNegated):
+    class MaterialBiconditionalNegated(K.TabRules.MaterialBiconditionalNegated, modal = False):
         """
         From an unticked negated material biconditional node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add two nodes to *b'*, one with
@@ -196,7 +191,7 @@ class TabRules(Abc):
         then tick *n*.
         """
 
-    class Conditional(K.TabRules.Conditional):
+    class Conditional(K.TabRules.Conditional, modal = False):
         """
         The rule functions the same as the corresponding material conditional rule.
 
@@ -206,7 +201,7 @@ class TabRules(Abc):
         *n*.
         """
 
-    class ConditionalNegated(K.TabRules.ConditionalNegated):
+    class ConditionalNegated(K.TabRules.ConditionalNegated, modal = False):
         """
         The rule functions the same as the corresponding material conditional rule.
 
@@ -215,7 +210,7 @@ class TabRules(Abc):
         of the consequent, then tick *n*.
         """
 
-    class Biconditional(K.TabRules.Biconditional):
+    class Biconditional(K.TabRules.Biconditional, modal = False):
         """
         The rule functions the same as the corresponding material biconditional rule.
 
@@ -226,7 +221,7 @@ class TabRules(Abc):
         tick *n*.
         """
 
-    class BiconditionalNegated(K.TabRules.BiconditionalNegated):
+    class BiconditionalNegated(K.TabRules.BiconditionalNegated, modal = False):
         """
         The rule functions the same as the corresponding material biconditional rule.
 
@@ -237,7 +232,7 @@ class TabRules(Abc):
         then tick *n*.
         """
 
-    class IdentityIndiscernability(K.TabRules.IdentityIndiscernability):
+    class IdentityIndiscernability(K.TabRules.IdentityIndiscernability, modal = False):
         """
         From an unticked node *n* having an Identity sentence *s* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,

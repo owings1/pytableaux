@@ -29,19 +29,14 @@ from pytableaux.proof.util import Access, adds, group
 
 name = 'S5'
 
-class Meta:
+class Meta(K.Meta):
     title       = 'S5 Normal Modal Logic'
-    category    = 'Bivalent Modal'
     description = (
         'Normal modal logic with a reflexive, symmetric, and transitive '
         'access relation'
     )
     category_order = 5
-    tags = (
-        'bivalent',
-        'modal',
-        'first-order',
-    )
+
 
 # TODO:
 # Some problematic arguments for S5:
@@ -70,6 +65,7 @@ class Model(S4.Model):
 class TableauxSystem(K.TableauxSystem):
     pass
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The Tableaux Rules for L{S5} contain the rules for {@S4}, as well

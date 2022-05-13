@@ -51,6 +51,10 @@ class Meta:
         'non-modal',
         'first-order',
     )
+    native_operators = (
+        Operator.Negation, Operator.Conjunction, Operator.Disjunction,
+        Operator.MaterialConditional, Operator.MaterialBiconditional,
+    )
 
 class Model(BaseModel[ValueFDE]):
     'An FDE Model.'
@@ -528,6 +532,7 @@ class TableauxSystem(BaseSystem):
                 complexity += cls.branchables[oper][last_is_negated][d]
                 last_is_negated = False
         return complexity
+    
 
 class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default FDE node rule with:
@@ -566,10 +571,8 @@ class ConjunctionReducingRule(OperatorNodeRule):
             s = ~s
         return adds(group(sdnode(s, self.designation)))
 
+@TableauxSystem.initialize
 class TabRules:
-    """
-
-    """
 
     class DesignationClosure(rules.BaseClosureRule):
         """
@@ -1149,3 +1152,4 @@ class TabRules:
             UniversalUndesignated,
         ),
     )
+

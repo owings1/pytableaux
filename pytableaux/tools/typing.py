@@ -36,13 +36,10 @@ if TYPE_CHECKING:
     from typing import (Generic, Hashable, Iterable, Iterator, Sequence,
                         overload)
 
-    from pytableaux.lang.lex import (CoordsItem, Lexical, LexicalAbc,
-                                     Sentence, TableStore)
     from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem, filters
     from pytableaux.proof.common import Branch, Node, Target
     from pytableaux.proof.tableaux import Rule
-    from pytableaux.tools.abcs import Ebc, EbcMeta
     from pytableaux.tools.hooks import HookConn
     from pytableaux.tools.hybrids import SequenceSet
     from pytableaux.tools.linked import Link, LinkSequence
@@ -72,6 +69,7 @@ class LogicType(
     class TabRules:
         closure_rules: ClassVar[tuple[type[Rule], ...]]
         rule_groups: ClassVar[tuple[ tuple[type[Rule], ...], ... ]]
+        all_rules: ClassVar[tuple[type[Rule], ...]]
 
 #==================================================+
 #  Type aliases -- used a runtime with isinstance  |
@@ -224,6 +222,9 @@ SetApiT = TypeVar('SetApiT', bound = 'SetApi')
 
 SetT = TypeVar('SetT', bound = Set)
 "Bound to ``Set``"
+
+SysRulesT = TypeVar('SysRulesT', bound = LogicType.TabRules)
+"Bound to ``LogicType.TabRules``"
 
 TimT = TypeVar('TimT', bound = 'TimingCommon')
 "Bound to ``TimingCommon``"

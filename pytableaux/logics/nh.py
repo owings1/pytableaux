@@ -30,20 +30,14 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'NH'
 
-class Meta:
+class Meta(LP.Meta):
     title       = 'Paraconsistent Hybrid Logic'
-    category    = 'Many-valued'
     description = (
         'Three-valued logic (True, False, Both) with non-standard conjunction, '
         'and a classical-like conditional'
     )
     category_order = 110
-    tags = (
-        'many-valued',
-        'glutty',
-        'non-modal',
-        'first-order',
-    )
+    native_operators = FDE.Meta.native_operators + (Oper.Conditional, Oper.Biconditional)
 
 class Model(LP.Model):
 
@@ -105,6 +99,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
+@TableauxSystem.initialize
 class TabRules:
 
     class GapClosure(LP.TabRules.GapClosure):

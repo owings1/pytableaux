@@ -20,24 +20,21 @@
 # pytableaux - Reflexive Normal Modal Logic
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from pytableaux.lang.lex import Atomic
 from pytableaux.logics import k as K
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from pytableaux.proof.util import Access, adds, group, swnode
+from pytableaux.tools.typing import LogicType
 
 name = 'T'
 
-class Meta:
+class Meta(K.Meta):
     title       = 'Reflexive Normal Modal Logic'
-    category    = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive access relation'
     category_order = 3
-    tags = (
-        'bivalent',
-        'modal',
-        'first-order',
-    )
 
 class Model(K.Model):
     """
@@ -53,7 +50,8 @@ class Model(K.Model):
 class TableauxSystem(K.TableauxSystem):
     pass
 
-class TabRules:
+@TableauxSystem.initialize
+class TabRules(LogicType.TabRules):
     """
     The Tableaux Rules for T contain the rules for :ref:`K <K>`, as well as an additional
     Reflexive rule, which operates on the accessibility relation for worlds.

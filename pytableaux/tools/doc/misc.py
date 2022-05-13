@@ -20,23 +20,26 @@ pytableaux.tools.doc.rstutils
 
 """
 from __future__ import annotations
+from collections import defaultdict
 
 import re
 from inspect import getsource
 from typing import TYPE_CHECKING
 import enum
-from pytableaux import proof
-from pytableaux.lang import Operator, Quantifier
+from pytableaux import logics
+from pytableaux.lang import Operator, Quantifier, Predicate
 from pytableaux.logics import LogicLocatorRef, registry
 from pytableaux.proof import TableauxSystem as TabSys
 from pytableaux.proof import ClosingRule, Rule, helpers, Branch
 from pytableaux.proof.util import RuleEvent, TabEvent, NodeAttr
+from pytableaux.tools import abcs
 from pytableaux.tools.abcs import isabstract
 from sphinx.ext.autodoc.importer import import_object
 
 if TYPE_CHECKING:
     from pytableaux.proof import Node, Rule, Target
-    from typing import Any, overload
+    from pytableaux.tools.typing import LogicType
+    from typing import Any, overload, Collection
 
 __all__ = (
     'EllipsisExampleHelper',
@@ -89,19 +92,81 @@ def rule_legend(rule: type[Rule]|Rule):
 
     legend = {}
 
+    if getattr(rule, 'negated', None):
+        legend['negated'] = Operator.Negation
+
     if (oper := getattr(rule, 'operator', None)):
         legend['operator'] = Operator[oper]
     elif (quan := getattr(rule, 'quantifier', None)):
         legend['quantifier'] = Quantifier[quan]
+    elif (pred := getattr(rule, 'predicate', None)):
+        legend['predicate'] = Predicate(pred)
 
     if (des := getattr(rule, 'designation', None)) is not None:
         legend['designation'] = des
 
     if (issubclass(rule, ClosingRule)):
-        legend['closure'] = None
+        legend['closure'] = True
 
     return tuple(legend.items())
 
+
+def rules_sorted(logic: LogicType, rules: Collection[type[Rule]] = None, /) -> dict[str, list[type[Rule]]]:
+
+    logic = logics.registry(logic)
+    RulesCls = logic.TabRules
+    if rules is None:
+        rules = list(RulesCls.all_rules)
+    results = {}
+
+    results['member_order'] = rules_sorted_member_order(logic, rules)
+    # results['legend_order'] = sorted(rules, key = LegendSortFlag.rulekey)
+    results['legend_order'] = rules_sorted_legend_order(rules)
+    from pprint import pp
+    # pp(inherit_map)
+    # pp(keys_member_order)
+    return results
+    # return native_members
+
+def rules_sorted_legend_order(rules: Collection[type[Rule]], /) -> list[type[Rule]]:
+    groups = {name: [] for name in ('closure', 'operator', 'quantifier', 'predicate')}
+    ungrouped = []
+    legends: dict[type[Rule], dict] = {}
+    for rule in rules:
+        legends[rule] = legend = dict(rule_legend(rule))
+        for name in legend:
+            if name in groups:
+                groups[name].append(rule)
+                break
+        else:
+            ungrouped.append(rule)
+    for name, group in groups.items():
+        group.sort(key = lambda rule: (
+            (1 * bool(legends[rule].get('negated'))) + 
+            (2 * legends[rule].get('designated', 0))
+        ))
+        group.sort(key = lambda rule: legends[rule][name])
+    groups['ungrouped'] = ungrouped
+    return list(rule for group in groups.values() for rule in group)
+
+def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /) -> list[type[Rule]]:
+    RulesCls = logic.TabRules
+    native_members = []
+    todo = set(rules)
+    for member in RulesCls.__dict__.values():
+        if member in todo:
+            native_members.append(member)
+            todo.remove(member)
+    keys_member_order = {rule: i for i, rule in enumerate(native_members, 1)}
+    inherit_map = defaultdict(set)
+    for rule in todo:
+        inherit_map[logics.registry.locate(rule)].add(rule)
+    for parent, values in inherit_map.items():
+        others = inherit_map[parent] = rules_sorted_member_order(parent, values)
+        keys_member_order.update({
+            rule: i for i, rule in enumerate(others, len(keys_member_order))
+        })
+    return sorted(rules, key = keys_member_order.__getitem__)
 # ------------------------------------------------
 
 if TYPE_CHECKING:

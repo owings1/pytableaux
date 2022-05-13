@@ -30,16 +30,11 @@ from pytableaux.proof.util import Access, adds, anode, group
 
 name = 'S4'
 
-class Meta:
+class Meta(K.Meta):
     title       = 'S4 Normal Modal Logic'
-    category    = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive and transitive access relation'
     category_order = 4
-    tags = (
-        'bivalent',
-        'modal',
-        'first-order',
-    )
+
 
 class Model(T.Model):
     """
@@ -65,6 +60,7 @@ class Model(T.Model):
 class TableauxSystem(K.TableauxSystem):
     pass
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The Tableaux Rules for S4 contain the rules for :ref:`T <T>`, as well as an additional

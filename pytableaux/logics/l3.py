@@ -29,9 +29,8 @@ from pytableaux.proof.util import adds, group, sdnode
 
 name = 'L3'
 
-class Meta:
+class Meta(FDE.Meta):
     title       = u'Łukasiewicz 3-valued Logic'
-    category    = 'Many-valued'
     description = (
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator'
@@ -43,6 +42,7 @@ class Meta:
         'non-modal',
         'first-order',
     )
+    native_operators = FDE.Meta.native_operators + (Oper.Conditional, Oper.Biconditional)
 
 class Model(K3.Model):
     """
@@ -72,6 +72,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
+@TableauxSystem.initialize
 class TabRules:
     """
     The closure rules for L{L3} are the FDE closure rule, and the L{K3} closure rule.
