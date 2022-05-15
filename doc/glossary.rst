@@ -14,6 +14,9 @@ Glossary
   DeMorgan laws
     . . .
 
+  conditional contraction
+    :s:`A $ (A $ B)` !{conseq} :s:`A $ B`
+
   disjunctive syllogism
     :s:`A V B`, :s:`~B` !{|?-} :s:`A`
 

@@ -4,7 +4,8 @@
 L{FDE} - First Degree Entailment
 ***************************************
 
-.. contents:: :local:
+.. contents:: Contents
+  :local:
   :depth: 2
 
 ------------------------
@@ -110,15 +111,13 @@ L{FDE} - First Degree Entailment
     Quantification
     --------------
 
-    Existential
-    ^^^^^^^^^^^
+    .. rubric:: Existential
 
     The value of an existential sentence is the maximum value of the sentences that
     result from replacing each constant for the quantified variable. The ordering of
     the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
 
-    Universal
-    ^^^^^^^^^
+    .. rubric:: Universal
 
     The value of an universal sentence is the minimum value of the sentences that
     result from replacing each constant for the quantified variable. The ordering of
@@ -155,8 +154,8 @@ L{FDE} - First Degree Entailment
       :build-trunk:
       :prolog:
     
-    Branches
-    --------
+    Closure
+    -------
 
     A branch is **closed** iff the same sentence appears on both a designated node,
     and undesignated node.
@@ -173,12 +172,35 @@ L{FDE} - First Degree Entailment
     .. _fde-rules:
 
     Rules
-    -----
+    --------
 
     In general, rules for connectives consist of four rules per connective:
     a designated rule, an undesignated rule, a negated designated rule, and a negated
     undesignated rule. The special case of negation has a total of two rules which apply
     to double negation only, one designated rule, and one undesignated rule.
+
+    .. tableau-rules::
+      :title:
+      :group: operator
+      :exclude: Assertion, Conditional, Biconditional
+      :legend:
+      :titles:
+      :docs:
+
+    .. tableau-rules::
+      :title:
+      :group: quantifier
+      :legend:
+      :titles:
+      :docs:
+
+    .. tableau-rules::
+      :title: Compatibility Rules
+      :group: operator
+      :include: Assertion, Conditional, Biconditional
+      :legend:
+      :titles:
+
 
     .. autoclass:: TabRules
         :members:
@@ -196,8 +218,8 @@ L{FDE} - First Degree Entailment
     * Failure of :term:`Modus Ponens`, :term:`Modus Tollens`, :term:`Disjunctive Syllogism`,
       and other Classical validities.
 
-    * DeMorgan laws are valid, as well as Conditional Contraction (:s:`A $ (A $ B)`
-      implies :s:`A $ B`).
+    * DeMorgan laws are valid, as well as :term:`Conditional Contraction` (:s:`A $ (A $ B)`
+      !{conseq} :s:`A $ B`).
 
     References
     ==========
