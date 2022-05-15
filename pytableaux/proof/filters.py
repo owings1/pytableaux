@@ -29,7 +29,7 @@ from pytableaux import __docformat__
 from pytableaux.lang.lex import (Operated, Operator, Predicate, Predicated,
                                  Quantified, Quantifier, Sentence)
 from pytableaux.proof.common import Node
-from pytableaux.proof.util import Access
+from pytableaux.proof import Access
 from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, thru
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.mappings import dmapns
@@ -259,7 +259,7 @@ class SentenceCompare(Comparer[SentenceComparable, RHS, CompSentenceCompItem]):
         )
 
     def sentence(self, rhs: RHS, /) -> Sentence|None:
-        """Get the sentence to be examine from the rhs, or None. For a `negated`
+        """Get the sentence to be examined from the rhs, or None. For a `negated`
         filter, returns the negatum, if any, else None. For a non-`negated`
         filter, returns the value retrieved unaltered.
         """

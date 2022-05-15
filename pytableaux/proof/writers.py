@@ -28,17 +28,15 @@ from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping
 import jinja2
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import Notation
-from pytableaux.lang.writing import LexWriter
+from pytableaux.lang import Notation, LexWriter
 from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure, abcs
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.typing import TT
+from pytableaux.proof.tableaux import Tableau, TreeStruct
 
 if TYPE_CHECKING:
     from typing import overload
 
-    from pytableaux.lang.collect import Argument
-    from pytableaux.proof.tableaux import Tableau, TreeStruct
 
 
 __all__ = (

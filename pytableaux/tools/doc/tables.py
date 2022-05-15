@@ -47,7 +47,6 @@ __all__ = (
     'Reprer',
 )
 
-
 def fmt_raw(obj: Any):
     "No formatting."
     return obj

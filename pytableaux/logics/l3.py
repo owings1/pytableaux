@@ -25,7 +25,7 @@ from pytableaux.logics import fde as FDE
 from pytableaux.logics import k3 as K3
 from pytableaux.models import ValueK3
 from pytableaux.proof.common import Node
-from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.proof import adds, group, sdnode
 
 name = 'L3'
 

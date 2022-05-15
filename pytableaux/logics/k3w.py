@@ -23,7 +23,7 @@ from __future__ import annotations
 from pytableaux.lang.lex import Operator as Oper
 from pytableaux.proof.common import Branch, Node
 from pytableaux.logics import fde as FDE, k3 as K3
-from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.proof import adds, group, sdnode
 
 name = 'K3W'
 

@@ -26,7 +26,7 @@ from pytableaux.logics import k as K
 from pytableaux.logics import t as T
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.proof.util import Access, adds, anode, group
+from pytableaux.proof import Access, adds, anode, group
 
 name = 'S4'
 

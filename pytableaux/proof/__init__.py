@@ -20,39 +20,280 @@ pytableaux.proof
 
 """
 from __future__ import annotations
-from collections import deque
 
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Mapping, NamedTuple, Sequence, TypeVar
 
 from pytableaux import _ENV, __docformat__
-from pytableaux.proof.util import HelperAttr, RuleAttr
+from pytableaux.lang import Operator, Predicate, Quantifier, Sentence, Argument
 from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure, abcs
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
-from pytableaux.tools.mappings import dmap
+from pytableaux.tools.mappings import ItemMapEnum, dmap
 from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.timing import Counter, StopWatch
 from pytableaux.tools.typing import LogicModule, NotImplType, LogicType, SysRulesT
 
 if TYPE_CHECKING:
     from typing import overload
 
-    from pytableaux.lang.collect import Argument
-    from pytableaux.proof.common import Node
-    from pytableaux.proof.tableaux import Rule, Tableau, TabRuleGroups
 
 __all__ = (
+    'adds',
+    'anode',
     'Branch',
+    'BranchEvent',
     'ClosingRule',
+    'group',
+    'HelperAttr',
     'Node',
+    'Rule',
+    'RuleAttr',
+    'RuleEvent',
     'RuleHelper',
     'RuleMeta',
+    'sdnode',
+    'snode',
+    'swnode',
+    'TabEvent',
     'Tableau',
     'TableauxSystem',
     'TabWriter',
     'Target',
-    'Rule'
 )
 
 NOARG = object()
+
+class HelperAttr(str, abcs.Ebc):
+    'Special ``RuleHelper`` class attribute names.'
+
+    InitRuleCls = 'configure_rule'
+
+#******  Rule Enum
+
+class RuleAttr(str, abcs.Ebc):
+    'Special ``Rule`` class attribute names.'
+
+    Helpers     = 'Helpers'
+    "Rule helper classes."
+
+    Timers      = 'Timers'
+    "Rule timer names."
+
+    DefaultOpts = '_defaults'
+    "Rule default options."
+
+    OptKeys     = '_optkeys'
+    "Rule option keys."
+
+    Name        = 'name'
+    "Rule class name attribute."
+
+    NodeFilters = 'NodeFilters'
+    "For `FilterHelper`."
+
+    IgnoreTicked = 'ignore_ticked'
+    "For `FilterHelper`."
+
+    ModalOperators = 'modal_operators'
+    "For `MaxWorlds` helper."
+
+    Modal = 'modal'
+    "Modal flag."
+
+    Legend = 'legend'
+    "Rule legend"
+
+
+class ProofAttr(str, abcs.Ebc):
+
+    def __str__(self):
+        return self.value
+
+class NodeAttr(ProofAttr):
+
+    designation = 'designated'
+    closure = 'closure'
+    flag    = 'flag'
+    is_flag = 'is_flag'
+    world   = 'world'
+
+
+class PropMap(ItemMapEnum):
+
+    NodeDefaults = {
+        NodeAttr.designation: None,
+        NodeAttr.world: None,
+    }
+
+    ClosureNode = {
+        NodeAttr.closure: True,
+        NodeAttr.flag: NodeAttr.closure,
+        NodeAttr.is_flag: True
+    },
+
+
+#******  Branch Enum
+
+class BranchEvent(abcs.Ebc):
+    'Branch events.'
+    AFTER_CLOSE = abcs.eauto()
+    AFTER_ADD   = abcs.eauto()
+    AFTER_TICK  = abcs.eauto()
+
+#******  Helper Enum
+
+
+
+class RuleEvent(abcs.Ebc):
+    'Rule events.'
+
+    BEFORE_APPLY = abcs.eauto()
+    AFTER_APPLY  = abcs.eauto()
+
+class RuleState(abcs.FlagEnum):
+    'Rule state bit flags.'
+
+    __slots__ = 'value', '_value_'
+
+    NONE   = 0
+    INIT   = 1
+    LOCKED = 2
+
+class RuleClassFlag(abcs.FlagEnum):
+    "WIP: Rule class feature flags."
+
+    __slots__ = 'value', '_value_'
+
+    Modal = 4
+    RankOptimSupported = 8
+
+
+#******  Tableau Enum
+
+class TabEvent(abcs.Ebc):
+    'Tableau events.'
+
+    AFTER_BRANCH_ADD    = abcs.eauto()
+    AFTER_BRANCH_CLOSE  = abcs.eauto()
+    AFTER_NODE_ADD      = abcs.eauto()
+    AFTER_NODE_TICK     = abcs.eauto()
+    AFTER_TRUNK_BUILD   = abcs.eauto()
+    BEFORE_TRUNK_BUILD  = abcs.eauto()
+    AFTER_FINISH        = abcs.eauto()
+
+class TabStatKey(abcs.Ebc):
+    'Tableau ``stat()`` keys.'
+
+    FLAGS       = abcs.eauto()
+    STEP_ADDED  = abcs.eauto()
+    STEP_TICKED = abcs.eauto()
+    STEP_CLOSED = abcs.eauto()
+    INDEX       = abcs.eauto()
+    PARENT      = abcs.eauto()
+    NODES       = abcs.eauto()
+
+class TabFlag(abcs.FlagEnum):
+    'Tableau state bit flags.'
+
+    __slots__ = 'value', '_value_'
+
+    NONE   = 0
+    TICKED = 1
+    CLOSED = 2
+    PREMATURE   = 4
+    FINISHED    = 8
+    TIMED_OUT   = 16
+    TRUNK_BUILT = 32
+    TIMING_INACCURATE = 64
+
+#******  Auxilliary Classes
+class StepEntry(NamedTuple):
+    #: The rule instance.
+    rule   : 'Rule'
+    #: The target produced by the rule.
+    target : 'Target'
+    #: The duration counter.
+    duration: Counter
+
+    def __repr__(self):
+        return f'<StepEntry:{id(self)}:{self.rule.name}:{self.target.type}>'
+
+class Access(NamedTuple):
+
+    world1: int
+    world2: int
+
+    @property
+    def w1(self) -> int:
+        return self.world1
+
+    @property
+    def w2(self) -> int:
+        return self.world2
+
+    @classmethod
+    def fornode(cls, node: Mapping) -> Access:
+        return cls._make(map(node.__getitem__, cls._fields))
+
+    def reversed(self) -> Access:
+        return self._make(reversed(self))
+
+
+class NodeStat(dict[TabStatKey, TabFlag|int]):
+
+    __slots__ = EMPTY_SET
+
+    _defaults = MapProxy({
+        TabStatKey.FLAGS       : TabFlag.NONE,
+        TabStatKey.STEP_ADDED  : TabFlag.NONE,
+        TabStatKey.STEP_TICKED : None,
+    })
+
+    def __init__(self):
+        super().__init__(self._defaults)
+
+class BranchStat(dict[TabStatKey, TabFlag|int|dict[Any, NodeStat]]):
+
+    __slots__ = EMPTY_SET
+
+    _defaults = MapProxy({
+        TabStatKey.FLAGS       : TabFlag.NONE,
+        TabStatKey.STEP_ADDED  : TabFlag.NONE,
+        TabStatKey.STEP_CLOSED : TabFlag.NONE,
+        TabStatKey.INDEX       : None,
+        TabStatKey.PARENT      : None,
+    })
+
+    def __init__(self, mapping: Mapping = None, /, **kw):
+        super().__init__(self._defaults)
+        self[TabStatKey.NODES] = {}
+        if mapping is not None:
+            self.update(mapping)
+        if len(kw):
+            self.update(kw)
+
+    def node(self, node: 'Node', /) -> NodeStat:
+        'Get the stat info for the node, and create if missing.'
+        # Avoid using defaultdict, since it may hide problems.
+        try:
+            return self[TabStatKey.NODES][node]
+        except KeyError:
+            return self[TabStatKey.NODES].setdefault(node, NodeStat())
+
+    def view(self) -> dict[TabStatKey, TabFlag|int|Any]:
+        return {k: self[k] for k in self._defaults}
+
+class TabTimers(NamedTuple):
+    'Tableau timers data class.'
+
+    build  : StopWatch
+    trunk  : StopWatch
+    tree   : StopWatch
+    models : StopWatch
+
+    @staticmethod
+    def create(it = (False,) * 4):
+        return TabTimers._make(map(StopWatch, it))
+
 
 class TableauxSystem(metaclass = abcs.AbcMeta):
     'Tableaux system base class.'
@@ -153,11 +394,11 @@ class RuleHelper(metaclass = abcs.AbcMeta):
                 yield len(params := get_params(value)) > 1
             yield is_positional(params[1])
 
-        def insp_configure_rule(subcls: type):
-            yield abcs.check_mrodict(subcls.__mro__, name := HelperAttr.InitRuleCls)
-            yield callable(value := getattr(subcls, name))
-            yield len(params := get_params(value)) > 1
-            yield is_positional(params[1])
+        # def insp_configure_rule(subcls: type):
+        #     yield abcs.check_mrodict(subcls.__mro__, name := HelperAttr.InitRuleCls)
+        #     yield callable(value := getattr(subcls, name))
+        #     yield len(params := get_params(value)) > 1
+        #     yield is_positional(params[1])
         # ---------------------
 
         inspections = (
@@ -240,11 +481,80 @@ class RuleMeta(abcs.AbcMeta):
                         v[filters.ModalNode] = NotImplemented
                         configs[helpercls] = setup(Class, config)
 
+        setattr(Class, RuleAttr.Legend, _rule_legend(Class))
         return Class
 
 
-from pytableaux.proof.writers import TabWriter
+def _rule_legend(rule: type[Rule]):
+
+    legend = {}
+
+    if getattr(rule, 'negated', None):
+        legend['negated'] = Operator.Negation
+
+    if (oper := getattr(rule, 'operator', None)):
+        legend['operator'] = Operator[oper]
+    elif (quan := getattr(rule, 'quantifier', None)):
+        legend['quantifier'] = Quantifier[quan]
+    elif (pred := getattr(rule, 'predicate', None)):
+        legend['predicate'] = Predicate(pred)
+
+    if (des := getattr(rule, 'designation', None)) is not None:
+        legend['designation'] = des
+
+    try:
+        if (issubclass(rule, ClosingRule)):
+            legend['closure'] = True
+    except NameError:
+        pass
+
+    return tuple(legend.items())
+
+__T = TypeVar('__T')
+def group(*items: __T) -> tuple[__T, ...]:
+    """Tuple builder.
+    
+    Args:
+        *items: members.
+
+    Returns:
+        The tuple of arguments.
+    """
+    return items
+
+def adds(*groups: tuple[dict, ...], **kw) -> dict[str, tuple[dict, ...]|Any]:
+    """Target dict builder for `AdzHelper`.
+    
+    Args:
+        *groups: node groups.
+        **kw: dict keywords.
+
+    Returns:
+        A dict built from ``dict(adds = groups, **kw)``.
+    """
+    return dict(adds = groups, **kw)
+
+def snode(s: Sentence):
+    'Make a sentence node dict.'
+    return dict(sentence = s)
+
+def sdnode(s: Sentence, d: bool):
+    'Make a sentence/designated node dict.'
+    return dict(sentence = s, designated = d)
+
+# def swnode(s: Sentence, w: int|None):
+def swnode(s: Sentence, w: int):
+    'Make a sentence/world node dict. Excludes world if None.'
+    if w is None:
+        return dict(sentence = s)
+    return dict(sentence = s, world = w)
+
+def anode(w1: int, w2: int):
+    'Make an Access node dict.'
+    return Access(w1, w2)._asdict()
+
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import Tableau, Rule
+from pytableaux.proof.tableaux import Tableau, Rule, TabRuleGroups
 from pytableaux.proof.rules import ClosingRule
+from pytableaux.proof.writers import TabWriter
 from pytableaux.proof import filters, helpers

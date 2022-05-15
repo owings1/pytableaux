@@ -36,7 +36,7 @@ from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.util import Access, adds, group, swnode
+from pytableaux.proof import Access, adds, group, swnode
 from pytableaux.tools import closure
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import EMPTY_SET

@@ -23,8 +23,7 @@ from typing import TYPE_CHECKING
 
 from pytableaux.lang import Operated, Quantified, Sentence, Operator
 from pytableaux.logics import k as K
-from pytableaux.proof import Branch, Node, Tableau
-from pytableaux.proof.util import snode
+from pytableaux.proof import Branch, Node, Tableau, snode
 
 if TYPE_CHECKING:
     from pytableaux.lang import Argument

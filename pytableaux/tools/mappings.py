@@ -21,7 +21,6 @@ pytableaux.tools.mappings
 """
 from __future__ import annotations
 from collections import defaultdict, deque
-import dataclasses
 from collections.abc import Iterator, Mapping, MutableMapping, Set
 from itertools import chain, filterfalse
 from operator import not_, truth
@@ -29,7 +28,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, isattrstr, closure
+from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, isattrstr
 from pytableaux.tools.decorators import membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.typing import KT, VT, NotImplType, T
@@ -37,7 +36,7 @@ from pytableaux.tools.typing import KT, VT, NotImplType, T
 if TYPE_CHECKING:
     from typing import overload
 
-    from pytableaux.tools.typing import MapiT, MapT, SetT
+    from pytableaux.tools.typing import MapiT
 
 __all__ = (
     'defaultdmap',
@@ -59,31 +58,6 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
     "Extended mapping api with fine-grained operator support."
 
     __slots__ = EMPTY_SET
-
-    if TYPE_CHECKING:
-        @overload
-        def __or__(self: MapT, b: Mapping) -> MapT: ...
-        @overload
-        def __ror__(self: MapT, b: Mapping) -> MapT: ...
-        @overload
-        def __ror__(self: MapT, b: SetT) -> SetT: ...
-
-        @overload
-        def __mod__(self: MapT, b: Mapping) -> MapT: ...
-        @overload
-        def __rmod__(self: MapT, b: Mapping) -> MapT: ...
-
-        @overload
-        def __and__(self: MapT, b: SetT) -> MapT: ...
-        @overload
-        def __sub__(self: MapT, b: SetT) -> MapT: ...
-
-        @overload
-        def __rand__(self: MapT, b: SetT) -> SetT: ...
-        @overload
-        def __rsub__(self: MapT, b: SetT) -> SetT: ...
-        @overload
-        def __rxor__(self: MapT, b: SetT) -> SetT: ...
 
     @abcs.abcf.temp
     @membr.defer
@@ -115,33 +89,39 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
 
     def __rmod__op__(self, other: Mapping):
         'Mapping | Mapping -> Mapping'
-        if not isinstance(other, Mapping): return NotImplemented
+        if not isinstance(other, Mapping):
+            return NotImplemented
         return chain(ItemsIterator(other), ItemsIterator(self,
             kpred = other.__contains__, koper = not_
         ))
 
     def __and__op__(self, other: Set):
-        if not isinstance(other, Set): return NotImplemented
+        if not isinstance(other, Set):
+            return NotImplemented
         'Mapping & Set    --> Mapping'
         return ItemsIterator(self, kpred = other.__contains__)
 
     def __rand__op__(self, other: Set):
-        if not isinstance(other, Set): return NotImplemented
+        if not isinstance(other, Set):
+            return NotImplemented
         'Set    & Mapping --> Set'
         return filter(self.__contains__, other)
 
     def __sub__op__(self, other: Set):
-        if not isinstance(other, Set): return NotImplemented
+        if not isinstance(other, Set):
+            return NotImplemented
         'Mapping - Set --> Mapping'
         return ItemsIterator(self, kpred = other.__contains__, koper = not_)
 
     def __rsub__op__(self, other: Set):
-        if not isinstance(other, Set): return NotImplemented
+        if not isinstance(other, Set):
+            return NotImplemented
         'Set    - Mapping --> Set'
         return filterfalse(other, self.__contains__)
 
     def __rxor__op__(self, other: Set):
-        if not isinstance(other, Set): return NotImplemented
+        if not isinstance(other, Set):
+            return NotImplemented
         'Set   ^ Mapping --> Set'
         return chain(
             filterfalse(self.__contains__, other),
@@ -156,24 +136,24 @@ class MappingApi(Mapping[KT, VT], abcs.Copyable):
         return dict(self)
 
     @classmethod
-    def _from_mapping(cls: type[MapT], mapping: Mapping) -> MapT:
+    def _from_mapping(cls, mapping):
         'Construct a new instance from a mapping.'
         return cls(mapping)
 
     @classmethod
-    def _from_iterable(cls: type[MapT], it: Iterable[tuple[Any, Any]], /) -> MapT:
+    def _from_iterable(cls, it, /):
         'Construct a new instance from an iterable of item tuples.'
         return NotImplemented
 
     @classmethod
-    def _oper_res_type(cls, othrtype: type[Iterable], /) -> type[Mapping]:
+    def _oper_res_type(cls, othrtype, /):
         '''Return the type (or callable) to construct a new instance from the result
         of an arithmetic operator expression for objects of type cls on the left hand
         side, and of othrtype on the right hand side.'''
         return cls
 
     @classmethod
-    def _roper_res_type(cls, othrtype: type[Iterable], /) -> type[Mapping]:
+    def _roper_res_type(cls, othrtype,/):
         '''Return the type (or callable) to construct a new instance from the result
         of an arithmetic operator expression for objects of type cls on the right hand
         side, and of othrtype on the left hand side.'''
@@ -230,8 +210,6 @@ class MapCover(MappingApi[KT, VT]):
     def _from_iterable(cls, it: Iterable):
         return cls._from_mapping(dict(it))
 
-    # def __init_subclass__(subcls: type[MapCover], **kw):
-    #     super().__init_subclass__(**kw)
 
 class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], abcs.Copyable):
 
@@ -298,26 +276,26 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], abcs.Copyabl
         return update
 
     @classmethod
-    def _from_iterable(cls: type[MapiT], it: Iterable, /) -> MapiT:
+    def _from_iterable(cls, it: Iterable, /):
         return cls(it)
 
-class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
+class dmap(dict, MutableMappingApi):
     'Mutable mapping api from dict.'
 
     __slots__ = EMPTY_SET
 
-    copy    = MutableMappingApi[KT, VT].copy
-    __or__  = MutableMappingApi[KT, VT].__or__
-    __ror__ = MutableMappingApi[KT, VT].__ror__
+    copy    = MutableMappingApi.copy
+    __or__  = MutableMappingApi.__or__
+    __ror__ = MutableMappingApi.__ror__
 
-class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
+class defaultdmap(defaultdict, MutableMappingApi):
     'Mutable mapping api from defaultdict.'
 
     __slots__ = EMPTY_SET
 
-    copy    = MutableMappingApi[KT, VT].copy
-    __or__  = MutableMappingApi[KT, VT].__or__
-    __ror__ = MutableMappingApi[KT, VT].__ror__
+    copy    = MutableMappingApi.copy
+    __or__  = MutableMappingApi.__or__
+    __ror__ = MutableMappingApi.__ror__
 
     @classmethod
     def _from_mapping(cls, mapping, /):
@@ -326,7 +304,7 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
         return cls(None, mapping)
 
     @classmethod
-    def _from_iterable(cls: type[MapiT], it: Iterable, /) -> MapiT:
+    def _from_iterable(cls, it: Iterable, /):
         return cls(None, it)
 
     @classmethod
@@ -360,10 +338,6 @@ class KeySetAttr(metaclass = abcs.AbcMeta):
         if self._keyattr_ok(name) and name in self:
             super().__delitem__(name)
 
-    if TYPE_CHECKING:
-        @overload
-        def update(self, it: Iterable = None, /, **kw):...
-
     update = MutableMappingApi._setitem_update
 
     @classmethod
@@ -372,7 +346,7 @@ class KeySetAttr(metaclass = abcs.AbcMeta):
         return not hasattr(cls, name)
 
 
-class dmapattr(KeySetAttr, dmap[KT, VT]):
+class dmapattr(KeySetAttr, dmap):
     "Dict attr dmap base class."
 
     __slots__ = EMPTY_SET
@@ -383,31 +357,8 @@ class dmapattr(KeySetAttr, dmap[KT, VT]):
         if len(kw):
             self.update(kw)
 
-    # def __init_subclass__(subcls, **kw):
-    #     super().__init_subclass__(**kw)
-    #     print(subcls)
-    #     a = subcls._from_mapping.__func__
-    #     b =  __class__._from_mapping.__func__
-    #     print(a, b, a is b)
-    #     a = subcls._from_iterable.__func__
-    #     b = __class__._from_iterable.__func__
-    #     x =  getattr(subcls, '__dataclass_params__', None)
-    #     print(a is b, x is not None, issubclass(subcls, dataclasses))
-    #     if (subcls._from_mapping.__func__ is __class__._from_mapping.__func__ and
-    #         subcls._from_iterable.__func__ is __class__._from_iterable.__func__ and
-    #         (params := getattr(subcls, '__dataclass_params__', None)) is not None
-    #     ):
-    #         if params.init:
-    #             subcls._from_mapping = classmethod(_kw_from_mapping)
-    #             subcls._from_iterable = classmethod(_kw_from_iterable)
 
-def _kw_from_mapping(cls, mapping):
-    return cls(**mapping)
-
-def _kw_from_iterable(cls, it):
-    return cls(**dict(it))
-
-class dmapns(dmapattr[KT, VT]):
+class dmapns(dmapattr):
     "Dict attr namespace with __dict__ slot and liberal key approval."
 
     @classmethod
@@ -439,12 +390,6 @@ class ItemMapEnum(abcs.Ebc):
         '__iter__', '__getitem__', '__len__', '__reversed__',
         'name', 'value', '_value_'
     )
-
-    if TYPE_CHECKING:
-        @overload
-        def __init__(self, mapping: Mapping): ...
-        @overload
-        def __init__(self, *items: tuple[Any, Any]): ...
 
     def __init__(self, *args):
         if len(args) == 1 and isinstance(args[0], Mapping):
@@ -494,13 +439,8 @@ class ItemMapEnum(abcs.Ebc):
 class DequeCache(Generic[VT], abcs.Abc):
 
     __slots__ = (
-        # '__len__',
         '__getitem__',
-        # '__reversed__',
         '__setitem__',
-        # '__iter__',
-        # '__contains__',
-        # 'clear',
         '_maxlen',
     )
 
@@ -516,16 +456,12 @@ class DequeCache(Generic[VT], abcs.Abc):
 
         self._maxlen = lambda: deck.maxlen
 
-        # self.__len__ = deck.__len__
-        # self.__iter__ = deck.__iter__
-        # self.__reversed__ = deck.__reversed__
-        # self.__contains__ = rev.__contains__
         self.__getitem__ = idx.__getitem__
 
-        def clear():
-            idx.clear()
-            rev.clear()
-            deck.clear()
+        # def clear():
+        #     idx.clear()
+        #     rev.clear()
+        #     deck.clear()
 
         if maxlen == 0:
             def setitem(key, item: VT, /): pass
@@ -558,15 +494,8 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
             return obj
         return super().__new__(cls)
 
-    def __init__(self,
-        obj: Mapping[KT, VT]|Iterable[tuple[KT, VT]]|Iterable[KT],
-        /, *, 
-        vget: Callable[[KT], VT]|None = None,
-        kpred: Callable[[KT], bool] = tools.true,
-        vpred: Callable[[VT], bool] = tools.true,
-        koper: Callable[[bool], bool] = truth,
-        voper: Callable[[bool], bool] = truth,
-    ):
+    def __init__(self, obj, /, *, vget = None, kpred = tools.true,
+        vpred = tools.true, koper = truth, voper = truth):
         if vget is None:
             if hasattr(obj, 'keys'):
                 self._gen_ = self._gen1(

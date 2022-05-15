@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.tools.doc.rstutils
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytableaux.tools.doc.misc
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
@@ -27,11 +27,13 @@ from inspect import getsource
 from typing import TYPE_CHECKING
 import enum
 from pytableaux import logics
-from pytableaux.lang import Operator, Quantifier, Predicate
+from pytableaux.lang import Operator, Quantifier, Predicate, Sentence
+from pytableaux.lang.lex import LexType
 from pytableaux.logics import LogicLocatorRef, registry
 from pytableaux.proof import TableauxSystem as TabSys
 from pytableaux.proof import ClosingRule, Rule, helpers, Branch
-from pytableaux.proof.util import RuleEvent, TabEvent, NodeAttr
+from pytableaux.proof.filters import SentenceCompare
+from pytableaux.proof import RuleEvent, TabEvent, NodeAttr
 from pytableaux.tools import abcs
 from pytableaux.tools.abcs import isabstract
 from sphinx.ext.autodoc.importer import import_object
@@ -49,17 +51,6 @@ __all__ = (
     'is_transparent_rule',
 )
 
-# def get_logic_names(logic_docdir: str = None, suffix: str = '.rst', /) -> set[str]:
-#     'Get all logic names with a .rst document in the doc dir.'
-#     if logic_docdir is None:
-#         logic_docdir = os.path.abspath(
-#             os.path.join(os.path.dirname(__file__), '../../../doc/logics')
-#         )
-#     return set(
-#         os.path.basename(file).removesuffix(suffix).upper()
-#         for file in os.listdir(logic_docdir)
-#         if file.endswith(suffix)
-#     )
 
 def is_concrete_rule(obj: Any, /) -> bool:
     return _is_rulecls(obj) and obj not in (Rule, ClosingRule)
@@ -85,69 +76,69 @@ def is_transparent_rule(obj: Any) -> bool:
     )
 
 
-def rule_legend(rule: type[Rule]|Rule):
 
-    if isinstance(rule, Rule):
-        rule = type(rule)
-
-    legend = {}
-
-    if getattr(rule, 'negated', None):
-        legend['negated'] = Operator.Negation
-
-    if (oper := getattr(rule, 'operator', None)):
-        legend['operator'] = Operator[oper]
-    elif (quan := getattr(rule, 'quantifier', None)):
-        legend['quantifier'] = Quantifier[quan]
-    elif (pred := getattr(rule, 'predicate', None)):
-        legend['predicate'] = Predicate(pred)
-
-    if (des := getattr(rule, 'designation', None)) is not None:
-        legend['designation'] = des
-
-    if (issubclass(rule, ClosingRule)):
-        legend['closure'] = True
-
-    return tuple(legend.items())
-
-
-def rules_sorted(logic: LogicType, rules: Collection[type[Rule]] = None, /) -> dict[str, list[type[Rule]]]:
+def rules_sorted(logic: LogicType, rules: Collection[type[Rule]] = None, /) -> dict[str, Any]:
 
     logic = logics.registry(logic)
     RulesCls = logic.TabRules
     if rules is None:
         rules = list(RulesCls.all_rules)
-    results = {}
-
-    results['member_order'] = rules_sorted_member_order(logic, rules)
-    # results['legend_order'] = sorted(rules, key = LegendSortFlag.rulekey)
-    results['legend_order'] = rules_sorted_legend_order(rules)
-    from pprint import pp
-    # pp(inherit_map)
-    # pp(keys_member_order)
+    results = dict(
+        member_order = rules_sorted_member_order(logic, rules),
+        legend_groups = (groups := rules_grouped_legend_order(rules)),
+        legend_order = [rule for group in groups.values() for rule in group],
+        legend_subgroups = (subgrouped := rules_legend_subgroups(groups)),
+        subgroups_named = {
+            name: {o.name : [r.name for r in subgroup] for o, subgroup in group.items()}
+            for name, group in subgrouped.items()
+        },
+        subgroup_types = {
+            name: type(next(iter(group)))
+            for name, group in subgrouped.items()
+            if len(group)
+        }
+    )
     return results
-    # return native_members
 
-def rules_sorted_legend_order(rules: Collection[type[Rule]], /) -> list[type[Rule]]:
+
+def rule_sortkey_legend(rule: type[Rule]):
+    if (c := SentenceCompare(rule).compitem) is None:
+        if issubclass(rule, ClosingRule):
+            return 0,
+        return LexType._seq[-1].rank + 1,
+    return (c.item, bool(getattr(c, 'negated', 0)),
+        -1 * bool(getattr(rule, 'designation', None)))
+
+def rules_grouped_legend_order(rules: Collection[type[Rule]], /) -> dict[str, list[type[Rule]]]:
     groups = {name: [] for name in ('closure', 'operator', 'quantifier', 'predicate')}
     ungrouped = []
-    legends: dict[type[Rule], dict] = {}
     for rule in rules:
-        legends[rule] = legend = dict(rule_legend(rule))
-        for name in legend:
+        for name, _ in rule.legend:
             if name in groups:
                 groups[name].append(rule)
                 break
         else:
             ungrouped.append(rule)
-    for name, group in groups.items():
-        group.sort(key = lambda rule: (
-            (1 * bool(legends[rule].get('negated'))) + 
-            (2 * legends[rule].get('designated', 0))
-        ))
-        group.sort(key = lambda rule: legends[rule][name])
+
+    for name in ('operator', 'quantifier', 'predicate'):
+        groups[name].sort(key = rule_sortkey_legend)
+    
     groups['ungrouped'] = ungrouped
-    return list(rule for group in groups.values() for rule in group)
+    return groups
+
+def rules_legend_subgroups(groups: dict[str, list[type[Rule]]]) -> dict[str, dict[Any, list[type[Rule]]]]:
+    subgroups: dict[str, dict[Any, list[type[Rule]]]] = {
+        name: {} for name in ('operator', 'quantifier', 'predicate')
+    }
+    for name, group in groups.items():
+        if name in subgroups:
+            subgroup = subgroups[name]
+            for rule in group:
+                obj = getattr(rule, name)
+                if obj not in subgroup:
+                    subgroup[obj] = []
+                subgroup[obj].append(rule)
+    return subgroups
 
 def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /) -> list[type[Rule]]:
     RulesCls = logic.TabRules

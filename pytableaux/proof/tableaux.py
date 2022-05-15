@@ -37,7 +37,7 @@ from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
 from pytableaux.proof import RuleHelper, RuleMeta
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.util import (BranchEvent, BranchStat, RuleClassFlag,
+from pytableaux.proof import (BranchEvent, BranchStat, RuleClassFlag,
                                    RuleEvent, RuleState, StepEntry, TabEvent,
                                    TabFlag, TabStatKey, TabTimers)
 from pytableaux.tools import EMPTY_MAP, abstract, closure, isstr
@@ -85,6 +85,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     _optkeys: ClassVar[setf[str]] = setf(_defaults)
 
     FLAGS: ClassVar[RuleClassFlag] = RuleClassFlag(0)
+    legend: ClassVar[tuple]
 
     Helpers: ClassVar[Mapping[type[RuleHelper], Any]] = {}
     "Helper classes mapped to their settings."

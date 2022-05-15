@@ -29,8 +29,9 @@ from pytableaux import EMPTY_SET, __docformat__
 from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
 from pytableaux.lang import (BiCoords, LangCommonMeta, Marking, Notation,
-                             ParseTableKey, ParseTableValue, TableStore,
-                             raiseae)
+                            #  ParseTableKey,
+                             TableStore,
+                             raiseae, Lexical)
 from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.lex import (Atomic, Constant, LexType, Operated, Operator,
                                  Parameter, Predicate, Predicated, Quantified,
@@ -54,6 +55,14 @@ __all__ = (
 )
 
 NOARG = object()
+
+ParseTableValue = int|Lexical
+"ParseTable value type."
+
+ParseTableKey   = LexType|Marking|type[Predicate.System]
+"ParseTable key type."
+
+
 
 class ParserMeta(LangCommonMeta):
     'Parser Metaclass.'

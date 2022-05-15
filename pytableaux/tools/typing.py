@@ -26,15 +26,15 @@ import enum as _enum
 from collections.abc import Set
 from types import FunctionType, MethodType, ModuleType
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
-                    Mapping, ParamSpec, SupportsIndex, TypeVar)
+                    Generic, Hashable, Iterable, Iterator, Mapping, ParamSpec,
+                    Sequence, SupportsIndex, TypeVar)
 
 #==========================+
 #  No local dependencies!  |
 #==========================+
 
 if TYPE_CHECKING:
-    from typing import (Generic, Hashable, Iterable, Iterator, Sequence,
-                        overload)
+    from typing import overload
 
     from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem, filters
@@ -195,9 +195,6 @@ LinkT = TypeVar('LinkT', bound = 'Link')
 
 MapiT = TypeVar('MapiT', bound = 'MappingApi')
 "Bound to ``MappingApi``"
-
-MapT = TypeVar('MapT', bound = Mapping)
-"Bound to ``Mapping``"
 
 MutSeqT = TypeVar('MutSeqT', bound = 'MutableSequenceApi')
 "Bound to ``MutableSequenceApi``"

@@ -126,24 +126,23 @@ def _():
     del(lex.nosetattr,)
 
 # ----- logics, examples, models
-
 import pytableaux.logics
-import pytableaux.examples
-import pytableaux.models
-
-# ----- proof
 
 import pytableaux.proof
-import pytableaux.proof.util
 import pytableaux.proof.common
-import pytableaux.proof.filters
 import pytableaux.proof.tableaux
+import pytableaux.proof.rules
+import pytableaux.proof.helpers
+import pytableaux.proof.filters
+import pytableaux.proof.writers
+
+# ----- proof
+import pytableaux.models
+import pytableaux.examples
+
 
 # pytableaux.proof.Rule = pytableaux.proof.tableaux.Rule
 
-import pytableaux.proof.rules
-import pytableaux.proof.helpers
-import pytableaux.proof.writers
 
 __all__ = (
     'errors',

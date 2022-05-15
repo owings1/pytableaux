@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import operator as opr
 from itertools import repeat
-from typing import TYPE_CHECKING, Any, Iterable, SupportsIndex
+from typing import TYPE_CHECKING, Any, Iterable, SupportsIndex, TypeVar
 
 from pytableaux import EMPTY_SET, __docformat__, tools
 from pytableaux.errors import Emsg, check
@@ -41,7 +41,7 @@ from pytableaux.tools.typing import EnumDictType, IcmpFunc, IndexType
 if TYPE_CHECKING:
     from typing import overload
 
-    from pytableaux.lang import PredsItemRef, PredsItemSpec
+    # from pytableaux.lang import PredsItemRef, PredsItemSpec
 
 __all__ = (
     'Argument',
@@ -219,15 +219,16 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     __delattr__ = raiseae
 
 
+__PredRef = TypeVar('__PredRef')
 class Predicates(qset[Predicate], metaclass = LangCommonMeta,
     hooks = {qset: dict(cast = Predicate)}
 ):
     'Predicate store. An ordered set with a multi-keyed lookup index.'
 
-    _lookup: dmap[PredsItemRef, Predicate]
+    _lookup: dmap[__PredRef, Predicate]
     __slots__ = '_lookup',
 
-    def __init__(self, values: Iterable[PredsItemSpec] = None, /, *,
+    def __init__(self, values: Iterable[__PredRef] = None, /, *,
         sort: bool = False, key = None, reverse: bool = False):
         """Create a new store from an iterable of predicate objects
         or specs
@@ -308,7 +309,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
 
         def __new__(cls, *spec):
             'Set the Enum value to the predicate instance.'
-            return LexicalAbc.__new__(Predicate)
+            return Predicate.__new__(Predicate, *spec)
 
         @classmethod
         def _member_keys(cls, pred: Predicate):

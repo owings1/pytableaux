@@ -46,6 +46,20 @@ __all__ = (
     'QsetView',
     'SequenceSet',
 )
+if TYPE_CHECKING:
+
+    from pytableaux.tools.mappings import defaultdmap
+
+    mymap: defaultdmap[str, list[tuple[type, ...]]] = defaultdmap(list)
+
+    for key in mymap:
+        for value in mymap[key]:
+            value == key
+    
+    mycopy = mymap.copy()
+
+    mycopy
+
 
 class SequenceSet(SequenceApi[VT], SetApi[VT]):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'

@@ -20,12 +20,11 @@
 # pytableaux - Deonitic Normal Modal Logic
 from __future__ import annotations
 
-from pytableaux.lang.lex import Atomic
+from pytableaux.lang import Atomic
 from pytableaux.logics import k as K
-from pytableaux.proof.rules import BaseSimpleRule
-from pytableaux.proof.common import Branch, Target
+from pytableaux.proof import Branch, Target, adds, anode, group, swnode
 from pytableaux.proof.helpers import MaxWorlds, UnserialWorlds
-from pytableaux.proof.util import adds, anode, group, swnode
+from pytableaux.proof.rules import BaseSimpleRule
 
 name = 'D'
 

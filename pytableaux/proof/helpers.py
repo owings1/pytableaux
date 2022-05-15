@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
 from pytableaux.proof import Branch, Node, Rule, RuleHelper, Target, filters
-from pytableaux.proof.util import Access, RuleAttr, RuleEvent, TabEvent
+from pytableaux.proof import Access, RuleAttr, RuleEvent, TabEvent
 from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract, closure
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf

@@ -25,7 +25,7 @@ from pytableaux.logics import fde as FDE
 from pytableaux.logics import k3 as K3
 from pytableaux.logics import k3w as K3W
 from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.proof import adds, group, sdnode
 
 name = 'K3WQ'
 

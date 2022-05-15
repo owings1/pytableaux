@@ -31,7 +31,6 @@ from typing import (TYPE_CHECKING, Any, Collection, Iterable, Iterator,
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Sentence
-from pytableaux.proof.util import BranchEvent, PropMap
 from pytableaux.tools import EMPTY_MAP, isattrstr, isint, abcs, MapProxy
 from pytableaux.tools.decorators import lazy, operd, raisr
 from pytableaux.tools.events import EventEmitter
@@ -45,7 +44,7 @@ if TYPE_CHECKING:
 
     from pytableaux.models import BaseModel
     from pytableaux.proof.tableaux import Rule
-    from pytableaux.proof.util import StepEntry
+    from pytableaux.proof import StepEntry
 
 __all__ = (
     'Branch',
@@ -670,6 +669,9 @@ class Target(dmapattr[str, Any]):
             if self._keyattr_ok(name))
 
 
+
+
+
 del(
     builtins,
     lazy,
@@ -677,3 +679,5 @@ del(
     opr,
     raisr,
 )
+
+from pytableaux.proof import BranchEvent, PropMap

@@ -21,8 +21,8 @@ pytableaux.lang
 """
 from __future__ import annotations
 
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
-                    NamedTuple, Set)
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Iterator,
+                    Mapping, NamedTuple, Sequence, Set)
 
 from pytableaux.errors import Emsg
 from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure, dxopy
@@ -31,9 +31,8 @@ from pytableaux.tools.sets import EMPTY_SET, setm
 from pytableaux.tools.typing import RsetSectKT, T
 
 if TYPE_CHECKING:
-    from typing import Iterator, Sequence, overload
+    from typing import overload
 
-    from pytableaux.tools.abcs import EnumLookup
 
 __all__ = (
     # Classes
@@ -52,12 +51,12 @@ __all__ = (
     # Type aliases
     'PredicateSpec',
     'ParameterSpec',
-    'AtomicSpec',
+    # 'AtomicSpec',
 
     # Generic aliases
-    'IdentType',
-    'OperandsSpec',
-    'OperatedSpec',
+    # 'IdentType',
+    # 'OperandsSpec',
+    # 'OperatedSpec',
     'OperatorSpec',
     'ParameterIdent',
     'PredicatedSpec',
@@ -67,12 +66,12 @@ __all__ = (
     'SpecType',
 
     # Deferred aliases
-    'OperCallArg',
-    'ParseTableKey',
-    'ParseTableValue',
-    'PredsItemRef',
-    'PredsItemSpec',
-    'QuantifiedItem',
+    # 'OperCallArg',
+    # 'ParseTableKey',
+    # 'ParseTableValue',
+    # 'PredsItemRef',
+    # 'PredsItemSpec',
+    # 'QuantifiedItem',
 
     # Subpackage convenience import
     'Argument',
@@ -130,7 +129,7 @@ class SysPredEnumMeta(LangCommonEnumMeta):
     if TYPE_CHECKING:
 
         __members__: Mapping[str, Predicate]
-        _lookup: EnumLookup[Predicate]
+        _lookup: abcs.EnumLookup[Predicate]
         _member_map_: Mapping[str, Predicate]
         _seq: Sequence[Predicate]
 
@@ -189,13 +188,14 @@ class Notation(LangCommonEnum):
 
     #--- Members
 
-    polish = abcs.eauto(), 'unicode'
+    polish = 'polish',
     "Polish notation."
 
-    standard = abcs.eauto(), 'unicode'
+    standard = 'standard',
     "Standard notation."
 
-    def __init__(self, num, default_charset: str, /):
+    def __init__(self, name, /):
+        default_charset = 'unicode'
         self.charsets = setm((default_charset,))
         self.default_charset = default_charset
         self.writers = setm()
@@ -233,6 +233,10 @@ class Notation(LangCommonEnum):
             else:
                 super().__setattr__(name, value)
         return setter
+
+    @classmethod
+    def _member_keys(cls, member: Notation, /):
+        return super()._member_keys(member).union({member.name.capitalize()})
 
     @abcs.abcf.after
     def _(cls):
@@ -485,10 +489,6 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
         @overload
         def fetch(notn, key = None, /) -> RenderSet: ...
 
-if TYPE_CHECKING:
-    RenderSet.fetch(Notation.standard).strings
-    RenderSet.load(Notation.standard, 'ascii', {}).notation
-
 #==================================================+
 #  Type aliases -- used a runtime with isinstance  |
 #==================================================+
@@ -499,8 +499,8 @@ ParameterSpec = BiCoords
 PredicateSpec = TriCoords
 "Predicate spec type (TriCoords)."
 
-AtomicSpec = BiCoords
-"Atomic spec type (BiCoords)."
+# AtomicSpec = BiCoords
+# "Atomic spec type (BiCoords)."
 
 #====================+
 #  Generic aliases   |
@@ -508,8 +508,9 @@ AtomicSpec = BiCoords
 
 SpecType = tuple[int|str|tuple, ...]
 "Tuple with integers, strings, or such nested tuples."
+# "tuple[int|str|tuple[int|str], ...]", ... etc.
 
-IdentType = tuple[str, SpecType]
+IdentType = tuple[str, tuple] #        tuple[str, SpecType]
 "Tuple of (classname, spec)."
 
 ParameterIdent = tuple[str, BiCoords]
@@ -530,39 +531,37 @@ PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
 QuantifiedSpec = tuple[str, BiCoords, IdentType]
 "Quantified sentence spec type."
 
-OperandsSpec = tuple[IdentType, ...]
-"Operands argument type."
+# OperandsSpec = tuple            #tuple[IdentType, ...]
+# "Operands argument type."
 
-OperatedSpec = tuple[str, OperandsSpec]
-"Operated sentence spec type."
+# OperatedSpec =  tuple  #    tuple[str, OperandsSpec]
+# "Operated sentence spec type."
 
-from pytableaux.lang.lex import Quantifier, Sentence, Variable, Lexical
 
-ParseTableValue = int|Lexical
-"ParseTable value type."
+# ParseTableValue = int|Lexical
+# "ParseTable value type."
 
-QuantifiedItem = Quantifier | Variable | Sentence
-"Quantified item type."
 
-from pytableaux.lang.lex import (Atomic, Constant, Operator,
-                                 Predicate, Predicated)
+# PredsItemSpec = PredicateSpec | Predicate
+# "Predicates store item spec."
 
-PredsItemSpec = PredicateSpec | Predicate
-"Predicates store item spec."
+# PredsItemRef  = PredicateRef  | Predicate
+# "Predicates store item ref."
 
-PredsItemRef  = PredicateRef  | Predicate
-"Predicates store item ref."
-
-OperCallArg = Iterable[Sentence] | Sentence | OperandsSpec
-"Operator __call__ argument."
-
+from pytableaux.lang.lex import (Atomic, Constant, Lexical, Operator,
+                                 Predicate, Predicated, Quantifier, Sentence,
+                                 Variable)
 
 from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.writing import LexWriter
 from pytableaux.lang.lex import LexType
+from pytableaux.lang.writing import LexWriter
 
-ParseTableKey   = LexType|Marking|type[Predicate.System]
-"ParseTable key type."
+# ParseTableKey   = LexType|Marking|type[Predicate.System]
+# "ParseTable key type."
 
-from pytableaux.lang.lex import Operated, Quantified
+from pytableaux.lang.lex import (Operated, 
+                Quantified,
+                # OperCallArg,
+                # QuantifiedItem,
+            )
 from pytableaux.lang.parsing import Parser, ParseTable

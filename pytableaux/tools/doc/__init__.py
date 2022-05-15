@@ -47,7 +47,6 @@ import os
 import re
 import traceback
 from dataclasses import dataclass
-from enum import Enum
 from importlib import import_module
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Container, Generic,
                     Mapping)
@@ -60,12 +59,13 @@ from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
 from pytableaux import logics
-from pytableaux.lang import Operator, Predicates
+from pytableaux.lang import Notation, Operator, Predicates, Parser
 from pytableaux.tools import EMPTY_MAP, MapProxy, NameTuple, abcs, abstract
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import T
+from sphinx.ext import viewcode
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
@@ -122,7 +122,9 @@ class ConfKey(str, abcs.Ebc):
 
     auto_skip_enum_value = 'autodoc_skip_enum_value'
 
-    wnotn = 'write_notation'
+    wnotn   = 'write_notation'
+    charset =  'render_charset'
+    rset =  'renderset'
     pnotn = 'parse_notation'
     preds = 'parse_predicates'
 
@@ -138,7 +140,7 @@ APPSTATE: dict[Sphinx, dict] = {}
 
 def setup(app: Sphinx):
 
-    from pytableaux.tools.doc import (directives, extnodes, processors, roles,
+    from pytableaux.tools.doc import (directives, processors, roles,
                                       tables)
 
     APPSTATE[app] = {}
@@ -147,7 +149,7 @@ def setup(app: Sphinx):
         del(APPSTATE[app])
     app.connect('build-finished', clear_state)
 
-    extnodes.setup(app)
+    nodez.setup(app)
     directives.setup(app)
     tables.setup(app)
     processors.setup(app)
@@ -167,6 +169,14 @@ def init_app(app: Sphinx, config: Config):
 
 
 # ------------------------------------------------
+
+
+def viewcode_target(obj: Any) -> str:
+    if isinstance(obj, str):
+        modname = obj
+    else:
+        modname = obj.__module__
+    return f"{viewcode.OUTPUT_DIRNAME}/{modname.replace('.', '/')}"
 
 class AppEnvMixin(abcs.Abc):
 
@@ -192,11 +202,15 @@ class AppEnvMixin(abcs.Abc):
     def current_logic(self):
         return logics.registry(self.current_module())
 
+    def viewcode_target(self, obj = None):
+        if obj is None:
+            obj = self.current_module()
+        return viewcode_target(obj)
+
 class RenderMixin(AppEnvMixin):
 
     def render(self, template, *args, **kw):
         return self.jenv.get_template(template).render(*args, **kw)
-
 
 # ------------------------------------------------
 
@@ -226,6 +240,14 @@ class RoleDirectiveMixin(AppEnvMixin):
 
     @abstract
     def run(self): ...
+
+class ParserOptionMixin(RoleDirectiveMixin):
+
+
+    def parser_option(self) -> Parser:
+        opts, conf = self.options, self.config
+        return Parser(opts.get(ConfKey.preds, opts.get('pnotn', conf[ConfKey.pnotn])),
+            Predicates(opts.get(ConfKey.preds, opts.get('preds', conf[ConfKey.preds]))))
 
 # ------------------------------------------------
 
@@ -351,7 +373,9 @@ class AutodocProcessor(Processor):
         options: dict
         lines: list[str]
 
-    __slots__ = 'app', 'lines', 'record'
+    app: Sphinx
+    lines: list[str]
+    record: AutodocProcessor.Record
 
     def hastext(self, txt:str):
         return txt in '\n'.join(self.lines)
@@ -430,8 +454,6 @@ class Tabler(list[list[str]], abcs.Abc):
     body: list[list[str]]
     meta: dict[str, Any]
 
-    __slots__ = 'header', 'body', 'meta'
-
     def __init__(self, body: list[list[str]], header: list[str]|None, /, **meta):
         self.header = header
         self.body = body
@@ -489,24 +511,11 @@ def stropt(arg: str, /) -> str:
         arg = ''
     return arg
 
-def flagorstr(arg: str, /) -> str:
-    if arg is None:
-        ...
+
 def cleanws(arg: str, /) -> str:
     "Option spec to remove all whitespace."
     return re_space.sub('', arg)
 
-def predsopt(arg: str, /) -> Predicates:
-    """Option spec for list of predicate specs.
-    
-    Example::
-    
-        0,0,1 : 1,0,2
-    """
-    return Predicates(
-        tuple(map(int, spec.split(':')))
-        for spec in re_comma.split(cleanws(arg))
-    )
 
 def opersopt(arg: str, /) -> tuple[Operator, ...]:
     """Operators list, from comma-separated input."""
@@ -516,24 +525,39 @@ def opersopt(arg: str, /) -> tuple[Operator, ...]:
 
 def nodeopt(arg: str, /):
     """A docutils node from a name, e.g. 'inline'."""
-    return getattr(nodes, arg)
+    try:
+        return getattr(nodez, arg)
+    except AttributeError:
+        return getattr(nodes, arg)
 
 def attrsopt(arg: str, /) -> list[str]:
     "list of attr-like names"
     return re_nonslug_plus.sub(' ', arg).split(' ')
 
-def choiceopt(choices: Container, /):
+def choiceopt(choices: Container[T], /, trans = str):
     'Option spec builder for choices.'
-    def opt(arg: str, /) -> str:
+    def opt(arg: str, /) -> T:
+        arg = trans(arg)
         if arg not in choices:
             raise ValueError(arg)
         return arg
+    return opt
+
+def choice_or_flag(*args, default = None, **kw):
+    chopt = choiceopt(*args, **kw)
+    def opt(str):
+        if str is None:
+            return default
+        return chopt(str)
     return opt
 
 del(class_option)
 
 # ------------------------------------------------
 
+
+def snakespace(name: str) -> str:
+    return re.sub(r'([A-Z])', r' \1', name)[1:]
 
 def set_classes(opts: dict) -> dict:
     if 'class' in opts:
@@ -590,4 +614,16 @@ def role_name(roleish: type|RoleFunction) -> str|None:
     'Get loaded role name, by name, instance or type.'
     return role_entry(roleish).name
 
+def predsopt(arg: str, /) -> Predicates:
+    """Option spec for list of predicate specs.
+    
+    Example::
+    
+        0,0,1 : 1,0,2
+    """
+    return Predicates(
+        tuple(map(int, spec.split(':')))
+        for spec in re_comma.split(cleanws(arg))
+    )
 
+from pytableaux.tools.doc import nodez

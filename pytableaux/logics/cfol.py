@@ -15,15 +15,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# ------------------
-#
 # pytableaux - Classical First-Order Logic
 from __future__ import annotations
 
-from pytableaux.lang.lex import Quantified, Sentence
+from pytableaux.lang import Quantified, Sentence
 from pytableaux.logics import cpl as CPL
 from pytableaux.logics import k as K
-from pytableaux.tools.abcs import Abc, abcf
 
 name = 'CFOL'
 
@@ -57,7 +54,7 @@ class TableauxSystem(CPL.TableauxSystem):
     """
 
 @TableauxSystem.initialize
-class TabRules(Abc):
+class TabRules:
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,
     including the CPL closure rules, and adds additional rules for the quantifiers.

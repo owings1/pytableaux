@@ -29,7 +29,7 @@ from pytableaux.proof import filters
 from pytableaux.proof.common import Branch, Node, Target
 
 from pytableaux.proof.tableaux import Rule
-from pytableaux.proof.util import adds, group
+from pytableaux.proof import adds, group
 from pytableaux.tools import abstract
 from pytableaux.tools.sets import EMPTY_SET
 

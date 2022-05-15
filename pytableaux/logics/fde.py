@@ -20,7 +20,7 @@
 # pytableaux - First Degree Entailment Logic
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
 from pytableaux.errors import Emsg
 from pytableaux.lang.collect import Argument
@@ -28,11 +28,9 @@ from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
 from pytableaux.models import BaseModel, ValueFDE
+from pytableaux.proof import Branch, Node, Tableau
 from pytableaux.proof import TableauxSystem as BaseSystem
-from pytableaux.proof import filters, rules
-from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.proof import Target, adds, filters, group, rules, sdnode
 from pytableaux.tools import MapProxy, closure
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import setf
@@ -741,7 +739,7 @@ class TabRules:
 
     class DisjunctionDesignated(ConjunctionUndesignated):
         """
-        From an unticked designated disjunction node *n* on a branch *b*, for each disjunt
+        From an unticked designated disjunction node *n* on a branch *b*, for each disjunct
         *d*, make a new branch *b'* from *b* and add a designated node with *d* to *b'*,
         then tick *n*.
         """

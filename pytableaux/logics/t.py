@@ -26,7 +26,7 @@ from pytableaux.lang.lex import Atomic
 from pytableaux.logics import k as K
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.proof.util import Access, adds, group, swnode
+from pytableaux.proof import Access, adds, group, swnode
 from pytableaux.tools.typing import LogicType
 
 name = 'T'
