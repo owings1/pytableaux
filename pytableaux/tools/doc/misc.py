@@ -20,28 +20,27 @@ pytableaux.tools.doc.misc
 
 """
 from __future__ import annotations
-from collections import defaultdict
 
+import enum
 import re
+from collections import defaultdict
 from inspect import getsource
 from typing import TYPE_CHECKING
-import enum
-from pytableaux import logics
-from pytableaux.lang import Operator, Quantifier, Predicate, Sentence
-from pytableaux.lang.lex import LexType
-from pytableaux.logics import LogicLocatorRef, registry
+
+from pytableaux.lang import LexType
+from pytableaux.logics import registry
+from pytableaux.proof import (Branch, ClosingRule, NodeAttr, Rule, RuleEvent,
+                              TabEvent)
 from pytableaux.proof import TableauxSystem as TabSys
-from pytableaux.proof import ClosingRule, Rule, helpers, Branch
 from pytableaux.proof.filters import SentenceCompare
-from pytableaux.proof import RuleEvent, TabEvent, NodeAttr
-from pytableaux.tools import abcs, sets
 from pytableaux.tools.abcs import isabstract
 from sphinx.ext.autodoc.importer import import_object
 
 if TYPE_CHECKING:
+    from typing import Any, Collection, overload
+
     from pytableaux.proof import Node, Rule, Target
-    from pytableaux.tools.typing import LogicType
-    from typing import Any, overload, Collection
+    from pytableaux.logics import LogicType
 
 __all__ = (
     'EllipsisExampleHelper',
@@ -79,7 +78,7 @@ def is_transparent_rule(obj: Any) -> bool:
 
 def rules_sorted(logic: LogicType, rules: Collection[type[Rule]] = None, /) -> dict[str, Any]:
 
-    logic = logics.registry(logic)
+    logic = registry(logic)
     RulesCls = logic.TabRules
     if rules is None:
         rules = list(RulesCls.all_rules)
@@ -151,7 +150,7 @@ def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /
     keys_member_order = {rule: i for i, rule in enumerate(native_members, 1)}
     inherit_map = defaultdict(set)
     for rule in todo:
-        inherit_map[logics.registry.locate(rule)].add(rule)
+        inherit_map[registry.locate(rule)].add(rule)
     for parent, values in inherit_map.items():
         others = inherit_map[parent] = rules_sorted_member_order(parent, values)
         keys_member_order.update({
@@ -240,7 +239,7 @@ def _is_nocode(obj: Any) -> bool:
         return False
     return True
 
-def _rule_is_grouped(rule: type[Rule], logic: LogicLocatorRef) -> bool:
+def _rule_is_grouped(rule: type[Rule], logic) -> bool:
     'Whether the rule class is grouped in the TabRules of the given logic.'
     if not _is_rulecls(rule):
         return False

@@ -41,7 +41,7 @@ _RT = TypeVar('_RT')
 # if TYPE_CHECKING:
 #     from typing import overload
 
-    # from pytableaux.tools.typing import _property
+    # from pytableaux.typing import _property
 
 __all__ = (
     'lazy',

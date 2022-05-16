@@ -26,13 +26,14 @@ import sys
 from collections import defaultdict
 from importlib import import_module
 from types import FunctionType, MethodType, ModuleType
-from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping
+from typing import TYPE_CHECKING, Mapping
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import closure, hybrids, mappings, abcs
+from pytableaux.tools import MapProxy, abcs, closure
+from pytableaux.tools.hybrids import QsetView, qset
+from pytableaux.tools.mappings import MappingApi, dmap
 from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import LogicType
 
 if TYPE_CHECKING:
     from typing import overload
@@ -44,60 +45,62 @@ __all__ = (
 
 NOARG = object()
 
+class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None))):
+    "Stub class definition for a logic interface."
+    name: str
+    class Meta:
+        category: str
+        description: str
+        category_order: int
+        tags: tuple
+        native_operators: tuple
+    TableauxSystem: type
+    Model: type
+    class TabRules:
+        closure_rules: tuple
+        rule_groups: tuple
+        all_rules: tuple
 
-LogicModule = LogicType | ModuleType
-"Logic module alias for type hinting."
 
-LogicLookupKey = ModuleType | str
-"Logic registry key. Module or string. See ``Registry.get()``."
-
-HasModuleAttr = MethodType | FunctionType | type
-"Supports the ``__module__`` attribute (class, method, or function."
-
-LogicLocatorRef = LogicLookupKey | HasModuleAttr
-"Either a logic registry key (string/module), or class, method, or function."
-
-class Registry(Mapping[str, LogicModule], abcs.Copyable):
+class Registry(MappingApi, abcs.Copyable):
     """Logic module registry.
     """
 
-    packages: hybrids.qset[str]
+    packages: qset
     "Packages containing logic modules to load from."
 
-    modules: hybrids.QsetView[str]
+    modules: QsetView
     "The set of loaded module names."
 
-    index: Mapping[LogicLookupKey, str]
+    index: Mapping
     """Mapping to ``module.__name__`` for each of its keys. See ``.get()``."""
 
     if TYPE_CHECKING:
         @overload
-        def add(self, logic: LogicModule):
+        def add(self, logic):
             "Add a logic module"
         @overload
-        def remove(self, logic: LogicModule):
+        def remove(self, logic):
             "Remove a logic  module"
-        @overload
-        def get(self, key: LogicLookupKey, /) -> LogicModule: ...
 
     __slots__ = 'packages', 'modules', 'index', 'add', 'remove', 
 
-    def __init__(self, *, source: Registry = None):
+    def __init__(self, *, source = None):
         
-        self.packages = hybrids.qset()
-        modules = hybrids.qset()
+        self.packages = qset()
+        modules = qset()
         index = self.Index()
 
         if source is not None:
-            check.inst(source, Registry)
+            source = check.inst(source, Registry)
             self.packages.update(source.packages)
             modules.update(source.modules)
             index.update(source.index)
 
-        self.modules = hybrids.QsetView(modules)
-        self.index = mappings.MapProxy(index)
+        self.modules = QsetView(modules)
+        self.index = MapProxy(index)
 
-        def add(logic: LogicModule):
+        def add(logic):
             check.inst(logic, LogicType)
             modname = logic.__name__
             if modname not in modules:
@@ -106,7 +109,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
                 )
                 modules.add(modname)
 
-        def remove(logic: LogicModule):
+        def remove(logic):
             modules.remove(logic.__name__)
             for key in self._module_keys(logic):
                 del(index[key])
@@ -114,14 +117,14 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
         self.add = add
         self.remove = remove
 
-    def discard(self, logic: LogicModule):
+    def discard(self, logic):
         "Discard a logic  module."
         try:
             self.remove(logic)
         except KeyError:
             pass
 
-    def copy(self) -> Registry:
+    def copy(self):
         "Copy the registry."
         return type(self)(source = self)
 
@@ -130,7 +133,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
         for logic in set(self.values()):
             self.remove(logic)
 
-    def __call__(self, key: LogicLookupKey, /) -> LogicModule:
+    def __call__(self, key, /):
         """Get a logic from the registry, importing if needed.
 
         Args:
@@ -157,7 +160,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
         else:
             return sys.modules[modname]
 
-        check.inst(key, LogicLookupKey)
+        check.inst(key, (ModuleType, str))
 
         if isinstance(key, ModuleType):
             module = key
@@ -194,7 +197,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
         self.add(module)
         return module
 
-    def get(self, ref: LogicLookupKey, default = NOARG, /):
+    def get(self, ref, default = NOARG, /):
         try:
             return self(ref)
         except ModuleNotFoundError:
@@ -203,7 +206,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             return default
 
 
-    def locate(self, ref: LogicLocatorRef, default = NOARG, /) -> LogicModule:
+    def locate(self, ref, default = NOARG, /):
         """Like ``.get()`` but also searches the ``__module__`` attribute of
         classes, methods, and functions to locate the logic in which it was defined.
 
@@ -219,9 +222,9 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             ValueError: if not found.
             TypeError: on bad key argument.
         """
-        check.inst(ref, LogicLocatorRef)
+        check.inst(ref, (str, ModuleType, MethodType, FunctionType))
         try:
-            if isinstance(ref, LogicLookupKey):
+            if isinstance(ref, (str, ModuleType)):
                 return self(ref)
             return self(ref.__module__.lower())
         except ValueError:
@@ -230,17 +233,17 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             return default
 
 
-    def all(self) -> Iterator[str]:
+    def all(self):
         for package in self.packages:
             yield from self._package_all(self._check_package(package))
 
-    def package_all(self, package: str|ModuleType, /) -> Iterator[str]:
+    def package_all(self, package, /):
         """List the package's declared logic modules from its ``__all__``
         attribute.
         """
         return self._package_all(self._check_package(package))
 
-    def sync(self) -> set[str]:
+    def sync(self):
         """Sync all registry packages by calling ``.sync_package()``.
 
         Returns:
@@ -251,7 +254,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             added.update(self.sync_package(pkgname))
         return added
 
-    def sync_package(self, package: str|ModuleType, /) -> set[str]:
+    def sync_package(self, package, /):
         """Attempt to find and add any logics that are already loaded (imported)
         but not in the registry. Tries the package's ``__all__`` and ``__dict__``
         attributes.
@@ -273,13 +276,13 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
                 added.add(logic)
         return added
 
-    def import_all(self) -> None:
+    def import_all(self):
         """Import all logics for all registry packages. See ``.import_package()``.
         """
         for pkgname in self.packages:
             self.import_package(pkgname)
 
-    def import_package(self, package: str|ModuleType, /) -> None:
+    def import_package(self, package, /):
         """Import all logic modules for a package. Uses the ``__all__`` attribute
         to list the logic names.
 
@@ -291,9 +294,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             if modname not in self.modules:
                 self.add(import_module(modname))
 
-    def grouped(self, keys: Iterable[LogicLookupKey], /, *,
-        sort: bool = True, key: Callable = None, reverse: bool = False,
-    ) -> dict[str, list[LogicModule]]:
+    def grouped(self, keys, /, *, sort = True, key = None, reverse = False):
         """Group logics by category.
 
         Args:
@@ -308,7 +309,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
         Raises:
             ValueError: if any not found.
         """
-        groups: dict[str, list[LogicModule]] = defaultdict(list)
+        groups = defaultdict(list)
         for logic in map(self, keys):
             groups[logic.Meta.category].append(logic)
         if not sort:
@@ -322,7 +323,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             for category in sorted(groups)
         }
 
-    def _check_package(self, pkgref: str|ModuleType, /) -> ModuleType:
+    def _check_package(self, pkgref: str|ModuleType, /):
         if pkgref in self.packages:
             return sys.modules.get(pkgref) or import_module(pkgref)
         if isinstance(pkgref, str):
@@ -332,7 +333,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
         raise Emsg.NotLogicsPackage(pkgref.__name__)
 
     @staticmethod
-    def _module_keys(logic: LogicModule, /) -> tuple[LogicModule, str, str, str]:
+    def _module_keys(logic, /):
         """Get the index keys for a logic module.
 
         Args:
@@ -347,15 +348,15 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
         )
         
     @staticmethod
-    def _package_all(package: ModuleType, /) -> Iterator[str]:
+    def _package_all(package: ModuleType, /):
         fmt = f'{package.__name__}.%s'.__mod__
         for value in package.__all__:
             yield fmt(value)
 
-    def __contains__(self, key: LogicLookupKey):
+    def __contains__(self, key):
         return key in self.index
 
-    def __getitem__(self, key: LogicLookupKey):
+    def __getitem__(self, key):
         modname = self.index[key]
         try:
             return sys.modules[modname]
@@ -379,7 +380,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             ident = id(self)
         return f'{type(self).__name__}@{ident}{repr(list(names))}'
 
-    class Index(mappings.dmap):
+    class Index(dmap):
         """Registry index."""
 
         __slots__ = EMPTY_SET
@@ -390,7 +391,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             super().__setitem__(key, value)
 
         def update(self, mapping = None, **kw):
-            'Check all keys before updating.'
+            # Check all keys before updating.
             if mapping is None:
                 upd = kw
             elif len(kw):
@@ -403,7 +404,7 @@ class Registry(Mapping[str, LogicModule], abcs.Copyable):
             super().update(upd)
 
 
-def key_category_order(logic: LogicModule) -> int:
+def key_category_order(logic) -> int:
     "Returns the category order from the logic, e.g. for sorting."
     return logic.Meta.category_order
 

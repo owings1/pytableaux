@@ -25,9 +25,9 @@ import functools
 import keyword
 import re
 from abc import abstractmethod as abstract
-from types import FunctionType, MappingProxyType, new_class
+from types import FunctionType, new_class
 from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping
-
+from types import MappingProxyType as MapProxy
 from pytableaux import __docformat__
 
 __all__ = (
@@ -38,32 +38,13 @@ __all__ = (
     'dxopy',
     'EMPTY_MAP',
     'MapProxy',
-    'NameTuple',
 )
 
 if TYPE_CHECKING:
 
-    from pytableaux.tools.typing import _T
+    from pytableaux.typing import _T
 
-    def classalias(orig: type[_T]) -> Callable[[type], type[_T]]:
-        """Decorator factory for class alias for type hinting.
 
-        Usage::
-
-            @classalias(int)
-            class integer: pass
-
-        Args:
-            orig (type): The reference class.
-        
-        Returns:
-            A decorator that ignores its argument and returns `orig`.
-        """
-        def d(_: type) -> type[_T]:
-            return orig
-        return d
-
-MapProxy = MappingProxyType
 EMPTY_MAP = MapProxy({})
 NOARG = object
 
@@ -169,63 +150,63 @@ def dxopy():
     return api
 
 
-@closure
-def NameTuple():
-    class NameTuple:
-        pass
-        """A NamedTuple that accepts Generic aliases for type checking.
+# @closure
+# def NameTuple():
+#     class NameTuple:
+#         pass
+#         """A NamedTuple that accepts Generic aliases for type checking.
 
-        Usage::
+#         Usage::
 
-            class spam(NameTuple, Generic[T]):
-                eggs: T
-                bacon: str
+#             class spam(NameTuple, Generic[T]):
+#                 eggs: T
+#                 bacon: str
         
-        Allows the following::
+#         Allows the following::
 
-            class MyList(list[spam[int]]): ...
+#             class MyList(list[spam[int]]): ...
 
-        At runtime the additional bases are ignored, so it is roughly
-        equivalent to::
+#         At runtime the additional bases are ignored, so it is roughly
+#         equivalent to::
 
-            class spam(NamedTuple):
-                eggs: T
-                bacon: str
+#             class spam(NamedTuple):
+#                 eggs: T
+#                 bacon: str
         
-        with the addition of `__orig_bases__`, and `__parameters__`
-        attributes::
+#         with the addition of `__orig_bases__`, and `__parameters__`
+#         attributes::
 
-            >>> spam.__orig_bases__
-            (<class 'pytableaux.tools.NameTuple'>, typing.Generic[~T])
-            >>> spam.__parameters__
-            (~T,)
-        """
-    if TYPE_CHECKING:
-        class NameTuple: ...
+#             >>> spam.__orig_bases__
+#             (<class 'pytableaux.tools.NameTuple'>, typing.Generic[~T])
+#             >>> spam.__parameters__
+#             (~T,)
+#         """
+#     if TYPE_CHECKING:
+#         class NameTuple: ...
 
-    import typing
+#     import typing
 
-    class meta(type):
+#     class meta(type):
 
-        __call__ = staticmethod(typing.NamedTuple)
+#         __call__ = staticmethod(typing.NamedTuple)
 
-        @staticmethod
-        def __prepare__(clsname, bases):
-            return dict(__orig_bases__ = bases)
+#         @staticmethod
+#         def __prepare__(clsname, bases):
+#             return dict(__orig_bases__ = bases)
 
-        def __new__(cls, clsname: str, bases, ns, **kw):
-            assert bases[0] is NameTuple
-            if (origs := ns['__orig_bases__'][1:]):
-                for a, b in zip(origs, bases[1:]):
-                    if b is typing.Generic:
-                        ns['__parameters__'] = a.__parameters__
-                        break
-                new_class(clsname, origs, kw)
-            return typing.NamedTupleMeta(clsname, (typing._NamedTuple,), ns)
+#         def __new__(cls, clsname: str, bases, ns, **kw):
+#             assert bases[0] is NameTuple
+#             if (origs := ns['__orig_bases__'][1:]):
+#                 for a, b in zip(origs, bases[1:]):
+#                     if b is typing.Generic:
+#                         ns['__parameters__'] = a.__parameters__
+#                         break
+#                 new_class(clsname, origs, kw)
+#             return typing.NamedTupleMeta(clsname, (typing._NamedTuple,), ns)
 
-    NameTuple = type.__new__(meta, 'NameTuple', (), {dund('doc'): NameTuple.__doc__})
+#     NameTuple = type.__new__(meta, 'NameTuple', (), {dund('doc'): NameTuple.__doc__})
 
-    return NameTuple
+#     return NameTuple
 
 
 @closure
@@ -311,13 +292,5 @@ def clsns():
 
     return clsns
 
-if TYPE_CHECKING:
 
-    @classalias(clsns)
-    class clsns: pass
 
-    @classalias(NameTuple)
-    class NameTuple: pass
-
-    @classalias(MappingProxyType)
-    class MapProxy: pass

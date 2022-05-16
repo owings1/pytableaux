@@ -21,7 +21,7 @@ from pytableaux.tools.hybrids import qset
 
 if TYPE_CHECKING:
     from typing import overload
-    from pytableaux.tools.typing import _TT, _F, _T
+    from pytableaux.typing import _TT, _F, _T
 __all__ = (
     'BaseSuite',
     'larg',

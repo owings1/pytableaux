@@ -24,7 +24,7 @@ from __future__ import annotations
 import operator as opr
 from typing import Any, Callable, NamedTuple
 
-from pytableaux import __docformat__
+from pytableaux import __docformat__, EMPTY_SET
 from pytableaux.lang import (Lexical, Operated, Operator, Predicated,
                              Quantified, Sentence)
 from pytableaux.proof import Access
@@ -32,7 +32,6 @@ from pytableaux.proof.common import Node
 from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, thru
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.mappings import dmapns
-from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
     'AttrCompare',
@@ -301,3 +300,4 @@ class ModalNode(AttrCompare, NodeCompare):
         elif attrs.get('is_modal'):
             n['world'] = 0
         return n
+

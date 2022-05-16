@@ -36,7 +36,7 @@ from pytableaux.tools import MapProxy
 
 if TYPE_CHECKING:
     from pytableaux.tools.hooks import hookutil
-    from pytableaux.tools.typing import iter
+    from pytableaux.typing import iter
                                      
 
 __all__ = (

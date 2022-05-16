@@ -19,11 +19,14 @@
 # pytableaux - lex module tests
 # import pytest
 
+import pickle
 from pytableaux.errors import *
 from pytableaux.lang.collect import *
 from pytableaux.lang.lex import *
 from pytableaux.tools.sets import EMPTY_SET
-import pickle
+
+from pytableaux import errors
+
 try:
     from test.tutils import BaseSuite, skip
 except ModuleNotFoundError:
@@ -509,9 +512,9 @@ class TestClasses(BaseSuite):
     def test_pickle(self):
         import warnings
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-        for cls in LexType.classes:
-            item = cls.first().next()
-            s = pickle.dumps(item)
-            item2 = pickle.loads(s)
-            assert item == item2
+            warnings.simplefilter('ignore', category=errors.RepeatValueWarning)
+            for cls in LexType.classes:
+                item = cls.first().next()
+                s = pickle.dumps(item)
+                item2 = pickle.loads(s)
+                assert item == item2

@@ -21,17 +21,13 @@ pytableaux.lang
 """
 from __future__ import annotations
 
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Iterator,
-                    Mapping, NamedTuple, Sequence, Set)
+from collections.abc import Mapping
+from typing import ClassVar, NamedTuple
 
 from pytableaux.errors import Emsg
 from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure, dxopy
 from pytableaux.tools.decorators import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
-
-if TYPE_CHECKING:
-    from typing import overload
-
 
 __all__ = (
     # Classes
@@ -48,21 +44,21 @@ __all__ = (
     'TriCoords',
 
     # Type aliases
-    'PredicateSpec',
-    'ParameterSpec',
+    # 'PredicateSpec',
+    # 'ParameterSpec',
     # 'AtomicSpec',
 
     # Generic aliases
     # 'IdentType',
     # 'OperandsSpec',
     # 'OperatedSpec',
-    'OperatorSpec',
-    'ParameterIdent',
-    'PredicatedSpec',
-    'PredicateRef',
-    'QuantifiedSpec',
-    'QuantifierSpec',
-    'SpecType',
+    # 'OperatorSpec',
+    # 'ParameterIdent',
+    # 'PredicatedSpec',
+    # 'PredicateRef',
+    # 'QuantifiedSpec',
+    # 'QuantifierSpec',
+    # 'SpecType',
 
     # Deferred aliases
     # 'OperCallArg',
@@ -132,7 +128,7 @@ class SysPredEnumMeta(LangCommonEnumMeta):
 class LangCommonEnum(abcs.Ebc, metaclass = LangCommonEnumMeta):
     'Common Enum base class for lang classes.'
 
-    __slots__   = 'value', '_value_', '_name_', '__objclass__'
+    # __slots__   = 'value', '_value_', '_name_',
 
     __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.Ebc, cls = True)
@@ -222,7 +218,7 @@ class Notation(LangCommonEnum):
         cls.default = cls.polish
 
 
-class Marking(LangCommonEnum):
+class Marking(str, LangCommonEnum):
     'Miscellaneous marking/punctuation enum.'
 
     paren_open = 'paren_open'
@@ -268,7 +264,7 @@ class BiCoords(NamedTuple):
         index: int
         "The index integer."
 
-    def sorting(self) -> BiCoords.Sorting:
+    def sorting(self):
         "Return the sorting tuple."
         return self.Sorting(self.subscript, self.index)
 
@@ -278,7 +274,7 @@ class BiCoords(NamedTuple):
         return repr(tuple(self))
 
     @staticmethod
-    def min_unused(used: Set[BiCoords], maxi: int):
+    def min_unused(used, maxi):
         # finds the mimimum available by searching for gaps.
         if not used:
             return BiCoords.first
@@ -313,7 +309,7 @@ class TriCoords(NamedTuple):
         arity: int
         "The arity integer."
 
-    def sorting(self) -> TriCoords.Sorting:
+    def sorting(self):
         "Return the sorting tuple."
         return self.Sorting(self.subscript, self.index, self.arity)
 
@@ -329,12 +325,12 @@ class TableStore(metaclass = LangCommonMeta):
 
     default_fetch_key: ClassVar[str]
 
-    _instances: ClassVar[dict[Notation, dict[str, TableStore]]]
+    _instances: ClassVar[dict]
 
     __slots__ = EMPTY_SET
 
     @classmethod
-    def load(cls, notn: Notation, key: str, data: Mapping, /):
+    def load(cls, notn, key, data, /):
         notn = Notation[notn]
         idx = cls._instances[notn]
         if key in idx:
@@ -342,7 +338,7 @@ class TableStore(metaclass = LangCommonMeta):
         return idx.setdefault(key, cls(data, (notn, key)))
 
     @classmethod
-    def fetch(cls, notn: Notation, key: str = None, /):
+    def fetch(cls, notn, key = None, /):
         if key is None:
             key = cls.default_fetch_key
         notn = Notation[notn]
@@ -356,17 +352,14 @@ class TableStore(metaclass = LangCommonMeta):
         return cls.load(notn, key, data)
 
     @classmethod
-    def available(cls, notn: Notation) -> list[str]:
+    def available(cls, notn):
         notn = Notation(notn)
         idx = cls._instances[notn]
         store = cls._builtin[notn]
         return sorted(set(idx).union(store))
 
     @classmethod
-    def _initcache(cls,
-        notns: Iterable[Notation],
-        builtin: Mapping[Notation, Mapping[str, Mapping]]
-    ):
+    def _initcache(cls, notns, builtin):
         if cls is __class__ or hasattr(cls, '_builtin'):
             raise TypeError
         cls._builtin = builtin = MapProxy(dict(builtin))
@@ -461,43 +454,43 @@ class RenderSet(TableStore, Mapping):
 #  Type aliases -- used a runtime with isinstance  |
 #==================================================+
 
-ParameterSpec = BiCoords
-"Parameter spec type (BiCoords)."
+# ParameterSpec = BiCoords
+# "Parameter spec type (BiCoords)."
 
-PredicateSpec = TriCoords
-"Predicate spec type (TriCoords)."
+# PredicateSpec = TriCoords
+# "Predicate spec type (TriCoords)."
 
 # AtomicSpec = BiCoords
 # "Atomic spec type (BiCoords)."
 
 #====================+
 #  Generic aliases   |
-#====================+
+# #====================+
 
-SpecType = tuple[int|str|tuple, ...]
-"Tuple with integers, strings, or such nested tuples."
-# "tuple[int|str|tuple[int|str], ...]", ... etc.
+# SpecType = tuple[int|str|tuple, ...]
+# "Tuple with integers, strings, or such nested tuples."
+# # "tuple[int|str|tuple[int|str], ...]", ... etc.
 
-IdentType = tuple[str, tuple] #        tuple[str, SpecType]
-"Tuple of (classname, spec)."
+# IdentType = tuple[str, tuple] #        tuple[str, SpecType]
+# "Tuple of (classname, spec)."
 
-ParameterIdent = tuple[str, BiCoords]
-"Tuple of (classname, (index, subscript))."
+# ParameterIdent = tuple[str, BiCoords]
+# "Tuple of (classname, (index, subscript))."
 
-QuantifierSpec = tuple[str]
-"Singleton tuple of quantifier name."
+# QuantifierSpec = tuple[str]
+# "Singleton tuple of quantifier name."
 
-OperatorSpec = tuple[str]
-"Singleton tuple of operator name."
+# OperatorSpec = tuple[str]
+# "Singleton tuple of operator name."
 
-PredicateRef = tuple[int, ...] | str
-"Predicate ref type, int tuple or string."
+# PredicateRef = tuple[int, ...] | str
+# "Predicate ref type, int tuple or string."
 
-PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
-"Predicated sentence spec type."
+# PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
+# "Predicated sentence spec type."
 
-QuantifiedSpec = tuple[str, BiCoords, IdentType]
-"Quantified sentence spec type."
+# QuantifiedSpec = tuple[str, BiCoords, IdentType]
+# "Quantified sentence spec type."
 
 # OperandsSpec = tuple            #tuple[IdentType, ...]
 # "Operands argument type."
@@ -516,20 +509,13 @@ QuantifiedSpec = tuple[str, BiCoords, IdentType]
 # PredsItemRef  = PredicateRef  | Predicate
 # "Predicates store item ref."
 
-from pytableaux.lang.lex import (Atomic, Constant, Lexical, Operator,
-                                 Predicate, Predicated, Quantifier, Sentence,
-                                 Variable)
-
 from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.lex import LexType
+from pytableaux.lang.lex import Atomic  # OperCallArg,; QuantifiedItem,
+from pytableaux.lang.lex import (Constant, Lexical, LexType, Operated,
+                                 Operator, Predicate, Predicated, Quantified,
+                                 Quantifier, Sentence, Variable)
+from pytableaux.lang.parsing import Parser, ParseTable
 from pytableaux.lang.writing import LexWriter
 
 # ParseTableKey   = LexType|Marking|type[Predicate.System]
 # "ParseTable key type."
-
-from pytableaux.lang.lex import (Operated, 
-                Quantified,
-                # OperCallArg,
-                # QuantifiedItem,
-            )
-from pytableaux.lang.parsing import Parser, ParseTable

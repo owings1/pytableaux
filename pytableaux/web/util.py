@@ -34,7 +34,7 @@ from pytableaux.lang.lex import Lexical
 from pytableaux.tools import abcs, mappings
 
 if TYPE_CHECKING:
-    from pytableaux.tools.typing import _T
+    from pytableaux.typing import _T
     class HasRegistry:
         registry: CollectorRegistry
     MetricType = pmc.Metric|pm.MetricWrapperBase|HasRegistry

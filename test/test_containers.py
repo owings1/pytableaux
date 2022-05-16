@@ -1,11 +1,10 @@
-from .tutils import BaseSuite, get_subclasses, skip
-from itertools import filterfalse
 import operator as opr
-from pytest import raises
-from typing import TYPE_CHECKING
+from collections import deque
+from itertools import filterfalse
+from typing import TypeVar
+
 from pytableaux.errors import *
 from pytableaux.lang.lex import *
-
 from pytableaux.tools import abcs
 from pytableaux.tools.abcs import *
 from pytableaux.tools.events import EventsListeners, Listeners
@@ -14,13 +13,11 @@ from pytableaux.tools.linked import *
 from pytableaux.tools.mappings import *
 from pytableaux.tools.sequences import *
 from pytableaux.tools.sets import *
+from pytest import raises
 
-if TYPE_CHECKING:
-    from pytableaux.tools.typing import _T
+from .tutils import BaseSuite, get_subclasses, skip
 
-from collections import deque
-
-
+_T = TypeVar('_T')
 
 def subclasses(supcls: type[_T]) -> qset[type[_T]]:
     classes = qset()
@@ -239,8 +236,9 @@ class TestMappingApi(BaseSuite):
         from pytableaux.proof.common import Target
         from pytableaux.proof.helpers import BranchCache
         from pytableaux.proof.tableaux import TreeStruct
-        from pytableaux.web.util import AppMetrics
         from pytableaux.tools.doc import AutodocProcessor
+        from pytableaux.web.util import AppMetrics
+        from pytableaux.logics import Registry
 
         rule = self.rule_tab('Conjunction').rule
 
@@ -262,7 +260,8 @@ class TestMappingApi(BaseSuite):
         )
 
         skip = {
-            AutodocProcessor.Record
+            AutodocProcessor.Record,
+            Registry,
         }
         for cls in classes:
             if cls in skip:

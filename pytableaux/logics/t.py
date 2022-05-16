@@ -23,11 +23,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from pytableaux.lang.lex import Atomic
-from pytableaux.logics import k as K
+import pytableaux.logics.k as K
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from pytableaux.proof import Access, adds, group, swnode
-from pytableaux.tools.typing import LogicType
+from pytableaux.logics import LogicType
 
 name = 'T'
 

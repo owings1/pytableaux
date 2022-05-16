@@ -30,7 +30,7 @@ from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import ItemMapEnum, dmap
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.timing import Counter, StopWatch
-from pytableaux.tools.typing import LogicType
+from pytableaux.logics import LogicType
 
 
 
@@ -70,33 +70,24 @@ class HelperAttr(str, abcs.Ebc):
 class RuleAttr(str, abcs.Ebc):
     'Special ``Rule`` class attribute names.'
 
-    Helpers     = 'Helpers'
+    Helpers = 'Helpers'
     "Rule helper classes."
-
-    Timers      = 'Timers'
+    Timers = 'Timers'
     "Rule timer names."
-
     DefaultOpts = '_defaults'
     "Rule default options."
-
-    OptKeys     = '_optkeys'
+    OptKeys = '_optkeys'
     "Rule option keys."
-
-    Name        = 'name'
+    Name = 'name'
     "Rule class name attribute."
-
     NodeFilters = 'NodeFilters'
     "For `FilterHelper`."
-
     IgnoreTicked = 'ignore_ticked'
     "For `FilterHelper`."
-
     ModalOperators = 'modal_operators'
     "For `MaxWorlds` helper."
-
     Modal = 'modal'
     "Modal flag."
-
     Legend = 'legend'
     "Rule legend"
 
@@ -113,7 +104,6 @@ class NodeAttr(ProofAttr):
     flag    = 'flag'
     is_flag = 'is_flag'
     world   = 'world'
-
 
 class PropMap(ItemMapEnum):
 
@@ -205,12 +195,12 @@ class TabFlag(abcs.FlagEnum):
 
 #******  Auxilliary Classes
 class StepEntry(NamedTuple):
-    #: The rule instance.
     rule   : 'Rule'
-    #: The target produced by the rule.
+    "The rule instance."
     target : 'Target'
-    #: The duration counter.
+    "The target produced by the rule."
     duration: Counter
+    "The duration counter."
 
     def __repr__(self):
         return f'<StepEntry:{id(self)}:{self.rule.name}:{self.target.type}>'
@@ -539,7 +529,6 @@ def sdnode(s, d):
     'Make a sentence/designated node dict.'
     return dict(sentence = s, designated = d)
 
-# def swnode(s: Sentence, w: int|None):
 def swnode(s, w):
     'Make a sentence/world node dict. Excludes world if None.'
     if w is None:

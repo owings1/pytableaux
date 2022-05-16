@@ -48,8 +48,7 @@ import re
 import traceback
 from dataclasses import dataclass
 from importlib import import_module
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Container, Generic,
-                    Mapping)
+from typing import TYPE_CHECKING, Any, Mapping, NamedTuple
 
 import jinja2
 import sphinx.directives
@@ -58,12 +57,11 @@ from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
-from pytableaux.logics import registry as logic_registry
-from pytableaux.lang import Notation, Operator, Predicates, Parser
-from pytableaux.tools import EMPTY_MAP, MapProxy, NameTuple, abcs, abstract
+from pytableaux import logics, EMPTY_SET
+from pytableaux.lang import Operator, Parser, Predicates
+from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
-from pytableaux.tools.sets import EMPTY_SET
 from sphinx.ext import viewcode
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
@@ -71,13 +69,11 @@ from sphinx.util.docutils import SphinxRole
 
 if TYPE_CHECKING:
     from typing import overload
-    from pytableaux.tools.typing import _T
 
     import sphinx.config
     from sphinx.application import Sphinx
     from sphinx.config import Config
     from sphinx.environment import BuildEnvironment
-    from sphinx.util.typing import RoleFunction
 
 __all__ = (
     'AutodocProcessor',
@@ -140,8 +136,7 @@ APPSTATE: dict[Sphinx, dict] = {}
 
 def setup(app: Sphinx):
 
-    from pytableaux.tools.doc import (directives, processors, roles,
-                                      tables)
+    from pytableaux.tools.doc import directives, processors, roles, tables
 
     APPSTATE[app] = {}
     app.connect('config-inited', init_app)
@@ -200,7 +195,7 @@ class AppEnvMixin(abcs.Abc):
         return getattr(self.current_module(), self.env.ref_context['py:class'])
 
     def current_logic(self):
-        return logic_registry(self.current_module())
+        return logics.registry(self.current_module())
 
     def viewcode_target(self, obj = None):
         if obj is None:
@@ -216,16 +211,16 @@ class RenderMixin(AppEnvMixin):
 
 class RoleDirectiveMixin(AppEnvMixin):
 
-    option_spec: ClassVar[Mapping[str, Callable]] = EMPTY_MAP
+    option_spec = EMPTY_MAP
 
-    options: dict[str, Any]
+    options: dict
 
     def set_classes(self, opts = NOARG, /) -> qset[str]:
         if opts is NOARG:
             opts = self.options
         return qset(set_classes(opts).get('classes', EMPTY_SET))
 
-    def parse_opts(self, rawopts: Mapping[str, Any]) -> dict[str, Any]:
+    def parse_opts(self, rawopts):
         optspec = self.option_spec
         todo = dict(rawopts)
         builder = {}
@@ -306,7 +301,7 @@ class DirectiveHelper(RoleDirectiveMixin):
 
 class BaseRole(SphinxRole, RoleDirectiveMixin):
 
-    patterns: ClassVar[dict[str, str|re.Pattern]] = {}
+    patterns = {}
 
     @property
     def app(self) -> Sphinx:
@@ -448,20 +443,20 @@ class ReplaceProcessor(Processor):
 
 # ------------------------------------------------
 
-class Tabler(list[list[str]], abcs.Abc):
+class Tabler(list, abcs.Abc):
 
     header: list[str]
-    body: list[list[str]]
-    meta: dict[str, Any]
+    body: list
+    meta: dict
 
-    def __init__(self, body: list[list[str]], header: list[str]|None, /, **meta):
+    def __init__(self, body, header, /, **meta):
         self.header = header
         self.body = body
         self.meta = meta
         self.append(header)
         self.extend(body)
 
-    def apply_repr(self, reprfunc: Callable, /) -> Tabler:
+    def apply_repr(self, reprfunc, /) -> Tabler:
         for row in self:
             for i, v in enumerate(row):
                 if not isinstance(v, str):
@@ -486,15 +481,10 @@ re_comma = re.compile(r',')
 re_nonslug_plus = re.compile(r'[^a-zA-Z0-9_-]+')
 "One or more non alpha, num, _ or - chars"
 
-if TYPE_CHECKING:
-    @overload
-    def classopt(arg: Any) -> list[str]: ...
-    @overload
-    def flagopt(arg: Any) -> None: ...
-
 classopt = class_option
+del(class_option)
 
-def boolopt(arg: str, /) -> bool:
+def boolopt(arg: str, /):
     if arg:
         arg = arg.strip()
     else:
@@ -517,7 +507,7 @@ def cleanws(arg: str, /) -> str:
     return re_space.sub('', arg)
 
 
-def opersopt(arg: str, /) -> tuple[Operator, ...]:
+def opersopt(arg: str, /):
     """Operators list, from comma-separated input."""
     return tuple(map(Operator,
         (s.strip() for s in re_comma.split(arg))
@@ -551,15 +541,14 @@ def choice_or_flag(*args, default = None, **kw):
         return chopt(str)
     return opt
 
-del(class_option)
 
 # ------------------------------------------------
 
 
-def snakespace(name: str) -> str:
+def snakespace(name):
     return re.sub(r'([A-Z])', r' \1', name)[1:]
 
-def set_classes(opts: dict) -> dict:
+def set_classes(opts):
     if 'class' in opts:
         if opts['class'] is None:
             del(opts['class'])
@@ -571,24 +560,13 @@ def set_classes(opts: dict) -> dict:
 
 # ------------------------------------------------
 
-class RoleItem(NameTuple, Generic[_T]):
+class RoleItem(NamedTuple):
     name: str
-    inst: _T
-
-if TYPE_CHECKING:
-
-    @overload
-    def role_entry(rolecls: type[_T]) -> RoleItem[_T]|None: ...
-
-    @overload
-    def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
-
-    @overload
-    def role_entry(roleish: str) -> RoleItem[RoleFunction]|None: ...
+    inst: object
 
 def role_entry(roleish):
     'Get loaded role name and instance, by name, instance or type.'
-    idx: dict = _roles
+    idx = _roles
     if isinstance(roleish, str):
         inst = idx.get(roleish)
         if inst is None:
@@ -606,15 +584,15 @@ def role_entry(roleish):
             return None
     return RoleItem(name, inst)
 
-def role_instance(roleish: type[_T]) -> _T|None:
+def role_instance(roleish):
     'Get loaded role instance, by name, instance or type.'
     return role_entry(roleish).inst
 
-def role_name(roleish: type|RoleFunction) -> str|None:
+def role_name(roleish):
     'Get loaded role name, by name, instance or type.'
     return role_entry(roleish).name
 
-def predsopt(arg: str, /) -> Predicates:
+def predsopt(arg):
     """Option spec for list of predicate specs.
     
     Example::

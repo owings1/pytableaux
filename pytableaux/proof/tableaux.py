@@ -40,25 +40,23 @@ from pytableaux.proof import (BranchEvent, BranchStat, RuleClassFlag,
                               StepEntry, TabEvent, TabFlag, TabStatKey,
                               TabTimers)
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.tools import EMPTY_MAP, abstract, closure, isstr
+from pytableaux.tools import abstract, closure, isstr
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.hybrids import EMPTY_QSET, qset, qsetf
+from pytableaux.tools.hybrids import qset, qsetf
 from pytableaux.tools.linked import linqset
 from pytableaux.tools.mappings import MapProxy, dmap, dmapns
 from pytableaux.tools.sequences import (SeqCover, SequenceApi, absindex, seqf,
                                         seqm)
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.timing import Counter, StopWatch
-from pytableaux.tools.typing import LogicType
 
 if TYPE_CHECKING:
     from typing import ClassVar, overload
 
-    from pytableaux.logics import LogicLookupKey
     from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem
-    from pytableaux.tools.typing import _F
+    from pytableaux.typing import _F
 
 
 __all__ = (
@@ -696,80 +694,32 @@ class RuleGroups(SequenceApi[RuleGroup]):
 class Tableau(Sequence[Branch], EventEmitter):
     'A tableau proof.'
 
-    #: The unique object ID of the tableau.
-    id: int
-
-    #: The logic of the tableau.
-    logic: LogicType|None
-
-    #: The argument of the tableau.
-    argument: Argument|None
-
-    #: Alias for ``self.logic.TableauxSystem``
-    System: TableauxSystem|None
-
-    #: The rule instances.
     rules: TabRuleGroups
+    "The rule instances."
 
-    #: The build options.
     opts: Mapping[str, bool|int|None]
+    "The build options."
 
-    #: The FlagEnum value.
-    flag: TabFlag
-
-    #: Whether the tableau is completed. A tableau is `completed` iff all rules
-    #: that can be applied have been applied.
-    completed: bool
-
-    #: Whether the tableau is finished. A tableau is `finished` iff `any` of the
-    #: following conditions apply:
-    #:
-    #: i. The tableau is `completed`.
-    #: ii. The `max_steps` option is met or exceeded.
-    #: iii. The `build_timeout` option is exceeded.
-    #: iv. The ``finish()`` method is manually invoked.
-    finished: bool
-
-    #: Whether the tableau is finished prematurely. A tableau is `premature` iff
-    #: it is `finished` but not `completed`.
-    premature: bool
-
-    #: Whether the tableau's argument is valid (proved). A tableau with an
-    #: argument is `valid` iff it is `completed` and it has no open branches.
-    #: If the tableau is not completed, or it has no argument, the value will
-    #: be ``None``.
-    valid: bool|None
-
-    #: Whether the tableau's argument is invalid (disproved). A tableau with
-    #: an argument is `invalid` iff it is `completed` and it has at least one
-    #: open branch. If the tableau is not completed, or it has no argument,
-    #: the value will be ``None``.
-    invalid: bool|None
-
-    #: The current step number. This is the number of rule applications, plus ``1``
-    #: if the argument trunk is built.
-    current_step: int
-
-    #: Ordered view of the open branches.
     open: Sequence[Branch]
+    "Ordered view of the open branches."
 
-    #: The history of rule applications.
     history: Sequence[StepEntry]
+    "The history of rule applications."
 
-    #: A tree structure of the tableau. This is generated after the tableau
-    #: is finished. If the `build_timeout` was exceeded, the tree is `not`
-    #: built.
     tree: TreeStruct
+    """A tree structure of the tableau. This is generated after the tableau
+    is finished. If the `build_timeout` was exceeded, the tree is `not`
+    built."""
 
-    #: The stats, built after finished.
     stats: dict[str, Any]
+    "The stats, built after finished."
 
-    #: The models, built after finished if the tableau is `invalid` and the
-    #: `is_build_models` option is enabled.
     models: setf[BaseModel]
+    """The models, built after finished if the tableau is `invalid` and the
+    `is_build_models` option is enabled."""
 
-    #: The tableau timers.
     timers: TabTimers
+    "The tableau timers."
 
     _defaults = MapProxy(dict(
         is_group_optim  = True,
@@ -778,7 +728,13 @@ class Tableau(Sequence[Branch], EventEmitter):
         max_steps       = None,
     ))
 
-    def __init__(self, logic: LogicLookupKey = None, argument: Argument = None, /, **opts):
+    def __init__(self, logic = None, argument: Argument = None, /, **opts):
+        """
+        Args:
+            logic: The logic name or module.
+            argument: The argument for the tableau.
+            **opts: The build options.
+        """
 
         # Events init
         super().__init__(*TabEvent)
@@ -812,15 +768,22 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.argument = argument
 
     @property
-    def id(self) -> int:
+    def id(self):
+        "The unique object ID of the tableau."
         return id(self)
 
     @property
     def flag(self):
+        "The :class:`FlagEnum` value."
         return self.__flag
 
     @property
     def argument(self):
+        """The argument of the tableau.
+
+        When setting this value, if the tableau has a logic set, then the
+        trunk is automatically built.
+        """
         try:
             return self.__argument
         except AttributeError:
@@ -829,6 +792,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     @property
     def logic(self):
+        "The logic of the tableau."
         try:
             return self.__logic
         except AttributeError:
@@ -837,6 +801,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     @property
     def System(self) -> TableauxSystem|None:
+        "Alias for :attr:`logic.TableauxSystem`"
         try:
             return self.logic.TableauxSystem
         except AttributeError:
@@ -844,16 +809,13 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     @argument.setter
     def argument(self, argument: Argument):
-        """Setter for ``argument``. If the tableau has a logic set, then the
-        trunk is automatically built."""
         self.__check_not_started()
         self.__argument = Argument(argument)
         if self.logic is not None:
             self.__build_trunk()
 
     @logic.setter
-    def logic(self, logic: LogicLookupKey):
-        'Setter for ``logic``. Assumes building has not started.'
+    def logic(self, logic):
         self.__check_not_started()
         self.__logic = registry(logic)
         self.rules.clear()
@@ -863,30 +825,52 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     @property
     def finished(self):
+        """Whether the tableau is finished. A tableau is `finished` iff `any` of the
+        following conditions apply:
+        
+        * The tableau is `completed`.
+        * The `max_steps` option is met or exceeded.
+        * The `build_timeout` option is exceeded.
+        * The :attr:`finish` method is manually invoked.
+        """
         return TabFlag.FINISHED in self.__flag
 
     @property
     def completed(self):
+        """Whether the tableau is completed. A tableau is `completed` iff all rules
+        that can be applied have been applied."""
         return TabFlag.FINISHED in self.__flag and TabFlag.PREMATURE not in self.__flag
 
     @property
     def premature(self):
+        """Whether the tableau is finished prematurely. A tableau is `premature` iff
+        it is `finished` but not `completed`."""
         return TabFlag.FINISHED in self.__flag and TabFlag.PREMATURE in self.__flag
 
     @property
     def valid(self):
+        """Whether the tableau's argument is valid (proved). A tableau with an
+        argument is `valid` iff it is :attr:`completed` and it has no open branches.
+        If the tableau is not completed, or it has no argument, the value will
+        be None."""
         if not self.completed or self.argument is None:
             return None
         return len(self.open) == 0
 
     @property
     def invalid(self) -> bool:
+        """Whether the tableau's argument is invalid (disproved). A tableau with
+        an argument is `invalid` iff it is :attr:`completed` and it has at least one
+        open branch. If the tableau is not completed, or it has no argument,
+        the value will be None."""
         if not self.completed or self.argument is None:
             return None
         return len(self.open) > 0
 
     @property
     def current_step(self) -> int:
+        """The current step number. This is the number of rule applications, plus 1
+        if the argument trunk is built."""
         return len(self.history) + (TabFlag.TRUNK_BUILT in self.__flag)
 
     def build(self) -> Tableau:

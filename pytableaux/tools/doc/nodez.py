@@ -17,7 +17,7 @@
 #
 # ------------------
 """
-pytableaux.tools.doc.write
+pytableaux.tools.doc.nodez
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
@@ -32,20 +32,10 @@ from pytableaux.lang import LexWriter, Notation
 from pytableaux.tools.doc import ConfKey
 from sphinx.util import logging
 from sphinx.writers.html5 import HTML5Translator as BaseTranslator
-
 if TYPE_CHECKING:
-    from typing import overload
-
-    import sphinx.writers.html5
-    from docutils.writers._html_base import HTMLTranslator
-    from pytableaux.lang import RenderSet
-    from sphinx import addnodes
+    from pytableaux.tools.doc.nodez import BaseTranslator
     from sphinx.application import Sphinx
-    from sphinx.builders import Builder
-    @overload
-    class BaseTranslator(sphinx.writers.html5.HTML5Translator, HTMLTranslator, nodes.NodeVisitor):...
-else:
-    from builtins import object as HTMLTranslator
+
 
 __all__ = (
     'sentence',
@@ -57,21 +47,19 @@ logger = logging.getLogger(__name__)
 
 class HTML5Translator(BaseTranslator):
 
-    document: addnodes.document
-    body: list[str]
 
     class OptStacks(NamedTuple):
-        notn: list[tuple[Element, Notation|str]]
-        charset: list[tuple[Element, str]]
+        notn: list
+        charset: list
 
-    def __init__(self, document, builder: Builder) -> None:
+    def __init__(self, document, builder):
         super().__init__(document, builder)
         self.optstacks = self.OptStacks([], [])
 
-    def visit_block(self, node: Element):
+    def visit_block(self, node):
         self.body.append(self.starttag(node, 'div', ''))
 
-    def depart_block(self, node: Element):
+    def depart_block(self, node):
         self.body.append('</div>\n')
 
     def visit_sentence(self, node: Element):
@@ -89,15 +77,15 @@ class HTML5Translator(BaseTranslator):
                 logger.error(f'Failed to render sentence {s} for node: {node}, '
                     f' {self.document["source"]}')
                 raise
-        self.body.append(content)
+            self.body.append(content)
 
-    def depart_sentence(self, node: Element):
+    def depart_sentence(self, node):
         self.body.append('</span>')
         for stack in self.optstacks:
             if stack and stack[-1] is node:
                 stack.pop()
 
-    def get_lwargs(self, node: Element) -> tuple[Notation|str, str]:
+    def get_lwargs(self, node: Element):
         stacks = self.optstacks
         if (notn := node.get('notn')):
             stacks.notn.append((node, Notation(notn)))

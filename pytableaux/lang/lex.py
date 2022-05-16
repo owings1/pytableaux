@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+
 """
 pytableaux.lang.lex
 -------------------
@@ -27,20 +28,11 @@ from types import FunctionType
 from typing import (TYPE_CHECKING, Annotated, Any, ClassVar, Iterable,
                     Iterator, Literal, Mapping, Sequence, SupportsIndex)
 
-from pytableaux import _ENV, __docformat__, tools, errors
+from pytableaux import _ENV, __docformat__, errors, tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import (
-    # AtomicSpec,
-    BiCoords,
-    # IdentType,
-    LangCommonEnum,
-                                 LangCommonMeta, LexicalAbcMeta,
-                                 #OperandsSpec,
-                            #  OperatedSpec,
-                             ParameterSpec, PredicatedSpec,
-                             PredicateRef, PredicateSpec, QuantifiedSpec,
-                             SpecType, SysPredEnumMeta, TriCoords, nosetattr,
-                             raiseae)
+from pytableaux.lang import (BiCoords, LangCommonEnum, LangCommonMeta,
+                             LexicalAbcMeta, SysPredEnumMeta, TriCoords,
+                             nosetattr, raiseae)
 from pytableaux.tools import MapProxy, abcs
 from pytableaux.tools.decorators import lazy, membr, wraps
 from pytableaux.tools.hybrids import qsetf
@@ -104,7 +96,7 @@ class Lexical:
     TYPE: ClassVar[LexType]
     ":class:`LexType` enum instance for concrete classes."
 
-    spec: SpecType
+    spec: tuple
     """The arguments roughly needed to construct, given that we know the
     type, i.e. in intuitive order. A tuple, possibly nested, containing
     numbers or strings.
@@ -362,10 +354,6 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
         'strings',
     )
 
-    spec: tuple[str]
-
-    ident: tuple[str, tuple[str]]
-
 
     order: int
     "A number to signify relative member order (need not be sequence index)."
@@ -467,8 +455,6 @@ class CoordsItem(LexicalAbc):
 
     Coords = BiCoords
 
-    spec: BiCoords
-
     index: int
     "The `index` coordinate."
 
@@ -533,8 +519,6 @@ class Parameter(CoordsItem):
 
     __slots__ = EMPTY_SET
 
-    spec: ParameterSpec
-
     is_constant: bool
     "Whether the parameter is a :class:`Constant`."
 
@@ -564,7 +548,7 @@ class Quantifier(LexicalEnum):
     Universal   = (1, 'Universal')
     "The :s:`L` Universal quantifier"
 
-    def __call__(self, *spec: QuantifiedSpec) -> Quantified:
+    def __call__(self, *spec) -> Quantified:
         'Quantify a variable over a sentence.'
         return Quantified(self, *spec)
 
@@ -849,8 +833,6 @@ class Predicate(CoordsItem):
 
     Coords = TriCoords
 
-    spec: PredicateSpec
-
     bicoords: BiCoords
     "The symbol coordinates `(index, subscript)`."
 
@@ -864,7 +846,7 @@ class Predicate(CoordsItem):
     "The name, for system predicates. Same as :attr:`spec` for user predicates."
 
     @lazy.prop
-    def refs(self: Predicate) -> qsetf[PredicateRef]:
+    def refs(self: Predicate):
         """References used to create indexes for predicate stores.
 
         ================  =============================  ==========================================
@@ -882,7 +864,7 @@ class Predicate(CoordsItem):
         return qsetf({self.spec, self.ident, self.bicoords, self.name})
 
 
-    def __call__(self, *spec: PredicatedSpec) -> Predicated:
+    def __call__(self, *spec):
         'Apply the predicate to parameters to make a predicated sentence.'
         return Predicated(self, *spec)
 
@@ -1023,9 +1005,6 @@ class Atomic(CoordsItem, Sentence):
         'variables',
     )
 
-    spec: BiCoords
-    "The sentence spec."
-
     @classmethod
     def first(cls):
         return cls(0, 0)
@@ -1081,8 +1060,6 @@ class Predicated(Sentence, Sequence[Parameter]):
         'sort_tuple',
         'spec',
     )
-
-    spec: PredicatedSpec
 
     predicate: Predicate
     "The predicate."
@@ -1173,8 +1150,6 @@ class Quantified(Sentence, Sequence):
         'spec',
         'variable',
     )
-
-    spec: QuantifiedSpec
 
     quantifier: Quantifier
     "The quantifier."

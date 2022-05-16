@@ -38,11 +38,8 @@ from sphinx.util import logging
 from sphinx.util.docutils import ReferenceRole
 
 if TYPE_CHECKING:
-    from docutils.nodes import Element, Node, system_message
-    from pytableaux.tools.typing import _F
+    from pytableaux.typing import _F
     from sphinx.application import Sphinx
-    from sphinx.environment import BuildEnvironment
-    from sphinx.transforms import post_transforms
     from stubs.docutils import nodes  # type: ignore
 
 __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)

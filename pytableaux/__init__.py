@@ -32,7 +32,6 @@ del(_package_info)
 
 # ----- errors, tools
 
-import pytableaux.tools.typing
 from pytableaux import errors, tools
 
 import pytableaux.tools.abcs
