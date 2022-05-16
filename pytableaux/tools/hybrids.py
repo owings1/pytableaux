@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from itertools import filterfalse
-from typing import TYPE_CHECKING, Iterable, Iterator, SupportsIndex
+from typing import Iterable, SupportsIndex
 
 from pytableaux.errors import (DuplicateValueError, Emsg,
                                check)
@@ -31,10 +31,7 @@ from pytableaux.tools import abstract, abcs
 from pytableaux.tools.sequences import (EMPTY_SEQ, MutableSequenceApi,
                                         SequenceApi, seqf, seqm, slicerange)
 from pytableaux.tools.sets import EMPTY_SET, MutableSetApi, SetApi, setf, setm
-from pytableaux.tools.typing import VT, IndexType
 
-if TYPE_CHECKING:
-    from typing import overload, Callable, Any
 
 __all__ = (
     'EMPTY_QSET',
@@ -291,8 +288,8 @@ class qset(MutableSequenceSet):
 
 
     @abcs.hookable('cast')
-    def __setitem__(self, key: IndexType, value, /, *,
-        cast: Callable = None
+    def __setitem__(self, key, value, /, *,
+        cast = None
     ):
         'Set value by index/slice. Raises ``DuplicateValueError``.'
 
@@ -316,7 +313,7 @@ class qset(MutableSequenceSet):
 
     @abcs.hookable('check', 'done')
     def __setitem_index__(self, index: SupportsIndex, arriving, /, *,
-        check: Callable = None, done: Callable = None,
+        check = None, done = None,
     ):
         'Index setitem Implementation'
 
@@ -354,7 +351,7 @@ class qset(MutableSequenceSet):
 
     @abcs.hookable('check', 'done')
     def __setitem_slice__(self, slice_: slice, arriving: Collection, /, *,
-        check: Callable = None, done: Callable = None,
+        check = None, done = None,
     ):
         'Slice setitem Implementation'
 

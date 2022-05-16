@@ -23,16 +23,13 @@ from __future__ import annotations
 
 from collections import deque
 from itertools import chain, repeat
-from typing import (TYPE_CHECKING, ClassVar, Iterable, MutableSequence,
-                    Sequence, Sized, SupportsIndex, TypeVar)
+from typing import (ClassVar, Iterable, MutableSequence,
+                    Sequence, Sized, SupportsIndex)
 
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import abcs, abstract, closure
 from pytableaux.tools.sets import EMPTY_SET, setf
-VT = TypeVar('VT')
 
-if TYPE_CHECKING:
-    from typing import overload
 
 __all__ = (
     'absindex',
@@ -128,7 +125,7 @@ class SequenceApi(Sequence, abcs.Copyable):
         '''Return the type (or callable) to construct a new instance from __radd__.'''
         return cls._concat_res_type(othrtype)
 
-class seqf(tuple[VT, ...], SequenceApi):
+class seqf(tuple, SequenceApi):
     'Frozen sequence, fusion of tuple and SequenceApi.'
 
     # NB: tuple implements all equality and ordering methods,

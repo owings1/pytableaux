@@ -23,17 +23,14 @@ from __future__ import annotations
 
 from enum import Enum
 from itertools import filterfalse
-from typing import TYPE_CHECKING, Callable, Mapping
+from typing import Callable, Mapping
 
 from pytableaux.errors import check, Emsg
 from pytableaux.tools import abcs
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.linked import linqset
 from pytableaux.tools.mappings import dmap
-from pytableaux.tools.typing import F
 
-if TYPE_CHECKING:
-    from typing import Iterable, overload
 
 __all__ = (
     'EventEmitter',
@@ -63,7 +60,7 @@ class EventEmitter(abcs.Copyable):
     def emit(self, event: EventId, *args, **kw) -> int:
         return self.events.emit(event, *args, **kw)
 
-    def copy(self, *, listeners:bool = False):
+    def copy(self, *, listeners = False):
         """Copy event emitter.
         
         Args:
@@ -119,7 +116,7 @@ class Listeners(linqset[Listener]):
 
     __slots__ = 'emitcount', 'callcount'
 
-    def __init__(self, values: Iterable[Listener] = None):
+    def __init__(self, values = None):
         super().__init__(values)
         self.callcount = 0
         self.emitcount = 0
@@ -181,7 +178,7 @@ class EventsListeners(dmap[EventId, Listeners]):
         del(self[event])
 
     @abcs.abcf.temp
-    def normargs(method: F) -> F:
+    def normargs(method):
         '''
         Possible ways to call on/once/off ...
 
@@ -212,17 +209,17 @@ class EventsListeners(dmap[EventId, Listeners]):
         return f
 
     @normargs
-    def on(self, event: EventId, *cbs: Callable):
+    def on(self, event: EventId, *cbs):
         """Attach listeners."""
         self[event].extend(Listener(cb, False) for cb in cbs)
 
     @normargs
-    def once(self, event: EventId, *cbs: Callable):
+    def once(self, event: EventId, *cbs):
         """Attach single-call listeners."""
         self[event].extend(Listener(cb, True) for cb in cbs)
 
     @normargs
-    def off(self, event: EventId, *cbs: Callable):
+    def off(self, event: EventId, *cbs):
         """Detach listeners."""
         for _ in map(self[event].discard, cbs): pass
 
@@ -243,7 +240,7 @@ class EventsListeners(dmap[EventId, Listeners]):
         self.callcount += callcount
         return callcount
 
-    def copy(self, *, listeners:bool = False):
+    def copy(self, *, listeners = False):
         """Copy events.
         
         Args:
@@ -261,9 +258,6 @@ class EventsListeners(dmap[EventId, Listeners]):
         # Override for type check
         super().__setitem__(key, check.inst(value, Listeners))
 
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def update(self, it: Iterable = None, /, **kw):...
 
     # Alternate update impl uses setitem.
     update = dmap._setitem_update

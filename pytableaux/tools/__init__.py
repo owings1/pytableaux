@@ -29,7 +29,6 @@ from types import FunctionType, MappingProxyType, new_class
 from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping
 
 from pytableaux import __docformat__
-from pytableaux.tools.typing import T
 
 __all__ = (
     'abstract',
@@ -44,7 +43,9 @@ __all__ = (
 
 if TYPE_CHECKING:
 
-    def classalias(orig: type[T]) -> Callable[[type], type[T]]:
+    from pytableaux.tools.typing import _T
+
+    def classalias(orig: type[_T]) -> Callable[[type], type[_T]]:
         """Decorator factory for class alias for type hinting.
 
         Usage::
@@ -58,7 +59,7 @@ if TYPE_CHECKING:
         Returns:
             A decorator that ignores its argument and returns `orig`.
         """
-        def d(_: type) -> type[T]:
+        def d(_: type) -> type[_T]:
             return orig
         return d
 
@@ -66,7 +67,7 @@ MapProxy = MappingProxyType
 EMPTY_MAP = MapProxy({})
 NOARG = object
 
-def closure(func: Callable[..., T]) -> T:
+def closure(func: Callable[..., _T]) -> _T:
     """Closure decorator calls the argument and returns its return value.
     If the return value is a function, updates its wrapper.
     """
@@ -75,7 +76,7 @@ def closure(func: Callable[..., T]) -> T:
         functools.update_wrapper(ret, func)
     return ret
 
-def thru(obj: T) -> T:
+def thru(obj: _T) -> _T:
     'Return the argument.'
     return obj
 

@@ -28,7 +28,6 @@ from pytableaux.errors import Emsg
 from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure, dxopy
 from pytableaux.tools.decorators import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import RsetSectKT, T
 
 if TYPE_CHECKING:
     from typing import overload
@@ -125,26 +124,6 @@ class LexicalAbcMeta(LangCommonMeta):
 
 class SysPredEnumMeta(LangCommonEnumMeta):
     "Meta class for special system predicates enum."
-
-    if TYPE_CHECKING:
-
-        __members__: Mapping[str, Predicate]
-        _lookup: abcs.EnumLookup[Predicate]
-        _member_map_: Mapping[str, Predicate]
-        _seq: Sequence[Predicate]
-
-        @overload
-        def __iter__(cls) -> Iterator[Predicate]: ...
-        @overload
-        def __reversed__(cls) -> Iterator[Predicate]: ...
-        @overload
-        def __getitem__(cls, key, /) -> Predicate: ...
-        @overload
-        def __call__(cls, value, /) -> Predicate: ...
-        @overload
-        def get(cls, key, /) -> Predicate: ...
-        @overload
-        def get(cls, key, default: T, /) -> Predicate|T: ...
 
 #==========================+
 #  Base classes            |
@@ -402,7 +381,7 @@ class TableStore(metaclass = LangCommonMeta):
                 cls.fetch(notn, key)
 
 
-class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
+class RenderSet(TableStore, Mapping):
     'Lexical writer table data class.'
 
     default_fetch_key = 'ascii'
@@ -410,15 +389,14 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
     notation: Notation
     "The notation."
 
-    renders: Mapping[RsetSectKT, Callable[..., str]]
+    renders: Mapping
     "Render functions."
 
-    strings: Mapping[RsetSectKT, str]
+    strings: Mapping
     "Fixed strings mapping."
 
-    data: Mapping[str, Mapping[RsetSectKT, Any]]
-
-    keypair: tuple[Notation, str]
+    data: Mapping
+    keypair: tuple
 
     @property
     def charset(self) -> str:
@@ -439,7 +417,7 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
         'hash',
     )
 
-    def __init__(self, data: Mapping[str, Any], keypair: tuple[Notation, str], /):
+    def __init__(self, data, keypair, /):
         self.data = data = dxopy(data, True)
         self.__getitem__ = data.__getitem__
         self.keypair = keypair
@@ -450,7 +428,7 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
         notn.charsets.add(self.charset)
         notn.rendersets.add(self)
 
-    def string(self, ctype: Any, value: Any) -> str:
+    def string(self, ctype, value) -> str:
         if ctype in self.renders:
             return self.renders[ctype](value)
         return self.strings[ctype][value]
@@ -478,16 +456,6 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
         ktup = *(*r.keys(), *s.keys()),
         vtup = *((*v.items(),) if isinstance(v, Mapping) else v for v in vv),
         return hash((ktup, vtup))
-
-    if TYPE_CHECKING:
-
-        @staticmethod
-        @overload
-        def load(notn, key, data: Mapping, /) -> RenderSet: ...
-
-        @staticmethod
-        @overload
-        def fetch(notn, key = None, /) -> RenderSet: ...
 
 #==================================================+
 #  Type aliases -- used a runtime with isinstance  |

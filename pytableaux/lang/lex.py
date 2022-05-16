@@ -47,7 +47,6 @@ from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.mappings import DequeCache, dmap
 from pytableaux.tools.sequences import EMPTY_SEQ, seqf
 from pytableaux.tools.sets import EMPTY_SET, setf
-from pytableaux.tools.typing import T
 
 if TYPE_CHECKING:
     from typing import overload
@@ -176,14 +175,14 @@ class Lexical:
         except StopIteration:
             pass
 
-    if TYPE_CHECKING:
+    # if TYPE_CHECKING:
 
-        # @overload
-        def next(self: T, **kw) -> T: ...
+    #     # @overload
+    #     def next(self: T, **kw) -> T: ...
 
-        @classmethod
-        # @overload
-        def gen(cls: type[T], stop: int|None, /, first = None, **nextkw) -> Iterator[T]: ...
+    #     @classmethod
+    #     # @overload
+    #     def gen(cls: type[T], stop: int|None, /, first = None, **nextkw) -> Iterator[T]: ...
 
 
     #******  Equality, Ordering, & Comparison

@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import operator as opr
 from itertools import repeat
-from typing import TYPE_CHECKING, Any, Iterable, SupportsIndex, TypeVar
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar
 
 from pytableaux import EMPTY_SET, __docformat__, tools
 from pytableaux.errors import Emsg, check
@@ -36,7 +36,6 @@ from pytableaux.tools.decorators import lazy, membr, wraps
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sequences import SequenceApi, seqf
-from pytableaux.tools.typing import EnumDictType, IcmpFunc, IndexType
 
 if TYPE_CHECKING:
     from typing import overload
@@ -130,7 +129,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
 
         @membr.defer
         def ordr(member: membr):
-            oper: IcmpFunc = getattr(opr, member.name)
+            oper = getattr(opr, member.name)
             @wraps(oper)
             def f(self: Argument, other: Any, /):
                 if not isinstance(other, Argument):
@@ -155,14 +154,14 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     def __len__(self):
         return len(self.seq)
 
-    if TYPE_CHECKING:
-        @overload
-        def __getitem__(self, s: slice, /) -> seqf[Sentence]: ...
+    # if TYPE_CHECKING:
+    #     @overload
+    #     def __getitem__(self, s: slice, /) -> seqf[Sentence]: ...
 
-        @overload
-        def __getitem__(self, i: SupportsIndex, /) -> Sentence: ...
+    #     @overload
+    #     def __getitem__(self, i: SupportsIndex, /) -> Sentence: ...
 
-    def __getitem__(self, index: IndexType, /):
+    def __getitem__(self, index, /):
         if isinstance(index, slice):
             return seqf(self.seq[index])
         return self.seq[index]
@@ -244,7 +243,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
         if sort:
             self.sort(key = key, reverse = reverse)
 
-    def get(self, ref: PredsItemRef, default = NOARG, /) -> Predicate:
+    def get(self, ref, default = NOARG, /) -> Predicate:
         """Get a predicate by any reference. Also searches system predicates.
 
         Args:
@@ -325,7 +324,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
             Predicate.System = cls
 
         @abcs.abcf.before
-        def expand(ns: EnumDictType, bases, **kw):
+        def expand(ns, bases, **kw):
             'Inject members from annotations in Predicate.System class.'
             annots = abcs.annotated_attrs(Predicate.System)
             members = {

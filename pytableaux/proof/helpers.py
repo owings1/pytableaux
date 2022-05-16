@@ -20,10 +20,9 @@ pytableaux.proof.helpers
 """
 from __future__ import annotations
 
-import functools
 from copy import copy
 from itertools import filterfalse
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
@@ -31,13 +30,12 @@ from pytableaux.proof import Branch, Node, Rule, RuleHelper, Target, filters
 from pytableaux.proof import Access, RuleAttr, RuleEvent, TabEvent
 from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract, closure
 from pytableaux.tools.decorators import wraps
-from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import (KT, VT, FiltersDict, NodePredFunc,
-                                     NodeTargetsFn, NodeTargetsGen, T,
-                                     TargetsFn)
 
+_T = TypeVar('_T')
+_KT = TypeVar('_KT')
+_VT = TypeVar('_VT')
 if TYPE_CHECKING:
     from typing import overload
 
@@ -99,9 +97,9 @@ class AdzHelper(RuleHelper):
                     break
         return close_count / min(1, len(target['adds']))
 
-class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
+class BranchCache(dmap[Branch, _T], abcs.Copyable, RuleHelper):
 
-    _valuetype: type[T] = bool
+    _valuetype: type[_T] = bool
 
     __slots__ = 'rule', 'config'
 
@@ -150,7 +148,7 @@ class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
         return dict(branches = len(self))
 
     @classmethod
-    def _empty_value(cls, branch: Branch) -> T:
+    def _empty_value(cls, branch: Branch):
         'Override, for example, if the value type takes arguments.'
         return cls._valuetype()
 
@@ -165,7 +163,7 @@ class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
         return NotImplemented
 
 
-class BranchDictCache(BranchCache[dmap[KT, VT]]):
+class BranchDictCache(BranchCache[dmap[_KT, _VT]]):
     'Copies each K->V item for parent branch via copy(V).'
 
     _valuetype = dmap
@@ -212,7 +210,7 @@ class QuitFlag(BranchCache[bool]):
     def __call__(self, target: Target, /) -> None:
         self[target.branch] = bool(target.get('flag'))
 
-class BranchValueHook(BranchCache[VT]):
+class BranchValueHook(BranchCache[_VT]):
     """Check each node as it is added, until a (truthy) value is returned,
     then cache that value for the branch and stop checking nodes.
 
@@ -224,9 +222,9 @@ class BranchValueHook(BranchCache[VT]):
     hook_method_name = '_branch_value_hook'
     __slots__ = 'hook',
 
-    if TYPE_CHECKING:
-        @overload
-        def hook(self, node: Node, branch: Branch,/) -> VT|None:...
+    # if TYPE_CHECKING:
+    #     @overload
+    #     def hook(self, node: Node, branch: Branch,/) -> _VT|None:...
 
     def __init__(self, rule: Rule, /):
         super().__init__(rule)
@@ -468,10 +466,10 @@ class FilterHelper(FilterNodeCache):
     """
     __slots__ = 'filters', '_garbage', 'pred',
 
-    filters: FiltersDict
+    filters: dict
     "Mapping from ``NodeCompare`` class to instance."
 
-    pred: NodePredFunc
+    pred: Callable
     """A single predicate of all filters. To also check the `ignore_ticked`
     setting, use ``.filter()``.
     """
@@ -554,7 +552,7 @@ class FilterHelper(FilterNodeCache):
         )
 
     @classmethod
-    def configure_rule(cls, rulecls: type[Rule], config, **kw) -> tuple[FiltersDict, NodePredFunc]|None:
+    def configure_rule(cls, rulecls: type[Rule], config, **kw):
         """``RuleHelper`` init hook.
         
         * Verify `NodeFilters`.
@@ -588,7 +586,7 @@ class FilterHelper(FilterNodeCache):
                 )
 
     @staticmethod
-    def build_filters_pred(rule: Rule,/) -> tuple[FiltersDict, NodePredFunc]:
+    def build_filters_pred(rule: Rule,/):
         configs = getattr(rule, RuleAttr.NodeFilters)
         types = tuple(fcls for fcls, flag in configs.items()
             if flag is not NotImplemented)
@@ -603,7 +601,7 @@ class FilterHelper(FilterNodeCache):
     @closure
     def node_targets():
 
-        def make_targets_fn(cls: type[FilterHelper], node_targets_fn: NodeTargetsFn) -> TargetsFn:
+        def make_targets_fn(cls: type[FilterHelper], node_targets_fn):
             """
             Method decorator to only iterate through nodes matching the
             configured FilterHelper filters.
@@ -624,7 +622,7 @@ class FilterHelper(FilterNodeCache):
         def create(it, r: Rule, b: Branch, n: Node, /) -> Target:
             return Target(it, rule = r, branch = b, node = n)
 
-        def make_targets_iter(node_targets_fn: NodeTargetsFn) -> NodeTargetsGen:
+        def make_targets_iter(node_targets_fn):
             @wraps(node_targets_fn)
             def targets_gen(rule: Rule, nodes: Iterable[Node], branch: Branch, /):
                 for node in nodes:
@@ -658,10 +656,6 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
     class Consts(BranchCache[set[Constant]]):
         _valuetype = set
         __slots__ = EMPTY_SET
-
-    if TYPE_CHECKING:
-        @overload
-        def filter(self, node: Node, branch: Branch, /) -> bool: ...
 
     consts: NodeConsts.Consts
     __slots__ = 'consts', 'filter',

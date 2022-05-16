@@ -32,9 +32,9 @@ from pytableaux import __docformat__, package
 from pytableaux.errors import Emsg
 from pytableaux.lang.lex import Lexical
 from pytableaux.tools import abcs, mappings
-from pytableaux.tools.typing import T
 
 if TYPE_CHECKING:
+    from pytableaux.tools.typing import _T
     class HasRegistry:
         registry: CollectorRegistry
     MetricType = pmc.Metric|pm.MetricWrapperBase|HasRegistry
@@ -52,7 +52,7 @@ MetrT = TypeVar('MetrT', bound = MetricType)
 metric_defs: deque[tuple[str, tuple[type[MetricType], str, list[str]]]] = deque()
 
 # Decorator for AppMetrics
-def mwrap(fn: Callable[..., T]) -> Callable[..., T]:
+def mwrap(fn: Callable[..., _T]) -> Callable[..., _T]:
     key = fn.__name__
     @functools.wraps(fn)
     def f(self: AppMetrics, *labels):

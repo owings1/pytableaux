@@ -38,13 +38,13 @@ if TYPE_CHECKING:
 
     # from pytableaux.models import BaseModel
     # from pytableaux.proof import TableauxSystem
-    from pytableaux.proof.tableaux import Rule
-    from pytableaux.tools.hybrids import SequenceSet
-    from pytableaux.tools.linked import Link, LinkSequence
+    # from pytableaux.proof.tableaux import Rule
+    # from pytableaux.tools.hybrids import SequenceSet
+    # from pytableaux.tools.linked import Link, LinkSequence
     # from pytableaux.tools.mappings import MappingApi
-    from pytableaux.tools.sequences import MutableSequenceApi, SequenceApi
-    from pytableaux.tools.sets import SetApi
-    from pytableaux.tools.timing import TimingCommon
+    # from pytableaux.tools.sequences import MutableSequenceApi, SequenceApi
+    # from pytableaux.tools.sets import SetApi
+    # from pytableaux.tools.timing import TimingCommon
 
 __all__ = ()
 
@@ -108,9 +108,9 @@ RsetSectKT = _enum.Enum|tuple[_enum.Enum, bool]
 IcmpFunc = KeysFunc = TargetsFn = NodeTargetsFn = NodeTargetsGen = \
     NodePredFunc = Callable
 
-HkProviderInfo = HkUserInfo = HkConns = HkProviders = Mapping
+# HkProviderInfo = HkUserInfo = HkConns = HkProviders = Mapping
 
-HkProvsTable = HkUsersTable = HkConnsTable = dict
+# HkProvsTable = HkUsersTable = HkConnsTable = dict
 # if TYPE_CHECKING:
 
 #     IcmpFunc = Callable[[int, int], bool]
@@ -131,26 +131,7 @@ HkProvsTable = HkUsersTable = HkConnsTable = dict
 #     NodePredFunc = Callable[[Node], bool]
 #     "Function that takes a Node and returns a boolean."
 
-#     HkProviderInfo = Mapping[str, tuple[str, ...]]
-#     "Hook provider info, `hookname` -> `attrnames`."
 
-#     HkUserInfo = Mapping[type, Mapping[str, Callable]]
-#     "Hook user info, `provider` -> `hookname` -> `callback`."
-
-#     HkConns = Mapping[str, tuple[HookConn, ...]]
-#     "Hook connections, `hookname` -> `conns`."
-
-#     HkProviders = Mapping[type, HkProviderInfo]
-#     "All hook providers info mappings."
-
-#     HkProvsTable = dict[type, HkProviderInfo]
-#     "Hook providers dict."
-
-#     HkUsersTable = dict[type, HkUserInfo]
-#     "Hook users dict."
-
-#     HkConnsTable = dict[type, dict[type, HkConns]]
-#     "Hook conns dict."
 
 
 # else:
@@ -181,11 +162,11 @@ VT = TypeVar('VT')
 # RT = TypeVar('RT')
 # "Generic, return type"
 
-LHS = TypeVar('LHS')
-"Generic, left compare"
+# LHS = TypeVar('LHS')
+# "Generic, left compare"
 
-RHS = TypeVar('RHS')
-"Generic, right compare"
+# RHS = TypeVar('RHS')
+# "Generic, right compare"
 
 # Self = TypeVar('Self')
 # "Generic, self"

@@ -35,11 +35,11 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
-from pytableaux.proof import RuleHelper, RuleMeta
-from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof import (BranchEvent, BranchStat, RuleClassFlag,
-                                   RuleEvent, RuleState, StepEntry, TabEvent,
-                                   TabFlag, TabStatKey, TabTimers)
+                              RuleEvent, RuleHelper, RuleMeta, RuleState,
+                              StepEntry, TabEvent, TabFlag, TabStatKey,
+                              TabTimers)
+from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.tools import EMPTY_MAP, abstract, closure, isstr
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
@@ -50,6 +50,7 @@ from pytableaux.tools.sequences import (SeqCover, SequenceApi, absindex, seqf,
                                         seqm)
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.timing import Counter, StopWatch
+from pytableaux.tools.typing import LogicType
 
 if TYPE_CHECKING:
     from typing import ClassVar, overload
@@ -57,7 +58,7 @@ if TYPE_CHECKING:
     from pytableaux.logics import LogicLookupKey
     from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem
-    from pytableaux.tools.typing import F, LogicModule, T, TypeInstDict
+    from pytableaux.tools.typing import _F
 
 
 __all__ = (
@@ -108,7 +109,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     opts: Mapping[str, bool]
     "The options."
 
-    helpers: TypeInstDict[RuleHelper]
+    helpers: Mapping
     """Helper instances mapped by class.
     
     :type: Mapping[type[RuleHelper], RuleHelper]
@@ -128,10 +129,10 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     __iter__ = None
 
-    if TYPE_CHECKING:
-        @overload
-        def __getitem__(self, key: type[T]) -> T: # type: ignore
-            'Get a helper instance by class.'
+    # if TYPE_CHECKING:
+    #     @overload
+    #     def __getitem__(self, key: type[T]) -> T: # type: ignore
+    #         'Get a helper instance by class.'
 
     def __new__(cls, *args, **kw):
         inst = super().__new__(cls)
@@ -350,7 +351,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
 # ----------------------------------------------
 
-def locking(method: F) -> F:
+def locking(method: _F) -> _F:
     'Decorator for locking TabRuleGroups methods after Tableau is started.'
     @wraps(method)
     def f(self: TabRuleGroups, *args, **kw):
@@ -699,7 +700,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     id: int
 
     #: The logic of the tableau.
-    logic: LogicModule|None
+    logic: LogicType|None
 
     #: The argument of the tableau.
     argument: Argument|None
@@ -1077,12 +1078,12 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     # *** Behaviors
 
-    if TYPE_CHECKING:
-        @overload
-        def __getitem__(self, s: slice) -> list[Branch]: ...
+    # if TYPE_CHECKING:
+    #     @overload
+    #     def __getitem__(self, s: slice) -> list[Branch]: ...
 
-        @overload
-        def __getitem__(self, i: SupportsIndex) -> Branch: ...
+    #     @overload
+    #     def __getitem__(self, i: SupportsIndex) -> Branch: ...
 
     def __getitem__(self, index):
         return self.__branch_list[index]

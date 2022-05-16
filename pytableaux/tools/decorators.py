@@ -27,14 +27,12 @@ from collections import defaultdict
 from collections.abc import Mapping
 from keyword import iskeyword
 from types import DynamicClassAttribute as dynca
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Concatenate,
-                    Generic, ParamSpec, TypeVar)
+from typing import Any, Callable, ClassVar, Generic, TypeVar
 
 from pytableaux import __docformat__
 from pytableaux.errors import check
 from pytableaux.tools import MapProxy, abcs, dund, getitem, undund
 
-# from pytableaux.tools.typing import 
 
 _T = TypeVar('_T')
 _F = TypeVar('_F', bound=Callable)
@@ -98,7 +96,7 @@ class BaseMember(Generic[_T], metaclass = abcs.AbcMeta):
         pass
 
     @property
-    def owner(self) -> T:
+    def owner(self) -> _T:
         try:
             return self.__owner
         except AttributeError:
@@ -120,7 +118,7 @@ class membr(BaseMember[_T], Generic[_T, _RT]):
 
     __slots__ = 'cbak',
 
-    owner: T
+    owner: _T
     cbak: tuple[Callable[..., _RT], tuple, dict]
 
     def __init__(self, cb: Callable[..., _RT], *args, **kw):

@@ -24,17 +24,10 @@ from __future__ import annotations
 import functools
 import operator as opr
 from collections.abc import MutableSet, Set
-from typing import TYPE_CHECKING
 
 from pytableaux.errors import check
 from pytableaux.tools import abcs
 from pytableaux.tools.decorators import operd
-from pytableaux.tools.typing import VT
-
-if TYPE_CHECKING:
-    from typing import Iterable, overload
-
-    from pytableaux.tools.typing import SetApiT
 
 __all__ = (
     'EMPTY_SET',
@@ -47,7 +40,7 @@ __all__ = (
 
 EMPTY_SET: setf = frozenset()
 
-class SetApi(Set[VT], abcs.Copyable):
+class SetApi(Set, abcs.Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
 
     __slots__ = EMPTY_SET
@@ -74,10 +67,10 @@ class SetApi(Set[VT], abcs.Copyable):
     #     @overload
     #     def symmetric_difference(self:SetApiT, other: Iterable) -> SetApiT: ...
 
-    __or__  = Set[VT].__or__
-    __and__ = Set[VT].__and__
-    __sub__ = Set[VT].__sub__
-    __xor__ = Set[VT].__xor__
+    __or__  = Set.__or__
+    __and__ = Set.__and__
+    __sub__ = Set.__sub__
+    __xor__ = Set.__xor__
 
     red = functools.partial(operd.reduce, freturn = '_from_iterable')
     app = operd.apply
@@ -95,10 +88,10 @@ class SetApi(Set[VT], abcs.Copyable):
         return self._from_iterable(self)
 
     @classmethod
-    def _from_iterable(cls: type[SetApiT], it: Iterable) -> SetApiT:
+    def _from_iterable(cls, it):
         return cls(it)
 
-class MutableSetApi(MutableSet[VT], SetApi[VT]):
+class MutableSetApi(MutableSet, SetApi):
     'Fusion interface of collections.abc.MutableSet and built-in set.'
 
     __slots__ = EMPTY_SET
@@ -127,42 +120,42 @@ class MutableSetApi(MutableSet[VT], SetApi[VT]):
 
     del(rep)
 
-class setf(SetApi[VT], frozenset[VT]):
+class setf(SetApi, frozenset):
     'SetApi wrapper around built-in frozenset.'
     __slots__ = EMPTY_SET
 
     __len__      = frozenset.__len__
-    __iter__     = frozenset[VT].__iter__
+    __iter__     = frozenset.__iter__
     __contains__ = frozenset.__contains__
 
 EMPTY_SET = setf()
 
-class setm(MutableSetApi[VT], set[VT]):
+class setm(MutableSetApi, set):
     'MutableSetApi wrapper around built-in set.'
     __slots__ = EMPTY_SET
 
     __len__      = set.__len__
-    __iter__     = set[VT].__iter__
+    __iter__     = set.__iter__
     __contains__ = set.__contains__
 
-    if TYPE_CHECKING:
-        @overload
-        def clear(self): ...
-        @overload
-        def add(self, value: VT): ...
-        @overload
-        def discard(self, value: VT): ...
+    # if TYPE_CHECKING:
+    #     @overload
+    #     def clear(self): ...
+    #     @overload
+    #     def add(self, value: VT): ...
+    #     @overload
+    #     def discard(self, value: VT): ...
 
     clear   = set.clear
     add     = set.add
     discard = set.discard
 
-class SetView(SetApi[VT]):
+class SetView(SetApi):
     'SetApi cover.'
 
     __slots__ = setf(SetApi.__abstractmethods__)
 
-    def __new__(cls, set_: Set[VT], /,):
+    def __new__(cls, set_, /,):
         check.inst(set_, Set)
 
         inst = object.__new__(cls)
@@ -179,7 +172,7 @@ class SetView(SetApi[VT]):
         return f'{prefix}''{}'
 
     @classmethod
-    def _from_iterable(cls: type[SetApiT], it: Iterable[VT]) -> SetApiT:
+    def _from_iterable(cls, it):
         return cls(setf(it))
 
 del(

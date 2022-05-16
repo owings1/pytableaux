@@ -2,7 +2,7 @@ from .tutils import BaseSuite, get_subclasses, skip
 from itertools import filterfalse
 import operator as opr
 from pytest import raises
-
+from typing import TYPE_CHECKING
 from pytableaux.errors import *
 from pytableaux.lang.lex import *
 
@@ -14,14 +14,15 @@ from pytableaux.tools.linked import *
 from pytableaux.tools.mappings import *
 from pytableaux.tools.sequences import *
 from pytableaux.tools.sets import *
-from pytableaux.tools.typing import T
 
+if TYPE_CHECKING:
+    from pytableaux.tools.typing import _T
 
 from collections import deque
 
 
 
-def subclasses(supcls: type[T]) -> qset[type[T]]:
+def subclasses(supcls: type[_T]) -> qset[type[_T]]:
     classes = qset()
     todo = [supcls]
     while len(todo):

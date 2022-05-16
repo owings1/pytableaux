@@ -58,13 +58,12 @@ from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
-from pytableaux import logics
+from pytableaux.logics import registry as logic_registry
 from pytableaux.lang import Notation, Operator, Predicates, Parser
 from pytableaux.tools import EMPTY_MAP, MapProxy, NameTuple, abcs, abstract
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import T
 from sphinx.ext import viewcode
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
@@ -72,6 +71,7 @@ from sphinx.util.docutils import SphinxRole
 
 if TYPE_CHECKING:
     from typing import overload
+    from pytableaux.tools.typing import _T
 
     import sphinx.config
     from sphinx.application import Sphinx
@@ -200,7 +200,7 @@ class AppEnvMixin(abcs.Abc):
         return getattr(self.current_module(), self.env.ref_context['py:class'])
 
     def current_logic(self):
-        return logics.registry(self.current_module())
+        return logic_registry(self.current_module())
 
     def viewcode_target(self, obj = None):
         if obj is None:
@@ -534,9 +534,9 @@ def attrsopt(arg: str, /) -> list[str]:
     "list of attr-like names"
     return re_nonslug_plus.sub(' ', arg).split(' ')
 
-def choiceopt(choices: Container[T], /, trans = str):
+def choiceopt(choices, /, trans = str):
     'Option spec builder for choices.'
-    def opt(arg: str, /) -> T:
+    def opt(arg: str, /):
         arg = trans(arg)
         if arg not in choices:
             raise ValueError(arg)
@@ -571,14 +571,14 @@ def set_classes(opts: dict) -> dict:
 
 # ------------------------------------------------
 
-class RoleItem(NameTuple, Generic[T]):
+class RoleItem(NameTuple, Generic[_T]):
     name: str
-    inst: T
+    inst: _T
 
 if TYPE_CHECKING:
 
     @overload
-    def role_entry(rolecls: type[T]) -> RoleItem[T]|None: ...
+    def role_entry(rolecls: type[_T]) -> RoleItem[_T]|None: ...
 
     @overload
     def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
@@ -606,7 +606,7 @@ def role_entry(roleish):
             return None
     return RoleItem(name, inst)
 
-def role_instance(roleish: type[T]) -> T|None:
+def role_instance(roleish: type[_T]) -> _T|None:
     'Get loaded role instance, by name, instance or type.'
     return role_entry(roleish).inst
 

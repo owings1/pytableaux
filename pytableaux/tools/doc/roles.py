@@ -33,13 +33,13 @@ from pytableaux.tools import MapProxy, abcs
 from pytableaux.tools.doc import (BaseRole, ConfKey, ParserOptionMixin,
                                   classopt, nodeopt, nodez, predsopt)
 from pytableaux.tools.hybrids import qset, qsetf
-from pytableaux.tools.typing import F
 from sphinx.errors import NoUri
 from sphinx.util import logging
 from sphinx.util.docutils import ReferenceRole
 
 if TYPE_CHECKING:
     from docutils.nodes import Element, Node, system_message
+    from pytableaux.tools.typing import _F
     from sphinx.application import Sphinx
     from sphinx.environment import BuildEnvironment
     from sphinx.transforms import post_transforms
@@ -49,7 +49,7 @@ __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
 
 logger = logging.getLogger(__name__)
 
-def rolerun(func: F) -> F:
+def rolerun(func: _F) -> _F:
     'Decorator for role run method.'
     @functools.wraps(func)
     def run(self):

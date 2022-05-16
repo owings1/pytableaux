@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from itertools import product, repeat
 from typing import Any, ClassVar, Generic, Mapping
 
-from pytableaux.errors import Emsg, check
+from pytableaux.errors import check
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import (Atomic, LexType, Operated, Operator,
                                  Predicated, Quantified, Quantifier, Sentence)
@@ -33,9 +33,8 @@ from pytableaux.proof.common import Branch
 from pytableaux.tools import abstract, closure
 from pytableaux.tools.abcs import Abc, Ebc
 from pytableaux.tools.sets import setf
-from pytableaux.tools.typing import VT
 
-from typing import TypeVar, TYPE_CHECKING
+from typing import TypeVar
 
 __all__ = (
     'BaseModel',

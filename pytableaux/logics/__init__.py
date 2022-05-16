@@ -25,15 +25,14 @@ import itertools
 import sys
 from collections import defaultdict
 from importlib import import_module
-from types import ModuleType
+from types import FunctionType, MethodType, ModuleType
 from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Mapping
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import closure, hybrids, mappings, abcs
 from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import (LogicLocatorRef, LogicLookupKey,
-                                     LogicModule, LogicType)
+from pytableaux.tools.typing import LogicType
 
 if TYPE_CHECKING:
     from typing import overload
@@ -44,6 +43,19 @@ __all__ = (
 )
 
 NOARG = object()
+
+
+LogicModule = LogicType | ModuleType
+"Logic module alias for type hinting."
+
+LogicLookupKey = ModuleType | str
+"Logic registry key. Module or string. See ``Registry.get()``."
+
+HasModuleAttr = MethodType | FunctionType | type
+"Supports the ``__module__`` attribute (class, method, or function."
+
+LogicLocatorRef = LogicLookupKey | HasModuleAttr
+"Either a logic registry key (string/module), or class, method, or function."
 
 class Registry(Mapping[str, LogicModule], abcs.Copyable):
     """Logic module registry.

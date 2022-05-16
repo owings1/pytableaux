@@ -32,8 +32,6 @@ from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, isattrstr
 from pytableaux.tools.decorators import membr, wraps
 from pytableaux.tools.sets import EMPTY_SET, setf
 
-if TYPE_CHECKING:
-    from typing import overload
 
 
 __all__ = (

@@ -22,10 +22,8 @@ pytableaux.tools.timing
 from __future__ import annotations
 
 from time import time as _time
-from typing import Iterator
 
 from pytableaux.errors import IllegalStateError
-from pytableaux.tools.typing import TimT
 
 __all__ = 'StopWatch', 'Counter'
 
@@ -36,7 +34,7 @@ def _nowms() -> int:
 class TimingCommon:
 
     @classmethod
-    def gen(cls: type[TimT], n: int, *args, **kw) -> Iterator[TimT]:
+    def gen(cls, n: int, *args, **kw):
         return (cls(*args, **kw) for _ in range(n))
 
 
@@ -84,40 +82,40 @@ class StopWatch(TimingCommon):
             self._start_time = None
         return self
 
-    def clear(self) -> StopWatch:
+    def clear(self):
         self.reset()
         self.count = 0
         return self
 
-    def elapsed(self) -> int:
+    def elapsed(self):
         'Elapsed milliseconds.'
         return self.elapsed_ms()
 
-    def elapsed_avg(self) -> float:
+    def elapsed_avg(self):
         'Elapsed milliseconds / count.'
         try:
             return self.elapsed() / self.count
         except ZeroDivisionError:
             return 0.0
 
-    def elapsed_secs(self) -> int:
+    def elapsed_secs(self):
         'Elapsed seconds.'
         return self.elapsed() // 1000
 
-    def elapsed_ms(self) -> int:
+    def elapsed_ms(self):
         'Elapsed milliseconds.'
         if self._running:
             return self._accum + (_nowms() - self._start_time)
         return self._accum
 
-    def summary(self) -> dict[str, int|float]:
+    def summary(self):
         return dict(
             elapsed_ms  = self.elapsed_ms(),
             count       = self.count,
             elapsed_avg = self.elapsed_avg(),
         )
 
-    def _asdict(self) -> dict[str, int|float]:
+    def _asdict(self):
         'JSON Comptibility'
         return self.summary()
 
@@ -135,7 +133,7 @@ class StopWatch(TimingCommon):
     def __str__(self):
         return str(self.elapsed())
 
-    def __enter__(self) -> StopWatch:
+    def __enter__(self):
         'Start/stop context entry.'
         self.start()
         return self
@@ -152,7 +150,7 @@ class Counter(TimingCommon):
 
     __hash__ = None
 
-    def __init__(self, value: int = 0):
+    def __init__(self, value = 0):
         self.value = value
 
     def inc(self, n = 1):

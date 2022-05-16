@@ -18,10 +18,10 @@ from pytableaux.proof.rules import ClosingRule, Rule
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.tools import abcs
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.typing import TT, F, T
 
 if TYPE_CHECKING:
     from typing import overload
+    from pytableaux.tools.typing import _TT, _F, _T
 __all__ = (
     'BaseSuite',
     'larg',
@@ -41,8 +41,8 @@ def _setattrs(obj, **attrs):
         else:
             setattr(obj, attr, val)
 
-def using(**attrs) -> Callable[[F], F]:
-    def wrapper(func: F) -> F:
+def using(**attrs) -> Callable[[_F], _F]:
+    def wrapper(func: _F) -> _F:
         if isclass(func):
             _setattrs(func, **attrs)
             return func
@@ -66,7 +66,7 @@ def using(**attrs) -> Callable[[F], F]:
     return wrapper
 
 
-def dynattrs(*names) -> Callable[[TT], TT]:
+def dynattrs(*names) -> Callable[[_TT], _TT]:
     def wrapper(cls):
         assert isclass(cls)
         cls._dynattrs = getattr(cls, '_dynattrs', tuple()) + names
@@ -76,15 +76,15 @@ def dynattrs(*names) -> Callable[[TT], TT]:
         return cls
     return wrapper
 
-def larg(*largs) -> Callable[[F], F]:
-    def decor(what: F) -> F:
+def larg(*largs) -> Callable[[_F], _F]:
+    def decor(what: _F) -> _F:
         if isclass(what): raise TypeError
         def operwrap(self, *args, **kw):
             what(self, *largs, *args, **kw)
         return operwrap
     return decor
 
-def loopgen(c: Collection[T], n: int = None):
+def loopgen(c: Collection[_T], n: int = None):
     if not len(c) and (n is None or n > 0):
         raise TypeError('empty collection')
     it = iter(c)
@@ -102,10 +102,10 @@ SKIPPED = []
 
 if TYPE_CHECKING:
     @overload
-    def skip(cls: TT) -> TT: ...
+    def skip(cls: _TT) -> _TT: ...
 
     @overload
-    def skip(func: F) -> F: ...
+    def skip(func: _F) -> _F: ...
 
 def skip(what):
     def skipped(*_, **__):
@@ -125,7 +125,7 @@ def clsmbrsrecurse(cls) -> Iterator[type]:
         clsmbrsrecurse(c) for c in mine
     ))
 
-def get_subclasses(supcls: type[T]) -> qset[type[T]]:
+def get_subclasses(supcls: type[_T]) -> qset[type[_T]]:
     'Get all (non-abstract) subclasses recusively.'
     classes = qset()
     todo = [supcls]
@@ -292,7 +292,7 @@ class BaseSuite:
         'Return one model.'
         return self.acmm(*args, **kw)[1][0]
 
-    def rule_tab(self, rule:str|type[T], bare = False, **kw) -> tuple[T, Tableau]|RuleTab:
+    def rule_tab(self, rule:str|type[_T], bare = False, **kw) -> tuple[_T, Tableau]|RuleTab:
         'Return (rule, tab) pair.'
         manual = False
         t = self.tab()
