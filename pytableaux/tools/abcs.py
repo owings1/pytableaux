@@ -29,19 +29,21 @@ import operator as opr
 from collections.abc import Set
 from enum import auto as eauto
 from typing import (TYPE_CHECKING, Any, Callable, Collection, Hashable,
-                    Iterable, Iterator, Mapping, Sequence, SupportsIndex)
+                    Iterable, Iterator, Mapping, Sequence, SupportsIndex, TypeVar)
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import MapProxy
-from pytableaux.tools.typing import RT, TT, EnumDictType, EnumT, F, T
+from pytableaux.tools.typing import RT, TT, EnumDictType, F, T
+
+EnumT = TypeVar('EnumT', bound = _enum.Enum)
+"Bound to ``Enum``"
 
 if TYPE_CHECKING:
     from typing import overload
 
     from pytableaux.tools.hooks import hookutil
-    from pytableaux.tools.typing import (HkProviderInfo, HkUserInfo, KeysFunc,
-                                         NotImplType, Self, iter)
+    from pytableaux.tools.typing import iter
                                      
 
 __all__ = (
@@ -225,7 +227,7 @@ class EnumLookup(Mapping[Any, T]):
         return repr(self._asdict())
 
     @classmethod
-    def _makemap(cls, Owner: type[EnumT], keyfuncs: Collection[KeysFunc], /) -> dict[Hashable, EnumT]:
+    def _makemap(cls, Owner: type[EnumT], keyfuncs: Collection[Callable], /) -> dict[Hashable, EnumT]:
         "Build an index source dictionary."
 
         # Named members, including aliases, but not pseudos.
@@ -253,7 +255,7 @@ class EnumLookup(Mapping[Any, T]):
 
     @classmethod
     def _seqmap(cls,
-        members: Sequence[EnumT], keyfuncs: Collection[KeysFunc], /) -> dict[Hashable, EnumT]:
+        members: Sequence[EnumT], keyfuncs: Collection[Callable], /) -> dict[Hashable, EnumT]:
         """Build the main index map for the sequence of proper (named) members
         with the given keys functions.
         """
@@ -290,7 +292,7 @@ class EnumLookup(Mapping[Any, T]):
         return cls._pseudo_keys(pseudo)
 
     @classmethod
-    def _get_keyfuncs(cls, Owner: type[_enum.Enum], /) -> set[KeysFunc]:
+    def _get_keyfuncs(cls, Owner: type[_enum.Enum], /) -> set[Callable]:
         "Get the key functions."
         funcs = {cls._default_keys}
         for meth in Eset.member_key_methods:
@@ -662,7 +664,7 @@ def annotated_attrs(obj) -> dict[str, tuple]:
         if get_origin(v) is Annotated
     }
 
-def check_mrodict(mro: Sequence[type], *names: str) -> NotImplType|bool:
+def check_mrodict(mro: Sequence[type], *names: str):
     'Check whether methods are implemented for dynamic subclassing.'
     if len(names) and not len(mro):
         return NotImplemented
@@ -798,10 +800,10 @@ class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
 
     def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, *,
-        hooks: HkUserInfo = None,
+        hooks: Mapping = None,
         skiphooks: bool = False,
         skipflags: bool = False,
-        hookinfo: HkProviderInfo = None,
+        hookinfo: Mapping = None,
         **kw
     ):
         nsinit(ns, bases, skipflags = skipflags)
@@ -846,7 +848,7 @@ class Copyable(metaclass = AbcMeta, skiphooks = True):
     __slots__ = Eset.Empty
 
     @tools.abstract
-    def copy(self: Self) -> Self:
+    def copy(self):
         cls = type(self)
         return cls.__new__(cls)
 

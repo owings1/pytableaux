@@ -18,7 +18,7 @@ from pytableaux.proof.rules import ClosingRule, Rule
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.tools import abcs
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.typing import TT, F, RuleT, T
+from pytableaux.tools.typing import TT, F, T
 
 if TYPE_CHECKING:
     from typing import overload
@@ -292,7 +292,7 @@ class BaseSuite:
         'Return one model.'
         return self.acmm(*args, **kw)[1][0]
 
-    def rule_tab(self, rule:str|type[RuleT], bare = False, **kw) -> tuple[RuleT, Tableau]|RuleTab:
+    def rule_tab(self, rule:str|type[T], bare = False, **kw) -> tuple[T, Tableau]|RuleTab:
         'Return (rule, tab) pair.'
         manual = False
         t = self.tab()

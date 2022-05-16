@@ -34,7 +34,7 @@ from pytableaux.proof import TableauxSystem as TabSys
 from pytableaux.proof import ClosingRule, Rule, helpers, Branch
 from pytableaux.proof.filters import SentenceCompare
 from pytableaux.proof import RuleEvent, TabEvent, NodeAttr
-from pytableaux.tools import abcs
+from pytableaux.tools import abcs, sets
 from pytableaux.tools.abcs import isabstract
 from sphinx.ext.autodoc.importer import import_object
 

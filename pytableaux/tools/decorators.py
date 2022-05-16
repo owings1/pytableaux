@@ -27,17 +27,23 @@ from collections import defaultdict
 from collections.abc import Mapping
 from keyword import iskeyword
 from types import DynamicClassAttribute as dynca
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Concatenate, Generic
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Concatenate,
+                    Generic, ParamSpec, TypeVar)
 
 from pytableaux import __docformat__
 from pytableaux.errors import check
 from pytableaux.tools import MapProxy, abcs, dund, getitem, undund
-from pytableaux.tools.typing import RT, F, P, Self, T
 
-if TYPE_CHECKING:
-    from typing import overload
+# from pytableaux.tools.typing import 
 
-    from pytableaux.tools.typing import _property
+_T = TypeVar('_T')
+_F = TypeVar('_F', bound=Callable)
+# _P = ParamSpec('_P')
+_RT = TypeVar('_RT')
+# if TYPE_CHECKING:
+#     from typing import overload
+
+    # from pytableaux.tools.typing import _property
 
 __all__ = (
     'lazy',
@@ -78,11 +84,11 @@ def _prevmodule(thisname = __name__, /):
         if val != thisname:
             return val
 
-class BaseMember(Generic[T], metaclass = abcs.AbcMeta):
+class BaseMember(Generic[_T], metaclass = abcs.AbcMeta):
 
     __slots__ = '__name__', '__qualname__', '__owner'
 
-    def __set_name__(self, owner: T, name):
+    def __set_name__(self, owner: _T, name):
         self.__owner = owner
         self.__name__ = name
         self.__qualname__ = f'{owner.__name__}.{name}'
@@ -110,17 +116,17 @@ class BaseMember(Generic[T], metaclass = abcs.AbcMeta):
             return object.__repr__(self)
         return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
 
-class membr(BaseMember[T], Generic[T, RT]):
+class membr(BaseMember[_T], Generic[_T, _RT]):
 
     __slots__ = 'cbak',
 
     owner: T
-    cbak: tuple[Callable[..., RT], tuple, dict]
+    cbak: tuple[Callable[..., _RT], tuple, dict]
 
-    def __init__(self, cb: Callable[..., RT], *args, **kw):
+    def __init__(self, cb: Callable[..., _RT], *args, **kw):
         self.cbak = cb, args, kw
 
-    def sethook(self, owner: T, name):
+    def sethook(self, owner: _T, name: str):
         setattr(owner, name, self())
 
     def __call__(self):
@@ -128,7 +134,8 @@ class membr(BaseMember[T], Generic[T, RT]):
         return cb(self, *args, **kw)
 
     @classmethod
-    def defer(cls, fdefer: Callable[Concatenate[membr[T, RT], P], RT]) -> Callable[P, RT]:
+    def defer(cls, fdefer: Callable) -> Callable:
+    # def defer(cls, fdefer: Callable[Concatenate[membr[T, RT], P], RT]) -> Callable[P, RT]:
         def fd(member, *args, **kw):
             return fdefer(member, *args, **kw)
         def f(*args, **kw):
@@ -214,15 +221,15 @@ class operd:
                 return freturn(self, functools.reduce(oper, operands, finit(self)))
             return freduce
 
-    if TYPE_CHECKING:
+    # if TYPE_CHECKING:
 
-        @overload
-        @staticmethod
-        def repeat(oper: Callable, info: F) -> F: ...
+    #     @overload
+    #     @staticmethod
+    #     def repeat(oper: Callable, info: F) -> F: ...
 
-        @overload
-        @staticmethod
-        def repeat(oper: F) -> F: ...
+    #     @overload
+    #     @staticmethod
+    #     def repeat(oper: F) -> F: ...
 
     class repeat(Base):
         """Create a method that accepts an arbitrary number of positional
@@ -261,7 +268,7 @@ class wraps(dict[str, str]):
                 else:
                     self.setdefault(k, _prevmodule())
 
-    def __call__(self, fout: F) -> F:
+    def __call__(self, fout: _F) -> _F:
         'Decorate function. Receives the wrapper function and updates its attributes.'
         self.update(fout)
         if isinstance(fout, (classmethod, staticmethod)):
@@ -279,7 +286,7 @@ class wraps(dict[str, str]):
             elif (value := get(obj, undund(name), None)):
                 yield name, value
 
-    def write(self, obj: F) -> F:
+    def write(self, obj: _F) -> _F:
         "Write wrapped attributes to a wrapper."
         for attr, val in self.items():
             setattr(obj, attr, val)
@@ -349,20 +356,20 @@ class lazy:
     def __new__(cls, *args, **kw):
         return cls.get(*args, **kw)
 
-    class get(BaseMember, Generic[F], metaclass = abcs.AbcMeta):
+    class get(BaseMember, Generic[_F], metaclass = abcs.AbcMeta):
 
         __slots__ = 'key', 'method'
         format = '_{}'.format
 
-        if TYPE_CHECKING:
-            @overload
-            def __new__(cls, method: F) -> F: ...
-            @overload
-            def __new__(cls, key: str|None, method: F) -> F: ...
-            @overload
-            def __new__(cls, key: str|None) -> lazy.get: ...
-            @overload
-            def __new__(cls) -> lazy.get: ...
+        # if TYPE_CHECKING:
+        #     @overload
+        #     def __new__(cls, method: F) -> F: ...
+        #     @overload
+        #     def __new__(cls, key: str|None, method: F) -> F: ...
+        #     @overload
+        #     def __new__(cls, key: str|None) -> lazy.get: ...
+        #     @overload
+        #     def __new__(cls) -> lazy.get: ...
 
         def __new__(cls, key = None, /, method = None):
             """If only argument to constructor is callable, construct and call the
@@ -378,7 +385,7 @@ class lazy:
             inst.key = None
             return inst(check.callable(key))
 
-        def __call__(self, method: F) -> F:
+        def __call__(self, method: _F) -> _F:
             key = self.key or self.format(method.__name__)
             @wraps(method)
             def fget(self):
@@ -395,7 +402,8 @@ class lazy:
                 self.key = self.format(name)
             setattr(owner, name, self(self.method))
 
-    class prop(get[type[Self]]):
+    # class prop(get[type[Self]]):
+    class prop(get):
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct attribute.
         """
@@ -406,11 +414,12 @@ class lazy:
         def propclass(self):
             return property
 
-        if TYPE_CHECKING:
-            @overload
-            def __new__(cls, func: Callable[[Self], T]) -> _property[Self, T]: ...
+        # if TYPE_CHECKING:
+        #     @overload
+        #     def __new__(cls, func: Callable[[Self], T]) -> property[Self, T]: ...
 
-        def __call__(self, method: Callable[[Self], T]) -> _property[Self, T]:
+        def __call__(self, method: Callable):
+        # def __call__(self, method: Callable[[Self], T]) -> property[Self, T]:
             fget = super().__call__(method)
             return self.propclass(fget, doc = method.__doc__)
 
@@ -462,7 +471,8 @@ class NoSetAttr(BaseMember):
     def __call__(self, base: type, **opts):
         return self._make(base.__setattr__, **(self.defaults | opts))
 
-    def _make(self, sa: F, /, efmt: Callable[[str, Any], str], attr: str|None, cls: bool|type|None) -> F:
+    # def _make(self, sa: _F, /, efmt: Callable[[str, Any], str], attr: str|None, cls: bool|type|None) -> _F:
+    def _make(self, sa, /, efmt, attr, cls):
         if attr:
             if cls is True:
                 check = self._clschecker(attr)
@@ -482,7 +492,7 @@ class NoSetAttr(BaseMember):
         return wraps(sa)(f)
 
     @abcs.abcf.temp
-    def cached(func: F) -> F:
+    def cached(func: _F) -> _F:
         @wraps(func)
         def f(self: NoSetAttr, *args):
             cache = self.cache[func]

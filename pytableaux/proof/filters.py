@@ -23,19 +23,21 @@ from __future__ import annotations
 
 import operator as opr
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic, Mapping,
-                    NamedTuple)
+                    NamedTuple, TypeVar)
 
 from pytableaux import __docformat__
 from pytableaux.lang.lex import (Operated, Operator, Predicate, Predicated,
                                  Quantified, Quantifier, Sentence)
-from pytableaux.proof.common import Node
 from pytableaux.proof import Access
+from pytableaux.proof.common import Node
 from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, thru
 from pytableaux.tools.abcs import Abc
 from pytableaux.tools.mappings import dmapns
 from pytableaux.tools.sets import EMPTY_SET
 from pytableaux.tools.typing import LHS, RHS, T
 
+LHS = TypeVar('LHS')
+RHS = TypeVar('RHS')
 if TYPE_CHECKING:
     from typing import overload
 
@@ -87,7 +89,7 @@ CompSentenceMap = tuple[tuple[str, tuple[CompSentenceType, BoolCompFunc]], ...]
 class CompSentenceCompItem(NamedTuple):
     "Comparison parameters for a sentence filter/comparator."
 
-    type: CompSentenceType
+    type: type[Sentence]
     "The expected sentence type."
 
     item: Operator|Quantifier|Predicate
@@ -150,12 +152,12 @@ class AttrCompare(Comparer[LHS, RHS, CompAttrCompItem]):
     attrmap: ClassVar[Mapping[str, str]] = EMPTY_MAP
     "LHS attr -> RHS attr mapping."
 
-    if TYPE_CHECKING:
-        @overload
-        def rget(self, rhs: RHS, name: str, /) -> Any:...
+    # if TYPE_CHECKING:
+    #     @overload
+    #     def rget(self, rhs: RHS, name: str, /) -> Any:...
 
-        @overload
-        def fcmp(self, a: Any, b: Any, /) -> bool: ...
+    #     @overload
+    #     def fcmp(self, a: Any, b: Any, /) -> bool: ...
 
     rget = staticmethod(getattr)
     fcmp = staticmethod(opr.eq)
@@ -223,11 +225,11 @@ class SentenceCompare(Comparer[SentenceComparable, RHS, CompSentenceCompItem]):
         ).items(),
     )
 
-    if TYPE_CHECKING:
+    # if TYPE_CHECKING:
 
-        @staticmethod
-        @overload
-        def rget(rhs: RHS, /) -> Sentence|None: ...
+    #     @staticmethod
+    #     @overload
+    #     def rget(rhs: RHS, /) -> Sentence|None: ...
         
     rget = staticmethod(thru)
 

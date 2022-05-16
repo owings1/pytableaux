@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from itertools import filterfalse
 from typing import (TYPE_CHECKING, Collection, Generic, Iterable, Iterator,
-                    Literal, SupportsIndex)
+                    Literal, SupportsIndex, TypeVar)
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg
@@ -32,8 +32,7 @@ from pytableaux.tools.hybrids import MutableSequenceSet
 from pytableaux.tools.sequences import (MutableSequenceApi, SequenceApi,
                                         absindex, slicerange)
 from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import VT, IndexType, LinkSeqT, LinkT
-
+VT = TypeVar('VT')
 if TYPE_CHECKING:
     from typing import overload
 
@@ -75,7 +74,7 @@ class Link(Generic[VT], abcs.Copyable):
     __iter__ = None
 
     @property
-    def self(self: LinkT) -> LinkT:
+    def self(self):
         return self
 
     def __init__(self, value: VT, /, ):
@@ -88,7 +87,7 @@ class Link(Generic[VT], abcs.Copyable):
         inst.next = self.next
         return inst
 
-    def __getitem__(self: LinkT, rel: int) -> LinkT | None:
+    def __getitem__(self, rel: int):
         'Get previous, self, or next with -1, 0, 1, or ``LinkRel`` enum.'
         return getattr(self, LinkRel(rel)._name_)
 
@@ -230,13 +229,6 @@ class LinkSequence(SequenceApi[VT]):
     def __reversed__(self) -> Iterator[VT]:
         return linkiter.values(self.__link_last__, -1)
 
-    if TYPE_CHECKING:
-        @overload
-        def __getitem__(self, index: SupportsIndex, /) -> VT:...
-
-        @overload
-        def __getitem__(self: LinkSeqT, slice_: slice, /) -> LinkSeqT: ...
-
     def __getitem__(self, i):
         'Get element(s) by index/slice.'
         # Retrieves link(s) using _link_at(index) method. Subclasses should
@@ -359,7 +351,7 @@ class linkseq(LinkSequence[VT], MutableSequenceApi[VT]):
     def remove(self, value: VT, /):
         self._unlink(self._link_of(value))
 
-    def __delitem__(self, i: IndexType):
+    def __delitem__(self, i):
         'Remove element(s) by index/slice.'
 
         if isinstance(i, SupportsIndex):
@@ -380,7 +372,7 @@ class linkseq(LinkSequence[VT], MutableSequenceApi[VT]):
         raise Emsg.InstCheck(i, (SupportsIndex, slice))
 
     @abcs.hookable('cast', 'check')
-    def __setitem__(self, i: IndexType, value: VT|Collection[VT],
+    def __setitem__(self, i, value,
         /, *, cast = None, check = None):
         "Set value(s) by index/slice."
 
@@ -415,7 +407,7 @@ class linkseq(LinkSequence[VT], MutableSequenceApi[VT]):
                 link.value = arrival
             return
 
-        raise Emsg.InstCheck(i, IndexType)
+        raise Emsg.InstCheck(i, (SupportsIndex, slice))
 
     def sort(self, /, *, key = None, reverse: bool = False) -> None:
         for link, value in zip(

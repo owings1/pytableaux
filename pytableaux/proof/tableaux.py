@@ -57,7 +57,7 @@ if TYPE_CHECKING:
     from pytableaux.logics import LogicLookupKey
     from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem
-    from pytableaux.tools.typing import F, LogicModule, RuleT, T, TypeInstDict
+    from pytableaux.tools.typing import F, LogicModule, T, TypeInstDict
 
 
 __all__ = (
@@ -402,7 +402,7 @@ class TabRuleGroups(SequenceApi[Rule]):
         self._ruleindex.clear()
         self._groupindex.clear()
 
-    def get(self, ref: type[RuleT]|str, default = NOARG, /) -> RuleT:
+    def get(self, ref: type|str, default = NOARG, /) -> Rule:
         'Get a rule instance by name or type.'
         return self._ruleindex_get(self._ruleindex, ref, default)
 
@@ -468,7 +468,7 @@ class TabRuleGroups(SequenceApi[Rule]):
             raise Emsg.DuplicateKey(name)
 
     @staticmethod
-    def _ruleindex_get(idx: Mapping[str, Rule], ref: str|type[RuleT], default = NOARG, /) -> RuleT:
+    def _ruleindex_get(idx: Mapping[str, Rule], ref: str|type, default = NOARG, /) -> Rule:
         '''Retrieve a rule instance from the given index, by name or type.
         '''
         try:
@@ -554,7 +554,7 @@ class RuleGroup(SequenceApi[Rule]):
         self._seq.clear()
         self._ruleindex.clear()
 
-    def get(self, ref:str|type[RuleT], default = NOARG, /) -> RuleT:
+    def get(self, ref:str|type, default = NOARG, /) -> Rule:
         """Get a member instance by name, type, or instance of same type.
 
         Args:

@@ -314,7 +314,7 @@ class BaseModel(Generic[MvalT_co], Abc):
         raise NotImplementedError
 
     @abstract
-    def is_countermodel_to(self, a: Argument, /) -> MvalT_co:
+    def is_countermodel_to(self, a: Argument, /) -> bool:
         check.inst(a, Argument)
         raise NotImplementedError
 

@@ -36,14 +36,12 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
 if TYPE_CHECKING:
     from typing import overload
 
-    from pytableaux.models import BaseModel
-    from pytableaux.proof import TableauxSystem, filters
-    from pytableaux.proof.common import Branch, Node, Target
+    # from pytableaux.models import BaseModel
+    # from pytableaux.proof import TableauxSystem
     from pytableaux.proof.tableaux import Rule
-    from pytableaux.tools.hooks import HookConn
     from pytableaux.tools.hybrids import SequenceSet
     from pytableaux.tools.linked import Link, LinkSequence
-    from pytableaux.tools.mappings import MappingApi
+    # from pytableaux.tools.mappings import MappingApi
     from pytableaux.tools.sequences import MutableSequenceApi, SequenceApi
     from pytableaux.tools.sets import SetApi
     from pytableaux.tools.timing import TimingCommon
@@ -60,16 +58,23 @@ class LogicType(
         description: str
         category_order: int
         tags: Collection[str]
-    if TYPE_CHECKING:
-        class TableauxSystem(TableauxSystem): pass
-        class Model(BaseModel): pass
-    else:
-        TableauxSystem: ClassVar[type[TableauxSystem]]
-        Model: ClassVar[type[BaseModel]]
+        native_operators: Collection
+    TableauxSystem: ClassVar[type]
+    Model: ClassVar[type]
     class TabRules:
-        closure_rules: ClassVar[tuple[type[Rule], ...]]
-        rule_groups: ClassVar[tuple[ tuple[type[Rule], ...], ... ]]
-        all_rules: ClassVar[tuple[type[Rule], ...]]
+        closure_rules: ClassVar[tuple[type, ...]]
+        rule_groups: ClassVar[tuple[tuple[type, ...], ... ]]
+        all_rules: ClassVar[tuple[type, ...]]
+    # if TYPE_CHECKING:
+    #     class TableauxSystem(TableauxSystem): pass
+    #     class Model(BaseModel): pass
+    # else:
+    #     TableauxSystem: ClassVar[type[TableauxSystem]]
+    #     Model: ClassVar[type[BaseModel]]
+    # class TabRules:
+    #     closure_rules: ClassVar[tuple[type[Rule], ...]]
+    #     rule_groups: ClassVar[tuple[ tuple[type[Rule], ...], ... ]]
+    #     all_rules: ClassVar[tuple[type[Rule], ...]]
 
 #==================================================+
 #  Type aliases -- used a runtime with isinstance  |
@@ -100,56 +105,62 @@ LogicLocatorRef = LogicLookupKey | HasModuleAttr
 RsetSectKT = _enum.Enum|tuple[_enum.Enum, bool]
 "RenderSet key type."
 
-if TYPE_CHECKING:
+IcmpFunc = KeysFunc = TargetsFn = NodeTargetsFn = NodeTargetsGen = \
+    NodePredFunc = Callable
 
-    IcmpFunc = Callable[[int, int], bool]
-    "Function that compares two ints and returns a boolean, e.g. `>` or `<`."
+HkProviderInfo = HkUserInfo = HkConns = HkProviders = Mapping
 
-    KeysFunc = Callable[[Any], Set[Hashable]]
-    "Function that returns a Set."
+HkProvsTable = HkUsersTable = HkConnsTable = dict
+# if TYPE_CHECKING:
 
-    TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
-    "Function like ``Rule._get_targets()``."
+#     IcmpFunc = Callable[[int, int], bool]
+#     "Function that compares two ints and returns a boolean, e.g. `>` or `<`."
 
-    NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]
-    "Node-iterating targets function."
+#     KeysFunc = Callable[[Any], Set[Hashable]]
+#     "Function that returns a Set."
 
-    NodeTargetsGen = Callable[[Rule, Iterable[Node], Branch], Iterator[Target]]
-    "Normalized node-iterating targets function."
+#     TargetsFn = Callable[[Rule, Branch], Sequence[Target]|None]
+#     "Function like ``Rule._get_targets()``."
 
-    NodePredFunc = Callable[[Node], bool]
-    "Function that takes a Node and returns a boolean."
+#     NodeTargetsFn  = Callable[[Rule, Iterable[Node], Branch], Any]
+#     "Node-iterating targets function."
 
-    HkProviderInfo = Mapping[str, tuple[str, ...]]
-    "Hook provider info, `hookname` -> `attrnames`."
+#     NodeTargetsGen = Callable[[Rule, Iterable[Node], Branch], Iterator[Target]]
+#     "Normalized node-iterating targets function."
 
-    HkUserInfo = Mapping[type, Mapping[str, Callable]]
-    "Hook user info, `provider` -> `hookname` -> `callback`."
+#     NodePredFunc = Callable[[Node], bool]
+#     "Function that takes a Node and returns a boolean."
 
-    HkConns = Mapping[str, tuple[HookConn, ...]]
-    "Hook connections, `hookname` -> `conns`."
+#     HkProviderInfo = Mapping[str, tuple[str, ...]]
+#     "Hook provider info, `hookname` -> `attrnames`."
 
-    HkProviders = Mapping[type, HkProviderInfo]
-    "All hook providers info mappings."
+#     HkUserInfo = Mapping[type, Mapping[str, Callable]]
+#     "Hook user info, `provider` -> `hookname` -> `callback`."
 
-    HkProvsTable = dict[type, HkProviderInfo]
-    "Hook providers dict."
+#     HkConns = Mapping[str, tuple[HookConn, ...]]
+#     "Hook connections, `hookname` -> `conns`."
 
-    HkUsersTable = dict[type, HkUserInfo]
-    "Hook users dict."
+#     HkProviders = Mapping[type, HkProviderInfo]
+#     "All hook providers info mappings."
 
-    HkConnsTable = dict[type, dict[type, HkConns]]
-    "Hook conns dict."
+#     HkProvsTable = dict[type, HkProviderInfo]
+#     "Hook providers dict."
+
+#     HkUsersTable = dict[type, HkUserInfo]
+#     "Hook users dict."
+
+#     HkConnsTable = dict[type, dict[type, HkConns]]
+#     "Hook conns dict."
 
 
-else:
+# else:
 
-    IcmpFunc = KeysFunc = TargetsFn = NodeTargetsFn = NodeTargetsGen = \
-        NodePredFunc = Callable
+#     IcmpFunc = KeysFunc = TargetsFn = NodeTargetsFn = NodeTargetsGen = \
+#         NodePredFunc = Callable
 
-    HkProviderInfo = HkUserInfo = HkConns = HkProviders = Mapping
+#     HkProviderInfo = HkUserInfo = HkConns = HkProviders = Mapping
 
-    HkProvsTable = HkUsersTable = HkConnsTable = dict
+#     HkProvsTable = HkUsersTable = HkConnsTable = dict
 
 #==========================+
 #  Type variables          |
@@ -158,8 +169,8 @@ else:
 T = TypeVar('T')
 "Generic, any type"
 
-T1 = TypeVar('T1')
-"Generic, any type"
+# T1 = TypeVar('T1')
+# "Generic, any type"
 
 KT = TypeVar('KT')
 "Generic, key type"
@@ -167,8 +178,8 @@ KT = TypeVar('KT')
 VT = TypeVar('VT')
 "Generic, value type"
 
-RT = TypeVar('RT')
-"Generic, return type"
+# RT = TypeVar('RT')
+# "Generic, return type"
 
 LHS = TypeVar('LHS')
 "Generic, left compare"
@@ -176,31 +187,31 @@ LHS = TypeVar('LHS')
 RHS = TypeVar('RHS')
 "Generic, right compare"
 
-Self = TypeVar('Self')
-"Generic, self"
+# Self = TypeVar('Self')
+# "Generic, self"
 
 # ---- Bound TypeVars
 
-EnumT = TypeVar('EnumT', bound = _enum.Enum)
-"Bound to ``Enum``"
+# EnumT = TypeVar('EnumT', bound = _enum.Enum)
+# "Bound to ``Enum``"
 
-F = TypeVar('F', bound = Callable[..., Any])
-"Bound to ``Callable``, decorator"
+# F = TypeVar('F', bound = Callable[..., Any])
+# "Bound to ``Callable``, decorator"
 
-LinkSeqT = TypeVar('LinkSeqT', bound = 'LinkSequence')
-"Bound to ``LinkSequence``"
+# LinkSeqT = TypeVar('LinkSeqT', bound = 'LinkSequence')
+# "Bound to ``LinkSequence``"
 
-LinkT = TypeVar('LinkT', bound = 'Link')
-"Bound to ``Link``"
+# LinkT = TypeVar('LinkT', bound = 'Link')
+# "Bound to ``Link``"
 
-MapiT = TypeVar('MapiT', bound = 'MappingApi')
-"Bound to ``MappingApi``"
+# MapiT = TypeVar('MapiT', bound = 'MappingApi')
+# "Bound to ``MappingApi``"
 
-MutSeqT = TypeVar('MutSeqT', bound = 'MutableSequenceApi')
-"Bound to ``MutableSequenceApi``"
+# MutSeqT = TypeVar('MutSeqT', bound = 'MutableSequenceApi')
+# "Bound to ``MutableSequenceApi``"
 
-RuleT = TypeVar('RuleT', bound = 'Rule')
-"Bound to ``Rule``"
+# RuleT = TypeVar('RuleT', bound = 'Rule')
+# "Bound to ``Rule``"
 
 # SenT = TypeVar('SenT', bound = 'Sentence')
 # "Bound to ``Sentence``"
@@ -208,97 +219,103 @@ RuleT = TypeVar('RuleT', bound = 'Rule')
 # SenT2 = TypeVar('SenT2', bound = 'Sentence')
 # "Bound to ``Sentence``"
 
-SeqApiT = TypeVar('SeqApiT', bound = 'SequenceApi')
-"Bound to ``SequenceApi``"
+# SeqApiT = TypeVar('SeqApiT', bound = 'SequenceApi')
+# "Bound to ``SequenceApi``"
 
-SeqSetT = TypeVar('SeqSetT', bound = 'SequenceSet')
-"Bound to ``SequenceSet``"
+# SeqSetT = TypeVar('SeqSetT', bound = 'SequenceSet')
+# "Bound to ``SequenceSet``"
 
-SetApiT = TypeVar('SetApiT', bound = 'SetApi')
-"Bound to ``SetApi``"
+# SetApiT = TypeVar('SetApiT', bound = 'SetApi')
+# "Bound to ``SetApi``"
 
-SetT = TypeVar('SetT', bound = Set)
-"Bound to ``Set``"
+# SetT = TypeVar('SetT', bound = Set)
+# "Bound to ``Set``"
 
-SysRulesT = TypeVar('SysRulesT', bound = LogicType.TabRules)
-"Bound to ``LogicType.TabRules``"
+# SysRulesT = TypeVar('SysRulesT', bound = LogicType.TabRules)
+# "Bound to ``LogicType.TabRules``"
 
-TimT = TypeVar('TimT', bound = 'TimingCommon')
-"Bound to ``TimingCommon``"
+# TimT = TypeVar('TimT', bound = 'TimingCommon')
+# "Bound to ``TimingCommon``"
 
-TT = TypeVar('TT', bound = type)
-"Bound to ``type``, class decorator"
+# TT = TypeVar('TT', bound = type)
+# "Bound to ``type``, class decorator"
 
 # ----
 
-P = ParamSpec('P')
-"Param spec"
+# P = ParamSpec('P')
+# "Param spec"
 
 #==========================+
 #  Stub/Hint classes       |
 #==========================+
 
+iter = builtins.iter
+TypeInstDict = FiltersDict = dict
+EnumDictType = _enum._EnumDict
+# _property = property
+
 if TYPE_CHECKING:
+    pass
+    # @overload
+    # def iter(__etype: type[EnumT]) -> Iterator[EnumT]: ...
 
-    @overload
-    def iter(__etype: type[EnumT]) -> Iterator[EnumT]: ...
+    # @overload
+    # def iter(__it: Iterable[T]) -> Iterator[T]: ...
 
-    @overload
-    def iter(__it: Iterable[T]) -> Iterator[T]: ...
+    # @overload
+    # def iter(__function: Callable[[], T], __sentinel: Any) -> Iterator[T]: ...
 
-    @overload
-    def iter(__function: Callable[[], T], __sentinel: Any) -> Iterator[T]: ...
+    # class TypeInstDict(dict[type[VT], VT]):
+    #     'Stub type for mapping of ``type[T]`` -> ``T``.'
+    #     @overload
+    #     def __getitem__(self, key: type[T]) -> T: ...
+    #     @overload
+    #     def get(self, key: type[T], default = None) -> T|None: ...
+    #     @overload
+    #     def copy(self: T) -> T: ...
+    #     @overload
+    #     def setdefault(self, key: type[T], value: Any) -> T:...
+    #     @overload
+    #     def pop(self, key: type[T]) -> T:...
 
-    class TypeInstDict(dict[type[VT], VT]):
-        'Stub type for mapping of ``type[T]`` -> ``T``.'
-        @overload
-        def __getitem__(self, key: type[T]) -> T: ...
-        @overload
-        def get(self, key: type[T], default = None) -> T|None: ...
-        @overload
-        def copy(self: T) -> T: ...
-        @overload
-        def setdefault(self, key: type[T], value: Any) -> T:...
-        @overload
-        def pop(self, key: type[T]) -> T:...
+    # FiltersDict = TypeInstDict[filters.NodeCompare]
+    # "Dict of filter type to filter."
 
-    FiltersDict = TypeInstDict[filters.NodeCompare]
-    "Dict of filter type to filter."
+    # class EnumDictType(_enum._EnumDict):
+    #     'Stub type for annotation reference.'
+    #     _member_names: list[str]
+    #     _last_values : list[object]
+    #     _ignore      : list[str]
+    #     _auto_called : bool
+    #     _cls_name    : str
 
-    class EnumDictType(_enum._EnumDict):
-        'Stub type for annotation reference.'
-        _member_names: list[str]
-        _last_values : list[object]
-        _ignore      : list[str]
-        _auto_called : bool
-        _cls_name    : str
-
-    class _property(property, Generic[Self, T]):
-        "Stub adapted from typing module with added annotations."
-        fget: Callable[[Self], Any] | None
-        fset: Callable[[Self, Any], None] | None
-        fdel: Callable[[Self], None] | None
-        @overload
-        def __init__(
-            self,
-            fget: Callable[[Self], T] | None = ...,
-            fset: Callable[[Self, Any], None] | None = ...,
-            fdel: Callable[[Self], None] | None = ...,
-            doc: str | None = ...,
-        ) -> None: ...
-        __init__ = NotImplemented
-        def getter(self, __fget: Callable[[Self], T]) -> _property[Self, T]: ...
-        def setter(self, __fset: Callable[[Self, Any], None]) -> _property[Self, T]: ...
-        def deleter(self, __fdel: Callable[[Self], None]) -> _property[Self, T]: ...
-        def __get__(self, __obj: Self, __type: type | None = ...) -> T: ...
-        def __set__(self, __obj: Self, __value: Any) -> None: ...
-        def __delete__(self, __obj: Self) -> None: ...
+    # class _property(property, Generic[Self, T]):
+    #     "Stub adapted from typing module with added annotations."
+    #     fget: Callable[[Self], Any] | None
+    #     fset: Callable[[Self, Any], None] | None
+    #     fdel: Callable[[Self], None] | None
+    #     @overload
+    #     def __init__(
+    #         self,
+    #         fget: Callable[[Self], T] | None = ...,
+    #         fset: Callable[[Self, Any], None] | None = ...,
+    #         fdel: Callable[[Self], None] | None = ...,
+    #         doc: str | None = ...,
+    #     ) -> None: ...
+    #     __init__ = NotImplemented
+    #     def getter(self, __fget: Callable[[Self], T]) -> _property[Self, T]: ...
+    #     def setter(self, __fset: Callable[[Self, Any], None]) -> _property[Self, T]: ...
+    #     def deleter(self, __fdel: Callable[[Self], None]) -> _property[Self, T]: ...
+    #     def __get__(self, __obj: Self, __type: type | None = ...) -> T: ...
+    #     def __set__(self, __obj: Self, __value: Any) -> None: ...
+    #     def __delete__(self, __obj: Self) -> None: ...
 
 else:
-    iter = builtins.iter
-    TypeInstDict = FiltersDict = dict
-    EnumDictType = _enum._EnumDict
-    _property = property
+    pass
+    # iter = builtins.iter
+    # TypeInstDict = FiltersDict = dict
+    # EnumDictType = _enum._EnumDict
+    # _property = property
     
 del(
     builtins,

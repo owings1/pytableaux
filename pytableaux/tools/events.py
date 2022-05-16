@@ -261,9 +261,9 @@ class EventsListeners(dmap[EventId, Listeners]):
         # Override for type check
         super().__setitem__(key, check.inst(value, Listeners))
 
-    if TYPE_CHECKING:
-        @overload
-        def update(self, it: Iterable = None, /, **kw):...
+    # if TYPE_CHECKING:
+    #     @overload
+    #     def update(self, it: Iterable = None, /, **kw):...
 
     # Alternate update impl uses setitem.
     update = dmap._setitem_update
