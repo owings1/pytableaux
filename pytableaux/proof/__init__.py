@@ -541,6 +541,7 @@ def anode(w1, w2):
 
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.tableaux import Tableau, Rule, TabRuleGroups
+from pytableaux.proof.tableaux import TreeStruct as TreeStruct
 from pytableaux.proof.rules import ClosingRule
 from pytableaux.proof.writers import TabWriter
 from pytableaux.proof import filters, helpers

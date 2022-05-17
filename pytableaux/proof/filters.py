@@ -22,15 +22,15 @@ pytableaux.proof.filters
 from __future__ import annotations
 
 import operator as opr
+from abc import abstractmethod as abstract
+from types import MappingProxyType as MapProxy
 from typing import Any, Callable, NamedTuple
 
-from pytableaux import __docformat__, EMPTY_SET
+from pytableaux import EMPTY_SET, __docformat__
 from pytableaux.lang import (Lexical, Operated, Operator, Predicated,
                              Quantified, Sentence)
-from pytableaux.proof import Access
-from pytableaux.proof.common import Node
-from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, thru
-from pytableaux.tools.abcs import Abc
+from pytableaux.proof import Access, Node
+from pytableaux.tools import EMPTY_MAP, abcs, thru
 from pytableaux.tools.mappings import dmapns
 
 __all__ = (
@@ -70,7 +70,7 @@ class CompSentenceCompItem(NamedTuple):
     negated: bool
     "Whether the sentence must be negated."
 
-class Comparer(Abc):
+class Comparer(abcs.Abc):
     "Filter/comparer base class."
 
     __slots__ = 'compitem',
@@ -184,6 +184,7 @@ class SentenceCompare(Comparer):
     )
         
     rget = staticmethod(thru)
+    compitem: CompSentenceCompItem
 
     __slots__ = EMPTY_SET
 
@@ -256,10 +257,10 @@ class SentenceNode(SentenceCompare, NodeCompare):
     __slots__ = EMPTY_SET
 
     @staticmethod
-    def rget(node: Node, /) -> Sentence|None:
+    def rget(node: Node, /):
         return node.get('sentence')
 
-    def example_node(self) -> dict[str, Sentence]:
+    def example_node(self):
         n = {}
         s = self.example()
         if s is not None:

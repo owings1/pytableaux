@@ -36,8 +36,8 @@ from .tutils import BaseSuite, larg, skip, using
 
 Existential = Quantifier.Existential
 Universal = Quantifier.Universal
-Identity = Predicates.System.Identity
-Existence = Predicates.System.Existence
+Identity = Predicate.System.Identity
+Existence = Predicate.System.Existence
 
 class BoolPropEnum(Enum):
     def __str__(self):

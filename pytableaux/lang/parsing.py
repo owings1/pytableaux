@@ -21,29 +21,25 @@ pytableaux.lang.parsing
 """
 from __future__ import annotations
 
+from abc import abstractmethod as abstract
 from collections import deque
 from collections.abc import Set
-from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Mapping
+from types import MappingProxyType as MapProxy
+from typing import ClassVar, Iterable, Mapping
 
 from pytableaux import EMPTY_SET, __docformat__
 from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
-from pytableaux.lang import (BiCoords, LangCommonMeta, Marking, Notation,
-                            #  ParseTableKey,
-                             TableStore,
-                             raiseae, Lexical)
-from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.lex import (Atomic, Constant, LexType, Operated, Operator,
-                                 Parameter, Predicate, Predicated, Quantified,
-                                 Sentence, Variable)
-from pytableaux.tools import MapProxy, abcs, abstract, key0
+from pytableaux.lang import (Argument, Atomic, BiCoords, Constant,
+                             LangCommonMeta, LexType, Marking, Notation,
+                             Operated, Operator, Parameter, Predicate,
+                             Predicated, Predicates, Quantified, Sentence,
+                             TableStore, Variable, raiseae)
+from pytableaux.tools import abcs, key0
 from pytableaux.tools.decorators import lazy
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap
 from pytableaux.tools.sequences import seqf
-
-if TYPE_CHECKING:
-    from typing import overload
 
 __all__ = (
     'Parser',
@@ -55,13 +51,6 @@ __all__ = (
 )
 
 NOARG = object()
-
-ParseTableValue = int|Lexical
-"ParseTable value type."
-
-ParseTableKey   = LexType|Marking|type[Predicate.System]
-"ParseTable key type."
-
 
 
 class ParserMeta(LangCommonMeta):
@@ -118,8 +107,8 @@ class Parser(metaclass = ParserMeta):
     notation: ClassVar[Notation]
     "The parser notation."
 
-    _defaults: ClassVar[dict[str, Any]] = {}
-    _optkeys: ClassVar[Set[str]] = _defaults.keys()
+    _defaults: ClassVar[dict] = {}
+    _optkeys: ClassVar[Set] = _defaults.keys()
 
     table: ParseTable
     "The parse table instance."
@@ -127,10 +116,10 @@ class Parser(metaclass = ParserMeta):
     preds: Predicates
     "The predicates store."
 
-    opts: Mapping[str, Any]
+    opts: Mapping
     "The parser options."
 
-    def __init__(self, preds: Predicates = Predicate.System, /, table: ParseTable|str = None, **opts):
+    def __init__(self, preds = Predicate.System, /, table = None, **opts):
         if table is None:
             self.table = ParseTable.fetch(self.notation)
         elif isinstance(table, str):
@@ -167,10 +156,6 @@ class Parser(metaclass = ParserMeta):
         """
         raise NotImplementedError
 
-    if TYPE_CHECKING:
-        @overload
-        def __call__(self, input_: str, /) -> Sentence: ...
-
     __call__ = parse
 
     def argument(self, conclusion: str, premises: Iterable[str] = None, /, title: str = None) -> Argument:
@@ -200,7 +185,7 @@ class Parser(metaclass = ParserMeta):
             title = title,
         )
 
-    def __init_subclass__(subcls: type[Parser], primary: bool = False, **kw):
+    def __init_subclass__(subcls, primary = False, **kw):
         'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
         super().__init_subclass__(**kw)
         abcs.merge_attr(subcls, '_defaults', supcls = __class__)
@@ -212,13 +197,9 @@ class Parser(metaclass = ParserMeta):
 class ParseContext:
     "Parse context."
 
-    if TYPE_CHECKING:
-        @overload
-        def type(self, char: str, default = NOARG, /) -> ParseTableKey: ...
-
     __slots__ = 'input', 'type', 'preds', 'is_open', 'pos', 'bound'
 
-    bound: set[Variable]
+    bound: set
     input: str
     preds: Predicates
     is_open: bool
@@ -241,21 +222,21 @@ class ParseContext:
     def __exit__(self, typ, value, traceback):
         pass
 
-    def current(self) -> str|None:
+    def current(self):
         'Return the current character, or ``None`` if after last.'
         try:
             return self.input[self.pos]
         except IndexError:
             return None
 
-    def next(self, n: int = 1, /) -> str|None:
+    def next(self, n: int = 1, /):
         'Get the nth character after the current, or ``None``.'
         try:
             return self.input[self.pos + n]
         except IndexError:
             return None
 
-    def assert_current(self) -> ParseTableKey|None:
+    def assert_current(self):
         """
         Returns:
             Type of current char, e.g. ``LexType.Operator``, or ``None`` if
@@ -268,7 +249,7 @@ class ParseContext:
             raise ParseError(f'Unexpected end of input at position {self.pos}.')
         return self.type(self.current(), None)
 
-    def assert_current_is(self, ctype: ParseTableKey, /) -> None:
+    def assert_current_is(self, ctype, /):
         """
         Args:
             ctype (str): Char type
@@ -279,18 +260,18 @@ class ParseContext:
         if self.assert_current() is not ctype:
             raise ParseError(self._unexp_msg())
 
-    def assert_current_in(self, ctypes: Set[ParseTableKey], /) -> ParseTableKey:
+    def assert_current_in(self, ctypes, /):
         ctype = self.assert_current()
         if ctype in ctypes:
             return ctype
         raise ParseError(self._unexp_msg())
 
-    def assert_end(self) -> None:
+    def assert_end(self):
         'Raise an error if not after last.'
         if len(self.input) > self.pos:
             raise ParseError(self._unexp_msg())
 
-    def has_next(self, n: int = 1, /) -> bool:
+    def has_next(self, n = 1, /) -> bool:
         'Whether there are n-many characters after the current.'
         return len(self.input) > self.pos + n
 
@@ -298,7 +279,7 @@ class ParseContext:
         'Whether there is a current character.'
         return len(self.input) > self.pos
 
-    def advance(self, n: int = 1, /) -> ParseContext:
+    def advance(self, n = 1, /):
         """Advance the current pointer n-many characters, and then eat whitespace.
 
         Args:
@@ -333,7 +314,7 @@ class ParseContext:
             pfx = f'Unexpected {ctype} symbol'
         return f"{pfx} '{char}' at position {self.pos}"
 
-class Ctype(frozenset[ParseTableKey], abcs.Ebc):
+class Ctype(frozenset, abcs.Ebc):
 
     pred = {LexType.Predicate, Predicate.System}
 
@@ -618,34 +599,30 @@ class StandardParser(BaseParser, primary = True):
         context.advance()
         return Operated(oper, (lhs, rhs))
 
-class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStore):
+class ParseTable(MapCover, TableStore):
     'Parser table data class.'
 
     default_fetch_key = 'default'
 
-    __slots__ = (
-        'chars',
-        'keypair',
-        'reversed',
-    )
+    __slots__ = ('chars', 'keypair', 'reversed')
 
-    reversed: Mapping[tuple[ParseTableKey, ParseTableValue], str]
+    reversed: Mapping
     "Reversed mapping of item to symbol."
 
-    chars: Mapping[ParseTableKey, seqf[str]]
+    chars: Mapping
     "Grouping of each symbol type to the the symbols."
 
-    keypair: tuple[Notation, str]
+    keypair: tuple
 
     @property
-    def notation(self) -> Notation:
+    def notation(self):
         return self.keypair[0]
 
     @property
-    def fetchkey(self) -> str:
+    def fetchkey(self):
         return self.keypair[1]
 
-    def __init__(self, data: Mapping[str, tuple[ParseTableKey, ParseTableValue]], keypair: tuple[Notation, str], /):
+    def __init__(self, data: Mapping, keypair, /):
         """
         Args:
             data: The table data.
@@ -656,9 +633,9 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
         vals = self.values()
 
         # list of types
-        ctypes: qset[ParseTableKey] = qset(map(key0, vals))
+        ctypes = qset(map(key0, vals))
 
-        tvals: dict[ParseTableKey, qset[ParseTableValue]] = {}
+        tvals:dict[str, qset] = {}
         for ctype in ctypes:
             tvals[ctype] = qset()
         for ctype, value in vals:
@@ -678,7 +655,7 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
                     for ctype in ctypes
         })
 
-    def type(self, char: str, default = NOARG, /) -> ParseTableKey:
+    def type(self, char, default = NOARG, /):
         """Get the item type for the character.
 
         Args:
@@ -698,7 +675,7 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
                 raise
             return NOARG
 
-    def value(self, char: str, /) -> ParseTableValue:
+    def value(self, char, /):
         """Get the item value for the character.
 
         Args:
@@ -712,7 +689,7 @@ class ParseTable(MapCover[str, tuple[ParseTableKey, ParseTableValue]], TableStor
         """
         return self[char][1]
 
-    def char(self, ctype: ParseTableKey, value: ParseTableValue, /) -> str:
+    def char(self, ctype, value, /):
         """Get the character symbol corresponding to the (ctype, value) item, i.e.
         perform a reverse lookup.
 

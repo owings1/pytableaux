@@ -27,7 +27,6 @@ from typing import TYPE_CHECKING, Optional
 
 from pytableaux.errors import check
 from pytableaux.logics import registry
-from pytableaux.tools import closure
 from pytableaux.tools.doc import (AutodocProcessor, ConfKey, Processor,
                                   ReplaceProcessor, SphinxEvent, misc)
 from sphinx.ext import autodoc

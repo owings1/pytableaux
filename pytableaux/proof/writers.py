@@ -20,18 +20,21 @@ pytableaux.proof.writers
 
 """
 from __future__ import annotations
-from collections import deque
 
 import os
-from typing import Mapping
+from abc import abstractmethod as abstract
+from collections import deque
+from types import MappingProxyType as MapProxy
+from typing import Mapping, TYPE_CHECKING
 
 import jinja2
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import Notation, LexWriter
-from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure, abcs
+from pytableaux.lang import LexWriter, Notation
+from pytableaux.tools import EMPTY_MAP, abcs, closure
 from pytableaux.tools.hybrids import qset
-
+if TYPE_CHECKING:
+    from pytableaux.proof import Tableau, TreeStruct
 
 __all__ = (
     'HtmlTabWriter',
@@ -67,7 +70,7 @@ def register():
             The writer class.
         """
 
-        check.subcls(wcls, TabWriter)
+        wcls = check.subcls(wcls, TabWriter)
         if abcs.isabstract(wcls):
             raise TypeError(f'Cannot register abstract class: {wcls}')
 
@@ -263,7 +266,7 @@ class TextTabWriter(TemplateTabWriter):
     ))
     """Default options."""
 
-    def write(self, tab, /) -> str:
+    def write(self, tab: Tableau, /) -> str:
         strs = deque()
         opts = self.opts
         # if opts['title']:
@@ -276,13 +279,13 @@ class TextTabWriter(TemplateTabWriter):
         strs.append(self._write_structure(tab.tree, template))
         return '\n'.join(strs)
 
-    def _write_structure(self, structure, template, *, prefix = '',):
-        nodestr = template.render(structure = structure)
+    def _write_structure(self, s: TreeStruct, template: jinja2.Template, *, prefix = '',):
+        nodestr = template.render(structure = s)
         lines = deque()
         append = lines.append
         writestruct = self._write_structure
         append(prefix + nodestr)
-        children = structure.children
+        children = s.children
         prefix += ' ' * (len(nodestr) - 1)
         for c, child in enumerate(children):
             is_last = c == len(children) - 1

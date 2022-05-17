@@ -20,15 +20,18 @@ pytableaux.proof.helpers
 """
 from __future__ import annotations
 
+from abc import abstractmethod as abstract
 from copy import copy
 from itertools import filterfalse
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
+from types import MappingProxyType as MapProxy
+from typing import (Any, Callable, Iterable, Iterator, Mapping,
+                    Sequence, TypeVar)
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
-from pytableaux.proof import Branch, Node, Rule, RuleHelper, Target, filters
-from pytableaux.proof import Access, RuleAttr, RuleEvent, TabEvent
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract, closure
+from pytableaux.proof import (Access, Branch, Node, Rule, RuleAttr, RuleEvent,
+                              RuleHelper, TabEvent, Target, filters, Tableau)
+from pytableaux.tools import EMPTY_MAP, abcs, closure
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setm
@@ -36,12 +39,6 @@ from pytableaux.tools.sets import EMPTY_SET, setm
 _T = TypeVar('_T')
 _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')
-if TYPE_CHECKING:
-    from typing import overload
-
-    from pytableaux.proof.tableaux import Tableau
-else:
-    pass
 
 __all__ = (
     'AdzHelper',
@@ -504,10 +501,6 @@ class FilterHelper(FilterNodeCache):
         if self.ignore_ticked and branch.is_ticked(node):
             return False
         return self.pred(node)
-
-    if TYPE_CHECKING:
-        @overload
-        def __call__(self, node: Node, branch: Branch, /) -> bool: ...
 
     __call__ = filter
 

@@ -47,7 +47,6 @@ logger = logging.getLogger(__name__)
 
 class HTML5Translator(BaseTranslator):
 
-
     class OptStacks(NamedTuple):
         notn: list
         charset: list

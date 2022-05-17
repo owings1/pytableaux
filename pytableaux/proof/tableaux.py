@@ -25,10 +25,13 @@ pytableaux.proof.tableaux
 from __future__ import annotations
 
 import operator as opr
+from abc import abstractmethod as abstract
 from collections import deque
 from collections.abc import Set
-from typing import (TYPE_CHECKING, Any, Callable, Collection, Iterable,
-                    Iterator, Mapping, Sequence, SupportsIndex, final)
+from types import MappingProxyType as MapProxy
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
+                    Iterable, Iterator, Mapping, Sequence, SupportsIndex,
+                    final)
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
@@ -36,23 +39,21 @@ from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
 from pytableaux.proof import (BranchEvent, BranchStat, RuleClassFlag,
-                              RuleEvent, RuleHelper, RuleMeta, RuleState,
-                              StepEntry, TabEvent, TabFlag, TabStatKey,
-                              TabTimers)
+                              RuleEvent, RuleMeta, RuleState, StepEntry,
+                              TabEvent, TabFlag, TabStatKey, TabTimers)
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.tools import abstract, closure, isstr
+from pytableaux.tools import closure, isstr
 from pytableaux.tools.decorators import wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset, qsetf
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import MapProxy, dmap, dmapns
+from pytableaux.tools.mappings import dmap, dmapns
 from pytableaux.tools.sequences import (SeqCover, SequenceApi, absindex, seqf,
                                         seqm)
 from pytableaux.tools.sets import EMPTY_SET, setf
 from pytableaux.tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
-    from typing import ClassVar, overload
 
     from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem
@@ -77,25 +78,25 @@ NOGET = object()
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
 
-    _defaults: ClassVar[Mapping[str, Any]] = MapProxy(dict(
+    _defaults = MapProxy(dict(
         is_rank_optim = True,
         nolock = False,
     ))
-    _optkeys: ClassVar[setf[str]] = setf(_defaults)
+    _optkeys = setf(_defaults)
 
-    FLAGS: ClassVar[RuleClassFlag] = RuleClassFlag(0)
-    legend: ClassVar[tuple]
+    FLAGS = RuleClassFlag(0)
+    legend: tuple
 
-    Helpers: ClassVar[Mapping[type[RuleHelper], Any]] = {}
+    Helpers = {}
     "Helper classes mapped to their settings."
 
-    Timers: ClassVar[qsetf[str]] = qsetf(('search', 'apply'))
+    Timers = qsetf(('search', 'apply'))
     "StopWatch names to create in ``timers`` mapping."
 
     name: ClassVar[str]
     "The rule class name."
 
-    branch_level: ClassVar[int] = 1
+    branch_level = 1
     """The number of branches resulting from an application. A value
     of ``1`` means no additional branches. A value of ``2`` means
     one additional branch, etc.
@@ -104,7 +105,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     tableau: Tableau
     "The tableau instance."
 
-    opts: Mapping[str, bool]
+    opts: Mapping
     "The options."
 
     helpers: Mapping
@@ -126,11 +127,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         'state', '__getitem__')
 
     __iter__ = None
-
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def __getitem__(self, key: type[T]) -> T: # type: ignore
-    #         'Get a helper instance by class.'
 
     def __new__(cls, *args, **kw):
         inst = super().__new__(cls)
@@ -467,7 +463,7 @@ class TabRuleGroups(SequenceApi[Rule]):
             raise Emsg.DuplicateKey(name)
 
     @staticmethod
-    def _ruleindex_get(idx: Mapping[str, Rule], ref: str|type, default = NOARG, /) -> Rule:
+    def _ruleindex_get(idx, ref, default = NOARG, /) -> Rule:
         '''Retrieve a rule instance from the given index, by name or type.
         '''
         try:
@@ -511,7 +507,7 @@ class RuleGroup(SequenceApi[Rule]):
         return self._name
 
     @locking
-    def append(self, value: type[Rule], /):
+    def append(self, value, /):
         """Instantiate and append a rule class.
 
         Args:
@@ -525,12 +521,12 @@ class RuleGroup(SequenceApi[Rule]):
         root = self._root
         name = check.subcls(value, Rule).__name__
         root._checkname(name)
-        rule = value(root._tab, **root._tab.opts)
+        rule: Rule = value(root._tab, **root._tab.opts)
         self._seq.append(rule)
         root._ruleindex[name] = self._ruleindex[name] = rule
         rule.on(RuleEvent.AFTER_APPLY, root._tab._after_rule_apply)
 
-    def extend(self, values: Iterable[type[Rule]], /):
+    def extend(self, values, /):
         """Append multiple rules.
 
         Args:
@@ -553,7 +549,7 @@ class RuleGroup(SequenceApi[Rule]):
         self._seq.clear()
         self._ruleindex.clear()
 
-    def get(self, ref:str|type, default = NOARG, /) -> Rule:
+    def get(self, ref, default = NOARG, /) -> Rule:
         """Get a member instance by name, type, or instance of same type.
 
         Args:
@@ -570,22 +566,12 @@ class RuleGroup(SequenceApi[Rule]):
         """
         return self._root._ruleindex_get(self._ruleindex, ref, default)
 
-    if TYPE_CHECKING:
-        @overload
-        def names(self) -> list[str]: ...
-
-        @overload
-        def __getitem__(self, i:SupportsIndex) -> Rule:...
-
-        @overload
-        def __getitem__(self, s:slice) -> SequenceApi[Rule]:...
-
     names = TabRuleGroups.names
 
     def __getitem__(self, index):
         return self._seq[index]
 
-    def __iter__(self) -> Iterator[Rule]:
+    def __iter__(self):
         return iter(self._seq)
 
     def __len__(self):
@@ -613,7 +599,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
         self._seq: list[RuleGroup] = []
 
     @locking
-    def create(self, name: str = None) -> RuleGroup:
+    def create(self, name = None):
         'Create and return a new emtpy rule group.'
         root = self._root
         if name is not None:
@@ -624,7 +610,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
             root._groupindex[name] = group
         return group
 
-    def append(self, Rules: Iterable[type[Rule]], /, name: str|None = NOARG):
+    def append(self, Rules, /, name = NOARG):
         'Create a new group with the given rules. Raise IllegalStateError if locked.'
         if name is NOARG:
             if isinstance(Rules, RuleGroup):
@@ -633,7 +619,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
                 name = None
         self.create(name).extend(Rules)
 
-    def extend(self, groups: Iterable[Iterable[type[Rule]]]):
+    def extend(self, groups):
         'Add multiple groups. Raise IllegalStateError if locked.'
         for _ in map(self.append, groups): pass
 
@@ -658,16 +644,16 @@ class RuleGroups(SequenceApi[RuleGroup]):
             isstr, (group.name for group in self)
         ))
 
-    def __iter__(self) -> Iterator[RuleGroup]:
+    def __iter__(self):
         return iter(self._seq)
 
     def __len__(self):
         return len(self._seq)
 
-    def __getitem__(self, index: SupportsIndex) -> RuleGroup:
+    def __getitem__(self, index):
         return self._seq[check.inst(index, SupportsIndex)]
 
-    def __contains__(self, item: str|RuleGroup):
+    def __contains__(self, item):
         if isinstance(item, str):
             return item in self._root._groupindex
         check.inst(item (str, RuleGroup))
@@ -697,7 +683,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     rules: TabRuleGroups
     "The rule instances."
 
-    opts: Mapping[str, bool|int|None]
+    opts: Mapping
     "The build options."
 
     open: Sequence[Branch]
@@ -1060,15 +1046,6 @@ class Tableau(Sequence[Branch], EventEmitter):
             return stat
         raise ValueError('Too many keys to lookup')
 
-    # *** Behaviors
-
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def __getitem__(self, s: slice) -> list[Branch]: ...
-
-    #     @overload
-    #     def __getitem__(self, i: SupportsIndex) -> Branch: ...
-
     def __getitem__(self, index):
         return self.__branch_list[index]
 
@@ -1078,13 +1055,13 @@ class Tableau(Sequence[Branch], EventEmitter):
     def __bool__(self):
         return True
 
-    def __iter__(self) -> Iterator[Branch]:
+    def __iter__(self):
         return iter(self.__branch_list)
 
-    def __reversed__(self) -> Iterator[Branch]:
+    def __reversed__(self):
         return reversed(self.__branch_list)
 
-    def __contains__(self, branch: Branch):
+    def __contains__(self, branch):
         return branch in self.__branchstat
 
     def __repr__(self):
@@ -1260,21 +1237,6 @@ class Tableau(Sequence[Branch], EventEmitter):
             #rules = tuple(map(self.__compute_rule_stats, self.rules)),
         )
 
-    # def __compute_rule_stats(self, rule: Rule, /) -> dict[str, Any]:
-    #     'Compute the stats for a rule after the tableau is finished.'
-    #     return dict(
-    #         name    = rule.name,
-    #         applied = len(rule.history),
-    #         timers  = {
-    #             name : dict(
-    #                 duration_ms  = timer.elapsed_ms(),
-    #                 duration_avg = timer.elapsed_avg(),
-    #                 count        = timer.count,
-    #             )
-    #             for name, timer in rule.timers.items()
-    #         },
-    #     )
-
     def __check_timeout(self):
         timeout = self.opts['build_timeout']
         if timeout is None or timeout < 0:
@@ -1401,13 +1363,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         if track['depth'] == 0:
             s.is_only_branch = True
 
-    def _build_tree_branches(self,
-        s: TreeStruct,
-        branches: Collection[Branch],
-        depth_nodes: Set[Node],
-        node_depth: int,
-        track: dict, /
-    ):
+    def _build_tree_branches(self,s: TreeStruct, branches: Collection[Branch], depth_nodes: Set[Node], node_depth: int, track: dict, /):
         'Build child structures for each distinct node.'
         w_first = w_last = w_mid = 0
 

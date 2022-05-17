@@ -23,13 +23,13 @@ from __future__ import annotations
 
 import functools
 import re
+from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING
 
 from docutils import nodes
 from pytableaux import logics
-from pytableaux.lang import (LexType, LexWriter, Notation, Parser, Predicate,
-                             Predicates)
-from pytableaux.tools import MapProxy, abcs
+from pytableaux.lang import LexType, LexWriter, Notation, Predicate
+from pytableaux.tools import abcs
 from pytableaux.tools.doc import (BaseRole, ConfKey, ParserOptionMixin,
                                   classopt, nodeopt, nodez, predsopt)
 from pytableaux.tools.hybrids import qset, qsetf

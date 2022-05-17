@@ -22,19 +22,19 @@ pytableaux.lang.writing
 from __future__ import annotations
 
 import itertools
+from abc import abstractmethod as abstract
 from types import DynamicClassAttribute as dynca
-from typing import TYPE_CHECKING, Any, ClassVar, Mapping
+from types import MappingProxyType as MapProxy
+from typing import Any, ClassVar
 
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import LangCommonMeta, Marking, Notation, RenderSet
-from pytableaux.lang.lex import (Atomic, Constant, CoordsItem, Lexical,
-                                 LexType, Operated, Operator, Predicate,
-                                 Predicated, Quantified)
-from pytableaux.tools import MapProxy, abstract, closure, abcs
+from pytableaux.lang import (Atomic, Constant, CoordsItem, LangCommonMeta,
+                             Lexical, LexType, Marking, Notation, Operated,
+                             Operator, Predicate, Predicated, Quantified,
+                             RenderSet)
+from pytableaux.tools import abcs, closure
 from pytableaux.tools.sets import EMPTY_SET
 
-if TYPE_CHECKING:
-    from typing import overload
 
 __all__ = (
     'LexWriter',
@@ -98,16 +98,14 @@ class LexWriter(metaclass = LexWriterMeta):
     #******  Class Variables
 
     notation: ClassVar[Notation]
-    defaults: ClassVar[dict[str, Any]] = {}
-    _methodmap: ClassVar[Mapping[LexType, str]] = MapProxy(dict(
-        zip(LexType, itertools.repeat(NotImplemented))
-    ))
-    _sys: ClassVar[LexWriter]
+    defaults = {}
+    _methodmap = MapProxy(dict(zip(LexType, itertools.repeat(NotImplemented))))
+    _sys: LexWriter
 
     #******  Instance Variables
 
     renderset: RenderSet
-    opts: dict[str, Any]
+    opts: dict
     charset: str
 
     @property
@@ -116,13 +114,9 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #******  External API
 
-    def write(self, item: Lexical) -> str:
+    def write(self, item) -> str:
         'Write a lexical item.'
         return self._write(item)
-
-    if TYPE_CHECKING:
-        @overload
-        def __call__(self, item: Lexical) -> str: ...
 
     __call__ = write
 
@@ -134,7 +128,7 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #******  Instance Init
 
-    def __init__(self, charset: str = None, renderset: RenderSet = None, **opts):
+    def __init__(self, charset = None, renderset = None, **opts):
         if renderset is None:
             notn = self.notation
             if charset is None:
@@ -147,7 +141,7 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #******  Internal API
 
-    def _write(self, item: Lexical) -> str:
+    def _write(self, item) -> str:
         'Wrapped internal write method.'
         try:
             method = self._methodmap[item.TYPE]
@@ -157,7 +151,7 @@ class LexWriter(metaclass = LexWriterMeta):
             raise NotImplementedError(type(item))
         return getattr(self, method)(item)
 
-    def _test(self) -> list[str]:
+    def _test(self):
         'Smoke test. Returns a rendered list of each lex type.'
         return list(map(self, (t.cls.first() for t in LexType)))
 
@@ -259,7 +253,7 @@ class StandardLexWriter(BaseLexWriter):
     notation = Notation.standard
     defaults = dict(drop_parens = True)
 
-    def write(self, item: Lexical) -> str:
+    def write(self, item):
         if self.opts['drop_parens'] and isinstance(item, Operated):
             return self._write_operated(item, drop_parens = True)
         return super().write(item)

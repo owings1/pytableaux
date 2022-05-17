@@ -25,13 +25,13 @@ import builtins
 import operator as opr
 from collections import defaultdict
 from collections.abc import Set
-from typing import (TYPE_CHECKING, Any, Collection, Iterable, Iterator,
-                    Mapping, SupportsIndex)
+from types import MappingProxyType as MapProxy
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
 
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Sentence
-from pytableaux.tools import EMPTY_MAP, isattrstr, isint, abcs, MapProxy
+from pytableaux.tools import EMPTY_MAP, abcs, isattrstr, isint
 from pytableaux.tools.decorators import lazy, operd, raisr
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
@@ -40,11 +40,10 @@ from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.sets import EMPTY_SET, SetView, setf
 
 if TYPE_CHECKING:
-    from typing import Literal, overload
 
     from pytableaux.models import BaseModel
-    from pytableaux.proof.tableaux import Rule
     from pytableaux.proof import StepEntry
+    from pytableaux.proof.tableaux import Rule
 
 __all__ = (
     'Branch',
@@ -145,12 +144,6 @@ class Node(MapCover):
     __eq__      = operd(opr.is_)
     __hash__    = operd(builtins.id)
     __delattr__ = raisr(AttributeError)
-
-    if TYPE_CHECKING:
-        @overload
-        def get(self, key: Literal['sentence']) -> Sentence|None:...
-        @overload
-        def __getitem__(self, key: Literal['sentence']) -> Sentence:...
 
     def __getitem__(self, key):
         try:
@@ -502,13 +495,6 @@ class Branch(SequenceApi[Node], EventEmitter):
             self.__origin = self
         self.__parent = parent
 
-    if TYPE_CHECKING:
-        @overload
-        def add(self, node: Mapping, /) -> Branch:...
-        @overload
-        def __getitem__(self, index: SupportsIndex) -> Node:...
-        @overload
-        def __getitem__(self, slice_: slice) -> qset[Node]:...
 
     add = append
 
@@ -518,7 +504,7 @@ class Branch(SequenceApi[Node], EventEmitter):
     def __len__(self):
         return len(self.__nodes)
 
-    def __iter__(self) -> Iterator[Node]:
+    def __iter__(self):
         return iter(self.__nodes)
 
     __bool__ = operd(tools.true)
@@ -541,7 +527,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         b.extend(it)
         return b
 
-    class Index(dict[str, dict[Any, set[Node]]], abcs.Copyable):
+    class Index(dict[str, dict[Any, set]], abcs.Copyable):
         "Branch node index."
 
         __slots__ = EMPTY_SET
@@ -556,7 +542,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                 w1Rw2      = defaultdict(set),
             )
 
-        def add(self, node: Node, /):
+        def add(self, node, /):
             for prop in self:
                 value = None
                 found = False
@@ -570,14 +556,14 @@ class Branch(SequenceApi[Node], EventEmitter):
                 if found:
                     self[prop][value].add(node)
 
-        def copy(self) -> Branch.Index:
+        def copy(self):
             inst = type(self)()
             for prop, index in self.items():
                 for value, nodes in index.items():
                     inst[prop][value].update(nodes)
             return inst
 
-        def select(self, props: Mapping, default: Collection[Node], /) -> Collection[Node]:
+        def select(self, props, default, /):
             best = None
             for prop in self:
                 value = None
@@ -667,9 +653,6 @@ class Target(dmapattr[str, Any]):
     def _names(self) -> Iterator[str]:
         return (name for name in self.__slots__
             if self._keyattr_ok(name))
-
-
-
 
 
 del(

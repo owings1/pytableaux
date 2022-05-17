@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING
 
 from pytableaux.lang import LexType
 from pytableaux.logics import registry
-from pytableaux.proof import (Branch, ClosingRule, NodeAttr, Rule, RuleEvent,
+from pytableaux.proof import (Branch, ClosingRule, Rule, RuleEvent,
                               TabEvent)
 from pytableaux.proof import TableauxSystem as TabSys
 from pytableaux.proof.filters import SentenceCompare
@@ -37,7 +37,7 @@ from pytableaux.tools.abcs import isabstract
 from sphinx.ext.autodoc.importer import import_object
 
 if TYPE_CHECKING:
-    from typing import Any, Collection, overload
+    from typing import Any, Collection
 
     from pytableaux.proof import Node, Rule, Target
     from pytableaux.logics import LogicType
@@ -159,15 +159,6 @@ def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /
     return sorted(rules, key = keys_member_order.__getitem__)
 # ------------------------------------------------
 
-if TYPE_CHECKING:
-
-    @overload
-    def is_enum_member(modname: str, objpath: list[str]):
-        "Prefered method if info is available."
-
-    @overload
-    def is_enum_member(fullname: str):
-        "Fallback method that tries to guess module path."
 
 def is_enum_member(modname: str, objpath = None):
 

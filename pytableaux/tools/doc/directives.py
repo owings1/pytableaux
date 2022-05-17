@@ -48,7 +48,7 @@ from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
 
 if TYPE_CHECKING:
-    from typing import Any, Literal, overload
+    from typing import Any, Literal
 
     import sphinx.config
     from docutils import nodes
@@ -493,7 +493,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         })
         return RenderSet.load(notn, rskey, data)
 
-    def _check_options_mode(self) -> Literal['argument']|Literal['rule']|Literal['build-trunk']:
+    def _check_options_mode(self) -> Literal['argument','rule','build-trunk']:
         opts = self.options
         for mode, names in self.modes.items():
             if mode in opts:

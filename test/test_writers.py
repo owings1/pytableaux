@@ -20,8 +20,7 @@
 import pytest
 from pytableaux import examples
 from pytableaux.errors import *
-from pytableaux.lang.collect import Predicates
-from pytableaux.lang.lex import Atomic
+from pytableaux.lang import Atomic, Predicate
 from pytableaux.lang.parsing import Parser
 from pytableaux.lang.writing import LexWriter
 from pytableaux.proof.tableaux import Tableau
@@ -96,7 +95,7 @@ class TestStandard(object):
         # assert res == ss
 
     def test_write_predicate_sys(self):
-        res = std(Predicates.System['Identity'])
+        res = std(Predicate.System['Identity'])
         assert res == '='
 
     # def test_write_parameter_not_impl_base_param(self):

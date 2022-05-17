@@ -46,8 +46,10 @@ from __future__ import annotations
 import os
 import re
 import traceback
+from abc import abstractmethod as abstract
 from dataclasses import dataclass
 from importlib import import_module
+from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Mapping, NamedTuple
 
 import jinja2
@@ -57,9 +59,9 @@ from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
-from pytableaux import logics, EMPTY_SET
+from pytableaux import EMPTY_SET, logics
 from pytableaux.lang import Operator, Parser, Predicates
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract
+from pytableaux.tools import EMPTY_MAP, abcs
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
 from sphinx.ext import viewcode
@@ -68,9 +70,7 @@ from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
 
 if TYPE_CHECKING:
-    from typing import overload
 
-    import sphinx.config
     from sphinx.application import Sphinx
     from sphinx.config import Config
     from sphinx.environment import BuildEnvironment
@@ -162,9 +162,7 @@ def init_app(app: Sphinx, config: Config):
         lstrip_blocks = True,
     )
 
-
 # ------------------------------------------------
-
 
 def viewcode_target(obj: Any) -> str:
     if isinstance(obj, str):
@@ -254,11 +252,9 @@ class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
     def app(self) -> Sphinx:
         return self.env.app
 
-
 # ------------------------------------------------
 
 class DirectiveHelper(RoleDirectiveMixin):
-
 
     required_arguments = 0
     optional_arguments = 0
@@ -310,7 +306,7 @@ class BaseRole(SphinxRole, RoleDirectiveMixin):
     def __init__(self):
         self.options = {'class': None}
 
-    def wrapped(self, name: str, newopts: Mapping, newcontent: list[str] = [], /):
+    def wrapped(self, name, newopts, newcontent: list = [], /):
         "Wrapper for ad-hoc customized roles."
         try:
             buildopts = dict(self.options)
@@ -410,20 +406,6 @@ class ReplaceProcessor(Processor):
 
     # See https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
-    if TYPE_CHECKING:
-    
-        @overload
-        def __call__(self, app: Sphinx, docname: str, lines: list[str]):
-            'Regex replace for source-read event.'
-
-        @overload
-        def __call__(self, app: Sphinx, lines: list[str]):
-            'Regex replace for custom include-read event.'
-
-        @overload
-        def __call__(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
-            'Regex replace for autodoc event.'
-
     def __call__(self, *args):
         if len(args) == 2:
             self.event = SphinxEvent.IncludeRead
@@ -468,7 +450,6 @@ class Tabler(list, abcs.Abc):
         if rp:
             self.apply_repr(rp)
         return tb(self.body, self.header, tablefmt, **kw)
-
 
 
 # ------------------------------------------------

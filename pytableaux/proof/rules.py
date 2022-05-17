@@ -21,12 +21,12 @@ pytableaux.proof.rules
 """
 from __future__ import annotations
 
+from abc import abstractmethod as abstract
 from typing import Generator, Iterable, final
 
 from pytableaux import EMPTY_SET
 from pytableaux.lang import Constant, Sentence
 from pytableaux.proof import adds, filters, group, Branch, Node, Target, Rule
-from pytableaux.tools import abstract
 
 __all__ = (
     'BaseClosureRule',

@@ -212,11 +212,11 @@ class TestPredicates(BaseSuite):
             assert Predicate.System['Identity'] == Predicate.System.Identity
 
         def test_sys_preds_enum_value(self):
-            assert Pred != Preds
+            # assert Pred != Preds
             assert Sys is Predicate.System
-            assert Pred.System is Preds.System
+            # assert Pred.System is Preds.System
             assert Sys.Identity is Sys['Identity']
-            assert sorted(Preds.System) == list(Preds.System)
+            assert sorted(Pred.System) == list(Pred.System)
 
 
 class TestSentence(BaseSuite):

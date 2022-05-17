@@ -21,15 +21,15 @@ pytableaux.tools.sequences
 """
 from __future__ import annotations
 
+from abc import abstractmethod as abstract
 from collections import deque
 from itertools import chain, repeat
-from typing import (ClassVar, Iterable, MutableSequence,
-                    Sequence, Sized, SupportsIndex)
+from typing import (ClassVar, Iterable, MutableSequence, Sequence,
+                    SupportsIndex)
 
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import abcs, abstract, closure
+from pytableaux.tools import abcs, closure
 from pytableaux.tools.sets import EMPTY_SET, setf
-
 
 __all__ = (
     'absindex',
@@ -45,7 +45,7 @@ __all__ = (
 
 NOARG = object()
 
-def absindex(seqlen: int, index: SupportsIndex, /, strict = True) -> int:
+def absindex(seqlen, index, /, strict = True) -> int:
     'Normalize to positive/absolute index.'
     if not isinstance(index, int):
         check.inst(index, SupportsIndex)
@@ -56,7 +56,7 @@ def absindex(seqlen: int, index: SupportsIndex, /, strict = True) -> int:
         raise Emsg.IndexOutOfRange(index)
     return index
 
-def slicerange(seqlen: int, slice_: slice, values: Sized, /, strict = True) -> range:
+def slicerange(seqlen, slice_: slice, values, /, strict = True) -> range:
     'Get a range of indexes from a slice and new values, and perform checks.'
     range_ = range(*slice_.indices(seqlen))
     if len(range_) != len(values):
@@ -71,21 +71,11 @@ class SequenceApi(Sequence, abcs.Copyable):
 
     __slots__ = EMPTY_SET
 
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def __getitem__(self: SeqApiT, s: slice, /) -> SeqApiT: ...
-
-    #     @overload
-    #     def __getitem__(self, i: SupportsIndex, /) -> VT: ...
-
-    #     @overload
-    #     def __rmul__(self: SeqApiT, other: SupportsIndex, /) -> SeqApiT: ...
-
     @abstract
     def __getitem__(self, index, /):
         raise IndexError
 
-    def __add__(self, other: Iterable):
+    def __add__(self, other):
         if not isinstance(other, Iterable):
             return NotImplemented
         restype = self._concat_res_type(type(other))
@@ -93,7 +83,7 @@ class SequenceApi(Sequence, abcs.Copyable):
             return NotImplemented
         return restype(chain(self, other))
 
-    def __radd__(self, other: Iterable):
+    def __radd__(self, other):
         if not isinstance(other, Iterable):
             return NotImplemented
         restype = self._rconcat_res_type(type(other))
@@ -101,7 +91,7 @@ class SequenceApi(Sequence, abcs.Copyable):
             return NotImplemented
         return restype(chain(other, self))
 
-    def __mul__(self, other: SupportsIndex):
+    def __mul__(self, other):
         if not isinstance(other, SupportsIndex):
             return NotImplemented
         return self._from_iterable(chain.from_iterable(repeat(self, other)))
@@ -116,12 +106,12 @@ class SequenceApi(Sequence, abcs.Copyable):
         return cls(it)
 
     @classmethod
-    def _concat_res_type(cls, othrtype: type[Iterable], /):
+    def _concat_res_type(cls, othrtype, /):
         '''Return the type (or callable) to construct a new instance from __add__.'''
         return cls._from_iterable
 
     @classmethod
-    def _rconcat_res_type(cls, othrtype: type[Iterable], /):
+    def _rconcat_res_type(cls, othrtype, /):
         '''Return the type (or callable) to construct a new instance from __radd__.'''
         return cls._concat_res_type(othrtype)
 
@@ -135,16 +125,6 @@ class seqf(tuple, SequenceApi):
 
     # Note that __getitem__ with slice returns a tuple, not a seqf,
     # because it does not call _from_iterable.
-
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def __radd__(self, other: tuple[VT, ...]) -> tuple[VT, ...]: ...
-    #     @overload
-    #     def __radd__(self, other: list[VT]) -> list[VT]: ...
-    #     @overload
-    #     def __radd__(self, other: deque[VT]) -> deque[VT]: ...
-    #     @overload
-    #     def __radd__(self, other: seqf[VT]) -> seqf[VT]: ...
 
     @classmethod
     @closure
@@ -164,7 +144,6 @@ class seqf(tuple, SequenceApi):
         return type(self).__name__ + super().__repr__()
 
 class MutableSequenceApi(SequenceApi, MutableSequence):
-# class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
 
     __slots__ = EMPTY_SET
@@ -221,10 +200,6 @@ class SeqCover(SequenceApi, immutcopy = True):
             raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
 
-    # def copy(self):
-    #     'Immutable copy, returns self.'
-    #     return self
-
     def __repr__(self):
         return f'{type(self).__name__}({list(self)})'
 
@@ -250,13 +225,6 @@ class seqm(list, MutableSequenceApi):
     __add__  = MutableSequenceApi.__add__
     __radd__ = MutableSequenceApi.__radd__
     copy     = MutableSequenceApi.copy
-
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def __getitem__(self: MutSeqT, s: slice, /) -> MutSeqT: ...
-
-    #     @overload
-    #     def __getitem__(self, i: SupportsIndex, /) -> VT: ...
 
     def __getitem__(self, i, /):
         if isinstance(i, slice):

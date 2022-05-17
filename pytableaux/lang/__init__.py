@@ -43,31 +43,6 @@ __all__ = (
     'TableStore',
     'TriCoords',
 
-    # Type aliases
-    # 'PredicateSpec',
-    # 'ParameterSpec',
-    # 'AtomicSpec',
-
-    # Generic aliases
-    # 'IdentType',
-    # 'OperandsSpec',
-    # 'OperatedSpec',
-    # 'OperatorSpec',
-    # 'ParameterIdent',
-    # 'PredicatedSpec',
-    # 'PredicateRef',
-    # 'QuantifiedSpec',
-    # 'QuantifierSpec',
-    # 'SpecType',
-
-    # Deferred aliases
-    # 'OperCallArg',
-    # 'ParseTableKey',
-    # 'ParseTableValue',
-    # 'PredsItemRef',
-    # 'PredsItemSpec',
-    # 'QuantifiedItem',
-
     # Subpackage convenience import
     'Argument',
     'Atomic',
@@ -321,6 +296,7 @@ class TriCoords(NamedTuple):
 BiCoords.first = BiCoords._make(BiCoords.first)
 TriCoords.first = TriCoords._make(TriCoords.first)
 
+
 class TableStore(metaclass = LangCommonMeta):
 
     default_fetch_key: ClassVar[str]
@@ -450,72 +426,14 @@ class RenderSet(TableStore, Mapping):
         vtup = *((*v.items(),) if isinstance(v, Mapping) else v for v in vv),
         return hash((ktup, vtup))
 
-#==================================================+
-#  Type aliases -- used a runtime with isinstance  |
-#==================================================+
-
-# ParameterSpec = BiCoords
-# "Parameter spec type (BiCoords)."
-
-# PredicateSpec = TriCoords
-# "Predicate spec type (TriCoords)."
-
-# AtomicSpec = BiCoords
-# "Atomic spec type (BiCoords)."
-
-#====================+
-#  Generic aliases   |
-# #====================+
-
-# SpecType = tuple[int|str|tuple, ...]
-# "Tuple with integers, strings, or such nested tuples."
-# # "tuple[int|str|tuple[int|str], ...]", ... etc.
-
-# IdentType = tuple[str, tuple] #        tuple[str, SpecType]
-# "Tuple of (classname, spec)."
-
-# ParameterIdent = tuple[str, BiCoords]
-# "Tuple of (classname, (index, subscript))."
-
-# QuantifierSpec = tuple[str]
-# "Singleton tuple of quantifier name."
-
-# OperatorSpec = tuple[str]
-# "Singleton tuple of operator name."
-
-# PredicateRef = tuple[int, ...] | str
-# "Predicate ref type, int tuple or string."
-
-# PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
-# "Predicated sentence spec type."
-
-# QuantifiedSpec = tuple[str, BiCoords, IdentType]
-# "Quantified sentence spec type."
-
-# OperandsSpec = tuple            #tuple[IdentType, ...]
-# "Operands argument type."
-
-# OperatedSpec =  tuple  #    tuple[str, OperandsSpec]
-# "Operated sentence spec type."
 
 
-# ParseTableValue = int|Lexical
-# "ParseTable value type."
-
-
-# PredsItemSpec = PredicateSpec | Predicate
-# "Predicates store item spec."
-
-# PredsItemRef  = PredicateRef  | Predicate
-# "Predicates store item ref."
-
-from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.lex import Atomic  # OperCallArg,; QuantifiedItem,
-from pytableaux.lang.lex import (Constant, Lexical, LexType, Operated,
+from pytableaux.lang.lex import (Atomic, Constant, Lexical, LexType, Operated,
                                  Operator, Predicate, Predicated, Quantified,
                                  Quantifier, Sentence, Variable)
+from pytableaux.lang.collect import Argument, Predicates
+from pytableaux.lang.lex import CoordsItem as CoordsItem
+from pytableaux.lang.lex import Parameter as Parameter
 from pytableaux.lang.parsing import Parser, ParseTable
 from pytableaux.lang.writing import LexWriter
 
-# ParseTableKey   = LexType|Marking|type[Predicate.System]
-# "ParseTable key type."
