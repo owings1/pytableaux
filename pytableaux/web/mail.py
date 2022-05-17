@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+
 """
 pytableaux.web.mail
 -------------------
@@ -28,11 +29,11 @@ import ssl
 import threading
 import time
 from collections import deque
+from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
 
 from pytableaux import errors, web
 from pytableaux.errors import Emsg, check
-from pytableaux.tools.mappings import MapProxy
 
 if TYPE_CHECKING:
     import logging

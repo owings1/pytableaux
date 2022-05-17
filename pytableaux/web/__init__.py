@@ -21,19 +21,17 @@ pytableaux.web
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import Any, Mapping
 
 from pytableaux import package, tools, __docformat__
-from pytableaux.tools.abcs import Ebc, eauto
+from enum import auto
+from pytableaux.tools.abcs import Ebc
 from pytableaux.tools.mappings import ItemMapEnum
-
-if TYPE_CHECKING:
-    pass
 
 __all__ = ()
 
 class Wevent(Ebc):
-    before_dispatch = eauto()
+    before_dispatch = auto()
 
 def get_logger(name: str|Any, conf: Mapping[str, Any] = None) -> logging.Logger:
     "Get a logger and configure it for web format."

@@ -99,16 +99,11 @@ class BranchCache(dmap[Branch, _T], abcs.Copyable, RuleHelper):
 
     __slots__ = 'rule', 'config'
 
-    # def __new__(cls, rule: Rule,/):
-    #     inst = super().__new__(cls)
-    #     inst.rule = rule
-    #     return inst
-
     def __init__(self, rule: Rule,/):
         RuleHelper.__init__(self, rule)
         self.listen_on(rule, rule.tableau)
 
-    def copy(self, /, *, listeners:bool = False):
+    def copy(self, /, *, listeners = False):
         cls = type(self)
         inst = cls.__new__(cls)
         inst.rule = self.rule
@@ -217,10 +212,6 @@ class BranchValueHook(BranchCache[_VT]):
     _valuetype = type(None)
     hook_method_name = '_branch_value_hook'
     __slots__ = 'hook',
-
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def hook(self, node: Node, branch: Branch,/) -> _VT|None:...
 
     def __init__(self, rule: Rule, /):
         super().__init__(rule)
@@ -475,7 +466,7 @@ class FilterHelper(FilterNodeCache):
     def __init__(self, rule: Rule,/):
         super().__init__(rule)
         self._garbage = setm()
-        self.filters, self.pred = self.config#rule.Helpers[type(self)] # self._build_filters_pred(rule)
+        self.filters, self.pred = self.config
 
     def copy(self, /, *, listeners:bool = False):
         inst: FilterHelper = super().copy(listeners = listeners)
@@ -805,12 +796,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
     """Project the maximum number of worlds required for a branch by examining
     the branches after the trunk is built.
     """
-    __slots__ = (
-        'rule',
-        'config',
-        '_modals',
-        '_modal_opfilter',
-    )
+    __slots__ = ('rule', 'config', '_modals', '_modal_opfilter')
 
     _modals: dict[Sentence, int]
 
@@ -856,13 +842,16 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         Generate a quit flag node for the branch.
         """
         info = f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin)})'
-        return dict(
-            is_flag = True,
-            flag = 'quit',
-            info = info
-        )
+        return {
+            NodeAttr.is_flag: True,
+            NodeAttr.flag: 'quit',
+            'info': info,
+        }
+        # return dict(is_flag = True, flag = 'quit',
+        #     info = info
+        # )
 
-    def __call__(self, tableau: Tableau, /) -> None:
+    def __call__(self, tableau: Tableau, /):
         for branch in tableau:
             origin = branch.origin
             # For normal logics, we will have only one trunk branch.
@@ -888,3 +877,4 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         super().configure_rule(rulecls, config, **kw)
         if not hasattr(rulecls, RuleAttr.ModalOperators):
             raise Emsg.MissingAttribute(RuleAttr.ModalOperators)
+from pytableaux.proof import NodeAttr

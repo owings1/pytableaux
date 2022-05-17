@@ -40,7 +40,6 @@ from sphinx.util.docutils import ReferenceRole
 if TYPE_CHECKING:
     from pytableaux.typing import _F
     from sphinx.application import Sphinx
-    from stubs.docutils import nodes  # type: ignore
 
 __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
 
@@ -60,11 +59,7 @@ def rolerun(func: _F) -> _F:
         return ret
     return run
 
-class refplus(
-    # sphinx.roles.XRefRole,
-    ReferenceRole,
-    BaseRole,
-):
+class refplus(ReferenceRole, BaseRole):
 
     section: str
     anchor: str
@@ -189,19 +184,18 @@ _re_nosent = re.compile(r'^(.)([0-9]*)$')
 
 class lexdress(BaseRole, ParserOptionMixin):
 
-    option_spec = MapProxy(dict({'class': None},
+    option_spec =dict({'class': None},
         node = nodeopt,
         wnotn = Notation,
         pnotn = Notation,
         preds = predsopt,
         classes = classopt,
-    ))
+    )
 
-    opt_defaults = MapProxy(dict({'class': None},
+    opt_defaults = dict({'class': None},
         node = nodes.inline,
         classes = qsetf(['lexitem']),
-    ))
-
+    )
 
     @rolerun
     def run(self):

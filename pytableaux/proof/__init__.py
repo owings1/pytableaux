@@ -21,18 +21,18 @@ pytableaux.proof
 """
 from __future__ import annotations
 
+from abc import abstractmethod as abstract
+from types import MappingProxyType as MapProxy
 from typing import Any, NamedTuple, Sequence
 
-from pytableaux import _ENV, __docformat__
+from pytableaux import _ENV, __docformat__, EMPTY_SET
 from pytableaux.lang import Operator, Predicate, Quantifier
-from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure, abcs
+from pytableaux.logics import LogicType
+from pytableaux.tools import EMPTY_MAP, abcs, closure
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import ItemMapEnum, dmap
-from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.sets import setf
 from pytableaux.tools.timing import Counter, StopWatch
-from pytableaux.logics import LogicType
-
-
 
 __all__ = (
     'adds',
@@ -55,6 +55,7 @@ __all__ = (
     'Tableau',
     'TableauxSystem',
     'TabWriter',
+    'TreeStruct',
     'Target',
 )
 
@@ -129,8 +130,6 @@ class BranchEvent(abcs.Ebc):
 
 #******  Helper Enum
 
-
-
 class RuleEvent(abcs.Ebc):
     'Rule events.'
 
@@ -153,7 +152,6 @@ class RuleClassFlag(abcs.FlagEnum):
 
     Modal = 4
     RankOptimSupported = 8
-
 
 #******  Tableau Enum
 
@@ -195,9 +193,9 @@ class TabFlag(abcs.FlagEnum):
 
 #******  Auxilliary Classes
 class StepEntry(NamedTuple):
-    rule   : 'Rule'
+    rule   : Rule
     "The rule instance."
-    target : 'Target'
+    target : Target
     "The target produced by the rule."
     duration: Counter
     "The duration counter."
@@ -540,8 +538,10 @@ def anode(w1, w2):
     return Access(w1, w2)._asdict()
 
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import Tableau, Rule, TabRuleGroups
-from pytableaux.proof.tableaux import TreeStruct as TreeStruct
-from pytableaux.proof.rules import ClosingRule
-from pytableaux.proof.writers import TabWriter
+from pytableaux.proof.tableaux import Rule, Tableau, TabRuleGroups
+# --
+from pytableaux.proof.rules import ClosingRule as ClosingRule
+# --
 from pytableaux.proof import filters, helpers
+from pytableaux.proof.tableaux import TreeStruct as TreeStruct
+from pytableaux.proof.writers import TabWriter

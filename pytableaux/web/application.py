@@ -27,6 +27,7 @@ __all__ = ('WebApp',)
 import mimetypes
 import os.path
 from datetime import datetime
+from types import MappingProxyType as MapProxy
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping, Sequence
@@ -37,14 +38,11 @@ import prometheus_client as prom
 import simplejson as json
 from pytableaux import examples, logics, package, web
 from pytableaux.errors import RequestDataError, TimeoutError
-from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.lex import (LexType, Operator, Predicate, Quantifier,
+from pytableaux.lang import (LexType, Operator, Predicate, Quantifier, Argument, Predicates, ParseTable, LexWriter,
                                  TriCoords)
-from pytableaux.lang.parsing import ParseTable
-from pytableaux.lang.writing import LexWriter
 from pytableaux.proof import tableaux, writers
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.mappings import EMPTY_MAP, MapProxy, dmap
+from pytableaux.tools.mappings import EMPTY_MAP, dmap
 from pytableaux.tools.timing import StopWatch
 from pytableaux.web import Wevent
 from pytableaux.web.mail import Mailroom, validate_feedback_form

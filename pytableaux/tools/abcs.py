@@ -29,15 +29,11 @@ import operator as opr
 from collections.abc import Mapping, Set
 from enum import auto as eauto
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg, check
-
-if TYPE_CHECKING:
-    from pytableaux.tools.hooks import hookutil
-    from pytableaux.typing import iter
-                                     
+               
 
 __all__ = (
     'Abc',
@@ -59,7 +55,7 @@ EMPTY = ()
 NOARG = object()
 
 
-def is_enumcls(obj: Any) -> bool:
+def is_enumcls(obj):
     return isinstance(obj, type) and issubclass(obj, _enum.Enum)
 
 def em_mixins(Class):
@@ -201,7 +197,7 @@ class EnumLookup(Mapping):
         return repr(self._asdict())
 
     @classmethod
-    def _makemap(cls, Owner, keyfuncs, /) -> dict:
+    def _makemap(cls, Owner: type[Ebc], keyfuncs, /) -> dict:
         "Build an index source dictionary."
 
         # Named members, including aliases, but not pseudos.
@@ -255,7 +251,7 @@ class EnumLookup(Mapping):
         }
 
     @classmethod
-    def _check_pseudo(cls, pseudo, Owner, /) -> set:
+    def _check_pseudo(cls, pseudo, Owner: type[Ebc], /) -> set:
         "Verify a pseudo member, returning index keys."
         check = Owner._value2member_map_[pseudo._value_]
         if check is not pseudo:
@@ -274,12 +270,12 @@ class EnumLookup(Mapping):
         return funcs
 
     @staticmethod
-    def _pseudo_keys(member, /) -> set:
+    def _pseudo_keys(member: Ebc, /) -> set:
         'Pseudo member lookup keys'
         return {member, member._value_}
 
     @staticmethod
-    def _default_keys(member, /) -> set:
+    def _default_keys(member: Ebc, /) -> set:
         'Default member lookup keys'
         return {member._name_, (member._name_,), member, member._value_}
 
@@ -389,7 +385,7 @@ class EbcMeta(_enum.EnumMeta):
     def __getitem__(cls, key, /):
         return cls._lookup[key]
 
-    def __contains__(cls, key: Any, /):
+    def __contains__(cls, key, /):
         return key in cls._lookup
 
     def __iter__(cls):
@@ -431,7 +427,7 @@ class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
     __slots__ = Eset.Empty
 
     name  : str
-    value : Any
+    value : object
 
     def __copy__(self):
         return self
@@ -446,7 +442,7 @@ class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
         EbcMeta._on_init(cls, subcls)
 
     @classmethod
-    def _member_keys(cls, member: Any):
+    def _member_keys(cls, member):
         'Propagate hook up to metaclass.'
         return EbcMeta._member_keys(cls, member)
 
@@ -482,7 +478,7 @@ class FlagEnum(_enum.Flag, Ebc, skipflags = True, skipabcm = True):
     _invert_ : tuple[int, FlagEnum]
 
     @classmethod
-    def _missing_(cls, value: Any, /):
+    def _missing_(cls, value, /):
         member: FlagEnum = super()._missing_(value)
         member.value = member._value_
         member.name  = member._name_
@@ -640,7 +636,6 @@ def merged_attr(name: str, it: Iterable = None, /, *,
         The merged value.                
     """
     if it is None:
-        # check.inst(cls, type)
         it = mroiter(**iteropts)
     elif iteropts:
         raise TypeError(f'Unexpected kwargs: {list(iteropts)}')
@@ -705,12 +700,7 @@ class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
 
     def __new__(cls, clsname, bases, ns, /, *,
-        hooks = None,
-        skiphooks = False,
-        skipflags = False,
-        hookinfo = None,
-        **kw
-    ):
+        hooks = None, skiphooks = False, skipflags = False, hookinfo = None, **kw):
         nsinit(ns, bases, skipflags = skipflags)
         Class = super().__new__(cls, clsname, bases, ns, **kw)
         if not skiphooks:
@@ -734,8 +724,6 @@ class AbcMeta(_abc.ABCMeta):
                 impl[name] = func
             return func
         return decorator
-
-
 
 #=============================================================================
 #_____________________________________________________________________________

@@ -37,20 +37,6 @@ from pytableaux import errors, tools
 import pytableaux.tools.abcs
 import pytableaux.tools.hooks
 
-# @tools.closure
-# def _():
-
-#     # Back patch abcs.hookutil
-#     from pytableaux.tools import abcs, hooks
-#     abcs.hookutil = hooks.hookutil
-
-    # Rebase errors.Emsg
-
-    # errors.Emsg = abcs.Emsg = abcs._em_rebase(errors.Emsg, errors.EmsgBase, abcs.Ebc)
-
-    # errors.EmsgBase = None
-    # del(errors.EmsgBase)
-
 # ----- env
 
 import dataclasses
@@ -124,7 +110,6 @@ def _():
 
     del(lex.nosetattr,)
 
-# ----- logics, examples, models
 import pytableaux.logics
 
 import pytableaux.proof
@@ -135,7 +120,6 @@ import pytableaux.proof.helpers
 import pytableaux.proof.filters
 import pytableaux.proof.writers
 
-# ----- proof
 import pytableaux.models
 import pytableaux.examples
 

@@ -31,7 +31,7 @@ from docutils import nodes
 from docutils.statemachine import StringList
 from pytableaux import examples, logics, models, tools
 from pytableaux.lang import (Argument, Atomic, LexWriter, Marking,
-                             Notation, Operator, Predicate, Predicates,
+                             Notation, Operator, Predicate, Predicates, Lexical,
                              Quantifier, RenderSet)
 from pytableaux.proof import Tableau, TabWriter, writers
 from pytableaux.tools.doc import (BaseDirective, ConfKey, DirectiveHelper,
@@ -51,7 +51,6 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     import sphinx.config
-    from docutils import nodes
     from pytableaux.proof import Rule
     from pytableaux.tools.doc import Tabler
     from sphinx.application import Sphinx
@@ -67,9 +66,6 @@ __all__ = (
 )
 
 logger = logging.getLogger(__name__)
-
-# Creating  Directives:
-#    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 
 
 class TableGenerator(DirectiveHelper):
@@ -109,13 +105,10 @@ class SentenceBlock(BaseDirective, ParserOptionMixin):
     has_content = True
     option_spec = dict(
         defn = flagopt,
-
         wnotn   = Notation,
         classes = classopt,
-
         pnotn = Notation,
         preds = predsopt,
-
         caption = stropt,
     )
 
@@ -211,29 +204,24 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
     """
 
     option_spec = dict(
-
         # Common
         logic   = logics.registry,
         format  = choiceopt(writers.registry),
         wnotn   = Notation,
         classes = classopt,
-
         # argument mode
         argument = examples.argument,
         conclusion = stropt,
         premises = re_comma.split,
         pnotn = Notation,
         preds = predsopt,
-
         # rule mode
         rule = stropt,
         legend = flagopt,
         doc = flagopt,
-
         # build-trunk mode
         **{'build-trunk': flagopt,},
         prolog = flagopt,
-
     )
 
     modes = {
@@ -242,12 +230,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         'argument'    : {'argument', 'conclusion', 'premises', 'pnotn', 'preds'},
         ... : {'format', 'classes', 'wnotn', 'logic'},
     }
-    trunk_data = dict(
-        arg = (arg := Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))),
-        unsub = Atomic(0, 0),
-        subnodes = (*(nodes.subscript(text = str(s))
-            for s in ('1', 'n')),),
-    )
+    _trunk_argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
     mode: str
     charset: str
@@ -317,8 +300,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         if opts['format'] == 'html':
             tabnode = nodes.raw(format = 'html', text = output)
         else:
-            tabnode = nodes.literal_block(text = output,
-                classes = ['tableau'])
+            tabnode = nodes.literal_block(text = output, classes = ['tableau'])
 
         tabwrapper = nodes.container(classes = ['tableau-wrapper'] + classes)
 
@@ -342,7 +324,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
                 legend = nodes.container(classes = ['rule-legend'])
                 legend += self.getnodes_rule_legend(rule)
                 tabwrapper += legend
-            
+
             tabwrapper += tabnode
             return [tabwrapper]
         
@@ -380,7 +362,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         rule = tab.rules.groups[1][0]
         helper = EllipsisExampleHelper(rule)
         rule.helpers[type(helper)] = helper
-        tab.argument = self.trunk_data['arg']
+        tab.argument = self._trunk_argument
         return tab
 
     def getnode_ruledoc_wrapper(self, rulecls: type[Rule], *inserts) -> addnodes.desc:
@@ -435,33 +417,21 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
                 except KeyError:
                     raise self.error(
                         f'Unwriteable legend item: {(name, value)} for {rule}')
-            nn.append(nodes.inline(text, text,
-                classes = ['legend-item', name],))
+            nn.append(nodes.inline(text, text, classes = ['legend-item', name],))
         return nn
 
     def getnodes_trunk_prolog(self):
         # Plain docutils nodes, not raw html.
-        # notn = self.options['wnotn']
-        # renderset = self.get_trunk_renderset(notn)#, 'unicode')
-        # renderset = RenderSet.fetch(notn, 'unicode')
-        # lw = self.lwuni
-        opts = self.options
-        # refdata = self.trunk_data
-        # arg = refdata['arg']
-        # unstr, cstr = map(lw, (refdata['unsub'], arg.conclusion))
-        argnode = nodes.inline(classes = ['argument'], notn = opts['wnotn'])
-        # pnodes = (nodes.inline('', unstr, subnode) for subnode in refdata['subnodes'])
-        prem2 = nodez.sentence(sentence = Atomic(0,0), notn = opts['wnotn'])
+        notn = self.options['wnotn']
+        argnode = nodes.inline(classes = ['argument'], notn = notn)
+        prem2 = nodez.sentence(sentence = Atomic(0,0), notn = notn)
         prem2 += nodes.subscript('n', 'n')
         argnode += (
-            # next(pnodes),
-            nodez.sentence(sentence = Atomic(0,1), notn = opts['wnotn']),
+            nodez.sentence(sentence = Atomic(0,1), notn = notn),
             nodes.inline(text = ' ... '),
-            # next(pnodes),
             prem2,
             nodes.inline(text = ' ∴ '),
-            # nodes.inline(text = f' ∴ {cstr}'),
-            nodez.sentence(sentence = Atomic(1, 0), notn = opts['wnotn'])
+            nodez.sentence(sentence = Atomic(1, 0), notn = notn)
         )
         return [
             nodes.inline(text = 'For the argument '),
@@ -518,7 +488,6 @@ class RuleGroupDirective(TableauDirective):
     """
     optional_arguments = sys.maxsize
     option_spec = dict(
-
         # Common
         logic   = logics.registry,
         format  = choiceopt(writers.registry),
@@ -536,7 +505,6 @@ class RuleGroupDirective(TableauDirective):
         legend   = flagopt,
         captions = flagopt,
         docs     = flagopt,
-
     )
 
     groupmode: str
@@ -544,12 +512,12 @@ class RuleGroupDirective(TableauDirective):
     ruleinfo: dict[str, Any]
     title: str|None
     group: list[type[Rule]]|None
-    subgroups: dict[Predicate|Quantifier|Operator, list[type[Rule]]]|None
+    subgroups: dict[Lexical, list[type[Rule]]]|None
     exclude: set[str]
     include: set[str]|None
     groupid: str
     subgroup: list[type[Rule]]|None
-    subgroup_type: type[Predicate|Quantifier|Operator]|None
+    subgroup_type: type[Lexical]|None
 
     def setup(self):
 
@@ -668,11 +636,10 @@ class RuleGroupDirective(TableauDirective):
         cont += nlist
         return [cont]
 
-    def _check_options_mode(self):
+    def _check_options_mode(self) -> Literal['rule']:
         if 'group' not in self.options:
             raise self.error(f"Missing required option: group")
         return 'rule'
-
 
 
 class TruthTables(BaseDirective, RenderMixin):
@@ -726,9 +693,6 @@ class TruthTables(BaseDirective, RenderMixin):
         return nlist
 
 
-
-
-
 class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     "Override csv-table to allow generator function."
 
@@ -756,14 +720,11 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
         res[0]['classes'].extend(classes)
         return res
 
-
     def get_csv_data(self):
         if self.generator is None:
             return super().get_csv_data()
-        
         table = self.generator.run()
         source = type(self.generator).__name__
-
         return self.csvlines(table), source
 
     class _writeshim:
@@ -786,12 +747,9 @@ class Include(sphinx.directives.other.Include, BaseDirective):
     "Override include directive to inject include-read event."
 
     class StateMachineProxy:
-
         __slots__ = 'insert_input', '_origin',
-
         def __getattr__(self, name):
             return getattr(self._origin, name)
-
         def __setattr__(self, name, value):
             if name in self.__slots__:
                 super().__setattr__(name, value)
@@ -799,24 +757,18 @@ class Include(sphinx.directives.other.Include, BaseDirective):
                 setattr(self._origin, name, value)
 
     def run(self):
-
         origin = self.state_machine
-
         def intercept(lines, source):
             self.app.emit(SphinxEvent.IncludeRead, lines)
             return origin.insert_input(lines, source)
-
         self.state_machine = proxy = self.StateMachineProxy()
-
         proxy._origin = origin
         proxy.insert_input = intercept
-
         try:
             return super().run()
         finally:
             self.state_machine = origin
             del(proxy._origin, proxy.insert_input)
-
 
 
 def setup(app: Sphinx):

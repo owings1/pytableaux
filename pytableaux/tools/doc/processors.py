@@ -33,7 +33,6 @@ from sphinx.ext import autodoc
 from sphinx.util import logging
 
 if TYPE_CHECKING:
-    from typing import Any
 
     # import sphinx_toolbox.more_autodoc.overloads
     from proof.tableaux import Rule

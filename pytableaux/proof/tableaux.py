@@ -29,8 +29,8 @@ from abc import abstractmethod as abstract
 from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Collection,
-                    Iterable, Iterator, Mapping, Sequence, SupportsIndex,
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, 
+                    Iterable, Mapping, Sequence, SupportsIndex,
                     final)
 
 from pytableaux import __docformat__
@@ -54,7 +54,6 @@ from pytableaux.tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
 
-    from pytableaux.models import BaseModel
     from pytableaux.proof import TableauxSystem
     from pytableaux.typing import _F
 
@@ -299,7 +298,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
                 raise Emsg.IllegalState('Already locked')
             sa(self, 'helpers', MapProxy(self.helpers))
             sa(self, 'timers' , MapProxy(self.timers))
-            sa(self, 'state'   , RuleState(newval))
+            sa(self, 'state'  , RuleState(newval))
         return lock
 
     def __extend_targets(self, targets: Sequence[Target], /):
@@ -370,23 +369,27 @@ class TabRuleGroups(SequenceApi[Rule]):
  
     #: The rule groups sequence view.
     groups: RuleGroups
-
+    _ruleindex: dict[str, Rule]
+    _groupindex: dict[str, RuleGroup]
+    _tab: Tableau
+    _root: TabRuleGroups
+    _locked: bool
     def __init__(self, tab: Tableau, /):
-        self._locked: bool = False
+        self._locked = False
         self._root = self
         #: Rule class name to rule instance.
-        self._ruleindex: dict[str, Rule] = {}
+        self._ruleindex = {}
         #: Named groups index.
-        self._groupindex: dict[str, RuleGroup] = {}
+        self._groupindex = {}
         self._tab = tab
         self.groups = RuleGroups(self)
         tab.once(TabEvent.AFTER_BRANCH_ADD, self._lock)
 
-    def append(self, rule: type[Rule]):
+    def append(self, rule,/):
         'Add a single Rule to a new (unnamed) group.'
         self.groups.create(None).append(rule)
 
-    def extend(self, rules: Iterable[type[Rule]], /, name: str|None = NOARG):
+    def extend(self, rules, /, name = NOARG):
         'Create a new group from a collection of Rule classes.'
         self.groups.append(rules, name = name)
 
@@ -396,11 +399,11 @@ class TabRuleGroups(SequenceApi[Rule]):
         self._ruleindex.clear()
         self._groupindex.clear()
 
-    def get(self, ref: type|str, default = NOARG, /) -> Rule:
+    def get(self, ref, default = NOARG, /) -> Rule:
         'Get a rule instance by name or type.'
         return self._ruleindex_get(self._ruleindex, ref, default)
 
-    def names(self) -> list[str]:
+    def names(self):
         'List all the rule names in the sequence.'
         return list(R.__name__ for R in map(type, self))
 
@@ -410,11 +413,11 @@ class TabRuleGroups(SequenceApi[Rule]):
     def __contains__(self, ref):
         return self.get(ref, NOGET) is not NOGET
 
-    def __iter__(self) -> Iterator[Rule]:
+    def __iter__(self):
         for group in self.groups:
             yield from group
 
-    def __reversed__(self) -> Iterator[Rule]:
+    def __reversed__(self):
         for group in reversed(self.groups):
             yield from reversed(group)
 
@@ -426,7 +429,7 @@ class TabRuleGroups(SequenceApi[Rule]):
             True  : ( (1).__mul__, reversed, opr.sub, opr.le ),
         }.__getitem__
 
-        def getitem(self: TabRuleGroups, index: SupportsIndex, /,) -> Rule:
+        def getitem(self: TabRuleGroups, index, /,):
             length = len(self)
             index = absindex(length, index)
             istart, iterfunc, adjust, compare = select(2 * index > length)
@@ -494,49 +497,51 @@ class RuleGroup(SequenceApi[Rule]):
     #: The group name, or ``None``.
     name: str|None
 
+    _seq: list[Rule]
+    _ruleindex: dict[str, Rule]
+
     def __init__(self, name: str|None, root: TabRuleGroups):
         self._name = name
         self._root = root
-        self._seq: list[Rule] = []
-        #: Rule classname to instance.
-        self._ruleindex: dict[str, Rule] = {}
+        self._seq = []
+        self._ruleindex = {}
 
     @property
     def name(self) -> str|None:
         return self._name
 
     @locking
-    def append(self, value, /):
+    def append(self, rulecls, /):
         """Instantiate and append a rule class.
 
         Args:
-          value: A ``Rule`` class.
+          rulecls: A :class:`Rule` class.
 
         Raises:
           ValueError: If there is a duplicate name.
-          TypeError: If ``value`` is not a subclass of ``Rule``.
+          TypeError: If `value` is not a subclass of :class:`Rule`.
           errors.IllegalStateError: If locked.
         """
         root = self._root
-        name = check.subcls(value, Rule).__name__
+        name = check.subcls(rulecls, Rule).__name__
         root._checkname(name)
-        rule: Rule = value(root._tab, **root._tab.opts)
+        rule: Rule = rulecls(root._tab, **root._tab.opts)
         self._seq.append(rule)
         root._ruleindex[name] = self._ruleindex[name] = rule
         rule.on(RuleEvent.AFTER_APPLY, root._tab._after_rule_apply)
 
-    def extend(self, values, /):
+    def extend(self, classes, /):
         """Append multiple rules.
 
         Args:
-          values: An iterable of ``Rule`` classes.
+          classes: An iterable of :class:`Rule` classes.
 
         Raises:
           ValueError: If there is a duplicate name.
-          TypeError: If an element is not a subclass of ``Rule``.
+          TypeError: If an element is not a subclass of :class:`Rule`.
           errors.IllegalStateError: If locked.
         """
-        for _ in map(self.append, values): pass
+        for _ in map(self.append, classes): pass
 
     @locking
     def clear(self):
@@ -593,9 +598,10 @@ class RuleGroups(SequenceApi[RuleGroup]):
 
     __slots__ = '_root', '_seq',
 
+    _seq: list[RuleGroup]
     def __init__(self, root: TabRuleGroups):
         self._root = root
-        self._seq: list[RuleGroup] = []
+        self._seq = []
 
     @locking
     def create(self, name = None):
@@ -639,9 +645,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
 
     def names(self) -> seqm[str]:
         'List the named groups.'
-        return seqm(filter(
-            isstr, (group.name for group in self)
-        ))
+        return seqm(filter(isstr, (group.name for group in self)))
 
     def __iter__(self):
         return iter(self._seq)
@@ -699,7 +703,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     stats: dict[str, Any]
     "The stats, built after finished."
 
-    models: setf[BaseModel]
+    models: setf
     """The models, built after finished if the tableau is `invalid` and the
     `is_build_models` option is enabled."""
 
@@ -713,6 +717,12 @@ class Tableau(Sequence[Branch], EventEmitter):
         max_steps       = None,
     ))
 
+    __flag        : TabFlag
+    __history     : list[StepEntry]
+    __branch_list : list[Branch]
+    __open        : linqset[Branch]
+    __branchstat  : dict[Branch, BranchStat]
+    __branching_complexities: dict[Node, int]
     def __init__(self, logic = None, argument: Argument = None, /, **opts):
         """
         Args:
@@ -730,14 +740,14 @@ class Tableau(Sequence[Branch], EventEmitter):
         })
 
         # Protected attributes
-        self.__flag        : TabFlag         = TabFlag.PREMATURE
-        self.__history     : list[StepEntry] = []
-        self.__branch_list : list[Branch]    = []
-        self.__open        : linqset[Branch] = linqset()
-        self.__branchstat  : dict[Branch, BranchStat] = {}
+        self.__flag = TabFlag.PREMATURE
+        self.__history = []
+        self.__branch_list = []
+        self.__open = linqset()
+        self.__branchstat = {}
 
         # Private
-        self.__branching_complexities: dict[Node, int] = {}
+        self.__branching_complexities = {}
 
         # Exposed attributes
         self.history = SeqCover(self.__history)
@@ -858,7 +868,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         if the argument trunk is built."""
         return len(self.history) + (TabFlag.TRUNK_BUILT in self.__flag)
 
-    def build(self) -> Tableau:
+    def build(self):
         'Build the tableau. Returns self.'
         with self.timers.build:
             while not self.finished:
@@ -1006,10 +1016,10 @@ class Tableau(Sequence[Branch], EventEmitter):
         #       provide a special branch-complexity node hashing function.
         cache = self.__branching_complexities
         if node not in cache:
-            sys = self.System
-            if sys is None:
+            system = self.System
+            if system is None:
                 return 0
-            cache[node] = sys.branching_complexity(node)
+            cache[node] = system.branching_complexity(node)
         return cache[node]
 
     def stat(self, branch: Branch, /, *keys: Node|TabStatKey) -> Any:
@@ -1210,7 +1220,6 @@ class Tableau(Sequence[Branch], EventEmitter):
             distinct_nodes = None
         timers = self.timers
         return dict(
-            # id              = self.id,
             result          = self.__result_word(),
             branches        = len(self),
             open_branches   = len(self.open),
@@ -1228,12 +1237,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             rules_time_ms = sum(
                 rule.timers[name].elapsed_ms()
                 for rule in self.rules
-                    for name in (
-                        'search',
-                        'apply',
-                    )
-            ),
-            #rules = tuple(map(self.__compute_rule_stats, self.rules)),
+                    for name in ('search', 'apply')),
         )
 
     def __check_timeout(self):
@@ -1248,11 +1252,9 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     def __is_max_steps_exceeded(self) -> bool:
         max_steps = self.opts['max_steps']
-        return (
-            max_steps is not None and
+        return (max_steps is not None and
             max_steps >= 0 and
-            len(self.history) >= max_steps
-        )
+            len(self.history) >= max_steps)
 
     def __check_not_started(self):
         if TabFlag.TRUNK_BUILT in self.__flag or len(self.history) > 0:
@@ -1269,7 +1271,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     def _gen_models(self):
         'Build models for the open branches.'
-        Model: type[BaseModel] = self.logic.Model
+        Model = self.logic.Model
         for branch in self.open:
             self.__check_timeout()
             model = Model()
@@ -1362,7 +1364,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         if track['depth'] == 0:
             s.is_only_branch = True
 
-    def _build_tree_branches(self,s: TreeStruct, branches: Collection[Branch], depth_nodes: Set[Node], node_depth: int, track: dict, /):
+    def _build_tree_branches(self, s: TreeStruct, branches: Sequence[Branch], depth_nodes: Set[Node], node_depth: int, track: dict, /):
         'Build child structures for each distinct node.'
         w_first = w_last = w_mid = 0
 
@@ -1441,7 +1443,7 @@ class TreeStruct(dmapns):
     has_closed: bool = False
     "Whether this structure or a descendant is closed."
 
-    closed_step: int|None
+    closed_step: int|None = None
     "If closed, the step number at which it closed."
 
     step: int = None
@@ -1474,11 +1476,9 @@ class TreeStruct(dmapns):
     "The step at which the branch was added"
 
     def __init__(self):
-
         self.nodes = []
         self.ticksteps = []
         self.children = []
-
         self.id = id(self)
 
     @classmethod

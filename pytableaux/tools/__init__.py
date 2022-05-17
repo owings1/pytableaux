@@ -42,6 +42,7 @@ __all__ = (
     'dxopy',
     'EMPTY_MAP',
     'getitem',
+    'select_fget',
     'isattrstr',
     'isdund',
     'isint',
@@ -139,6 +140,11 @@ def getitem(obj, key, default = NOARG, /):
             raise
         return default
 
+def select_fget(obj):
+    if callable(getattr(obj, '__getitem__', None)):
+        return getitem
+    return getattr
+
 @closure
 def dxopy():
 
@@ -231,10 +237,7 @@ class membr(BaseMember):
             return cls(fd, *args, **kw)
         return f
 
-def select_fget(obj):
-    if callable(getattr(obj, '__getitem__', None)):
-        return getitem
-    return getattr
+
 
 def _thru(obj, *_):
     return obj
@@ -261,7 +264,7 @@ class wraps(dict):
 
     __slots__ = 'only', 'original',
 
-    def __init__(self, original = None, /, only = WRASS_SET, exclude = (), **kw):
+    def __init__(self, original = None, /, only = WRASS_SET, exclude = EMPTY, **kw):
         'Initialize argument, initial input function that will be decorated.'
         self.original = original
         only = set(map(dund, only))
@@ -394,8 +397,7 @@ class operd:
                 _methcaller(val)
                     if isinstance(val, str) else
                 check.callable(val)
-                    for val in (freturn, finit)
-            )
+                    for val in (freturn, finit))
 
         def __call__(self, info = None):
             oper, freturn, finit = (self.oper, *self.inout)

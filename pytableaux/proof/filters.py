@@ -29,9 +29,9 @@ from typing import Any, Callable, NamedTuple
 from pytableaux import EMPTY_SET, __docformat__
 from pytableaux.lang import (Lexical, Operated, Operator, Predicated,
                              Quantified, Sentence)
-from pytableaux.proof import Access, Node
 from pytableaux.tools import EMPTY_MAP, abcs, thru
 from pytableaux.tools.mappings import dmapns
+from pytableaux.proof import Access, Node
 
 __all__ = (
     'AttrCompare',
@@ -270,9 +270,7 @@ class SentenceNode(SentenceCompare, NodeCompare):
 class DesignationNode(AttrCompare, NodeCompare):
     "Designation node filter."
 
-    attrmap = MapProxy(dict(
-        designation = 'designated',
-    ))
+    attrmap = MapProxy(dict(designation = 'designated'))
 
     __slots__ = EMPTY_SET
 

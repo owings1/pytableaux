@@ -27,9 +27,7 @@ from functools import partial
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
-from pytableaux.lang.lex import LexType, Operator
-from pytableaux.lang.parsing import ParseTable
-from pytableaux.lang.writing import LexWriter, RenderSet
+from pytableaux.lang import LexType, LexWriter, Operator, ParseTable, RenderSet
 from pytableaux.tools import abcs, closure
 from pytableaux.tools.doc import ConfKey, Tabler, directives
 from pytableaux.tools.doc.directives import TableGenerator

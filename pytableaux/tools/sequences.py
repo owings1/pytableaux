@@ -24,8 +24,7 @@ from __future__ import annotations
 from abc import abstractmethod as abstract
 from collections import deque
 from itertools import chain, repeat
-from typing import (Iterable, MutableSequence, Sequence,
-                    SupportsIndex)
+from typing import Iterable, MutableSequence, Sequence, SupportsIndex
 
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import abcs, closure

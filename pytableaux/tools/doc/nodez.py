@@ -53,6 +53,8 @@ class HTML5Translator(BaseTranslator):
 
     def __init__(self, document, builder):
         super().__init__(document, builder)
+        logger.info((type((self.document))))
+        logger.info((type((self.document.settings))))
         self.optstacks = self.OptStacks([], [])
 
     def visit_block(self, node):

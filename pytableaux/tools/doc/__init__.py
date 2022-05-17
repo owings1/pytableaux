@@ -254,6 +254,7 @@ class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
 
     @property
     def app(self) -> Sphinx:
+        self.error
         return self.env.app
 
 # ------------------------------------------------
