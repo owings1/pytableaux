@@ -21,6 +21,7 @@ pytableaux.lang._symdata
 """
 from __future__ import annotations
 
+from types import MappingProxyType as MapProxy
 import re
 from typing import Any, Callable, Mapping
 
@@ -136,7 +137,6 @@ def rendersets():
 
     from pytableaux.lang import (LexType, Marking, Notation, Operator,
                                  Predicate, Quantifier)
-    from pytableaux.tools import MapProxy
 
     def dunesc(d: dict, inplace = False) -> None:
         return dtransform(html_unescape, d, typeinfo = str, inplace = inplace)

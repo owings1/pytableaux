@@ -21,6 +21,7 @@ pytableaux.logics
 """
 from __future__ import annotations
 
+from types import MappingProxyType as MapProxy
 import itertools
 import sys
 from collections import defaultdict
@@ -30,7 +31,7 @@ from typing import TYPE_CHECKING, Mapping
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy, abcs, closure
+from pytableaux.tools import abcs, closure
 from pytableaux.tools.hybrids import QsetView, qset
 from pytableaux.tools.mappings import MappingApi, dmap
 from pytableaux.tools.sets import EMPTY_SET
@@ -76,10 +77,8 @@ class Registry(MappingApi, abcs.Copyable):
     """Mapping to ``module.__name__`` for each of its keys. See ``.get()``."""
 
     if TYPE_CHECKING:
-        @overload
         def add(self, logic):
             "Add a logic module"
-        @overload
         def remove(self, logic):
             "Remove a logic  module"
 
@@ -222,7 +221,7 @@ class Registry(MappingApi, abcs.Copyable):
             ValueError: if not found.
             TypeError: on bad key argument.
         """
-        check.inst(ref, (str, ModuleType, MethodType, FunctionType))
+        check.inst(ref, (str, type, ModuleType, MethodType, FunctionType))
         try:
             if isinstance(ref, (str, ModuleType)):
                 return self(ref)

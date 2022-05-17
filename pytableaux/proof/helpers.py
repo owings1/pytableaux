@@ -31,8 +31,7 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
 from pytableaux.proof import (Access, Branch, Node, Rule, RuleAttr, RuleEvent,
                               RuleHelper, TabEvent, Target, filters, Tableau)
-from pytableaux.tools import EMPTY_MAP, abcs, closure
-from pytableaux.tools.decorators import wraps
+from pytableaux.tools import EMPTY_MAP, abcs, closure, wraps
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setm
 

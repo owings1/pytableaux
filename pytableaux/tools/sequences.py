@@ -24,12 +24,12 @@ from __future__ import annotations
 from abc import abstractmethod as abstract
 from collections import deque
 from itertools import chain, repeat
-from typing import (ClassVar, Iterable, MutableSequence, Sequence,
+from typing import (Iterable, MutableSequence, Sequence,
                     SupportsIndex)
 
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import abcs, closure
-from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
     'absindex',
@@ -45,7 +45,7 @@ __all__ = (
 
 NOARG = object()
 
-def absindex(seqlen, index, /, strict = True) -> int:
+def absindex(seqlen, index, /, strict = True):
     'Normalize to positive/absolute index.'
     if not isinstance(index, int):
         check.inst(index, SupportsIndex)
@@ -56,7 +56,7 @@ def absindex(seqlen, index, /, strict = True) -> int:
         raise Emsg.IndexOutOfRange(index)
     return index
 
-def slicerange(seqlen, slice_: slice, values, /, strict = True) -> range:
+def slicerange(seqlen, slice_: slice, values, /, strict = True):
     'Get a range of indexes from a slice and new values, and perform checks.'
     range_ = range(*slice_.indices(seqlen))
     if len(range_) != len(values):
@@ -102,7 +102,7 @@ class SequenceApi(Sequence, abcs.Copyable):
         return self._from_iterable(self)
 
     @classmethod
-    def _from_iterable(cls, it: Iterable, /):
+    def _from_iterable(cls, it, /):
         return cls(it)
 
     @classmethod
@@ -158,45 +158,35 @@ class MutableSequenceApi(SequenceApi, MutableSequence):
         self.extend(chain.from_iterable(repeat(self, int(other) - 1)))
         return self
 
+
+class CoverAttr(frozenset, abcs.Ebc):
+    REQUIRED = {'__len__', '__getitem__', '__contains__', '__iter__',
+        'count', 'index',}
+    OPTIONAL = {'__reversed__'}
+    ALL = REQUIRED | OPTIONAL
+
 class SeqCover(SequenceApi, immutcopy = True):
 
-    _cover_attrs_reqd: ClassVar[setf[str]] = setf({
-        '__len__', '__getitem__', '__contains__', '__iter__',
-        'count', 'index',
-    })
-    _cover_attrs_optl: ClassVar[setf[str]] = setf({
-        '__reversed__',
-    })
-    _cover_attrs: ClassVar[setf[str]] = _cover_attrs_reqd | _cover_attrs_optl
-
-    __slots__ = _cover_attrs
+    __slots__ = CoverAttr.ALL.copy()
 
     def __new__(cls, seq: Sequence, /):
-
-        check.inst(seq, Sequence)
-        inst: SeqCover = object.__new__(cls)
-        cls._init_cover(seq, inst)
-
-        return inst
-
-    @classmethod
-    def _init_cover(cls, src: Sequence, dest: SeqCover, /, *,
+        self = object.__new__(cls)
         sa = object.__setattr__
-    ):
-        for name in cls._cover_attrs_reqd:
-            sa(dest, name, getattr(src, name))
-        for name in cls._cover_attrs_optl:
-            value = getattr(src, name, NOARG)
+        for name in CoverAttr.REQUIRED:
+            sa(self, name, getattr(seq, name))
+        for name in CoverAttr.OPTIONAL:
+            value = getattr(seq, name, NOARG)
             if value is not NOARG:
-                sa(dest, name, value)
+                sa(self, name, value)
+        return self
 
     def __delattr__(self, name, /):
-        if name in self._cover_attrs:
+        if name in CoverAttr.ALL:
             raise Emsg.ReadOnly(self, name)
         super().__delattr__(name)
 
     def __setattr__(self, name, value, /):
-        if name in self._cover_attrs:
+        if name in CoverAttr.ALL:
             raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
 
@@ -210,10 +200,6 @@ class SeqCover(SequenceApi, immutcopy = True):
         if isinstance(it, Sequence):
             return cls(it)
         return cls(tuple(it))
-
-    def __init_subclass__(subcls: type[SeqCover], **kw):
-        super().__init_subclass__(**kw)
-        subcls._cover_attrs = setf(subcls._cover_attrs_reqd) | subcls._cover_attrs_optl
 
 class seqm(list, MutableSequenceApi):
 
@@ -253,7 +239,6 @@ class deqseq(deque, MutableSequenceApi):
         if isinstance(it, deque):
             return cls(it, maxlen = it.maxlen)
         return cls(it)
-
 
 EMPTY_SEQ = seqf()
 

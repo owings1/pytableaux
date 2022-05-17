@@ -199,6 +199,8 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         .. tableau::
             :logic: CFOL
             :rule: Conjunction
+            :legend:
+            :doc:
     
     For a build_trunk example::
 
@@ -226,7 +228,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         # rule mode
         rule = stropt,
         legend = flagopt,
-        ruledoc = flagopt,
+        doc = flagopt,
 
         # build-trunk mode
         **{'build-trunk': flagopt,},
@@ -234,11 +236,8 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
 
     )
 
-    if TYPE_CHECKING:
-        ...
-
     modes = {
-        'rule'        : {'rule', 'legend', 'ruledoc'},
+        'rule'        : {'rule', 'legend', 'doc'},
         'build-trunk' : {'build-trunk', 'prolog'},
         'argument'    : {'argument', 'conclusion', 'premises', 'pnotn', 'preds'},
         ... : {'format', 'classes', 'wnotn', 'logic'},
@@ -285,8 +284,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
 
         self.writer = TabWriter(wformat,
             lw = LexWriter(wnotn, renderset = self.renderset),
-            classes = classes, wrapper = False
-        )
+            classes = classes, wrapper = False)
         self.lwuni = LexWriter(wnotn, 'unicode')
 
     def run(self):
@@ -322,14 +320,11 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
             tabnode = nodes.literal_block(text = output,
                 classes = ['tableau'])
 
-        tabwrapper = nodes.container(
-            classes = ['tableau-wrapper'] + classes
-        )
+        tabwrapper = nodes.container(classes = ['tableau-wrapper'] + classes)
 
         if self.mode == 'rule':
 
-
-            if 'ruledoc' in opts:
+            if 'doc' in opts:
                 if 'legend' in opts:
                     legend = nodes.inline(classes = ['rule-legend'])
                     legend += self.getnodes_rule_legend(rule)
@@ -599,7 +594,7 @@ class RuleGroupDirective(TableauDirective):
             self.subgroups = subgroups
 
         if 'docs' in opts:
-            opts['ruledoc'] = opts['docs']
+            opts['doc'] = opts['docs']
 
     def run(self):
 

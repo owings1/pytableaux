@@ -21,17 +21,16 @@ pytableaux.tools.hybrids
 """
 from __future__ import annotations
 
+from abc import abstractmethod as abstract
 from collections.abc import Collection
 from itertools import filterfalse
 from typing import Iterable, SupportsIndex
 
-from pytableaux.errors import (DuplicateValueError, Emsg,
-                               check)
-from pytableaux.tools import abstract, abcs
+from pytableaux.errors import DuplicateValueError, Emsg, check
+from pytableaux.tools import abcs
 from pytableaux.tools.sequences import (EMPTY_SEQ, MutableSequenceApi,
                                         SequenceApi, seqf, seqm, slicerange)
 from pytableaux.tools.sets import EMPTY_SET, MutableSetApi, SetApi, setf, setm
-
 
 __all__ = (
     'EMPTY_QSET',
@@ -93,7 +92,6 @@ class qsetf(SequenceSet):
 
     def copy(self):
         inst = object.__new__(type(self))
-        # copy reference only
         inst._seq_ = self._seq_
         inst._set_ = self._set_
         return inst
@@ -112,7 +110,7 @@ class qsetf(SequenceSet):
         raise Emsg.InstCheck(index, (slice, SupportsIndex))
 
     def __iter__(self):
-        yield from self._seq_
+        return iter(self._seq_)
 
     def __reversed__(self):
         return reversed(self._seq_)
@@ -120,7 +118,7 @@ class qsetf(SequenceSet):
 
 EMPTY_QSET = qsetf()
 
-class QsetView(SequenceSet):
+class QsetView(SequenceSet, immutcopy = True):
     """SequenceSet view.
     """
 
@@ -130,19 +128,14 @@ class QsetView(SequenceSet):
 
         check.inst(base, SequenceSet)
 
-        inst = object.__new__(cls)
-        inst.__len__ = base.__len__
-        inst.__iter__ = base.__iter__
-        inst.__getitem__ = base.__getitem__
-        inst.__contains__ = base.__contains__
-        inst.__reversed__ = base.__reversed__
+        self = object.__new__(cls)
+        self.__len__ = base.__len__
+        self.__iter__ = base.__iter__
+        self.__getitem__ = base.__getitem__
+        self.__contains__ = base.__contains__
+        self.__reversed__ = base.__reversed__
 
-        return inst
-
-    def copy(self):
-        'Immutable copy, returns self.'
         return self
-
 
     @classmethod
     def _from_iterable(cls, it):
@@ -155,9 +148,8 @@ class QsetView(SequenceSet):
 class MutableSequenceSet(SequenceSet, MutableSequenceApi, MutableSetApi):
     """Mutable sequence set (ordered set) interface.
 
-    Sequence methods such as ``append`` raise ``DuplicateValueError``.
+    Sequence methods such as :attr:`append` raise :class:`DuplicateValueError`.
     """
-
     __slots__ = EMPTY_SET
 
     def add(self, value):
@@ -181,12 +173,11 @@ class MutableSequenceSet(SequenceSet, MutableSequenceApi, MutableSetApi):
         # Must re-implement MutableSequence method.
         raise NotImplementedError
 
-
 class qset(MutableSequenceSet):
     'Mutable sequence set implementation backed by built-in set and list.'
 
-    _set_type_: type = setm
-    _seq_type_: type = seqm
+    _set_type_ = setm
+    _seq_type_ = seqm
 
     _set_: setm
     _seq_: seqm
@@ -194,12 +185,12 @@ class qset(MutableSequenceSet):
     __slots__ = qsetf.__slots__
 
     def __new__(cls, *args, **kw):
-        inst = object.__new__(cls)
-        inst._set_ = cls._set_type_()
-        inst._seq_ = cls._seq_type_()
-        return inst
+        self = object.__new__(cls)
+        self._set_ = cls._set_type_()
+        self._seq_ = cls._seq_type_()
+        return self
 
-    def __init__(self, values: Iterable = None, /,):
+    def __init__(self, values = None, /,):
         if values is not None:
             self |= values
 
@@ -230,165 +221,93 @@ class qset(MutableSequenceSet):
         self._set_.clear()
 
     @abcs.hookable('cast', 'check', 'done')
-    def insert(self, index: SupportsIndex, value, /, *,
-        cast = None, check = None, done = None
-    ):
+    def insert(self, index, value, /, *, cast = None, check = None, done = None):
         'Insert a value before an index. Raises ``DuplicateValueError``.'
-
-        # hook.cast
         if cast is not None:
             value = cast(value)
-
         if value in self:
             raise DuplicateValueError(value)
-
-        # hook.check
         if check is not None:
             check(self, (value,), EMPTY_SET)
-
-        # --- begin changes -----
         self._seq_.insert(index, value)
         self._set_.add(value)
-        # --- end changes -----
-
-        # hook.done
         if done is not None:
             done(self, (value,), EMPTY_SET)
 
     @abcs.hookable('check', 'done')
-    def __delitem__(self, key: SupportsIndex|slice, /, *,
-        check = None, done = None
-    ):
+    def __delitem__(self, key, /, *, check = None, done = None):
         'Delete by index/slice.'
-
         if isinstance(key, SupportsIndex):
             setdelete = self._set_.remove
-
         elif isinstance(key, slice):
             setdelete = self._set_.difference_update
-
         else:
             raise Emsg.InstCheck(key, (slice, SupportsIndex))
-
-        # Retrieve the departing
         leaving = self[key]
-
-        # hook.check
         if check is not None:
             check(self, EMPTY_SET, (leaving,))
-
-        # --- begin changes -----
         del self._seq_[key]
         setdelete(leaving)
-        # --- end changes -----
-
-        # hook.done
         if done is not None:
             done(self, EMPTY_SET, (leaving,))
 
-
     @abcs.hookable('cast')
-    def __setitem__(self, key, value, /, *,
-        cast = None
-    ):
+    def __setitem__(self, key, value, /, *, cast = None):
         'Set value by index/slice. Raises ``DuplicateValueError``.'
-
         if isinstance(key, SupportsIndex):
-            # hook.cast
             if cast is not None:
                 value = cast(value)
             self.__setitem_index__(key, value)
             return
-
         if isinstance(key, slice):
-            # hook.cast
             if cast is not None:
                 value = tuple(map(cast, value))
             else:
                 check.inst(value, Collection)
             self.__setitem_slice__(key, value)
             return
-
         raise Emsg.InstCheck(key, (slice, SupportsIndex))
 
     @abcs.hookable('check', 'done')
-    def __setitem_index__(self, index: SupportsIndex, arriving, /, *,
-        check = None, done = None,
-    ):
+    def __setitem_index__(self, index, arriving, /, *, check = None, done = None):
         'Index setitem Implementation'
-
-        #  Retrieve the departing
         leaving = self._seq_[index]
-    
-        #  Check for duplicates
         if arriving in self and arriving != leaving:
             raise Emsg.DuplicateValue(arriving)
-
-        # hook.check
         if check is not None:
             check(self, (arriving,), (leaving,))
-
-        # --- begin changes -----
-
-        # Remove from set
         self._set_.remove(leaving)
         try:
-            # Assign by index to list.
             self._seq_[index] = arriving
         except:
-            # On error, restore the set.
             self._set_.add(leaving)
             raise
         else:
-            #  Add new value to the set
             self._set_.add(arriving)
-
-        # --- end changes -----
-
-        # hook.done
         if done is not None:
             done(self, (arriving,), (leaving,))
 
     @abcs.hookable('check', 'done')
-    def __setitem_slice__(self, slice_: slice, arriving: Collection, /, *,
-        check = None, done = None,
-    ):
+    def __setitem_slice__(self, slice_, arriving, /, *, check = None, done = None):
         'Slice setitem Implementation'
-
         # Check length and compute range. This will fail for some bad input,
         # and it is fast to compute.
-        range_ = slicerange(len(self), slice_, arriving)
-
-        # Retrieve the departing.
+        _ = slicerange(len(self), slice_, arriving)
         leaving = self[slice_]
-
         # Check for duplicates.
         # Any value that we already contain, and is not leaving with the others
         # is a duplicate.
         for v in filterfalse(leaving.__contains__, filter(self.__contains__, arriving)):
             raise Emsg.DuplicateValue(v)
-
-        # hook.check
         if check is not None:
             check(self, arriving, leaving)
-
-        # --- begin changes -----
-        # Remove from set.
         self._set_ -= leaving
         try:
-            # Assign by slice to list.
             self._seq_[slice_] = arriving
         except:
-            # On error, restore the set.
             self._set_ |= leaving
             raise
         else:
-            # Add new values to set.
             self._set_ |= arriving
-        # --- end changes -----
-
-        # hook.done
         if done is not None:
             done(self, arriving, leaving)
-
-

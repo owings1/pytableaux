@@ -45,7 +45,8 @@ from __future__ import annotations
 
 import os
 import re
-import traceback
+import sys
+import warnings
 from abc import abstractmethod as abstract
 from dataclasses import dataclass
 from importlib import import_module
@@ -59,7 +60,7 @@ from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
-from pytableaux import EMPTY_SET, logics
+from pytableaux import EMPTY_SET, errors, logics
 from pytableaux.lang import Operator, Parser, Predicates
 from pytableaux.tools import EMPTY_MAP, abcs
 from pytableaux.tools.hybrids import qset
@@ -162,9 +163,12 @@ def init_app(app: Sphinx, config: Config):
         lstrip_blocks = True,
     )
 
+    if not sys.warnoptions:
+        warnings.simplefilter('ignore', category=errors.RepeatValueWarning)
+
 # ------------------------------------------------
 
-def viewcode_target(obj: Any) -> str:
+def viewcode_target(obj):
     if isinstance(obj, str):
         modname = obj
     else:
@@ -375,16 +379,11 @@ class AutodocProcessor(Processor):
         return True
 
     def __call__(self, app:Sphinx, *args):
-        try:
-            self.app = app
-            self.record = self.Record(*args)
-            self.lines = self.record.lines
-            if self.applies():
-                self.run()
-        except Exception as err:
-            logger.error(err)
-            traceback.print_exc()
-            raise
+        self.app = app
+        self.record = self.Record(*args)
+        self.lines = self.record.lines
+        if self.applies():
+            self.run()
 
     def __iadd__(self, other: str|list[str]):
         self.lines.extend(self.prepstr(other))
@@ -482,17 +481,13 @@ def stropt(arg: str, /) -> str:
         arg = ''
     return arg
 
-
 def cleanws(arg: str, /) -> str:
     "Option spec to remove all whitespace."
     return re_space.sub('', arg)
 
-
 def opersopt(arg: str, /):
     """Operators list, from comma-separated input."""
-    return tuple(map(Operator,
-        (s.strip() for s in re_comma.split(arg))
-    ))
+    return tuple(map(Operator, (s.strip() for s in re_comma.split(arg))))
 
 def nodeopt(arg: str, /):
     """A docutils node from a name, e.g. 'inline'."""
@@ -529,7 +524,7 @@ def choice_or_flag(*args, default = None, **kw):
 def snakespace(name):
     return re.sub(r'([A-Z])', r' \1', name)[1:]
 
-def set_classes(opts):
+def set_classes(opts:dict):
     if 'class' in opts:
         if opts['class'] is None:
             del(opts['class'])
@@ -580,9 +575,7 @@ def predsopt(arg):
     
         0,0,1 : 1,0,2
     """
-    return Predicates(
-        tuple(map(int, spec.split(':')))
-        for spec in re_comma.split(cleanws(arg))
-    )
+    return Predicates(map(int, spec.split(':'))
+        for spec in re_comma.split(cleanws(arg)))
 
 from pytableaux.tools.doc import nodez

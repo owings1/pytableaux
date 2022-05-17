@@ -29,8 +29,7 @@ from typing import Any, Iterable
 from pytableaux import EMPTY_SET, __docformat__, tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import LangCommonMeta, Sentence,Predicate, raiseae
-from pytableaux.tools import abcs
-from pytableaux.tools.decorators import lazy, membr, wraps
+from pytableaux.tools import abcs, lazy, membr, wraps
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sequences import SequenceApi, seqf

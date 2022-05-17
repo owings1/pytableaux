@@ -35,8 +35,7 @@ __all__ = (
 
 
 from pytableaux import tools
-from pytableaux.lang.parsing import Parser
-from pytableaux.lang.collect import Argument, Predicates
+from pytableaux.lang import Argument, Parser, Predicates
 
 data = tools.MapProxy({
     'Addition'                         : (('a',), 'Aab'),

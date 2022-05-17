@@ -35,8 +35,7 @@ from pytableaux.lang import (Argument, Atomic, BiCoords, Constant,
                              Operated, Operator, Parameter, Predicate,
                              Predicated, Predicates, Quantified, Sentence,
                              TableStore, Variable, raiseae)
-from pytableaux.tools import abcs, key0
-from pytableaux.tools.decorators import lazy
+from pytableaux.tools import abcs, key0, lazy
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap
 from pytableaux.tools.sequences import seqf

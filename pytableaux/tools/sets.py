@@ -26,8 +26,7 @@ import operator as opr
 from collections.abc import MutableSet, Set
 
 from pytableaux.errors import check
-from pytableaux.tools import abcs
-from pytableaux.tools.decorators import operd
+from pytableaux.tools import abcs, operd
 
 __all__ = (
     'EMPTY_SET',
@@ -44,28 +43,6 @@ class SetApi(Set, abcs.Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
 
     __slots__ = EMPTY_SET
-
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def __or__(self:SetApiT, other) -> SetApiT: ...
-    #     @overload
-    #     def __and__(self:SetApiT, other) -> SetApiT: ...
-    #     @overload
-    #     def __sub__(self:SetApiT, other) -> SetApiT: ...
-    #     @overload
-    #     def __xor__(self:SetApiT, other) -> SetApiT: ...
-    #     @overload
-    #     def issubset(self, other: Iterable) -> bool: ...
-    #     @overload
-    #     def issuperset(self, other: Iterable) -> bool: ...
-    #     @overload
-    #     def union(self:SetApiT, *others: Iterable) -> SetApiT: ...
-    #     @overload
-    #     def intersection(self:SetApiT, *others: Iterable) -> SetApiT: ...
-    #     @overload
-    #     def difference(self:SetApiT, *others: Iterable) -> SetApiT: ...
-    #     @overload
-    #     def symmetric_difference(self:SetApiT, other: Iterable) -> SetApiT: ...
 
     __or__  = Set.__or__
     __and__ = Set.__and__
@@ -93,31 +70,13 @@ class SetApi(Set, abcs.Copyable):
 
 class MutableSetApi(MutableSet, SetApi):
     'Fusion interface of collections.abc.MutableSet and built-in set.'
-
     __slots__ = EMPTY_SET
-
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def update(self, *others: Iterable): ...
-    #     @overload
-    #     def intersection_update(self, *others: Iterable): ...
-    #     @overload
-    #     def difference_update(self, *others: Iterable): ...
-    #     @overload
-    #     def symmetric_difference_update(self, other: Iterable): ...
-
     rep = operd.repeat
-
     update = rep(opr.ior, set.update)
-
     intersection_update = rep(opr.iand, set.intersection_update)
     difference_update   = rep(opr.isub, set.difference_update)
-
-    symmetric_difference_update = operd.apply(
-        opr.ixor,
-        set.symmetric_difference_update
-    )
-
+    symmetric_difference_update = operd.apply(opr.ixor,
+        set.symmetric_difference_update)
     del(rep)
 
 class setf(SetApi, frozenset):
@@ -138,14 +97,6 @@ class setm(MutableSetApi, set):
     __iter__     = set.__iter__
     __contains__ = set.__contains__
 
-    # if TYPE_CHECKING:
-    #     @overload
-    #     def clear(self): ...
-    #     @overload
-    #     def add(self, value: VT): ...
-    #     @overload
-    #     def discard(self, value: VT): ...
-
     clear   = set.clear
     add     = set.add
     discard = set.discard
@@ -157,13 +108,11 @@ class SetView(SetApi):
 
     def __new__(cls, set_, /,):
         check.inst(set_, Set)
-
-        inst = object.__new__(cls)
-        inst.__len__      = set_.__len__
-        inst.__iter__     = set_.__iter__
-        inst.__contains__ = set_.__contains__
-
-        return inst
+        self = object.__new__(cls)
+        self.__len__      = set_.__len__
+        self.__iter__     = set_.__iter__
+        self.__contains__ = set_.__contains__
+        return self
 
     def __repr__(self):
         prefix = type(self).__name__

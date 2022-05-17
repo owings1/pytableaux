@@ -22,11 +22,12 @@ pytableaux.lang
 from __future__ import annotations
 
 from collections.abc import Mapping
+from types import MappingProxyType as MapProxy
 from typing import ClassVar, NamedTuple
 
 from pytableaux.errors import Emsg
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure, dxopy
-from pytableaux.tools.decorators import NoSetAttr, raisr
+from pytableaux.tools import EMPTY_MAP, abcs, closure, dxopy
+from pytableaux.tools import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
 
 __all__ = (

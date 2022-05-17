@@ -28,13 +28,13 @@ from collections.abc import Mapping, Set
 from dataclasses import dataclass
 from itertools import filterfalse, repeat
 from types import FunctionType
+from types import MappingProxyType as MapProxy
 from typing import Callable
 
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy, abcs, closure, dund
+from pytableaux.tools import abcs, closure, dund
 
-# Allowed local imports: errors, tools, tools.abcs, tools.typing
-
+# Allowed local imports: errors, tools, tools.abcs
 
 __all__ = (
     'HookConn',
@@ -196,13 +196,9 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
 
     __new__ = None
 
-    #******  API
-
     @staticmethod
     def provider_info(provider):
         return HookProvider(provider)
-
-    #******  API Closure
 
     @abcs.abcf.before
 
@@ -458,7 +454,6 @@ class HookConn(Mapping):
     callback: Callable
     "The hook callback function."
 
-
     def __getitem__(self, key):
         if key in type(self).__dataclass_fields__:
             return getattr(self, key)
@@ -473,4 +468,3 @@ class HookConn(Mapping):
     def __len__(self):
         return len(type(self).__dataclass_fields__)
 
-HookConn._slotset = frozenset(HookConn.__slots__)

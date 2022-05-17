@@ -26,8 +26,7 @@ from itertools import filterfalse
 from typing import Callable, Mapping
 
 from pytableaux.errors import check, Emsg
-from pytableaux.tools import abcs
-from pytableaux.tools.decorators import wraps
+from pytableaux.tools import abcs, wraps
 from pytableaux.tools.linked import linqset
 from pytableaux.tools.mappings import dmap
 
@@ -77,11 +76,7 @@ class Listener(Callable, abcs.Abc):
     once      : bool
     callcount : int
 
-    __slots__ = (
-        'cb',
-        'once',
-        'callcount',
-    )
+    __slots__ = ('cb', 'once', 'callcount')
 
     def __init__(self, cb: Callable, once: bool = False):
         self.cb = cb
@@ -109,7 +104,6 @@ class Listener(Callable, abcs.Abc):
     __delattr__ = Emsg.ReadOnly.razr
 
 class Listeners(linqset[Listener]):
-
 
     emitcount: int
     callcount: int
@@ -257,7 +251,6 @@ class EventsListeners(dmap[EventId, Listeners]):
     def __setitem__(self, key, value):
         # Override for type check
         super().__setitem__(key, check.inst(value, Listeners))
-
 
     # Alternate update impl uses setitem.
     update = dmap._setitem_update

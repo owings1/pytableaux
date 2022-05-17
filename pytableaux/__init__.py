@@ -37,12 +37,12 @@ from pytableaux import errors, tools
 import pytableaux.tools.abcs
 import pytableaux.tools.hooks
 
-@tools.closure
-def _():
+# @tools.closure
+# def _():
 
-    # Back patch abcs.hookutil
-    from pytableaux.tools import abcs, hooks
-    abcs.hookutil = hooks.hookutil
+#     # Back patch abcs.hookutil
+#     from pytableaux.tools import abcs, hooks
+#     abcs.hookutil = hooks.hookutil
 
     # Rebase errors.Emsg
 
@@ -77,7 +77,7 @@ del(dataclasses,_Settings)
 
 # ---- tools
 
-import pytableaux.tools.decorators
+# import pytableaux.tools.decorators
 import pytableaux.tools.sets
 from pytableaux.tools.sets import EMPTY_SET
 

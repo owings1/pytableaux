@@ -56,7 +56,6 @@ def is_concrete_rule(obj: Any, /) -> bool:
 
 def is_concrete_build_trunk(obj: Any, /,):
     return TabSys.build_trunk in _methmro(obj) and not isabstract(obj)
-    # return obj is not TabSys.build_trunk and TabSys.build_trunk in _methmro(obj)
 
 def is_transparent_rule(obj: Any) -> bool:
     """Whether a rule class:
@@ -75,8 +74,7 @@ def is_transparent_rule(obj: Any) -> bool:
     )
 
 
-
-def rules_sorted(logic: LogicType, rules: Collection[type[Rule]] = None, /) -> dict[str, Any]:
+def rules_sorted(logic: LogicType, rules = None, /) -> dict:
 
     logic = registry(logic)
     RulesCls = logic.TabRules
@@ -108,7 +106,7 @@ def rule_sortkey_legend(rule: type[Rule]):
     return (c.item, bool(getattr(c, 'negated', 0)),
         -1 * bool(getattr(rule, 'designation', None)))
 
-def rules_grouped_legend_order(rules: Collection[type[Rule]], /) -> dict[str, list[type[Rule]]]:
+def rules_grouped_legend_order(rules: Collection[type[Rule]], /) -> dict:
     groups = {name: [] for name in ('closure', 'operator', 'quantifier', 'predicate')}
     ungrouped = []
     for rule in rules:
@@ -125,8 +123,8 @@ def rules_grouped_legend_order(rules: Collection[type[Rule]], /) -> dict[str, li
     groups['ungrouped'] = ungrouped
     return groups
 
-def rules_legend_subgroups(groups: dict[str, list[type[Rule]]]) -> dict[str, dict[Any, list[type[Rule]]]]:
-    subgroups: dict[str, dict[Any, list[type[Rule]]]] = {
+def rules_legend_subgroups(groups: dict[str, list[type[Rule]]]) -> dict:
+    subgroups: dict[str, dict[Any, list]] = {
         name: {} for name in ('operator', 'quantifier', 'predicate')
     }
     for name, group in groups.items():
@@ -328,10 +326,6 @@ class EllipsisExampleHelper:
     def add_node(self, branch: Branch):
         self.applied.add(branch)
         branch.add(self.mynode)
-
-    
-
-
 
 # def rsttable(data, /, headers = (), **kw):
 #     from tabulate import tabulate

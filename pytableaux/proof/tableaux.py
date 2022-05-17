@@ -42,8 +42,7 @@ from pytableaux.proof import (BranchEvent, BranchStat, RuleClassFlag,
                               RuleEvent, RuleMeta, RuleState, StepEntry,
                               TabEvent, TabFlag, TabStatKey, TabTimers)
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.tools import closure, isstr
-from pytableaux.tools.decorators import wraps
+from pytableaux.tools import closure, isstr, wraps
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset, qsetf
 from pytableaux.tools.linked import linqset

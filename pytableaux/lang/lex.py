@@ -25,15 +25,14 @@ import operator as opr
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import Annotated, Any, ClassVar, Mapping, Sequence
+from typing import Any, ClassVar, Mapping, Sequence
 
 from pytableaux import _ENV, __docformat__, errors, tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import (BiCoords, LangCommonEnum, LangCommonMeta,
                              LexicalAbcMeta, SysPredEnumMeta, TriCoords,
                              nosetattr, raiseae)
-from pytableaux.tools import abcs
-from pytableaux.tools.decorators import lazy, membr, wraps
+from pytableaux.tools import abcs, lazy, membr, wraps
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.mappings import DequeCache, dmap
 from pytableaux.tools.sequences import EMPTY_SEQ, seqf
@@ -284,10 +283,7 @@ class Lexical:
 class LexicalAbc(Lexical, metaclass = LexicalAbcMeta, lexcopy = True):
     'Base class for non-Enum lexical classes.'
 
-    __slots__ = (
-        '_ident',
-        '_hash',
-    )
+    __slots__ = ('_ident', '_hash',)
 
     @lazy.prop
     def ident(self):
@@ -520,7 +516,7 @@ class Quantifier(LexicalEnum):
     Existential = (0, 'Existential')
     "The :s:`X` Existential quantifier"
 
-    Universal   = (1, 'Universal')
+    Universal = (1, 'Universal')
     "The :s:`L` Universal quantifier"
 
     def __call__(self, *spec) -> Quantified:
@@ -548,7 +544,6 @@ class Operator(LexicalEnum):
     which implements ``&``, the value is ``'__and__'``.
     """
 
-    #******  Members
     Assertion             = (10,  'Assertion',              1, None)
     Negation              = (20,  'Negation',               1, '__invert__')
     Conjunction           = (30,  'Conjunction',            2, '__and__')

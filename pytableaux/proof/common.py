@@ -31,8 +31,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Sentence
-from pytableaux.tools import EMPTY_MAP, abcs, isattrstr, isint
-from pytableaux.tools.decorators import lazy, operd, raisr
+from pytableaux.tools import EMPTY_MAP, abcs, isattrstr, isint, lazy, operd, raisr
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap, dmapattr

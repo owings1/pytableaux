@@ -21,20 +21,19 @@ pytableaux.models
 """
 from __future__ import annotations
 
+from abc import abstractmethod as abstract
 from dataclasses import dataclass
 from itertools import product, repeat
-from typing import Any, ClassVar, Generic, Mapping
+from typing import Any, ClassVar, Generic, Mapping, TypeVar
 
 from pytableaux.errors import check
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import (Atomic, LexType, Operated, Operator,
                                  Predicated, Quantified, Quantifier, Sentence)
 from pytableaux.proof.common import Branch
-from pytableaux.tools import abstract, closure
+from pytableaux.tools import closure
 from pytableaux.tools.abcs import Abc, Ebc
 from pytableaux.tools.sets import setf
-
-from typing import TypeVar
 
 __all__ = (
     'BaseModel',

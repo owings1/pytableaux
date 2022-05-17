@@ -26,13 +26,13 @@ import enum as _enum
 import functools
 import itertools
 import operator as opr
-from collections.abc import Set, Mapping
+from collections.abc import Mapping, Set
 from enum import auto as eauto
+from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import MapProxy
 
 if TYPE_CHECKING:
     from pytableaux.tools.hooks import hookutil
@@ -300,10 +300,6 @@ class EbcMeta(_enum.EnumMeta):
     _member_names_: Sequence[str] # Use tuple instead of list
     __members__: Mapping = None # Override to not double-proxy
 
-    # @classmethod
-    # def __prepare__(cls, clsname, bases, **kw):
-    #     return super().__prepare__(clsname, bases, **kw)
-
     def __new__(cls, clsname, bases, ns, /, *,
         skipflags = False, idxbuild = True, skipabcm = False, **kw
     ):
@@ -356,11 +352,7 @@ class EbcMeta(_enum.EnumMeta):
         Class._after_init()
 
         # Cleanup.
-        _em_clean_methods(Class)
-
-        return Class
-
-    #******  Class Call
+        return _em_clean_methods(Class)
 
     def __call__(cls, value, names = None, **kw):
         if names is not None:
@@ -373,8 +365,6 @@ class EbcMeta(_enum.EnumMeta):
         return cls._lookup.pseudo(
             # Will raise ValueError for bad value.
             cls.__new__(cls, value))
-
-    #******  Mapping(ish) Behavior
 
     def get(cls, key, default = NOARG, /):
         """Get a member by an indexed reference key.
@@ -402,23 +392,17 @@ class EbcMeta(_enum.EnumMeta):
     def __contains__(cls, key: Any, /):
         return key in cls._lookup
 
-    #******  Sequence(ish) Behavior
-
     def __iter__(cls):
         return iter(cls._seq)
 
     def __reversed__(cls):
         return reversed(cls._seq)
 
-    #******  Misc Behaviors
-
     def __getattr__(cls, name, /):
         raise AttributeError(name)
 
     def __dir__(cls):
         return cls._member_names_
-
-    #******  Subclass Init Hooks
 
     def _member_keys(cls, member, /):
         'Init hook to get the index lookup keys for a member.'
@@ -432,42 +416,6 @@ class EbcMeta(_enum.EnumMeta):
     def _after_init(cls):
         'Init hook once the class is initialized. Includes abstract classes.'
         pass
-
-    # if TYPE_CHECKING:
-
-    #     @overload
-    #     def __call__(cls: EbcMeta|type[EnumT], value: Any, /) -> EnumT: ...
-    #     @overload
-    #     def __call__(cls: EbcMeta|type[EnumT], value: Any, names: Any, /, **kw) -> type[EnumT]: ...
-
-    #     @overload
-    #     def __getitem__(cls: EbcMeta|type[EnumT], key: Any, /) -> EnumT: ...
-
-    #     @overload
-    #     def get(cls: EbcMeta|type[EnumT], key: Any, /) -> EnumT: ...
-    #     @overload
-    #     def get(cls: EbcMeta|type[EnumT], key: Any, default: T, /) -> EnumT|T: ...
-
-    #     @overload
-    #     def __iter__(cls: EbcMeta|type[EnumT]) -> Iterator[EnumT]: ...
-    #     @overload
-    #     def __reversed__(cls: EbcMeta|type[EnumT]) -> Iterator[EnumT]: ...
-
-    #     @property
-    #     @overload
-    #     def _seq(cls: EbcMeta|type[EnumT]) -> Sequence[EnumT]: ...
-
-    #     @property
-    #     @overload
-    #     def _lookup(cls: EbcMeta|type[EnumT]) -> EnumLookup[EnumT]: ...
-
-    #     @property
-    #     @overload
-    #     def _member_map_(cls: EbcMeta|type[EnumT]) -> Mapping[str, EnumT]: ...
-
-    #     @property
-    #     @overload
-    #     def __members__(cls: EbcMeta|type[EnumT]) -> Mapping[str, EnumT]: ...
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -787,6 +735,8 @@ class AbcMeta(_abc.ABCMeta):
             return func
         return decorator
 
+
+
 #=============================================================================
 #_____________________________________________________________________________
 #
@@ -826,6 +776,8 @@ class Copyable(metaclass = AbcMeta, skiphooks = True):
             if '__deepcopy__' not in subcls.__dict__:
                 subcls.__deepcopy__ = Ebc.__deepcopy__
         subcls.__copy__ = subcls.copy
+
+from pytableaux.tools.hooks import hookutil
 
 #=============================================================================
 #_____________________________________________________________________________
