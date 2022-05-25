@@ -15,8 +15,26 @@
     font-family: Charmonman;
     font-weight: bold;
 }
-div[class^=highlight] .pre {
+div[class^=highlight] .pre,
+table.lex-eg-table tr > td:last-child {
     font-family: SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,Courier,monospace;
+}
+html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) .rule-sig.sig-name,
+.ruledoc.rule-sig,
+.ruledoc.with-legend .descname {
+    font-family: inherit;
+}
+
+
+
+.sig .rule-legend {
+    padding: 4px 10px;
+    color: black;
+    margin-left: -6px;
+    margin-top: -6px;
+    border: 1px solid #dadada;
+    border-left-color: #ac9;
+
 }
 
 
@@ -24,18 +42,27 @@ div[class^=highlight] .pre {
     position: absolute;
     border: 1px solid #ccc;
     padding: 0 8px;
-    font-size: 20px;
-    background-color: white;
 }
-.tableau-wrapper .rule-legend .legend-item {
-    padding: 0 2px;
-}
-/* font-size */
 
+.sig .rule-legend {
+    color: black;
+    
+}
+
+.ruledoc.rule-sig {
+    color: #252525;
+}
+
+
+/* font-size */
+.sig .rule-legend,
+.tableau-wrapper .rule-legend {
+    font-size: 20px;
+}
 .tableau-wrapper .prolog .argument {
     font-size: initial;
 }
-table.truth-table th.operator-name {
+table.truth-table th.operator-name {    
     font-size: 90%;
 }
 p.definiens .lexitem,
@@ -70,10 +97,13 @@ div[class^=highlight] .pre {
 }
 
 /* font-weight */
-
+html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) .rule-sig.sig-name,
+.ruledoc.rule-sig,
+.ruledoc.with-legend .descname,
 table.truth-table > thead > tr > th.operator-name {
     font-weight: normal;
 }
+.big-l,
 table.truth-table th.value-header,
 table.truth-table th.operator-symbol,
 p.definiendum {
@@ -82,7 +112,9 @@ p.definiendum {
 
 /* font-style */
 
-
+.ruledoc.rule-sig {
+    font-style: italic;
+}
 
 /* font-variant */
 
@@ -101,6 +133,7 @@ div[class^=highlight] .pre {
 p.definition.center {
     text-align: center;
 }
+dt.ruledoc.sig,
 table.truth-table tr > th.value-header.column,
 table.truth-table th.operator-symbol.arity-2 {
     text-align: right;
@@ -116,7 +149,8 @@ table.lex-eg-table tr > td:last-child {
 /* display */
 
 p.definiendum,
-div[class^=highlight] .pre {
+div[class^=highlight] .pre,
+html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) dt.ruledoc.sig {
     display: block;
 }
 table.flex-last tr > td:last-child,
@@ -126,6 +160,7 @@ table.lex-eg-table tr > td:last-child {
 }
 
 /* float */
+.sig .rule-legend,
 .truth-table-wrapper {
     float: left;
 }
@@ -145,8 +180,12 @@ table.lex-eg-table tr > td:last-child {
 
 /* margin */
 
+
 div[class^=highlight] .pre {
     margin: 0;
+}
+dl.ruledoc dd {
+    margin-left: 0;
 }
 p.definition > em {
     margin-right: 10px;
@@ -181,6 +220,16 @@ p.definiendum {
 
 /* padding */
 
+.sig .rule-legend {
+    padding: 4px 8px;
+}
+.rule-legend .legend-item {
+    padding: 0 2px;
+}
+
+dl.ruledoc {
+    padding-bottom: 0px;
+}
 .tableau-wrapper .prolog {
     padding-left: 10px;
     padding-top: 10px;
@@ -201,7 +250,6 @@ p.definiendum {
 }
 
 
-
 /* border */
 
 table.truth-table tr > th.value-header.row,
@@ -214,14 +262,17 @@ table.truth-table tr > th.value-header.column {
 .highlight,
 .tableau-wrapper {
     border: 1px solid #ac9;
+}
+.highlight,
+.tableau-wrapper {
     border-radius: 3px;
 }
-
 /* background */
+dl.ruledoc,
 p.definition,
 p.consequence,
 p.definiens {
-    background: #e7f2fa;
+    background-color: #e7f2fa;
 }
 p.definiendum {
     background: #6ab0de85;
@@ -229,4 +280,9 @@ p.definiendum {
 .highlight,
 .tableau-wrapper {
     background-color: #eeffcc;
+}
+.tableau-wrapper .rule-legend ,
+.sig .rule-legend{
+    background-color: white;
+
 }

@@ -24,49 +24,51 @@ from __future__ import annotations
 import functools
 import keyword
 import re
+import sys
 from abc import abstractmethod as abstract
-from types import FunctionType, MappingProxyType, new_class
-from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping
+from collections import defaultdict
+from collections.abc import Callable, Mapping
+from keyword import iskeyword
+from types import DynamicClassAttribute as dynca
+from types import FunctionType
+from types import MappingProxyType as MapProxy
 
 from pytableaux import __docformat__
-from pytableaux.tools.typing import T
 
 __all__ = (
     'abstract',
-    'clsns',
     'closure',
-    'dxopy',
+    'dun',
     'dxopy',
     'EMPTY_MAP',
+    'getitem',
+    'select_fget',
+    'isattrstr',
+    'isdund',
+    'isint',
+    'isstr',
+    'key0',
     'MapProxy',
-    'NameTuple',
+    'sbool',
+    'thru',
+    'true',
+    'undund',
+
+    'lazy',
+    'membr',
+    'NoSetAttr',
+    'operd',
+    'raisr',
+    'wraps',
 )
 
-if TYPE_CHECKING:
 
-    def classalias(orig: type[T]) -> Callable[[type], type[T]]:
-        """Decorator factory for class alias for type hinting.
-
-        Usage::
-
-            @classalias(int)
-            class integer: pass
-
-        Args:
-            orig (type): The reference class.
-        
-        Returns:
-            A decorator that ignores its argument and returns `orig`.
-        """
-        def d(_: type) -> type[T]:
-            return orig
-        return d
-
-MapProxy = MappingProxyType
+EMPTY = ()
 EMPTY_MAP = MapProxy({})
 NOARG = object
+WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
 
-def closure(func: Callable[..., T]) -> T:
+def closure(func):
     """Closure decorator calls the argument and returns its return value.
     If the return value is a function, updates its wrapper.
     """
@@ -75,15 +77,15 @@ def closure(func: Callable[..., T]) -> T:
         functools.update_wrapper(ret, func)
     return ret
 
-def thru(obj: T) -> T:
+def thru(obj):
     'Return the argument.'
     return obj
 
-def true(_: Any) -> Literal[True]:
+def true(_):
     'Always returns ``True``.'
     return True
 
-def key0(obj: Any) -> Any:
+def key0(obj):
     'Get key/subscript ``0``.'
     return obj[0]
 
@@ -106,11 +108,11 @@ def undund(name: str) -> str:
         return name[2:-2]
     return name
 
-def isint(obj: Any) -> bool:
+def isint(obj) -> bool:
     'Whether the argument is an :obj:`int` instance'
     return isinstance(obj, int)
 
-def isattrstr(obj: Any) -> bool:
+def isattrstr(obj) -> bool:
     "Whether the argument is a non-keyword identifier string"
     return (
         isinstance(obj, str) and
@@ -118,7 +120,7 @@ def isattrstr(obj: Any) -> bool:
         not keyword.iskeyword(obj)
     )
 
-def isstr(obj: Any) -> bool:
+def isstr(obj) -> bool:
     'Whether the argument is an :obj:`str` instance'
     return isinstance(obj, str)
 
@@ -138,10 +140,15 @@ def getitem(obj, key, default = NOARG, /):
             raise
         return default
 
+def select_fget(obj):
+    if callable(getattr(obj, '__getitem__', None)):
+        return getitem
+    return getattr
+
 @closure
 def dxopy():
 
-    def api(a: Mapping, proxy = False, /, ) -> Mapping:
+    def api(a, proxy = False, /, ):
         """Deep map copy, recursive for mapping values.
         Safe for circular reference. Second arg supports
         deep proxy.
@@ -152,7 +159,7 @@ def dxopy():
             wrap = thru
         return runner(a, {}, wrap, runner)
 
-    def runner(a: Mapping, memo: dict, wrap, recur):
+    def runner(a: Mapping, memo, wrap, recur):
         if (i := id(a)) in memo:
             return a
         memo[i] = True
@@ -168,155 +175,433 @@ def dxopy():
     return api
 
 
-@closure
-def NameTuple():
-    class NameTuple:
+
+from pytableaux.tools import abcs
+from pytableaux.errors import check
+
+class BaseMember(metaclass = abcs.AbcMeta):
+
+    __slots__ = '__name__', '__qualname__', '__owner'
+
+    def __set_name__(self, owner, name):
+        self.__owner = owner
+        self.__name__ = name
+        self.__qualname__ = f'{owner.__name__}.{name}'
+        self.sethook(owner, name)
+
+    def sethook(self, owner, name):
         pass
-        """A NamedTuple that accepts Generic aliases for type checking.
 
-        Usage::
+    @property
+    def owner(self):
+        try:
+            return self.__owner
+        except AttributeError:
+            pass
 
-            class spam(NameTuple, Generic[T]):
-                eggs: T
-                bacon: str
-        
-        Allows the following::
+    @property
+    def name(self):
+        try:
+            return self.__name__
+        except AttributeError:
+            return type(self).__name__
 
-            class MyList(list[spam[int]]): ...
+    def __repr__(self):
+        if not hasattr(self, '__qualname__') or not callable(self):
+            return object.__repr__(self)
+        return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
 
-        At runtime the additional bases are ignored, so it is roughly
-        equivalent to::
 
-            class spam(NamedTuple):
-                eggs: T
-                bacon: str
-        
-        with the addition of `__orig_bases__`, and `__parameters__`
-        attributes::
+class membr(BaseMember):
 
-            >>> spam.__orig_bases__
-            (<class 'pytableaux.tools.NameTuple'>, typing.Generic[~T])
-            >>> spam.__parameters__
-            (~T,)
+    __slots__ = 'cbak',
+
+    owner: object
+    cbak: tuple
+
+    def __init__(self, cb, *args, **kw):
+        self.cbak = cb, args, kw
+
+    def sethook(self, owner, name):
+        setattr(owner, name, self())
+
+    def __call__(self):
+        cb, args, kw = self.cbak
+        return cb(self, *args, **kw)
+
+    @classmethod
+    def defer(cls, fdefer):
+        def fd(member, *args, **kw):
+            return fdefer(member, *args, **kw)
+        def f(*args, **kw):
+            return cls(fd, *args, **kw)
+        return f
+
+
+
+def _thru(obj, *_):
+    return obj
+
+def _thru2(_x, obj, *_):
+    return obj
+
+def _methcaller(name: str):
+    if iskeyword(name) or not name.isidentifier():
+        raise TypeError(f"Invalid attr name '{name}'")
+    def f(obj, *args, **kw):
+        return getattr(obj, name)(*args, **kw)
+    f.__name__ = name
+    return f
+
+def _prevmodule(thisname = __name__, /):
+    f = sys._getframe()
+    while (f := f.f_back) is not None:
+        val = f.f_globals.get('__name__', '__main__')
+        if val != thisname:
+            return val
+
+class wraps(dict):
+
+    __slots__ = 'only', 'original',
+
+    def __init__(self, original = None, /, only = WRASS_SET, exclude = EMPTY, **kw):
+        'Initialize argument, initial input function that will be decorated.'
+        self.original = original
+        only = set(map(dund, only))
+        only.difference_update(map(dund, exclude))
+        only.intersection_update(WRASS_SET)
+        self.only = only
+        if kw:
+            self.update(kw)
+        if original:
+            self.update(original)
+            if (k := '__module__') in only and k not in self:
+                if (v := getattr(original, '__objclass__', None)):
+                    self.setdefault(k, v)
+                else:
+                    self.setdefault(k, _prevmodule())
+
+    def __call__(self, fout):
+        'Decorate function. Receives the wrapper function and updates its attributes.'
+        self.update(fout)
+        if isinstance(fout, (classmethod, staticmethod)):
+            self.write(fout.__func__)
+        else:
+            self.write(fout)
+        return fout
+
+    def read(self, obj):
+        "Read relevant attributes from object/mapping."
+        get = select_fget(obj)
+        for name in self.only:
+            if (value := get(obj, name, None)):
+                yield name, value
+            elif (value := get(obj, undund(name), None)):
+                yield name, value
+
+    def write(self, obj):
+        "Write wrapped attributes to a wrapper."
+        for attr, val in self.items():
+            setattr(obj, attr, val)
+        if callable(self.original):
+            obj.__wrapped__ = self.original
+        return obj
+
+    def update(self, obj = None, /, **kw):
+        """Read from an object/mapping and update relevant values. Any attributes
+        already present are ignored. Returns self.
         """
-    if TYPE_CHECKING:
-        class NameTuple: ...
+        for o in obj, kw:
+            if o is not None:
+                for attr, val in self.read(o):
+                    if attr not in self:
+                        self[attr] = val
+        return self
 
-    import typing
+    def setdefault(self, key, value):
+        "Override value if key is relevant and value is not empty."
+        if key in self.only:
+            if value:
+                self[key] = value
+                return value
+            return self[key]
+            
+    def __setitem__(self, key, value):
+        if key in self or key not in self.only:
+            raise KeyError(key)
+        super().__setitem__(key, value)
 
-    class meta(type):
+    def __repr__(self):
+        return f'{type(self).__name__}({dict(self)})'
 
-        __call__ = staticmethod(typing.NamedTuple)
+class operd:
+    """Build operational functions: `apply` (default), `reduce`, `order`, `repeat`.
+    """
 
-        @staticmethod
-        def __prepare__(clsname, bases):
-            return dict(__orig_bases__ = bases)
+    def __new__(cls, *args, **kw):
+        return cls.apply(*args, **kw)
 
-        def __new__(cls, clsname: str, bases, ns, **kw):
-            assert bases[0] is NameTuple
-            if (origs := ns['__orig_bases__'][1:]):
-                for a, b in zip(origs, bases[1:]):
-                    if b is typing.Generic:
-                        ns['__parameters__'] = a.__parameters__
-                        break
-                new_class(clsname, origs, kw)
-            return typing.NamedTupleMeta(clsname, (typing._NamedTuple,), ns)
+    class Base(BaseMember, Callable):
 
-    NameTuple = type.__new__(meta, 'NameTuple', (), {dund('doc'): NameTuple.__doc__})
+        __slots__ = 'oper', 'wrap'
 
-    return NameTuple
+        def __init__(self, oper, info = None):
+            self.oper = oper
+            self.wrap = wraps(info).update(oper)
 
+        def sethook(self, owner, name):
+            setattr(owner, name, self())
 
-@closure
-def clsns():
-    class clsns:
-        pass
-        """A base class that produces a useful dict of a class body.
+    class apply(Base):
+        """Create a function or method from an operator, or other
+        built-in function.
+        """
+        __slots__ = EMPTY
 
-        Decorator usage::
+        def __call__(self, info = None):
+            oper = check.callable(self.oper)
+            @self.wrap.update(info)
+            def f(*args):
+                return oper(*args)
+            return f
 
-            @clsns
-            class ns:
-                def spam(): ...
-                eggs = 1
+    class reduce(Base):
+        """Create a reducing method using functools.reduce to apply
+        a single operator/function to an arbitrarily number of arguments.
 
-            >>> ns
-            ... {'spam': <function ns.spam>, 'eggs': 1}
+        Args:
 
-        The original class is stored in `.cls`. The raw mapping is
-        copied to `.raw`.
+            oper: The operator, or any two-argument function.
 
-            >>> ns.cls
-            ... <class '__main__.ns'>
+            info: The original or stub method being replaced, or an
+                object with informational attributes (`__name__`, `__doc__`, etc.)
+                to be passed through `wraps`.
 
-            >>> ns.raw.keys()
-            ... dict_keys(['__module__', 'spam', 'eggs', '__dict__', '__weakref__', '__doc__'])
+            freturn: A two-argument function that takes `self` and the
+                end result, e.g. to create a copy of an object, etc. This could
+                be a method-caller, which would invoke the method on the first
+                argument (self). Default is to return the second argument (result).
 
-        Base class usage. A new class is created by removing the first base,
-        which must be ``clsns``.:
-
-            class ns(clsns, int):
-                eggs = 3
-
-            >>> ns
-            ... {'eggs': 3}
-
-            >>> ns.cls.__bases__
-            ... (<class 'int'>,)    
-
-        Additional keyword arguments are added to the dict.
-
-            class ns(clsns, bacon = 4):
-                eggs = 5
-
-            >>> ns
-            ... {'eggs': 5, 'bacon': 4}
+            finit: A single-argument function that takes `self` to seed
+                the initial value. This could be used, for example, to ensure
+                a copy is created in case the number of arguments is 0.
         """
 
-    ignore = set(map(dund, ('module', 'qualname', 'doc', 'dict', 'weakref')))
+        __slots__ = 'inout',
 
-    class Ns(dict):
+        inout: tuple[Callable, Callable]
 
-        __slots__ = 'raw', 'cls'
+        def __init__(self, oper, /, info = None, freturn = _thru2, finit = _thru):
+            super().__init__(oper, info)
+            self.inout = (
+                _methcaller(val)
+                    if isinstance(val, str) else
+                check.callable(val)
+                    for val in (freturn, finit))
 
-        raw: Mapping[str, Any]
+        def __call__(self, info = None):
+            oper, freturn, finit = (self.oper, *self.inout)
+            @self.wrap.update(info)
+            def freduce(self, *operands):
+                return freturn(self, functools.reduce(oper, operands, finit(self)))
+            return freduce
 
-        def __init__(self, ns: dict, cls = None, /, **kw):
-            if isinstance(ns, type):
-                if cls: raise TypeError
-                cls, ns = ns, ns.__dict__
-            self.raw = MapProxy(dict(ns))
-            self.cls = cls
-            self.update(ns)
-            for key in ignore:
-                self.pop(key, None)
-            if len(kw):
-                self.update(kw)
-  
-    class meta(type):
+    class repeat(Base):
+        """Create a method that accepts an arbitrary number of positional
+        arguments, and repeatedly calls a one argument method for each
+        argument (or, equivalently, a two-argument function with self as the
+        first argument).
+        """
 
-        def __new__(cls, name, bases, ns: dict, typecls = False, **kw):
-            assert bases[0] is clsns
-            if typecls:
-                c = type(name, bases[1:], dict(ns))
+        __slots__ = EMPTY
+
+        def __call__(self, info = None):
+            oper = check.callable(self.oper)
+            @self.wrap.update(info)
+            def f(self, *args):
+                for arg in args: oper(self, arg)
+            return f
+
+class raisr(BaseMember):
+    """Factory for raising an error. Not to be used as a decorator.
+    """
+
+    __slots__ = 'wrap', 'Error'
+
+    def __init__(self, Error, /):
+        self.Error = check.subcls(Error, Exception)
+        self.wrap = wraps(only = ('name', 'qualname', 'module', 'doc'),
+            doc = f"""
+            Raises:
+                {Error.__name__}: always
+            """)
+
+    def __call__(self, original = None, /):
+        wrap = self.wrap
+        if original:
+            wrap.original = original
+            wrap.update(original)
+        Error = self.Error
+        def f(self, *args, **_):
+            raise Error(*args[0:1])
+        return wrap(f)
+
+    def sethook(self, owner, name):
+        setattr(owner, name, self(getattr(owner.__bases__[0], name, self)))
+
+class lazy:
+
+    __slots__ = EMPTY
+
+    def __new__(cls, *args, **kw):
+        return cls.get(*args, **kw)
+
+    class get(BaseMember):
+
+        __slots__ = 'key', 'method'
+        format = '_{}'.format
+
+        def __new__(cls, key = None, /, method = None):
+            """If only argument to constructor is callable, construct and call the
+            instance. Otherwise create normally.
+            """
+            inst = object.__new__(cls)
+            inst.method = method
+            if not callable(key) or method is not None:
+                inst.key = check.inst(key, str)
+                if method is not None:
+                    check.callable(method)
+                return inst
+            inst.key = None
+            return inst(check.callable(key))
+
+        def __call__(self, method):
+            key = self.key or self.format(method.__name__)
+            @wraps(method)
+            def fget(self):
+                try:
+                    return getattr(self, key)
+                except AttributeError:
+                    pass
+                setattr(self, key, value := method(self))
+                return value
+            return fget
+
+        def sethook(self, owner, name):
+            if self.key is None:
+                self.key = self.format(name)
+            setattr(owner, name, self(self.method))
+
+    class prop(get):
+        """Return a property with the getter. NB: a setter/deleter should be
+        sure to use the correct attribute.
+        """
+
+        __slots__ = EMPTY
+
+        @property
+        def propclass(self):
+            return property
+
+        def __call__(self, method):
+            fget = super().__call__(method)
+            return self.propclass(fget, doc = method.__doc__)
+
+    class dynca(prop):
+        """Return a DynamicClassAttribute with the getter. NB: a setter/deleter
+        should be sure to use the correct attribute.
+        """
+
+        @property
+        def propclass(self):
+            return dynca
+
+        __slots__ = EMPTY
+
+class NoSetAttr(BaseMember):
+    'Lame thing that does a lame thing.'
+
+    enabled: bool
+    "Whether raising is enabled."
+
+    _defaults = MapProxy(dict(
+        efmt = (
+            "Attribute '{0}' of '{1.__class__.__name__}' "
+            "objects is readonly"
+        ).format,
+
+        # Control attribute name to check on the object,
+        # e.g. '_readonly', in addition to this object's
+        # `enabled` setting.
+        attr = None,
+
+        # If `True`: Check `attr` on the object's class;
+        # If set to a `type`, check the `attr` on that class;
+        # If Falsy, only check for this object's `enabled` setting.
+        cls = None,
+    ))
+
+    __slots__ =  'cache', 'defaults', 'enabled',
+
+    defaults: dict
+    cache: dict
+
+    def __init__(self, /, *, enabled = True, **defaults):
+        self.enabled = bool(enabled)
+        self.defaults = self._defaults | defaults
+        self.cache = defaultdict(dict)
+
+    def __call__(self, base: type, **opts):
+        return self._make(base.__setattr__, **(self.defaults | opts))
+
+    def _make(self, sa, /, efmt, attr, cls):
+        if attr:
+            if cls is True:
+                check = self._clschecker(attr)
+            elif cls:
+                check = self._fixedchecker(attr, cls)
             else:
-                c = new_class(name, bases[1:], None, lambda n: n.update(ns))
-            return Ns(ns, c, **kw)
+                check = self._selfchecker(attr)
+            def f(obj, name, value, /):
+                if self.enabled and check(obj):
+                    raise AttributeError(efmt(name, obj))
+                sa(obj, name, value)
+        else:
+            def f(obj, name, value, /):
+                if self.enabled:
+                    raise AttributeError(efmt(name, obj))
+                sa(obj, name, value)
+        return wraps(sa)(f)
 
-        def __call__(self, *args, **kw):
-            return Ns(*args, **kw)
+    @abcs.abcf.temp
+    def cached(func):
+        @wraps(func)
+        def f(self: NoSetAttr, *args):
+            cache = self.cache[func]
+            try:
+                return cache[args]
+            except KeyError:
+                return cache.setdefault(args, func(self, *args))
+        return f
 
-    clsns = type.__new__(meta, 'clsns', (), {dund('doc'): clsns.__doc__})
+    @cached
+    def _fixedchecker(self, attr, obj):
+        return lambda _: getattr(obj, attr, False)
 
-    return clsns
+    @cached
+    def _callchecker(self, attr, fget):
+        return lambda obj: getattr(fget(obj), attr, False)
 
-if TYPE_CHECKING:
+    @cached
+    def _clschecker(self, attr):
+        return self._callchecker(type, attr)
 
-    @classalias(clsns)
-    class clsns: pass
+    @cached
+    def _selfchecker(self, attr):
+        return lambda obj: getattr(obj, attr, False)
 
-    @classalias(NameTuple)
-    class NameTuple: pass
-
-    @classalias(MappingProxyType)
-    class MapProxy: pass
+    def sethook(self, owner, name):
+        func = self(owner.__bases__[0])
+        func.__name__ = name
+        func.__qualname__ = self.__qualname__
+        setattr(owner, name, func)

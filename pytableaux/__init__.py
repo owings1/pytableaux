@@ -32,25 +32,10 @@ del(_package_info)
 
 # ----- errors, tools
 
-import pytableaux.tools.typing
 from pytableaux import errors, tools
 
 import pytableaux.tools.abcs
 import pytableaux.tools.hooks
-
-@tools.closure
-def _():
-
-    # Back patch abcs.hookutil
-    from pytableaux.tools import abcs, hooks
-    abcs.hookutil = hooks.hookutil
-
-    # Rebase errors.Emsg
-
-    # errors.Emsg = abcs.Emsg = abcs._em_rebase(errors.Emsg, errors.EmsgBase, abcs.Ebc)
-
-    # errors.EmsgBase = None
-    # del(errors.EmsgBase)
 
 # ----- env
 
@@ -78,7 +63,7 @@ del(dataclasses,_Settings)
 
 # ---- tools
 
-import pytableaux.tools.decorators
+# import pytableaux.tools.decorators
 import pytableaux.tools.sets
 from pytableaux.tools.sets import EMPTY_SET
 
@@ -89,7 +74,7 @@ import pytableaux.tools.hybrids
 import pytableaux.tools.linked
 
 # ------ lang
-
+import pytableaux.lang
 import pytableaux.lang.collect
 import pytableaux.lang.writing
 import pytableaux.lang.parsing
@@ -125,25 +110,22 @@ def _():
 
     del(lex.nosetattr,)
 
-# ----- logics, examples, models
-
 import pytableaux.logics
-import pytableaux.examples
-import pytableaux.models
-
-# ----- proof
 
 import pytableaux.proof
-import pytableaux.proof.util
 import pytableaux.proof.common
-import pytableaux.proof.filters
 import pytableaux.proof.tableaux
+import pytableaux.proof.rules
+import pytableaux.proof.helpers
+import pytableaux.proof.filters
+import pytableaux.proof.writers
+
+import pytableaux.models
+import pytableaux.examples
+
 
 # pytableaux.proof.Rule = pytableaux.proof.tableaux.Rule
 
-import pytableaux.proof.rules
-import pytableaux.proof.helpers
-import pytableaux.proof.writers
 
 __all__ = (
     'errors',

@@ -20,26 +20,21 @@ pytableaux.proof.writers
 
 """
 from __future__ import annotations
-from collections import deque
 
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping
+from abc import abstractmethod as abstract
+from collections import deque
+from types import MappingProxyType as MapProxy
+from typing import Mapping, TYPE_CHECKING
 
 import jinja2
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import Notation
-from pytableaux.lang.writing import LexWriter
-from pytableaux.tools import EMPTY_MAP, MapProxy, abstract, closure, abcs
+from pytableaux.lang import LexWriter, Notation
+from pytableaux.tools import EMPTY_MAP, abcs, closure
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.typing import TT
-
 if TYPE_CHECKING:
-    from typing import overload
-
-    from pytableaux.lang.collect import Argument
-    from pytableaux.proof.tableaux import Tableau, TreeStruct
-
+    from pytableaux.proof import Tableau, TreeStruct
 
 __all__ = (
     'HtmlTabWriter',
@@ -50,7 +45,7 @@ __all__ = (
     'register',
 )
 
-registry: Mapping[str, type[TabWriter]]
+registry: Mapping
 """The tableau writer class registry.
 
 :meta hide-value:
@@ -61,10 +56,10 @@ def register():
 
     global registry
 
-    regtable: dict[str, type[TabWriter]] = {}
+    regtable = {}
     registry = MapProxy(regtable)
 
-    def register(wcls: type[TabWriter],/, *, force: bool = False):
+    def register(wcls,/, *, force: bool = False):
         """Register a ``TabWriter`` class. Returns the argument, so it can be
         used as a decorator.
 
@@ -75,7 +70,7 @@ def register():
             The writer class.
         """
 
-        check.subcls(wcls, TabWriter)
+        wcls = check.subcls(wcls, TabWriter)
         if abcs.isabstract(wcls):
             raise TypeError(f'Cannot register abstract class: {wcls}')
 
@@ -90,7 +85,7 @@ def register():
 
 class TabWriterMeta(abcs.AbcMeta):
 
-    DefaultFormat: ClassVar[str] = 'text'
+    DefaultFormat = 'text'
 
     def __call__(cls, *args, **kw):
         if cls is TabWriter:
@@ -118,24 +113,24 @@ class TabWriter(metaclass = TabWriterMeta):
         writer = TabWriter('html', 'standard', 'ascii')
     """
 
-    format: ClassVar[str]
+    format: str
     "The format registry identifier."
 
-    default_charsets: ClassVar[Mapping[Notation, str]] = MapProxy({
+    default_charsets = MapProxy({
         notn: notn.default_charset for notn in Notation
     })
     "Default ``LexWriter`` charset for each notation."
 
-    defaults: ClassVar[Mapping[str, Any]] = EMPTY_MAP
+    defaults = EMPTY_MAP
     "Default options."
 
     lw: LexWriter
     "The writer's `LexWriter` instance."
 
-    opts: dict[str, Any]
+    opts: dict
     "The writer's options."
 
-    def __init__(self, notn: Notation|str = None, charset: str = None, *, lw: LexWriter = None, **opts):
+    def __init__(self, notn = None, charset = None, *, lw: LexWriter = None, **opts):
         if lw is None:
             if notn is None:
                 notn = Notation.default
@@ -154,25 +149,16 @@ class TabWriter(metaclass = TabWriterMeta):
         self.lw = lw
         self.opts = dict(self.defaults) | opts
 
-    def attachments(self, /) -> Mapping[str, Any]:
+    def attachments(self, /):
         return EMPTY_MAP
 
     @abstract
-    def write(self, tableau: Tableau, /, **kw) -> str:
+    def write(self, tableau, /, **kw) -> str:
         raise NotImplementedError
-
-    if TYPE_CHECKING:
-
-        @overload
-        def __call__(self, tableau: Tableau, /, **kw) -> str:...
-
-        @classmethod
-        @overload
-        def register(cls, subcls: TT) -> TT: ...
 
     __call__ = write
 
-    def __init_subclass__(subcls: type[TemplateTabWriter], **kw):
+    def __init_subclass__(subcls, **kw):
         super().__init_subclass__(**kw)
         subcls.__call__ = subcls.write
 
@@ -182,19 +168,19 @@ _templates_base_dir = os.path.join(
 
 class TemplateTabWriter(TabWriter):
 
-    template_dir: ClassVar[str]
+    template_dir: str
 
-    jinja_opts: ClassVar[Mapping[str, Any]] = MapProxy(dict(
+    jinja_opts = MapProxy(dict(
         trim_blocks   = True,
         lstrip_blocks = True,
     ))
-    _jenv: ClassVar[jinja2.Environment]
+    _jenv:jinja2.Environment
 
     @classmethod
     def render(cls, template: str, *args, **kw) -> str:
         return cls._jenv.get_template(template).render(*args, **kw)
 
-    def __init_subclass__(subcls: type[TemplateTabWriter], **kw):
+    def __init_subclass__(subcls, **kw):
         super().__init_subclass__(**kw)
         if abcs.isabstract(subcls):
             return
@@ -222,7 +208,7 @@ class HtmlTabWriter(TemplateTabWriter):
         inline_css   = False,
     ))
 
-    def write(self, tab: Tableau, /, *, classes: Collection[str] = None) -> str:
+    def write(self, tab, /, *, classes = None) -> str:
         """"
         Args:
             tab: The tableaux instance.
@@ -293,13 +279,13 @@ class TextTabWriter(TemplateTabWriter):
         strs.append(self._write_structure(tab.tree, template))
         return '\n'.join(strs)
 
-    def _write_structure(self, structure: TreeStruct, template: jinja2.Template, *, prefix: str = '',) -> str:
-        nodestr = template.render(structure = structure)
+    def _write_structure(self, s: TreeStruct, template: jinja2.Template, *, prefix = '',):
+        nodestr = template.render(structure = s)
         lines = deque()
         append = lines.append
         writestruct = self._write_structure
         append(prefix + nodestr)
-        children = structure.children
+        children = s.children
         prefix += ' ' * (len(nodestr) - 1)
         for c, child in enumerate(children):
             is_last = c == len(children) - 1

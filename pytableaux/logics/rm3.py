@@ -24,7 +24,7 @@ from pytableaux.lang.lex import Operator as Oper
 from pytableaux.logics import fde as FDE
 from pytableaux.logics import lp as LP
 from pytableaux.proof.common import Node
-from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.proof import adds, group, sdnode
 
 name = 'RM3'
 

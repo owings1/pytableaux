@@ -27,16 +27,14 @@ from typing import TYPE_CHECKING, Optional
 
 from pytableaux.errors import check
 from pytableaux.logics import registry
-from pytableaux.tools import closure
 from pytableaux.tools.doc import (AutodocProcessor, ConfKey, Processor,
                                   ReplaceProcessor, SphinxEvent, misc)
 from sphinx.ext import autodoc
 from sphinx.util import logging
 
 if TYPE_CHECKING:
-    from typing import Any
 
-    import sphinx_toolbox.more_autodoc.overloads
+    # import sphinx_toolbox.more_autodoc.overloads
     from proof.tableaux import Rule
     from sphinx.application import Sphinx
     from sphinx.config import Config
@@ -46,7 +44,6 @@ __all__ = (
     'BuildtrunkExample',
     'RuledocExample',
     'RuledocInherit',
-    'GlobalReplace',
 )
 
 logger = logging.getLogger(__name__)

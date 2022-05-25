@@ -21,19 +21,14 @@ pytableaux.lang
 """
 from __future__ import annotations
 
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
-                    NamedTuple, Set)
+from collections.abc import Mapping
+from types import MappingProxyType as MapProxy
+from typing import ClassVar, NamedTuple
 
 from pytableaux.errors import Emsg
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, closure, dxopy
-from pytableaux.tools.decorators import NoSetAttr, raisr
+from pytableaux.tools import EMPTY_MAP, abcs, closure, dxopy
+from pytableaux.tools import NoSetAttr, raisr
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import RsetSectKT, T
-
-if TYPE_CHECKING:
-    from typing import Iterator, Sequence, overload
-
-    from pytableaux.tools.abcs import EnumLookup
 
 __all__ = (
     # Classes
@@ -48,31 +43,6 @@ __all__ = (
     'SysPredEnumMeta',
     'TableStore',
     'TriCoords',
-
-    # Type aliases
-    'PredicateSpec',
-    'ParameterSpec',
-    'AtomicSpec',
-
-    # Generic aliases
-    'IdentType',
-    'OperandsSpec',
-    'OperatedSpec',
-    'OperatorSpec',
-    'ParameterIdent',
-    'PredicatedSpec',
-    'PredicateRef',
-    'QuantifiedSpec',
-    'QuantifierSpec',
-    'SpecType',
-
-    # Deferred aliases
-    'OperCallArg',
-    'ParseTableKey',
-    'ParseTableValue',
-    'PredsItemRef',
-    'PredsItemSpec',
-    'QuantifiedItem',
 
     # Subpackage convenience import
     'Argument',
@@ -127,26 +97,6 @@ class LexicalAbcMeta(LangCommonMeta):
 class SysPredEnumMeta(LangCommonEnumMeta):
     "Meta class for special system predicates enum."
 
-    if TYPE_CHECKING:
-
-        __members__: Mapping[str, Predicate]
-        _lookup: EnumLookup[Predicate]
-        _member_map_: Mapping[str, Predicate]
-        _seq: Sequence[Predicate]
-
-        @overload
-        def __iter__(cls) -> Iterator[Predicate]: ...
-        @overload
-        def __reversed__(cls) -> Iterator[Predicate]: ...
-        @overload
-        def __getitem__(cls, key, /) -> Predicate: ...
-        @overload
-        def __call__(cls, value, /) -> Predicate: ...
-        @overload
-        def get(cls, key, /) -> Predicate: ...
-        @overload
-        def get(cls, key, default: T, /) -> Predicate|T: ...
-
 #==========================+
 #  Base classes            |
 #==========================+
@@ -154,7 +104,7 @@ class SysPredEnumMeta(LangCommonEnumMeta):
 class LangCommonEnum(abcs.Ebc, metaclass = LangCommonEnumMeta):
     'Common Enum base class for lang classes.'
 
-    __slots__   = 'value', '_value_', '_name_', '__objclass__'
+    # __slots__   = 'value', '_value_', '_name_',
 
     __delattr__ = raiseae
     __setattr__ = nosetattr(abcs.Ebc, cls = True)
@@ -189,13 +139,14 @@ class Notation(LangCommonEnum):
 
     #--- Members
 
-    polish = abcs.eauto(), 'unicode'
+    polish = 'polish',
     "Polish notation."
 
-    standard = abcs.eauto(), 'unicode'
+    standard = 'standard',
     "Standard notation."
 
-    def __init__(self, num, default_charset: str, /):
+    def __init__(self, name, /):
+        default_charset = 'unicode'
         self.charsets = setm((default_charset,))
         self.default_charset = default_charset
         self.writers = setm()
@@ -234,12 +185,16 @@ class Notation(LangCommonEnum):
                 super().__setattr__(name, value)
         return setter
 
+    @classmethod
+    def _member_keys(cls, member: Notation, /):
+        return super()._member_keys(member).union({member.name.capitalize()})
+
     @abcs.abcf.after
     def _(cls):
         cls.default = cls.polish
 
 
-class Marking(LangCommonEnum):
+class Marking(str, LangCommonEnum):
     'Miscellaneous marking/punctuation enum.'
 
     paren_open = 'paren_open'
@@ -285,7 +240,7 @@ class BiCoords(NamedTuple):
         index: int
         "The index integer."
 
-    def sorting(self) -> BiCoords.Sorting:
+    def sorting(self):
         "Return the sorting tuple."
         return self.Sorting(self.subscript, self.index)
 
@@ -295,7 +250,7 @@ class BiCoords(NamedTuple):
         return repr(tuple(self))
 
     @staticmethod
-    def min_unused(used: Set[BiCoords], maxi: int):
+    def min_unused(used, maxi):
         # finds the mimimum available by searching for gaps.
         if not used:
             return BiCoords.first
@@ -330,7 +285,7 @@ class TriCoords(NamedTuple):
         arity: int
         "The arity integer."
 
-    def sorting(self) -> TriCoords.Sorting:
+    def sorting(self):
         "Return the sorting tuple."
         return self.Sorting(self.subscript, self.index, self.arity)
 
@@ -342,16 +297,17 @@ class TriCoords(NamedTuple):
 BiCoords.first = BiCoords._make(BiCoords.first)
 TriCoords.first = TriCoords._make(TriCoords.first)
 
+
 class TableStore(metaclass = LangCommonMeta):
 
     default_fetch_key: ClassVar[str]
 
-    _instances: ClassVar[dict[Notation, dict[str, TableStore]]]
+    _instances: ClassVar[dict]
 
     __slots__ = EMPTY_SET
 
     @classmethod
-    def load(cls, notn: Notation, key: str, data: Mapping, /):
+    def load(cls, notn, key, data, /):
         notn = Notation[notn]
         idx = cls._instances[notn]
         if key in idx:
@@ -359,7 +315,7 @@ class TableStore(metaclass = LangCommonMeta):
         return idx.setdefault(key, cls(data, (notn, key)))
 
     @classmethod
-    def fetch(cls, notn: Notation, key: str = None, /):
+    def fetch(cls, notn, key = None, /):
         if key is None:
             key = cls.default_fetch_key
         notn = Notation[notn]
@@ -373,17 +329,14 @@ class TableStore(metaclass = LangCommonMeta):
         return cls.load(notn, key, data)
 
     @classmethod
-    def available(cls, notn: Notation) -> list[str]:
+    def available(cls, notn):
         notn = Notation(notn)
         idx = cls._instances[notn]
         store = cls._builtin[notn]
         return sorted(set(idx).union(store))
 
     @classmethod
-    def _initcache(cls,
-        notns: Iterable[Notation],
-        builtin: Mapping[Notation, Mapping[str, Mapping]]
-    ):
+    def _initcache(cls, notns, builtin):
         if cls is __class__ or hasattr(cls, '_builtin'):
             raise TypeError
         cls._builtin = builtin = MapProxy(dict(builtin))
@@ -398,7 +351,7 @@ class TableStore(metaclass = LangCommonMeta):
                 cls.fetch(notn, key)
 
 
-class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
+class RenderSet(TableStore, Mapping):
     'Lexical writer table data class.'
 
     default_fetch_key = 'ascii'
@@ -406,15 +359,14 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
     notation: Notation
     "The notation."
 
-    renders: Mapping[RsetSectKT, Callable[..., str]]
+    renders: Mapping
     "Render functions."
 
-    strings: Mapping[RsetSectKT, str]
+    strings: Mapping
     "Fixed strings mapping."
 
-    data: Mapping[str, Mapping[RsetSectKT, Any]]
-
-    keypair: tuple[Notation, str]
+    data: Mapping
+    keypair: tuple
 
     @property
     def charset(self) -> str:
@@ -435,7 +387,7 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
         'hash',
     )
 
-    def __init__(self, data: Mapping[str, Any], keypair: tuple[Notation, str], /):
+    def __init__(self, data, keypair, /):
         self.data = data = dxopy(data, True)
         self.__getitem__ = data.__getitem__
         self.keypair = keypair
@@ -446,7 +398,7 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
         notn.charsets.add(self.charset)
         notn.rendersets.add(self)
 
-    def string(self, ctype: Any, value: Any) -> str:
+    def string(self, ctype, value) -> str:
         if ctype in self.renders:
             return self.renders[ctype](value)
         return self.strings[ctype][value]
@@ -475,94 +427,14 @@ class RenderSet(TableStore, Mapping[RsetSectKT, Any]):
         vtup = *((*v.items(),) if isinstance(v, Mapping) else v for v in vv),
         return hash((ktup, vtup))
 
-    if TYPE_CHECKING:
-
-        @staticmethod
-        @overload
-        def load(notn, key, data: Mapping, /) -> RenderSet: ...
-
-        @staticmethod
-        @overload
-        def fetch(notn, key = None, /) -> RenderSet: ...
-
-if TYPE_CHECKING:
-    RenderSet.fetch(Notation.standard).strings
-    RenderSet.load(Notation.standard, 'ascii', {}).notation
-
-#==================================================+
-#  Type aliases -- used a runtime with isinstance  |
-#==================================================+
-
-ParameterSpec = BiCoords
-"Parameter spec type (BiCoords)."
-
-PredicateSpec = TriCoords
-"Predicate spec type (TriCoords)."
-
-AtomicSpec = BiCoords
-"Atomic spec type (BiCoords)."
-
-#====================+
-#  Generic aliases   |
-#====================+
-
-SpecType = tuple[int|str|tuple, ...]
-"Tuple with integers, strings, or such nested tuples."
-
-IdentType = tuple[str, SpecType]
-"Tuple of (classname, spec)."
-
-ParameterIdent = tuple[str, BiCoords]
-"Tuple of (classname, (index, subscript))."
-
-QuantifierSpec = tuple[str]
-"Singleton tuple of quantifier name."
-
-OperatorSpec = tuple[str]
-"Singleton tuple of operator name."
-
-PredicateRef = tuple[int, ...] | str
-"Predicate ref type, int tuple or string."
-
-PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
-"Predicated sentence spec type."
-
-QuantifiedSpec = tuple[str, BiCoords, IdentType]
-"Quantified sentence spec type."
-
-OperandsSpec = tuple[IdentType, ...]
-"Operands argument type."
-
-OperatedSpec = tuple[str, OperandsSpec]
-"Operated sentence spec type."
-
-from pytableaux.lang.lex import Quantifier, Sentence, Variable, Lexical
-
-ParseTableValue = int|Lexical
-"ParseTable value type."
-
-QuantifiedItem = Quantifier | Variable | Sentence
-"Quantified item type."
-
-from pytableaux.lang.lex import (Atomic, Constant, Operator,
-                                 Predicate, Predicated)
-
-PredsItemSpec = PredicateSpec | Predicate
-"Predicates store item spec."
-
-PredsItemRef  = PredicateRef  | Predicate
-"Predicates store item ref."
-
-OperCallArg = Iterable[Sentence] | Sentence | OperandsSpec
-"Operator __call__ argument."
 
 
+from pytableaux.lang.lex import Atomic, Constant
+from pytableaux.lang.lex import CoordsItem as CoordsItem
+from pytableaux.lang.lex import Lexical, LexType, Operated, Operator
+from pytableaux.lang.lex import Parameter as Parameter
+from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
+                                 Sentence, Variable)
+from pytableaux.lang.parsing import Parser, ParseTable
 from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.writing import LexWriter
-from pytableaux.lang.lex import LexType
-
-ParseTableKey   = LexType|Marking|type[Predicate.System]
-"ParseTable key type."
-
-from pytableaux.lang.lex import Operated, Quantified
-from pytableaux.lang.parsing import Parser, ParseTable

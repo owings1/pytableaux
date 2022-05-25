@@ -21,20 +21,12 @@ pytableaux.proof.rules
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generator, Iterable, final
+from abc import abstractmethod as abstract
+from typing import Generator, Iterable, final
 
-from pytableaux.lang.lex import (Constant, Operated, Operator, Predicate,
-                                 Predicated, Quantified, Quantifier, Sentence)
-from pytableaux.proof import filters
-from pytableaux.proof.common import Branch, Node, Target
-
-from pytableaux.proof.tableaux import Rule
-from pytableaux.proof.util import adds, group
-from pytableaux.tools import abstract
-from pytableaux.tools.sets import EMPTY_SET
-
-if TYPE_CHECKING:
-    from typing import overload
+from pytableaux import EMPTY_SET
+from pytableaux.lang import Constant, Sentence
+from pytableaux.proof import adds, filters, group, Branch, Node, Target, Rule
 
 __all__ = (
     'BaseClosureRule',
@@ -131,7 +123,7 @@ class BaseSimpleRule(Rule):
 
     Helpers = AdzHelper,
     #: (AdzHelper) Whether the target node should be ticked after application.
-    ticking: bool = True
+    ticking = True
 
     def _apply(self, target: Target, /) -> None:
         'Delegates to ``AdzHelper._apply()``.'
@@ -155,10 +147,10 @@ class BaseSentenceRule(BaseNodeRule):
 
     NodeFilters = filters.SentenceNode,
 
-    negated    : bool      |None = None
-    operator   : Operator  |None = None
-    quantifier : Quantifier|None = None
-    predicate  : Predicate |None = None
+    negated    = None
+    operator   = None
+    quantifier = None
+    predicate  = None
 
     def sentence(self, node: Node, /) -> Sentence:
         'Delegates to ``filters.SentenceNode`` of ``FilterHelper``.'
@@ -168,21 +160,11 @@ class PredicatedSentenceRule(BaseSentenceRule):
 
     Helpers = PredNodes,
 
-    if TYPE_CHECKING:
-        @overload
-        def sentence(self, node: Node, /) -> Predicated:...
-
 class QuantifiedSentenceRule(BaseSentenceRule):
-
-    if TYPE_CHECKING:
-        @overload
-        def sentence(self, node: Node, /) -> Quantified:...
+    pass
 
 class OperatedSentenceRule(BaseSentenceRule):
-
-    if TYPE_CHECKING:
-        @overload
-        def sentence(self, node: Node, /) -> Operated:...
+    pass
 
 class NarrowQuantifierRule(QuantifiedSentenceRule):
 

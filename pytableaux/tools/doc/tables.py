@@ -21,19 +21,15 @@ pytableaux.tools.doc.docparts
 """
 from __future__ import annotations
 
-import html
-import re
 import reprlib
 import sys
 from functools import partial
+from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
-from pytableaux.lang.lex import LexType, Operator
-from pytableaux.lang.parsing import ParseTable
-from pytableaux.lang.writing import LexWriter, RenderSet
-from pytableaux.logics import registry
-from pytableaux.tools import MapProxy, abcs, closure
-from pytableaux.tools.doc import Tabler, directives, ConfKey
+from pytableaux.lang import LexType, LexWriter, Operator, ParseTable, RenderSet
+from pytableaux.tools import abcs, closure
+from pytableaux.tools.doc import ConfKey, Tabler, directives
 from pytableaux.tools.doc.directives import TableGenerator
 from pytableaux.tools.hybrids import qset
 
@@ -46,7 +42,6 @@ __all__ = (
     'oper_sym_table',
     'Reprer',
 )
-
 
 def fmt_raw(obj: Any):
     "No formatting."

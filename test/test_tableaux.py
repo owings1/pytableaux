@@ -13,7 +13,7 @@ from pytableaux.proof.filters import getkey
 from pytableaux.proof.helpers import *
 from pytableaux.proof.rules import ClosingRule, NoopRule, Rule
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.util import TabEvent, TabFlag, TabStatKey
+from pytableaux.proof import TabEvent, TabFlag, TabStatKey
 from pytableaux.tools import MapProxy
 from pytableaux.tools.mappings import MapCover, dmap
 from pytest import raises

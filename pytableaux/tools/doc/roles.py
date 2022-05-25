@@ -23,31 +23,29 @@ from __future__ import annotations
 
 import functools
 import re
+from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING
 
 from docutils import nodes
 from pytableaux import logics
-from pytableaux.lang import (LexType, LexWriter, Notation, Parser, Predicate,
-                             Predicates)
-from pytableaux.tools import MapProxy, abcs
-from pytableaux.tools.doc import BaseRole, classopt, nodeopt, predsopt, ConfKey
-from pytableaux.tools.hybrids import qsetf, qset
-from pytableaux.tools.typing import F
+from pytableaux.lang import LexType, LexWriter, Notation, Predicate
+from pytableaux.tools import abcs
+from pytableaux.tools.doc import (BaseRole, ConfKey, ParserOptionMixin,
+                                  classopt, nodeopt, nodez, predsopt)
+from pytableaux.tools.hybrids import qset, qsetf
 from sphinx.errors import NoUri
 from sphinx.util import logging
 from sphinx.util.docutils import ReferenceRole
 
 if TYPE_CHECKING:
-    from docutils.nodes import Element, Node, system_message
+    from pytableaux.typing import _F
     from sphinx.application import Sphinx
-    from sphinx.transforms import post_transforms
-    from sphinx.environment import BuildEnvironment
 
 __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
 
 logger = logging.getLogger(__name__)
 
-def rolerun(func: F) -> F:
+def rolerun(func: _F) -> _F:
     'Decorator for role run method.'
     @functools.wraps(func)
     def run(self):
@@ -61,11 +59,7 @@ def rolerun(func: F) -> F:
         return ret
     return run
 
-class refplus(
-    # sphinx.roles.XRefRole,
-    ReferenceRole,
-    BaseRole,
-):
+class refplus(ReferenceRole, BaseRole):
 
     section: str
     anchor: str
@@ -78,15 +72,12 @@ class refplus(
 
     _classes = 'xref', refdomain, f'{refdomain}-{reftype}'
 
-    # innernodeclass = nodes.literal
-    # innernodeclass = nodes.inline
     # lowercase = False
     warn_dangling = True
 
     def __init__(self):
         # {'class': None}         
         self.options ={}
-        # self.env.domains[].domain.resolve_xref(self.env, refdoc, self.app.builder, typ, target, node, contnode)
 
     @rolerun
     def run(self):
@@ -179,7 +170,7 @@ class refplus(
             f'logicname={self.name}, section={self.section}, anchor={self.anchor}, '
             f'title={self.title}, self.target={self.target}'
         )
-    
+
 class _Ctype(frozenset, abcs.Ebc):
     valued = {
         LexType.Operator, LexType.Quantifier, Predicate.System
@@ -191,21 +182,20 @@ class _Ctype(frozenset, abcs.Ebc):
 _re_nosent = re.compile(r'^(.)([0-9]*)$')
 
 
-class lexdress(BaseRole):
+class lexdress(BaseRole, ParserOptionMixin):
 
-    option_spec = MapProxy(dict({'class': None},
+    option_spec =dict({'class': None},
         node = nodeopt,
         wnotn = Notation,
         pnotn = Notation,
         preds = predsopt,
         classes = classopt,
-    ))
+    )
 
-    opt_defaults = MapProxy(dict({'class': None},
+    opt_defaults = dict({'class': None},
         node = nodes.inline,
         classes = qsetf(['lexitem']),
-    ))
-
+    )
 
     @rolerun
     def run(self):
@@ -216,11 +206,10 @@ class lexdress(BaseRole):
         opts = self.options
         conf = self.config
 
+        parser = self.parser_option()
+        preds = parser.preds
         nodecls = opts.get('node', self.opt_defaults['node'])
-        pnotn = opts.get('pnotn', conf[ConfKey.pnotn])
         wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
-        preds = Predicates(opts.get('preds', conf[ConfKey.preds]))
-        parser = Parser(pnotn, preds)
         lw = LexWriter(wnotn, 'unicode')
 
         text = self.text
@@ -251,9 +240,9 @@ class lexdress(BaseRole):
 
         classes.add(item.TYPE.name.lower())
 
-        rend = lw(item)
-
-        return nodecls(text = rend, classes = classes)
+        node = nodecls(classes = classes)
+        node += nodez.sentence(sentence = item)
+        return node
 
 class metadress(BaseRole):
 

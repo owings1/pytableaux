@@ -34,8 +34,4 @@ classes
 .. autoclass:: RenderSet
     :members:
 
-types
-------
-
-.. attribute:: PredicateRef
 

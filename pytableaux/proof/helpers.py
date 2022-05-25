@@ -20,30 +20,24 @@ pytableaux.proof.helpers
 """
 from __future__ import annotations
 
-import functools
+from abc import abstractmethod as abstract
 from copy import copy
 from itertools import filterfalse
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence
+from types import MappingProxyType as MapProxy
+from typing import (Any, Callable, Iterable, Iterator, Mapping,
+                    Sequence, TypeVar)
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang.lex import Constant, Predicated, Sentence
-from pytableaux.proof import Branch, Node, Rule, RuleHelper, Target, filters
-from pytableaux.proof.util import Access, RuleAttr, RuleEvent, TabEvent
-from pytableaux.tools import EMPTY_MAP, MapProxy, abcs, abstract, closure
-from pytableaux.tools.decorators import wraps
-from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
+from pytableaux.proof import (Access, Branch, Node, Rule, RuleAttr, RuleEvent,
+                              RuleHelper, TabEvent, Target, filters, Tableau)
+from pytableaux.tools import EMPTY_MAP, abcs, closure, wraps
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sets import EMPTY_SET, setm
-from pytableaux.tools.typing import (KT, VT, FiltersDict, NodePredFunc,
-                                     NodeTargetsFn, NodeTargetsGen, T,
-                                     TargetsFn)
 
-if TYPE_CHECKING:
-    from typing import overload
-
-    from pytableaux.proof.tableaux import Tableau
-else:
-    pass
+_T = TypeVar('_T')
+_KT = TypeVar('_KT')
+_VT = TypeVar('_VT')
 
 __all__ = (
     'AdzHelper',
@@ -99,22 +93,17 @@ class AdzHelper(RuleHelper):
                     break
         return close_count / min(1, len(target['adds']))
 
-class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
+class BranchCache(dmap[Branch, _T], abcs.Copyable, RuleHelper):
 
-    _valuetype: type[T] = bool
+    _valuetype: type[_T] = bool
 
     __slots__ = 'rule', 'config'
-
-    # def __new__(cls, rule: Rule,/):
-    #     inst = super().__new__(cls)
-    #     inst.rule = rule
-    #     return inst
 
     def __init__(self, rule: Rule,/):
         RuleHelper.__init__(self, rule)
         self.listen_on(rule, rule.tableau)
 
-    def copy(self, /, *, listeners:bool = False):
+    def copy(self, /, *, listeners = False):
         cls = type(self)
         inst = cls.__new__(cls)
         inst.rule = self.rule
@@ -150,7 +139,7 @@ class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
         return dict(branches = len(self))
 
     @classmethod
-    def _empty_value(cls, branch: Branch) -> T:
+    def _empty_value(cls, branch: Branch):
         'Override, for example, if the value type takes arguments.'
         return cls._valuetype()
 
@@ -165,7 +154,7 @@ class BranchCache(dmap[Branch, T], abcs.Copyable, RuleHelper):
         return NotImplemented
 
 
-class BranchDictCache(BranchCache[dmap[KT, VT]]):
+class BranchDictCache(BranchCache[dmap[_KT, _VT]]):
     'Copies each K->V item for parent branch via copy(V).'
 
     _valuetype = dmap
@@ -212,7 +201,7 @@ class QuitFlag(BranchCache[bool]):
     def __call__(self, target: Target, /) -> None:
         self[target.branch] = bool(target.get('flag'))
 
-class BranchValueHook(BranchCache[VT]):
+class BranchValueHook(BranchCache[_VT]):
     """Check each node as it is added, until a (truthy) value is returned,
     then cache that value for the branch and stop checking nodes.
 
@@ -223,10 +212,6 @@ class BranchValueHook(BranchCache[VT]):
     _valuetype = type(None)
     hook_method_name = '_branch_value_hook'
     __slots__ = 'hook',
-
-    if TYPE_CHECKING:
-        @overload
-        def hook(self, node: Node, branch: Branch,/) -> VT|None:...
 
     def __init__(self, rule: Rule, /):
         super().__init__(rule)
@@ -468,10 +453,10 @@ class FilterHelper(FilterNodeCache):
     """
     __slots__ = 'filters', '_garbage', 'pred',
 
-    filters: FiltersDict
+    filters: dict
     "Mapping from ``NodeCompare`` class to instance."
 
-    pred: NodePredFunc
+    pred: Callable
     """A single predicate of all filters. To also check the `ignore_ticked`
     setting, use ``.filter()``.
     """
@@ -481,7 +466,7 @@ class FilterHelper(FilterNodeCache):
     def __init__(self, rule: Rule,/):
         super().__init__(rule)
         self._garbage = setm()
-        self.filters, self.pred = self.config#rule.Helpers[type(self)] # self._build_filters_pred(rule)
+        self.filters, self.pred = self.config
 
     def copy(self, /, *, listeners:bool = False):
         inst: FilterHelper = super().copy(listeners = listeners)
@@ -506,10 +491,6 @@ class FilterHelper(FilterNodeCache):
         if self.ignore_ticked and branch.is_ticked(node):
             return False
         return self.pred(node)
-
-    if TYPE_CHECKING:
-        @overload
-        def __call__(self, node: Node, branch: Branch, /) -> bool: ...
 
     __call__ = filter
 
@@ -554,7 +535,7 @@ class FilterHelper(FilterNodeCache):
         )
 
     @classmethod
-    def configure_rule(cls, rulecls: type[Rule], config, **kw) -> tuple[FiltersDict, NodePredFunc]|None:
+    def configure_rule(cls, rulecls: type[Rule], config, **kw):
         """``RuleHelper`` init hook.
         
         * Verify `NodeFilters`.
@@ -588,7 +569,7 @@ class FilterHelper(FilterNodeCache):
                 )
 
     @staticmethod
-    def build_filters_pred(rule: Rule,/) -> tuple[FiltersDict, NodePredFunc]:
+    def build_filters_pred(rule: Rule,/):
         configs = getattr(rule, RuleAttr.NodeFilters)
         types = tuple(fcls for fcls, flag in configs.items()
             if flag is not NotImplemented)
@@ -603,7 +584,7 @@ class FilterHelper(FilterNodeCache):
     @closure
     def node_targets():
 
-        def make_targets_fn(cls: type[FilterHelper], node_targets_fn: NodeTargetsFn) -> TargetsFn:
+        def make_targets_fn(cls: type[FilterHelper], node_targets_fn):
             """
             Method decorator to only iterate through nodes matching the
             configured FilterHelper filters.
@@ -624,7 +605,7 @@ class FilterHelper(FilterNodeCache):
         def create(it, r: Rule, b: Branch, n: Node, /) -> Target:
             return Target(it, rule = r, branch = b, node = n)
 
-        def make_targets_iter(node_targets_fn: NodeTargetsFn) -> NodeTargetsGen:
+        def make_targets_iter(node_targets_fn):
             @wraps(node_targets_fn)
             def targets_gen(rule: Rule, nodes: Iterable[Node], branch: Branch, /):
                 for node in nodes:
@@ -658,10 +639,6 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
     class Consts(BranchCache[set[Constant]]):
         _valuetype = set
         __slots__ = EMPTY_SET
-
-    if TYPE_CHECKING:
-        @overload
-        def filter(self, node: Node, branch: Branch, /) -> bool: ...
 
     consts: NodeConsts.Consts
     __slots__ = 'consts', 'filter',
@@ -819,12 +796,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
     """Project the maximum number of worlds required for a branch by examining
     the branches after the trunk is built.
     """
-    __slots__ = (
-        'rule',
-        'config',
-        '_modals',
-        '_modal_opfilter',
-    )
+    __slots__ = ('rule', 'config', '_modals', '_modal_opfilter')
 
     _modals: dict[Sentence, int]
 
@@ -870,13 +842,16 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         Generate a quit flag node for the branch.
         """
         info = f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin)})'
-        return dict(
-            is_flag = True,
-            flag = 'quit',
-            info = info
-        )
+        return {
+            NodeAttr.is_flag: True,
+            NodeAttr.flag: 'quit',
+            'info': info,
+        }
+        # return dict(is_flag = True, flag = 'quit',
+        #     info = info
+        # )
 
-    def __call__(self, tableau: Tableau, /) -> None:
+    def __call__(self, tableau: Tableau, /):
         for branch in tableau:
             origin = branch.origin
             # For normal logics, we will have only one trunk branch.
@@ -902,3 +877,4 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         super().configure_rule(rulecls, config, **kw)
         if not hasattr(rulecls, RuleAttr.ModalOperators):
             raise Emsg.MissingAttribute(RuleAttr.ModalOperators)
+from pytableaux.proof import NodeAttr

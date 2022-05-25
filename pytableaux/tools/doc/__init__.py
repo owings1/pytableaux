@@ -45,12 +45,13 @@ from __future__ import annotations
 
 import os
 import re
-import traceback
+import sys
+import warnings
+from abc import abstractmethod as abstract
 from dataclasses import dataclass
-from enum import Enum
 from importlib import import_module
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Container, Generic,
-                    Mapping)
+from types import MappingProxyType as MapProxy
+from typing import TYPE_CHECKING, Any, Mapping, NamedTuple
 
 import jinja2
 import sphinx.directives
@@ -59,25 +60,21 @@ from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
-from pytableaux import logics
-from pytableaux.lang import Operator, Predicates
-from pytableaux.tools import EMPTY_MAP, MapProxy, NameTuple, abcs, abstract
+from pytableaux import EMPTY_SET, errors, logics
+from pytableaux.lang import Operator, Parser, Predicates
+from pytableaux.tools import EMPTY_MAP, abcs
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmapns
-from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import T
+from sphinx.ext import viewcode
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
 
 if TYPE_CHECKING:
-    from typing import overload
 
-    import sphinx.config
     from sphinx.application import Sphinx
     from sphinx.config import Config
     from sphinx.environment import BuildEnvironment
-    from sphinx.util.typing import RoleFunction
 
 __all__ = (
     'AutodocProcessor',
@@ -122,7 +119,9 @@ class ConfKey(str, abcs.Ebc):
 
     auto_skip_enum_value = 'autodoc_skip_enum_value'
 
-    wnotn = 'write_notation'
+    wnotn   = 'write_notation'
+    charset =  'render_charset'
+    rset =  'renderset'
     pnotn = 'parse_notation'
     preds = 'parse_predicates'
 
@@ -138,8 +137,7 @@ APPSTATE: dict[Sphinx, dict] = {}
 
 def setup(app: Sphinx):
 
-    from pytableaux.tools.doc import (directives, extnodes, processors, roles,
-                                      tables)
+    from pytableaux.tools.doc import directives, processors, roles, tables
 
     APPSTATE[app] = {}
     app.connect('config-inited', init_app)
@@ -147,7 +145,7 @@ def setup(app: Sphinx):
         del(APPSTATE[app])
     app.connect('build-finished', clear_state)
 
-    extnodes.setup(app)
+    nodez.setup(app)
     directives.setup(app)
     tables.setup(app)
     processors.setup(app)
@@ -165,8 +163,17 @@ def init_app(app: Sphinx, config: Config):
         lstrip_blocks = True,
     )
 
+    if not sys.warnoptions:
+        warnings.simplefilter('ignore', category=errors.RepeatValueWarning)
 
 # ------------------------------------------------
+
+def viewcode_target(obj):
+    if isinstance(obj, str):
+        modname = obj
+    else:
+        modname = obj.__module__
+    return f"{viewcode.OUTPUT_DIRNAME}/{modname.replace('.', '/')}"
 
 class AppEnvMixin(abcs.Abc):
 
@@ -192,26 +199,30 @@ class AppEnvMixin(abcs.Abc):
     def current_logic(self):
         return logics.registry(self.current_module())
 
+    def viewcode_target(self, obj = None):
+        if obj is None:
+            obj = self.current_module()
+        return viewcode_target(obj)
+
 class RenderMixin(AppEnvMixin):
 
     def render(self, template, *args, **kw):
         return self.jenv.get_template(template).render(*args, **kw)
 
-
 # ------------------------------------------------
 
 class RoleDirectiveMixin(AppEnvMixin):
 
-    option_spec: ClassVar[Mapping[str, Callable]] = EMPTY_MAP
+    option_spec = EMPTY_MAP
 
-    options: dict[str, Any]
+    options: dict
 
     def set_classes(self, opts = NOARG, /) -> qset[str]:
         if opts is NOARG:
             opts = self.options
         return qset(set_classes(opts).get('classes', EMPTY_SET))
 
-    def parse_opts(self, rawopts: Mapping[str, Any]) -> dict[str, Any]:
+    def parse_opts(self, rawopts):
         optspec = self.option_spec
         todo = dict(rawopts)
         builder = {}
@@ -227,6 +238,14 @@ class RoleDirectiveMixin(AppEnvMixin):
     @abstract
     def run(self): ...
 
+class ParserOptionMixin(RoleDirectiveMixin):
+
+
+    def parser_option(self) -> Parser:
+        opts, conf = self.options, self.config
+        return Parser(opts.get(ConfKey.preds, opts.get('pnotn', conf[ConfKey.pnotn])),
+            Predicates(opts.get(ConfKey.preds, opts.get('preds', conf[ConfKey.preds]))))
+
 # ------------------------------------------------
 
 class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
@@ -235,13 +254,12 @@ class BaseDirective(sphinx.directives.SphinxDirective, RoleDirectiveMixin):
 
     @property
     def app(self) -> Sphinx:
+        self.error
         return self.env.app
-
 
 # ------------------------------------------------
 
 class DirectiveHelper(RoleDirectiveMixin):
-
 
     required_arguments = 0
     optional_arguments = 0
@@ -284,7 +302,7 @@ class DirectiveHelper(RoleDirectiveMixin):
 
 class BaseRole(SphinxRole, RoleDirectiveMixin):
 
-    patterns: ClassVar[dict[str, str|re.Pattern]] = {}
+    patterns = {}
 
     @property
     def app(self) -> Sphinx:
@@ -293,7 +311,7 @@ class BaseRole(SphinxRole, RoleDirectiveMixin):
     def __init__(self):
         self.options = {'class': None}
 
-    def wrapped(self, name: str, newopts: Mapping, newcontent: list[str] = [], /):
+    def wrapped(self, name, newopts, newcontent: list = [], /):
         "Wrapper for ad-hoc customized roles."
         try:
             buildopts = dict(self.options)
@@ -351,7 +369,9 @@ class AutodocProcessor(Processor):
         options: dict
         lines: list[str]
 
-    __slots__ = 'app', 'lines', 'record'
+    app: Sphinx
+    lines: list[str]
+    record: AutodocProcessor.Record
 
     def hastext(self, txt:str):
         return txt in '\n'.join(self.lines)
@@ -360,16 +380,11 @@ class AutodocProcessor(Processor):
         return True
 
     def __call__(self, app:Sphinx, *args):
-        try:
-            self.app = app
-            self.record = self.Record(*args)
-            self.lines = self.record.lines
-            if self.applies():
-                self.run()
-        except Exception as err:
-            logger.error(err)
-            traceback.print_exc()
-            raise
+        self.app = app
+        self.record = self.Record(*args)
+        self.lines = self.record.lines
+        if self.applies():
+            self.run()
 
     def __iadd__(self, other: str|list[str]):
         self.lines.extend(self.prepstr(other))
@@ -391,20 +406,6 @@ class ReplaceProcessor(Processor):
 
     # See https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
-    if TYPE_CHECKING:
-    
-        @overload
-        def __call__(self, app: Sphinx, docname: str, lines: list[str]):
-            'Regex replace for source-read event.'
-
-        @overload
-        def __call__(self, app: Sphinx, lines: list[str]):
-            'Regex replace for custom include-read event.'
-
-        @overload
-        def __call__(self, app: Sphinx, what: Any, name: str, obj: Any, options: dict, lines: list[str]):
-            'Regex replace for autodoc event.'
-
     def __call__(self, *args):
         if len(args) == 2:
             self.event = SphinxEvent.IncludeRead
@@ -424,22 +425,20 @@ class ReplaceProcessor(Processor):
 
 # ------------------------------------------------
 
-class Tabler(list[list[str]], abcs.Abc):
+class Tabler(list, abcs.Abc):
 
     header: list[str]
-    body: list[list[str]]
-    meta: dict[str, Any]
+    body: list
+    meta: dict
 
-    __slots__ = 'header', 'body', 'meta'
-
-    def __init__(self, body: list[list[str]], header: list[str]|None, /, **meta):
+    def __init__(self, body, header, /, **meta):
         self.header = header
         self.body = body
         self.meta = meta
         self.append(header)
         self.extend(body)
 
-    def apply_repr(self, reprfunc: Callable, /) -> Tabler:
+    def apply_repr(self, reprfunc, /) -> Tabler:
         for row in self:
             for i, v in enumerate(row):
                 if not isinstance(v, str):
@@ -453,7 +452,6 @@ class Tabler(list[list[str]], abcs.Abc):
         return tb(self.body, self.header, tablefmt, **kw)
 
 
-
 # ------------------------------------------------
 
 
@@ -464,15 +462,10 @@ re_comma = re.compile(r',')
 re_nonslug_plus = re.compile(r'[^a-zA-Z0-9_-]+')
 "One or more non alpha, num, _ or - chars"
 
-if TYPE_CHECKING:
-    @overload
-    def classopt(arg: Any) -> list[str]: ...
-    @overload
-    def flagopt(arg: Any) -> None: ...
-
 classopt = class_option
+del(class_option)
 
-def boolopt(arg: str, /) -> bool:
+def boolopt(arg: str, /):
     if arg:
         arg = arg.strip()
     else:
@@ -489,53 +482,50 @@ def stropt(arg: str, /) -> str:
         arg = ''
     return arg
 
-def flagorstr(arg: str, /) -> str:
-    if arg is None:
-        ...
 def cleanws(arg: str, /) -> str:
     "Option spec to remove all whitespace."
     return re_space.sub('', arg)
 
-def predsopt(arg: str, /) -> Predicates:
-    """Option spec for list of predicate specs.
-    
-    Example::
-    
-        0,0,1 : 1,0,2
-    """
-    return Predicates(
-        tuple(map(int, spec.split(':')))
-        for spec in re_comma.split(cleanws(arg))
-    )
-
-def opersopt(arg: str, /) -> tuple[Operator, ...]:
+def opersopt(arg: str, /):
     """Operators list, from comma-separated input."""
-    return tuple(map(Operator,
-        (s.strip() for s in re_comma.split(arg))
-    ))
+    return tuple(map(Operator, (s.strip() for s in re_comma.split(arg))))
 
 def nodeopt(arg: str, /):
     """A docutils node from a name, e.g. 'inline'."""
-    return getattr(nodes, arg)
+    try:
+        return getattr(nodez, arg)
+    except AttributeError:
+        return getattr(nodes, arg)
 
 def attrsopt(arg: str, /) -> list[str]:
     "list of attr-like names"
     return re_nonslug_plus.sub(' ', arg).split(' ')
 
-def choiceopt(choices: Container, /):
+def choiceopt(choices, /, trans = str):
     'Option spec builder for choices.'
-    def opt(arg: str, /) -> str:
+    def opt(arg: str, /):
+        arg = trans(arg)
         if arg not in choices:
             raise ValueError(arg)
         return arg
     return opt
 
-del(class_option)
+def choice_or_flag(*args, default = None, **kw):
+    chopt = choiceopt(*args, **kw)
+    def opt(str):
+        if str is None:
+            return default
+        return chopt(str)
+    return opt
+
 
 # ------------------------------------------------
 
 
-def set_classes(opts: dict) -> dict:
+def snakespace(name):
+    return re.sub(r'([A-Z])', r' \1', name)[1:]
+
+def set_classes(opts:dict):
     if 'class' in opts:
         if opts['class'] is None:
             del(opts['class'])
@@ -547,24 +537,13 @@ def set_classes(opts: dict) -> dict:
 
 # ------------------------------------------------
 
-class RoleItem(NameTuple, Generic[T]):
+class RoleItem(NamedTuple):
     name: str
-    inst: T
-
-if TYPE_CHECKING:
-
-    @overload
-    def role_entry(rolecls: type[T]) -> RoleItem[T]|None: ...
-
-    @overload
-    def role_entry(rolefn: RoleFunction) -> RoleItem[RoleFunction]|None: ...
-
-    @overload
-    def role_entry(roleish: str) -> RoleItem[RoleFunction]|None: ...
+    inst: object
 
 def role_entry(roleish):
     'Get loaded role name and instance, by name, instance or type.'
-    idx: dict = _roles
+    idx = _roles
     if isinstance(roleish, str):
         inst = idx.get(roleish)
         if inst is None:
@@ -582,12 +561,22 @@ def role_entry(roleish):
             return None
     return RoleItem(name, inst)
 
-def role_instance(roleish: type[T]) -> T|None:
+def role_instance(roleish):
     'Get loaded role instance, by name, instance or type.'
     return role_entry(roleish).inst
 
-def role_name(roleish: type|RoleFunction) -> str|None:
+def role_name(roleish):
     'Get loaded role name, by name, instance or type.'
     return role_entry(roleish).name
 
+def predsopt(arg):
+    """Option spec for list of predicate specs.
+    
+    Example::
+    
+        0,0,1 : 1,0,2
+    """
+    return Predicates(map(int, spec.split(':'))
+        for spec in re_comma.split(cleanws(arg)))
 
+from pytableaux.tools.doc import nodez

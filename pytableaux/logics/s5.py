@@ -25,7 +25,7 @@ from pytableaux.logics import s4 as S4
 from pytableaux.logics import t as T
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.proof.util import Access, adds, group
+from pytableaux.proof import Access, adds, group
 
 name = 'S5'
 

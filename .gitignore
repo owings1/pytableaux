@@ -8,3 +8,4 @@
 .vscode/settings.json
 /test/scratch.py
 node_modules
+/stubs

@@ -24,7 +24,7 @@ from pytableaux.logics import fde as FDE
 from pytableaux.models import BaseModel, ValueLP
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.rules import BaseClosureRule
-from pytableaux.proof.util import sdnode
+from pytableaux.proof import sdnode
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import setf
 

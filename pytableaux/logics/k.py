@@ -27,7 +27,7 @@ from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Predicate, Predicated, Quantified, Quantifier,
                                  Sentence)
-from pytableaux.logics import fde as FDE
+import pytableaux.logics.fde as FDE
 from pytableaux.models import BaseModel, ValueCPL
 from pytableaux.proof import TableauxSystem as BaseSystem
 from pytableaux.proof import filters, rules
@@ -36,11 +36,11 @@ from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.util import Access, adds, group, swnode
+from pytableaux.proof import Access, adds, group, swnode
 from pytableaux.tools import closure
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.tools.typing import LogicType
+from pytableaux.logics import LogicType
 
 name = 'K'
 
@@ -968,7 +968,7 @@ class TabRules(LogicType.TabRules):
             lhs, rhs = s
             return adds(
                 group(swnode( lhs, w), swnode(~rhs, w)),
-                group(swnode(~rhs, w), swnode( lhs, w)),
+                group(swnode(~lhs, w), swnode( rhs, w)),
             )
 
     class Conditional(MaterialConditional):

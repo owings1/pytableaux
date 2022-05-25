@@ -15,31 +15,32 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.tools.doc.rstutils
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytableaux.tools.doc.misc
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
-from collections import defaultdict
 
+import enum
 import re
+from collections import defaultdict
 from inspect import getsource
 from typing import TYPE_CHECKING
-import enum
-from pytableaux import logics
-from pytableaux.lang import Operator, Quantifier, Predicate
-from pytableaux.logics import LogicLocatorRef, registry
+
+from pytableaux.lang import LexType
+from pytableaux.logics import registry
+from pytableaux.proof import (Branch, ClosingRule, Rule, RuleEvent,
+                              TabEvent)
 from pytableaux.proof import TableauxSystem as TabSys
-from pytableaux.proof import ClosingRule, Rule, helpers, Branch
-from pytableaux.proof.util import RuleEvent, TabEvent, NodeAttr
-from pytableaux.tools import abcs
+from pytableaux.proof.filters import SentenceCompare
 from pytableaux.tools.abcs import isabstract
 from sphinx.ext.autodoc.importer import import_object
 
 if TYPE_CHECKING:
+    from typing import Any, Collection
+
     from pytableaux.proof import Node, Rule, Target
-    from pytableaux.tools.typing import LogicType
-    from typing import Any, overload, Collection
+    from pytableaux.logics import LogicType
 
 __all__ = (
     'EllipsisExampleHelper',
@@ -49,24 +50,12 @@ __all__ = (
     'is_transparent_rule',
 )
 
-# def get_logic_names(logic_docdir: str = None, suffix: str = '.rst', /) -> set[str]:
-#     'Get all logic names with a .rst document in the doc dir.'
-#     if logic_docdir is None:
-#         logic_docdir = os.path.abspath(
-#             os.path.join(os.path.dirname(__file__), '../../../doc/logics')
-#         )
-#     return set(
-#         os.path.basename(file).removesuffix(suffix).upper()
-#         for file in os.listdir(logic_docdir)
-#         if file.endswith(suffix)
-#     )
 
 def is_concrete_rule(obj: Any, /) -> bool:
     return _is_rulecls(obj) and obj not in (Rule, ClosingRule)
 
 def is_concrete_build_trunk(obj: Any, /,):
     return TabSys.build_trunk in _methmro(obj) and not isabstract(obj)
-    # return obj is not TabSys.build_trunk and TabSys.build_trunk in _methmro(obj)
 
 def is_transparent_rule(obj: Any) -> bool:
     """Whether a rule class:
@@ -85,69 +74,68 @@ def is_transparent_rule(obj: Any) -> bool:
     )
 
 
-def rule_legend(rule: type[Rule]|Rule):
+def rules_sorted(logic: LogicType, rules = None, /) -> dict:
 
-    if isinstance(rule, Rule):
-        rule = type(rule)
-
-    legend = {}
-
-    if getattr(rule, 'negated', None):
-        legend['negated'] = Operator.Negation
-
-    if (oper := getattr(rule, 'operator', None)):
-        legend['operator'] = Operator[oper]
-    elif (quan := getattr(rule, 'quantifier', None)):
-        legend['quantifier'] = Quantifier[quan]
-    elif (pred := getattr(rule, 'predicate', None)):
-        legend['predicate'] = Predicate(pred)
-
-    if (des := getattr(rule, 'designation', None)) is not None:
-        legend['designation'] = des
-
-    if (issubclass(rule, ClosingRule)):
-        legend['closure'] = True
-
-    return tuple(legend.items())
-
-
-def rules_sorted(logic: LogicType, rules: Collection[type[Rule]] = None, /) -> dict[str, list[type[Rule]]]:
-
-    logic = logics.registry(logic)
+    logic = registry(logic)
     RulesCls = logic.TabRules
     if rules is None:
         rules = list(RulesCls.all_rules)
-    results = {}
-
-    results['member_order'] = rules_sorted_member_order(logic, rules)
-    # results['legend_order'] = sorted(rules, key = LegendSortFlag.rulekey)
-    results['legend_order'] = rules_sorted_legend_order(rules)
-    from pprint import pp
-    # pp(inherit_map)
-    # pp(keys_member_order)
+    results = dict(
+        member_order = rules_sorted_member_order(logic, rules),
+        legend_groups = (groups := rules_grouped_legend_order(rules)),
+        legend_order = [rule for group in groups.values() for rule in group],
+        legend_subgroups = (subgrouped := rules_legend_subgroups(groups)),
+        subgroups_named = {
+            name: {o.name : [r.name for r in subgroup] for o, subgroup in group.items()}
+            for name, group in subgrouped.items()
+        },
+        subgroup_types = {
+            name: type(next(iter(group)))
+            for name, group in subgrouped.items()
+            if len(group)
+        }
+    )
     return results
-    # return native_members
 
-def rules_sorted_legend_order(rules: Collection[type[Rule]], /) -> list[type[Rule]]:
+
+def rule_sortkey_legend(rule: type[Rule]):
+    if (c := SentenceCompare(rule).compitem) is None:
+        if issubclass(rule, ClosingRule):
+            return 0,
+        return LexType._seq[-1].rank + 1,
+    return (c.item, bool(getattr(c, 'negated', 0)),
+        -1 * bool(getattr(rule, 'designation', None)))
+
+def rules_grouped_legend_order(rules: Collection[type[Rule]], /) -> dict:
     groups = {name: [] for name in ('closure', 'operator', 'quantifier', 'predicate')}
     ungrouped = []
-    legends: dict[type[Rule], dict] = {}
     for rule in rules:
-        legends[rule] = legend = dict(rule_legend(rule))
-        for name in legend:
+        for name, _ in rule.legend:
             if name in groups:
                 groups[name].append(rule)
                 break
         else:
             ungrouped.append(rule)
-    for name, group in groups.items():
-        group.sort(key = lambda rule: (
-            (1 * bool(legends[rule].get('negated'))) + 
-            (2 * legends[rule].get('designated', 0))
-        ))
-        group.sort(key = lambda rule: legends[rule][name])
+
+    for name in ('operator', 'quantifier', 'predicate'):
+        groups[name].sort(key = rule_sortkey_legend)
+    
     groups['ungrouped'] = ungrouped
-    return list(rule for group in groups.values() for rule in group)
+    return groups
+
+def rules_legend_subgroups(groups: dict[str, list[type[Rule]]]) -> dict:
+    subgroups: dict[str, dict[Any, list]] = {
+        name: {} for name in ('operator', 'quantifier', 'predicate')
+    }
+    for name, group in groups.items():
+        if name in subgroups:
+            subgroup = subgroups[name]
+            for rule in group:
+                obj = getattr(rule, name)
+                if obj not in subgroup:
+                    subgroup[obj] = []
+                subgroup[obj].append(rule)
+    return subgroups
 
 def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /) -> list[type[Rule]]:
     RulesCls = logic.TabRules
@@ -160,7 +148,7 @@ def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /
     keys_member_order = {rule: i for i, rule in enumerate(native_members, 1)}
     inherit_map = defaultdict(set)
     for rule in todo:
-        inherit_map[logics.registry.locate(rule)].add(rule)
+        inherit_map[registry.locate(rule)].add(rule)
     for parent, values in inherit_map.items():
         others = inherit_map[parent] = rules_sorted_member_order(parent, values)
         keys_member_order.update({
@@ -169,15 +157,6 @@ def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /
     return sorted(rules, key = keys_member_order.__getitem__)
 # ------------------------------------------------
 
-if TYPE_CHECKING:
-
-    @overload
-    def is_enum_member(modname: str, objpath: list[str]):
-        "Prefered method if info is available."
-
-    @overload
-    def is_enum_member(fullname: str):
-        "Fallback method that tries to guess module path."
 
 def is_enum_member(modname: str, objpath = None):
 
@@ -249,7 +228,7 @@ def _is_nocode(obj: Any) -> bool:
         return False
     return True
 
-def _rule_is_grouped(rule: type[Rule], logic: LogicLocatorRef) -> bool:
+def _rule_is_grouped(rule: type[Rule], logic) -> bool:
     'Whether the rule class is grouped in the TabRules of the given logic.'
     if not _is_rulecls(rule):
         return False
@@ -347,10 +326,6 @@ class EllipsisExampleHelper:
     def add_node(self, branch: Branch):
         self.applied.add(branch)
         branch.add(self.mynode)
-
-    
-
-
 
 # def rsttable(data, /, headers = (), **kw):
 #     from tabulate import tabulate

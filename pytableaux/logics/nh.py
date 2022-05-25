@@ -26,7 +26,7 @@ from pytableaux.logics import fde as FDE
 from pytableaux.logics import lp as LP
 from pytableaux.logics import mh as MH
 from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.proof import adds, group, sdnode
 
 name = 'NH'
 

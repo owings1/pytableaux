@@ -32,7 +32,6 @@ from pytableaux import __docformat__, package
 from pytableaux.errors import Emsg
 from pytableaux.lang.lex import Lexical
 from pytableaux.tools import abcs, mappings
-from pytableaux.tools.typing import T
 
 if TYPE_CHECKING:
     class HasRegistry:
@@ -47,12 +46,13 @@ __all__ = (
     'fix_uri_req_data',
 )
 
-MetrT = TypeVar('MetrT', bound = MetricType)
+_F = TypeVar('_F', bound = Callable)
+_MetrT = TypeVar('_MetrT', bound = MetricType)
 
 metric_defs: deque[tuple[str, tuple[type[MetricType], str, list[str]]]] = deque()
 
 # Decorator for AppMetrics
-def mwrap(fn: Callable[..., T]) -> Callable[..., T]:
+def mwrap(fn: _F) -> _F:
     key = fn.__name__
     @functools.wraps(fn)
     def f(self: AppMetrics, *labels):
@@ -66,10 +66,7 @@ def mwrap(fn: Callable[..., T]) -> Callable[..., T]:
 
 class AppMetrics(mappings.MapCover[str, MetricType], abcs.Abc):
 
-    __slots__ = (
-        'config',
-        'registry',
-    )
+    __slots__ = ('config', 'registry')
 
     config: Mapping[str, Any]
     registry: CollectorRegistry
@@ -94,7 +91,7 @@ class AppMetrics(mappings.MapCover[str, MetricType], abcs.Abc):
 
     # ------------------------------------------------------------------
 
-    def __init__(self, config: Mapping[str, Any], registry: CollectorRegistry = None, /):
+    def __init__(self, config, registry: CollectorRegistry = None, /):
         self.config = config
         if registry is None:
             registry = self._new_registry()
@@ -112,7 +109,7 @@ class AppMetrics(mappings.MapCover[str, MetricType], abcs.Abc):
         return CollectorRegistry(auto_describe = auto_describe, **kw)
 
     @staticmethod
-    def _copy_metric(m: MetrT, registry: CollectorRegistry) -> MetrT:
+    def _copy_metric(m: _MetrT, registry: CollectorRegistry) -> _MetrT:
         metric = type(m)(m._name,
             documentation = m._documentation,
             labelnames = m._labelnames,
@@ -122,7 +119,7 @@ class AppMetrics(mappings.MapCover[str, MetricType], abcs.Abc):
         return metric
 
     @classmethod
-    def _from_mapping(cls, mapping: Mapping[str, MetricType]):
+    def _from_mapping(cls, mapping):
 
         inst = cls.__new__(cls)
 

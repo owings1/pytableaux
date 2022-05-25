@@ -24,24 +24,16 @@ from __future__ import annotations
 
 import operator as opr
 from itertools import repeat
-from typing import TYPE_CHECKING, Any, Iterable, SupportsIndex
+from typing import Any, Iterable
 
 from pytableaux import EMPTY_SET, __docformat__, tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import (LangCommonMeta,
-                             raiseae)
-from pytableaux.lang.lex import LexicalAbc, Predicate, Sentence
-from pytableaux.tools import abcs
-from pytableaux.tools.decorators import lazy, membr, wraps
+from pytableaux.lang import LangCommonMeta, raiseae
+from pytableaux.lang.lex import Predicate, Sentence
+from pytableaux.tools import abcs, lazy, membr, wraps
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sequences import SequenceApi, seqf
-from pytableaux.tools.typing import EnumDictType, IcmpFunc, IndexType
-
-if TYPE_CHECKING:
-    from typing import overload
-
-    from pytableaux.lang import PredsItemRef, PredsItemSpec
 
 __all__ = (
     'Argument',
@@ -63,14 +55,11 @@ class ArgumentMeta(LangCommonMeta):
 class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     """Argument class.
     
-    A container of sentences with sequence implementation, ordering and hashing.
+    A container of sentences (premises, conclusion) with sequence implementation
+    ordering and hashing.
     """
 
-    def __init__(self,
-        conclusion: Sentence,
-        premises: Iterable[Sentence] = None,
-        title: str = None
-    ):
+    def __init__(self, conclusion, premises = None, title = None):
         self.seq = seqf(
             (Sentence(conclusion),) if premises is None
             else map(Sentence, (conclusion, *premises))
@@ -130,7 +119,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
 
         @membr.defer
         def ordr(member: membr):
-            oper: IcmpFunc = getattr(opr, member.name)
+            oper = getattr(opr, member.name)
             @wraps(oper)
             def f(self: Argument, other: Any, /):
                 if not isinstance(other, Argument):
@@ -150,19 +139,10 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     def __hash__(self):
         return self.hash
 
-    #******  Sequence Behavior
-
     def __len__(self):
         return len(self.seq)
 
-    if TYPE_CHECKING:
-        @overload
-        def __getitem__(self, s: slice, /) -> seqf[Sentence]: ...
-
-        @overload
-        def __getitem__(self, i: SupportsIndex, /) -> Sentence: ...
-
-    def __getitem__(self, index: IndexType, /):
+    def __getitem__(self, index, /):
         if isinstance(index, slice):
             return seqf(self.seq[index])
         return self.seq[index]
@@ -219,15 +199,13 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     __delattr__ = raiseae
 
 
-class Predicates(qset[Predicate], metaclass = LangCommonMeta,
-    hooks = {qset: dict(cast = Predicate)}
-):
+class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dict(cast = Predicate)}):
     'Predicate store. An ordered set with a multi-keyed lookup index.'
 
-    _lookup: dmap[PredsItemRef, Predicate]
+    _lookup: dmap[Any, Predicate]
     __slots__ = '_lookup',
 
-    def __init__(self, values: Iterable[PredsItemSpec] = None, /, *,
+    def __init__(self, values = None, /, *,
         sort: bool = False, key = None, reverse: bool = False):
         """Create a new store from an iterable of predicate objects
         or specs
@@ -243,7 +221,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
         if sort:
             self.sort(key = key, reverse = reverse)
 
-    def get(self, ref: PredsItemRef, default = NOARG, /) -> Predicate:
+    def get(self, ref, default = NOARG, /) -> Predicate:
         """Get a predicate by any reference. Also searches system predicates.
 
         Args:
@@ -260,7 +238,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
             return self._lookup[ref]
         except KeyError:
             try:
-                return self.System[ref]
+                return Predicate.System[ref]
             except KeyError:
                 pass
             if default is NOARG:
@@ -281,10 +259,10 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
             # Is there a distinct predicate that matches any lookup keys,
             # viz. BiCoords or name, that does not equal pred, e.g. arity
             # mismatch.
-            for other in filter(None, map(self._lookup.get, pred.refs)):
+            for other in filter(None, map(self._lookup.get, refs := pred.refs)):
                 if other != pred:
                     raise Emsg.ValueConflictFor(pred, pred.spec, other.spec)
-            self._lookup |= zip(pred.refs, repeat(pred))
+            self._lookup |= zip(refs, repeat(pred))
             self._lookup[pred] = pred
 
     #******  Override qset
@@ -301,38 +279,6 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta,
         inst._lookup = self._lookup.copy()
         return inst
 
-    #******  System Enum
-
-    class System(Predicate.System):
-        'System Predicates enum container class.'
-
-        def __new__(cls, *spec):
-            'Set the Enum value to the predicate instance.'
-            return LexicalAbc.__new__(Predicate)
-
-        @classmethod
-        def _member_keys(cls, pred: Predicate):
-            'Enum lookup index init hook. Add all predicate keys.'
-            return super()._member_keys(pred) | pred.refs.union((pred,))
-
-        @classmethod
-        def _after_init(cls):
-            'Enum after init hook. Set Predicate class attributes.'
-            super()._after_init()
-            for pred in cls:
-                setattr(Predicate, pred.name, pred)
-            Predicate.System = cls
-
-        @abcs.abcf.before
-        def expand(ns: EnumDictType, bases, **kw):
-            'Inject members from annotations in Predicate.System class.'
-            annots = abcs.annotated_attrs(Predicate.System)
-            members = {
-                name: spec for name, (vtype, spec)
-                in annots.items() if vtype is Predicate
-            }
-            ns |= members
-            ns._member_names += members.keys()
 
 
 del(

@@ -20,12 +20,11 @@
 # pytableaux - Bochvar 3 External logic
 from __future__ import annotations
 
-from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang import Operator as Oper
 from pytableaux.logics import fde as FDE
 from pytableaux.logics import k3 as K3
 from pytableaux.logics import k3w as K3W
-from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.proof import Branch, Node, adds, group, sdnode
 
 name = 'B3E'
 

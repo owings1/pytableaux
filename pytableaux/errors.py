@@ -33,6 +33,11 @@ if  TYPE_CHECKING:
     from typing import TypeVar
     _ExT = TypeVar('_ExT', bound = Exception)
     _T = TypeVar('_T')
+
+# warnings
+
+class RepeatValueWarning(UserWarning):
+    pass
 # Base Errors
 
 class IllegalStateError(Exception):
@@ -88,6 +93,8 @@ class ModelValueError(ValueError):
 
 class DenotationError(ModelValueError):
     pass
+
+
 
 def _thru(o): return o
 def _len(o): return o if isinstance(o, int) else len(o)
@@ -192,6 +199,11 @@ class check:
             raise Emsg.InstCheck(obj, Callable)
         return obj
 
+
+from warnings import warn as warn
+
+
+
 # Some external assembly required.
 class EmsgBase:
     __slots__ = ()
@@ -220,20 +232,12 @@ class EmsgBase:
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
 
-from pytableaux.tools import clsns;
 
-class e(clsns):
-    __slots__ = ()
-    def __init__(self, *a): pass
-    def __call__(self): pass
-    def _makeas(self): pass
-    def _getargs(self ): pass
 
 __all__ = 'check', 'Emsg', *(
     name for name, value in locals().items()
-    if isinstance(value, type) and issubclass(value, Exception)
+    if isinstance(value, type) and issubclass(value, (Exception, Warning))
 )
-
 
 
 

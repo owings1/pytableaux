@@ -25,9 +25,7 @@ from pytableaux.lang.lex import Quantified, Quantifier
 from pytableaux.logics import b3e as B3E
 from pytableaux.logics import fde as FDE
 from pytableaux.logics import k3 as K3
-from pytableaux.proof import rules
-from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.util import adds, group, sdnode
+from pytableaux.proof import Branch, Node, adds, group, rules, sdnode
 
 name = 'GO'
 
