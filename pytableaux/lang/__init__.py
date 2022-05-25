@@ -429,12 +429,12 @@ class RenderSet(TableStore, Mapping):
 
 
 
-from pytableaux.lang.lex import (Atomic, Constant, Lexical, LexType, Operated,
-                                 Operator, Predicate, Predicated, Quantified,
-                                 Quantifier, Sentence, Variable)
-from pytableaux.lang.collect import Argument, Predicates
+from pytableaux.lang.lex import Atomic, Constant
 from pytableaux.lang.lex import CoordsItem as CoordsItem
+from pytableaux.lang.lex import Lexical, LexType, Operated, Operator
 from pytableaux.lang.lex import Parameter as Parameter
+from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
+                                 Sentence, Variable)
 from pytableaux.lang.parsing import Parser, ParseTable
+from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.writing import LexWriter
-

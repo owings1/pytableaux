@@ -612,15 +612,33 @@ class Sentence(LexicalAbc):
         return Operated(Operator.Negation, (self,))
 
     def asserted(self):
-        'Apply assertion operator to the sentence.'
+        """Apply the :obj:`Assertion` operator.
+        
+        Returns:
+            The new sentence.
+        """
         return Operated(Operator.Assertion, (self,))
 
     def disjoin(self, rhs, /):
-        'Apply disjunction to the right-hand sentence.'
+        """Apply the :obj:`Disjunction` operator to the right-hand sentence.
+
+        Args:
+            rhs (Sentence): The right-hand disjunct.
+        
+        Returns:
+            The new sentence.
+        """
         return Operated(Operator.Disjunction, (self, rhs))
 
     def conjoin(self, rhs, /):
-        'Apply conjunction to the right-hand sentence.'
+        """Apply the :obj:`Conjunction` operator to the right-hand sentence.
+
+        Args:
+            rhs (Sentence): The right-hand conjunct.
+        
+        Returns:
+            The new sentence.
+        """
         return Operated(Operator.Conjunction, (self, rhs))
 
     def negative(self):

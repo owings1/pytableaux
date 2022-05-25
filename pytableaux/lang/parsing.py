@@ -30,11 +30,12 @@ from typing import ClassVar, Iterable, Mapping
 from pytableaux import EMPTY_SET, __docformat__
 from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
-from pytableaux.lang import (Argument, Atomic, BiCoords, Constant,
-                             LangCommonMeta, LexType, Marking, Notation,
-                             Operated, Operator, Parameter, Predicate,
-                             Predicated, Predicates, Quantified, Sentence,
-                             TableStore, Variable, raiseae)
+from pytableaux.lang import (BiCoords, LangCommonMeta, LexType, Marking,
+                             Notation, TableStore, raiseae)
+from pytableaux.lang.collect import Argument, Predicates
+from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
+                                 Parameter, Predicate, Predicated, Quantified,
+                                 Sentence, Variable)
 from pytableaux.tools import abcs, key0, lazy
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap

@@ -164,6 +164,7 @@ L{FDE} - First Degree Entailment
     .. tableau::
       :rule: DesignationClosure
       :legend:
+      :doc:
 
     This allows for both a sentence and its negation to appear as *designated*
     on an open branch (or both as *undesignated*).
@@ -200,11 +201,7 @@ L{FDE} - First Degree Entailment
       :include: Assertion, Conditional, Biconditional
       :legend:
       :titles:
-
-
-    .. autoclass:: TabRules
-        :members:
-        :exclude-members: DesignationClosure
+      :docs:
 
     Notes
     =====

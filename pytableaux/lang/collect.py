@@ -28,12 +28,12 @@ from typing import Any, Iterable
 
 from pytableaux import EMPTY_SET, __docformat__, tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import LangCommonMeta, Sentence,Predicate, raiseae
+from pytableaux.lang import LangCommonMeta, raiseae
+from pytableaux.lang.lex import Predicate, Sentence
 from pytableaux.tools import abcs, lazy, membr, wraps
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import dmap
 from pytableaux.tools.sequences import SequenceApi, seqf
-from pytableaux.lang import Predicate
 
 __all__ = (
     'Argument',
@@ -55,7 +55,8 @@ class ArgumentMeta(LangCommonMeta):
 class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     """Argument class.
     
-    A container of sentences with sequence implementation, ordering and hashing.
+    A container of sentences (premises, conclusion) with sequence implementation
+    ordering and hashing.
     """
 
     def __init__(self, conclusion, premises = None, title = None):

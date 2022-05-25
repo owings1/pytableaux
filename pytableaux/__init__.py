@@ -74,7 +74,7 @@ import pytableaux.tools.hybrids
 import pytableaux.tools.linked
 
 # ------ lang
-
+import pytableaux.lang
 import pytableaux.lang.collect
 import pytableaux.lang.writing
 import pytableaux.lang.parsing
