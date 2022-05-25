@@ -968,7 +968,7 @@ class TabRules(LogicType.TabRules):
             lhs, rhs = s
             return adds(
                 group(swnode( lhs, w), swnode(~rhs, w)),
-                group(swnode(~rhs, w), swnode( lhs, w)),
+                group(swnode(~lhs, w), swnode( rhs, w)),
             )
 
     class Conditional(MaterialConditional):

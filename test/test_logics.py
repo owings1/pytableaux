@@ -1795,6 +1795,8 @@ class TestCPL(BaseSuite):
             def test_arguments(self):
                 self.valid_tab('Simplification')
                 self.invalid_tab('Syllogism')
+                self.invalid_tab('Nb', ('Bab'))
+                self.invalid_tab('Nb', ('NBab'))
 
         class Test_Optimizations(BaseSuite):
 
