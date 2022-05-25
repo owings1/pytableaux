@@ -1,0 +1,232 @@
+/* fonts */
+@font-face {
+    font-family: "Charmonman";
+    font-weight: normal;
+    src: url("fonts/charmonman/Charmonman-Regular.ttf") format("truetype");
+}
+@font-face {
+    font-family: "Charmonman"; 
+    font-weight: bold;
+    src: url("fonts/charmonman/Charmonman-Bold.ttf") format("truetype");
+}
+
+/* font-family */
+.big-l {
+    font-family: Charmonman;
+    font-weight: bold;
+}
+div[class^=highlight] .pre {
+    font-family: SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,Courier,monospace;
+}
+
+
+.tableau-wrapper .rule-legend {
+    position: absolute;
+    border: 1px solid #ccc;
+    padding: 0 8px;
+    font-size: 20px;
+    background-color: white;
+}
+.tableau-wrapper .rule-legend .legend-item {
+    padding: 0 2px;
+}
+/* font-size */
+
+.tableau-wrapper .prolog .argument {
+    font-size: initial;
+}
+table.truth-table th.operator-name {
+    font-size: 90%;
+}
+p.definiens .lexitem,
+p.definiens .metawrite,
+p.definition .lexitem,
+p.definition .metawrite,
+table.truth-table th.operator-symbol {
+    font-size: 110%;
+}
+.logic_name.subsup > .main {
+    font-size: 115%;
+}
+.tableau-wrapper .prolog {
+    font-size: 85%;
+}
+
+/* line-height */
+
+.tableau {
+    line-height: initial;
+}
+p.definition,
+p.consequence,
+p.definiens {
+    line-height: 24px;
+}
+div[class^=highlight] .pre {
+    line-height: 1.4;
+}
+.tableau-wrapper .prolog {
+    line-height: 1;
+}
+
+/* font-weight */
+
+table.truth-table > thead > tr > th.operator-name {
+    font-weight: normal;
+}
+table.truth-table th.value-header,
+table.truth-table th.operator-symbol,
+p.definiendum {
+    font-weight: bold;
+}
+
+/* font-style */
+
+
+
+/* font-variant */
+
+.smallcaps, .small-caps {
+    font-variant: small-caps;
+}
+
+/* overflow */
+
+div[class^=highlight] .pre {
+    overflow: auto;
+}
+
+/* text-align */
+
+p.definition.center {
+    text-align: center;
+}
+table.truth-table tr > th.value-header.column,
+table.truth-table th.operator-symbol.arity-2 {
+    text-align: right;
+}
+
+/* white-space */
+
+div[class^=highlight] .pre,
+table.lex-eg-table tr > td:last-child {
+    white-space: pre;
+}
+
+/* display */
+
+p.definiendum,
+div[class^=highlight] .pre {
+    display: block;
+}
+table.flex-last tr > td:last-child,
+table.lex-eg-table tr > td:last-child {
+    display: flex;
+    min-width: max-content;
+}
+
+/* float */
+.truth-table-wrapper {
+    float: left;
+}
+
+/* clear */
+.clear {
+    clear: both;
+}
+
+/* position */
+.logic_name.subsup > sub.down {
+    bottom: -0.45em;
+}
+.conseqq > sup {
+    top: -0.6em;
+}
+
+/* margin */
+
+div[class^=highlight] .pre {
+    margin: 0;
+}
+p.definition > em {
+    margin-right: 10px;
+}
+.tableau-wrapper {
+    margin-bottom: 20px;
+}
+p.definition,
+p.consequence,
+p.definiens,
+p.definiendum {
+    margin-right: 30px;
+    margin-left: 40px;
+}
+.truth-table-wrapper {
+    margin-right: 15px;
+    margin-bottom: 15px;
+}
+.logic_name.subsup > sub.down,
+.conseqq > sup {
+    margin-left: -0.55em;
+}
+p.definition,
+p.consequence,
+p.definiens {
+    margin-bottom: 24px;
+}
+p.definiendum {
+    margin-bottom: 0 !important;
+}
+
+
+/* padding */
+
+.tableau-wrapper .prolog {
+    padding-left: 10px;
+    padding-top: 10px;
+}
+table.truth-table td,
+.tableau-wrapper,
+.tableau-wrapper .prolog .argument {
+    padding: 10px;
+}
+p.definition,
+p.consequence,
+p.definiens,
+div[class^=highlight] .pre {
+    padding: 12px;
+}
+p.definiendum {
+    padding: 6px 12px;
+}
+
+
+
+/* border */
+
+table.truth-table tr > th.value-header.row,
+table.truth-table > tbody > tr > th.operator-symbol.arity-1 {
+    border-bottom: 1px solid black;
+}
+table.truth-table tr > th.value-header.column {
+    border-right: 1px solid black;
+}
+.highlight,
+.tableau-wrapper {
+    border: 1px solid #ac9;
+    border-radius: 3px;
+}
+
+/* background */
+p.definition,
+p.consequence,
+p.definiens {
+    background: #e7f2fa;
+}
+p.definiendum {
+    background: #6ab0de85;
+}
+.highlight,
+.tableau-wrapper {
+    background-color: #eeffcc;
+}

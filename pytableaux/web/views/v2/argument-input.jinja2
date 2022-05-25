@@ -1,0 +1,80 @@
+<div class="input-argument panebox">
+    {# <div id="clear_argument_wrapper"><a href="javascript:" id="clear_argument">Clear</a></div> #}
+    <div class="heading">Argument</div>
+    <table class="argument">
+        <tbody class="premises">
+            {%- if 'premises[]' in form_data -%}
+                {%- for premise in form_data['premises[]'] -%}
+                    {%- set error_label = 'Premise ' ~ loop.index -%}
+                    {%- if errors and error_label in errors -%}
+                        {{ helper.premise(loop.index, premise, 'bad', errors[error_label].message) }}
+                    {%- elif premise -%}
+                        {{ helper.premise(loop.index, premise, 'good') }}
+                    {%- endif -%}
+                {%- endfor -%}
+            {%- endif -%}
+        </tbody>
+        <tbody class="spacer">
+            <tr>
+                <td colspan="2"></td>
+                <td></td>
+            </tr>
+        </tbody>
+        <tbody class="conclusion">
+            <tr class="input sentence conclusion">
+                {%- set status = '' -%}
+                {%- set message = '' -%}
+                {%- if errors and 'Conclusion' in errors -%}
+                    {%- set status = 'bad' -%}
+                    {%- set message = errors.Conclusion.message -%}
+                {%- elif 'conclusion' in form_data -%}
+                    {%- set status = 'good' -%}
+                {%- endif -%}
+                <td class="status {{ status }}" title="{{ message|e }}">
+                    <span class="conclusion-marker">C</span>
+                </td>
+                <td>
+                    <input id="input_conclusion" class="sentence conclusion" type="text"{#
+                    #} name="conclusion" value="{{ form_data.conclusion|e }}" required="required"{#
+                    #} placeholder="enter conclusion or load example"/>
+                </td>
+                <td><a class="add-premise bgicon tooltip" title="Add premise" href="javascript:"></a></td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="input select example-argument">
+        <select id="example_argument">
+            <option value="">Load example argument ...</option>
+            {% for title in example_args -%}
+                <option value="{{ title|e }}">{{ title|e }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+<div class="select-logic panebox">
+    <div class="heading" for="selected_logic">Logic</div>
+    <select name="logic" id="selected_logic">
+        {% for category, group in logic_categories.items() -%}
+            <optgroup label="{{ category|e }}">
+                {% for logic in group -%}
+                    {%- set namelc = logic.name.lower() -%}
+                    <option value="{{ namelc|e }}" {{- helper.select_opt(form_data, 'logic', namelc) }}>
+                        {{- logic.name|e -}}
+                    </option>
+                {% endfor %}
+            </optgroup>
+        {% endfor %}
+    </select>
+    {% for key, logic in logics.items() -%}
+        <div class="hidden logic-details {{ key|e }}">
+            <span class="value logic-title {{ key|e }}">
+                <a class="external" href="/doc/logics/{{ key|e }}.html" target="_blank" rel="noreferrer noopener">
+                {{ logic.Meta.title|e }}
+                </a>
+            </span>
+        </div>
+    {% endfor %}
+</div>
+<div class="input submit">
+    <input type="submit" value="Go"/>
+</div>

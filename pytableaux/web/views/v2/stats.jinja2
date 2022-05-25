@@ -1,0 +1,70 @@
+{% set stats = tableau.stats %}
+<div class="proof-stats">
+    <ul class="details">
+        <li class="argument-output">
+            <div class="prop">Argument</div>
+            <div class="value">
+                {% if tableau.argument %}
+                    {% set arg = tableau.argument %}
+                    {% for premise in arg.premises -%}
+                        <div class="premise">
+                        {% if lw.charset == 'html' -%}
+                            {{ lw(premise) }}
+                        {% else -%}
+                            {{ lw(premise)|e }}
+                        {% endif -%}
+                        </div>
+                    {% endfor -%}
+                    &there4;
+                    {% if lw.charset == 'html' -%}
+                        {{ lw(arg.conclusion) }}
+                    {% else -%}
+                        {{ lw(arg.conclusion)|e }}
+                    {% endif -%}
+                {% endif %}
+            </div>
+        </li>
+    </ul>
+    <ul class="details">
+        <li>
+            <div class="prop">Logic</div>
+            <div class="value">{{ tableau.logic.name|e }} - {{ tableau.logic.Meta.title|e }}</div>
+        </li>
+        <li>
+            <div class="prop">Result</div>
+            <div class="value proof-result-admon {{ stats.result|lower|e }}">
+                {{ stats.result|e }}
+            </div>
+        </li>
+    </ul>
+    <ul class="details">
+        <li>
+            <div class="prop">Branches</div>
+            <div class="value">{{ stats.branches|e }}</div>
+        </li>
+        <li>
+            <div class="prop">Open</div>
+            <div class="value">{{ stats.open_branches|e }}</div>
+        </li>
+        <li>
+            <div class="prop">Closed</div>
+            <div class="value">{{ stats.closed_branches|e }}</div>
+        </li>
+        <li>
+            <div class="prop">Nodes</div>
+            <div class="value">{{ stats.distinct_nodes|e }}</div>
+        </li>
+        <li>
+            <div class="prop">Steps</div>
+            <div class="value">{{ stats.steps|e }}</div>
+        </li>
+        <li>
+            <div class="prop">Duration</div>
+            <div class="value">{{ stats.build_duration_ms|e }}ms</div>
+        </li>
+        <li>
+            <div class="prop">Overhead</div>
+            <div class="value">{{ (stats.build_duration_ms - stats.rules_duration_ms)|e }}ms</div>
+        </li>
+    </ul>
+</div>

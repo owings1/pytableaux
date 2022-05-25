@@ -1,0 +1,859 @@
+/**
+ * pytableaux, a multi-logic proof generator.
+ * Copyright (C) 2014-2022 Doug Owings.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * pytableaux - main css for web ui
+ */
+/*!
+ *  Font Awesome 4.7.0 by @davegandy - http://fontawesome.io - @fontawesome
+ *  License - http://fontawesome.io/license (Font: SIL OFL 1.1, CSS: MIT License)
+ */
+@font-face {
+  font-family: FontAwesome;
+  src: url(fonts/fontawesome/fontawesome-webfont.eot);
+  src: url(fonts/fontawesome/fontawesome-webfont.eot) format("embedded-opentype"),
+    url(fonts/fontawesome/fontawesome-webfont.woff2) format("woff2"),
+    url(fonts/fontawesome/fontawesome-webfont.woff) format("woff"),
+    url(fonts/fontawesome/fontawesome-webfont.ttf) format("truetype"),
+    url(fonts/fontawesome/fontawesome-webfont.svg) format("svg");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: Lato;
+  src: url(fonts/lato-normal.woff2) format("woff2"),
+    url(fonts/lato-normal.woff) format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: Lato;
+  src: url(fonts/lato-bold.woff2) format("woff2"),
+    url(fonts/lato-bold.woff) format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: Lato;
+  src: url(fonts/lato-bold-italic.woff2) format("woff2"),
+    url(fonts/lato-bold-italic.woff) format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: Lato;
+  src: url(fonts/lato-normal-italic.woff2) format("woff2"),
+    url(fonts/lato-normal-italic.woff) format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: Roboto Slab;
+  font-style: normal;
+  font-weight: 400;
+  src: url(fonts/Roboto-Slab-Regular.woff2) format("woff2"),
+    url(fonts/Roboto-Slab-Regular.woff) format("woff");
+  font-display: block;
+}
+@font-face {
+  font-family: Roboto Slab;
+  font-style: normal;
+  font-weight: 700;
+  src: url(fonts/Roboto-Slab-Bold.woff2) format("woff2"),
+    url(fonts/Roboto-Slab-Bold.woff) format("woff");
+  font-display: block;
+}
+
+/* ---- font ---- */
+body.pt-app,
+.pt-app .ui-widget {
+  font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
+}
+.pt-app code,
+.pt-app .json-dump,
+.pt-app .errors dd,
+.pt-app .warns dd,
+.pt-app .logic-title,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+}
+.pt-app .uitab_link::before,
+.pt-app .headicon::before,
+.pt-app .warns h3::before,
+.pt-app .errors h3::before,
+.pt-app a.external:after,
+.pt-app a.add-predicate::after,
+.pt-app a.del-predicate::after,
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after {
+  font-family: FontAwesome;
+}
+.pt-app .footer {
+  font-size: 0.8em;
+}
+body.pt-app {
+  font-size: 0.9em;
+}
+.pt-app #argument_form .heading,
+.pt-app.no-proof #lexicons-content ul.item-symbols li,
+.pt-app.no-proof #lexicons-content .predicate-symbol,
+.pt-app.no-proof #lexicons-content .operator-symbol,
+.pt-app #argument_form input[type="submit"] {
+  font-size: 1.2em;
+}
+.pt-app .headicon::before {
+  font-size: 1.3125em;
+}
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after,
+.pt-app a.add-predicate::after,
+.pt-app a.del-predicate::after {
+  font-size: 1.5em;
+}
+.pt-app #lexicons-content table.predicates th {
+  font-weight: normal;
+}
+.pt-app .errors dt,
+.pt-app .warns dt,
+.pt-app #argument_form .heading,
+.pt-app .select-logic .logic-title,
+.pt-app .proof-result-admon {
+  font-weight: bold;
+}
+.pt-app .proof-result-admon {
+  letter-spacing: 0.05em;
+}
+
+/* ---- text ---- */
+.pt-app #argument_form .panebox,
+.pt-app #argument_form .heading,
+.pt-app #lexicons-content table.predicates th {
+  text-align: left;
+}
+.pt-app .footer,
+.pt-app .input.sentence .status,
+.pt-app table.argument tr.sentence td:last-child,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  text-align: center;
+}
+.pt-app .errors dt,
+.pt-app .warns dt,
+.pt-app .input label {
+  text-align: right;
+}
+.pt-app .header a,
+.pt-app .footer a,
+.pt-app a.external,
+.pt-app table.argument td a,
+.pt-app a.add-predicate,
+.pt-app a.del-predicate {
+  text-decoration: none;
+}
+.pt-app .header a:hover,
+.pt-app .footer a:hover {
+  text-decoration: underline;
+}
+.pt-app .proof-result-admon,
+.pt-app #argument_form input[type="submit"] {
+  text-transform: uppercase;
+}
+.pt-app .input label,
+.pt-app #argument_form .heading {
+  vertical-align: top;
+}
+.pt-app .json-dump {
+  white-space: pre;
+}
+
+/* ---- display ---- */
+.hidden,
+.pt-app.has-proof .footer-wrapper,
+.pt-app #lexicons-content .predicate-symbol.hidden {
+  display: none;
+}
+.pt-app #clear_argument_wrapper {
+  display: inline;
+}
+.pt-app .input label,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  display: inline-block;
+}
+.pt-app ul.details li {
+  display: inline-table;
+}
+.pt-app #argument_form .heading,
+.pt-app .lexicons .label,
+.pt-app .select-logic .logic-title,
+.pt-app #selected_logic-button,
+.pt-app #example_argument-button,
+.pt-app table.argument tbody.spacer td a,
+.pt-app .debugs-wrapper::before {
+  display: block;
+}
+.pt-app #lexicons-content ul.item-symbols {
+  list-style-type: none;
+}
+
+/* ---- color ---- */
+.pt-app .proof-result-admon,
+.pt-app .header-wrapper,
+.pt-app.no-proof .footer-wrapper,
+.pt-app .header a,
+.pt-app .footer a,
+.pt-app .errors h3,
+.pt-app .warns h3,
+.pt-app .input.sentence .status.good,
+.pt-app .input.sentence .status.bad,
+.pt-app .debugs-wrapper > .debugs-heading {
+  color: #ffffff;
+}
+.pt-app a.external,
+.pt-app a.add-predicate:hover::after,
+.pt-app td:hover a.add-premise::before,
+.pt-app td:hover a.add-premise::after,
+.pt-app .json-dump .json-abrace {
+  color: #2980b9;
+}
+.pt-app.has-proof .footer-wrapper {
+  color: #888888;
+}
+.pt-app a.button.disabled,
+.pt-app .json-dump .json-obrace {
+  color: #999999;
+}
+.pt-app a.external:after {
+  color: #b3b3b3;
+}
+.pt-app code,
+.pt-app a.del-predicate:hover::after,
+.pt-app td:hover a.del-premise::before,
+.pt-app td:hover a.del-premise::after {
+  color: #e74c3c;
+}
+.pt-app .json-dump .json-string {
+  color: #ba2121;
+}
+.pt-app .debugs .debug-heading {
+  color: #0f100f;
+}
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after,
+.pt-app a.add-predicate::after,
+.pt-app a.del-predicate::after {
+  color: #cccccc;
+}
+
+/* ---- background-color ---- */
+.pt-app #argument_form .heading,
+.pt-app .debugs-wrapper {
+  background-color: inherit;
+}
+.pt-app .header-wrapper {
+  background-color: #343131;
+}
+.pt-app.no-proof .footer-wrapper {
+  background-color: #6ab0de;
+}
+.pt-app a.button.disabled {
+  background-color: #dddddd;
+}
+.pt-app .errors {
+  background-color: #fdf3f2;
+}
+.pt-app .warns {
+  background-color: #ffedcc;
+}
+.pt-app .input label,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol,
+.pt-app #lexicons-content table.predicates th,
+.pt-app .debugs .debug-content {
+  background-color: #eeeeee;
+}
+.pt-app .lexicons .label {
+  background-color: #edf0f261;
+}
+.pt-app .errors h3 {
+  background-color: #f29f97;
+}
+.pt-app .warns h3,
+.pt-app .debugs .debug-heading {
+  background-color: #f0b37e;
+}
+.pt-app .input.sentence .status {
+  background-color: #cccccc;
+}
+.pt-app .proof-result-admon.valid,
+.pt-app .input.sentence.conclusion .status.good {
+  background-color: #1abc9c;
+}
+.pt-app .input.sentence.conclusion .status.bad {
+  background-color: #bc1a1ad4;
+}
+.pt-app .input.sentence.premise .status.good,
+.pt-app .debugs-wrapper > .debugs-heading {
+  background-color: #2196f3;
+}
+.pt-app .input.sentence.premise .status.bad {
+  background-color: #f3217cf5;
+}
+.pt-app .select-logic .logic-title {
+  background-color: #f0f0f0;
+}
+.pt-app .proof-result-admon.invalid {
+  background-color: #ff6455;
+}
+.pt-app .proof-result-admon.unfinished {
+  background-color: #cd813f;
+}
+
+/* ---- border ---- */
+.pt-app .input label,
+.pt-app .debugs,
+.pt-app #argument_form .panebox,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  border: 1px solid #cccccc;
+}
+.pt-app .proof-result-admon.invalid,
+.pt-app .proof-result-admon.unfinished {
+  border: 1px solid #aaaaaa;
+}
+.pt-app .debugs .debug-heading,
+.pt-app .debugs .debug-content {
+  border: 1px solid #888888;
+}
+.pt-app .lexicons .label {
+  border: 1px solid #ccccccab;
+}
+.pt-app .proof-result-admon.valid {
+  border: 1px solid #666666;
+}
+.pt-app .errors {
+  border: 1px solid #f29f97;
+}
+.pt-app .warns {
+  border: 1px solid #f0b37e;
+}
+.pt-app code {
+  border: 1px solid #e1e4e5;
+}
+.pt-app #input_feedback_content {
+  border: 3px solid #cccccc;
+}
+.pt-app .input.example-argument {
+  border-top: 1px solid #cccccc;
+}
+.pt-app ul.details li {
+  border-left: 2px solid #cccccc;
+}
+.pt-app .select-logic .logic-title {
+  border: none;
+  border-left: 3px solid #cccccc;
+}
+.pt-app #argument_form .heading {
+  border-width: 0 0 1px 0;
+  border-color: #cccccc;
+  border-style: solid;
+}
+.pt-app .debugs-wrapper::before {
+  border-bottom: 2px dashed #9e9e9e;
+}
+.pt-app .debugs-wrapper > .debugs-heading {
+  border-bottom: 1px solid #cccccc;
+}
+
+/* ---- float ---- */
+.left,
+.pt-app .errors dt,
+.pt-app .errors dd,
+.pt-app .warns dt,
+.pt-app .warns dd,
+.pt-app .uitab-insert,
+.pt-app #uitab_input .col1,
+.pt-app #uitab_input .col2,
+.pt-app .lexicons .panel {
+  float: left;
+}
+.right,
+.pt-app #clear_argument_wrapper {
+  float: right;
+}
+.clear,
+.pt-app .errors dt,
+.pt-app .warns dt,
+.pt-app .ui-tabs-panel {
+  clear: both;
+}
+
+/* ---- margin ---- */
+body.pt-app,
+.pt-app .errors h3,
+.pt-app .warns h3,
+.pt-app .errors dd,
+.pt-app .warns dd,
+.pt-app #lexicons-content table.predicates {
+  margin: 0;
+}
+.pt-app a.external:after,
+.pt-app .uitab-insert {
+  margin: 0 0.2em;
+}
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  margin: 0 3px;
+}
+.pt-app div.input {
+  margin: 2px 0;
+}
+.pt-app .select-logic .logic-title {
+  margin: 6px 0;
+}
+.pt-app .select-logic .logic-details {
+  margin: 20px 0;
+}
+.pt-app.no-proof .pt-content {
+  margin: 30px 0;
+}
+.pt-app .lexicons .label {
+  margin: 0 0 7px 0;
+}
+.pt-app .input .example-argument {
+  margin: 0 0 15px 0;
+}
+.pt-app #lexicons-content ul.item-symbols,
+.pt-app #lexicons-content table.operator-symbols {
+  margin: 0 0 16px 0;
+}
+.pt-app #clear_argument_wrapper {
+  margin-top: 8px;
+}
+.pt-app ul.details .value {
+  margin-top: 9px;
+}
+.pt-app .debugs .debug-heading,
+.pt-app #argument_form input[type="submit"] {
+  margin-top: 10px;
+}
+.pt-app ul.details li {
+  margin-top: 22px;
+}
+.pt-app .debugs-wrapper::before {
+  margin-top: 100px;
+}
+.pt-app .tableau-wrapper {
+  margin-top: 170px;
+}
+.pt-app .warns h3::before,
+.pt-app .errors h3::before {
+  margin-right: 8px;
+}
+.pt-app .lexicons .panel {
+  margin-right: 10px;
+}
+.pt-app #clear_argument_wrapper {
+  margin-right: 28px;
+}
+.pt-app .select-logic .logic-title {
+  margin-bottom: 6px;
+}
+.pt-app .panebox {
+  margin-bottom: 7px;
+}
+.pt-app .errors,
+.pt-app .warns {
+  margin-bottom: 10px;
+}
+.pt-app table.argument,
+.pt-app #argument_form .heading {
+  margin-bottom: 12px;
+}
+.pt-app #uitabs_main_wrapper,
+.pt-app .debugs-wrapper::before {
+  margin-bottom: 20px;
+}
+.pt-app #uitab_input .col2 {
+  margin-left: 5px;
+}
+.pt-app .debugs-wrapper > .debugs-heading,
+.pt-app .debugs .debug-heading {
+  margin-block-start: 0;
+  margin-block-end: 0;
+}
+
+/* ---- padding ---- */
+body.pt-app,
+.pt-app ul.details,
+.pt-app #lexicons-content ul.item-symbols {
+  padding: 0;
+}
+.pt-app ul.details .value,
+.pt-app #lexicons-content input.arity {
+  padding: 0.125em;
+}
+.pt-app #lexicons-content table.predicates td,
+.pt-app #lexicons-content .operator-symbols td {
+  padding: 0.1875em;
+}
+.pt-app .select-logic .logic-title,
+.pt-app .lexicons .label,
+.pt-app #input_feedback_content {
+  padding: 0.375em;
+}
+.pt-app .proof-result-admon {
+  padding: 0.4em;
+}
+.pt-app .input.sentence .status,
+.pt-app table.argument tr.sentence td:last-child {
+  padding: 0.5em;
+}
+.pt-app .header,
+.pt-app .footer,
+.pt-app .errors dt,
+.pt-app .warns dt,
+.pt-app .errors dd,
+.pt-app .warns dd,
+.pt-app .input label,
+.pt-app #argument_form .heading,
+.pt-app #uitabs_main .ui-tabs-panel,
+.pt-app .debugs .debug-heading,
+.pt-app .debugs-wrapper > .debugs-heading {
+  padding: 0.625em;
+}
+.pt-app #argument_form input[type="submit"] {
+  padding: 0.975em;
+}
+.pt-app.no-proof .pt-content,
+.pt-app .tableau-wrapper.plaintext > pre,
+.pt-app .debugs .debug-content {
+  padding: 1.25em;
+}
+.pt-app .headicon::before {
+  padding: 0 0.25em;
+}
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  padding: 0.125em 0.25em;
+}
+.pt-app code {
+  padding: 0.1875em 0.3125em;
+}
+.pt-app .json-dump .json-dict li {
+  padding: 0.2em 0;
+}
+.pt-app.has-proof .ui-tabs-anchor {
+  padding: 0.2em 0.5em;
+}
+.pt-app a.button {
+  padding: 0.3125em 0.625em;
+}
+.pt-app .errors h3,
+.pt-app .warns h3 {
+  padding: 0.375em 0.75em;
+}
+.ui-tabs #tab-view.ui-tabs-panel,
+.ui-tabs #tab-step.ui-tabs-panel,
+.ui-tabs #tab-stats.ui-tabs-panel,
+.ui-tabs #tab-models.ui-tabs-panel {
+  padding: 0.4em 0.4em 0 0.4em;
+}
+.pt-app .input input[type="text"],
+.pt-app .input input[type="email"] {
+  padding: 0.4375em 0.25em;
+}
+.pt-app #argument_form .panebox {
+  padding: 0.625em 1.25em;
+}
+.pt-app ul.details li {
+  padding: 0 0.5em 0 0.3125em;
+}
+.pt-app .lexicons .panel {
+  padding: 0 0.3125em 0 0;
+}
+.pt-app .debugs .debug {
+  padding: 0.625em 0.625em 0 0.625em;
+}
+.pt-app .errors,
+.pt-app .warns {
+  padding-bottom: 0.9375em;
+}
+.pt-app .debugs {
+  padding-bottom: 1.25em;
+}
+.pt-app .input.example-argument {
+  padding-top: 12px;
+}
+.pt-app #argument_form .heading {
+  padding-left: 0;
+}
+.pt-app a.add-predicate {
+  padding-left: 0.65em;
+}
+.pt-app a.del-premise,
+.pt-app a.add-premise {
+  padding-left: 1em;
+}
+.pt-app .json-dump ul.json-dict,
+.pt-app .json-dump ol.json-array {
+  padding-left: 1.5em;
+}
+
+/* ---- width ---- */
+.pt-app #selected_logic-button,
+.pt-app #example_argument-button {
+  width: inherit;
+}
+.pt-app.has-proof #uitabs_main_wrapper {
+  width: 95%;
+}
+.pt-app .header-wrapper,
+.pt-app .footer-wrapper,
+.pt-app #argument_form input[type="submit"] {
+  width: 100%;
+}
+.pt-app #lexicons-content input.arity {
+  width: 0.8em;
+}
+.pt-app table.argument td.status,
+.pt-app table.argument tr.sentence td:last-child {
+  width: 1.25em;
+}
+.pt-app #predicates_input_table tr td:last-child {
+  width: 76%;
+}
+.pt-app .fieldset.options .input label {
+  width: 160px;
+}
+.pt-app #uitab_input .col1 {
+  width: 351px;
+}
+.pt-app .input.sentence input {
+  width: 16.4em;
+}
+.pt-app #input_feedback_content {
+  width: 600px;
+}
+.pt-app #lexicons-content .predicate-symbol {
+  min-width: 10px;
+}
+.pt-app .errors dt,
+.pt-app .warns dt {
+  min-width: 100px;
+}
+.pt-app code {
+  max-width: 100%;
+}
+.pt-app .feedback_view {
+  max-width: 800px;
+}
+
+/* ---- height ---- */
+.pt-app #input_feedback_content {
+  height: 120px;
+}
+.pt-app.has-proof #uitabs_main_wrapper {
+  max-height: 80%;
+}
+.pt-app.ui-selectmenu-menu .ui-menu {
+  max-height: 300px;
+}
+
+/* ---- position ---- */
+.pt-app .header-wrapper,
+.pt-app .footer-wrapper,
+.pt-app.has-proof #uitabs_main_wrapper {
+  position: fixed;
+}
+.pt-app a.bgicon,
+.pt-app .uitab-insert {
+  position: relative;
+}
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after {
+  position: absolute;
+}
+.pt-app .header-wrapper {
+  top: 0;
+}
+.pt-app .uitab-insert {
+  top: 0.2em;
+}
+.pt-app .footer-wrapper {
+  bottom: 0;
+}
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after {
+  left: 0;
+}
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.pt-app.has-proof #uitabs_main_wrapper {
+  top: 35px;
+  left: 20px;
+}
+.pt-app .header-wrapper,
+.pt-app .footer-wrapper {
+  z-index: 101;
+}
+
+/* ---- overflow ---- */
+.pt-app code {
+  overflow-x: auto;
+}
+.pt-app .json-dump {
+  overflow-x: scroll;
+}
+.pt-app.has-proof #uitabs_main_wrapper {
+  overflow-y: auto;
+}
+
+/* ---- cursor ---- */
+.tableau.with-controls,
+.pt-app .debugs-wrapper > .debugs-heading,
+.pt-app .debugs .debug-heading {
+  cursor: pointer;
+}
+
+/* ---- content ---- */
+.pt-app .debugs-wrapper::before {
+  content: "";
+}
+.pt-app a.del-predicate::after,
+.pt-app a.del-premise::before,
+.pt-app a.del-premise::after {
+  content: '\f147';
+}
+.pt-app a.external:after {
+  content: "\f08e";
+}
+.pt-app .warns h3::before,
+.pt-app .errors h3::before {
+  content: "\f06a";
+}
+.pt-app a.add-predicate::after,
+.pt-app a.add-premise::before,
+.pt-app a.add-premise::after {
+  content: '\F196';
+}
+.pt-app a.headicon.doc::before {
+  content: '\F059';
+}
+.pt-app a.headicon.source::before {
+  content: '\F09B';
+}
+.pt-app a.headicon.feedback::before {
+  content: '\F199';
+}
+.pt-app #uitab_input_link::before {
+  content: '\F044';
+}
+.pt-app #uitab_options_link::before {
+  content: '\F1DE';
+}
+.pt-app #uitab_stats_link::before {
+  content: '\F080';
+}
+.pt-app #uitab_view_link::before {
+  content: '\F1E5';
+}
+.pt-app #uitab_step_link::before {
+  content: '\F04B';
+}
+.pt-app #uitab_models_link::before {
+  content: '\F20E';
+}
+/*
+https://fontdrop.info/
+FontAwesome:
+  remove_sign: '\f057'
+  trash: '\f014', F1F8
+  resize_vertical: '\f07d'
+  resize_horizontal: '\f07e'
+  caret_up: f0d7
+  caret_down: f0d8
+  caret_left: f0d9
+  caret_right: f0da
+  bullseye: F140
+  dot_circlt: F192
+  compass: F14E
+  circle_blank: F10C, F1DB
+  github: F09B, F113
+  git: F1DA, F1D3
+  question_sign: F059, F29C, F128
+  info_sign: F05A
+  envelope: F003, F2B6, F2B7, F199
+  play: F04B, F144, F152, F01D
+  ol: F0CB
+  cog: F013
+  cogs: F085
+  bar_chart: F080
+  edit: F044
+  sliders/options?: F1DE
+  binoculars: F1E5
+*/
+/* .pt-app.has-proof #uitabs_main_wrapper {
+  position: -webkit-sticky;
+  position: sticky;
+} */
+/* Example of character as icon */
+/*
+.icon {
+  position: relative;
+  padding-left: 1em;
+}
+.icon::before,
+.icon::after {
+  position: absolute;
+  font-size: 3.25em;
+  left: 0;
+  top: 25%;
+  transform: translateY(-50%);
+  color: #f3217cf5;
+  content: '\2297';
+}
+*/
+/* 
+rtd-theme:
+    backgrounds:
+        #6ab0de (note, blue)
+        #dbfaf4 (important, light green)
+        rgb(26, 188, 156) (important, dark green)
+        #2980b9 (title bar, blue)
+ */
+/* 
+.json-comma
+.json-literal.json-number
+.json-literal.json-boolean
+.json-literal.json-null
+.json-key
+ */

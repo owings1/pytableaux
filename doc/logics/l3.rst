@@ -1,21 +1,49 @@
-*******************************
-L3 - Łukasiewicz 3-valued Logic
-*******************************
+.. _L3:
 
-Ł3 is a three-valued logic with values **T**, **F**, and **N**. It is
-similar to `K3`_, but with a different, primitive conditional 
-operator that respects the Law of Conditional Identity (P{A $ A}).
+********************************************
+L{L3} - Łukasiewicz 3-valued Logic
+********************************************
+
+L{L3} is a three-valued logic with values V{T}, V{F}, and V{N}. It is
+similar to {@K3}, but with a different, primitive conditional 
+operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
 .. contents:: :local:
 
-.. automodule:: logics.l3
+.. automodule:: pytableaux.logics.l3
 
     Semantics
     =========
 
+    .. _l3-model:
+
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. autoclass:: pytableaux.logics.l3::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
+        .. include:: include/fde/m.attributes.rst
+
+    .. _l3-truth-tables:
+
+    Truth Tables
+    ------------
+
+    .. include:: include/truth_table_blurb.rst
+
+    .. truth-tables::
+
+    .. _l3-consequence:
+
+    Consequence
+    -----------
+
+    Logical consequence is defined just like in L{K3}:
+    
+    .. include:: include/k3/m.consequence.rst
+
+    .. _l3-system:
 
     Tableaux System
     ===============
@@ -23,16 +51,15 @@ operator that respects the Law of Conditional Identity (P{A $ A}).
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. _l3-rules:
+
+    .. autoclass:: TabRules
         :members:
 
-    Logical Consequence
-    ===================
+    Notes
+    =====
 
-    **Logical Consequence** is defined just like in `CPL`_ and `K3`_:
+    * Łukasiewicz, J. (1920). On 3-valued logic. Ruch Filozoficzny 5, 169-171.
 
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
-
-.. _K3: k3.html
-.. _CPL: cpl.html
+    * Łukasiewicz, J. (1957). Aristotle's Syllogistic from the Standpoint of Modern
+      Formal Logic. Oxford: Clarendon Press

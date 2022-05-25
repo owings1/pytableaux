@@ -1,19 +1,57 @@
+.. _T:
+
 ********************************
 T - Reflexive Normal Modal Logic
 ********************************
 
-Reflexive Modal Logic is an extension of `K`_, with a *reflexive* accessibility relation,
-which states that for every world *w*, *w* accesses *w* (itself).
+Reflexive Modal Logic is an extension of :ref:`K <K>`, with a *reflexive*
+accessibility relation, which states that for every world *w*,
+*w* accesses *w* (itself).
 
 .. contents:: :local:
 
-.. automodule:: logics.t
+.. automodule:: pytableaux.logics.t
 
     Semantics
     =========
 
+    A T model uses :ref:`K Frames <k-frame>` to hold information about each world.
+
+    .. autoclass:: pytableaux.logics.k.Frame
+        :noindex:
+
+        .. autoattribute:: world
+            :noindex:
+
+        .. autoattribute:: atomics
+            :noindex:
+
+        .. autoattribute:: extensions
+            :noindex:
+
     .. autoclass:: Model
-        :members:
+
+        .. autoclass:: pytableaux.logics.t::Model.Value()
+            :members: F, T
+            :undoc-members:
+
+        .. include:: include/k/m.attributes.rst
+
+    Reflexivity
+    -----------
+
+    T adds a *reflexivity* restriction on the access relation for models.
+
+    .. include:: include/t/m.reflexivity.rst
+
+    This is witnessed in the tableaux system through the :ref:`Reflexive Rule <reflexive-rule>`.
+
+    Consequence
+    -----------
+
+    Logical Consequence is defined just as in :ref:`K <K>`:
+
+    .. include:: include/k/m.consequence.rst
 
     Tableaux System
     ===============
@@ -21,15 +59,5 @@ which states that for every world *w*, *w* accesses *w* (itself).
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just as in `K`_:
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      at *w0* are models where *C* also has the value **T** at *w0*.
-
-.. _K: k.html

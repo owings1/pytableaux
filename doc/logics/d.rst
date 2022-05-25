@@ -1,20 +1,64 @@
+.. _D:
+
 ******************************
 D - Deontic Normal Modal Logic
 ******************************
 
-Deontic logic, also known as the Logic of Obligation, is an extension of `K`_, with
+Deontic logic, also known as the Logic of Obligation, is an extension of :ref:`K <K>`, with
 a *serial* accessibility relation, which states that for every world *w*, there is
 a world *w'* such that *w* accesses *w'*.
 
 .. contents:: :local:
 
-.. automodule:: logics.d
+.. automodule:: pytableaux.logics.d
 
     Semantics
     =========
 
-    .. autoclass:: Model
-        :members:
+    A D model uses :ref:`K Frames <k-frame>` to hold information about each world.
+
+    .. autoclass:: pytableaux.logics.k.Frame
+        :noindex:
+
+        .. autoattribute:: world
+            :noindex:
+
+        .. autoattribute:: atomics
+            :noindex:
+
+        .. autoattribute:: extensions
+            :noindex:
+
+    .. class:: Model
+
+        .. autoclass:: pytableaux.logics.d::Model.Value()
+            :members: F, T
+            :undoc-members:
+
+        .. include:: include/k/m.attributes.rst
+
+    Seriality
+    ---------
+
+    D adds a *serial* restriction on the access relation for models.
+
+    .. cssclass:: definiendum smallcaps
+
+    Seriality
+
+    .. cssclass:: definiens
+
+    In every model, for each world :m:`w`, there is *some world* :m:`w'` such
+    that :m:`<w,w'>` is in the access relation.
+
+    This is witnessed in the tableaux system through the :ref:`Serial Rule <serial-rule>`.
+
+    Consequence
+    -----------
+
+    Logical Consequence is defined just as in :ref:`K <K>`:
+
+    .. include:: include/k/m.consequence.rst
 
     Tableaux System
     ===============
@@ -22,24 +66,14 @@ a world *w'* such that *w* accesses *w'*.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just as in `K`_:
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      at *w0* are models where *C* also has the value **T** at *w0*.
-
     Notes
-    =====
+    -----
 
-    For further reading, see
+    .. rubric:: Further Reading
 
     * `Stanford Encyclopedia on Deontic Logic`_
-
-.. _K: k.html
 
 .. _Stanford Encyclopedia on Deontic Logic: http://plato.stanford.edu/entries/logic-deontic/

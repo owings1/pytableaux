@@ -1,0 +1,109 @@
+<div class="tableau-controls ui-controls"
+    data-tableau-id="tableau_{{ tableau.id|e }}"
+    id="step_{{ tableau.id|e }}">
+    {% set tree = tableau.tree %}
+    {% set numsteps = tableau.stats.steps %}
+    <ul class="details">
+        <li>
+            <div class="prop">Step</div>
+            <div class="value">
+                <span class="ui-controlgroup">
+                    <a class="button step-start {{- ' disabled' if not tableau.history }}"{#
+                        #} data-shortcut-key="B" href="javascript:" title="Go to beginning">&langle;&langle;</a>
+                    <a class="button step-prev {{- ' disabled' if not tableau.history }}"{#
+                        #} data-shortcut-key="&lt;" href="javascript:" title="Go back 1 step">&langle;</a>
+                </span>
+                <input type="text" size="{{ numsteps|string|length + 1 }}" class="step-input" value="{{ numsteps|e }}">
+                <span class="ui-controlgroup">
+                    <a class="button step-next disabled" data-shortcut-key="&gt;" href="javascript:"{#
+                        #} title="Go forward 1 step">&rangle;</a>
+                    <a class="button step-end disabled" data-shortcut-key="E" href="javascript:"{#
+                        #} title="Go to end">&rangle;&rangle;</a>
+                </span>
+            </div>
+        </li>
+        <li>
+            <div class="prop">Rule Target</div>
+            <div class="value">
+                <a class="step-rule-target step-rule-datum {{- helper.hidden_if(numsteps) }}"
+                    data-target-type="argument" data-step="0" href="javascript:">Argument</a>
+                {%- for step in tableau.history -%}
+                    {% set target = step.target %}
+                    <a class="step-rule-target step-rule-datum {{- helper.hidden_if(not loop.last) }}"{#
+                     #} data-target-type="{{ target.type|e }}"{#
+                     #} data-node-id="{{ target.node.id if target.node }}"{#
+                     #} data-node-ids="{{ target.nodes|join(',', attribute='id') if target.nodes }}"{#
+                     #} data-branch-node-id="{{ target.branch.leaf.id if target.branch }}"{#
+                     #} data-step="{{ loop.index }}" href="javascript:">{{ target.type|e }}</a>
+                {%- endfor %}
+            </div>
+        </li>
+        <li>
+            <div class="prop">Rule Applied</div>
+            <div class="value step-rule-names">
+                <code class="literal step-rule-name step-rule-datum {{- helper.hidden_if(numsteps) }}"{#
+                    #} data-step="0">Build Trunk</code>
+                {%- for step in tableau.history %}
+                    <code class="literal step-rule-name step-rule-datum {{- helper.hidden_if(not loop.last) }}"{#
+                        #} data-step="{{ loop.index }}">{{ step.rule.name|e }}</code>
+                {%- endfor %}
+            </div>
+        </li>
+        {% if False and is_debug -%}
+            <li>
+                <div class="prop">Group Score</div>
+                <div class="value">
+                    <span class="step-rule-group-score step-rule-datum {{- helper.hidden_if(numsteps) }}"
+                        data-step="0">n/a</span>
+                    {%- for step in tableau.history %}
+                        {% set target = step.target %}
+                        <span class="step-rule-group-score step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
+                            {% if target.is_group_optim -%}
+                                {{- target.group_score|round(2) }}
+                                (min score: {{ target.min_group_score|round(2) }})
+                                of
+                                {{ target.total_group_targets|e }}
+                                total
+                            {% else -%}
+                                n/a
+                            {% endif -%}
+                        </span>
+                    {%- endfor %}
+                </div>
+            </li>
+            <li>
+                <div class="prop">Rank</div>
+                <div class="value">
+                    <span class="step-rule-candidate-score step-rule-datum {{- helper.hidden_if(numsteps) }}"
+                        data-step="0">n/a</span>
+                    {%- for step in tableau.history %}
+                        {% set target = step.target %}
+                        <span class="step-rule-candidate-score step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
+                            {% if target.is_rank_optim -%}
+                                {{- target.candidate_score|round(2) }} 
+                                (min score: {{ target.min_candidate_score|round(2) }})
+                                of
+                                {{ target.total_candidates|e }}
+                                total
+                            {% else -%}
+                                n/a
+                            {% endif -%}
+                        </span>
+                    {%- endfor %}
+                </div>
+            </li>
+            <li>
+                <div class="prop">Duration</div>
+                <div class="value">
+                    <span class="step-rule-duration step-rule-datum {{- helper.hidden_if(numsteps) }}"
+                        data-step="0">{{ tableau.stats.trunk_duration_ms|e }}</span>
+                    {%- for step in tableau.history %}
+                        <span class="step-rule-duration step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
+                            {{- step.duration.value|e }}ms
+                        </span>
+                    {%- endfor %}
+                </div>
+            </li>
+        {% endif -%}
+    </ul>
+</div>

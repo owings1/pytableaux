@@ -1,61 +1,211 @@
-*****************************
-FDE - First Degree Entailment
-*****************************
+.. _FDE:
 
-FDE is a 4-valued logic (**T**, **F**, **N** and **B**). A common interpretation of these
-values is:
-
-- **T**: just true
-- **F**: just false
-- **N**: neither true nor false
-- **B**: both true and false
+***************************************
+L{FDE} - First Degree Entailment
+***************************************
 
 .. contents:: :local:
+  :depth: 2
 
-.. automodule:: logics.fde
+------------------------
+
+.. automodule:: pytableaux.logics.fde
+
+    .. _fde-semantics:
 
     Semantics
     =========
 
+    .. _fde-truth-values:
+
+    Truth Values
+    ------------
+
+    L{FDE} is a 4-valued logic (V{T}, V{F}, V{N} and V{B}). One common reading
+    of these values is:
+
+    - V{F}: just false
+    - V{N}: neither true nor false
+    - V{B}: both true and false
+    - V{T}: just true
+
+    .. _fde-model:
+
+    Model
+    -----
+
     .. autoclass:: Model
+
+      .. autoclass:: pytableaux.logics.fde::Model.Value()
+          :members: F, N, B, T
+          :undoc-members:
+
+      .. autoattribute:: designated_values
+
+      .. autoattribute:: extensions
+
+      .. autoattribute:: anti_extensions
+
+      .. autoattribute:: atomics
+
+    .. _fde-truth-tables:
+
+    Truth Tables
+    ------------
+
+    .. include:: include/truth_table_blurb.rst
+
+    .. truth-tables::
+      :operators: Negation, Conjunction, Disjunction
+
+    The `Material Conditional` :s:`>` is definable in terms of disjunction:
+    
+    .. sentence::
+    
+      A > B := ~A V B
+
+    Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+    and :s:`&`:
+
+    .. sentence::
+    
+      A < B := (A > B) & (B > A)
+
+    .. truth-tables::
+      :operators: MaterialConditional, MaterialBiconditional
+ 
+    L{FDE} does not have separate `Assertion` or `Conditional` operators,
+    but we include tables and rules for them, for cross-compatibility.
+
+    .. truth-tables::
+      :operators: Assertion, Conditional, Biconditional
+
+    .. _fde-predication:
+
+    Predication
+    -----------
+
+    A sentence with *n*-ary predicate :m:`P` over parameters !{ntuple}
+    has the value:
+
+    * V{T} iff !{ntuple} is in the *extension* of :m:`P` and
+      not in the *anti-extension* of :m:`P`.
+
+    * V{F} iff !{ntuple} is in the *anti-extension* of :m:`P`
+      and not in the *extension* of :m:`P`.
+
+    * V{B} iff !{ntuple} is in *both* the extension and anti-extension
+      of :m:`P`.
+
+    * V{N} iff !{ntuple} is in *neither* in the extension nor the 
+      anti-extension of :m:`P`.
+
+    Note, for L{FDE}, there is no *exclusivity* nor *exhaustion* constraint on a
+    predicate's extension and anti-extension. This means that !{ntuple} could
+    be in *neither* the extension nor the anti-extension of a predicate, or it
+    could be in *both* the extension and the anti-extension.
+
+    .. _fde-quantification:
+
+    Quantification
+    --------------
+
+    Existential
+    ^^^^^^^^^^^
+
+    The value of an existential sentence is the maximum value of the sentences that
+    result from replacing each constant for the quantified variable. The ordering of
+    the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
+
+    Universal
+    ^^^^^^^^^
+
+    The value of an universal sentence is the minimum value of the sentences that
+    result from replacing each constant for the quantified variable. The ordering of
+    the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
+
+    .. _fde-consequence:
+
+    Consequence
+    -----------
+
+    **Logical Consequence** is defined in terms of the set of *designated* values
+    V{T, B}:
+
+      .. include:: include/fde/m.consequence.rst
+
+    .. _fde-system:
+
+    Tableaux
+    ========
+
+    Nodes
+    -----
+
+    Nodes for L{FDE} include a *designation* marker: |[+]| for *designated*, and |[-]|
+    for *undesignated*.
+
+    Trunk
+    -----
+
+    To build the trunk for an argument, add a designated node for each premise, and
+    an undesignated node for the conclusion.
+
+    .. tableau::
+      :build-trunk:
+      :prolog:
+    
+    Branches
+    --------
+
+    A branch is **closed** iff the same sentence appears on both a designated node,
+    and undesignated node.
+    
+    
+    .. tableau::
+      :rule: DesignationClosure
+      :legend:
+
+    This allows for both a sentence and its negation to appear as *designated*
+    on an open branch (or both as *undesignated*).
+
+
+    .. _fde-rules:
+
+    Rules
+    -----
+
+    In general, rules for connectives consist of four rules per connective:
+    a designated rule, an undesignated rule, a negated designated rule, and a negated
+    undesignated rule. The special case of negation has a total of two rules which apply
+    to double negation only, one designated rule, and one undesignated rule.
+
+    .. autoclass:: TabRules
         :members:
-
-    Tableaux System
-    ===============
-
-    .. autoclass:: TableauxSystem
-        :members:
-
-    .. autoclass:: TableauxRules
-        :members:
-
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined in terms of the *designated* values **T** and **B**:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
-      (**T** or **B**) are models where *C* also has a *designated* value.
+        :exclude-members: DesignationClosure
 
     Notes
     =====
 
-    Some notable features of FDE include:
+    Some notable features of L{FDE} include:
 
-    * No logical truths. The means that the Law of Excluded Middle P{A V ~A}, and the
-      Law of Non-Contradiction P{~(A & ~A)} fail, as well as Conditional Identity P{A $ A}.
+    * No logical truths. The means that the Law of Excluded Middle :s:`A V ~A`, and the
+      Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as :term:`Conditional Identity`
+      :s:`A $ A`.
   
-    * Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical validities.
+    * Failure of :term:`Modus Ponens`, :term:`Modus Tollens`, :term:`Disjunctive Syllogism`,
+      and other Classical validities.
 
-    * DeMorgan laws are valid, as well as Conditional Contraction (P{A $ (A $ B)} implies P{A $ B}).
+    * DeMorgan laws are valid, as well as Conditional Contraction (:s:`A $ (A $ B)`
+      implies :s:`A $ B`).
 
     References
     ==========
 
-    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
-      United Kingdom, Oxford University Press, 2003.
+    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and
+      Many-valued Logic. United Kingdom, Oxford University Press, 2003.
 
-    * Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
+    * Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
       Cambridge University Press, 2008.
 
     For futher reading see:
@@ -74,3 +224,5 @@ values is:
 .. _An Introduction to Non-Classical Logic: https://www.google.com/books/edition/_/rMXVbmAw3YwC?hl=en
 .. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
+
+

@@ -1,19 +1,40 @@
-*************************
-G3 - Gödel 3-valued logic
-*************************
+.. _G3:
 
-Gödel 3-valued logic (**T**, **F**, and **N**) with classical-like negation.
+*************************************
+L{G3} - Gödel 3-valued logic
+*************************************
+
+Gödel 3-valued logic (V{T}, V{F}, and V{N}) with classical-like negation.
 
 .. contents:: :local:
 
-.. automodule:: logics.g3
+.. automodule:: pytableaux.logics.g3
 
     Semantics
     =========
 
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. autoclass:: pytableaux.logics.g3::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+            :noindex:
+
+        .. include:: include/fde/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            .. truth-tables::
+
+    Consequence
+    -----------
+
+    Logical consequence is defined just like in L{K3}:
+    
+    .. include:: include/k3/m.consequence.rst
 
     Tableaux System
     ===============
@@ -21,25 +42,17 @@ Gödel 3-valued logic (**T**, **F**, and **N**) with classical-like negation.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
-    Logical Consequence
-    ===================
+    Notes
+    -----
 
-    **Logical Consequence** is defined just like in `CPL`_ and `K3`_:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
-
-    References
-    ==========
+    .. rubric:: Futher Reading
 
     - Heyting, Arend. `Intuitionism`_: An Introduction. Netherlands, North-Holland, 1966.
 
     - Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
 
-.. _CPL: cpl.html
-.. _K3: k3.html
 .. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en
 .. _Intuitionism: https://www.google.com/books/edition/Intuitionism/qfp_-Fo9yWMC?hl=en&gbpv=0

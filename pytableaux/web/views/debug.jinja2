@@ -1,0 +1,14 @@
+<div class="pt-app">
+    <div id="pt_debugs_wrapper" class="debugs-wrapper">
+        <h3 id="pt_debugs_heading" class="debugs-heading">Debug</h3>
+        <div class="debugs">
+            {%- for debug in debugs %}
+                {%- set topic, data = debug %}
+                <div class="debug">
+                    <h4 class="debug-heading">{{ topic|e }}</h4>
+                    <div class="debug-content json-dump">{{ toJson(data, indent = 2)|e }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

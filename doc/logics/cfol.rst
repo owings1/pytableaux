@@ -1,17 +1,34 @@
+.. _CFOL:
+
 **********************************
 CFOL - Classical First-Order Logic
 **********************************
 
-Classical First-Order Logic (CFOL) augments `CPL`_ with the quantifiers: Universal and Existential.
+Classical First-Order Logic (CFOL) augments :ref:`CPL <CPL>` with the quantifiers:
+Universal (:s:`L`) and Existential (:s:`X`).
 
 .. contents:: :local:
 
-.. automodule:: logics.cfol
+.. automodule:: pytableaux.logics.cfol
 
     Semantics
     =========
 
     .. autoclass:: Model
+
+        .. autoclass:: pytableaux.logics.cfol::Model.Value()
+            :members: F, T
+            :undoc-members:
+            :noindex:
+
+        .. include:: include/cpl/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            .. truth-tables::
 
         .. method:: value_of_existential(sentence)
 
@@ -23,25 +40,22 @@ Classical First-Order Logic (CFOL) augments `CPL`_ with the quantifiers: Univers
             A universal sentence is true just when the sentence resulting in the
             subsitution of each constant in the domain for the variable is true.
 
-        .. automethod:: value_of_operated(sentence)
+    Consequence
+    -----------
 
-        .. automethod:: is_sentence_opaque(sentence)
+    **Logical Consequence** is defined in the standard way:
+
+        .. include:: include/cpl/m.consequence.rst
 
     Tableaux System
     ===============
 
+    .. _cfol-system:
+
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
-    Logical Consequence
-    ===================
 
-    **Logical Consequence** is defined in the standard way:
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
-
-.. _CPL: cpl.html

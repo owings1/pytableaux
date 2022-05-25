@@ -50,16 +50,69 @@ Bivalent Modal
 - **S4** - S4 Normal Modal Logic
 - **S5** - S5 Normal Modal Logic
 
+## Dependencies
+
+Python **3.10.1** or later is required.
+
+```bash
+python3 -m pip install --upgrade \
+    future jinja2 cherrypy prometheus_client simplejson tabulate
+```
+
+For system-level dependencies, refer to [res/python3.dockerfile][dockerfile].
+
+## Development
+
+Test dependencies:
+
+```bash
+python3 -m pip install --upgrade \
+    pytest coverage
+```
+
+Run tests:
+
+```bash
+python3 -m pytest test
+```
+
+Doc dependencies:
+
+```bash
+python3 -m pip install --upgrade \
+    Sphinx sphinx_rtd_theme sphinx-toolbox
+```
+<!-- optional: python-Levenshtein -->
+
+Build docs:
+
+```bash
+cd doc && make clean html
+```
+
+Build docker image
+
+```bash
+docker build -f res/python3.dockerfile .
+```
+
 ## Contributing
 
-Please file any issues on [github][issues].
+You can file any issues on [github][issues], or contact me directly [via email][mailto].
 
 ## Copyright & License
 
-Copyright (C) 2014-2021 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
+<!-- [copyright-begin] -->
+Copyright (C) 2014-2022 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
+<!-- [copyright-end] -->
 
 [site]: http://logic.dougowings.net
 [doc]: http://logic.dougowings.net/doc/
-[license]: https://www.gnu.org/licenses/agpl-3.0.en.html
 [dockerhub]: https://hub.docker.com/r/owings1/pytableaux/
+[dockerfile]: res/python3.dockerfile
+
+<!-- [refs-begin] -->
+[license]: https://www.gnu.org/licenses/agpl-3.0.en.html
 [issues]: https://github.com/owings1/pytableaux/issues
+[mailto]: mailto:doug@dougowings.net
+<!-- [refs-end] -->
