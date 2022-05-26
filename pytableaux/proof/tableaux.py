@@ -55,7 +55,7 @@ from pytableaux.tools.timing import Counter, StopWatch
 if TYPE_CHECKING:
 
     from pytableaux.proof import TableauxSystem
-    from pytableaux.typing import _F
+    from pytableaux.typing import _F # type: ignore
 
 
 __all__ = (

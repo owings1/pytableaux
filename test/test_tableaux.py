@@ -55,7 +55,7 @@ class TestTableau(BaseSuite):
     def test_timeout_1ms(self):
         proof = Tableau('cpl', exarg('Addition'), build_timeout=1)
         proof.step = mock_sleep_5ms
-        with raises(TimeoutError):
+        with raises(ProofTimeoutError):
             proof.build()
 
     def test_finish_empty_sets_build_duration_ms_0(self):
