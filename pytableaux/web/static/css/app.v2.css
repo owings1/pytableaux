@@ -34,32 +34,32 @@
 }
 @font-face {
   font-family: Lato;
-  src: url(fonts/lato-normal.woff2) format("woff2"),
-    url(fonts/lato-normal.woff) format("woff");
+  src: url(fonts/lato/lato-normal.woff2) format("woff2"),
+    url(fonts/lato/lato-normal.woff) format("woff");
   font-weight: 400;
   font-style: normal;
   font-display: block;
 }
 @font-face {
   font-family: Lato;
-  src: url(fonts/lato-bold.woff2) format("woff2"),
-    url(fonts/lato-bold.woff) format("woff");
+  src: url(fonts/lato/lato-bold.woff2) format("woff2"),
+    url(fonts/lato/lato-bold.woff) format("woff");
   font-weight: 700;
   font-style: normal;
   font-display: block;
 }
 @font-face {
   font-family: Lato;
-  src: url(fonts/lato-bold-italic.woff2) format("woff2"),
-    url(fonts/lato-bold-italic.woff) format("woff");
+  src: url(fonts/lato/lato-bold-italic.woff2) format("woff2"),
+    url(fonts/lato/lato-bold-italic.woff) format("woff");
   font-weight: 700;
   font-style: italic;
   font-display: block;
 }
 @font-face {
   font-family: Lato;
-  src: url(fonts/lato-normal-italic.woff2) format("woff2"),
-    url(fonts/lato-normal-italic.woff) format("woff");
+  src: url(fonts/lato/lato-normal-italic.woff2) format("woff2"),
+    url(fonts/lato/lato-normal-italic.woff) format("woff");
   font-weight: 400;
   font-style: italic;
   font-display: block;
@@ -68,16 +68,16 @@
   font-family: Roboto Slab;
   font-style: normal;
   font-weight: 400;
-  src: url(fonts/Roboto-Slab-Regular.woff2) format("woff2"),
-    url(fonts/Roboto-Slab-Regular.woff) format("woff");
+  src: url(fonts/roboto/Roboto-Slab-Regular.woff2) format("woff2"),
+    url(fonts/roboto/Roboto-Slab-Regular.woff) format("woff");
   font-display: block;
 }
 @font-face {
   font-family: Roboto Slab;
   font-style: normal;
   font-weight: 700;
-  src: url(fonts/Roboto-Slab-Bold.woff2) format("woff2"),
-    url(fonts/Roboto-Slab-Bold.woff) format("woff");
+  src: url(fonts/roboto/Roboto-Slab-Bold.woff2) format("woff2"),
+    url(fonts/roboto/Roboto-Slab-Bold.woff) format("woff");
   font-display: block;
 }
 
