@@ -22,7 +22,7 @@
     "lint": "eslint json-viewer test",
     "test": "jest"
   },
-  "devDependencies": {
+  "_devDependencies": {
     "eslint": "^7.28.0",
     "eslint-plugin-jest": "^24.3.6",
     "jest": "^27.0.4",
