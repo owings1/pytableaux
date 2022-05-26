@@ -1,5 +1,3 @@
-.. include:: /_inc/attn-doc-freewheel.rsti
-
 **********
 Python API
 **********
@@ -57,8 +55,6 @@ The following is an example for building a proof in {@CPL} for Modus Ponens::
 
     # Build a tableau for the logic CPL
     tableau = Tableau('CPL', argument).build()
-    # This one should be valid!
-    assert proof.valid
 
     # Output the proof
     text = TabWriter('text').write(tableau)
