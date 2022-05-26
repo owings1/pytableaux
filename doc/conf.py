@@ -206,6 +206,8 @@ rst_epilog = """
 
 
 rst_prolog = """
+.. include:: /_inc/attn-doc-freewheel.rsti
+
 .. testsetup:: *
 
     import logics
