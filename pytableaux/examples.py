@@ -23,6 +23,14 @@ Example arguments
 
 from __future__ import annotations
 
+from types import MappingProxyType as MapProxy
+
+from pytableaux import logics
+from pytableaux.errors import check
+from pytableaux.lang import Argument, Parser, Predicates
+from pytableaux.proof import Tableau
+from pytableaux.tools import closure
+
 __all__ = (
     'aliases',
     'argument',
@@ -33,11 +41,9 @@ __all__ = (
     'titles',
 )
 
+EMPTY = ()
 
-from pytableaux import tools
-from pytableaux.lang import Argument, Parser, Predicates
-
-data = tools.MapProxy({
+data = MapProxy({
     'Addition'                         : (('a',), 'Aab'),
     'Affirming a Disjunct 1'           : (('Aab', 'a'), 'b'),
     'Affirming a Disjunct 2'           : (('Aab', 'a'), 'Nb'),
@@ -47,7 +53,7 @@ data = tools.MapProxy({
     'Biconditional Elimination 1'      : (('Bab', 'a'), 'b'),
     'Biconditional Elimination 2'      : (('Bab', 'Na'), 'Nb'),
     'Biconditional Elimination 3'      : (('NBab', 'a'), 'Nb'),
-    'Biconditional Identity'           : 'Baa',
+    'Biconditional Identity'           : (EMPTY, 'Baa'),
     'Biconditional Introduction 1'     : (('a', 'b'), 'Bab'),
     'Biconditional Introduction 2'     : (('Na', 'Nb'), 'Bab'),
     'Biconditional Introduction 3'     : (('a', 'Nb'), 'NBab'),
@@ -55,15 +61,15 @@ data = tools.MapProxy({
     'Conditional Contraposition 1'     : (('Uab',), 'UNbNa'),
     'Conditional Contraposition 2'     : (('UNbNa',), 'Uab'),
     'Conditional Equivalence'          : (('Uab',), 'Uba'),
-    'Conditional Identity'             : 'Uaa',
+    'Conditional Identity'             : (EMPTY, 'Uaa'),
     'Conditional Modus Ponens'         : (('Uab', 'a'), 'b'),
     'Conditional Modus Tollens'        : (('Uab', 'Nb'), 'Na'),
-    'Conditional Pseudo Contraction'   : 'UUaUabUab',
-    'Conditional Pseudo Contraposition': 'BUabUNbNa',
+    'Conditional Pseudo Contraction'   : (EMPTY, 'UUaUabUab'),
+    'Conditional Pseudo Contraposition': (EMPTY, 'BUabUNbNa'),
     'Conjunction Commutativity'        : (('Kab',), 'Kba'),
     'Conjunction Elimination'          : (('Kab',), 'a'),
     'Conjunction Introduction'         : (('a', 'b'), 'Kab'),
-    'Conjunction Pseudo Commutativity' : 'BKabKba',
+    'Conjunction Pseudo Commutativity' : (EMPTY, 'BKabKba'),
     'DeMorgan 1'                       : (('NAab',), 'KNaNb'),
     'DeMorgan 2'                       : (('NKab',), 'ANaNb'),
     'DeMorgan 3'                       : (('KNaNb',), 'NAab'),
@@ -74,7 +80,7 @@ data = tools.MapProxy({
     'DeMorgan 8'                       : (('NANaNb',), 'Kab'),
     'Denying the Antecedent'           : (('Cab', 'Na'), 'b'),
     'Disjunction Commutativity'        : (('Aab',), 'Aba'),
-    'Disjunction Pseudo Commutativity' : 'BAabAba',
+    'Disjunction Pseudo Commutativity' : (EMPTY, 'BAabAba'),
     'Disjunctive Syllogism'            : (('Aab', 'Nb'), 'a'),
     'Disjunctive Syllogism 2'          : (('ANab', 'Nb'), 'Na'),
     'Existential from Universal'       : (('SxFx',), 'VxFx'),
@@ -86,21 +92,21 @@ data = tools.MapProxy({
     'Extracting the Consequent'        : (('Cab',), 'b'),
     'Identity Indiscernability 1'      : (('Fm', 'Imn'), 'Fn'),
     'Identity Indiscernability 2'      : (('Fm', 'Inm'), 'Fn'),
-    'Law of Excluded Middle'           : 'AaNa',
+    'Law of Excluded Middle'           : (EMPTY, 'AaNa'),
     'Law of Non-contradiction'         : (('KaNa',), 'b'),
     'Material Biconditional Elimination 1' : (('Eab', 'a'), 'b'),
     'Material Biconditional Elimination 2' : (('Eab', 'Na'), 'Nb'),
     'Material Biconditional Elimination 3' : (('NEab', 'a'),  'Nb'),
-    'Material Biconditional Identity'      : 'Eaa',
+    'Material Biconditional Identity'      : (EMPTY, 'Eaa'),
     'Material Biconditional Introduction 1': (('a', 'b'), 'Eab'),
     'Material Contraction'             : (('CaCab',), 'Cab'),
     'Material Contraposition 1'        : (('Cab',), 'CNbNa'),
     'Material Contraposition 2'        : (('CNbNa',), 'Cab'),
-    'Material Identity'                : 'Caa',
+    'Material Identity'                : (EMPTY, 'Caa'),
     'Material Modus Ponens'            : (('Cab', 'a'), 'b'),
     'Material Modus Tollens'           : (('Cab', 'Nb'), 'Na'),
-    'Material Pseudo Contraction'      : 'CCaCabCab',
-    'Material Pseudo Contraposition'   : 'ECabCNbNa',
+    'Material Pseudo Contraction'      : (EMPTY, 'CCaCabCab'),
+    'Material Pseudo Contraposition'   : (EMPTY, 'ECabCNbNa'),
     'Modal Platitude 1'                : (('Ma',), 'Ma'),
     'Modal Platitude 2'                : (('La',), 'La'),
     'Modal Platitude 3'                : (('LMa',), 'LMa'),
@@ -108,7 +114,7 @@ data = tools.MapProxy({
     'Modal Transformation 2'           : (('NMNa',), 'La'),
     'Modal Transformation 3'           : (('NLa',), 'MNa'),
     'Modal Transformation 4'           : (('MNa',), 'NLa'),
-    'Necessity Distribution 1'         : 'ULUabULaLb',
+    'Necessity Distribution 1'         : (EMPTY, 'ULUabULaLb'),
     'Necessity Distribution 2'         : (('LUab',), 'ULaLb'),
     'Necessity Elimination'            : (('La',), 'a'),
     'NP Collapse 1'                    : (('LMa',), 'Ma'),
@@ -118,26 +124,26 @@ data = tools.MapProxy({
     'Quantifier Interdefinability 2'   : (('NVxFx',), 'SxNFx'),
     'Quantifier Interdefinability 3'   : (('SxFx',), 'NVxNFx'),
     'Quantifier Interdefinability 4'   : (('NSxFx',), 'VxNFx'),
-    'Reflexive Inference 1'            : 'CLaa',
-    'S4 Conditional Inference 1'       : 'ULaLLa',
+    'Reflexive Inference 1'            : (EMPTY, 'CLaa'),
+    'S4 Conditional Inference 1'       : (EMPTY, 'ULaLLa'),
     'S4 Conditional Inference 2'       : (('LUaMNb', 'Ma'), 'MNb'),
-    'S4 Material Inference 1'          : 'CLaLLa',
+    'S4 Material Inference 1'          : (EMPTY, 'CLaLLa'),
     'S4 Material Inference 2'          : (('LCaMNb', 'Ma'), 'MNb'),
-    'S5 Conditional Inference 1'       : 'UaLMa',
-    'S5 Material Inference 1'          : 'CaLMa',
-    'Self Identity 1'                  : 'Imm',
-    'Self Identity 2'                  : 'VxIxx',
-    'Serial Inference 1'               : 'ULaMa',
+    'S5 Conditional Inference 1'       : (EMPTY, 'UaLMa'),
+    'S5 Material Inference 1'          : (EMPTY, 'CaLMa'),
+    'Self Identity 1'                  : (EMPTY, 'Imm'),
+    'Self Identity 2'                  : (EMPTY, 'VxIxx'),
+    'Serial Inference 1'               : (EMPTY, 'ULaMa'),
     'Serial Inference 2'               : (('La',), 'Ma'),
     'Simplification'                   : (('Kab',), 'a'),
     'Syllogism'                        : (('VxCFxGx', 'VxCGxHx'), 'VxCFxHx'),
-    'Triviality 1'                     : 'a',
+    'Triviality 1'                     : (EMPTY, 'a'),
     'Triviality 2'                     : (('a',), 'b'),
     'Universal Predicate Syllogism'    : (('VxVyCFxFy', 'Fm'), 'Fn'),
     'Universal from Existential'       : (('SxFx',), 'VxFx'),
 })
 
-aliases = tools.MapProxy({
+aliases = MapProxy({
     'Triviality 1': ('TRIV', 'TRIV1'),
     'Triviality 2': ('TRIV2',),
     'Law of Excluded Middle': ('LEM',),
@@ -182,7 +188,7 @@ titles = tuple(sorted(data))
 
 preds = Predicates(((0,0,1), (1,0,1), (2,0,1)))
 
-@tools.closure
+@closure
 def argument():
 
     index = {}
@@ -199,53 +205,36 @@ def argument():
 
     parsearg = Parser('polish', preds.copy()).argument
 
-    def argument(key: str|Argument) -> Argument:
+    def argument(key):
         if isinstance(key, Argument):
             return key
-        if not isinstance(key, str):
-            raise TypeError(key)
+        key = check.inst(key, str)
         title = index[key.lower()]
         if title not in cache:
-            info = data[title]
-            if isinstance(info, tuple):
-                premises, conclusion = info
-            else:
-                premises = None
-                conclusion = info
+            premises, conclusion = data[title]
             cache[title] = parsearg(conclusion, premises, title = title)
         return cache[title]
 
     return argument
 
-@tools.closure
-def arguments():
+def arguments(*keys):
+    if not len(keys):
+        keys = titles
+    return tuple(map(argument, keys))
 
-    def arguments(*keys: str|Argument) -> tuple[Argument, ...]:
-        if not len(keys):
-            keys = titles
-        return tuple(map(argument, keys))
 
-    return arguments
+def tabiter(*logics, build = True, grouparg = False, registry = logics.registry, **opts):
+    if not len(logics):
+        logics = tuple(registry.all())
+    if grouparg:
+        it = ((logic, title) for title in titles for logic in logics)
+    else:
+        it = ((logic, title) for logic in logics for title in titles)
+    for logic, title in it:
+        tab = Tableau(logic, argument(title), **opts)
+        if build:
+            tab.build()
+        yield tab
 
-@tools.closure
-def tabiter():
 
-    from pytableaux.logics import registry
-    from pytableaux.proof.tableaux import Tableau
-
-    def tabiter(*logics, build = True, grouparg = False, registry = registry, **opts):
-        if not len(logics):
-            logics = tuple(registry.all())
-        if grouparg:
-            it = ((logic, title) for title in titles for logic in logics)
-        else:
-            it = ((logic, title) for logic in logics for title in titles)
-        for logic, title in it:
-            tab = Tableau(logic, argument(title), **opts)
-            if build:
-                tab.build()
-            yield tab
-
-    return tabiter
-
-del(tools, )
+del(closure, EMPTY, MapProxy, Parser, Predicates, logics)
