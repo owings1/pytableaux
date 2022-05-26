@@ -389,9 +389,14 @@ class WebApp(EventEmitter):
         warns  = {}
         debugs = []
 
+        view_version = form_data.get('v')
+        if view_version not in self.view_versions:
+            view_version = config['view_version']
+
         view = 'feedback'
         view_data = dict(self.base_view_data,
-            form_data = form_data
+            form_data = form_data,
+            view_version = view_version,
         )
 
         is_submitted = False
@@ -772,6 +777,7 @@ class WebApp(EventEmitter):
     def render(self, view: str, *args, **kw) -> str:
         return self.get_template(view).render(*args, **kw)
 
+    @staticmethod
     def get_remote_ip(req: Request) -> str:
         # TODO: use proxy forward header
         return req.remote.ip
