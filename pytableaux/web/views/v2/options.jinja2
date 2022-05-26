@@ -1,0 +1,88 @@
+<div class="fieldset options">
+<div class="input select">
+    <label for="input_notation">Input Notation</label>
+    <select id="input_notation" name="input_notation">
+        {% for notn in Notation -%}
+            <option value="{{ notn.name|e }}" {{-
+                helper.select_opt(form_data, 'input_notation', notn.name)
+            }}>
+                {{- notn.name|e -}}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="input select">
+    <label for="output_format">Output Format</label>
+    <select id="output_format" name="output_format">
+        {% for format in output_formats -%}
+            <option value="{{ format|e }}" {{- 
+                helper.select_opt(form_data, 'output_format', format) 
+            }}>
+                {{- format|e -}}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="input select">
+    <label for="output_notation">Output Notation</label>
+    <select id="output_notation" name="output_notation">
+        {% for notn in Notation -%}
+            <option value="{{ notn.name|e }}" {{- 
+                helper.select_opt(form_data, 'output_notation', notn.name) 
+            }}>
+                {{- notn.name|e -}}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="input select">
+    <label for="output_charset">Output Charset</label>
+    <select id="output_charset" name="output_charset">
+        {% for charset in output_charsets -%}
+            <option value="{{ charset|e }}" {{- 
+                helper.select_opt(form_data, 'output_charset', charset) 
+            }}>
+                {{- charset|e -}}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="input">
+    <label for="options_show_controls">Show Controls</label>
+    <input type="checkbox" id="options_show_controls" name="show_controls"
+        value="1" {{- helper.checkbox_default(form_data, 'show_controls') }}/>
+</div>
+<div class="input">
+    <label for="options_build_models">Build Models</label>
+    <input type="checkbox" id="options_build_models" name="build_models" class="options"
+        value="1" {{- helper.checkbox_default(form_data, 'build_models') }}/>
+</div>
+<div class="input">
+    <label for="options_color_open">Color Open</label>
+    <input type="checkbox" id="options_color_open" name="color_open" class="options"
+        value="1" {{- helper.checkbox_default(form_data, 'color_open') }}/>
+</div>
+<div class="input">
+    <label for="options_max_steps">Max Steps</label>
+    <input type="number" id="options_max_steps" name="max_steps" min="-1" max="100" size="5"
+        value="{{ form_data.max_steps|e }}"/>
+</div>
+{% if is_debug -%}
+<div class="input">
+    <label for="options_rank_optimizations">Rank Optimizations</label>
+    <input type="checkbox" id="options_rank_optimizations" name="rank_optimizations"
+        value="1" {{- helper.checkbox_default(form_data, 'rank_optimizations') }}/>
+</div>
+<div class="input">
+    <label for="options_group_optimizations">Group Optimizations</label>
+    <input type="checkbox" id="options_group_optimizations" name="group_optimizations"
+        value="1" {{- helper.checkbox_default(form_data, 'group_optimizations') }}/>
+</div>
+<div class="input">
+    <label for="options_debug_off">Disable Debug</label>
+    <input type="checkbox" id="options_debug_off" name="debug" value="0"/>
+</div>
+{% else -%}
+<input type="hidden" name="debug" value="0"/>
+{% endif -%}
+</div>

@@ -1,28 +1,60 @@
+.. _CPL:
+
 *******************************
 CPL - Classical Predicate Logic
 *******************************
 
 Classical Predicate Logic (CPL) is the standard bivalent logic with
-values **T** and **F**, commonly interpretated as 'true' and 'false',
+values V{T} and V{F}, commonly interpretated as 'true' and 'false',
 respectively.
 
 .. contents:: :local:
 
-.. automodule:: logics.cpl
+.. automodule:: pytableaux.logics.cpl
 
     Semantics
     =========
 
+    .. _cpl-model:
+
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. autoclass:: pytableaux.logics.cpl::Model.Value()
+            :members: F, T
+            :undoc-members:
+            :noindex:
+
+        .. include:: include/cpl/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            .. truth-tables::
 
         .. method:: value_of_predicated(sentence)
 
-            A sentence for predicate `P` is true iff the tuple of the parameters
-            is in the extension of `P`.
+            The value of predicated sentences are handled in terms of their *extension*:
 
-        .. automethod:: is_sentence_opaque(sentence)
+                | A sentence with *n*-ary predicate :math:`P` over parameters :m:`!{ntuple}`
+                | has the value V{T} iff :m:`!{ntuple}` is in the extension of :math:`P`.
+
+
+        .. Note:: CPL does not give a treatment of the quantifiers. Quantified sentences
+            are treated as opaque (uninterpreted). See {@CFOL} for quantification.
+              
+
+    .. _cpl-consequence:
+
+    Consequence
+    -----------
+
+    **Logical Consequence** is defined in the standard way:
+
+        .. include:: include/cpl/m.consequence.rst
+
+    .. _cfol-system:
 
     Tableaux System
     ===============
@@ -30,15 +62,6 @@ respectively.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
-    .. _cpl-consequence:
-
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined in the standard way:
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.

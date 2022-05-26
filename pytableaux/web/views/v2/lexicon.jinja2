@@ -1,0 +1,95 @@
+<div id="lexicons-content" class="lexicons panebox">
+    <div class="heading">Symbols</div>
+    <div class="panel">
+        {%- for notn in Notation -%}
+            {%- set table = ParseTable.fetch(notn) -%}
+            <div class="lexicon hidden notation-{{ notn.name|e }}">
+                <span class="label">Operators</span>
+                <table class="operator-symbols">
+                    {%- for oper in Operator -%}
+                        <tr>
+                            <td><span class="operator-symbol">{{ table.char(LexType.Operator, oper)|e }}</span></td>
+                            <td class="html-ref-symbol">{{ lwh(oper) }}</td>
+                            <td>{{ oper.label|e }}</td>
+                        </tr>
+                    {%- endfor %}
+                </table>
+                <div class="clear"></div>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="panel">
+        {%- for notn in Notation -%}
+            {%- set table = ParseTable.fetch(notn) -%}
+            <div class="lexicon hidden notation-{{ notn.name|e }}">
+                <span class="label">Atomics</span>
+                <ul class="item-symbols">
+                    {%- for char in table.chars[LexType.Atomic] -%}
+                        <li>{{ char|e }}</li>
+                    {%- endfor %}
+                </ul>
+                <span class="label">Constants</span>
+                <ul class="item-symbols">
+                    {%- for char in table.chars[LexType.Constant] -%}
+                        <li>{{ char|e }}</li>
+                    {%- endfor %}
+                </ul>
+                <span class="label">Variables</span>
+                <ul class="item-symbols">
+                    {%- for char in table.chars[LexType.Variable] -%}
+                        <li>{{ char|e }}</li>
+                    {%- endfor %}
+                </ul>
+                <span class="label">Quantifiers</span>
+                <table class="operator-symbols quantifier-symbols">
+                    {%- for quantifier in Quantifier -%}
+                        <tr>
+                            <td>
+                                <span class="operator-symbol quantifier-symbol">
+                                    {{- table.char(LexType.Quantifier, quantifier)|e -}}
+                                </span>
+                            </td>
+                            <td class="html-ref-symbol">{{ lwh(quantifier) }}</td>
+                            <td>{{ quantifier.name|e }}</td>
+                        </tr>
+                    {%- endfor %}
+                </table>
+                <div class="clear"></div>
+            </div>
+        {%- endfor %}
+    </div>
+    <div class="panel">
+        <span class="label">Predicates</span>
+        <table id="predicates_input_table" class="predicates predicate-symbols">
+            {%- set PredSys = Predicate.System -%}
+            {%- for pred in PredSys -%}
+                <tr class="system-predicate">
+                    <td>
+                        {%- for notn in Notation -%}
+                            {%- set symbol = ParseTable.fetch(notn).char(PredSys, pred) -%}
+                            {%- set subscript = pred.subscript -%}
+                            <span class="lexicon predicate-symbol notation-{{ notn.name|e }} hidden">
+                                {{- symbol|e }}{% if pred.subscript > 0 %}<sub>{{ pred.subscript|e }}</sub>{% endif -%}
+                            </span>
+                        {% endfor %}
+                    </td>
+                    <td class="html-ref-symbol">{{ lwh(pred) }}</td>
+                    <td>{{ pred.name|e }}</td>
+                </tr>
+            {%- endfor -%}
+            {%- for label in form_data['user_predicate_symbols[]'] %}
+                {%- set index, subscript = label.split('.')|map('int') -%}
+                {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
+                {%- call helper.predicate(index, subscript, arity) %}
+                    {%- for notn in Notation -%}
+                        {%- set table = ParseTable.fetch(notn) -%}
+                        {{- helper.predicate_symbol(notn.name, table.char(LexType.Predicate, index), subscript) }}
+                    {% endfor -%}
+                {%- endcall -%}
+            {%- endfor -%}
+        </table>
+        <div><a href="javascript:" class="add-predicate tooltip" title="Add a predicate"></a></div>
+        <div class="clear"></div>
+    </div>
+    <div class="clear"></div>
+</div>

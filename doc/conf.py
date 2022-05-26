@@ -6,57 +6,248 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+from __future__ import annotations
+import os
 import sys
-sys.path.insert(1, '../src')
+from typing import TYPE_CHECKING
 
-import docutil, logic
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
-copyright = logic.copyright
+# =================================================================================
+# =================================================================================
 
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.viewcode',
-]
-
-autodoc_member_order = 'bysource'
-
+addpath = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..')
+)
+if addpath not in sys.path:
+    sys.path.insert(1, addpath)
+os.environ['DOC_MODE'] = 'True'
+from pytableaux import package
 # General information about the project.
-project = u'pytableaux'
-
+project = package.name
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = logic.version
+version = package.version.short
 # The full version, including alpha/beta/rc tags.
-release = version
+release = package.version.full
+copyright = package.copyright
 
-pygments_style = 'colorful'
-#pygments_style = 'xcode'
-#pygments_style = 'material'
+# =================================================================================
+# =================================================================================
 
-# html_theme = 'default'
-html_theme = 'sphinx_rtd_theme'
+# Add any Sphinx extension module names here, as strings. They can be
+# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
+# ones.
+extensions = [
+    'sphinx.ext.doctest',
+    'sphinx.ext.viewcode',
+    # ,
+]
+
+# =================================================================================
+# =================================================================================
+
+
+# -------------------
+# -  Napoleon
+# -------------------
+#
+# https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#configuration
+#  
+#
+extensions.insert(1, 'sphinx.ext.napoleon')
+
+napoleon_numpy_docstring = False
+napoleon_preprocess_types = True
+napoleon_attr_annotations = True
+napoleon_type_aliases = {
+
+}
+
+# -------------------
+# -  Autodoc
+# -------------------
+#
+# https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
+#
+#
+extensions.append('sphinx.ext.autodoc')
+
+# autodoc_class_signature = 'separated'
+
+autodoc_inherit_docstrings = True
+"""
+This value controls the docstrings inheritance. If set to True the
+docstring for classes or methods, if not explicitly set, is inherited
+from parents.
+
+The default is True.
+"""
+
+autodoc_typehints = 'none'
+"""
+This value controls how to represent typehints. The setting takes the
+following values:
+
+* 'signature' - Show typehints in the signature (default)
+
+* 'description' - Show typehints as content of the function or method.
+    The typehints of overloaded functions or methods will still be
+    represented in the signature.
+
+* 'none' - Do not show typehints
+
+* 'both' - Show typehints in the signature and as content of the
+    function or method.
+
+Overloaded functions or methods will not have typehints included in
+the description because it is impossible to accurately represent all
+possible overloads as a list of parameters.
+"""
+
+autodoc_typehints_format = 'short'
+"""
+This value controls the format of typehints. The setting takes the
+following values:
+
+  * 'fully-qualified' - Show the module name and its name of typehints
+
+  * 'short' - Suppress the leading module names of the typehints
+     (ex. io.StringIO -> StringIO) (default)
+
+New in version 4.4.
+
+Changed in version 5.0: The default setting was changed to 'short'
+"""
+
+
+autodoc_member_order = 'bysource' # 'groupwise'
+
+autodoc_default_options = {
+    'exclude-members': 'for_json',
+    # 'no-value': True,
+    # 'special-members': '__init__',
+
+    # For modules, __all__ will be respected when looking for members
+    # unless you give the ignore-module-all flag option.
+    # Without ignore-module-all, the order of the members will also
+    # be the order in __all__.
+    'ignore-module-all': True,
+}
+
+auto_skip_enum_value = True
+
+
+
+# -----------------------------
+# - sphinx_toolbox More Autodoc
+# -----------------------------
+#
+# https://sphinx-toolbox.readthedocs.io/en/latest/extensions/more_autodoc/overloads.html
+#
+
+# extensions.append('sphinx_toolbox.more_autodoc.overloads')
+
+overloads_location = [ 'signature',
+                       'top',
+                      'bottom'][  2 ]
+
+
+# -------------------
+# - Custom Extension
+# -------------------
+#
+#
+extensions.append('pytableaux.tools.doc')
+
+
+
+copy_file_tree = [
+    (
+        f'{package.root}/web/static/css/fonts/charmonman',
+        '_static/fonts/charmonman',
+    ),
+]
+
+# -------------------
+# -  Intersphinx
+# -------------------
+#
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
+#
+#
+extensions.append('sphinx.ext.intersphinx')
+
+intersphinx_mapping = dict(
+    python = (
+        'https://docs.python.org/3',
+        # local cache of https://docs.python.org/3/objects.inv
+        os.environ.get('ISPX_PY3_OBJINV'),
+    )
+)
+
+# -------------------
+# -  Prolog/Epilog
+# -------------------
+#
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-rst_prolog
+#
+#
+rst_epilog = """
+.. |[+]| unicode:: 0x2295
+.. |[-]| unicode:: 0x2296
+.. |(x)| unicode:: 0x2297
+"""
+
+
+rst_prolog = """
+.. include:: /_inc/attn-doc-freewheel.rsti
+
+.. testsetup:: *
+
+    import logics
+    from pytableaux.lang import *
+    from pytableaux.proof import *
+"""
+
+# -------------------
+# -  Smartquote
+# -------------------
+# 
+# https://docutils.sourceforge.io/docs/user/smartquotes.html
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes
+#
+#
+
+smartquotes = False
+
+# -------------------
+# -  HTML
+# -------------------
+# 
+# https://github.com/readthedocs/sphinx_rtd_theme
+# 
+
+html_theme = 'sphinx_rtd_theme' # 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {}
 
-# https://github.com/readthedocs/sphinx_rtd_theme
 if html_theme == 'sphinx_rtd_theme':
-    html_theme_options.update({
-        'style_external_links': True,
-    })
+    # https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html
+    html_theme_options.update(
+        # style_external_links = True,
+    )
 
-# If true, SmartyPants will be used to convert quotes and dashes to
-# typographically correct entities.
-html_use_smartypants = False
+# Others tried: material, xcode
+pygments_style = 'colorful'
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 html_show_sphinx = False
@@ -64,18 +255,28 @@ html_show_sphinx = False
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
-html_static_path = ['../src/www/static', 'res']
+html_static_path = [
+    '_static',
+    f'{package.root}/proof/templates/html/static',
+]
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'pytableauxdoc'
 
+# =================================================================================
+# =================================================================================
+
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build', 'templates/*']
+exclude_patterns = [
+    '_build',
+    'node_modules',
+    '**/include/*',
+]
 
 # Add any paths that contain templates here, relative to this directory.
-#templates_path = ['_templates']
+templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -83,19 +284,31 @@ source_suffix = '.rst'
 # The master toctree document.
 master_doc = 'index'
 
+
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
 add_module_names = False
 
-def sphinxcontrib_autodoc_filterparams(fun, param):
-    raise NotImplementedError()
 
-def setup(app):
-    docutil.init_sphinx(app, {
-        'html_theme': html_theme,
-    })
+cssflag = {
+    'doc.css'         : True,
+    'doc.default.css' : html_theme == 'default',
+    'doc.rtd.css'     : html_theme == 'sphinx_rtd_theme',
+    'tableau.css'     : True,
+}
 
-def foo():
+exclude_patterns.extend(
+    file
+    for file, flag in cssflag.items()
+        if not flag
+)
+
+def setup(app: Sphinx):
+    for file, flag in cssflag.items():
+        if flag:
+            app.add_css_file(file)
+
+if False:
     pass
     # -------------------------------------------------------------------
     # The encoding of source files.

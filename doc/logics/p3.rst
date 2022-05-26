@@ -1,23 +1,84 @@
-************************
-P3 - Post 3-valued logic
-************************
+.. _P3:
 
-Emil Post's three-valued logic (**T**, **F**, and **N**) has a deviant negation
+***********************************
+L{P3} - Post 3-valued logic
+***********************************
+
+.. figure:: /res/img/Emil_Leon_Post.jpg
+    :alt: Photo of Emil Post
+    :align: right
+    :scale: 50 %
+    :target: https://en.wikipedia.org/wiki/File:Emil_Leon_Post.jpg
+
+    Emil Post
+
+Emil Post's three-valued logic (V{T}, V{F}, and V{N}) has a deviant negation
 that performs a *cyclic shift* in value. The result is a system much different
-from classical logic, as well as more well-known many-valued systems.
+from :ref:`CFOL`, as well as more well-known many-valued systems.
 
 .. contents:: :local:
 
-.. automodule:: logics.p3
+.. automodule:: pytableaux.logics.p3
 
     Semantics
     =========
 
+    .. _p3-model:
+
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. autoclass:: pytableaux.logics.p3::Model.Value()
+            :members: F, N, T
+            :undoc-members:
 
-        .. automethod:: value_of_universal(sentence)
+        .. include:: include/fde/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined
+            by the values of its operands according to the following tables.
+
+            Most notable is the behavior of negation. Disjunction :s:`V` is the same
+            as in :ref:`K3 <K3>`, but conjunction is quite different, which is defined
+            in terms of disjunction in the standard way as :s:`~(~A V ~B)`.
+
+            .. truth-tables::
+
+        .. method:: value_of_predicated(sentence)
+
+            Predication is given the same treatment as :ref:`K3 <k3-model>`,
+            defined in terms of a predicate's *extenstion* and *anti-extension*.
+
+            .. include:: include/k3/m.predication.rst
+
+        .. method:: value_of_existential(sentence)
+
+            Existential quantification is defined just as in :ref:`K3 <k3-model>`:
+
+            .. include:: include/k3/m.existential.rst
+
+        .. method:: value_of_universal(sentence)
+
+            .. Note:: L{P3} did not originally define quantification. This is a novel
+               construction.
+
+            The :s:`L` quantifier is thought of like `generalized conjunction`.
+            Given that :s:`A & B` is defined as :s:`~(~A V ~B)`, we interpret :s:`L`
+            in the following way. Take the set of values of the sentence resulting
+            from the substitution of the variable with each constant. Then apply
+            the negation function to each of those values. Then take the maximum
+            of those values (the `generalized disjunction`), and apply the negation
+            function to that maximum value. The result is the value of the universal
+            sentence.
+
+    Consequence
+    -----------
+
+    Logical consequence is defined just like in L{K3}:
+    
+    .. include:: include/k3/m.consequence.rst
+
+    .. _p3-system:
 
     Tableaux System
     ===============
@@ -25,16 +86,8 @@ from classical logic, as well as more well-known many-valued systems.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just like in `CPL`_ and `K3`_:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
 
     References
     ==========
@@ -44,16 +97,7 @@ from classical logic, as well as more well-known many-valued systems.
 
     - Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
 
-    - `Wikipedia entry on Emil Post <https://en.wikipedia.org/wiki/Emil_Leon_Post>`_.
+.. _Introduction to a General Theory of Elementary Propositions:
+    https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
 
-    - Here is a picture of Emil Leon Post (from `Wikimedia Commons <https://en.wikipedia.org/wiki/File:Emil_Leon_Post.jpg>`_
-      in the public domain):
-
-      .. raw:: html
-
-          <img src="../_static/img/Emil_Leon_Post.jpg">
-
-.. _CPL: cpl.html
-.. _K3: k3.html
-.. _Introduction to a General Theory of Elementary Propositions: https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
 .. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en

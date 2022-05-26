@@ -1,17 +1,37 @@
+.. _MH:
+
 ******************************
 MH - Paracomplete Hybrid Logic
 ******************************
 
 .. contents:: :local:
 
-.. automodule:: logics.mh
+.. automodule:: pytableaux.logics.mh
 
     Semantics
     =========
 
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. autoclass:: pytableaux.logics.mh::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
+        .. include:: include/fde/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            .. truth-tables::
+
+    Consequence
+    -----------
+
+    Logical consequence is defined just like in L{K3}:
+    
+    .. include:: include/k3/m.consequence.rst
 
     Tableaux System
     ===============
@@ -19,21 +39,9 @@ MH - Paracomplete Hybrid Logic
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just like in `CPL`_ and `K3`_:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
-
-
-
-.. _K3: k3.html
-.. _CPL: cpl.html
 
 ..
     - Maximal Weakly-Intuitionistic Logics: https://www.jstor.org/stable/20015812

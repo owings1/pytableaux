@@ -1,33 +1,82 @@
-*********************
-LP - Logic of Paradox
-*********************
+.. _LP:
 
-LP is a 3-valued logic (**T**, **F**, and **B**). It can be understood as `FDE`_ without
-the **N** value.
+*****************************
+L{LP} - Logic of Paradox
+*****************************
+
+L{LP} is a 3-valued logic (V{T}, V{F}, and V{B}). It can be understood as
+{@FDE} without the V{N} value.
 
 .. contents:: :local:
 
-.. automodule:: logics.lp
+.. automodule:: pytableaux.logics.lp
 
     Semantics
     =========
 
+    .. _lp-model:
+
+    Model
+    -----
+
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+      .. autoclass:: pytableaux.logics.lp::Model.Value()
+          :members: F, B, T
+          :undoc-members:
 
-        .. method:: value_of_predicated(sentence)
+      .. autoattribute:: designated_values
 
-            A sentence with predicate `P` with parameters `<p,...>` has the value:
+      .. autoattribute:: extensions
 
-            * **T** iff `<p,...>` is in the extension of `P` and not in the anti-extension of `P`.
-            * **F** iff `<p,...>` is in the anti-extension of `P` and not in the extension of `P`.
-            * **B** iff `<p,...>` is in both the extension and anti-extension of `P`.
+      .. autoattribute:: anti_extensions
 
-            Note, unlike `FDE`_, there is an exhaustion constraint on a predicate's
-            extension/anti-extension. This means that `<p,...>` must be in either the
-            extension and the anti-extension of `P`. Like `FDE`_, there is no exclusion
-            restraint.
+      .. autoattribute:: atomics
+
+    .. _lp-truth-tables:
+
+    Truth Tables
+    ------------
+
+    .. include:: include/truth_table_blurb.rst
+
+    .. truth-tables::
+
+    .. _lp-predication:
+
+    Predication
+    -----------
+
+    A sentence with predicate `P` with parameters !{ntuple} is assigned a
+    value as follows:
+
+    * V{T} iff !{ntuple} is in the extension of `P` and not in the
+      anti-extension of `P`.
+
+    * V{F} iff !{ntuple} is in the anti-extension of `P` and not
+      in the extension of `P`.
+
+    * V{B} iff !{ntuple} is in both the extension and anti-extension
+      of `P`.
+
+    Note, unlike {@FDE}, there is an *exhaustion constraint* on a predicate's
+    extension/anti-extension. This means that !{ntuple} must be in either the
+    extension and the anti-extension of `P`. Like L{FDE}, there is no exclusion
+    restraint.
+
+    .. _lp-consequence:
+
+    Consequence
+    -----------
+
+    **Logical Consequence** is defined, just as in {@FDE}, in terms of *designated*
+    values V{T} and V{B}:
+
+    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a
+      *desginated* value (V{T} or V{B}) are models where *C* also has a *designated*
+      value.
+
+    .. _lp-system:
 
     Tableaux System
     ===============
@@ -35,43 +84,37 @@ the **N** value.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. _lp-rules:
+
+    .. autoclass:: TabRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined, just as in `FDE`_, in terms of *designated* values **T**
-    and **B**:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
-      (**T** or **B**) are models where *C* also has a *designated* value.
 
     Notes
     =====
 
-    Some notable features of LP include:
+    Some notable features of L{LP} include:
 
-    * Everything valid in `FDE`_ is valid in LP.
+    * Everything valid in {@FDE} is valid in L{LP}.
 
-    * Like `FDE`_, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
+    * Like {@FDE}, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
 
-    * Unlike `FDE`_, LP has some logical truths. For example, the Law of Excluded Middle (:s:`(A V ~A)`),
-      and Conditional Identity (:s:`(A $ A)`).
+    * Unlike {@FDE}, L{LP} has some logical truths. For example, the Law of Excluded
+      Middle (:s:`(A V ~A)`), and Conditional Identity (:s:`(A $ A)`).
 
-    * Many classical validities fail, such as Modus Ponens, Modus Tollens, and Disjunctive Syllogism.
+    * Many classical validities fail, such as Modus Ponens, Modus Tollens,
+      and Disjunctive Syllogism.
 
     * DeMorgan laws are valid.
 
     References
     ==========
     
-    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
-      United Kingdom, Oxford University Press, 2003.
+    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and
+      Many-valued Logic. United Kingdom, Oxford University Press, 2003.
 
     For futher reading see:
 
-    * `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
+    * `Stanford Encyclopedia entry on paraconsistent logic
+      <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
 
-.. _FDE: fde.html
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en

@@ -1,0 +1,71 @@
+<div class="tableau-controls ui-controls"{#
+    #} data-tableau-id="tableau_{{ tableau.id|e }}"{#
+    #} id="view_{{ tableau.id|e }}">
+    {% set tree = tableau.tree %}
+    <ul class="details">
+        <li>
+            <div class="prop">Auto</div>
+            <div class="value auto-opts ui-controlgroup">
+                <a class="button auto-width active" data-shortcut-key="W" href="javascript:"{#
+                    #} title="Auto-adjust width"></a>
+                <a class="button auto-scroll active" data-shortcut-key="S" href="javascript:"{#
+                    #} title="Auto-scroll"></a>
+            </div>
+        </li>
+        <li>
+            <div class="prop">Scroll</div>
+            <div class="value">
+                <a class="button scroll-center" data-shortcut-key="$" href="javascript:"{#
+                    #} title="Scroll to center"></a>
+            </div>
+        </li>
+        <li>
+            <div class="prop">Width<span class="width-adjust-display"></span></div>
+            <div class="value width-adjusts ui-controlgroup">
+                <a class="button width-stretch" data-shortcut-key="@" href="javascript:"{#
+                    #} title="Stretch width for no wrapping"></a>
+                <a class="button width-reset" data-shortcut-key="|" href="javascript:"{#
+                    #} title="Set width to 100%"></a>
+                <a class="button width-minus-minus" data-shortcut-key="{" href="javascript:"{#
+                    #} title="Decrease width by 25%"></a>
+                <a class="button width-minus" data-shortcut-key="[" href="javascript:"{#
+                    #} title="Decrease width by 10%"></a>
+                <a class="button width-plus" data-shortcut-key="]" href="javascript:"{#
+                    #} title="Increase width by 20%"></a>
+                <a class="button width-plus-plus" data-shortcut-key="}" href="javascript:"{#
+                    #} title="Increase width by 25%"></a>
+            </div>
+        </li>
+        <li>
+            <div class="prop">Text<span class="font-adjust-display"></span></div>
+            <div class="value ui-controlgroup">
+                <a class="button font-minus" data-shortcut-key="-" href="javascript:"{#
+                    #} title="Decrease font size"></a>
+                <a class="button font-reset" data-shortcut-key="=" href="javascript:"{#
+                    #} title="Reset font size"></a>
+                <a class="button font-plus" data-shortcut-key="+" href="javascript:"{#
+                    #} title="Increase font size"></a>
+            </div>
+        </li>
+    </ul>
+    <ul class="details">
+        <li>
+            <div class="prop">Branch Filter</div>
+            <div class="value ui-controlgroup">
+                {%- set can_filter = tree.has_open and tree.has_closed %}
+                <a class="button branch-filter all active {{- ' disabled' if not can_filter }}"{#
+                    #} data-shortcut-key="A" href="javascript:" title="Show all branches">All</a>
+                <a class="button branch-filter open {{- ' disabled' if not can_filter }}"{#
+                    #} data-shortcut-key="O" href="javascript:" title="Show only open branches">Open</a>
+                <a class="button branch-filter closed {{- ' disabled' if not can_filter }}"{#
+                    #} data-shortcut-key="C" href="javascript:" title="Show only closed branches">Closed</a>
+            </div>
+        </li>
+        <li>
+            <div class="prop">Color</div>
+            <div class="value">
+                <input type="checkbox" class="color-open" {{- ' checked' if is_color -}} {{- ' disabled' if not tree.has_open }}/>
+            </div>
+        </li>
+    </ul>
+</div>

@@ -1,0 +1,270 @@
+/**
+ * pytableaux, a multi-logic proof generator.
+ * Copyright (C) 2014-2022 Doug Owings.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * pytableaux - css for html tableau writer
+ */
+ @font-face {
+    font-family: "Charmonman";
+    font-weight: normal;
+    src: url("fonts/charmonman/Charmonman-Regular.ttf") format("truetype");
+}
+@font-face {
+    font-family: "Charmonman"; 
+    font-weight: bold;
+    src: url("fonts/charmonman/Charmonman-Bold.ttf") format("truetype");
+}
+.tableau {
+    font-family: 'lucida grande',verdana,helvetica,arial,sans-serif;
+    margin: auto;
+}
+.tableau .hidden {
+    display: none;
+}
+.tableau.drag-scroll {
+    -webkit-user-select: none;
+    -moz-user-select: moz-none;
+    -ms-user-select: none;
+    user-select: none;
+}
+/* Controls */
+.tableau .node.highlight > .node-props, 
+.tableau .structure.closed.highlight-closed > .node-segment > .node:last-child::after {
+    background-color: yellow;
+}
+/* Node Highlighting */
+.tableau .node.highlight-ticked > .node-props.ticked {
+    border-width: 2px;
+    padding: 2px;
+    color: #dddddd;
+}
+.tableau-controls .invalid,
+.tableau-models .model .is-countermodel.no,
+.tableau.color-open .structure.has-open > .node-segment {
+    color: red;
+}
+.tableau.color-open .structure.has-open.has-closed > .node-segment {
+    color: #e808ff;
+}
+/* Selected branch indicator, at the leaf. Only show if controls or models options are enabled */
+
+/* .tableau.with-controls .structure.leaf.inspected > .node-segment::after {
+    width: 16px;
+    height: 16px;
+    background-size: 16px 16px;
+    background-image: url(/static/img-v1/inspected-black.svg);
+    content: "";
+} */
+
+.tableau-controls .valid,
+.tableau-models .model .is-countermodel.yes {
+    color: green;
+}
+.tableau-controls .branch-filter.active:not(.disabled),
+.tableau-controls .auto-opts .button.active {
+    background-color: #1abc9c;
+    border: 1px solid #39d6b7;
+    color: white;
+}
+.tableau-controls .step-rule-name {
+    text-decoration: none;
+    cursor: pointer;
+}
+.tableau-controls > ul.details,
+.proof-stats > ul.details,
+.tableau-models ul.details {
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-right: 3px;
+    display: inline-block;
+    vertical-align: top;
+}
+.tableau-controls > ul.details > li,
+.tableau-models .model > ul.details li,
+.proof-stats > ul.details > li {
+    display: table-cell;
+    margin: 0;
+}
+.tableau-models .model > ul ul li {
+    border-left: none;
+}
+.tableau-controls > ul.details > li > .prop,
+.proof-stats > ul.details > li > .prop {
+    padding-bottom: 3px;
+    border-bottom: 1px solid #cccccc;
+}
+.proof-stats .argument-output .premise:last-child {
+    border-bottom: 1px solid #000000;
+    padding-bottom: 3px;
+    margin-bottom: 1px;
+}
+.tableau-controls > ul.details > li > .value {
+    margin-top: 3px;
+}
+.tableau-models .model > ul > li.in-summary {
+    display: block;
+}
+.tableau-models .model ul.details li .prop {
+    font-weight: bold;
+}
+.tableau-models .model ul.details li .value {
+    font-weight: normal;
+}
+.tableau-models.single-branch .model {
+    display: block;
+}
+.tableau-models .model,
+.tableau-models.inspected .select-a-branch {
+    display: none;
+}
+.tableau-models .model .symbol,
+.tableau-models .model .tuple > .values::before
+.tableau-models .model .tuple > .values::after,
+.tableau-models .model .set.non-empty > .values::before,
+.tableau-models .model .set.non-empty > .values::after {
+    font-family: "Charmonman", "cursive";
+}
+.tableau-models .model .set > .symbol::after {
+    margin-left: 5px;
+}
+.tableau-models .model .map > .values > li > .value > .symbol::after {
+    margin-left: 10px;
+}
+.tableau-models .model .set > .symbol::after,
+.tableau-models .model .map > .values > li > .value > .symbol::after,
+.tableau-models .model .list > .symbol::after,
+.tableau-models .model .value.world > .symbol::after {
+    content: "=";
+    margin-right: 5px;
+}
+.tableau-models .model .values .world {
+    font-style: italic;
+}
+.tableau-models .model .set > .values,
+.tableau-models .model .set > .values > .tuple,
+.tableau-models .model .set > .values > .tuple > .values {
+    display: inline;
+}
+.tableau-models .model .set > .symbol,
+.tableau-models .model .map > .values > li > .value > .symbol,
+.tableau-models .model .list > .symbol,
+.tableau-models .model .list > ul.values > li > .symbol {
+    font-weight: bold;
+    font-size: 14px;
+}
+.tableau-models .model .set > .values::before,
+.tableau-models .model .set > .values::after {
+    font-size: 14px;
+}
+.tableau-models .model .set.non-empty > .values::before {
+    content: "{";
+}
+.tableau-models .model .set.non-empty > .values::after {
+    content: "}";
+}
+.tableau-models .model .set.empty > .values::after,
+.tableau-models .model .function.empty::after {
+    content: "\2205";
+}
+.tableau-models .model .list.empty > .symbol::after {
+    content: " = \2205";
+}
+.tableau-models .model .tuple > .values::before {
+    content: "⟨";
+}
+.tableau-models .model .tuple > .values::after {
+    content: "⟩";
+}
+.tableau-models .model .function > ul.values,
+.tableau-models .model .map > ul.values,
+.tableau-models .model .list > ul.values {
+    margin: 0;
+    padding: 0;
+    padding-inline-start: 0;
+}
+.tableau-models .model .function > ul.values li,
+.tableau-models .model .map > ul.values li,
+.tableau-models .model .list > ul.values li  {
+    display: block;
+    padding: 0;
+    margin: 0;
+}
+.tableau-models .model .map > ul.values > li > .prop {
+    font-style: italic;
+    font-weight: bold;
+    font-size: 12px;
+}
+.tableau-models .model .map > ul.values > li {
+    margin-top: 5px;
+}
+.tableau-models .model .map > ul.values > li > .value {
+    padding-left: 10px;
+}
+.tableau-models .model .truth_value {
+    font-weight: bold;
+}
+.tableau-models .model .function > ul.values > li > .input,
+.tableau-models .model .function > ul.values > li > .output,
+.tableau-models .model .function > ul.values > li > .output > .set {
+    display: inline;
+}
+.tableau-models .model .function > ul.values > li > .input::before {
+    content: '(';
+}
+.tableau-models .model .function > ul.values > li > .input::after {
+    content: ') = ';
+}
+
+/* .tableau-controls .button.width-reset {
+    padding-top: 5px;
+    padding-bottom: 6px;
+}
+.tableau-controls .button.auto-scroll {
+    font-size: 0.7em;
+} */
+/* .tableau-models {
+    max-width: 300px;
+} */
+/* .tableau-models .message {
+    padding: 10px;
+} */
+/* .tableau-models .model .function.extension > ul.values > li > .symbol {
+    font-size: 18px;
+    font-weight: bold;
+} */
+/* .tableau-models .model .function.extension > ul.values > li {
+    padding-top: 4px;
+} */
+/* .tableau-models .model ul.values.frame > li {
+    border: 1px solid #cccccc;
+    border-top: 3px solid #bbbbbb;
+    border-left: 2px solid #cccccc;
+    padding: 5px 0 5px 5px;
+} */
+/* .tableau-models .model ul.values.frame > li > .symbol {
+    font-size: 17px;
+} */
+/* .tableau-models .model .list.frames > ul.values > li {
+    margin-bottom: 10px;
+} */
+/* Models */
+/*
+.tableau-models {
+    z-index: 1;
+}
+.tableau-models .collapser-wrapper.uncollapsed {
+    min-width: 200px;
+} */

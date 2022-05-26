@@ -1,0 +1,83 @@
+{#
+ #  Write a TreeStruct, recursive.
+ #}
+{%- macro sw(s, is_child = False) -%}
+    <div id="structure_{{ s.id }}" class="structure
+        {{- ' root' if not is_child -}}
+        {{- ' has-open' if s.has_open -}}
+        {{- ' has-closed' if s.has_closed -}}
+        {{- ' leaf' if s.leaf -}}
+        {{- ' only-branch' if s.is_only_branch -}}
+        {{- ' closed' if s.closed -}}
+        {{- ' open' if s.open -}}"{#
+        #} data-depth="{{ s.depth }}"{#
+        #} data-width="{{ s.width }}"{#
+        #} data-left="{{ s.left }}"{#
+        #} data-right="{{ s.right }}"{#
+        #} data-step="{{ s.step }}"
+        {{- ' data-closed-step="' ~ s.closed_step ~ '"' if s.closed -}}
+        {{- ' data-branch-id="' ~ s.branch_id ~ '"' if s.branch_id -}}
+        {{- ' data-model-id="' ~ s.model_id ~ '"' if s.model_id }}>
+        <div class="node-segment">
+        {% if is_child %}
+            <div class="vertical-line" data-step="{{ s.step }}"></div>
+        {% endif %}
+        {% for node in s.nodes -%}
+            {{ nw(node, s.ticksteps[loop.index0]) -}}
+        {% endfor -%}
+        </div>
+        {% if s.children|length %}
+            <div class="vertical-line" data-step="{{ s.branch_step }}"></div>
+            {% set width = 100 * s.balanced_line_width %}
+            {% set margin = 100 * s.balanced_line_margin %}
+            <div class="horizontal-line"{#
+            #} style="width: {{ width }}%; margin-left: {{ margin }}%;"{#
+            #} data-step="{{ s.branch_step }}"></div>
+            {% for child in s.children %}
+                {% set child_width = (100 / s.width) * child.width %}
+                <div class="child-wrapper"{#
+                #} style="width: {{ child_width }}%;"{#
+                #} data-step="{{ child.step }}"{#
+                #} data-current-width-pct="{{ child_width }}%">
+                    {{ sw(child, True) }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% if not is_child %}
+            <div class="clear"></div>
+        {% endif %}
+    </div>
+{%- endmacro -%}
+
+{#
+ #  Write a node.
+ #}
+{%- macro nw(node, tickstep) -%}
+    <div class="node {{- ' ticked' if node.ticked }}"{#
+        #} id="node_{{ node.id }}"{#
+        #} data-node-id="{{ node.id }}"{#
+        #} data-step="{{ node.step }}"{#
+        #}{{- ' data-ticked-step="' ~ tickstep ~ '"' if node.ticked }}>
+        <span class="node-props {{- ' ticked' if node.ticked}}">
+            {%- if node.has('sentence') -%}
+                {% set sentence_raw = lw(node.sentence) -%}
+                <span class="sentence">{{ sentence_raw if lw.charset == 'html' else sentence_raw|e }}</span>
+                {%- if node.has('world') -%}
+                    <span class="world">, w<sub>{{ node.world }}</sub></span>
+                {%- endif -%}
+            {%- endif -%}
+            {%- if node.has('designated') -%}
+                <span class="designation {{ 'designated' if node.designated else 'undesignated' }}"></span>
+            {%- endif -%}
+            {%- if node.is_access -%}
+                <span class="access">w<sub>{{ node.world1 }}</sub>Rw<sub>{{ node.world2 }}</sub></span>
+            {%- endif -%}
+            {%- if node.has('ellipsis') -%}
+                <span class="ellipsis"></span>
+            {%- endif -%}
+            {%- if node.has('is_flag') -%}
+                <span class="flag {{ node.flag|e }}" title="{{ node.info|e }}"></span>
+            {%- endif -%}
+        </span>
+    </div>
+{%- endmacro %}

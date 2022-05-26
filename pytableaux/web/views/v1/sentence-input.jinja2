@@ -1,0 +1,38 @@
+<div class="input select example-argument">
+    <select id="example_argument">
+        <option value="">Load example argument ...</option>
+        {% for title in example_args -%}
+            <option value="{{ title|e }}">{{ title|e }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="premises">
+    {%- if 'premises[]' in form_data -%}
+        {%- for premise in form_data['premises[]'] -%}
+            {%- set error_label = 'Premise ' ~ loop.index -%}
+            {%- if errors and error_label in errors -%}
+                {{ helper.premise(loop.index, premise, 'bad', errors[error_label].message) }}
+            {%- elif premise -%}
+                {{ helper.premise(loop.index, premise, 'good') }}
+            {%- endif -%}
+        {%- endfor -%}
+    {% endif %}
+</div>
+<div class="sentence input conclusion">
+    <label for="conclusion">Conclusion</label>
+    <input id="conclusion" class="sentence conclusion" type="text"
+        name="conclusion" value="{{ form_data.conclusion|e }}" />
+    {%- set status = '' -%}
+    {%- set message = '' -%}
+    {%- if errors and 'Conclusion' in errors -%}
+        {%- set status = 'bad' -%}
+        {%- set message = errors['Conclusion'].message -%}
+    {%- elif 'conclusion' in form_data -%}
+        {%- set status = 'good' -%}
+    {%- endif %}
+    <span class="status {{ status }}" title="{{ message|e }}"></span>
+</div>    
+<div class="input submit">
+    <input type="submit" value="Go"/>
+    <div class="clear-argument"><a href="javascript:" id="clear_argument">Clear</a></div>
+</div>

@@ -1,24 +1,57 @@
+.. _GO:
+
 ***********************
 GO - Gappy Object Logic
 ***********************
 
-GO is a 3-valued logic (**T**, **F**, and **N**) with non-standard readings of
+GO is a 3-valued logic (V{T}, V{F}, and V{N}) with non-standard readings of
 disjunction and conjunction, as well as different behavior of the quantifiers.
 
 .. contents:: :local:
 
-.. automodule:: logics.go
+.. automodule:: pytableaux.logics.go
 
     Semantics
     =========
 
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. autoclass:: pytableaux.logics.go::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
+        .. include:: include/fde/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+              The value of a sentence with a truth-functional operator is determined
+              by the values of its operands according to the following tables.
+
+              .. truth-tables::
+
+              Note that, given the tables above, conjunctions and disjunctions
+              always have a classical value (V{T} or V{F}). This means that
+              only atomic sentences (with zero or more negations) can have the
+              non-classical V{N} value.
+
+              This property of "classical containment" means, that we can define
+              a conditional operator that satisfies Identity :s:`A $ A`. It also
+              allows us to give a formal description of a subset of sentences
+              that obey all principles of classical logic. For example, although
+              the Law of Excluded Middle fails for atomic sentences :s:`A V ~A`,
+              complex sentences -- those with at least one binary connective --
+              do obey the law: :s:`(A V A) V ~(A V A)`.
 
         .. automethod:: value_of_existential(sentence)
 
         .. automethod:: value_of_universal(sentence)
+
+    Consequence
+    -----------
+
+    Logical consequence is defined just like in L{K3}:
+    
+    .. include:: include/k3/m.consequence.rst
 
     Tableaux System
     ===============
@@ -26,48 +59,33 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. cssclass:: tableauxrules
+
+    .. autoclass:: TabRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just like in `CPL`_ and `K3`_:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
-
     Notes
-    =====
+    -----
 
-    - GO has some similarities to `K3`_. Material Identity :s:`A $ A` and the
+    - GO has some similarities to L{K3}. Material Identity :s:`A $ A` and the
       Law of Excluded Middle :s:`A V ~A` fail.
 
-    - Unlike `K3`_, there are logical truths, e.g. The Law of Non Contradiction :s:`~(A & ~A)`.
+    - Unlike L{K3}, there are logical truths, e.g. The Law of Non-Contradiction
+      :s:`~(A & ~A)`.
 
     - GO contains an additional conditional operator besides the material conditional,
-      which is similar to `L3`_. However, this conditional is *non-primitive*, unlike `L3`_,
-      and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
+      which is similar to L{L3}. However, this conditional is *non-primitive*,
+      unlike L{L3}, and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
 
-    - This logic was developed as part of this author's dissertation, `Indeterminacy and Logical Atoms`_
-      at the University of Connecticut, under `Professor Jc Beall`_.
+    .. rubric:: Further Reading
 
+    - Doug Owings (2012). `Indeterminacy and Logical Atoms`_. *Ph.D. Thesis, University
+      of Connecticut*.
 
-    Further Reading
-    ===============
-
-    - Doug Owings (2012). `Indeterminacy and Logical Atoms`_. *Ph.D. Thesis, University of Connecticut*.
-
-    - `Colin Caret`_. (2017). `Hybridized Paracomplete and Paraconsistent Logics`_. *The Australasian 
-      Journal of Logic*, 14.
+    - `Colin Caret`_. (2017). `Hybridized Paracomplete and Paraconsistent Logics`_.
+      *The Australasian  Journal of Logic*, 14.
 
 .. _Professor Jc Beall: http://entailments.net
 .. _Colin Caret: https://sites.google.com/view/colincaret
 .. _Indeterminacy and Logical Atoms: https://github.com/owings1/dissertation/raw/master/output/dissertation.pdf
-.. _K3: k3.html
-.. _K3 Predication: k3.html#predication
-.. _L3: l3.html
-.. _B3E: b3e.html
-.. _FDE: fde.html
-.. _CPL: cpl.html
 .. _Hybridized Paracomplete and Paraconsistent Logics: https://ojs.victoria.ac.nz/ajl/article/view/4035/3588

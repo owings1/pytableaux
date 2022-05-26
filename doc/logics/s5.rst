@@ -1,3 +1,5 @@
+.. _S5:
+
 **************************
 S5 - S5 Normal Modal Logic
 **************************
@@ -6,13 +8,63 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
 
 .. contents:: :local:
 
-.. automodule:: logics.s5
+.. automodule:: pytableaux.logics.s5
 
     Semantics
     =========
 
+    An S5 model uses :ref:`K Frames <k-frame>` to hold information about each world.
+
+    .. autoclass:: pytableaux.logics.k.Frame
+        :noindex:
+
+        .. autoattribute:: world
+            :noindex:
+
+        .. autoattribute:: atomics
+            :noindex:
+
+        .. autoattribute:: extensions
+            :noindex:
+
     .. autoclass:: Model
-        :members:
+
+        .. autoclass:: pytableaux.logics.s5::Model.Value()
+            :members: F, T
+            :undoc-members:
+
+        .. include:: include/k/m.attributes.rst
+
+    Universal Access
+    ----------------
+
+    S5 includes both the *reflexivity* restriction of :ref:`T <T>`, and the
+    *transitivity* restriction of :ref:`S4 <S4>`:
+
+    .. include:: include/t/m.reflexivity.rst
+
+    .. include:: include/s4/m.transitivity.rst
+
+    S5 adds an additional *symmetric* restriction on the access relation for models:
+
+    .. cssclass:: definiendum smallcaps
+
+    Symmetry
+
+    .. cssclass:: definiens
+
+    In every model, for each world :m:`w` and each world :m:`w'`, if :m:`<w,w'>`
+    is in the access relation, then so is :m:`<w',w>`.
+
+    This is witnessed in the tableaux system through the :ref:`Symmetric Rule
+    <symmetric-rule>`.
+
+    Consequence
+    -----------
+
+    Logical Consequence is defined just as in :ref:`K <K>`:
+
+    .. include:: include/k/m.consequence.rst
 
     Tableaux System
     ===============
@@ -20,15 +72,5 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just as in `K`_:
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      at *w0* are models where *C* also has the value **T** at *w0*.
-
-.. _K: k.html

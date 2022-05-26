@@ -1,0 +1,18 @@
+{% set stats = tab.stats %}
+{% set logic = tab.logic %}
+{% set desc = [logic.name, logic.Meta.title]|join(' - ') %}
+{% set col1len = 17 %}
+{% set col2len = desc|length %}
+{% set f = "%-" + ((1 + col2len)|string) + 's' %}
+{% set rowlen = col1len + col2len + 2 %}
+{% set rowline = '-' * rowlen %}
++{{ '-' * rowlen }}+
+| Summary {{ ' ' * (rowlen - 9) }}|
+|{{ '=' * rowlen }}|
+|          Logic | {{ f | format(desc) }}|
+|         Result | {{ f | format(stats.result) }}|
+|       Branches | {{ f | format(stats.branches) }}|
+|  Open Branches | {{ f | format(stats.open_branches) }}|
+|          Nodes | {{ f | format(stats.distinct_nodes) }}|
+|          Steps | {{ f | format(stats.steps) }}|
++{{ '-' * rowlen }}+

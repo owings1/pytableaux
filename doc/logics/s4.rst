@@ -1,3 +1,5 @@
+.. _S4:
+
 **************************
 S4 - S4 Normal Modal Logic
 **************************
@@ -6,13 +8,56 @@ Normal modal logic with reflexive and transitive access relation.
 
 .. contents:: :local:
 
-.. automodule:: logics.s4
+.. automodule:: pytableaux.logics.s4
 
     Semantics
     =========
 
+    An S4 model uses :ref:`K Frames <k-frame>` to hold information about each world.
+
+    .. autoclass:: pytableaux.logics.k.Frame
+        :noindex:
+
+        .. autoattribute:: world
+            :noindex:
+
+        .. autoattribute:: atomics
+            :noindex:
+
+        .. autoattribute:: extensions
+            :noindex:
+
+    .. _s4-model:
+
     .. autoclass:: Model
-        :members:
+
+        .. autoclass:: pytableaux.logics.s4::Model.Value()
+            :members: F, T
+            :undoc-members:
+
+        .. include:: include/k/m.attributes.rst
+
+    Reflexivity & Transitivity
+    --------------------------
+
+    S4 includes the *reflexivity* restriction of :ref:`T <T>` on the access
+    relation for models:
+
+    .. include:: include/t/m.reflexivity.rst
+
+    S4 adds an additional *transitivity* restriction on models:
+
+    .. include:: include/s4/m.transitivity.rst
+
+    This is witnessed in the tableaux system through the :ref:`Transitive Rule
+    <transitive-rule>`.
+
+    Consequence
+    -----------
+
+    Logical Consequence is defined just as in :ref:`K <K>`:
+
+    .. include:: include/k/m.consequence.rst
 
     Tableaux System
     ===============
@@ -20,15 +65,5 @@ Normal modal logic with reflexive and transitive access relation.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just as in `K`_:
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      at *w0* are models where *C* also has the value **T** at *w0*.
-
-.. _K: k.html

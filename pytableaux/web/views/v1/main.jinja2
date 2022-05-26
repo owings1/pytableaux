@@ -1,0 +1,89 @@
+{%- extends 'layout.jinja2' -%}
+{%- import 'v1/helper.jinja2' as helper -%}
+{%- block inline_css -%}
+    {% if is_proof and resp_data %}
+        {{ resp_data.attachments.get('css') }}
+    {% endif %}
+{%- endblock %}
+{%- block content -%}
+    <script type="text/template" id="premiseTemplate">
+        {{ helper.premise('{n}', '{value}', '{status}', '{message}') }}
+    </script>
+    <script type="text/template" id="predicateRowTemplate">
+        {% call helper.predicate_row('{index}', '{subscript}', '{name}', '{arity}') %}
+            {symbol_html}
+        {% endcall %}
+    </script>
+    <div class="pt-app">
+        {% if errors %}
+            {% include 'errors.jinja2' %}
+        {% endif %}
+        {% if warns %}
+            {% include 'warns.jinja2' %}
+        {% endif %}
+        <form class="argument" action="/" method="post">
+            <input type="hidden" name="api-json"/>
+            <input type="hidden" name="v" value="{{ view_version }}"/>
+            <div class="fieldset logic">
+                <div class="heading collapsed">
+                    <h2 class="legend">Logic</h2>
+                    <span class="heading-summary" id="logic-heading-description"></span>
+                </div>
+                <div class="fieldset-contents hidden">
+                    {% include 'v1/select-logic.jinja2' %}
+                    <div class="clear"></div>
+                </div>
+            </div>
+            <div class="fieldset argument">
+                <div class="heading {{- helper.collapsed_if(is_proof) }}">
+                    <h2 class="legend">Argument</h2>
+                    <span class="heading-summary" id="argument-heading-rendered"></span>
+                </div>
+                <div class="fieldset-contents {{- helper.hidden_if(is_proof) }}">
+                    <div class="left" id="sentences-input-panel">
+                        {% include 'v1/sentence-input.jinja2' %}
+                    </div>
+                    <div class="collapser-wrapper" id="lexicons-wrapper">
+                        {% include 'v1/lexicon.jinja2' %}
+                    </div>
+                </div>
+                <div class="clear"></div>
+            </div>        
+            <div class="fieldset output">
+                <div class="heading collapsed">
+                    <h2 class="legend">Output</h2>
+                    <span class="heading-summary" id="output-heading-description"></span>
+                </div>
+                <div class="fieldset-contents hidden">
+                    {% include 'v1/output-options.jinja2' %}
+                </div>
+            </div>
+        </form>
+        <div class="clear"></div>
+    </div>
+    {% if is_proof %}
+        <hr>
+        <div class="evaluation">
+            <div class="summary">
+                <h3 class="left">Proof Result</h3>
+                <div class="result">
+                    <span class="{{ resp_data.tableau.result|lower|e }}">{{ resp_data.tableau.result|e }}</span>
+                </div>
+                <div class="clear"></div>
+            </div>
+            <div class="proof-output">
+                {% if resp_data.writer.format == 'html' %}
+                    {% if form_data.show_controls %}
+                        {% include 'v1/controls.jinja2' %}
+                        {% if True and form_data.get('options.models') %}
+                            {% include 'v1/models.jinja2' %}
+                        {% endif %}
+                    {% endif %}
+                    {{ resp_data.tableau.body }}
+                {% else %}
+                    <pre>{{ resp_data.tableau.body|e }}</pre>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{%- endblock -%}

@@ -1,94 +1,133 @@
-************************
-K3 - Strong Kleene Logic
-************************
+.. _K3:
+
+********************************
+L{K3} - Strong Kleene Logic
+********************************
 
 .. contents:: :local:
 
-K3 is a three-valued logic (:m:`T`, :m:`F`, and :m:`N`). It can be understood
-as {@FDE} without the :m:`B` value. :m:`v.B`
+L{K3} is a three-valued logic (V{T}, V{F}, and V{N}). It can be understood
+as {@FDE} without the V{B} value.
 
-.. automodule:: logics.k3
+.. automodule:: pytableaux.logics.k3
 
     Semantics
     =========
 
+    .. _k3-model:
+
     .. autoclass:: Model
 
-        .. autoattribute:: truth_values
+      .. autoclass:: pytableaux.logics.k3::Model.Value()
+          :members: F, N, T
+          :undoc-members:
 
-        .. autoattribute:: designated_values
+      .. include:: include/fde/m.attributes.rst
 
-        .. autoattribute:: extensions
+    .. _k3-truth-tables:
 
-        .. autoattribute:: anti_extensions
+    Truth Tables
+    ------------
 
-        .. autoattribute:: atomics
+    .. include:: include/truth_table_blurb.rst
 
-        .. method:: value_of_operated(sentence)
+    .. truth-tables::
+      :operators: Negation, Conjunction, Disjunction
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+    The `Material Conditional` :s:`>` is definable in terms of disjunction
+    in the usual way:
+    
+    .. sentence::
+    
+      A > B := ~A V B
 
-            //truth_tables//k3//
+    Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+    and :s:`&`:
 
-        .. method:: value_of_predicated(sentence)
+    .. sentence::
 
-            Like {@FDE}, K3 predication defines a predicate's *extenstion*
-            and *anti-extension*. The value of a predicated sentence is determined as follows:
+      A < B := (A > B) & (B > A)
 
-            A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
-            has the value:
+    .. truth-tables::
+      :operators: MaterialConditional, MaterialBiconditional
+ 
+    L{FDE} does not have separate `Assertion` or `Conditional` operators,
+    but we include tables and rules for them, for cross-compatibility.
+    
+    .. _k3-predication:
 
-            * :m:`T` iff :m:`ntuple` is in the *extension* of :math:`P` and
-              not in the *anti-extension* of :math:`P`.
+    Predication
+    -----------
 
-            * :m:`F` iff :m:`ntuple` is in the *anti-extension* of :math:`P`
-              and not in the *extension* of :math:`P`.
+    Like L{FDE}, L{K3} predication defines a predicate's *extenstion* and
+    *anti-extension*. The value of a predicated sentence is determined as
+    follows:
 
-            * :m:`N` iff :m:`ntuple` is in **neither** the extension nor the 
-              anti-extension of :math:`P`.
+    .. include:: include/k3/m.predication.rst
 
-            Note, unlike {@FDE}, there is an *exclusivity constraint*
-            on a predicate's extension/anti-extension. This means that :m:`ntuple`
-            cannot be in **both** the extension and the anti-extension of `P`.
+    Note, unlike L{FDE}, there is an *exclusivity constraint*
+    on a predicate's extension/anti-extension. This means that !{ntuple}
+    cannot be in *both* the extension and the anti-extension of :m:`P`.
 
-            Like {@FDE}, there is no *exhaustion constraint*: there are permissible K3 models
-            where some tuple :m:`ntuple` is in **neither** the extension nor the
-            anti-extension of some predicate :math:`P`.
+    Like L{FDE}, there is no *exhaustion constraint*: there are
+    permissible L{K3} models where some tuple !{ntuple} is in *neither*
+    the extension nor the anti-extension of some predicate :m:`P`.
+
+    .. _k3-quantification:
+
+    Quantification
+    --------------
+
+    The quantifiers :s:`X` and :s:`L` are interpreted similary to
+    {@FDE <fde-quantification>}, without the V{B} value.
+
+    Existential
+    ^^^^^^^^^^^
+
+    .. include:: include/k3/m.existential.rst
+
+    Universal
+    ^^^^^^^^^
+
+    .. include:: include/k3/m.universal.rst
+
+    .. _k3-consequence:
+
+    Consequence
+    -----------
+
+    **Logical Consequence** uses the same formulation as {@CPL consequence}:
+
+    .. include:: include/k3/m.consequence.rst
+
+    Alternatively, we can use the formulation of {@FDE consequence} in terms of
+    *designated* values, since L{K3} has only the designated value V{T}.
 
     Tableaux System
     ===============
 
+    .. _k3-system:
+
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. _k3-rules:
+
+    Rules
+    -----
+
+    .. autoclass:: TabRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just like in :ref:`CPL <cpl-consequence>`:
-
-        | :math:`C` is a **Logical Consequence** of :math:`A` iff,
-        | in all models where the value of :math:`A`is :m:`T`,
-        | then value of :math:`C` is also :m:`T`.
-
-    Alternatively, we can use the :ref:`FDE formulation <fde-consequence>`
-    in terms of *designated* values, since K3 has only the designated value :m:`T`.
-
     Notes
-    =====
+    -----
 
-    Some notable features of K3 include:
+    Some notable features of L{K3} include:
 
-    * Everything valid in {@FDE} is valid in K3.
+    * L{K3} is an :term:`extension of` L{FDE}.
 
-    * Like {@FDE}, the Law of Excluded Middle, and Conditional Identity :s:`(A $ A)` fail.
+    * Like L{FDE}, the :term:`Law of Excluded Middle`, and
+      :term:`Conditional Identity` fail.
 
-    * Some cassical validities, such as *Modus Ponens*, *Modus Tollens*, *Disjunctive Syllogism*,
-      and *DeMorgan* laws, are valid.
-
-
-.. _FDE: fde.html
-.. _CPL: cpl.html
+    * Some cassical validities are valid, such as :term:`Modus Ponens`,
+      :term:`Modus Tollens`, :term:`Disjunctive Syllogism`, and :term:`DeMorgan laws`.

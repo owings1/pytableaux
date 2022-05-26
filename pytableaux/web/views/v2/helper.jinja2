@@ -1,0 +1,49 @@
+{#
+    v2
+#}
+{%- macro premise(num, value='', status='', message='') %}
+    {% set marker = 'P' ~ num|e -%}
+    <tr class="input sentence premise" data-premise-num="{{ num|e }}">
+        <td class="status {{ status|e }}" title="{{ message|e }}">
+            <span class="premise-marker">{{marker}}</span>
+        </td>
+        <td>
+            <input class="sentence premise" type="text" name="premises[]" value="{{ value|e }}"/>
+        </td>
+        <td>
+            <a class="del-premise bgicon tooltip" href="javascript:" title="Delete premise"></a>
+        </td>
+    </tr>
+{%- endmacro -%}
+
+{% macro predicate_symbol(notn, symbol, subscript) -%}
+    <span class="predicate-symbol lexicon notation-{{notn|e}} hidden">
+        {{- symbol|e }}{% if subscript > 0 %}<sub>{{ subscript|e }}</sub>{% endif -%}
+    </span>
+{%- endmacro %}
+
+{%- macro predicate(index, subscript, arity='') %}
+    <tr class="input predicate">
+        <td>
+            {{- caller() -}}
+            <input type="hidden" class="predicate-symbol" name="user_predicate_symbols[]" value="{{ index|e }}.{{ subscript|e }}"/>
+        </td>
+        <td colspan="2">
+            <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity|e }}"/>
+            <span class="arity-label">arity</span>
+            <a href="javascript:" class="right del-predicate" title="Delete predicate"></a>
+        </td>
+    </tr>
+{%- endmacro -%}
+
+{% macro select_opt(form_data, key, value, defaults = {}) -%}
+    {{- ' selected="selected"' if form_data.get(key, defaults.get(key)) == value }}
+{%- endmacro %}
+
+{% macro checkbox_default(form_data, key, defaults = {}) -%}
+    {% if key in form_data or defaults[key] %} checked="checked"{% endif %}
+{%- endmacro %}
+
+{% macro hidden_if(value) -%}
+    {% if value %} hidden{% endif %}
+{%- endmacro %}
