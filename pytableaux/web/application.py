@@ -27,21 +27,25 @@ __all__ = ('WebApp',)
 import mimetypes
 import os.path
 from datetime import datetime
-from types import MappingProxyType as MapProxy
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import TYPE_CHECKING, Any, ClassVar, Collection, Mapping, Sequence
+from types import MappingProxyType as MapProxy
+from typing import TYPE_CHECKING, Any, ClassVar, Mapping
 
-import cherrypy as chpy
+import cherrypy
+import cherrypy._cpdispatch
 import jinja2
 import prometheus_client as prom
 import simplejson as json
-from pytableaux import examples, logics, package, web
-from pytableaux.errors import RequestDataError, TimeoutError
-from pytableaux.lang import (LexType, Operator, Predicate, Quantifier, Argument, Predicates, ParseTable, LexWriter,
-                                 TriCoords)
-from pytableaux.proof import tableaux, writers
+from cherrypy import expose, NotFound, HTTPError
+from pytableaux import examples, logics, package, proof, web
+from pytableaux.errors import RequestDataError, ProofTimeoutError
+from pytableaux.lang import (Argument, LexType, LexWriter, Operator,
+                             ParseTable, Predicate, Predicates, Quantifier,
+                             TriCoords)
+from pytableaux.proof import Tableau, writers
 from pytableaux.tools.events import EventEmitter
+from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.mappings import EMPTY_MAP, dmap
 from pytableaux.tools.timing import StopWatch
 from pytableaux.web import Wevent
@@ -57,8 +61,6 @@ EMPTY = ()
 
 class WebApp(EventEmitter):
 
-    view_versions: ClassVar[frozenset[str]] = frozenset({'v1', 'v2'})
-    "Available index view versions."
 
     config: dict[str, Any]
     "Instance config."
@@ -84,15 +86,16 @@ class WebApp(EventEmitter):
     base_view_data: Mapping[str, Any]
     "Instance base view data, merged with class defaults."
 
-    lw_cache: ClassVar[Mapping[Notation, Mapping[str, LexWriter]]]
-    jsapp_data: ClassVar[Mapping[str, Any]]
-    api_defaults: ClassVar[Mapping[str, Any]]
-    form_defaults: ClassVar[Mapping[str, Any]]
-    view_data_defaults: ClassVar[Mapping[str, Any]]
-    config_defaults: ClassVar[Mapping[str, Any]]
-    routes_defaults: ClassVar[Mapping[str, Mapping[str, Any]]]
-
+    api_defaults: ClassVar[Mapping]
+    config_defaults: ClassVar[Mapping]
+    form_defaults: ClassVar[Mapping]
     is_class_setup: ClassVar[bool] = False
+    jsapp_data: ClassVar[Mapping]
+    lw_cache: ClassVar[Mapping[Notation, Mapping[str, LexWriter]]]
+    routes_defaults: ClassVar[Mapping[str, Mapping]]
+    view_data_defaults: ClassVar[Mapping]
+    view_version_default = 'v2'
+    view_versions: ClassVar[qsetf[str]] = qsetf({'v2'})
 
     @classmethod
     def setup_class_data(cls):
@@ -130,7 +133,7 @@ class WebApp(EventEmitter):
             source_href = package.repository.url,
             version     = package.version.display,
             view_path   = f'{package.root}/web/views',
-            view_version = 'v2',
+            view_version = cls.view_version_default,
         ))
 
         cls.api_defaults = MapProxy(dict(
@@ -181,7 +184,7 @@ class WebApp(EventEmitter):
 
         cls.jsapp_data = MapProxy(dict(
             example_args   = example_args,
-            example_preds  = tuple(p.spec for p in examples.preds),
+            example_preds  = examples.preds.specs(),#tuple(p.spec for p in examples.preds),
             nups           = MapProxy({
                 notn.name: ParseTable.fetch(notn).chars[
                     LexType.Predicate
@@ -205,7 +208,7 @@ class WebApp(EventEmitter):
             logics         = logics_map,
             example_args   = example_args,
             form_defaults  = cls.form_defaults,
-            # output_formats = writers.TabWriter.Registry.keys(),
+            view_versions  = cls.view_versions,
             output_formats = writers.registry.keys(),
             output_charsets  = Notation.get_common_charsets(),
             logic_categories = logics.registry.grouped(logics_map),
@@ -215,7 +218,7 @@ class WebApp(EventEmitter):
 
         cls.is_class_setup = True
 
-    def __init__(self, opts: Mapping[str, Any] = None, **kw):
+    def __init__(self, opts = None, **kw):
 
         super().__init__(*Wevent)
         
@@ -252,11 +255,12 @@ class WebApp(EventEmitter):
         )
 
     def start(self):
+        """Start the web server."""
         config = self.config
         logger = self.logger
         metrics_port = config['metrics_port']
         self.mailroom.start()
-        chpy.config.update({
+        cherrypy.config.update({
             'global': {
                 'server.socket_host'   : config['host'],
                 'server.socket_port'   : config['port'],
@@ -265,26 +269,26 @@ class WebApp(EventEmitter):
         })
         logger.info(f'Starting metrics on port {metrics_port}')
         prom.start_http_server(metrics_port)
-        chpy.quickstart(self, '/', self.routes)
+        cherrypy.quickstart(self, '/', self.routes)
 
-    @chpy.expose
+    @expose
     def static(self, *respath, **req_data):
-        req: Request = chpy.request
-        res: Response = chpy.response
+        req: Request = cherrypy.request
+        res: Response = cherrypy.response
         resource = '/'.join(respath)
         try:
             content = self.static_res[resource]
         except KeyError:
-            raise chpy.NotFound()
+            raise NotFound()
         if req.method != 'GET':
-            raise chpy.HTTPError(405)
+            raise HTTPError(405)
         res.headers['Content-Type'] = mimetypes.guess_type(resource)[0]
         return content
 
-    @chpy.expose
+    @expose
     def index(self, **req_data):
 
-        req: Request = chpy.request
+        req: Request = cherrypy.request
 
         errors = {}
         warns  = {}
@@ -320,7 +324,7 @@ class WebApp(EventEmitter):
                 resp_data, tableau, lw = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
-            except TimeoutError as err: # pragma: no cover
+            except ProofTimeoutError as err: # pragma: no cover
                 errors['Tableau'] = errstr(err)
             else:
                 is_proof = True
@@ -374,16 +378,16 @@ class WebApp(EventEmitter):
 
         return self.render(view, view_data)
 
-    @chpy.expose
-    def feedback(self, **form_data) -> str:
+    @expose
+    def feedback(self, **form_data):
 
         config = self.config
         if not (config['feedback_enabled'] and config['smtp_host']):
-            raise chpy.NotFound()
+            raise NotFound()
 
         mailroom = self.mailroom
 
-        req: Request = chpy.request
+        req: Request = cherrypy.request
 
         errors = {}
         warns  = {}
@@ -457,14 +461,14 @@ class WebApp(EventEmitter):
 
         return self.render(view, view_data)
 
-    @chpy.expose
-    @chpy.tools.json_in()
-    @chpy.tools.json_out()
+    @expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
 
-    def api(self, action: str = None) -> dict[str, Any]:
+    def api(self, action = None):
 
-        req: Request = chpy.request
-        res: Response = chpy.response
+        req: Request = cherrypy.request
+        res: Response = cherrypy.response
 
         if req.method == 'POST':
             try:
@@ -479,7 +483,7 @@ class WebApp(EventEmitter):
                         message = 'OK',
                         result  = result,
                     )
-            except TimeoutError as err: # pragma: no cover
+            except ProofTimeoutError as err: # pragma: no cover
                 res.status = 408
                 return dict(
                     status  = 408,
@@ -505,7 +509,7 @@ class WebApp(EventEmitter):
         res.status = 404
         return dict(message = 'Not found', status = 404)
 
-    def api_parse(self, body: Mapping) -> dict[str, Any]:
+    def api_parse(self, body):
         """
         Request example::
 
@@ -572,7 +576,7 @@ class WebApp(EventEmitter):
             },
         )
 
-    def api_prove(self, body: Mapping[str, Any]) -> tuple[dict, tableaux.Tableau, LexWriter]:
+    def api_prove(self, body) -> tuple[dict, Tableau, LexWriter]:
         """
         Example request body::
 
@@ -695,7 +699,7 @@ class WebApp(EventEmitter):
         metrics = self.metrics
         with StopWatch() as timer:
             metrics.proofs_inprogress_count(logic.name).inc()
-            tableau = tableaux.Tableau(logic, arg, **tableau_opts)
+            tableau = proof.Tableau(logic, arg, **tableau_opts)
 
             try:
                 tableau.build()
@@ -728,7 +732,7 @@ class WebApp(EventEmitter):
         return resp_data, tableau, lw
 
     @classmethod
-    def _parse_argument(cls, adata: Mapping[str, Any]) -> Argument:
+    def _parse_argument(cls, adata: Mapping):
 
         errors = {}
 
@@ -766,7 +770,7 @@ class WebApp(EventEmitter):
 
         return Argument(conclusion, premises)
 
-    def get_template(self, view: str) -> jinja2.Template:
+    def get_template(self, view):
         cache = self.template_cache
         if '.' not in view:
             view = f'{view}.jinja2'
@@ -774,16 +778,16 @@ class WebApp(EventEmitter):
             cache[view] = self.jenv.get_template(view)
         return cache[view]
 
-    def render(self, view: str, *args, **kw) -> str:
+    def render(self, view, *args, **kw):
         return self.get_template(view).render(*args, **kw)
 
     @staticmethod
-    def get_remote_ip(req: Request) -> str:
+    def get_remote_ip(req: Request):
         # TODO: use proxy forward header
         return req.remote.ip
 
     @staticmethod
-    def _parse_preds(pspecs: Collection[Mapping|Sequence]) -> Predicates|None:
+    def _parse_preds(pspecs):
         if not pspecs:
             return None
         errors = {}
@@ -819,15 +823,15 @@ class WebApp(EventEmitter):
         return result
 
 
-class AppDispatcher(chpy._cpdispatch.Dispatcher):
+class AppDispatcher(cherrypy._cpdispatch.Dispatcher):
 
     def __call__(self, path_info: str):
         self.before_dispatch(path_info)
         return super().__call__(path_info.split('?')[0])
 
     def webapp(self) -> WebApp:
-        "Get the WebApp instance from chpy env."
-        return chpy.serving.request.app.root
+        "Get the WebApp instance from cherrypy env."
+        return cherrypy.serving.request.app.root
 
     def before_dispatch(self, *args):
         "Forward event to webapp"

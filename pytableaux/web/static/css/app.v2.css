@@ -228,7 +228,8 @@ body.pt-app {
 .pt-app .warns h3,
 .pt-app .input.sentence .status.good,
 .pt-app .input.sentence .status.bad,
-.pt-app .debugs-wrapper > .debugs-heading {
+.pt-app .debugs-wrapper > .debugs-heading,
+.pt-app .lexicons .label {
   color: #ffffff;
 }
 .pt-app a.external,
@@ -296,7 +297,7 @@ body.pt-app {
   background-color: #eeeeee;
 }
 .pt-app .lexicons .label {
-  background-color: #edf0f261;
+  background-color: #728998eb;
 }
 .pt-app .errors h3 {
   background-color: #f29f97;
@@ -471,6 +472,9 @@ body.pt-app,
 .pt-app .tableau-wrapper {
   margin-top: 170px;
 }
+.pt-app #uitab_input .col1 {
+  margin-right: 5px;
+}
 .pt-app .warns h3::before,
 .pt-app .errors h3::before {
   margin-right: 8px;
@@ -498,9 +502,6 @@ body.pt-app,
 .pt-app #uitabs_main_wrapper,
 .pt-app .debugs-wrapper::before {
   margin-bottom: 20px;
-}
-.pt-app #uitab_input .col2 {
-  margin-left: 5px;
 }
 .pt-app .debugs-wrapper > .debugs-heading,
 .pt-app .debugs .debug-heading {

@@ -47,7 +47,7 @@ class RequestDataError(Exception):
     def __init__(self, errors: dict):
         self.errors = errors
 
-class TimeoutError(Exception):
+class ProofTimeoutError(Exception):
     pass
 
 # ParseErrors
@@ -154,7 +154,7 @@ class Emsg(_enum.Enum):
     ThreadRuning = IllegalStateError, "Background thread already running"
     ThreadStopped = IllegalStateError, "Background thread not running"
 
-    Timeout = TimeoutError, "Timeout of {}ms exceeded", (int,)
+    Timeout = ProofTimeoutError, "Timeout of {}ms exceeded", (int,)
 
     UnknownForSentence = (ModelValueError,
         'Non-existent value {0} for sentence {1}', (str, str)

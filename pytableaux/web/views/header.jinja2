@@ -1,8 +1,14 @@
 <div class="header">
     <a href="/">{{ config.app_name|e }} {{ config.version|e }}</a>
     {% if is_debug %}
-    {% set altver = 'v1' if view_version == 'v2' else 'v2' %}
-        | view: <a href="/?v={{ altver }}">{{ view_version|e }}</a>
+        | view: 
+        {% for ver in view_versions -%}
+            {% if ver != view_version -%}
+                <a href="/?v={{ ver|e }}">{{ ver|e }}</a>
+            {% else -%}
+                <strong>{{ ver|e }}</strong>
+            {% endif -%}
+        {% endfor %}
         | <a href="/?v={{ view_version|e }}&debug=0">debug</a>
     {% endif %}
     <span class="right">
