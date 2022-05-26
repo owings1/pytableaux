@@ -97,6 +97,7 @@ body.pt-app,
   font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
 }
 .pt-app .uitab_link::before,
+.pt-app #uitab_view .button::before,
 .pt-app .headicon::before,
 .pt-app .warns h3::before,
 .pt-app .errors h3::before,
@@ -792,9 +793,42 @@ body.pt-app,
 .pt-app #uitab_models_link::before {
   content: '\F20E';
 }
+.pt-app #uitab_view .button.auto-scroll::before,
+.pt-app #uitab_view .button.scroll-center::before {
+  content: '\F05B';
+}
+.pt-app #uitab_view .button.auto-width::before,
+.pt-app #uitab_view .button.width-stretch::before {
+  content: '⬄';
+}
+.pt-app #uitab_view .button.width-reset::before {
+  content: '‖';
+}
+.pt-app #uitab_view .button.width-minus-minus::before {
+  content: '\F100';
+}
+.pt-app #uitab_view .button.width-minus::before {
+  content: '\F104';
+}
+.pt-app #uitab_view .button.width-plus::before {
+  content: '\F105';
+}
+.pt-app #uitab_view .button.width-plus-plus::before {
+  content: '\F101';
+}
+.pt-app #uitab_view .button.font-minus::before {
+  content: '\F107';
+}
+.pt-app #uitab_view .button.font-plus::before {
+  content: '\F106';
+}
+.pt-app #uitab_view .button.font-reset::before {
+  content: '=';
+}
 /*
 https://fontdrop.info/
 FontAwesome:
+  screenshot: '\f05b'
   remove_sign: '\f057'
   trash: '\f014', F1F8
   resize_vertical: '\f07d'
