@@ -4,241 +4,209 @@
 L{FDE} - First Degree Entailment
 ***************************************
 
+L{FDE} is a 4-valued `relevance logic`_ logic with values V{T}, V{F}, V{N} and V{B}.
+
 .. contents:: Contents
   :local:
   :depth: 2
 
 ------------------------
 
-.. automodule:: pytableaux.logics.fde
+.. module:: pytableaux.logics.fde
 
-    .. _fde-semantics:
+.. _fde-semantics:
+.. _fde-model:
 
-    Semantics
-    =========
+Semantics
+=========
 
-    .. _fde-truth-values:
+.. _fde-truth-values:
 
-    Truth Values
-    ------------
+Truth Values
+------------
 
-    L{FDE} is a 4-valued logic (V{T}, V{F}, V{N} and V{B}). One common reading
-    of these values is:
+Common labels for the values include:
 
-    - V{F}: just false
-    - V{N}: neither true nor false
-    - V{B}: both true and false
-    - V{T}: just true
+.. include:: include/fde/value-table.rst
 
-    .. _fde-model:
+.. rubric:: Designated Values
 
-    Model
-    -----
+The set of *designated values* for L{FDE} is: { V{T}, V{B} }
 
-    .. autoclass:: Model
+.. _fde-truth-tables:
 
-      .. autoclass:: pytableaux.logics.fde::Model.Value()
-          :members: F, N, B, T
-          :undoc-members:
+Truth Tables
+------------
 
-      .. autoattribute:: designated_values
+.. include:: include/truth_table_blurb.rst
 
-      .. autoattribute:: extensions
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction
 
-      .. autoattribute:: anti_extensions
+.. rubric:: Defined Operators
 
-      .. autoattribute:: atomics
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-    .. _fde-truth-tables:
+.. sentence::
 
-    Truth Tables
-    ------------
+  A > B := ~A V B
 
-    .. include:: include/truth_table_blurb.rst
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-    .. truth-tables::
-      :operators: Negation, Conjunction, Disjunction
+.. sentence::
 
-    The `Material Conditional` :s:`>` is definable in terms of disjunction:
-    
-    .. sentence::
-    
-      A > B := ~A V B
+  A < B := (A > B) & (B > A)
 
-    Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
-    and :s:`&`:
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
 
-    .. sentence::
-    
-      A < B := (A > B) & (B > A)
+.. rubric:: Compatibility Tables
 
-    .. truth-tables::
-      :operators: MaterialConditional, MaterialBiconditional
- 
-    L{FDE} does not have separate `Assertion` or `Conditional` operators,
-    but we include tables and rules for them, for cross-compatibility.
+L{FDE} does not have separate `Assertion` or `Conditional` operators,
+but we include tables and rules for them, for cross-compatibility.
 
-    .. truth-tables::
-      :operators: Assertion, Conditional, Biconditional
+.. truth-tables::
+  :operators: Assertion, Conditional, Biconditional
 
-    .. _fde-predication:
+.. _fde-predication:
 
-    Predication
-    -----------
+Predication
+-----------
 
-    A sentence with *n*-ary predicate :m:`P` over parameters !{ntuple}
-    has the value:
+.. include:: include/fde/predication.rst
 
-    * V{T} iff !{ntuple} is in the *extension* of :m:`P` and
-      not in the *anti-extension* of :m:`P`.
+Note, for L{FDE}, there is no *exclusivity* nor *exhaustion* constraint on a
+predicate's extension and anti-extension. This means that !{ntuple} could
+be in *neither* the extension nor the anti-extension of a predicate, or it
+could be in *both* the extension and the anti-extension.
 
-    * V{F} iff !{ntuple} is in the *anti-extension* of :m:`P`
-      and not in the *extension* of :m:`P`.
+.. _fde-quantification:
 
-    * V{B} iff !{ntuple} is in *both* the extension and anti-extension
-      of :m:`P`.
+Quantification
+--------------
 
-    * V{N} iff !{ntuple} is in *neither* in the extension nor the 
-      anti-extension of :m:`P`.
+.. rubric:: Existential
 
-    Note, for L{FDE}, there is no *exclusivity* nor *exhaustion* constraint on a
-    predicate's extension and anti-extension. This means that !{ntuple} could
-    be in *neither* the extension nor the anti-extension of a predicate, or it
-    could be in *both* the extension and the anti-extension.
+The value of an existential sentence is the maximum value of the sentences that
+result from replacing each constant for the quantified variable. The ordering of
+the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
 
-    .. _fde-quantification:
+.. rubric:: Universal
 
-    Quantification
-    --------------
+The value of an universal sentence is the minimum value of the sentences that
+result from replacing each constant for the quantified variable. The ordering of
+the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
 
-    .. rubric:: Existential
+.. _fde-consequence:
 
-    The value of an existential sentence is the maximum value of the sentences that
-    result from replacing each constant for the quantified variable. The ordering of
-    the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
+Consequence
+-----------
 
-    .. rubric:: Universal
+**Logical Consequence** is defined in terms of the set of *designated* values
+V{T, B}:
 
-    The value of an universal sentence is the minimum value of the sentences that
-    result from replacing each constant for the quantified variable. The ordering of
-    the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
+  .. include:: include/fde/m.consequence.rst
 
-    .. _fde-consequence:
+.. _fde-system:
 
-    Consequence
-    -----------
+Tableaux
+========
 
-    **Logical Consequence** is defined in terms of the set of *designated* values
-    V{T, B}:
+Nodes
+-----
 
-      .. include:: include/fde/m.consequence.rst
+Nodes for L{FDE} include a *designation* marker: |[+]| for *designated*, and |[-]|
+for *undesignated*.
 
-    .. _fde-system:
+Trunk
+-----
 
-    Tableaux
-    ========
+To build the trunk for an argument, add a designated node for each premise, and
+an undesignated node for the conclusion.
 
-    Nodes
-    -----
+.. tableau::
+  :build-trunk:
+  :prolog:
 
-    Nodes for L{FDE} include a *designation* marker: |[+]| for *designated*, and |[-]|
-    for *undesignated*.
+Closure
+-------
 
-    Trunk
-    -----
+A branch is **closed** iff the same sentence appears on both a designated node,
+and undesignated node.
 
-    To build the trunk for an argument, add a designated node for each premise, and
-    an undesignated node for the conclusion.
 
-    .. tableau::
-      :build-trunk:
-      :prolog:
-    
-    Closure
-    -------
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
 
-    A branch is **closed** iff the same sentence appears on both a designated node,
-    and undesignated node.
-    
-    
-    .. tableau::
-      :rule: DesignationClosure
-      :legend:
-      :doc:
+This allows for both a sentence and its negation to appear as *designated*
+on an open branch (or both as *undesignated*).
 
-    This allows for both a sentence and its negation to appear as *designated*
-    on an open branch (or both as *undesignated*).
 
+.. _fde-rules:
 
-    .. _fde-rules:
+Rules
+--------
 
-    Rules
-    --------
+In general, rules for connectives consist of four rules per connective:
+a designated rule, an undesignated rule, a negated designated rule, and a negated
+undesignated rule. The special case of negation has a total of two rules which apply
+to double negation only, one designated rule, and one undesignated rule.
 
-    In general, rules for connectives consist of four rules per connective:
-    a designated rule, an undesignated rule, a negated designated rule, and a negated
-    undesignated rule. The special case of negation has a total of two rules which apply
-    to double negation only, one designated rule, and one undesignated rule.
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion, Conditional, Biconditional
 
-    .. tableau-rules::
-      :title:
-      :group: operator
-      :exclude: Assertion, Conditional, Biconditional
-      :legend:
-      :titles:
-      :docs:
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
 
-    .. tableau-rules::
-      :title:
-      :group: quantifier
-      :legend:
-      :titles:
-      :docs:
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion, Conditional, Biconditional
 
-    .. tableau-rules::
-      :title: Compatibility Rules
-      :group: operator
-      :include: Assertion, Conditional, Biconditional
-      :legend:
-      :titles:
-      :docs:
+Notes
+=====
 
-    Notes
-    =====
+Some notable features of L{FDE} include:
 
-    Some notable features of L{FDE} include:
+* No logical truths. The means that the Law of Excluded Middle :s:`A V ~A`, and the
+  Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as :term:`Conditional Identity`
+  :s:`A $ A`.
 
-    * No logical truths. The means that the Law of Excluded Middle :s:`A V ~A`, and the
-      Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as :term:`Conditional Identity`
-      :s:`A $ A`.
-  
-    * Failure of :term:`Modus Ponens`, :term:`Modus Tollens`, :term:`Disjunctive Syllogism`,
-      and other Classical validities.
+* Failure of :term:`Modus Ponens`, :term:`Modus Tollens`, :term:`Disjunctive Syllogism`,
+  and other Classical validities.
 
-    * DeMorgan laws are valid, as well as :term:`Conditional Contraction` (:s:`A $ (A $ B)`
-      !{conseq} :s:`A $ B`).
+* DeMorgan laws are valid, as well as :term:`Conditional Contraction` (:s:`A $ (A $ B)`
+  !{conseq} :s:`A $ B`).
 
-    References
-    ==========
+References
+==========
 
-    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and
-      Many-valued Logic. United Kingdom, Oxford University Press, 2003.
+* Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and
+  Many-valued Logic. United Kingdom, Oxford University Press, 2003.
 
-    * Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
-      Cambridge University Press, 2008.
+* Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
+  Cambridge University Press, 2008.
 
-    For futher reading see:
+For futher reading see:
 
-    * Anderson, A., Belnap, N. D., et al. `Entailment`_: The Logic of Relevance and
-      Necessity. United Kingdom, Princeton University Press, 1975.
-    
-    * Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
-      Vol. 38, No. 2, 1979.
+* Anderson, A., Belnap, N. D., et al. `Entailment`_: The Logic of Relevance and
+  Necessity. United Kingdom, Princeton University Press, 1975.
 
-    * `Stanford Encyclopedia on Paraconsistent Logic`_
+* Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
+  Vol. 38, No. 2, 1979.
 
+* Stanford Encyclopedia on `Paraconsistent Logic`_ and `Relevance Logic`_.
 
-.. _Stanford Encyclopedia on Paraconsistent Logic: http://plato.stanford.edu/entries/logic-paraconsistent/
+
+.. _Paraconsistent Logic: http://plato.stanford.edu/entries/logic-paraconsistent/
+.. _Relevance logic: https://plato.stanford.edu/entries/logic-relevance/
 .. _Entailment: https://www.google.com/books/edition/_/8LRGswEACAAJ?hl=en
 .. _An Introduction to Non-Classical Logic: https://www.google.com/books/edition/_/rMXVbmAw3YwC?hl=en
 .. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf

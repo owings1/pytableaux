@@ -1,7 +1,7 @@
 .. _G3:
 
 *************************************
-L{G3} - Gödel 3-valued logic
+L{G3} - Gödel 3-valued Logic
 *************************************
 
 Gödel 3-valued logic (V{T}, V{F}, and V{N}) with classical-like negation.

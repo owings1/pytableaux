@@ -9,7 +9,7 @@
 
     .. autoclass::  RequestDataError
 
-    .. autoclass::  TimeoutError
+    .. autoclass::  ProofTimeoutError
 
     .. autoclass::  ParseError
 

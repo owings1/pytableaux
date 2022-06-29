@@ -4,10 +4,19 @@
 L{K3} - Strong Kleene Logic
 ********************************
 
-.. contents:: :local:
+.. figure:: /res/img/Stephen_Cole_Kleene.jpg
+    :alt: Photo of Stephen Kleene
+    :align: right
+    :scale: 50 %
+    :target: https://mathshistory.st-andrews.ac.uk/Biographies/Kleene/Kleene_3.jpeg
+
+    Stephen Kleene
 
 L{K3} is a three-valued logic (V{T}, V{F}, and V{N}). It can be understood
 as {@FDE} without the V{B} value.
+
+.. contents:: Contents
+  :local:
 
 .. automodule:: pytableaux.logics.k3
 

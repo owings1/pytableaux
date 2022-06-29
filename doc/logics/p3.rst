@@ -1,7 +1,7 @@
 .. _P3:
 
 ***********************************
-L{P3} - Post 3-valued logic
+L{P3} - Post 3-valued Logic
 ***********************************
 
 .. figure:: /res/img/Emil_Leon_Post.jpg
@@ -16,7 +16,8 @@ Emil Post's three-valued logic (V{T}, V{F}, and V{N}) has a deviant negation
 that performs a *cyclic shift* in value. The result is a system much different
 from :ref:`CFOL`, as well as more well-known many-valued systems.
 
-.. contents:: :local:
+.. contents:: Contents
+  :local:
 
 .. automodule:: pytableaux.logics.p3
 

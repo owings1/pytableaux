@@ -4,6 +4,14 @@
 L{B3E} - Bochvar 3-valued External Logic
 *************************************************
 
+.. figure:: /res/img/Dmitry_Anatolevich_Bochvar.jpg
+    :alt: Photo of Dmitry Bochvar
+    :align: right
+    :scale: 50 %
+    :target: https://ineos.ac.ru/images/stories/oldschool/bochvar.jpg
+
+    Dmitry Bochvar
+
 L{B3E} is a three-valued logic with values V{T}, V{F}, and V{N}. L{B3E}
 is similar to :ref:`K3W <K3W>`, with a special Assertion operator, that
 always results in a classical value (V{T} or V{F}).

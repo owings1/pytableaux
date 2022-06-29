@@ -494,6 +494,8 @@ class RuleGroupDirective(TableauDirective):
         wnotn   = Notation,
         classes = classopt,
 
+        docflags = flagopt,
+
         title  = stropt,
         titles = choice_or_flag({'symbols', 'names', 'labels'}, default = 'symbols'),
         flat   = flagopt,
@@ -506,6 +508,8 @@ class RuleGroupDirective(TableauDirective):
         captions = flagopt,
         docs     = flagopt,
     )
+
+    default_docflags = ('title', 'titles', 'legend', 'doc')
 
     groupmode: str
 
@@ -524,6 +528,10 @@ class RuleGroupDirective(TableauDirective):
         super().setup()
 
         opts = self.options
+        if 'docflags' in opts:
+            for name in self.default_docflags:
+                if name not in opts:
+                    opts[name] = None
         if 'subgroup' in opts:
             label = f"{opts['subgroup']} Rules"
         else:
