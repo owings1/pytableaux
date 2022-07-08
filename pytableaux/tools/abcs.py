@@ -568,16 +568,6 @@ def isabstract(obj) -> bool:
         return bool(len(getattr(obj, '__abstractmethods__', Eset.Empty)))
     return bool(getattr(obj, '__isabstractmethod__', False))
 
-def annotated_attrs(obj) -> dict:
-    'Evaluate annotions of type :obj:`typing.Annotated`.'
-    # This is called infrequently, so we import lazily.
-    from typing import Annotated, get_args, get_origin, get_type_hints
-    hints = get_type_hints(obj, include_extras = True)
-    return {
-        k: get_args(v) for k,v in hints.items()
-        if get_origin(v) is Annotated
-    }
-
 def check_mrodict(mro, *names):
     'Check whether methods are implemented for dynamic subclassing.'
     if len(names) and not len(mro):

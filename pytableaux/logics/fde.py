@@ -31,9 +31,10 @@ from pytableaux.models import BaseModel, ValueFDE
 from pytableaux.proof import Branch, Node, Tableau
 from pytableaux.proof import TableauxSystem as BaseSystem
 from pytableaux.proof import Target, adds, filters, group, rules, sdnode
-from pytableaux.tools import MapProxy, closure
+from pytableaux.tools import closure
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.sets import setf
+from types import MappingProxyType as MapProxy
 
 name = 'FDE'
 

@@ -22,7 +22,6 @@ pytableaux.tools.hybrids
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
-from collections.abc import Collection
 from itertools import filterfalse
 from typing import Iterable, SupportsIndex
 
@@ -50,7 +49,7 @@ class SequenceSet(SequenceApi, SetApi):
         'Returns 1 if in the set, else 0.'
         return int(value in self)
 
-    def index(self, value, start: int = 0, stop: int = None, /) -> int:
+    def index(self, value, start = 0, stop = None, /) -> int:
         'Get the index of the value in the sequence.'
         if value not in self:
             raise Emsg.MissingValue(value)
@@ -262,8 +261,6 @@ class qset(MutableSequenceSet):
         if isinstance(key, slice):
             if cast is not None:
                 value = tuple(map(cast, value))
-            else:
-                check.inst(value, Collection)
             self.__setitem_slice__(key, value)
             return
         raise Emsg.InstCheck(key, (slice, SupportsIndex))

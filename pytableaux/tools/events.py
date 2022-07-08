@@ -23,9 +23,9 @@ from __future__ import annotations
 
 from enum import Enum
 from itertools import filterfalse
-from typing import Callable, Mapping
+from typing import Callable, Mapping, Any
 
-from pytableaux.errors import check, Emsg
+from pytableaux.errors import Emsg
 from pytableaux.tools import abcs, wraps
 from pytableaux.tools.linked import linqset
 from pytableaux.tools.mappings import dmap
@@ -38,7 +38,6 @@ __all__ = (
     'Listeners',
 )
 
-EventId = str | int | Enum
 
 class EventEmitter(abcs.Copyable):
 
@@ -56,7 +55,7 @@ class EventEmitter(abcs.Copyable):
     def off(self, *args, **kw):
         self.events.off(*args, **kw)
 
-    def emit(self, event: EventId, *args, **kw) -> int:
+    def emit(self, event, *args, **kw) -> int:
         return self.events.emit(event, *args, **kw)
 
     def copy(self, *, listeners = False):
@@ -115,10 +114,10 @@ class Listeners(linqset[Listener]):
         self.callcount = 0
         self.emitcount = 0
 
-    @abcs.abcf.temp
-    @linqset.hook('cast')
-    def cast(value):
-        return check.inst(value, Listener)
+    # @abcs.abcf.temp
+    # @linqset.hook('cast')
+    # def cast(value):
+    #     return check.inst(value, Listener)
 
     def emit(self, *args, **kw) -> int:
         self.emitcount += 1
@@ -142,18 +141,19 @@ class Listeners(linqset[Listener]):
             f'<{type(self).__name__} listeners:{len(self)} '
             f'emitcount:{self.emitcount} callcount:{self.callcount}>')
 
-class EventsListeners(dmap[EventId, Listeners]):
+class EventsListeners(dmap[Any, Listeners]):
 
     emitcount: int
     callcount: int
 
     __slots__ = 'emitcount', 'callcount',
 
-    def __init__(self, *names: EventId):
+    def __init__(self, *events):
         self.emitcount = self.callcount = 0
-        self.create(*names)
+        if events:
+            self.create(*events)
 
-    def create(self, *events: EventId):
+    def create(self, *events):
         """Create events.
         
         Args:
@@ -161,9 +161,8 @@ class EventsListeners(dmap[EventId, Listeners]):
         """
         for event in filterfalse(self.__contains__, events):
             self[event] = Listeners()
-            # self[event] = Listeners(event)
 
-    def delete(self, event: EventId):
+    def delete(self, event):
         """Delete an event and all listeners.
         
         Args:
@@ -185,16 +184,16 @@ class EventsListeners(dmap[EventId, Listeners]):
 
         .on(event1 = (func1, func2), event2 = func3, ...)
         '''
+        idtypes = (str, int, Enum)
         @wraps(method)
         def f(self, *args, **kw):
             if not (args or kw) or (args and kw):
                 raise TypeError
             arg, *cbs = (kw,) if kw else args
-            if isinstance(arg, EventId):
+            if isinstance(arg, idtypes):
                 method(self, arg, *cbs)
             elif isinstance(arg, Mapping) and not len(cbs):
                 for event, cbs in arg.items():
-                    # if not isinstance(cbs, Sequence):
                     if callable(cbs):
                         cbs = cbs,
                     method(self, event, *cbs)
@@ -203,21 +202,21 @@ class EventsListeners(dmap[EventId, Listeners]):
         return f
 
     @normargs
-    def on(self, event: EventId, *cbs):
+    def on(self, event, *cbs):
         """Attach listeners."""
         self[event].extend(Listener(cb, False) for cb in cbs)
 
     @normargs
-    def once(self, event: EventId, *cbs):
+    def once(self, event, *cbs):
         """Attach single-call listeners."""
         self[event].extend(Listener(cb, True) for cb in cbs)
 
     @normargs
-    def off(self, event: EventId, *cbs):
+    def off(self, event, *cbs):
         """Detach listeners."""
         for _ in map(self[event].discard, cbs): pass
 
-    def emit(self, event: EventId, *args, **kw) -> int:
+    def emit(self, event, *args, **kw) -> int:
         """Emit an event.
         
         Args:
@@ -248,12 +247,12 @@ class EventsListeners(dmap[EventId, Listeners]):
         inst.create(*self)
         return inst
 
-    def __setitem__(self, key, value):
-        # Override for type check
-        super().__setitem__(key, check.inst(value, Listeners))
+    # def __setitem__(self, key, value):
+    #     # Override for type check
+    #     super().__setitem__(key, check.inst(value, Listeners))
 
     # Alternate update impl uses setitem.
-    update = dmap._setitem_update
+    # update = dmap._setitem_update
 
     def __repr__(self):
         return (

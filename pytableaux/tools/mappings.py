@@ -444,22 +444,19 @@ class DequeCache(abcs.Abc):
 
         self.__getitem__ = idx.__getitem__
 
-        if maxlen == 0:
-            def setitem(key, item, /): pass
-        else:
-            def setitem(key, item, /):
-                if item in rev:
-                    item = idx[item]
-                else:
-                    if len(deck) == deck.maxlen:
-                        old = deck.popleft()
-                        for k in rev.pop(old):
-                            del(idx[k])
-                    idx[item] = item
-                    rev[item] = {item}
-                    deck.append(item)
-                idx[key] = item
-                rev[item].add(key)
+        def setitem(key, item, /):
+            if item in rev:
+                item = idx[item]
+            else:
+                if len(deck) == deck.maxlen:
+                    old = deck.popleft()
+                    for k in rev.pop(old):
+                        del(idx[k])
+                idx[item] = item
+                rev[item] = {item}
+                deck.append(item)
+            idx[key] = item
+            rev[item].add(key)
 
         self.__setitem__ = setitem
 
