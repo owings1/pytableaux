@@ -4,117 +4,202 @@
 L{LP} - Logic of Paradox
 *****************************
 
-L{LP} is a 3-valued logic (V{T}, V{F}, and V{B}). It can be understood as
+L{LP} is a 3-valued logic with value V{T}, V{F}, and V{B}. It can be understood as
 {@FDE} without the V{N} value.
 
-.. contents:: :local:
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-.. automodule:: pytableaux.logics.lp
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.lp
 
-    .. _lp-model:
+.. _lp-semantics:
+.. _lp-model:
 
-    Model
-    -----
+Semantics
+=========
 
-    .. autoclass:: Model
+.. _lp-truth-values:
 
-      .. autoclass:: pytableaux.logics.lp::Model.Value()
-          :members: F, B, T
-          :undoc-members:
+Truth Values
+------------
 
-      .. autoattribute:: designated_values
+Common labels for the values include:
 
-      .. autoattribute:: extensions
+.. include:: include/lp/value-table.rst
 
-      .. autoattribute:: anti_extensions
+.. rubric:: Designated Values
 
-      .. autoattribute:: atomics
+The set of *designated values* for L{LP} is: { V{T}, V{B} }
 
-    .. _lp-truth-tables:
+.. _lp-truth-tables:
 
-    Truth Tables
-    ------------
+Truth Tables
+------------
 
-    .. include:: include/truth_table_blurb.rst
+.. include:: include/truth_table_blurb.rst
 
-    .. truth-tables::
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction
 
-    .. _lp-predication:
+.. rubric:: Defined Operators
 
-    Predication
-    -----------
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-    A sentence with predicate `P` with parameters !{ntuple} is assigned a
-    value as follows:
+.. sentence::
 
-    * V{T} iff !{ntuple} is in the extension of `P` and not in the
-      anti-extension of `P`.
+  A > B := ~A V B
 
-    * V{F} iff !{ntuple} is in the anti-extension of `P` and not
-      in the extension of `P`.
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-    * V{B} iff !{ntuple} is in both the extension and anti-extension
-      of `P`.
+.. sentence::
 
-    Note, unlike {@FDE}, there is an *exhaustion constraint* on a predicate's
-    extension/anti-extension. This means that !{ntuple} must be in either the
-    extension and the anti-extension of `P`. Like L{FDE}, there is no exclusion
-    restraint.
+  A < B := (A > B) & (B > A)
 
-    .. _lp-consequence:
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
 
-    Consequence
-    -----------
+.. rubric:: Compatibility Tables
 
-    **Logical Consequence** is defined, just as in {@FDE}, in terms of *designated*
-    values V{T} and V{B}:
+L{LP} does not have separate `Assertion` or `Conditional` operators,
+but we include tables and rules for them, for cross-compatibility.
 
-    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a
-      *desginated* value (V{T} or V{B}) are models where *C* also has a *designated*
-      value.
+.. truth-tables::
+  :operators: Assertion, Conditional, Biconditional
 
-    .. _lp-system:
+.. _lp-predication:
 
-    Tableaux System
-    ===============
+Predication
+-----------
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+Like L{FDE}, L{LP} predication defines a predicate's *extenstion* and
+*anti-extension*. The value of a predicated sentence is determined as
+follows:
 
-    .. _lp-rules:
+.. include:: include/lp/predication.rst
 
-    .. autoclass:: TabRules
-        :members:
+Note, unlike {@FDE}, there is an *exhaustion constraint* on a predicate's
+extension/anti-extension. This means that !{ntuple} must be in either the
+extension and the anti-extension of `P`.
 
-    Notes
-    =====
+Like L{FDE}, there is no *exclusion restraint*: there are permissible L{LP}
+models where some tuple !{ntuple} is in *both* the extension and anti-extension
+of a predicate.
 
-    Some notable features of L{LP} include:
+.. _lp-quantification:
 
-    * Everything valid in {@FDE} is valid in L{LP}.
+Quantification
+--------------
 
-    * Like {@FDE}, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
+.. rubric:: Existential
 
-    * Unlike {@FDE}, L{LP} has some logical truths. For example, the Law of Excluded
-      Middle (:s:`(A V ~A)`), and Conditional Identity (:s:`(A $ A)`).
+.. include:: include/fde/m.existential.rst
 
-    * Many classical validities fail, such as Modus Ponens, Modus Tollens,
-      and Disjunctive Syllogism.
+.. rubric:: Universal
 
-    * DeMorgan laws are valid.
+.. include:: include/fde/m.universal.rst
 
-    References
-    ==========
-    
-    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and
-      Many-valued Logic. United Kingdom, Oxford University Press, 2003.
+.. _lp-consequence:
 
-    For futher reading see:
+Consequence
+-----------
 
-    * `Stanford Encyclopedia entry on paraconsistent logic
-      <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T}, V{B} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _lp-system:
+
+Tableaux
+========
+
+L{LP} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+L{LP} includes the L{FDE} closure rule.
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+L{LP} includes an additional `gap` closure rule. This means a branch closes
+when a sentence and its negation both appear as undesignated nodes on the branch.
+
+.. tableau::
+  :rule: GapClosure
+  :legend:
+  :doc:
+
+.. _lp-rules:
+
+Rules
+--------
+
+.. include:: include/fde/rules_blurb.rst
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion, Conditional, Biconditional
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion, Conditional, Biconditional
+
+
+Notes
+=====
+
+Some notable features of L{LP} include:
+
+* Everything valid in {@FDE} is valid in L{LP}.
+
+* Like {@FDE}, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
+
+* Unlike {@FDE}, L{LP} has some logical truths. For example, the Law of Excluded
+  Middle (:s:`(A V ~A)`), and Conditional Identity (:s:`(A $ A)`).
+
+* Many classical validities fail, such as Modus Ponens, Modus Tollens,
+  and Disjunctive Syllogism.
+
+* DeMorgan laws are valid.
+
+References
+==========
+
+* Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and
+  Many-valued Logic. United Kingdom, Oxford University Press, 2003.
+
+For futher reading see:
+
+* `Stanford Encyclopedia entry on paraconsistent logic
+  <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
 
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en

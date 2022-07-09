@@ -182,7 +182,7 @@ Rules
   :include: Assertion, Conditional, Biconditional
 
 Notes
------
+=====
 
 Some notable features of L{K3} include:
 
