@@ -113,7 +113,7 @@ class BaseClosureRule(ClosingRule):
     def group_score(self, target: Target, /) -> float:
         # Called in tableau
         return 1.0 #??
-        # return self.score_candidate(target) / max(1, self.branch_level)
+        # return self.score_candidate(target) / max(1, 1 + self.branching)
 
     def score_candidate(self, target: Target, /) -> float:
         # Closure rules have is_rank_optim = False by default.

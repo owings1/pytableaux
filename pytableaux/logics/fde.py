@@ -535,7 +535,6 @@ class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule):
 class ConjunctionReducingRule(OperatorNodeRule):
 
     conjunct_op: Operator
-    branch_level = 1
 
     def _get_node_targets(self, node: Node, _, /):
         oper = self.conjunct_op
@@ -580,11 +579,9 @@ class TabRules:
         From an unticked designated negated negation node *n* on a branch *b*,
         add a designated node to *b* with the double-negatum of *n*, then tick *n*.
         """
-
         designation = True
         negated     = True
         operator    = Operator.Negation
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
@@ -606,7 +603,6 @@ class TabRules:
         """
         designation = True
         operator    = Operator.Assertion
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
@@ -628,7 +624,6 @@ class TabRules:
         designation = True
         negated     = True
         operator    = Operator.Assertion
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
@@ -649,7 +644,6 @@ class TabRules:
         """
         designation = True
         operator    = Operator.Conjunction
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -667,7 +661,7 @@ class TabRules:
         designation = True
         negated     = True
         operator    = Operator.Conjunction
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -685,7 +679,7 @@ class TabRules:
         """
         designation = False
         operator    = Operator.Conjunction
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -704,7 +698,6 @@ class TabRules:
         designation = False
         negated     = True
         operator    = Operator.Conjunction
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -756,7 +749,7 @@ class TabRules:
         """
         designation = True
         operator    = Operator.MaterialConditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -775,7 +768,6 @@ class TabRules:
         designation = True
         negated     = True
         operator    = Operator.MaterialConditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -792,7 +784,6 @@ class TabRules:
         """
         designation = False
         operator    = Operator.MaterialConditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -811,7 +802,7 @@ class TabRules:
         designation = False
         negated     = True
         operator    = Operator.MaterialConditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -831,7 +822,7 @@ class TabRules:
         """
         designation = True
         operator    = Operator.MaterialBiconditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -852,7 +843,7 @@ class TabRules:
         designation = True
         negated     = True
         operator    = Operator.MaterialBiconditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -982,7 +973,6 @@ class TabRules:
         """
         designation = True
         quantifier  = Quantifier.Existential
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch,/):
             s = self.sentence(node)
@@ -1001,7 +991,6 @@ class TabRules:
         negated     = True
         quantifier  = Quantifier.Existential
         convert     = Quantifier.Universal
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             v, si = self.sentence(node)[1:]
@@ -1019,7 +1008,6 @@ class TabRules:
         """
         designation = False
         quantifier  = Quantifier.Existential
-        branch_level = 1
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             return group(sdnode(c >> self.sentence(node), self.designation))

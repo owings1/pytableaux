@@ -87,7 +87,6 @@ class TabRules:
         designation = True
         negated     = True
         operator    = Operator.Negation
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _,/):
             return adds(
@@ -176,7 +175,7 @@ class TabRules:
         designation = True
         negated     = True
         operator    = Operator.Conditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _: Branch):
             lhs, rhs = self.sentence(node)
@@ -206,7 +205,7 @@ class TabRules:
         designation = False
         negated     = True
         operator    = Operator.Conditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)

@@ -78,7 +78,7 @@ class TabRules(K3.TabRules):
         negated     = True
         operator    = Operator.Conjunction
         designation = True
-        branch_level = 3
+        branching   = 2
 
         def _get_node_targets(self, node: Node, _: Branch, /):
             lhs, rhs = self.sentence(node)
@@ -99,7 +99,7 @@ class TabRules(K3.TabRules):
         negated     = True
         operator    = Operator.Conjunction
         designation = False
-        branch_level = 3
+        branching   = 2
 
         def _get_node_targets(self, node: Node, _: Branch, /):
             lhs, rhs = self.sentence(node)
@@ -120,7 +120,7 @@ class TabRules(K3.TabRules):
         """
         operator    = Operator.Disjunction
         designation = True
-        branch_level = 3
+        branching   = 2
 
         def _get_node_targets(self, node: Node, _: Branch, /):
             lhs, rhs = self.sentence(node)
@@ -140,7 +140,7 @@ class TabRules(K3.TabRules):
         """
         operator    = Operator.Disjunction
         designation = False
-        branch_level = 3
+        branching   = 2
 
         def _get_node_targets(self, node: Node, _: Branch, /):
             lhs, rhs = self.sentence(node)
@@ -163,7 +163,7 @@ class TabRules(K3.TabRules):
         negated     = True
         operator    = Operator.Disjunction
         designation = False
-        branch_level = 3
+        branching   = 2
 
         def _get_node_targets(self, node: Node, _: Branch, /):
             s = self.sentence(node)
@@ -179,7 +179,6 @@ class TabRules(K3.TabRules):
         """
         operator    = Operator.MaterialConditional
         designation = True
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _: Branch, /):
             s = self.sentence(node)
@@ -194,7 +193,6 @@ class TabRules(K3.TabRules):
         negated     = True
         operator    = Operator.MaterialConditional
         designation = True
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _: Branch, /):
             s = self.sentence(node)
@@ -223,7 +221,6 @@ class TabRules(K3.TabRules):
         operator    = Operator.MaterialBiconditional
         designation = True
         conjunct_op = Operator.MaterialConditional
-        branch_level = 1
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
@@ -233,7 +230,6 @@ class TabRules(K3.TabRules):
         operator    = Operator.MaterialBiconditional
         designation = True
         conjunct_op = Operator.MaterialConditional
-        branch_level = 1
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
         """

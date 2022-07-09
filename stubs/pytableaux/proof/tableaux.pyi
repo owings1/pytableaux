@@ -23,7 +23,7 @@ class Rule(EventEmitter, metaclass=RuleMeta):
     Helpers: ClassVar[Mapping[type[RuleHelper], Any]]
     Timers: ClassVar[qsetf[str]]
     name: ClassVar[str]
-    branch_level: ClassVar[int]
+    branching: ClassVar[int]
     tableau: Tableau
     opts: Mapping[str, bool]
     helpers: _TypeInstDict[RuleHelper]

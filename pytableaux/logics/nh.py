@@ -122,10 +122,10 @@ class TabRules:
 
         Then, tick *n*.
         """
-        negated      = True
-        operator     = Oper.Conjunction
-        designation  = True
-        branch_level = 4
+        negated     = True
+        operator    = Oper.Conjunction
+        designation = True
+        branching   = 3
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
@@ -150,10 +150,10 @@ class TabRules:
         one for the negation of each conjunct. On *b''*, add four designated nodes, one
         for each of the conjuncts and its negation. Then tick *n*.
         """
-        negated      = True
-        operator     = Oper.Conjunction
-        designation  = False
-        branch_level = 2
+        negated     = True
+        operator    = Oper.Conjunction
+        designation = False
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
@@ -185,7 +185,6 @@ class TabRules:
         """
         operator     = Oper.MaterialConditional
         designation  = True
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
@@ -200,7 +199,6 @@ class TabRules:
         negated      = True
         operator     = Oper.MaterialConditional
         designation  = True
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _: Branch):
             s = self.sentence(node)
@@ -229,7 +227,6 @@ class TabRules:
         operator     = Oper.MaterialBiconditional
         designation  = True
         conjunct_op  = Oper.MaterialConditional
-        branch_level = 1
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
@@ -239,7 +236,6 @@ class TabRules:
         operator     = Oper.MaterialBiconditional
         designation  = True
         conjunct_op  = Oper.MaterialConditional
-        branch_level = 1
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
         """
@@ -272,7 +268,6 @@ class TabRules:
         operator    = Oper.Biconditional
         designation = True
         conjunct_op = Oper.Conditional
-        branch_level = 1
 
     class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
@@ -282,7 +277,6 @@ class TabRules:
         operator    = Oper.Biconditional
         designation = True
         conjunct_op = Oper.Conditional
-        branch_level = 1
 
     class BiconditionalUndesignated(BiconditionalDesignated):
         """

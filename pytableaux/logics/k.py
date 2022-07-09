@@ -35,7 +35,7 @@ from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
-from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof import Tableau
 from pytableaux.proof import Access, adds, group, swnode
 from pytableaux.tools import closure
 from pytableaux.tools.hybrids import qsetf
@@ -793,7 +793,6 @@ class TabRules(LogicType.TabRules):
         """
         negated  = True
         operator = Operator.Negation
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
@@ -806,7 +805,6 @@ class TabRules(LogicType.TabRules):
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
         """
         operator = Operator.Assertion
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
@@ -821,7 +819,6 @@ class TabRules(LogicType.TabRules):
         """
         negated  = True
         operator = Operator.Assertion
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
@@ -835,7 +832,6 @@ class TabRules(LogicType.TabRules):
         then tick *n*.
         """
         operator = Operator.Conjunction
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
@@ -852,7 +848,7 @@ class TabRules(LogicType.TabRules):
         """
         negated  = True
         operator = Operator.Conjunction
-        branch_level = 2
+        branching = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -869,7 +865,7 @@ class TabRules(LogicType.TabRules):
         then tick *n*.
         """
         operator = Operator.Disjunction
-        branch_level = 2
+        branching = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -886,7 +882,6 @@ class TabRules(LogicType.TabRules):
         """
         negated  = True
         operator = Operator.Disjunction
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -903,7 +898,7 @@ class TabRules(LogicType.TabRules):
         *n*.
         """
         operator = Operator.MaterialConditional
-        branch_level = 2
+        branching = 1
 
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
@@ -921,7 +916,6 @@ class TabRules(LogicType.TabRules):
         """
         negated  = True
         operator = Operator.MaterialConditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -939,7 +933,7 @@ class TabRules(LogicType.TabRules):
         tick *n*.
         """
         operator = Operator.MaterialBiconditional
-        branch_level = 2
+        branching = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -960,7 +954,7 @@ class TabRules(LogicType.TabRules):
         """
         negated  = True
         operator = Operator.MaterialBiconditional
-        branch_level = 2
+        branching = 1
 
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
@@ -1027,7 +1021,6 @@ class TabRules(LogicType.TabRules):
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
         quantifier = Quantifier.Existential
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -1044,7 +1037,6 @@ class TabRules(LogicType.TabRules):
         negated    = True
         quantifier = Quantifier.Existential
         convert    = Quantifier.Universal
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             v, si = self.sentence(node)[1:]
@@ -1060,8 +1052,7 @@ class TabRules(LogicType.TabRules):
         exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
         *b*. The node *n* is never ticked.
         """
-        quantifier   = Quantifier.Universal
-        branch_level = 1
+        quantifier = Quantifier.Universal
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             return group(swnode(c >> self.sentence(node), node.get('world')))
@@ -1084,7 +1075,6 @@ class TabRules(LogicType.TabRules):
         world1 *w* and world2 *w'* to *b*, then tick *n*.
         """
         operator = Operator.Possibility
-        branch_level = 1
 
         Helpers = QuitFlag, MaxWorlds, AplSentCount,
         modal_operators = Model.modal_operators
@@ -1136,10 +1126,9 @@ class TabRules(LogicType.TabRules):
         necessity node to *b* with *w*, whose operand is the negation of the negated 
         possibilium of *n*, then tick *n*.
         """
-        negated    = True
-        operator   = Operator.Possibility
-        convert    = Operator.Necessity
-        branch_level = 1
+        negated  = True
+        operator = Operator.Possibility
+        convert  = Operator.Necessity
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -1155,7 +1144,6 @@ class TabRules(LogicType.TabRules):
         """
         ticking = False
         operator = Operator.Necessity
-        branch_level = 1
 
         Helpers = QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex,
         modal_operators = Model.modal_operators
@@ -1242,8 +1230,6 @@ class TabRules(LogicType.TabRules):
         """
         ticking   = False
         predicate = Predicate.System.Identity
-
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /) -> list[Target]:
             pnodes = self[PredNodes][branch]

@@ -119,10 +119,10 @@ class TabRules:
         nodes, one for each disjunct and its negation. On *b''* add two designated
         nodes, one for the negation of each disjunct. Then tick *n*.
         """
-        designation  = True
-        negated      = True
-        operator     = Oper.Disjunction
-        branch_level = 2
+        designation = True
+        negated     = True
+        operator    = Oper.Disjunction
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
@@ -165,10 +165,10 @@ class TabRules:
 
         Then tick *n*.
         """
-        designation  = False
-        negated      = True
-        operator     = Oper.Disjunction
-        branch_level = 4
+        designation = False
+        negated     = True
+        operator    = Oper.Disjunction
+        branching   = 3
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
@@ -194,7 +194,6 @@ class TabRules:
         """
         designation  = True
         operator     = Oper.MaterialConditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
@@ -209,7 +208,6 @@ class TabRules:
         designation  = True
         negated      = True
         operator     = Oper.MaterialConditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
@@ -264,9 +262,9 @@ class TabRules:
         with the antecedent, and on *b''* add a designated node with the consequent.
         Then tick *n*.
         """
-        designation  = True
-        operator     = Oper.Conditional
-        branch_level = 2
+        designation = True
+        operator    = Oper.Conditional
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
@@ -289,7 +287,6 @@ class TabRules:
         designation  = True
         negated      = True
         operator     = Oper.Conditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)

@@ -100,7 +100,7 @@ class ProofAttr(str, abcs.Ebc):
 
 class NodeAttr(ProofAttr):
 
-    designation = 'designated'
+    designation = designated = 'designated'
     closure = 'closure'
     flag    = 'flag'
     is_flag = 'is_flag'

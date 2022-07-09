@@ -154,7 +154,7 @@ class TabRules:
         """
         operator    = Oper.Conditional
         designation = True
-        branch_level = 3
+        branching   = 2
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
@@ -182,7 +182,7 @@ class TabRules:
         """
         operator    = Oper.Conditional
         designation = False
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
@@ -204,7 +204,7 @@ class TabRules:
         """
         operator    = Oper.Biconditional
         designation = True
-        branch_level = 3
+        branching   = 2
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
@@ -231,7 +231,7 @@ class TabRules:
         """
         operator    = Oper.Biconditional
         designation = False
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
@@ -251,7 +251,7 @@ class TabRules:
         negated     = True
         operator    = Oper.Biconditional
         designation = False
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)

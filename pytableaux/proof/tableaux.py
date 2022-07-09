@@ -94,11 +94,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     name: ClassVar[str]
     "The rule class name."
 
-    branch_level = 1
-    """The number of branches resulting from an application. A value
-    of ``1`` means no additional branches. A value of ``2`` means
-    one additional branch, etc.
-    """
+    branching = 0
+    "The number of additional branches created."
 
     tableau: Tableau
     "The tableau instance."
@@ -107,10 +104,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     "The options."
 
     helpers: Mapping
-    """Helper instances mapped by class.
-    
-    :type: Mapping[type[RuleHelper], RuleHelper]
-    """
+    "Helper instances mapped by class."
 
     timers: Mapping[str, StopWatch]
     "StopWatch instances mapped by name."
@@ -191,7 +185,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     # Scoring
     def group_score(self, target: Target, /) -> float:
         # Called in tableau
-        return self.score_candidate(target) / max(1, self.branch_level)
+        return self.score_candidate(target) / max(1, 1 + self.branching)
 
     # Candidate score implementation options ``is_rank_optim``
     def score_candidate(self, target: Target, /) -> float:
@@ -723,6 +717,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     __open        : linqset[Branch]
     __branchstat  : dict[Branch, BranchStat]
     __branching_complexities: dict[Node, int]
+
     def __init__(self, logic = None, argument: Argument = None, /, **opts):
         """
         Args:

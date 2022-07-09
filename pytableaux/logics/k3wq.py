@@ -111,7 +111,6 @@ class TabRules(K3W.TabRules):
         negated     = False
         quantifier  = Quantifier.Existential
         convert     = Quantifier.Universal
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -137,7 +136,7 @@ class TabRules(K3W.TabRules):
         negated     = False
         quantifier  = Quantifier.Existential
         convert     = Quantifier.Universal
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -159,7 +158,6 @@ class TabRules(K3W.TabRules):
         designation = False
         negated     = True
         quantifier  = Quantifier.Existential
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -178,7 +176,6 @@ class TabRules(K3W.TabRules):
         designation = True
         negated     = True
         quantifier  = Quantifier.Universal
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -202,7 +199,7 @@ class TabRules(K3W.TabRules):
         designation = False
         negated     = True
         quantifier  = Quantifier.Universal
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)

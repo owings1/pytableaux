@@ -83,7 +83,6 @@ class TabRules(K3W.TabRules):
         designation = True
         negated     = True
         operator    = Operator.Assertion
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -119,7 +118,6 @@ class TabRules(K3W.TabRules):
         """
         designation = True
         operator    = Operator.Conditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -139,7 +137,6 @@ class TabRules(K3W.TabRules):
         designation = True
         negated     = True
         operator    = Operator.Conditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -176,7 +173,7 @@ class TabRules(K3W.TabRules):
         """
         designation = True
         operator    = Operator.Biconditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)

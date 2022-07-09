@@ -129,7 +129,7 @@ class TabRules(B3E.TabRules):
         designation = True
         negated     = True
         operator    = Operator.Conjunction
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
@@ -146,7 +146,6 @@ class TabRules(B3E.TabRules):
         """
         designation = False
         operator    = Operator.Conjunction
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             return adds(
@@ -161,7 +160,6 @@ class TabRules(B3E.TabRules):
         designation = False
         negated     = True
         operator    = Operator.Conjunction
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             return adds(
@@ -176,7 +174,6 @@ class TabRules(B3E.TabRules):
         designation = True
         negated     = True
         operator    = Operator.Disjunction
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
@@ -208,7 +205,6 @@ class TabRules(B3E.TabRules):
         negated     = True
         operator    = Operator.MaterialConditional
         designation = True
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
@@ -241,7 +237,7 @@ class TabRules(B3E.TabRules):
         designation = True
         negated     = True
         operator    = Operator.MaterialBiconditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
@@ -274,7 +270,7 @@ class TabRules(B3E.TabRules):
         """
         designation = True
         operator    = Operator.Conditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
@@ -302,7 +298,7 @@ class TabRules(B3E.TabRules):
         designation = True
         negated     = True
         operator    = Operator.Conditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
@@ -338,7 +334,6 @@ class TabRules(B3E.TabRules):
         """
         designation = True
         operator    = Operator.Biconditional
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
@@ -358,7 +353,7 @@ class TabRules(B3E.TabRules):
         designation = True
         negated     = True
         operator    = Operator.Biconditional
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
@@ -396,7 +391,6 @@ class TabRules(B3E.TabRules):
         negated     = True
         quantifier  = Quantifier.Existential
         convert     = Quantifier.Universal
-        branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
             v, si = self.sentence(node)[1:]
@@ -439,7 +433,7 @@ class TabRules(B3E.TabRules):
         negated     = True
         quantifier  = Quantifier.Universal
         convert     = Quantifier.Existential
-        branch_level = 2
+        branching   = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
