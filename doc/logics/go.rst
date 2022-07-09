@@ -4,86 +4,209 @@
 GO - Gappy Object Logic
 ***********************
 
-GO is a 3-valued logic (V{T}, V{F}, and V{N}) with non-standard readings of
+GO is a 3-valued logic with values V{T}, V{F}, and V{N}. It has non-standard readings of
 disjunction and conjunction, as well as different behavior of the quantifiers.
 
-.. contents:: :local:
 
-.. automodule:: pytableaux.logics.go
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-    Semantics
-    =========
+------------------------
 
-    .. autoclass:: Model
+.. module:: pytableaux.logics.go
 
-        .. autoclass:: pytableaux.logics.go::Model.Value()
-            :members: F, N, T
-            :undoc-members:
+.. _go-semantics:
+.. _go-model:
 
-        .. include:: include/fde/m.attributes.rst
+Semantics
+=========
 
-        .. method:: truth_function(operator, a, b)
+.. _go-truth-values:
 
-              The value of a sentence with a truth-functional operator is determined
-              by the values of its operands according to the following tables.
+Truth Values
+------------
 
-              .. truth-tables::
+Common labels for the values include:
 
-              Note that, given the tables above, conjunctions and disjunctions
-              always have a classical value (V{T} or V{F}). This means that
-              only atomic sentences (with zero or more negations) can have the
-              non-classical V{N} value.
+.. include:: include/k3/value-table.rst
 
-              This property of "classical containment" means, that we can define
-              a conditional operator that satisfies Identity :s:`A $ A`. It also
-              allows us to give a formal description of a subset of sentences
-              that obey all principles of classical logic. For example, although
-              the Law of Excluded Middle fails for atomic sentences :s:`A V ~A`,
-              complex sentences -- those with at least one binary connective --
-              do obey the law: :s:`(A V A) V ~(A V A)`.
+.. rubric:: Designated Values
 
-        .. automethod:: value_of_existential(sentence)
+The set of *designated values* for L{GO} is the singleton: { V{T} }
 
-        .. automethod:: value_of_universal(sentence)
+.. _go-truth-tables:
 
-    Consequence
-    -----------
+Truth Tables
+------------
 
-    Logical consequence is defined just like in L{K3}:
-    
-    .. include:: include/k3/m.consequence.rst
+.. include:: include/truth_table_blurb.rst
 
-    Tableaux System
-    ===============
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+.. rubric:: Defined Operators
 
-    .. cssclass:: tableauxrules
+An `Assertion` :s:`*` operator is definable in terms of :s:`&`:
 
-    .. autoclass:: TabRules
-        :members:
+.. sentence::
 
-    Notes
-    -----
+  *A := A & A
 
-    - GO has some similarities to L{K3}. Material Identity :s:`A $ A` and the
-      Law of Excluded Middle :s:`A V ~A` fail.
+.. truth-tables::
+  :operators: Assertion
 
-    - Unlike L{K3}, there are logical truths, e.g. The Law of Non-Contradiction
-      :s:`~(A & ~A)`.
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-    - GO contains an additional conditional operator besides the material conditional,
-      which is similar to L{L3}. However, this conditional is *non-primitive*,
-      unlike L{L3}, and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
+.. sentence::
 
-    .. rubric:: Further Reading
+  A > B := ~A V B
 
-    - Doug Owings (2012). `Indeterminacy and Logical Atoms`_. *Ph.D. Thesis, University
-      of Connecticut*.
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-    - `Colin Caret`_. (2017). `Hybridized Paracomplete and Paraconsistent Logics`_.
-      *The Australasian  Journal of Logic*, 14.
+.. sentence::
+
+  A < B := (A > B) & (B > A)
+
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
+
+The `Conditional` :s:`$` is definable as follows:
+
+.. sentence::
+
+  A $ B := (A > B) V (~(A V ~A) & ~(B V ~B))
+
+This can be read as: either :s:`A > B` or both :s:`A` and :s:`B` are
+`gappy` (i.e. have the value T{N}).
+
+Likewise the `Biconditional` is defined as:
+
+.. sentence::
+
+  A % B := (A $ B) & (B $ A)
+
+.. truth-tables::
+  :operators: Conditional, Biconditional
+
+.. _go-predication:
+
+Predication
+-----------
+
+.. include:: include/k3/m.predication.rst
+
+.. _go-quantification:
+
+Quantification
+--------------
+
+For quantification, we introduce a `crunch` function:
+
+.. include:: include/go/crunch.rst
+
+.. rubric:: Existential
+
+.. include:: include/go/m.existential.rst
+
+.. rubric:: Universal
+
+.. include:: include/go/m.universal.rst
+
+.. _go-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _go-system:
+
+Tableaux
+========
+
+L{GO} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: GlutClosure
+  :legend:
+  :doc:
+
+Rules
+-----
+
+.. include:: include/fde/rules_blurb.rst
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+
+Notes
+=====
+
+- GO has some similarities to L{K3}. Material Identity :s:`A > A` and the
+  Law of Excluded Middle :s:`A V ~A` fail.
+
+- Unlike L{K3}, there are logical truths, e.g. The Law of Non-Contradiction
+  :s:`~(A & ~A)`.
+
+- GO contains an additional conditional operator besides the material conditional,
+  which is similar to L{L3}. However, this conditional is *non-primitive*,
+  unlike L{L3}, and it obeys contraction (:s:`A $ (A $ B)` !{conseq} :s:`A $ B`).
+
+- Conjunctions and Disjunctions always have a classical value (V{T} or V{F}).
+  This means that only atomic sentences (with zero or more negations) can have
+  the non-classical V{N} value.
+
+  This property of "classical containment" means that we can define
+  a conditional operator that satisfies Identity :s:`A $ A`. It also
+  allows us to give a formal description of a subset of sentences
+  that obey all principles of classical logic. For example, although
+  the Law of Excluded Middle fails for atomic sentences :s:`A V ~A`,
+  complex sentences -- those with at least one binary connective --
+  do obey the law: !{conseq} :s:`(A V A) V ~(A V A)`.
+
+References
+==========
+
+- Doug Owings (2012). `Indeterminacy and Logical Atoms`_. *Ph.D. Thesis, University
+  of Connecticut*.
+
+.. rubric:: Further Reading
+
+- `Colin Caret`_. (2017). `Hybridized Paracomplete and Paraconsistent Logics`_.
+  *The Australasian  Journal of Logic*, 14.
 
 .. _Professor Jc Beall: http://entailments.net
 .. _Colin Caret: https://sites.google.com/view/colincaret
