@@ -5,61 +5,174 @@ L{L3} - Łukasiewicz 3-valued Logic
 ********************************************
 
 L{L3} is a three-valued logic with values V{T}, V{F}, and V{N}. It is
-similar to {@K3}, but with a different, primitive conditional 
-operator that respects the Law of Conditional Identity (:s:`A $ A`).
+similar to {@K3}, but with a different Conditional.
 
-.. contents:: :local:
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-.. automodule:: pytableaux.logics.l3
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.l3
 
-    .. _l3-model:
+.. _l3-semantics:
+.. _l3-model:
 
-    .. autoclass:: Model
+Semantics
+=========
 
-        .. autoclass:: pytableaux.logics.l3::Model.Value()
-            :members: F, N, T
-            :undoc-members:
+.. _l3-truth-values:
 
-        .. include:: include/fde/m.attributes.rst
+Truth Values
+------------
 
-    .. _l3-truth-tables:
+Common labels for the values include:
 
-    Truth Tables
-    ------------
+.. include:: include/k3/value-table.rst
 
-    .. include:: include/truth_table_blurb.rst
+.. rubric:: Designated Values
 
-    .. truth-tables::
+The set of *designated values* for L{L3} is the singleton: { V{T} }
 
-    .. _l3-consequence:
+.. _l3-truth-tables:
 
-    Consequence
-    -----------
+Truth Tables
+------------
 
-    Logical consequence is defined just like in L{K3}:
-    
-    .. include:: include/k3/m.consequence.rst
+.. include:: include/truth_table_blurb.rst
 
-    .. _l3-system:
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction, Conditional
 
-    Tableaux System
-    ===============
+.. rubric:: Defined Operators
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+The `Biconditional` :s:`%` is defined in the usual way:
 
-    .. _l3-rules:
+.. sentence::
 
-    .. autoclass:: TabRules
-        :members:
+  A % B := (A $ B) & (B $ A)
 
-    Notes
-    =====
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-    * Łukasiewicz, J. (1920). On 3-valued logic. Ruch Filozoficzny 5, 169-171.
+.. sentence::
 
-    * Łukasiewicz, J. (1957). Aristotle's Syllogistic from the Standpoint of Modern
-      Formal Logic. Oxford: Clarendon Press
+  A > B := ~A V B
+
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
+
+.. sentence::
+
+  A < B := (A > B) & (B > A)
+
+.. truth-tables::
+  :operators: Biconditional, MaterialConditional, MaterialBiconditional
+
+.. rubric:: Compatibility Tables
+
+L{L3} does not have a separate `Assertion` operator, but we include a table
+and rules for it, for cross-compatibility.
+
+.. truth-tables::
+  :operators: Assertion
+
+.. _l3-predication:
+
+Predication
+-----------
+
+.. include:: include/k3/m.predication.rst
+
+.. _l3-quantification:
+
+Quantification
+--------------
+
+.. rubric:: Existential
+
+.. include:: include/fde/m.existential.rst
+
+.. rubric:: Universal
+
+.. include:: include/fde/m.universal.rst
+
+.. _l3-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _l3-system:
+
+Tableaux
+========
+
+L{L3} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: GlutClosure
+  :legend:
+  :doc:
+
+.. _l3-rules:
+
+Rules
+--------
+
+.. include:: include/fde/rules_blurb.rst
+
+There are no rules that apply to quantified sentences.
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion
+
+Notes
+=====
+
+* Conditional Identity holds: !{conseq} :s:`A $ A`.
+
+References
+==========
+
+* Łukasiewicz, J. (1920). On 3-valued logic. Ruch Filozoficzny 5, 169-171.
+
+* Łukasiewicz, J. (1957). Aristotle's Syllogistic from the Standpoint of Modern
+    Formal Logic. Oxford: Clarendon Press
