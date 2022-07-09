@@ -338,9 +338,10 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
 
     def gettab_rule(self):
         opts = self.options
-        tab = Tableau()
         logic: logics.LogicType = opts['logic']
-        rulecls = getattr(logic.TabRules, opts['rule'])
+        tab = Tableau(logic)
+        rulecls = type(tab.rules.get(opts['rule']))
+        tab.rules.clear()
         tab.rules.append(rulecls)
         rule = tab.rules[0]
         helper = EllipsisExampleHelper(rule)
