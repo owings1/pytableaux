@@ -556,7 +556,7 @@ class StandardParser(BaseParser, primary = True):
                     f'Unterminated open paren at position {context.pos}'
                 )
             peek = context.next(length)
-            ptype = context.type(peek)
+            ptype = context.type(peek, None)
             if ptype is Marking.paren_close:
                 depth -= 1
             elif ptype is Marking.paren_open:
@@ -626,6 +626,7 @@ class ParseTable(MapCover, TableStore):
         """
         Args:
             data: The table data.
+            keypair: The key pair identifier.
         """
         self.keypair = keypair
         super().__init__(dict(data))
@@ -673,7 +674,7 @@ class ParseTable(MapCover, TableStore):
         except KeyError:
             if default is NOARG:
                 raise
-            return NOARG
+            return default
 
     def value(self, char, /):
         """Get the item value for the character.
