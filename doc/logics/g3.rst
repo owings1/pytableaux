@@ -4,55 +4,178 @@
 L{G3} - Gödel 3-valued Logic
 *************************************
 
-Gödel 3-valued logic (V{T}, V{F}, and V{N}) with classical-like negation.
+L{G3} is a 3-valued logic, with values V{T}, V{F}, and V{N}. It features a
+classical-like negation, and {@L3}-like conditional.
 
-.. contents:: :local:
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-.. automodule:: pytableaux.logics.g3
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.g3
 
-    .. autoclass:: Model
+.. _g3-semantics:
+.. _g3-model:
 
-        .. autoclass:: pytableaux.logics.g3::Model.Value()
-            :members: F, N, T
-            :undoc-members:
-            :noindex:
+Semantics
+=========
 
-        .. include:: include/fde/m.attributes.rst
+.. _g3-truth-values:
 
-        .. method:: truth_function(operator, a, b)
+Truth Values
+------------
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+Common labels for the values include:
 
-            .. truth-tables::
+.. include:: include/k3/value-table.rst
 
-    Consequence
-    -----------
+.. rubric:: Designated Values
 
-    Logical consequence is defined just like in L{K3}:
-    
-    .. include:: include/k3/m.consequence.rst
+The set of *designated values* for L{G3} is the singleton: { V{T} }
 
-    Tableaux System
-    ===============
+.. _g3-truth-tables:
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+Truth Tables
+------------
 
-    .. autoclass:: TabRules
-        :members:
+.. include:: include/truth_table_blurb.rst
 
-    Notes
-    -----
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction, Conditional
 
-    .. rubric:: Futher Reading
+.. rubric:: Defined Operators
 
-    - Heyting, Arend. `Intuitionism`_: An Introduction. Netherlands, North-Holland, 1966.
+The `Biconditional` :s:`%` is defined in the usual way:
 
-    - Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
+.. sentence::
+
+  A % B := (A $ B) & (B $ A)
+
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
+
+.. sentence::
+
+  A > B := ~A V B
+
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
+
+.. sentence::
+
+  A < B := (A > B) & (B > A)
+
+.. truth-tables::
+  :operators: Biconditional, MaterialConditional, MaterialBiconditional
+
+.. rubric:: Compatibility Tables
+
+L{G3} does not have a separate `Assertion` operator, but we include a table
+and rules for it, for cross-compatibility.
+
+.. truth-tables::
+  :operators: Assertion
+
+.. _g3-predication:
+
+Predication
+-----------
+
+.. include:: include/k3/m.predication.rst
+
+.. _g3-quantification:
+
+Quantification
+--------------
+
+.. rubric:: Existential
+
+.. include:: include/fde/m.existential.rst
+
+.. rubric:: Universal
+
+.. include:: include/fde/m.universal.rst
+
+.. _g3-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _g3-system:
+
+Tableaux
+========
+
+L{G3} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: GlutClosure
+  :legend:
+  :doc:
+
+.. _g3-rules:
+
+Rules
+--------
+
+.. include:: include/fde/rules_blurb.rst
+
+There are no rules that apply to quantified sentences.
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion
+
+
+Notes
+=====
+
+References
+==========
+
+- Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
+
+.. rubric:: Futher Reading
+
+- Heyting, Arend. `Intuitionism`_: An Introduction. Netherlands, North-Holland, 1966.
 
 .. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en
 .. _Intuitionism: https://www.google.com/books/edition/Intuitionism/qfp_-Fo9yWMC?hl=en&gbpv=0
