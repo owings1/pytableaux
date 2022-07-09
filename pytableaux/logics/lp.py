@@ -20,7 +20,7 @@
 # pytableaux - Logic of Paradox
 from __future__ import annotations as annotations
 
-from pytableaux.logics import fde as FDE
+import pytableaux.logics.fde as FDE
 from pytableaux.models import BaseModel, ValueLP
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.rules import BaseClosureRule
@@ -48,8 +48,8 @@ class Model(FDE.Model, BaseModel[ValueLP]):
 
     Value = ValueLP
 
-    #: The set of designated values.
     designated_values = setf({Value.B, Value.T})
+    "The set of designated values."
 
     unassigned_value = Value.F
 
@@ -60,7 +60,7 @@ class TableauxSystem(FDE.TableauxSystem):
     """
 
 @TableauxSystem.initialize
-class TabRules:
+class TabRules(FDE.TabRules):
     """
     The Tableaux System for L{LP} contains all the rules from L{FDE}, as
     well as an additional closure rule.
@@ -95,147 +95,7 @@ class TabRules:
             s = Atomic.first()
             return sdnode(s, False), sdnode(~s, False)
 
-    class DesignationClosure(FDE.TabRules.DesignationClosure):
-        pass
-
-    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated):
-        pass
-    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated):
-        pass
-
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
-        pass
-    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated):
-        pass
-    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated):
-        pass
-    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
-        pass
-
-    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
-        pass
-    class ConjunctionNegatedDesignated(FDE.TabRules.ConjunctionNegatedDesignated):
-        pass
-    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
-        pass
-    class ConjunctionNegatedUndesignated(FDE.TabRules.ConjunctionNegatedUndesignated):
-        pass
-
-    class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
-        pass
-    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
-        pass
-    class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
-        pass
-    class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
-        pass
-
-    class MaterialConditionalDesignated(FDE.TabRules.MaterialConditionalDesignated):
-        pass
-    class MaterialConditionalNegatedDesignated(FDE.TabRules.MaterialConditionalNegatedDesignated):
-        pass
-    class MaterialConditionalUndesignated(FDE.TabRules.MaterialConditionalUndesignated):
-        pass
-    class MaterialConditionalNegatedUndesignated(FDE.TabRules.MaterialConditionalNegatedUndesignated):
-        pass
-
-    class MaterialBiconditionalDesignated(FDE.TabRules.MaterialBiconditionalDesignated):
-        pass
-    class MaterialBiconditionalNegatedDesignated(FDE.TabRules.MaterialBiconditionalNegatedDesignated):
-        pass
-    class MaterialBiconditionalUndesignated(FDE.TabRules.MaterialBiconditionalUndesignated):
-        pass
-    class MaterialBiconditionalNegatedUndesignated(FDE.TabRules.MaterialBiconditionalNegatedUndesignated):
-        pass
-
-    class ConditionalDesignated(FDE.TabRules.ConditionalDesignated):
-        pass
-    class ConditionalNegatedDesignated(FDE.TabRules.ConditionalNegatedDesignated):
-        pass
-    class ConditionalUndesignated(FDE.TabRules.ConditionalUndesignated):
-        pass
-    class ConditionalNegatedUndesignated(FDE.TabRules.ConditionalNegatedUndesignated):
-        pass
-
-    class BiconditionalDesignated(FDE.TabRules.BiconditionalDesignated):
-        pass
-    class BiconditionalNegatedDesignated(FDE.TabRules.BiconditionalNegatedDesignated):
-        pass
-    class BiconditionalUndesignated(FDE.TabRules.BiconditionalUndesignated):
-        pass
-    class BiconditionalNegatedUndesignated(FDE.TabRules.BiconditionalNegatedUndesignated):
-        pass
-
-    class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
-        pass
-    class ExistentialNegatedDesignated(FDE.TabRules.ExistentialNegatedDesignated):
-        pass
-    class ExistentialUndesignated(FDE.TabRules.ExistentialUndesignated):
-        pass
-    class ExistentialNegatedUndesignated(FDE.TabRules.ExistentialNegatedUndesignated):
-        pass
-
-    class UniversalDesignated(FDE.TabRules.UniversalDesignated):
-        pass
-    class UniversalNegatedDesignated(FDE.TabRules.UniversalNegatedDesignated):
-        pass
-    class UniversalUndesignated(FDE.TabRules.UniversalUndesignated):
-        pass
-    class UniversalNegatedUndesignated(FDE.TabRules.UniversalNegatedUndesignated):
-        pass
-
     closure_rules = (
         GapClosure,
-        DesignationClosure,
-    )
-
-    rule_groups = (
-        (
-            # non-branching rules
-            AssertionDesignated,
-            AssertionUndesignated,
-            AssertionNegatedDesignated,
-            AssertionNegatedUndesignated,
-            ConjunctionDesignated, 
-            DisjunctionNegatedDesignated,
-            DisjunctionUndesignated,
-            DisjunctionNegatedUndesignated,
-            MaterialConditionalNegatedDesignated,
-            MaterialConditionalUndesignated,
-            ConditionalUndesignated, 
-            ConditionalNegatedDesignated,
-            ExistentialNegatedDesignated,
-            ExistentialNegatedUndesignated,
-            UniversalNegatedDesignated,
-            UniversalNegatedUndesignated,
-            DoubleNegationDesignated,
-            DoubleNegationUndesignated,
-        ),
-        (
-            # branching rules
-            ConjunctionNegatedDesignated,
-            ConjunctionUndesignated,
-            ConjunctionNegatedUndesignated,
-            DisjunctionDesignated,
-            MaterialConditionalDesignated,
-            MaterialConditionalNegatedUndesignated,
-            MaterialBiconditionalDesignated,
-            MaterialBiconditionalNegatedDesignated,
-            MaterialBiconditionalUndesignated,
-            MaterialBiconditionalNegatedUndesignated,
-            ConditionalDesignated,
-            ConditionalNegatedUndesignated,
-            BiconditionalDesignated,
-            BiconditionalNegatedDesignated,
-            BiconditionalUndesignated,
-            BiconditionalNegatedUndesignated,
-        ),
-        (
-            ExistentialDesignated,
-            ExistentialUndesignated,
-        ),
-        (
-            UniversalDesignated,
-            UniversalUndesignated,
-        ),
+        FDE.TabRules.DesignationClosure,
     )
