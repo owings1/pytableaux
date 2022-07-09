@@ -6,88 +6,166 @@ L{K3W} - Weak Kleene Logic
 
 L{K3W} is a 3-valued logic with values V{T}, V{F}, and V{N}. The logic is
 similar to {@K3}, but with slightly different behavior of the V{N} value.
-This logic is also known as Bochvar Internal (L{B3}). A common interpretation of
-these values is:
+This logic is also known as Bochvar Internal (L{B3}).
 
-- V{T}: just true
-- V{F}: just false
-- V{N}: meaningless (or senseless)
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-.. contents:: :local:
+------------------------
 
-.. automodule:: pytableaux.logics.k3w
+.. module:: pytableaux.logics.k3w
 
-    Semantics
-    =========
+.. _k3w-semantics:
+.. _k3w-model:
 
-    .. _k3w-model:
+Semantics
+=========
 
-    .. autoclass:: Model
+.. _k3w-truth-values:
 
-        .. autoclass:: pytableaux.logics.k3w::Model.Value()
-            :members: F, N, T
-            :undoc-members:
+Truth Values
+------------
 
-        .. include:: include/fde/m.attributes.rst
-        
-        .. method:: truth_function(operator, a, b)
+Common labels for the values include:
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+.. include:: include/k3w/value-table.rst
 
-            .. truth-tables::
+.. rubric:: Designated Values
 
-            Note that, for the binary connectives, if either operand has the value V{N},
-            then the whole sentence has the value V{N}. To (re-)quote a Chinese proverb,
-            "a single jot of rat's dung spoils the soup."
+The set of *designated values* for L{K3W} is the singleton: { V{T} }
 
-        .. method:: value_of_predicated(sentence)
+.. _k3w-truth-tables:
 
-            Predication is the same as {@K3 model}, defined in terms of a
-            predicate's *extenstion* and *anti-extension*.
+Truth Tables
+------------
 
-            .. include:: include/k3/m.predication.rst
+.. include:: include/truth_table_blurb.rst
 
-        .. method:: value_of_existential(sentence)
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction
 
-            Existential quantification is defined just as in {@K3 model}:
+.. rubric:: Defined Operators
 
-            .. include:: include/k3/m.existential.rst
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-        .. method:: value_of_universal(sentence)
+.. sentence::
 
-            Universal quantification is defined just as in {@K3 model}:
+  A > B := ~A V B
 
-            .. include:: include/k3/m.existential.rst
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-        .. Note:: For an alternate interpretation of the quantifiers in L{K3W}, see
-            :ref:`K3WQ <k3wq-model>`. There we apply the notion of *generalized*
-            conjunction and disjunction to :s:`L` and :s:`X`.
+.. sentence::
 
+  A < B := (A > B) & (B > A)
 
-    Consequence
-    -----------
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
 
-    Logical consequence is defined just like in L{K3}:
-    
-    .. include:: include/k3/m.consequence.rst
+.. rubric:: Compatibility Tables
 
-    .. _k3w-system:
+L{K3W} does not have separate `Assertion` or `Conditional` operators,
+but we include tables and rules for them, for cross-compatibility.
 
-    Tableaux System
-    ===============
+.. truth-tables::
+  :operators: Assertion, Conditional, Biconditional
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+.. _k3w-predication:
 
-    .. autoclass:: TabRules
-        :members:
+Predication
+-----------
 
-    Notes
-    -----
+.. include:: include/k3/m.predication.rst
 
-    Addition fails in L{K3W}. That is :s:`A` does not imply :s:`A V B`.
+.. _k3w-quantification:
 
-    For further reading, see:
+Quantification
+--------------
 
-    * Beall, Jc `Off-topic: a new interpretation of Weak Kleene logic <http://entailments.net/papers/beall-ajl-wk3-interp.pdf>`_. 2016.
+.. rubric:: Existential
+
+.. include:: include/fde/m.existential.rst
+
+.. rubric:: Universal
+
+.. include:: include/fde/m.universal.rst
+
+.. Note:: For an alternate interpretation of the quantifiers in L{K3W}, see
+    {@K3WQ}. There we apply the notion of *generalized*
+    conjunction and disjunction to :s:`L` and :s:`X`.
+
+.. _k3w-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _k3w-system:
+
+Tableaux
+========
+
+L{K3W} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: GlutClosure
+  :legend:
+  :doc:
+
+.. _k3w-rules:
+
+Rules
+--------
+
+.. include:: include/fde/rules_blurb.rst
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion, Conditional, Biconditional
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion, Conditional, Biconditional
+
+Notes
+=====
+
+- Addition fails in L{K3W}. That is :s:`A` does not imply :s:`A V B`.
+
+For further reading, see:
+
+* Beall, Jc `Off-topic: a new interpretation of Weak Kleene logic <http://entailments.net/papers/beall-ajl-wk3-interp.pdf>`_. 2016.
