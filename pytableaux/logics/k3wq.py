@@ -20,28 +20,19 @@
 # pytableaux - Weak Kleene Logic with alternate quantification
 from __future__ import annotations
 
-from pytableaux.lang.lex import Operated, Quantified, Quantifier
-from pytableaux.logics import fde as FDE
-from pytableaux.logics import k3 as K3
-from pytableaux.logics import k3w as K3W
-from pytableaux.proof.common import Branch, Node
-from pytableaux.proof import adds, group, sdnode
+import pytableaux.logics.fde as FDE
+import pytableaux.logics.k3w as K3W
+from pytableaux.lang import Operated, Quantified, Quantifier
+from pytableaux.proof import Branch, Node, adds, group, sdnode
 
 name = 'K3WQ'
 
 class Meta(K3W.Meta):
-    title       = 'Weak Kleene 3-valued alternate-quantifier logic'
+    title       = 'Weak Kleene alt-Q Logic'
     description = 'Three-valued logic with values T, F, and N, with alternate quantification'
     category_order = 40
 
-
 class Model(K3W.Model):
-    """
-    A K3WQ model is just like a `K3W model`_ with a different treatment of the
-    quantifiers
-
-    .. _K3W model: k3w.html#logics.k3w.Model
-    """
 
     Value = K3W.Model.Value
     # generalized conjunction
@@ -103,120 +94,11 @@ class Model(K3W.Model):
         value = self.md_cvals[md_value]
         return value
 
-class TableauxSystem(FDE.TableauxSystem):
-    """
-    L{K3WQ}'s Tableaux System inherits directly from L{FDE}
-    designation markers, and building the trunk in the same way.
-    """
+class TableauxSystem(K3W.TableauxSystem):
+    pass
 
 @TableauxSystem.initialize
-class TabRules:
-    """
-    The Tableaux System for K3WQ contains the `FDE closure rule`_, and the
-    `K3 closure rule`_. All of the operator rules are the same as :ref:`K3W`. The
-    rules for the quantifiers, however, are different.
-
-    .. _FDE closure rule: fde.html#logics.fde.TabRules.DesignationClosure
-    .. _K3 closure rule: k3.html#logics.k3w.TabRules.GlutClosure
-    .. _FDE: fde.html
-    .. _K3W: k3w.html
-    """
-
-    class GlutClosure(K3.TabRules.GlutClosure):
-        pass
-
-    class DesignationClosure(FDE.TabRules.DesignationClosure):
-        pass
-
-    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated):
-        pass
-
-    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated):
-        pass
-
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
-        pass
-
-    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated):
-        pass
-
-    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated):
-        pass
-
-    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
-        pass
-
-    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
-        pass
-
-    class ConjunctionNegatedDesignated(K3W.TabRules.ConjunctionNegatedDesignated):
-        pass
-
-    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
-        pass
-
-    class ConjunctionNegatedUndesignated(K3W.TabRules.ConjunctionNegatedUndesignated):
-        pass
-
-    class DisjunctionDesignated(K3W.TabRules.DisjunctionDesignated):
-        pass
-            
-    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
-        pass
-
-    class DisjunctionUndesignated(K3W.TabRules.DisjunctionUndesignated):
-        pass
-
-    class DisjunctionNegatedUndesignated(K3W.TabRules.DisjunctionNegatedUndesignated):
-        pass
-
-    class MaterialConditionalDesignated(K3W.TabRules.MaterialConditionalDesignated):
-        pass
-
-    class MaterialConditionalNegatedDesignated(K3W.TabRules.MaterialConditionalNegatedDesignated):
-        pass
-
-    class MaterialConditionalUndesignated(K3W.TabRules.MaterialConditionalUndesignated):
-        pass
-
-    class MaterialConditionalNegatedUndesignated(K3W.TabRules.MaterialConditionalNegatedUndesignated):
-        pass
-
-    class MaterialBiconditionalDesignated(K3W.TabRules.MaterialBiconditionalDesignated):
-        pass
-
-    class MaterialBiconditionalNegatedDesignated(K3W.TabRules.MaterialBiconditionalNegatedDesignated):
-        pass
-
-    class MaterialBiconditionalUndesignated(K3W.TabRules.MaterialBiconditionalUndesignated):
-        pass
-
-    class MaterialBiconditionalNegatedUndesignated(K3W.TabRules.MaterialBiconditionalNegatedUndesignated):
-        pass
-
-    class ConditionalDesignated(K3W.TabRules.ConditionalDesignated):
-        pass
-
-    class ConditionalNegatedDesignated(K3W.TabRules.ConditionalNegatedDesignated):
-        pass
-
-    class ConditionalUndesignated(K3W.TabRules.ConditionalUndesignated):
-        pass
-
-    class ConditionalNegatedUndesignated(K3W.TabRules.ConditionalNegatedUndesignated):
-        pass
-
-    class BiconditionalDesignated(K3W.TabRules.BiconditionalDesignated):
-        pass
-
-    class BiconditionalNegatedDesignated(K3W.TabRules.BiconditionalNegatedDesignated):
-        pass
-
-    class BiconditionalUndesignated(K3W.TabRules.BiconditionalUndesignated):
-        pass
-
-    class BiconditionalNegatedUndesignated(K3W.TabRules.BiconditionalNegatedUndesignated):
-        pass
+class TabRules(K3W.TabRules):
 
     class ExistentialDesignated(FDE.QuantifierSkinnyRule):
         """
@@ -241,9 +123,6 @@ class TabRules:
                     sdnode(branch.new_constant() >> s, d),
                 )
             )
-
-    class ExistentialNegatedDesignated(FDE.TabRules.ExistentialNegatedDesignated):
-        pass
 
     class ExistentialUndesignated(FDE.QuantifierSkinnyRule):
         """
@@ -288,9 +167,6 @@ class TabRules:
                 group(sdnode(~(branch.new_constant() >> s), self.designation))
             )
 
-    class UniversalDesignated(FDE.TabRules.UniversalDesignated):
-        pass
-
     class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
         """
         From an unticked, designated, negated universal node `n` on a branch `b`,
@@ -315,9 +191,6 @@ class TabRules:
                 )
             )
 
-    class UniversalUndesignated(FDE.TabRules.UniversalUndesignated):
-        pass
-
     class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """
         From an unticked, undesignated, negated universal node `n` on a branch `b`,
@@ -341,56 +214,51 @@ class TabRules:
                 group(sdnode(self.quantifier(v, si), not d)),
             )
 
-    closure_rules = (
-        GlutClosure,
-        DesignationClosure,
-    )
-
     rule_groups = (
         (
             # non-branching rules
 
-            AssertionDesignated,
-            AssertionUndesignated,
-            AssertionNegatedDesignated,
-            AssertionNegatedUndesignated,
-            ConjunctionDesignated, 
-            DisjunctionNegatedDesignated,
+            FDE.TabRules.AssertionDesignated,
+            FDE.TabRules.AssertionUndesignated,
+            FDE.TabRules.AssertionNegatedDesignated,
+            FDE.TabRules.AssertionNegatedUndesignated,
+            FDE.TabRules.ConjunctionDesignated, 
+            FDE.TabRules.DisjunctionNegatedDesignated,
 
-            ExistentialNegatedDesignated,
+            FDE.TabRules.ExistentialNegatedDesignated,
 
-            DoubleNegationDesignated,
-            DoubleNegationUndesignated,
+            FDE.TabRules.DoubleNegationDesignated,
+            FDE.TabRules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)
-            MaterialConditionalDesignated,
-            MaterialConditionalUndesignated,
-            MaterialConditionalNegatedDesignated,
-            MaterialConditionalNegatedUndesignated,
-            ConditionalDesignated,
-            ConditionalUndesignated,
-            ConditionalNegatedDesignated,
-            ConditionalNegatedUndesignated,
-            MaterialBiconditionalDesignated,
-            MaterialBiconditionalUndesignated,
-            MaterialBiconditionalNegatedDesignated,
-            MaterialBiconditionalNegatedUndesignated,
-            BiconditionalDesignated,
-            BiconditionalUndesignated,
-            BiconditionalNegatedDesignated,
-            BiconditionalNegatedUndesignated,
+            K3W.TabRules.MaterialConditionalDesignated,
+            K3W.TabRules.MaterialConditionalUndesignated,
+            K3W.TabRules.MaterialConditionalNegatedDesignated,
+            K3W.TabRules.MaterialConditionalNegatedUndesignated,
+            K3W.TabRules.ConditionalDesignated,
+            K3W.TabRules.ConditionalUndesignated,
+            K3W.TabRules.ConditionalNegatedDesignated,
+            K3W.TabRules.ConditionalNegatedUndesignated,
+            K3W.TabRules.MaterialBiconditionalDesignated,
+            K3W.TabRules.MaterialBiconditionalUndesignated,
+            K3W.TabRules.MaterialBiconditionalNegatedDesignated,
+            K3W.TabRules.MaterialBiconditionalNegatedUndesignated,
+            K3W.TabRules.BiconditionalDesignated,
+            K3W.TabRules.BiconditionalUndesignated,
+            K3W.TabRules.BiconditionalNegatedDesignated,
+            K3W.TabRules.BiconditionalNegatedUndesignated,
         ),
         (
             # two-branching rules
-            ConjunctionUndesignated,
+            FDE.TabRules.ConjunctionUndesignated,
         ),
         (
             # three-branching rules
-            DisjunctionDesignated,
-            DisjunctionUndesignated,
-            ConjunctionNegatedDesignated,
-            ConjunctionNegatedUndesignated,
+            K3W.TabRules.DisjunctionDesignated,
+            K3W.TabRules.DisjunctionUndesignated,
+            K3W.TabRules.ConjunctionNegatedDesignated,
+            K3W.TabRules.ConjunctionNegatedUndesignated,
             # five-branching rules (formerly)
-            DisjunctionNegatedUndesignated,
+            K3W.TabRules.DisjunctionNegatedUndesignated,
         ),
         (
             ExistentialDesignated,
@@ -400,7 +268,7 @@ class TabRules:
             UniversalNegatedUndesignated,
         ),
         (
-            UniversalDesignated,
-            UniversalUndesignated,
+            FDE.TabRules.UniversalDesignated,
+            FDE.TabRules.UniversalUndesignated,
         ),
     )
