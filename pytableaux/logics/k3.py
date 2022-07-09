@@ -31,7 +31,7 @@ from pytableaux.tools.sets import setf
 name = 'K3'
 
 class Meta(FDE.Meta):
-    title       = 'Strong Kleene 3-valued logic'
+    title       = 'Strong Kleene Logic'
     category    = 'Many-valued'
     description = 'Three-valued logic (T, F, N)'
     category_order = 20
