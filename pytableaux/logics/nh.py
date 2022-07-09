@@ -20,11 +20,11 @@
 # pytableaux - Paraconsistent Hybrid 3-valued Logic
 from __future__ import annotations
 
+import pytableaux.logics.fde as FDE
+import pytableaux.logics.lp as LP
+import pytableaux.logics.mh as MH
 from pytableaux.lang.lex import Operator as Oper
 from pytableaux.lang.lex import Quantified, Sentence
-from pytableaux.logics import fde as FDE
-from pytableaux.logics import lp as LP
-from pytableaux.logics import mh as MH
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof import adds, group, sdnode
 
@@ -63,40 +63,17 @@ class TableauxSystem(FDE.TableauxSystem):
     """
     # operator => negated => designated
     branchables = {
-        Oper.Negation: {
-            True  : {True: 0, False: 0},
-        },
-        Oper.Assertion: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Oper.Conjunction: {
-            False : {True: 0, False: 1},
-            True  : {True: 3, False: 1},
-        },
-        Oper.Disjunction: {
-            False : {True: 1, False: 0},
-            True  : {True: 0, False: 1},
-        },
+        Oper.Negation: (None, (0, 0)),
+        Oper.Assertion: ((0, 0), (0, 0)),
+        Oper.Conjunction: ((1, 0), (1, 3)),
+        Oper.Disjunction: ((0, 1), (1, 0)),
         # for now, reduce to negated disjunction
-        Oper.MaterialConditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Oper.MaterialConditional: ((0, 0), (0, 0)),
         # for now, reduce to conjunction
-        Oper.MaterialBiconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Oper.Conditional: {
-            False : {True: 1, False: 0},
-            True  : {True: 0, False: 1},
-        },
+        Oper.MaterialBiconditional: ((0, 0), (0, 0)),
+        Oper.Conditional: ((0, 1), (1, 0)),
         # for now, reduce to conjunction
-        Oper.Biconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Oper.Biconditional: ((0, 0), (0, 0)),
     }
 
 @TableauxSystem.initialize

@@ -474,37 +474,14 @@ class TableauxSystem(BaseSystem):
 
     # operator => negated => designated
     branchables = {
-        Operator.Negation: {
-            True: {True: 0, False: 0},
-        },
-        Operator.Assertion: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Operator.Conjunction: {
-            False : {True: 0, False: 1},
-            True  : {True: 1, False: 0},
-        },
-        Operator.Disjunction: {
-            False : {True: 1, False: 0},
-            True  : {True: 0, False: 1},
-        },
-        Operator.MaterialConditional: {
-            False : {True: 1, False: 0},
-            True  : {True: 0, False: 1},
-        },
-        Operator.MaterialBiconditional: {
-            False : {True: 1, False: 1},
-            True  : {True: 1, False: 1},
-        },
-        Operator.Conditional: {
-            False : {True: 1, False: 0},
-            True  : {True: 0, False: 1},
-        },
-        Operator.Biconditional: {
-            False : {True: 1, False: 1},
-            True  : {True: 1, False: 1},
-        },
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Negation: (None, (0, 0)),
+        Operator.Conjunction: ((1, 0), (0, 1)),
+        Operator.Disjunction: ((0, 1), (1, 0)),
+        Operator.MaterialConditional: ((0, 1), (1, 0)),
+        Operator.MaterialBiconditional: ((0, 1), (1, 0)),
+        Operator.Conditional: ((0, 1), (1, 0)),
+        Operator.Biconditional: ((1, 1), (1, 1)),
     }
 
     @classmethod
@@ -519,16 +496,14 @@ class TableauxSystem(BaseSystem):
         s = node.get('sentence')
         if s is None:
             return 0
-        d = node['designated']
         last_is_negated = False
         complexity = 0
         for oper in s.operators:
-            if oper is Operator.Negation:
-                if not last_is_negated:
-                    last_is_negated = True
-                    continue
+            if oper is Operator.Negation and not last_is_negated:
+                last_is_negated = True
+                continue
             if oper in cls.branchables:
-                complexity += cls.branchables[oper][last_is_negated][d]
+                complexity += cls.branchables[oper][last_is_negated][node['designated']]
                 last_is_negated = False
         return complexity
     

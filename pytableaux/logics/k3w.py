@@ -20,9 +20,10 @@
 # pytableaux - Weak Kleene Logic
 from __future__ import annotations
 
+import pytableaux.logics.fde as FDE
+import pytableaux.logics.k3 as K3
 from pytableaux.lang.lex import Operator as Oper
 from pytableaux.proof.common import Branch, Node
-from pytableaux.logics import fde as FDE, k3 as K3
 from pytableaux.proof import adds, group, sdnode
 
 name = 'K3W'
@@ -51,41 +52,18 @@ class TableauxSystem(FDE.TableauxSystem):
     employing designation markers, and building the trunk in the same way.
     """
     branchables = {
-        Oper.Negation: {
-            True: {True: 0, False: 0},
-        },
-        Oper.Assertion: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Oper.Conjunction: {
-            False : {True: 0, False: 1},
-            True  : {True: 2, False: 2},
-        },
-        Oper.Disjunction: {
-            False : {True: 2, False: 2},
-            True  : {True: 0, False: 2},
-        },
+        Oper.Negation: (None, (0, 0)),
+        Oper.Assertion: ((0, 0), (0, 0)),
+        Oper.Conjunction: ((1, 0), (2, 2)),
+        Oper.Disjunction: ((2, 2), (2, 0)),
         # reduction
-        Oper.MaterialConditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Oper.MaterialConditional: ((0, 0), (0, 0)),
         # reduction
-        Oper.MaterialBiconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Oper.MaterialBiconditional: ((0, 0), (0, 0)),
         # reduction
-        Oper.Conditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Oper.Conditional: ((0, 0), (0, 0)),
         # reduction
-        Oper.Biconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Oper.Biconditional: ((0, 0), (0, 0)),
     }
 
 @TableauxSystem.initialize

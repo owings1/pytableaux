@@ -20,11 +20,11 @@
 # pytableaux - Gappy Object 3-valued Logic
 from __future__ import annotations
 
+import pytableaux.logics.b3e as B3E
+import pytableaux.logics.fde as FDE
+import pytableaux.logics.k3 as K3
 from pytableaux.lang.lex import Operator as Oper
 from pytableaux.lang.lex import Quantified, Quantifier
-from pytableaux.logics import b3e as B3E
-from pytableaux.logics import fde as FDE
-from pytableaux.logics import k3 as K3
 from pytableaux.proof import Branch, Node, adds, group, rules, sdnode
 
 name = 'GO'
@@ -108,37 +108,14 @@ class TableauxSystem(FDE.TableauxSystem):
     """
     # operator => negated => designated
     branchables = {
-        Oper.Negation: {
-            True: {True: 0, False: 0},
-        },
-        Oper.Assertion: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Oper.Conjunction: {
-            False : {True: 0, False: 0},
-            True  : {True: 1, False: 0},
-        },
-        Oper.Disjunction: {
-            False : {True: 1, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Oper.MaterialConditional: {
-            False : {True: 1, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Oper.MaterialBiconditional: {
-            False : {True: 1, False: 0},
-            True  : {True: 1, False: 0},
-        },
-        Oper.Conditional: {
-            False : {True: 1, False: 0},
-            True  : {True: 1, False: 0},
-        },
-        Oper.Biconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 1, False: 0},
-        },
+        Oper.Negation: (None, (0, 0)),
+        Oper.Assertion: ((0, 0), (0, 0)),
+        Oper.Conjunction: ((0, 0), (0, 1)),
+        Oper.Disjunction: ((0, 1), (0, 0)),
+        Oper.MaterialConditional: ((0, 1), (0, 0)),
+        Oper.MaterialBiconditional: ((0, 1), (0, 1)),
+        Oper.Conditional: ((0, 1), (0, 1)),
+        Oper.Biconditional: ((0, 0), (0, 1)),
     }
 
 @TableauxSystem.initialize

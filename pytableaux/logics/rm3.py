@@ -20,11 +20,11 @@
 # pytableaux - R-mingle 3 logic
 from __future__ import annotations
 
+import pytableaux.logics.fde as FDE
+import pytableaux.logics.lp as LP
 from pytableaux.lang.lex import Operator as Oper
-from pytableaux.logics import fde as FDE
-from pytableaux.logics import lp as LP
-from pytableaux.proof.common import Node
 from pytableaux.proof import adds, group, sdnode
+from pytableaux.proof.common import Node
 
 name = 'RM3'
 
@@ -58,14 +58,8 @@ class Model(LP.Model):
 class TableauxSystem(FDE.TableauxSystem):
 
     branchables = FDE.TableauxSystem.branchables | {
-        Oper.Conditional: {
-            False : {True: 2, False: 1},
-            True  : {True: 0, False: 1},
-        },
-        Oper.Biconditional: {
-            False : {True: 2, False: 1},
-            True  : {True: 1, False: 1},
-        },
+        Oper.Conditional: ((1, 2), (1, 0)),
+        Oper.Biconditional: ((1, 2), (1, 1)),
     }
 
 @TableauxSystem.initialize

@@ -20,10 +20,10 @@
 # pytableaux - Paracomplete Hybrid 3-valued Logic
 from __future__ import annotations
 
+import pytableaux.logics.fde as FDE
+import pytableaux.logics.k3 as K3
 from pytableaux.lang.lex import Operator as Oper
 from pytableaux.lang.lex import Quantified, Sentence
-from pytableaux.logics import fde as FDE
-from pytableaux.logics import k3 as K3
 from pytableaux.proof.common import Node
 from pytableaux.proof import adds, group, sdnode
 
@@ -41,7 +41,7 @@ class Meta(K3.Meta):
 class Model(K3.Model):
 
     def is_sentence_opaque(self, s: Sentence, /):
-        return isinstance(s, Quantified) or super().is_sentence_opaque(s)
+        return type(s) is Quantified or super().is_sentence_opaque(s)
 
     def truth_function(self, oper: Oper, a, b = None, /):
         oper = Oper(oper)
@@ -62,40 +62,17 @@ class TableauxSystem(FDE.TableauxSystem):
     """
     # operator => negated => designated
     branchables = {
-        Oper.Negation: {
-            True  : {True: 0, False: 0}
-        },
-        Oper.Assertion: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Oper.Conjunction: {
-            False : {True: 0, False: 1},
-            True  : {True: 1, False: 0},
-        },
-        Oper.Disjunction: {
-            False : {True: 1, False: 0},
-            True  : {True: 1, False: 3},
-        },
+        Oper.Negation: (None, (0, 0)),
+        Oper.Assertion: ((0, 0), (0, 0)),
+        Oper.Conjunction: ((1, 0), (0, 1)),
+        Oper.Disjunction: ((0, 1), (3, 1)),
         # for now, reduce to negated disjunction
-        Oper.MaterialConditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Oper.MaterialConditional: ((0, 0), (0, 0)),
         # for now, reduce to conjunction
-        Oper.MaterialBiconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
-        Oper.Conditional: {
-            False : {True: 1, False: 0},
-            True  : {True: 0, False: 1},
-        },
+        Oper.MaterialBiconditional: ((0, 0), (0, 0)),
+        Oper.Conditional: ((0, 1), (1, 0)),
         # for now, reduce to conjunction
-        Oper.Biconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Oper.Biconditional: ((0, 0), (0, 0)),
     }
 
 @TableauxSystem.initialize

@@ -20,10 +20,10 @@
 # pytableaux - Bochvar 3 External logic
 from __future__ import annotations
 
-from pytableaux.lang import Operator as Oper
-from pytableaux.logics import fde as FDE
-from pytableaux.logics import k3 as K3
-from pytableaux.logics import k3w as K3W
+import pytableaux.logics.fde as FDE
+import pytableaux.logics.k3 as K3
+import pytableaux.logics.k3w as K3W
+from pytableaux.lang import Operator as Operator
 from pytableaux.proof import Branch, Node, adds, group, sdnode
 
 name = 'B3E'
@@ -32,7 +32,7 @@ class Meta(K3.Meta):
     title       = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 50
-    native_operators = FDE.Meta.native_operators + (Oper.Assertion,)
+    native_operators = FDE.Meta.native_operators + (Operator.Assertion,)
 
 def gap(v):
     return min(v, 1 - v)
@@ -46,17 +46,17 @@ class Model(K3W.Model):
     some of the connectives.
     """
 
-    def truth_function(self, oper: Oper, a, b = None, /):
-        oper = Oper(oper)
-        if oper is Oper.Assertion:
+    def truth_function(self, oper: Operator, a, b = None, /):
+        oper = Operator(oper)
+        if oper is Operator.Assertion:
             return self.Value[crunch(self.Value[a].num)]
-        elif oper is Oper.Conditional:
+        elif oper is Operator.Conditional:
             return self.truth_function(
-                Oper.Disjunction,
-                self.truth_function(Oper.Negation, self.truth_function(Oper.Assertion, a)),
-                self.truth_function(Oper.Assertion, b)
+                Operator.Disjunction,
+                self.truth_function(Operator.Negation, self.truth_function(Operator.Assertion, a)),
+                self.truth_function(Operator.Assertion, b)
             )
-        elif oper is Oper.Biconditional:
+        elif oper is Operator.Biconditional:
             return FDE.Model.truth_function(self, oper, a, b)
         return super().truth_function(oper, a, b)
 
@@ -69,15 +69,9 @@ class TableauxSystem(FDE.TableauxSystem):
     # operator => negated => designated
     branchables = K3W.TableauxSystem.branchables | {
         # reduction
-        Oper.Conditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Operator.Conditional: ((0, 0), (0, 0)),
         # reduction
-        Oper.Biconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Operator.Biconditional: ((0, 0), (0, 0)),
     }
 
 @TableauxSystem.initialize
@@ -111,7 +105,7 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Assertion
+        operator    = Operator.Assertion
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
@@ -195,7 +189,7 @@ class TabRules:
         and the second disjunct is the assertion of the consequent. Then tick *n*.
         """
         designation = True
-        operator    = Oper.Conditional
+        operator    = Operator.Conditional
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
@@ -216,7 +210,7 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Conditional
+        operator    = Operator.Conditional
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
@@ -253,7 +247,7 @@ class TabRules:
         inverted. Then tick *n*.
         """
         designation = True
-        operator    = Oper.Biconditional
+        operator    = Operator.Biconditional
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch, /):

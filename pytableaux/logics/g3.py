@@ -20,10 +20,10 @@
 # pytableaux - Gödel 3-valued logic
 from __future__ import annotations
 
-from pytableaux.lang import Operator as Oper
-from pytableaux.logics import fde as FDE
-from pytableaux.logics import k3 as K3
-from pytableaux.logics import l3 as L3
+import pytableaux.logics.fde as FDE
+import pytableaux.logics.k3 as K3
+import pytableaux.logics.l3 as L3
+from pytableaux.lang import Operator as Operator
 from pytableaux.proof import Branch, Node, adds, group, sdnode
 
 name = 'G3'
@@ -47,8 +47,8 @@ class Model(L3.Model):
     for some of the operators.
     """
 
-    def truth_function(self, operator: Oper, a, b = None, /):
-        if operator == Oper.Negation:
+    def truth_function(self, operator: Operator, a, b = None, /):
+        if operator == Operator.Negation:
             if a == 'N':
                 return self.Value.F
         return super().truth_function(operator, a, b)
@@ -60,14 +60,8 @@ class TableauxSystem(FDE.TableauxSystem):
     """
 
     branchables = FDE.TableauxSystem.branchables | {
-        Oper.Conditional: {
-            False : {True: 1, False: 1},
-            True  : {True: 1, False: 1},
-        },
-        Oper.Biconditional: {
-            False : {True: 0, False: 0},
-            True  : {True: 0, False: 0},
-        },
+        Operator.Conditional: ((1, 1), (1, 1)),
+        Operator.Biconditional: ((0, 0), (0, 0)),
     }
 
 @TableauxSystem.initialize
@@ -92,7 +86,7 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Negation
+        operator    = Operator.Negation
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _,/):
@@ -181,7 +175,7 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Conditional
+        operator    = Operator.Conditional
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _: Branch):
@@ -211,7 +205,7 @@ class TabRules:
         """
         designation = False
         negated     = True
-        operator    = Oper.Conditional
+        operator    = Operator.Conditional
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _,/):
@@ -227,8 +221,8 @@ class TabRules:
         This rule reduces to a conjunction of conditionals.
         """
         designation = True
-        operator    = Oper.Biconditional
-        conjunct_op = Oper.Conditional
+        operator    = Operator.Biconditional
+        conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
@@ -236,8 +230,8 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Biconditional
-        conjunct_op = Oper.Conditional
+        operator    = Operator.Biconditional
+        conjunct_op = Operator.Conditional
 
     class BiconditionalUndesignated(FDE.ConjunctionReducingRule):
         """
@@ -245,8 +239,8 @@ class TabRules:
         """
         designation = False
         negated     = False
-        operator    = Oper.Biconditional
-        conjunct_op = Oper.Conditional
+        operator    = Operator.Biconditional
+        conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
         """
@@ -254,8 +248,8 @@ class TabRules:
         """
         designation = False
         negated     = True
-        operator    = Oper.Biconditional
-        conjunct_op = Oper.Conditional
+        operator    = Operator.Biconditional
+        conjunct_op = Operator.Conditional
 
     class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
         pass
