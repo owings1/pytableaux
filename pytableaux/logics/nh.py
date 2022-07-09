@@ -23,8 +23,7 @@ from __future__ import annotations
 import pytableaux.logics.fde as FDE
 import pytableaux.logics.lp as LP
 import pytableaux.logics.mh as MH
-from pytableaux.lang.lex import Operator as Oper
-from pytableaux.lang.lex import Quantified, Sentence
+from pytableaux.lang.lex import Quantified, Sentence, Operator
 from pytableaux.proof.common import Branch, Node
 from pytableaux.proof import adds, group, sdnode
 
@@ -37,69 +36,47 @@ class Meta(LP.Meta):
         'and a classical-like conditional'
     )
     category_order = 110
-    native_operators = FDE.Meta.native_operators + (Oper.Conditional, Oper.Biconditional)
+    native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
 
 class Model(LP.Model):
 
     def is_sentence_opaque(self, s: Sentence):
         return isinstance(s, Quantified) or super().is_sentence_opaque(s)
 
-    def truth_function(self, oper: Oper, a, b = None, /):
-        oper = Oper(oper)
+    def truth_function(self, oper: Operator, a, b = None, /):
+        oper = Operator(oper)
         Value = self.Value
-        if oper is Oper.Conjunction:
+        if oper is Operator.Conjunction:
             if Value[a] is Value.B and Value[b] is Value.B:
                 return Value.T
-        elif oper is Oper.Conditional:
+        elif oper is Operator.Conditional:
             if Value[a] is not Value.F and Value[b] is Value.F:
                 return Value.F
             return Value.T
         return super().truth_function(oper, a, b)
 
-class TableauxSystem(FDE.TableauxSystem):
+class TableauxSystem(LP.TableauxSystem):
     """
     NH's Tableaux System inherits directly from the {@FDE} system, employing
     designation markers, and building the trunk in the same way.
     """
     # operator => negated => designated
     branchables = {
-        Oper.Negation: (None, (0, 0)),
-        Oper.Assertion: ((0, 0), (0, 0)),
-        Oper.Conjunction: ((1, 0), (1, 3)),
-        Oper.Disjunction: ((0, 1), (1, 0)),
+        Operator.Negation: (None, (0, 0)),
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Conjunction: ((1, 0), (1, 3)),
+        Operator.Disjunction: ((0, 1), (1, 0)),
         # for now, reduce to negated disjunction
-        Oper.MaterialConditional: ((0, 0), (0, 0)),
+        Operator.MaterialConditional: ((0, 0), (0, 0)),
         # for now, reduce to conjunction
-        Oper.MaterialBiconditional: ((0, 0), (0, 0)),
-        Oper.Conditional: ((0, 1), (1, 0)),
+        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
+        Operator.Conditional: ((0, 1), (1, 0)),
         # for now, reduce to conjunction
-        Oper.Biconditional: ((0, 0), (0, 0)),
+        Operator.Biconditional: ((0, 0), (0, 0)),
     }
 
 @TableauxSystem.initialize
-class TabRules:
-
-    class GapClosure(LP.TabRules.GapClosure):
-        pass
-    class DesignationClosure(FDE.TabRules.DesignationClosure):
-        pass
-
-    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated):
-        pass
-    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated):
-        pass
-
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
-        pass
-    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated):
-        pass
-    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated):
-        pass
-    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
-        pass
-
-    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
-        pass
+class TabRules(LP.TabRules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -123,7 +100,7 @@ class TabRules:
         Then, tick *n*.
         """
         negated     = True
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         designation = True
         branching   = 3
 
@@ -140,9 +117,6 @@ class TabRules:
                 )
             )
 
-    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
-        pass
-
     class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, negated, undesignated conjunction node *n* on a branch *b*,
@@ -151,7 +125,7 @@ class TabRules:
         for each of the conjuncts and its negation. Then tick *n*.
         """
         negated     = True
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         designation = False
         branching   = 1
 
@@ -167,23 +141,11 @@ class TabRules:
                 )
             )
 
-    class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
-        pass
-
-    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
-        pass
-
-    class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
-        pass
-
-    class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
-        pass
-
     class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """
-        operator     = Oper.MaterialConditional
+        operator     = Operator.MaterialConditional
         designation  = True
 
         def _get_node_targets(self, node: Node, _,/):
@@ -197,7 +159,7 @@ class TabRules:
         This rule reduces to a negated disjunction.
         """
         negated      = True
-        operator     = Oper.MaterialConditional
+        operator     = Operator.MaterialConditional
         designation  = True
 
         def _get_node_targets(self, node: Node, _: Branch):
@@ -224,18 +186,18 @@ class TabRules:
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        operator     = Oper.MaterialBiconditional
+        operator     = Operator.MaterialBiconditional
         designation  = True
-        conjunct_op  = Oper.MaterialConditional
+        conjunct_op  = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
         negated      = True
-        operator     = Oper.MaterialBiconditional
+        operator     = Operator.MaterialBiconditional
         designation  = True
-        conjunct_op  = Oper.MaterialConditional
+        conjunct_op  = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
         """
@@ -249,34 +211,27 @@ class TabRules:
         """
         designation = False
 
-    class ConditionalDesignated(MH.TabRules.ConditionalDesignated):
-        pass
-
-    class ConditionalNegatedDesignated(MH.TabRules.ConditionalNegatedDesignated):
-        pass
-
-    class ConditionalUndesignated(MH.TabRules.ConditionalUndesignated):
-        pass
-
-    class ConditionalNegatedUndesignated(MH.TabRules.ConditionalNegatedUndesignated):
-        pass
+    ConditionalDesignated = MH.TabRules.ConditionalDesignated
+    ConditionalNegatedDesignated = MH.TabRules.ConditionalNegatedDesignated
+    ConditionalUndesignated = MH.TabRules.ConditionalUndesignated
+    ConditionalNegatedUndesignated = MH.TabRules.ConditionalNegatedUndesignated
 
     class BiconditionalDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        operator    = Oper.Biconditional
+        operator    = Operator.Biconditional
         designation = True
-        conjunct_op = Oper.Conditional
+        conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a negated conjunction of conditionals.
         """
         negated     = True
-        operator    = Oper.Biconditional
+        operator    = Operator.Biconditional
         designation = True
-        conjunct_op = Oper.Conditional
+        conjunct_op = Operator.Conditional
 
     class BiconditionalUndesignated(BiconditionalDesignated):
         """
@@ -290,21 +245,25 @@ class TabRules:
         """
         designation = False
 
-    closure_rules = (
-        GapClosure,
-        DesignationClosure,
-    )
+    ExistentialDesignated = None
+    ExistentialNegatedDesignated = None
+    ExistentialUndesignated = None
+    ExistentialNegatedUndesignated = None
+    UniversalDesignated = None
+    UniversalNegatedDesignated = None
+    UniversalUndesignated = None
+    UniversalNegatedUndesignated = None
 
     rule_groups = (
         # Non-branching rules.
         (
-            AssertionDesignated,
-            AssertionUndesignated,
-            AssertionNegatedDesignated,
-            AssertionNegatedUndesignated,
-            ConjunctionDesignated,
-            DisjunctionUndesignated,
-            DisjunctionNegatedDesignated,
+            FDE.TabRules.AssertionDesignated,
+            FDE.TabRules.AssertionUndesignated,
+            FDE.TabRules.AssertionNegatedDesignated,
+            FDE.TabRules.AssertionNegatedUndesignated,
+            FDE.TabRules.ConjunctionDesignated,
+            FDE.TabRules.DisjunctionUndesignated,
+            FDE.TabRules.DisjunctionNegatedDesignated,
             MaterialConditionalDesignated,
             MaterialConditionalNegatedDesignated,
             MaterialConditionalUndesignated,
@@ -319,15 +278,15 @@ class TabRules:
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
-            DoubleNegationDesignated,
-            DoubleNegationUndesignated,
+            FDE.TabRules.DoubleNegationDesignated,
+            FDE.TabRules.DoubleNegationUndesignated,
         ),
         # 1-branching rules.
         (
-            ConjunctionUndesignated,
+            FDE.TabRules.ConjunctionUndesignated,
             ConjunctionNegatedUndesignated,
-            DisjunctionDesignated,
-            DisjunctionNegatedUndesignated,
+            FDE.TabRules.DisjunctionDesignated,
+            FDE.TabRules.DisjunctionNegatedUndesignated,
             ConditionalDesignated,
             ConditionalNegatedUndesignated,
         ),
