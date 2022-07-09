@@ -41,10 +41,6 @@ def crunch(v):
     return v - gap(v)
 
 class Model(K3W.Model):
-    """
-    A L{B3E} model is just like {@K3W} with different tables for
-    some of the connectives.
-    """
 
     def truth_function(self, oper: Operator, a, b = None, /):
         oper = Operator(oper)
@@ -60,11 +56,7 @@ class Model(K3W.Model):
             return FDE.Model.truth_function(self, oper, a, b)
         return super().truth_function(oper, a, b)
 
-class TableauxSystem(FDE.TableauxSystem):
-    """
-    L{B3E}'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
-    employing designation markers, and building the trunk in the same way.
-    """
+class TableauxSystem(K3W.TableauxSystem):
 
     # operator => negated => designated
     branchables = K3W.TableauxSystem.branchables | {
@@ -75,28 +67,13 @@ class TableauxSystem(FDE.TableauxSystem):
     }
 
 @TableauxSystem.initialize
-class TabRules:
+class TabRules(K3W.TabRules):
     """
     The closure rules for L{B3E} are the L{FDE} closure rule, and the {@K3} closure rule.
     The operator rules are mostly a mix of L{FDE} and {@K3W}
     rules, but with different rules for the assertion, conditional and
     biconditional operators.
     """
-
-    class GlutClosure(K3.TabRules.GlutClosure):
-        pass
-
-    class DesignationClosure(FDE.TabRules.DesignationClosure):
-        pass
-
-    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated):
-        pass
-
-    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated):
-        pass
-
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
-        pass
 
     class AssertionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -133,54 +110,6 @@ class TabRules:
             s = self.sentence(node)
             return adds(group(sdnode(s.lhs, not self.designation)))
 
-    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
-        pass
-
-    class ConjunctionNegatedDesignated(K3W.TabRules.ConjunctionNegatedDesignated):
-        pass
-
-    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
-        pass
-
-    class ConjunctionNegatedUndesignated(K3W.TabRules.ConjunctionNegatedUndesignated):
-        pass
-
-    class DisjunctionDesignated(K3W.TabRules.DisjunctionDesignated):
-        pass
-
-    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
-        pass
-
-    class DisjunctionUndesignated(K3W.TabRules.DisjunctionUndesignated):
-        pass
-
-    class DisjunctionNegatedUndesignated(K3W.TabRules.DisjunctionNegatedUndesignated):
-        pass
-
-    class MaterialConditionalDesignated(K3W.TabRules.MaterialConditionalDesignated):
-        pass
-
-    class MaterialConditionalNegatedDesignated(K3W.TabRules.MaterialConditionalNegatedDesignated):
-        pass
-
-    class MaterialConditionalUndesignated(K3W.TabRules.MaterialConditionalUndesignated):
-        pass
-
-    class MaterialConditionalNegatedUndesignated(K3W.TabRules.MaterialConditionalNegatedUndesignated):
-        pass
-
-    class MaterialBiconditionalDesignated(K3W.TabRules.MaterialBiconditionalDesignated):
-        pass
-
-    class MaterialBiconditionalNegatedDesignated(K3W.TabRules.MaterialBiconditionalNegatedDesignated):
-        pass
-
-    class MaterialBiconditionalUndesignated(K3W.TabRules.MaterialBiconditionalUndesignated):
-        pass
-
-    class MaterialBiconditionalNegatedUndesignated(K3W.TabRules.MaterialBiconditionalNegatedUndesignated):
-        pass
-
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*,
@@ -194,8 +123,7 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            lhsa, rhsa = (operand.asserted() for operand in s)
-            sn = ~lhsa | rhsa
+            sn = ~s.lhs.asserted() | s.rhs.asserted()
             # keep negated neutral for inheritance below
             if self.negated:
                 sn = ~sn
@@ -252,7 +180,8 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            lhsa, rhsa = (operand.asserted() for operand in s)
+            lhsa = s.lhs.asserted()
+            rhsa = s.rhs.asserted()
             sn1 = ~lhsa | rhsa
             sn2 = ~rhsa | lhsa
             # Keep negated neutral for inheritance below.
@@ -298,62 +227,33 @@ class TabRules:
         designation = False
         negated     = True
 
-    class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
-        pass
-
-    class ExistentialNegatedDesignated(FDE.TabRules.ExistentialNegatedDesignated):
-        pass
-
-    class ExistentialUndesignated(FDE.TabRules.ExistentialUndesignated):
-        pass
-
-    class ExistentialNegatedUndesignated(FDE.TabRules.ExistentialNegatedUndesignated):
-        pass
-
-    class UniversalDesignated(FDE.TabRules.UniversalDesignated):
-        pass
-
-    class UniversalNegatedDesignated(FDE.TabRules.UniversalNegatedDesignated):
-        pass
-
-    class UniversalUndesignated(FDE.TabRules.UniversalUndesignated):
-        pass
-
-    class UniversalNegatedUndesignated(FDE.TabRules.UniversalNegatedUndesignated):
-        pass
-
-    closure_rules = (
-        GlutClosure,
-        DesignationClosure,
-    )
-
     rule_groups = (
         (
-            AssertionDesignated,
+            FDE.TabRules.AssertionDesignated,
             AssertionUndesignated,
             AssertionNegatedDesignated,
             AssertionNegatedUndesignated,
-            ConjunctionDesignated, 
-            DisjunctionNegatedDesignated,
+            FDE.TabRules.ConjunctionDesignated,
+            FDE.TabRules.DisjunctionNegatedDesignated,
             ConditionalNegatedDesignated,
             ConditionalUndesignated,
-            ExistentialNegatedDesignated,
-            ExistentialNegatedUndesignated,
-            UniversalNegatedDesignated,
-            UniversalNegatedUndesignated,
-            DoubleNegationDesignated,
-            DoubleNegationUndesignated,
+            FDE.TabRules.ExistentialNegatedDesignated,
+            FDE.TabRules.ExistentialNegatedUndesignated,
+            FDE.TabRules.UniversalNegatedDesignated,
+            FDE.TabRules.UniversalNegatedUndesignated,
+            FDE.TabRules.DoubleNegationDesignated,
+            FDE.TabRules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)
-            MaterialConditionalDesignated,
-            MaterialConditionalUndesignated,
-            MaterialConditionalNegatedDesignated,
-            MaterialConditionalNegatedUndesignated,
+            K3W.TabRules.MaterialConditionalDesignated,
+            K3W.TabRules.MaterialConditionalUndesignated,
+            K3W.TabRules.MaterialConditionalNegatedDesignated,
+            K3W.TabRules.MaterialConditionalNegatedUndesignated,
             ConditionalDesignated,
             ConditionalNegatedUndesignated,
-            MaterialBiconditionalDesignated,
-            MaterialBiconditionalUndesignated,
-            MaterialBiconditionalNegatedDesignated,
-            MaterialBiconditionalNegatedUndesignated,
+            K3W.TabRules.MaterialBiconditionalDesignated,
+            K3W.TabRules.MaterialBiconditionalUndesignated,
+            K3W.TabRules.MaterialBiconditionalNegatedDesignated,
+            K3W.TabRules.MaterialBiconditionalNegatedUndesignated,
             BiconditionalDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
@@ -361,23 +261,23 @@ class TabRules:
         ),
         (
             # two-branching rules
-            ConjunctionUndesignated,
+            FDE.TabRules.ConjunctionUndesignated,
         ),
         (
             # three-branching rules
-            DisjunctionDesignated,
-            DisjunctionUndesignated,
-            ConjunctionNegatedDesignated,
-            ConjunctionNegatedUndesignated,
+            K3W.TabRules.DisjunctionDesignated,
+            K3W.TabRules.DisjunctionUndesignated,
+            K3W.TabRules.ConjunctionNegatedDesignated,
+            K3W.TabRules.ConjunctionNegatedUndesignated,
             # (formerly) four-branching rules
-            DisjunctionNegatedUndesignated,
+            K3W.TabRules.DisjunctionNegatedUndesignated,
         ),
         (
-            ExistentialDesignated,
-            ExistentialUndesignated,
+            FDE.TabRules.ExistentialDesignated,
+            FDE.TabRules.ExistentialUndesignated,
         ),
         (
-            UniversalDesignated,
-            UniversalUndesignated,
+            FDE.TabRules.UniversalDesignated,
+            FDE.TabRules.UniversalUndesignated,
         ),
     )
