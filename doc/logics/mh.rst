@@ -4,6 +4,9 @@
 MH - Paracomplete Hybrid Logic
 ******************************
 
+L{MH} is a three-valued predicate logic with values V{T}, V{F}, and V{N}.
+It is the `gappy` dual of {@NH}.
+
 .. contents:: Contents
   :local:
   :depth: 2

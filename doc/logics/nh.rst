@@ -4,43 +4,160 @@
 NH - Paraconsistent Hybrid Logic
 ********************************
 
-.. contents:: :local:
+L{NH} is a three-valued predicate logic with values V{T}, V{F}, and V{B}.
+It is the `glutty` dual of {@MH}.
 
-.. automodule:: pytableaux.logics.nh
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-    Semantics
-    =========
+------------------------
 
-    .. autoclass:: Model
+.. module:: pytableaux.logics.nh
 
-        .. autoclass:: pytableaux.logics.nh::Model.Value()
-            :members: F, B, T
-            :undoc-members:
+.. _nh-semantics:
+.. _nh-model:
 
-        .. include:: include/fde/m.attributes.rst
+Semantics
+=========
 
-        .. method:: truth_function(operator, a, b)
+.. _nh-truth-values:
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+Truth Values
+------------
 
-            .. :truth-tables:: NH
+Common labels for the values include:
 
-    Consequence
-    -----------
+.. include:: include/lp/value-table.rst
 
-    **Logical Consequence** is defined, just as in L{FDE} and :ref:`LP`, in
-    terms of *designated* values V{T} and V{B}:
+.. rubric:: Designated Values
 
-    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a
-      *desginated* value (V{T} or V{B}) are models where *C* also has a
-      *designated* value.
+The set of *designated values* for L{NH} is: { V{T}, V{B} }
 
-    Tableaux System
-    ===============
+.. _nh-truth-tables:
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+Truth Tables
+------------
 
-    .. autoclass:: TabRules
-        :members:
+.. include:: include/truth_table_blurb.rst
+
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction, Conditional
+
+.. rubric:: Defined Operators
+
+The `Biconditional` :s:`%` is defined in the usual way:
+
+.. sentence::
+
+  A % B := (A $ B) & (B $ A)
+
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
+
+.. sentence::
+
+  A > B := ~A V B
+
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
+
+.. sentence::
+
+  A < B := (A > B) & (B > A)
+
+.. truth-tables::
+  :operators: Biconditional, MaterialConditional, MaterialBiconditional
+
+.. rubric:: Compatibility Tables
+
+L{NH} does not have a separate `Assertion` operator, but we include a table
+and rules for it, for cross-compatibility.
+
+.. truth-tables::
+  :operators: Assertion
+
+.. _nh-predication:
+
+Predication
+-----------
+
+.. include:: include/lp/predication.rst
+
+.. _nh-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _nh-system:
+
+Tableaux
+========
+
+L{NH} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: GapClosure
+  :legend:
+  :doc:
+
+.. _nh-rules:
+
+Rules
+--------
+
+.. include:: include/fde/rules_blurb.rst
+
+There are no rules that apply to quantified sentences.
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion
+
+
+Notes
+=====
+
+
+References
+==========
+
+- `Colin Caret`_. (2017). `Hybridized Paracomplete and Paraconsistent Logics`_.
+  *The Australasian  Journal of Logic*, 14.
+
+
+.. _Colin Caret: https://sites.google.com/view/colincaret
+.. _Hybridized Paracomplete and Paraconsistent Logics: https://ojs.victoria.ac.nz/ajl/article/view/4035/3588
