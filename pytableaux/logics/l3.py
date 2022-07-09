@@ -14,18 +14,13 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Lukasiewicz 3-valued Logic
 from __future__ import annotations
 
 import pytableaux.logics.fde as FDE
 import pytableaux.logics.k3 as K3
-from pytableaux.lang.lex import Operator as Oper
+from pytableaux.lang import Operator
 from pytableaux.models import ValueK3
-from pytableaux.proof.common import Node
-from pytableaux.proof import adds, group, sdnode
+from pytableaux.proof import adds, group, sdnode, Node
 
 name = 'L3'
 
@@ -42,92 +37,25 @@ class Meta(FDE.Meta):
         'non-modal',
         'first-order',
     )
-    native_operators = FDE.Meta.native_operators + (Oper.Conditional, Oper.Biconditional)
+    native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
 
 class Model(K3.Model):
-    """
-    An L{L3} model is just like a :ref:`K3 model <k3-model>` with different tables
-    for the conditional and bi-conditional operators.
-    """
 
     def truth_function(self, operator, a, b = None) -> ValueK3:
-        if operator == Oper.Conditional:
+        if operator == Operator.Conditional:
             if a == self.Value.N and b == self.Value.N:
                 return self.Value.T
         return super().truth_function(operator, a, b)
 
-class TableauxSystem(FDE.TableauxSystem):
-    """
-    L{L3}'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
-    employing designation markers, and building the trunk in the same way.
-    """
+class TableauxSystem(K3.TableauxSystem):
+
     branchables = FDE.TableauxSystem.branchables | {
-        Oper.Conditional: ((1, 1), (1, 0)),
-        Oper.Biconditional: ((1, 1), (1, 1)),
+        Operator.Conditional: ((1, 1), (1, 0)),
+        Operator.Biconditional: ((1, 1), (1, 1)),
     }
 
 @TableauxSystem.initialize
-class TabRules:
-    """
-    The closure rules for L{L3} are the FDE closure rule, and the L{K3} closure rule.
-    The operator rules for L{L3} are mostly the rules for L{FDE}, with
-    the exception of the rules for the conditional and biconditional operators.
-    """
-
-    class GlutClosure(K3.TabRules.GlutClosure):
-        pass
-    class DesignationClosure(FDE.TabRules.DesignationClosure):
-        pass
-
-    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated):
-        pass
-    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated):
-        pass
-
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
-        pass
-    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated):
-        pass
-    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated):
-        pass
-    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
-        pass
-
-    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
-        pass
-    class ConjunctionNegatedDesignated(FDE.TabRules.ConjunctionNegatedDesignated):
-        pass
-    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
-        pass
-    class ConjunctionNegatedUndesignated(FDE.TabRules.ConjunctionNegatedUndesignated):
-        pass
-
-    class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
-        pass
-    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
-        pass
-    class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
-        pass
-    class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
-        pass
-
-    class MaterialConditionalDesignated(FDE.TabRules.MaterialConditionalDesignated):
-        pass
-    class MaterialConditionalNegatedDesignated(FDE.TabRules.MaterialConditionalNegatedDesignated):
-        pass
-    class MaterialConditionalUndesignated(FDE.TabRules.MaterialConditionalUndesignated):
-        pass
-    class MaterialConditionalNegatedUndesignated(FDE.TabRules.MaterialConditionalNegatedUndesignated):
-        pass
-
-    class MaterialBiconditionalDesignated(FDE.TabRules.MaterialBiconditionalDesignated):
-        pass
-    class MaterialBiconditionalNegatedDesignated(FDE.TabRules.MaterialBiconditionalNegatedDesignated):
-        pass
-    class MaterialBiconditionalUndesignated(FDE.TabRules.MaterialBiconditionalUndesignated):
-        pass
-    class MaterialBiconditionalNegatedUndesignated(FDE.TabRules.MaterialBiconditionalNegatedUndesignated):
-        pass
+class TabRules(K3.TabRules):
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -139,7 +67,7 @@ class TabRules:
         a node with the consequent, and a node with the negation of the consequent.
         Then tick *n*.
         """
-        operator    = Oper.Conditional
+        operator    = Operator.Conditional
         designation = True
         branching   = 1
 
@@ -155,9 +83,6 @@ class TabRules:
                 )
             )
 
-    class ConditionalNegatedDesignated(FDE.TabRules.ConditionalNegatedDesignated):
-        pass
-
     class ConditionalUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked undesignated conditional node *n* on a branch *b*,
@@ -166,7 +91,7 @@ class TabRules:
         add undesignated nodes for the antecedent and its negation, and a designated
         with the negation of the consequent. Then tick *n*.   
         """
-        operator    = Oper.Conditional
+        operator    = Operator.Conditional
         designation = False
         branching   = 1
 
@@ -184,9 +109,6 @@ class TabRules:
                 ),
             )
 
-    class ConditionalNegatedUndesignated(FDE.TabRules.ConditionalNegatedUndesignated):
-        pass
-        
     class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
@@ -195,14 +117,14 @@ class TabRules:
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-        operator    = Oper.Biconditional
+        operator    = Operator.Biconditional
         designation = True
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
             return adds(
-                group(sdnode(Oper.MaterialBiconditional(lhs, rhs), True)),
+                group(sdnode(Operator.MaterialBiconditional(lhs, rhs), True)),
                 group(
                     sdnode( lhs, False),
                     sdnode(~lhs, False),
@@ -211,9 +133,6 @@ class TabRules:
                 )
             )
 
-    class BiconditionalNegatedDesignated(FDE.TabRules.BiconditionalNegatedDesignated):
-        pass
-
     class BiconditionalUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, make
@@ -221,13 +140,13 @@ class TabRules:
         node with the same operands. On *b''* add an undesignated conditional node
         with the reversed operands. Then tick *n*.
         """
-        operator    = Oper.Biconditional
+        operator    = Operator.Biconditional
         designation = False
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            Cond = Oper.Conditional
+            Cond = Operator.Conditional
             return adds(
                 group(sdnode(Cond(lhs, rhs), False)),
                 group(sdnode(Cond(rhs, lhs), False)),
@@ -242,14 +161,14 @@ class TabRules:
         and the negation of the consequent, respectively. Then tick *n*.
         """
         negated     = True
-        operator    = Oper.Biconditional
+        operator    = Operator.Biconditional
         designation = False
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
             return adds(
-                group(sdnode(~Oper.MaterialBiconditional(lhs, rhs), False)),
+                group(sdnode(~Operator.MaterialBiconditional(lhs, rhs), False)),
                 group(
                     sdnode( lhs, False),
                     sdnode(~lhs, False),
@@ -258,76 +177,53 @@ class TabRules:
                 )
             )
 
-    class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
-        pass
-    class ExistentialNegatedDesignated(FDE.TabRules.ExistentialNegatedDesignated):
-        pass
-    class ExistentialUndesignated(FDE.TabRules.ExistentialUndesignated):
-        pass
-    class ExistentialNegatedUndesignated(FDE.TabRules.ExistentialNegatedUndesignated):
-        pass
-
-    class UniversalDesignated(FDE.TabRules.UniversalDesignated):
-        pass
-    class UniversalNegatedDesignated(FDE.TabRules.UniversalNegatedDesignated):
-        pass
-    class UniversalUndesignated(FDE.TabRules.UniversalUndesignated):
-        pass
-    class UniversalNegatedUndesignated(FDE.TabRules.UniversalNegatedUndesignated):
-        pass
-
-    closure_rules = (
-        GlutClosure,
-        DesignationClosure,
-    )
-
     rule_groups = (
         (
             # non-branching rules
-            AssertionDesignated,
-            AssertionUndesignated,
-            AssertionNegatedDesignated,
-            AssertionNegatedUndesignated,
-            ConjunctionDesignated,
-            DisjunctionNegatedDesignated,
-            DisjunctionUndesignated,
-            DisjunctionNegatedUndesignated,
-            MaterialConditionalNegatedDesignated,
-            MaterialConditionalUndesignated,
-            ConditionalNegatedDesignated,
-            BiconditionalNegatedDesignated,
-            ExistentialNegatedDesignated,
-            ExistentialNegatedUndesignated,
-            UniversalNegatedDesignated,
-            UniversalNegatedUndesignated,
-            DoubleNegationDesignated,
-            DoubleNegationUndesignated,
+            FDE.TabRules.AssertionDesignated,
+            FDE.TabRules.AssertionUndesignated,
+            FDE.TabRules.AssertionNegatedDesignated,
+            FDE.TabRules.AssertionNegatedUndesignated,
+            FDE.TabRules.ConjunctionDesignated,
+            FDE.TabRules.DisjunctionNegatedDesignated,
+            FDE.TabRules.DisjunctionUndesignated,
+            FDE.TabRules.DisjunctionNegatedUndesignated,
+            FDE.TabRules.MaterialConditionalNegatedDesignated,
+            FDE.TabRules.MaterialConditionalUndesignated,
+            FDE.TabRules.ConditionalNegatedDesignated,
+            FDE.TabRules.BiconditionalNegatedDesignated,
+            FDE.TabRules.ExistentialNegatedDesignated,
+            FDE.TabRules.ExistentialNegatedUndesignated,
+            FDE.TabRules.UniversalNegatedDesignated,
+            FDE.TabRules.UniversalNegatedUndesignated,
+            FDE.TabRules.DoubleNegationDesignated,
+            FDE.TabRules.DoubleNegationUndesignated,
         ),
         (
             # branching rules
-            ConjunctionNegatedDesignated,
-            ConjunctionUndesignated,
-            ConjunctionNegatedUndesignated,
-            DisjunctionDesignated,
-            MaterialConditionalDesignated,
-            MaterialConditionalNegatedUndesignated,
-            MaterialBiconditionalDesignated,
-            MaterialBiconditionalNegatedDesignated,
-            MaterialBiconditionalUndesignated,
-            MaterialBiconditionalNegatedUndesignated,
+            FDE.TabRules.ConjunctionNegatedDesignated,
+            FDE.TabRules.ConjunctionUndesignated,
+            FDE.TabRules.ConjunctionNegatedUndesignated,
+            FDE.TabRules.DisjunctionDesignated,
+            FDE.TabRules.MaterialConditionalDesignated,
+            FDE.TabRules.MaterialConditionalNegatedUndesignated,
+            FDE.TabRules.MaterialBiconditionalDesignated,
+            FDE.TabRules.MaterialBiconditionalNegatedDesignated,
+            FDE.TabRules.MaterialBiconditionalUndesignated,
+            FDE.TabRules.MaterialBiconditionalNegatedUndesignated,
             ConditionalDesignated,
             ConditionalUndesignated,
-            ConditionalNegatedUndesignated,
+            FDE.TabRules.ConditionalNegatedUndesignated,
             BiconditionalDesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalUndesignated,
         ),
         (
-            ExistentialDesignated,
-            ExistentialUndesignated,
+            FDE.TabRules.ExistentialDesignated,
+            FDE.TabRules.ExistentialUndesignated,
         ),
         (
-            UniversalDesignated,
-            UniversalUndesignated,
+            FDE.TabRules.UniversalDesignated,
+            FDE.TabRules.UniversalUndesignated,
         ),
     )

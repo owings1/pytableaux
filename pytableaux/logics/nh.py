@@ -14,18 +14,13 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Paraconsistent Hybrid 3-valued Logic
 from __future__ import annotations
 
 import pytableaux.logics.fde as FDE
 import pytableaux.logics.lp as LP
 import pytableaux.logics.mh as MH
-from pytableaux.lang.lex import Quantified, Sentence, Operator
-from pytableaux.proof.common import Branch, Node
-from pytableaux.proof import adds, group, sdnode
+from pytableaux.lang import Operator, Quantified, Sentence
+from pytableaux.proof import Branch, Node, adds, group, sdnode
 
 name = 'NH'
 
@@ -43,7 +38,7 @@ class Model(LP.Model):
     def is_sentence_opaque(self, s: Sentence):
         return isinstance(s, Quantified) or super().is_sentence_opaque(s)
 
-    def truth_function(self, oper: Operator, a, b = None, /):
+    def truth_function(self, oper, a, b = None, /):
         oper = Operator(oper)
         Value = self.Value
         if oper is Operator.Conjunction:
