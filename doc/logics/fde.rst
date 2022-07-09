@@ -88,15 +88,11 @@ Quantification
 
 .. rubric:: Existential
 
-The value of an existential sentence is the maximum value of the sentences that
-result from replacing each constant for the quantified variable. The ordering of
-the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
+.. include:: include/fde/m.existential.rst
 
 .. rubric:: Universal
 
-The value of an universal sentence is the minimum value of the sentences that
-result from replacing each constant for the quantified variable. The ordering of
-the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
+.. include:: include/fde/m.universal.rst
 
 .. _fde-consequence:
 
@@ -116,14 +112,12 @@ Tableaux
 Nodes
 -----
 
-Nodes for L{FDE} include a *designation* marker: |[+]| for *designated*, and |[-]|
-for *undesignated*.
+.. include:: include/fde/nodes_blurb.rst
 
 Trunk
 -----
 
-To build the trunk for an argument, add a designated node for each premise, and
-an undesignated node for the conclusion.
+.. include:: include/fde/trunk_blurb.rst
 
 .. tableau::
   :build-trunk:
@@ -135,7 +129,6 @@ Closure
 A branch is **closed** iff the same sentence appears on both a designated node,
 and undesignated node.
 
-
 .. tableau::
   :rule: DesignationClosure
   :legend:
@@ -144,16 +137,12 @@ and undesignated node.
 This allows for both a sentence and its negation to appear as *designated*
 on an open branch (or both as *undesignated*).
 
-
 .. _fde-rules:
 
 Rules
 --------
 
-In general, rules for connectives consist of four rules per connective:
-a designated rule, an undesignated rule, a negated designated rule, and a negated
-undesignated rule. The special case of negation has a total of two rules which apply
-to double negation only, one designated rule, and one undesignated rule.
+.. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
   :docflags:
