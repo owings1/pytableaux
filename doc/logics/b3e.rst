@@ -13,141 +13,202 @@ L{B3E} - Bochvar 3-valued External Logic
     Dmitry Bochvar
 
 L{B3E} is a three-valued logic with values V{T}, V{F}, and V{N}. L{B3E}
-is similar to :ref:`K3W <K3W>`, with a special Assertion operator, that
+is similar to {@K3W}, but with a special Assertion operator that
 always results in a classical value (V{T} or V{F}).
 
-.. contents:: :local:
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-.. automodule:: pytableaux.logics.b3e
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.b3e
 
-    .. _b3e-model:
+.. _b3e-semantics:
+.. _b3e-model:
 
-    .. autoclass:: Model
+Semantics
+=========
 
-      .. autoclass:: pytableaux.logics.b3e::Model.Value()
-          :members: F, N, T
-          :undoc-members:
-          :noindex:
+.. _b3e-truth-values:
 
-      .. include:: include/fde/m.attributes.rst
+Truth Values
+------------
 
-    .. _b3e-truth-tables:
+Common labels for the values include:
 
-    Truth Tables
-    ------------
+.. include:: include/k3w/value-table.rst
 
-    .. include:: include/truth_table_blurb.rst
+.. rubric:: Designated Values
 
-    .. truth-tables::
+The set of *designated values* for L{B3E} is the singleton: { V{T} }
 
-    Note that the Conditional operator :s:`$` is definable in terms of
-    the Assertion operator :s:`*`:
-    
-    .. sentence::
-    
-      A $ B := ~*A V *B
+.. _b3e-truth-tables:
 
-    .. _b3e-external-connectives:
+Truth Tables
+------------
 
-    External Connectives
-    --------------------
+.. include:: include/truth_table_blurb.rst
 
-    Bochvar also defined `external` versions of :s:`&` and :s:`V`
-    using :s:`*`:
+.. truth-tables::
+  :operators: Assertion, Negation, Conjunction, Disjunction
 
-    .. cssclass:: definiendum
-    
-    External Conjunction
+.. rubric:: Defined Operators
 
-    .. cssclass:: definiens
+The Conditional operator :s:`$` is definable in terms of
+the Assertion operator :s:`*`:
 
-    :s:`A` :s:`&`:sub:`ext` :s:`B` :math:`:=` :s:`*A & *B`
+.. sentence::
 
-    .. cssclass:: definiendum
+  A $ B := ~*A V *B
 
-    External Disjunction
+.. truth-tables::
+  :operators: Conditional, Biconditional
 
-    .. cssclass:: definiens
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-    :s:`A` :s:`V`:sub:`ext` :s:`B` :math:`:=` :s:`*A V *B`
+.. sentence::
 
-    These connectives always result in a classical value (V{T} or V{F}).
-    For compatibility, we use the standard `internal` readings of :s:`$`
-    and :s:`V`, and use the `internal` reading for :s:`$` and :s:`%`.
+  A > B := ~A V B
 
-    .. _b3e-predication:
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-    Predication
-    -----------
+.. sentence::
 
-    L{B3E} predication is defined just as in L{K3}:
+  A < B := (A > B) & (B > A)
 
-    .. include:: include/k3/m.predication.rst
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
 
-    .. _b3e-quantification:
+.. _b3e-external-connectives:
 
-    Quantification
-    --------------
+.. rubric:: External Connectives
 
-    The quantifiers :s:`X` and :s:`L` are interpreted just as in L{K3}.
+Bochvar also defined `external` versions of :s:`&` and :s:`V`
+using :s:`*`:
 
-    Existential
-    ^^^^^^^^^^^
+.. cssclass:: definiendum
 
-    .. include:: include/k3/m.existential.rst
+External Conjunction
 
-    Universal
-    ^^^^^^^^^
+.. cssclass:: definiens
 
-    .. include:: include/k3/m.universal.rst
+:s:`A` :s:`&`:sub:`ext` :s:`B` :math:`:=` :s:`*A & *B`
 
-    .. _b3e-consequence:
-        
-    Consequence
-    -----------
+.. cssclass:: definiendum
 
-    Logical consequence is defined just like in L{K3}:
-    
-    .. include:: include/k3/m.consequence.rst
+External Disjunction
 
-    .. _b3e-system:
+.. cssclass:: definiens
 
-    Tableaux
-    ========
+:s:`A` :s:`V`:sub:`ext` :s:`B` :math:`:=` :s:`*A V *B`
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+These connectives always result in a classical value (V{T} or V{F}).
+For compatibility, we use the standard `internal` readings of :s:`&`
+and :s:`V`, and use the `external` reading for :s:`$` and :s:`%`.
 
-    .. _b3e-rules:
+.. _b3e-predication:
 
-    Rules
-    -----
+Predication
+-----------
 
-    .. autoclass:: TabRules
-        :members:
+.. include:: include/k3/m.predication.rst
 
-    Notes
-    =====
+.. _b3e-quantification:
 
-    * Unlike L{K3W}, L{B3E} has some logical truths. For example
-      :s:`(A $ B) V ~(A $ B)`. This logical truth is an instance of the
-      Law of Excluded Middle.
+Quantification
+--------------
 
-    * The Assertion operator :s:`*` can express alternate versions of validities
-      that fail in L{K3W}. For example, :s:`A` implies :s:`A V *B` in L{B3E},
-      which fails in L{K3W}.
+.. rubric:: Existential
 
-    * D. A. Bochvar published his paper in 1938. An English translation by Merrie
-      Bergmann was published in 1981. *On a three-valued logical calculus and its
-      application to the analysis of the paradoxes of the classical extended
-      functional calculus.* History and Philosophy of Logic, 2(1-2):87-112, 1981.
+.. include:: include/fde/m.existential.rst
 
-    For further reading, see:
+.. rubric:: Universal
 
-    * Rescher, N. (1969). Many-valued Logic. McGraw-Hill.
+.. include:: include/fde/m.universal.rst
 
-    * Beall, Jc `Off-topic: a new interpretation of Weak Kleene logic
-      <http://entailments.net/papers/beall-ajl-wk3-interp.pdf>`_. 2016.
+.. _b3e-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _b3e-system:
+
+Tableaux
+========
+
+L{B3E} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: GlutClosure
+  :legend:
+  :doc:
+
+.. _b3e-rules:
+
+Rules
+--------
+
+.. include:: include/fde/rules_blurb.rst
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+Notes
+=====
+
+* Unlike L{K3W}, L{B3E} has some logical truths. For example
+  :s:`(A $ B) V ~(A $ B)`. This logical truth is an instance of the
+  Law of Excluded Middle.
+
+* The Assertion operator :s:`*` can express alternate versions of validities
+  that fail in L{K3W}. For example, :s:`A` !{conseq} :s:`A V *B` in L{B3E},
+  which fails in L{K3W}.
+
+References
+==========
+
+* D. A. Bochvar published his paper in 1938. An English translation by Merrie
+  Bergmann was published in 1981. *On a three-valued logical calculus and its
+  application to the analysis of the paradoxes of the classical extended
+  functional calculus.* History and Philosophy of Logic, 2(1-2):87-112, 1981.
+
+For further reading, see:
+
+* Rescher, N. (1969). Many-valued Logic. McGraw-Hill.
+
+* Beall, Jc `Off-topic: a new interpretation of Weak Kleene logic
+  <http://entailments.net/papers/beall-ajl-wk3-interp.pdf>`_. 2016.
