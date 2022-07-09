@@ -25,6 +25,7 @@ import pytableaux.logics.fde as FDE
 import pytableaux.logics.k3 as K3
 from pytableaux.lang import Operator, Quantified, Quantifier
 from pytableaux.proof import Branch, Node, adds, group, rules, sdnode
+from pytableaux.tools import maxceil, minfloor
 
 name = 'GO'
 
@@ -68,11 +69,17 @@ class Model(K3.Model):
         values* of the sentences that result from replacing each constant for the
         quantified variable.
         """
-        si = sentence.sentence
+        sub = sentence.sentence.substitute
         v = sentence.variable
-        values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
-        crunched = {crunch(self.Value[val].num) for val in values}
-        return self.Value[max(crunched)]
+        return self.Value[
+            maxceil(
+                self.Value.T,
+                (
+                    crunch(self.Value[self.value_of(sub(c, v), **kw)].num)
+                    for c in self.constants
+                ),
+            )
+        ]
 
     def value_of_universal(self, sentence: Quantified, **kw):
         """
@@ -80,11 +87,17 @@ class Model(K3.Model):
         of the sentences that result from replacing each constant for the quantified
         variable.
         """
-        si = sentence.sentence
+        sub = sentence.sentence.substitute
         v = sentence.variable
-        values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
-        crunched = {crunch(self.Value[val].num) for val in values}
-        return self.Value[min(crunched)]
+        return self.Value[
+            minfloor(
+                self.Value.F,
+                (
+                    crunch(self.Value[self.value_of(sub(c, v), **kw)].num)
+                    for c in self.constants
+                ),
+            )
+        ]
 
 class TableauxSystem(K3.TableauxSystem):
     """

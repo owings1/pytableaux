@@ -38,34 +38,35 @@ from pytableaux import __docformat__
 __all__ = (
     'abstract',
     'closure',
-    'dun',
+    'dund',
     'dxopy',
     'EMPTY_MAP',
     'getitem',
-    'select_fget',
     'isattrstr',
     'isdund',
     'isint',
     'isstr',
     'key0',
-    'MapProxy',
-    'sbool',
-    'thru',
-    'true',
-    'undund',
-
     'lazy',
+    'MapProxy',
+    'maxceil',
     'membr',
+    'minfloor',
     'NoSetAttr',
     'operd',
     'raisr',
+    'sbool',
+    'select_fget',
+    'thru',
+    'true',
+    'undund',
     'wraps',
 )
 
 
 EMPTY = ()
 EMPTY_MAP = MapProxy({})
-NOARG = object
+NOARG = object()
 WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
 
 def closure(func):
@@ -144,6 +145,32 @@ def select_fget(obj):
     if callable(getattr(obj, '__getitem__', None)):
         return getitem
     return getattr
+
+def minfloor(floor, it):
+    it = iter(it)
+    try:
+        minval = next(it)
+    except StopIteration:
+        raise ValueError(f"minfloor() arg is an empty sequence") from None
+    for val in it:
+        if val == floor:
+            return val
+        if val < minval:
+            minval = val
+    return minval
+
+def maxceil(ceil, it):
+    it = iter(it)
+    try:
+        maxval = next(it)
+    except StopIteration:
+        raise ValueError(f"maxceil() arg is an empty sequence") from None
+    for val in it:
+        if val == ceil:
+            return val
+        if val > maxval:
+            maxval = val
+    return maxval
 
 @closure
 def dxopy():
