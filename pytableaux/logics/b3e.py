@@ -56,7 +56,7 @@ class Model(K3W.Model):
             return FDE.Model.truth_function(self, oper, a, b)
         return super().truth_function(oper, a, b)
 
-class TableauxSystem(K3W.TableauxSystem):
+class TableauxSystem(K3.TableauxSystem):
 
     # operator => negated => designated
     branchables = K3W.TableauxSystem.branchables | {
