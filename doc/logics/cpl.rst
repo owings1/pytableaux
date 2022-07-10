@@ -4,64 +4,133 @@
 CPL - Classical Predicate Logic
 *******************************
 
-Classical Predicate Logic (CPL) is the standard bivalent logic with
-values V{T} and V{F}, commonly interpretated as 'true' and 'false',
-respectively.
+L{CPL} is the standard bivalent logic with values V{T} and V{F}.
 
-.. contents:: :local:
+.. contents::
+  :local:
+  :depth: 2
 
-.. automodule:: pytableaux.logics.cpl
+.. module:: pytableaux.logics.cpl
 
-    Semantics
-    =========
+.. _cpl-semantics:
+.. _cpl-model:
 
-    .. _cpl-model:
+Semantics
+=========
 
-    .. autoclass:: Model
+.. _cpl-truth-values:
 
-        .. autoclass:: pytableaux.logics.cpl::Model.Value()
-            :members: F, T
-            :undoc-members:
-            :noindex:
+Truth Values
+------------
 
-        .. include:: include/cpl/m.attributes.rst
+Common labels for the values include:
 
-        .. method:: truth_function(operator, a, b)
+.. include:: include/cpl/value-table.rst
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+.. _cpl-truth-tables:
 
-            .. truth-tables::
+Truth Tables
+------------
 
-        .. method:: value_of_predicated(sentence)
+.. include:: include/truth_table_blurb.rst
 
-            The value of predicated sentences are handled in terms of their *extension*:
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction
 
-                | A sentence with *n*-ary predicate :math:`P` over parameters :m:`!{ntuple}`
-                | has the value V{T} iff :m:`!{ntuple}` is in the extension of :math:`P`.
+.. rubric:: Defined Operators
 
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-        .. Note:: CPL does not give a treatment of the quantifiers. Quantified sentences
-            are treated as opaque (uninterpreted). See {@CFOL} for quantification.
-              
+.. sentence::
 
-    .. _cpl-consequence:
+  A > B := ~A V B
 
-    Consequence
-    -----------
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-    **Logical Consequence** is defined in the standard way:
+.. sentence::
 
-        .. include:: include/cpl/m.consequence.rst
+  A < B := (A > B) & (B > A)
 
-    .. _cfol-system:
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
 
-    Tableaux System
-    ===============
+.. rubric:: Compatibility Tables
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+L{CPL} does not have separate `Assertion` or `Conditional` operators,
+but we include tables and rules for them, for cross-compatibility.
 
-    .. autoclass:: TabRules
-        :members:
+.. truth-tables::
+  :operators: Assertion, Conditional, Biconditional
+
+.. _cpl-predication:
+
+Predication
+-----------
+
+The value of predicated sentences are handled in terms of a predicate's *extension*.
+
+.. include:: include/cpl/predication.rst
+
+.. Note:: CPL does not give a treatment of the quantifiers. Quantified sentences
+    are treated as opaque (uninterpreted). See {@CFOL} for quantification.
+
+.. _cpl-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined as follows:
+
+  .. include:: include/cpl/m.consequence.rst
+
+.. _cpl-system:
+
+Tableaux
+========
+
+Nodes
+-----
+
+.. include:: include/cpl/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/cpl/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: ContradictionClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: SelfIdentityClosure
+  :legend:
+  :doc:
+
+.. _cpl-rules:
+
+Rules
+--------
+
+.. include:: include/cpl/rules_blurb.rst
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion, Conditional, Biconditional
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion, Conditional, Biconditional
 

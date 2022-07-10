@@ -82,7 +82,7 @@ and rules for it, for cross-compatibility.
 Predication
 -----------
 
-.. include:: include/lp/m.predication.rst
+.. include:: include/lp/predication.rst
 
 .. _rm3-quantification:
 

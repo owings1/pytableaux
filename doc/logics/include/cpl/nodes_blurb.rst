@@ -1,0 +1,1 @@
+Each node consists of a sentence.
