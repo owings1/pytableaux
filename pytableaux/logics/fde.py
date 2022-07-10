@@ -14,27 +14,20 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - First Degree Entailment Logic
 from __future__ import annotations
 
+from types import MappingProxyType as MapProxy
 from typing import Any
 
 from pytableaux.errors import Emsg
-from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
-                                 Predicate, Predicated, Quantified, Quantifier,
-                                 Sentence)
+from pytableaux.lang import (Argument, Atomic, Constant, Operated, Operator,
+                             Predicate, Predicated, Quantified, Quantifier,
+                             Sentence)
+from pytableaux.logics import LogicType
 from pytableaux.models import BaseModel, ValueFDE
-from pytableaux.proof import Branch, Node, Tableau
-from pytableaux.proof import TableauxSystem as BaseSystem
-from pytableaux.proof import Target, adds, filters, group, rules, sdnode
-from pytableaux.tools import closure
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.sets import setf
-from types import MappingProxyType as MapProxy
+from pytableaux.proof import (Branch, Node, Tableau, TableauxSystem, Target,
+                              adds, filters, group, rules, sdnode)
+from pytableaux.tools import closure, qsetf, setf
 
 name = 'FDE'
 
@@ -470,7 +463,7 @@ class Model(BaseModel[ValueFDE]):
 
         return func_mapper
 
-class TableauxSystem(BaseSystem):
+class TableauxSystem(TableauxSystem):
 
     # operator => negated => designated
     branchables = {
@@ -545,7 +538,7 @@ class ConjunctionReducingRule(OperatorNodeRule):
         return adds(group(sdnode(s, self.designation)))
 
 @TableauxSystem.initialize
-class TabRules:
+class TabRules(LogicType.TabRules):
 
     class DesignationClosure(rules.BaseClosureRule):
         """

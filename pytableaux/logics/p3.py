@@ -20,6 +20,7 @@ import pytableaux.logics.fde as FDE
 import pytableaux.logics.k3 as K3
 from pytableaux.lang import Constant, Operator, Quantified, Quantifier
 from pytableaux.proof import Branch, Node, adds, group, sdnode
+from pytableaux.tools import maxceil
 
 name = 'P3'
 
@@ -27,7 +28,6 @@ class Meta(K3.Meta):
     title       = 'Post 3-valued Logic'
     description = 'Emil Post three-valued logic (T, F, and N) with mirror-image negation'
     category_order = 120
-
 
 class Model(K3.Model):
 
@@ -37,19 +37,15 @@ class Model(K3.Model):
         from the substitution of the variable with each constant. Then apply
         the negation function to each of those values. Then take the maximum
         of those values (the `generalized disjunction`), and apply the negation
-        function to that minimum value. The result is the value of the universal
+        function to that maximum value. The result is the value of the universal
         sentence.
         """
         v = s.variable
-        si = s.sentence
-        values = {
-            self.truth_function(
-                Operator.Negation,
-                self.value_of(si.substitute(c, v), **kw)
-            )
+        sub = s.sentence.substitute
+        return self.truth_function(Operator.Negation, maxceil(self.Value.T, (
+            self.truth_function(Operator.Negation, self.value_of(sub(c, v), **kw))
             for c in self.constants
-        }
-        return self.truth_function(Operator.Negation, max(values))
+        )))
 
     def truth_function(self, oper, a, b=None, /):
         oper = Operator(oper)

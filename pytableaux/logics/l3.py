@@ -24,20 +24,14 @@ from pytableaux.proof import adds, group, sdnode, Node
 
 name = 'L3'
 
-class Meta(FDE.Meta):
+class Meta(K3.Meta):
     title       = u'Łukasiewicz 3-valued Logic'
     description = (
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator'
     )
     category_order = 80
-    tags = (
-        'many-valued',
-        'gappy',
-        'non-modal',
-        'first-order',
-    )
-    native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
+    native_operators = K3.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
 
 class Model(K3.Model):
 
@@ -49,7 +43,7 @@ class Model(K3.Model):
 
 class TableauxSystem(K3.TableauxSystem):
 
-    branchables = FDE.TableauxSystem.branchables | {
+    branchables = K3.TableauxSystem.branchables | {
         Operator.Conditional: ((1, 1), (1, 0)),
         Operator.Biconditional: ((1, 1), (1, 1)),
     }
@@ -146,10 +140,9 @@ class TabRules(K3.TabRules):
 
         def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            Cond = Operator.Conditional
             return adds(
-                group(sdnode(Cond(lhs, rhs), False)),
-                group(sdnode(Cond(rhs, lhs), False)),
+                group(sdnode(Operator.Conditional(lhs, rhs), False)),
+                group(sdnode(Operator.Conditional(rhs, lhs), False)),
             )
 
     class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):

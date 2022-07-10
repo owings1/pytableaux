@@ -530,7 +530,7 @@ def sdnode(s, d):
 def swnode(s, w):
     'Make a sentence/world node dict. Excludes world if None.'
     if w is None:
-        return dict(sentence = s)
+        return snode(s)
     return dict(sentence = s, world = w)
 
 def anode(w1, w2):

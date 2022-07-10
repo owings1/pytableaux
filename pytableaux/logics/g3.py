@@ -24,36 +24,20 @@ from pytableaux.proof import Branch, Node, adds, group, sdnode
 
 name = 'G3'
 
-class Meta(K3.Meta):
-    title    = 'Gödel 3-valued logic'
-    category = 'Many-valued'
+class Meta(L3.Meta):
+    title    = 'Gödel 3-valued Logic'
     description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
     category_order = 90
-    tags = (
-        'many-valued',
-        'gappy',
-        'non-modal',
-        'first-order',
-    )
-    native_operators = L3.Meta.native_operators
 
 class Model(L3.Model):
-    """
-    A L{G3} model is similar to a :ref:`K3 model <k3-model>`, but with different tables
-    for some of the operators.
-    """
 
-    def truth_function(self, operator: Operator, a, b = None, /):
+    def truth_function(self, operator, a, b = None, /):
         if operator == Operator.Negation:
-            if a == 'N':
+            if a == self.Value.N:
                 return self.Value.F
         return super().truth_function(operator, a, b)
 
 class TableauxSystem(K3.TableauxSystem):
-    """
-    L{G3}'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
-    employing designation markers, and building the trunk in the same way.
-    """
 
     branchables = FDE.TableauxSystem.branchables | {
         Operator.Conditional: ((1, 1), (1, 1)),
@@ -62,12 +46,6 @@ class TableauxSystem(K3.TableauxSystem):
 
 @TableauxSystem.initialize
 class TabRules(L3.TabRules):
-    """
-    The closure rules for L{G3} are the L{FDE} closure rule, and the L{K3} closure rule.
-    The operator rules for L{G3} are mostly the rules for L{FDE}, with the exception
-    of the rules for the conditional and biconditional operators, and some of
-    the negation rules.
-    """
 
     class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """

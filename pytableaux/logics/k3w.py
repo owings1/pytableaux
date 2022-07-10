@@ -14,10 +14,6 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Weak Kleene Logic
 from __future__ import annotations
 
 import pytableaux.logics.fde as FDE
@@ -59,12 +55,6 @@ class TableauxSystem(K3.TableauxSystem):
 
 @TableauxSystem.initialize
 class TabRules(K3.TabRules):
-    """
-    The Tableaux System for L{K3W} contains the FDE closure rule, and the L{K3} closure
-    rule. Several of the operator rules are the same as :ref:`FDE <fde-system>`.
-    However, many rules for L{K3W} are different from FDE, given
-    the behavior of the *N* value.
-    """
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """

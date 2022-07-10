@@ -30,14 +30,13 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
 
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang.lex import Constant, Sentence
-from pytableaux.tools import (EMPTY_MAP, abcs, isattrstr, isint, lazy, operd,
-                              raisr)
+from pytableaux.lang import Constant, Sentence
+from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, SetView, abcs, dmap,
+                              dmapattr, isattrstr, isint, lazy, operd, qset,
+                              raisr, setf)
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap, dmapattr
+from pytableaux.tools.mappings import ItemsIterator, MapCover
 from pytableaux.tools.sequences import SequenceApi
-from pytableaux.tools.sets import EMPTY_SET, SetView, setf
 
 if TYPE_CHECKING:
 
@@ -563,7 +562,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                     inst[prop][value].update(nodes)
             return inst
 
-        def select(self, props, default, /):
+        def select(self, props, default, /) -> set[Node]:
             best = None
             for prop in self:
                 value = None

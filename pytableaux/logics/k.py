@@ -14,10 +14,6 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Kripke Normal Modal Logic
 from __future__ import annotations
 
 from typing import Any, Callable, Optional, cast
@@ -34,7 +30,7 @@ from pytableaux.proof import (Access, Branch, Node, Tableau, TableauxSystem,
 from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
-from pytableaux.tools import EMPTY_SET, closure, qsetf
+from pytableaux.tools import EMPTY_SET, closure, qsetf, substitute
 
 name = 'K'
 
@@ -49,9 +45,6 @@ class Meta:
         'first-order',
     )
     native_operators = FDE.Meta.native_operators + (Operator.Possibility, Operator.Necessity)
-
-def substitute_params(params, old_value, new_value):
-    return tuple(new_value if p == old_value else p for p in params)
 
 class Model(BaseModel[ValueCPL]):
     """
@@ -114,10 +107,9 @@ class Model(BaseModel[ValueCPL]):
         subsitution of some constant in the domain for the variable is true at :m:`w`.
         """
         Value = self.Value
-        Tru = Value.T
         for c in self.constants:
-            if self.value_of(c >> s, **kw) is Tru:
-                return Tru
+            if self.value_of(c >> s, **kw) is Value.T:
+                return Value.T
         return Value.F
 
     def value_of_universal(self, s: Quantified, **kw):
@@ -126,10 +118,9 @@ class Model(BaseModel[ValueCPL]):
         subsitution of each constant in the domain for the variable is true at :m:`w`.
         """
         Value = self.Value
-        Fals = Value.F
         for c in self.constants:
-            if self.value_of(c >> s, **kw) is Fals:
-                return Fals
+            if self.value_of(c >> s, **kw) is Value.F:
+                return Value.F
         return Value.T
 
     def value_of_possibility(self, s: Operated, world: int = 0, **kw):
@@ -138,10 +129,9 @@ class Model(BaseModel[ValueCPL]):
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
         """
         Value = self.Value
-        Tru = Value.T
         for w2 in self.visibles(world):
-            if self.value_of(s.lhs, world=w2, **kw) is Tru:
-                return Tru
+            if self.value_of(s.lhs, world=w2, **kw) is Value.T:
+                return Value.T
         return Value.F
 
     def value_of_necessity(self, s: Operated, /, world: int = 0, **kw):
@@ -150,23 +140,21 @@ class Model(BaseModel[ValueCPL]):
         each :m:`w'` such that :m:`<w, w'>` is in the access relation.
         """
         Value = self.Value
-        Fals = Value.F
         for w2 in self.visibles(world):
-            if self.value_of(s.lhs, world=w2, **kw) is Fals:
-                return Fals
+            if self.value_of(s.lhs, world=w2, **kw) is Value.F:
+                return Value.F
         return Value.T
 
-    def is_countermodel_to(self, argument: Argument, /) -> bool:
+    def is_countermodel_to(self, arg: Argument, /) -> bool:
         """
         A model is a countermodel for an argument iff the value of each premise
         is V{T} at `w0` and the value of the conclusion is V{F} at :m:`w0`.
         """
         Value = self.Value
-        Tru = Value.T
-        for premise in argument.premises:
-            if self.value_of(premise, world = 0) is not Tru:
+        for premise in arg.premises:
+            if self.value_of(premise, world = 0) is not Value.T:
                 return False
-        return self.value_of(argument.conclusion, world = 0) is Value.F
+        return self.value_of(arg.conclusion, world = 0) is Value.F
 
     def get_data(self) -> dict:
         return dict(
@@ -273,7 +261,7 @@ class Model(BaseModel[ValueCPL]):
             for params in extension:
                 if c in params:
                     for new_c in identicals:
-                        new_params = substitute_params(params, c, new_c)
+                        new_params = substitute(params, c, new_c)
                         to_add.add(new_params)
             extension.update(to_add)
 
@@ -311,7 +299,7 @@ class Model(BaseModel[ValueCPL]):
         identicals.discard(c)
         return identicals
 
-    def set_literal_value(self, s: Sentence, value: ValueCPL, /, **kw):
+    def set_literal_value(self, s: Sentence, value, /, **kw):
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value, **kw)
         elif (stype := type(s)) is Operated and s.operator is Operator.Negation:
@@ -324,7 +312,7 @@ class Model(BaseModel[ValueCPL]):
         else:
             raise NotImplementedError
 
-    def set_opaque_value(self, s: Sentence, value: ValueCPL, /, world: int = 0):
+    def set_opaque_value(self, s: Sentence, value, /, world = 0):
         value = self.Value[value]
         frame = self.frames[world]
         if frame.opaques.get(s, value) is not value:
@@ -337,14 +325,14 @@ class Model(BaseModel[ValueCPL]):
         self.predicates.update(s.predicates)
         frame.opaques[s] = value
 
-    def set_atomic_value(self, s: Atomic, value: ValueCPL, /, world: int = 0):
+    def set_atomic_value(self, s: Atomic, value, /, world = 0):
         value = self.Value[value]
         frame = self.frames[world]
         if s in frame.atomics and frame.atomics[s] is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         frame.atomics[s] = value
 
-    def set_predicated_value(self, s: Predicated, value: ValueCPL, /, **kw):
+    def set_predicated_value(self, s: Predicated, value, /, **kw):
         Value = self.Value
         value = Value[value]
         pred = s.predicate
@@ -369,7 +357,7 @@ class Model(BaseModel[ValueCPL]):
                 )
             extension.add(params)
 
-    def get_extension(self, pred: Predicate, /, world: int = 0) -> set[tuple[Constant, ...]]:
+    def get_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
         frame = self.frames[world]
         if pred not in self.predicates:
             self.predicates.add(pred)
@@ -379,7 +367,7 @@ class Model(BaseModel[ValueCPL]):
             frame.anti_extensions[pred] = set()
         return frame.extensions[pred]
 
-    def get_anti_extension(self, pred: Predicate, /, world: int = 0) -> set[tuple[Constant, ...]]:
+    def get_anti_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
         frame = self.frames[world]
         if pred not in self.predicates:
             self.predicates.add(pred)
@@ -1217,7 +1205,7 @@ class TabRules(LogicType.TabRules):
                     # but it is by ``test_identity_indiscernability_not_applies()```
                     continue # pragma: no cover
                 # Replace p with p1.
-                params = substitute_params(s.params, p_old, p_new)
+                params = substitute(s.params, p_old, p_new)
                 # Since we have SelfIdentityClosure, we don't need a = a.
                 if s.predicate == self.predicate and params[0] == params[1]:
                     continue

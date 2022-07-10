@@ -14,10 +14,6 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - R-mingle 3 logic
 from __future__ import annotations
 
 import pytableaux.logics.fde as FDE
@@ -34,19 +30,9 @@ class Meta(LP.Meta):
         'Conditional operator'
     )
     category_order = 130
-    tags = (
-        'many-valued',
-        'glutty',
-        'non-modal',
-        'first-order',
-    )
     native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
 
 class Model(LP.Model):
-    """
-    An RM3 model is just like an {@LP model} with different tables for the conditional
-    and bi-conditional operators.
-    """
 
     def truth_function(self, oper: Operator, a, b=None, /):
         Value = self.Value
@@ -56,19 +42,13 @@ class Model(LP.Model):
 
 class TableauxSystem(LP.TableauxSystem):
 
-    branchables = FDE.TableauxSystem.branchables | {
+    branchables = LP.TableauxSystem.branchables | {
         Operator.Conditional: ((1, 2), (1, 0)),
         Operator.Biconditional: ((1, 2), (1, 1)),
     }
 
 @TableauxSystem.initialize
 class TabRules(LP.TabRules):
-    """
-    The closure rules for RM3 are the FDE closure rule, and the LP closure rule.
-    Most of the operator rules are the same as L{FDE}, except for the conditional
-    rules. The biconditional rules are borrowed from `L3_`, since they are
-    simplification rules.
-    """
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -79,8 +59,8 @@ class TabRules(LP.TabRules):
         the antecedent, its negation, the consequent, and its negation,
         respectively. Then tick *n*.
         """
-        operator    = Operator.Conditional
         designation = True
+        operator    = Operator.Conditional
         branching   = 2
 
         def _get_node_targets(self, node: Node, _,/):
@@ -104,8 +84,8 @@ class TabRules(LP.TabRules):
         On *b''*, add an undesignated node with the negation of the antecedent,
         and a designated node with the negation of the consequent. Then tick *n*.
         """
-        operator    = Operator.Conditional
         designation = False
+        operator    = Operator.Conditional
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
@@ -123,8 +103,8 @@ class TabRules(LP.TabRules):
         the negation of each operand. On *b'''*, add four designated nodes, one
         with each operand, and one for the negation of each operand. Then tick *n*.
         """
-        operator    = Operator.Biconditional
         designation = True
+        operator    = Operator.Biconditional
         branching   = 2
 
         def _get_node_targets(self, node: Node, _,/):
@@ -147,8 +127,8 @@ class TabRules(LP.TabRules):
         with the same operands as *n*, and the second conjunct being a conditional
         with the reversed operands of *n*, then tick *n*.
         """
-        operator    = Operator.Biconditional
         designation = False
+        operator    = Operator.Biconditional
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
@@ -167,8 +147,8 @@ class TabRules(LP.TabRules):
         each operand. Then tick *n*.
         """
         negated     = True
-        operator    = Operator.Biconditional
         designation = False
+        operator    = Operator.Biconditional
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):

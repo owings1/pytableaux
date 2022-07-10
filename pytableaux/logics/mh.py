@@ -18,10 +18,8 @@ from __future__ import annotations
 
 import pytableaux.logics.fde as FDE
 import pytableaux.logics.k3 as K3
-from pytableaux.lang.lex import Operator as Operator
-from pytableaux.lang.lex import Quantified, Sentence
-from pytableaux.proof.common import Node
-from pytableaux.proof import adds, group, sdnode
+from pytableaux.lang import Operator, Quantified, Sentence
+from pytableaux.proof import Node, adds, group, sdnode
 
 name = 'MH'
 
@@ -32,7 +30,12 @@ class Meta(K3.Meta):
         'and a classical-like conditional'
     )
     category_order = 70
-    native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
+    tags = ( # remove first-order
+        'many-valued',
+        'gappy',
+        'non-modal',
+    )
+    native_operators = K3.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
 
 class Model(K3.Model):
 
@@ -166,9 +169,9 @@ class TabRules(K3.TabRules):
         operator     = Operator.MaterialConditional
 
         def _get_node_targets(self, node: Node, _):
-            lhs, rhs = self.sentence(node)
+            s = self.sentence(node)
             return adds(
-                group(sdnode(~(~lhs | rhs), self.designation))
+                group(sdnode(~(~s.lhs | s.rhs), self.designation))
             )
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
@@ -223,11 +226,11 @@ class TabRules(K3.TabRules):
         branching   = 1
 
         def _get_node_targets(self, node: Node, _):
-            lhs, rhs = self.sentence(node)
+            s = self.sentence(node)
             # Keep designation fixed for inheritance below.
             return adds(
-                group(sdnode(lhs, False)),
-                group(sdnode(rhs, True)),
+                group(sdnode(s.lhs, False)),
+                group(sdnode(s.rhs, True)),
             )
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
@@ -245,10 +248,10 @@ class TabRules(K3.TabRules):
         operator     = Operator.Conditional
 
         def _get_node_targets(self, node: Node, _):
-            lhs, rhs = self.sentence(node)
+            s = self.sentence(node)
             # Keep designation fixed for inheritance below.
             return adds(
-                group(sdnode(lhs, True), sdnode(rhs, False))
+                group(sdnode(s.lhs, True), sdnode(s.rhs, False))
             )
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):

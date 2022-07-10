@@ -39,9 +39,7 @@ class Model(CPL.Model):
         """
         A sentence is opaque if its operator is either Necessity or Possibility.
         """
-        if type(s) is Quantified:
-            return False
-        return super().is_sentence_opaque(s)
+        return type(s) is not Quantified and super().is_sentence_opaque(s)
 
 class TableauxSystem(CPL.TableauxSystem):
     pass

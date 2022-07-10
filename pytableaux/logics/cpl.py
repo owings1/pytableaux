@@ -83,7 +83,7 @@ class TabRules:
         def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             if s is not None:
-                return branch.find(dict(sentence = s.negative()))
+                return branch.find(snode(s.negative()))
 
     class SelfIdentityClosure(K.TabRules.SelfIdentityClosure, modal = False):
         """

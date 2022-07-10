@@ -28,10 +28,11 @@ from itertools import chain, filterfalse
 from operator import not_, truth
 from types import MappingProxyType as MapProxy
 
-from pytableaux import EMPTY_SET, __docformat__, tools
+from pytableaux import __docformat__
 from pytableaux.errors import Emsg
-from pytableaux.tools import EMPTY_MAP, abcs, isattrstr, membr, wraps
-from pytableaux.tools.sets import setf
+from pytableaux.tools import (EMPTY_MAP, abcs, closure, isattrstr, membr, thru,
+                              true, wraps)
+from pytableaux.tools.sets import EMPTY_SET, setf
 
 __all__ = (
     'defaultdmap',
@@ -163,7 +164,7 @@ class MapCover(MappingApi):
     __slots__ = ('__getitem__', '_cov_mapping')
     _cov_mapping: Mapping
 
-    @tools.closure
+    @closure
     def __init__():
         sa = object.__setattr__
         def init(self, mapping: Mapping, /):
@@ -249,7 +250,7 @@ class MutableMappingApi(MappingApi, MutableMapping, abcs.Copyable):
         ): pass
         return self
 
-    @tools.closure
+    @closure
     def _setitem_update():
         EMPTY_ITER = iter(())
         def update(self, it = None, /, **kw):
@@ -471,8 +472,8 @@ class ItemsIterator(Iterator[tuple]):
             return obj
         return super().__new__(cls)
 
-    def __init__(self, obj, /, *, vget = None, kpred = tools.true,
-        vpred = tools.true, koper = truth, voper = truth):
+    def __init__(self, obj, /, *, vget = None, kpred = true,
+        vpred = true, koper = truth, voper = truth):
         if vget is None:
             if hasattr(obj, 'keys'):
                 self._gen_ = self._gen1(
@@ -508,7 +509,7 @@ class ItemsIterator(Iterator[tuple]):
                 yield k, v
 
 
-@tools.closure
+@closure
 def _opcache():
 
     class CacheResolversType(dict):
@@ -543,7 +544,7 @@ def _opcache():
                 self.pop(next(iter(self)))
             return self.setdefault(othrtype, self.resolve)
 
-        def resolve(self, mapi, other, /, *, FTHRU = tools.thru):
+        def resolve(self, mapi, other, /, *, FTHRU = thru):
             othrtype = type(other)
             if not issubclass(othrtype, Iterable):
                 return self.reject(othrtype)
@@ -569,7 +570,7 @@ def _opcache():
             self[othrtype] = resolve_cache[res_create, get_res_iter]
             return res
 
-        @tools.closure
+        @closure
         def reject():
 
             def FNOTIMPL(*args, **kw):
@@ -620,7 +621,7 @@ def _opcache():
             return source[type(mapi)][opname][type(other)](mapi, other)
 
         @staticmethod
-        @tools.closure
+        @closure
         def resolvers():
             _resolvers = MapProxy(resolve_cache)
             return lambda: _resolvers
@@ -637,7 +638,7 @@ def _opcache():
             limit_conf['_limit'] = min(0, int(n))
 
         @staticmethod
-        @tools.closure
+        @closure
         def __dir__(funcs = [get, resolve, clear, limit, resolvers]):
             names = [f.__name__ for f in funcs]
             return lambda: list(names)
@@ -646,7 +647,6 @@ def _opcache():
 
 del(
     membr,
-    tools,
     truth,
     wraps,
 )

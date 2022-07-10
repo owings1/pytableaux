@@ -14,16 +14,13 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Gappy Object 3-valued Logic
 from __future__ import annotations
 
 import pytableaux.logics.b3e as B3E
 import pytableaux.logics.fde as FDE
 import pytableaux.logics.k3 as K3
 from pytableaux.lang import Operator, Quantified, Quantifier
+from pytableaux.logics.b3e import crunch, gap
 from pytableaux.proof import Branch, Node, adds, group, rules, sdnode
 from pytableaux.tools import maxceil, minfloor
 
@@ -34,12 +31,6 @@ class Meta(K3.Meta):
     description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
     category_order = 60
     native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
-
-def gap(v):
-    return min(v, 1 - v)
-
-def crunch(v):
-    return v - gap(v)
 
 class Model(K3.Model):
 
@@ -437,7 +428,8 @@ class TabRules(B3E.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
-            v, si = s[1:]
+            v = s.variable
+            si = s.sentence
             r = branch.new_constant() >> s
             d = self.designation
             return adds(

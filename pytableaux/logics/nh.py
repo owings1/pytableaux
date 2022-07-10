@@ -19,7 +19,7 @@ from __future__ import annotations
 import pytableaux.logics.fde as FDE
 import pytableaux.logics.lp as LP
 import pytableaux.logics.mh as MH
-from pytableaux.lang import Operator, Quantified, Sentence
+from pytableaux.lang import Operator, Quantified
 from pytableaux.proof import Branch, Node, adds, group, sdnode
 
 name = 'NH'
@@ -31,12 +31,17 @@ class Meta(LP.Meta):
         'and a classical-like conditional'
     )
     category_order = 110
+    tags = ( # remove first-order
+        'many-valued',
+        'glutty',
+        'non-modal',
+    )
     native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
 
 class Model(LP.Model):
 
-    def is_sentence_opaque(self, s: Sentence):
-        return isinstance(s, Quantified) or super().is_sentence_opaque(s)
+    def is_sentence_opaque(self, s,/):
+        return type(s) is Quantified or super().is_sentence_opaque(s)
 
     def truth_function(self, oper, a, b = None, /):
         oper = Operator(oper)
@@ -51,11 +56,6 @@ class Model(LP.Model):
         return super().truth_function(oper, a, b)
 
 class TableauxSystem(LP.TableauxSystem):
-    """
-    NH's Tableaux System inherits directly from the {@FDE} system, employing
-    designation markers, and building the trunk in the same way.
-    """
-    # operator => negated => designated
     branchables = {
         Operator.Negation: (None, (0, 0)),
         Operator.Assertion: ((0, 0), (0, 0)),
@@ -95,8 +95,8 @@ class TabRules(LP.TabRules):
         Then, tick *n*.
         """
         negated     = True
-        operator    = Operator.Conjunction
         designation = True
+        operator    = Operator.Conjunction
         branching   = 3
 
         def _get_node_targets(self, node: Node, _,/):
@@ -120,8 +120,8 @@ class TabRules(LP.TabRules):
         for each of the conjuncts and its negation. Then tick *n*.
         """
         negated     = True
-        operator    = Operator.Conjunction
         designation = False
+        operator    = Operator.Conjunction
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
@@ -140,8 +140,8 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        operator     = Operator.MaterialConditional
-        designation  = True
+        designation = True
+        operator    = Operator.MaterialConditional
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
@@ -153,9 +153,9 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a negated disjunction.
         """
-        negated      = True
-        operator     = Operator.MaterialConditional
-        designation  = True
+        negated     = True
+        designation = True
+        operator    = Operator.MaterialConditional
 
         def _get_node_targets(self, node: Node, _: Branch):
             s = self.sentence(node)
@@ -181,8 +181,8 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        operator     = Operator.MaterialBiconditional
         designation  = True
+        operator     = Operator.MaterialBiconditional
         conjunct_op  = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
@@ -190,8 +190,8 @@ class TabRules(LP.TabRules):
         This rule reduces to a negated conjunction of material conditionals.
         """
         negated      = True
-        operator     = Operator.MaterialBiconditional
         designation  = True
+        operator     = Operator.MaterialBiconditional
         conjunct_op  = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
@@ -215,8 +215,8 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        operator    = Operator.Biconditional
         designation = True
+        operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
@@ -224,8 +224,8 @@ class TabRules(LP.TabRules):
         This rule reduces to a negated conjunction of conditionals.
         """
         negated     = True
-        operator    = Operator.Biconditional
         designation = True
+        operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalUndesignated(BiconditionalDesignated):

@@ -14,19 +14,13 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Logic of Paradox
 from __future__ import annotations as annotations
 
 import pytableaux.logics.fde as FDE
 from pytableaux.models import BaseModel, ValueLP
-from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof import Branch, Node, Target, sdnode
 from pytableaux.proof.rules import BaseClosureRule
-from pytableaux.proof import sdnode
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.sets import setf
+from pytableaux.tools import qsetf, setf
 
 name = 'LP'
 
@@ -42,34 +36,19 @@ class Meta(FDE.Meta):
     )
 
 class Model(FDE.Model, BaseModel[ValueLP]):
-    """
-    An L{LP} model is like an {@FDE model} without the V{N} value.
-    """
-
     Value = ValueLP
-
     designated_values = setf({Value.B, Value.T})
-    "The set of designated values."
-
     unassigned_value = Value.F
 
 class TableauxSystem(FDE.TableauxSystem):
-    """
-    L{LP}'s Tableaux System inherits directly from the {@FDE system},
-    employing designation markers, and building the trunk in the same way.
-    """
+    pass
 
 @TableauxSystem.initialize
 class TabRules(FDE.TabRules):
-    """
-    The Tableaux System for L{LP} contains all the rules from L{FDE}, as
-    well as an additional closure rule.
-    """
 
     class GapClosure(BaseClosureRule):
         """
         A branch closes when a sentence and its negation both appear as undesignated nodes.
-        This rule is **in addition to** the L{FDE} :class:`TabRules.DesignationClosure` rule.
         """
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):
@@ -91,7 +70,7 @@ class TabRules(FDE.TabRules):
 
         @staticmethod
         def example_nodes():
-            from pytableaux.lang.lex import Atomic
+            from pytableaux.lang import Atomic
             s = Atomic.first()
             return sdnode(s, False), sdnode(~s, False)
 

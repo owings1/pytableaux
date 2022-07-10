@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+
 """
 pytableaux.lang.lex
 -------------------
@@ -32,11 +33,8 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang import (BiCoords, LangCommonEnum, LangCommonMeta,
                              LexicalAbcMeta, SysPredEnumMeta, TriCoords,
                              nosetattr, raiseae)
-from pytableaux.tools import abcs, lazy, membr, wraps
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.mappings import DequeCache, dmap
-from pytableaux.tools.sequences import EMPTY_SEQ, seqf
-from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, DequeCache, abcs, dmap,
+                              lazy, membr, qsetf, seqf, setf, wraps)
 
 __all__ = (
     'Atomic',

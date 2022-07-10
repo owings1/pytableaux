@@ -14,16 +14,13 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Weak Kleene Logic with alternate quantification
 from __future__ import annotations
 
 import pytableaux.logics.fde as FDE
 import pytableaux.logics.k3w as K3W
-from pytableaux.lang import Operated, Quantified, Quantifier
+from pytableaux.lang import Quantified, Quantifier
 from pytableaux.proof import Branch, Node, adds, group, sdnode
+from pytableaux.tools import maxceil, minfloor
 
 name = 'K3WQ'
 
@@ -59,9 +56,6 @@ class Model(K3W.Model):
         3: Value.N,
     }
 
-    def value_of_operated(self, s: Operated, /, **kw):
-        return super().value_of_operated(s, **kw)
-
     def value_of_universal(self, s: Quantified, /, **kw):
         """
         A universal sentence is interpreted in terms of `generalized conjunction`.
@@ -71,12 +65,15 @@ class Model(K3W.Model):
         the variable.
         """
         v = s.variable
-        si = s.sentence
-        values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
-        mc_values = {self.mc_nvals[value] for value in values}
-        mc_value = min(mc_values)
-        value = self.mc_cvals[mc_value]
-        return value
+        sub = s.sentence.substitute
+        return self.Value[
+            self.mc_cvals[
+                minfloor(1, (
+                    self.mc_nvals[self.value_of(sub(c, v), **kw)]
+                    for c in self.constants
+                ))
+            ].name
+        ]
 
     def value_of_existential(self, s: Quantified, **kw):
         """
@@ -87,12 +84,15 @@ class Model(K3W.Model):
         the variable.
         """
         v = s.variable
-        si = s.sentence
-        values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
-        md_values = {self.md_nvals[value] for value in values}
-        md_value = max(md_values)
-        value = self.md_cvals[md_value]
-        return value
+        sub = s.sentence.substitute
+        return self.Value[
+            self.md_cvals[
+                maxceil(3, (
+                    self.md_nvals[self.value_of(sub(c, v), **kw)]
+                    for c in self.constants
+                ))
+            ].name
+        ]
 
 class TableauxSystem(K3W.TableauxSystem):
     pass
@@ -114,7 +114,8 @@ class TabRules(K3W.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            v, si = s[1:]
+            v = s.variable
+            si = s.sentence
             d = self.designation
             return adds(
                 group(
@@ -140,7 +141,8 @@ class TabRules(K3W.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            v, si = s[1:]
+            v = s.variable
+            si = s.sentence
             r = branch.new_constant() >> s
             d = self.designation
             return adds(
@@ -179,7 +181,8 @@ class TabRules(K3W.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            v, si = s[1:]
+            v = s.variable
+            si = s.sentence
             d = self.designation
             return adds(
                 group(
@@ -203,7 +206,8 @@ class TabRules(K3W.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            v, si = s[1:]
+            v = s.variable
+            si = s.sentence
             r = branch.new_constant() >> s
             d = self.designation
             return adds(
