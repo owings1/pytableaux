@@ -27,7 +27,7 @@ import typing
 __docformat__ = 'google'
 __all__ = ('package',)
 
-__version__ = 2, 0, 2, 'dev'
+__version__ = 2, 0, 2, 'final'
 'Version tuple (major, minor, patch, release).'
 
 __year__ = 2022
