@@ -10,6 +10,8 @@ L{CPL} is the standard bivalent logic with values V{T} and V{F}.
   :local:
   :depth: 2
 
+------------------------
+
 .. module:: pytableaux.logics.cpl
 
 .. _cpl-semantics:

@@ -1,61 +1,153 @@
 .. _CFOL:
 
-**********************************
-CFOL - Classical First-Order Logic
-**********************************
+********************************************
+L{CFOL} - Classical First-Order Logic
+********************************************
 
-Classical First-Order Logic (CFOL) augments :ref:`CPL <CPL>` with the quantifiers:
-Universal (:s:`L`) and Existential (:s:`X`).
+L{CFOL} adds quantification to {@CPL}.
 
-.. contents:: :local:
+.. contents::
+  :local:
+  :depth: 2
 
-.. automodule:: pytableaux.logics.cfol
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.cfol
 
-    .. autoclass:: Model
+.. _cfol-semantics:
+.. _cfol-model:
 
-        .. autoclass:: pytableaux.logics.cfol::Model.Value()
-            :members: F, T
-            :undoc-members:
-            :noindex:
+Semantics
+=========
 
-        .. include:: include/cpl/m.attributes.rst
+.. _cfol-truth-values:
 
-        .. method:: truth_function(operator, a, b)
+Truth Values
+------------
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+Common labels for the values include:
 
-            .. truth-tables::
+.. include:: include/cpl/value-table.rst
 
-        .. method:: value_of_existential(sentence)
+.. _cfol-truth-tables:
 
-            An existential sentence is true just when the sentence resulting in the
-            subsitution of some constant in the domain for the variable is true.  
+Truth Tables
+------------
 
-        .. method:: value_of_universal(sentence)
+.. include:: include/truth_table_blurb.rst
 
-            A universal sentence is true just when the sentence resulting in the
-            subsitution of each constant in the domain for the variable is true.
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction
 
-    Consequence
-    -----------
+.. rubric:: Defined Operators
 
-    **Logical Consequence** is defined in the standard way:
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-        .. include:: include/cpl/m.consequence.rst
+.. sentence::
 
-    Tableaux System
-    ===============
+  A > B := ~A V B
 
-    .. _cfol-system:
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+.. sentence::
 
-    .. autoclass:: TabRules
-        :members:
+  A < B := (A > B) & (B > A)
 
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
 
+.. rubric:: Compatibility Tables
+
+L{CFOL} does not have separate `Assertion` or `Conditional` operators,
+but we include tables and rules for them, for cross-compatibility.
+
+.. truth-tables::
+  :operators: Assertion, Conditional, Biconditional
+
+.. _cfol-predication:
+
+Predication
+-----------
+
+The value of predicated sentences are handled in terms of a predicate's *extension*.
+
+.. include:: include/cpl/predication.rst
+
+.. _cfol-quantification:
+
+Quantification
+--------------
+
+.. rubric:: Existential
+
+.. include:: include/cfol/m.existential.rst
+
+.. rubric:: Universal
+
+.. include:: include/cfol/m.universal.rst
+
+.. _cfol-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in the standard way:
+
+  .. include:: include/cpl/m.consequence.rst
+
+.. _cfol-system:
+
+Tableaux
+========
+
+Nodes
+-----
+
+.. include:: include/cpl/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/cpl/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: ContradictionClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: SelfIdentityClosure
+  :legend:
+  :doc:
+
+.. _cfol-rules:
+
+Rules
+--------
+
+.. include:: include/cpl/rules_blurb.rst
+
+Additional rules are given for the quantifiers.
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion, Conditional, Biconditional
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion, Conditional, Biconditional
