@@ -14,13 +14,11 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# pytableaux - Classical First-Order Logic
 from __future__ import annotations
 
+import pytableaux.logics.cpl as CPL
+import pytableaux.logics.k as K
 from pytableaux.lang import Quantified, Sentence
-from pytableaux.logics import cpl as CPL
-from pytableaux.logics import k as K
 
 name = 'CFOL'
 
@@ -36,9 +34,6 @@ class Meta(CPL.Meta):
     )
 
 class Model(CPL.Model):
-    """
-    A CFOL Model is just like :ref:`CPL model <cpl-model>` but with quantification.
-    """
 
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
         """
@@ -49,71 +44,14 @@ class Model(CPL.Model):
         return super().is_sentence_opaque(s)
 
 class TableauxSystem(CPL.TableauxSystem):
-    """
-    CFOL's Tableaux System inherits directly from :ref:`CPL <CPL>`'s.
-    """
+    pass
 
 @TableauxSystem.initialize
-class TabRules:
+class TabRules(CPL.TabRules):
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,
     including the CPL closure rules, and adds additional rules for the quantifiers.
     """
-
-    class ContradictionClosure(CPL.TabRules.ContradictionClosure):
-        pass
-
-    class SelfIdentityClosure(CPL.TabRules.SelfIdentityClosure):
-        pass
-
-    class NonExistenceClosure(CPL.TabRules.NonExistenceClosure):
-        pass
-
-    class DoubleNegation(CPL.TabRules.DoubleNegation):
-        pass
-
-    class Assertion(CPL.TabRules.Assertion):
-        pass
-
-    class AssertionNegated(CPL.TabRules.AssertionNegated):
-        pass
-
-    class Conjunction(CPL.TabRules.Conjunction):
-        pass
-
-    class ConjunctionNegated(CPL.TabRules.ConjunctionNegated):
-        pass
-
-    class Disjunction(CPL.TabRules.Disjunction):
-        pass
-
-    class DisjunctionNegated(CPL.TabRules.DisjunctionNegated):
-        pass
-
-    class MaterialConditional(CPL.TabRules.MaterialConditional):
-        pass
-
-    class MaterialConditionalNegated(CPL.TabRules.MaterialConditionalNegated):
-        pass
-
-    class MaterialBiconditional(CPL.TabRules.MaterialBiconditional):
-        pass
-
-    class MaterialBiconditionalNegated(CPL.TabRules.MaterialBiconditionalNegated):
-        pass
-
-    class Conditional(CPL.TabRules.Conditional):
-        pass
-
-    class ConditionalNegated(CPL.TabRules.ConditionalNegated):
-        pass
-
-    class Biconditional(CPL.TabRules.Biconditional):
-        pass
-
-    class BiconditionalNegated(CPL.TabRules.BiconditionalNegated):
-        pass
-
     class Existential(K.TabRules.Existential, modal = False):
         """
         From an unticked existential node *n* on a branch *b*, quantifying over
@@ -144,39 +82,30 @@ class TabRules:
         then tick *n*.
         """
 
-    class IdentityIndiscernability(CPL.TabRules.IdentityIndiscernability):
-        pass
-
-    closure_rules = (
-        ContradictionClosure,
-        SelfIdentityClosure,
-        NonExistenceClosure,
-    )
-
     rule_groups = (
         (
             # non-branching rules
-            IdentityIndiscernability,
-            DoubleNegation,
-            Assertion,
-            AssertionNegated,
-            Conjunction,
-            DisjunctionNegated,
-            MaterialConditionalNegated,
-            ConditionalNegated,
+            CPL.TabRules.IdentityIndiscernability,
+            CPL.TabRules.DoubleNegation,
+            CPL.TabRules.Assertion,
+            CPL.TabRules.AssertionNegated,
+            CPL.TabRules.Conjunction,
+            CPL.TabRules.DisjunctionNegated,
+            CPL.TabRules.MaterialConditionalNegated,
+            CPL.TabRules.ConditionalNegated,
             ExistentialNegated,
             UniversalNegated,
         ),
         (
             # branching rules
-            ConjunctionNegated,
-            Disjunction,
-            MaterialConditional,
-            MaterialBiconditional,
-            MaterialBiconditionalNegated,
-            Conditional,
-            Biconditional,
-            BiconditionalNegated,
+            CPL.TabRules.ConjunctionNegated,
+            CPL.TabRules.Disjunction,
+            CPL.TabRules.MaterialConditional,
+            CPL.TabRules.MaterialBiconditional,
+            CPL.TabRules.MaterialBiconditionalNegated,
+            CPL.TabRules.Conditional,
+            CPL.TabRules.Biconditional,
+            CPL.TabRules.BiconditionalNegated,
         #),
         #(
 
