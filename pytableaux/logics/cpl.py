@@ -14,15 +14,11 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Classical Predicate Logic
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+import pytableaux.logics.k as K
 from pytableaux.lang import Operated, Quantified, Sentence, Operator
-from pytableaux.logics import k as K
 from pytableaux.proof import Branch, Node, Tableau, snode
 
 if TYPE_CHECKING:
@@ -45,9 +41,6 @@ class Meta:
     )
 
 class Model(K.Model):
-    """
-    A CPL Model is just a :ref:`K model <k-model>` with a single :ref:`frame <k-frame>`.
-    """
 
     def is_sentence_opaque(self, s: Sentence, /):
         """
@@ -75,10 +68,6 @@ class TableauxSystem(K.TableauxSystem):
 
     @classmethod
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
-        """
-        To build the trunk for an argument, add a node for each premise, and
-        a node with the negation of the conclusion.        
-        """
         b = tab.branch()
         b.extend(map(snode, arg.premises))
         b.append(snode(~arg.conclusion))
@@ -86,12 +75,6 @@ class TableauxSystem(K.TableauxSystem):
 
 @TableauxSystem.initialize
 class TabRules:
-    """
-    In general, rules for connectives consist of two rules per connective:
-    a "plain" rule, and a negated rule. The special case of negation has only
-    one rule for double negation. There is also a special rule for Identity
-    predicate.
-    """
 
     class ContradictionClosure(K.TabRules.ContradictionClosure, modal = False):
         """
