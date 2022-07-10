@@ -22,16 +22,16 @@ pytableaux.tools.mappings
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from collections.abc import (Callable, Iterable, Iterator, Mapping,
-                             MutableMapping, Reversible, Set)
+from collections.abc import (Callable, Iterable, Mapping, MutableMapping,
+                             Reversible, Set)
 from itertools import chain, filterfalse
 from operator import not_, truth
 from types import MappingProxyType as MapProxy
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg
-from pytableaux.tools import (EMPTY_MAP, abcs, closure, isattrstr, membr, thru,
-                              true, wraps)
+from pytableaux.tools import (EMPTY_MAP, abcs, closure, isattrstr, itemsiter,
+                              membr, thru, wraps)
 from pytableaux.tools.sets import EMPTY_SET, setf
 
 __all__ = (
@@ -42,7 +42,6 @@ __all__ = (
     'dmapns',
     'EMPTY_MAP',
     'ItemMapEnum',
-    'ItemsIterator',
     'KeySetAttr',
     'MapCover',
     'MappingApi',
@@ -69,33 +68,31 @@ class MappingApi(Mapping, Reversible, abcs.Copyable):
 
     def __or__op__(self, other):
         'Mapping | Mapping -> Mapping'
-        return chain(ItemsIterator(self), ItemsIterator(other))
+        return chain(itemsiter(self), itemsiter(other))
 
     def __ror__op__(self, other):
         'Set     | Mapping --> Set'
         if isinstance(other, Set): return chain(other, self)
         'Mapping | Mapping --> Mapping'
-        return chain(ItemsIterator(other), ItemsIterator(self))
+        return chain(itemsiter(other), itemsiter(self))
 
     def __mod__op__(self, other):
         'Mapping | Mapping -> Mapping'
-        return chain(ItemsIterator(self), ItemsIterator(other, 
-            kpred = self.__contains__, koper = not_
-        ))
+        return chain(itemsiter(self), itemsiter(other, 
+            kpred = self.__contains__, koper = not_))
 
     def __rmod__op__(self, other):
         'Mapping | Mapping -> Mapping'
         if not isinstance(other, Mapping):
             return NotImplemented
-        return chain(ItemsIterator(other), ItemsIterator(self,
-            kpred = other.__contains__, koper = not_
-        ))
+        return chain(itemsiter(other), itemsiter(self,
+            kpred = other.__contains__, koper = not_))
 
     def __and__op__(self, other):
         if not isinstance(other, Set):
             return NotImplemented
         'Mapping & Set --> Mapping'
-        return ItemsIterator(self, kpred = other.__contains__)
+        return itemsiter(self, kpred = other.__contains__)
 
     def __rand__op__(self, other):
         if not isinstance(other, Set):
@@ -107,7 +104,7 @@ class MappingApi(Mapping, Reversible, abcs.Copyable):
         if not isinstance(other, Set):
             return NotImplemented
         'Mapping - Set --> Mapping'
-        return ItemsIterator(self, kpred = other.__contains__, koper = not_)
+        return itemsiter(self, kpred = other.__contains__, koper = not_)
 
     def __rsub__op__(self, other):
         if not isinstance(other, Set):
@@ -231,7 +228,7 @@ class MutableMappingApi(MappingApi, MutableMapping, abcs.Copyable):
     def __imod__(self, other):
         if not isinstance(other, Iterable):
             return NotImplemented
-        self.update(ItemsIterator(other, kpred = self.__contains__, koper = not_))
+        self.update(itemsiter(other, kpred = self.__contains__, koper = not_))
         return self
 
     def __iand__(self, other):
@@ -260,9 +257,9 @@ class MutableMappingApi(MappingApi, MutableMapping, abcs.Copyable):
             if it is None:
                 it = EMPTY_ITER
             else:
-                it = ItemsIterator(it)
+                it = itemsiter(it)
             if len(kw):
-                it = chain(it, ItemsIterator(kw))
+                it = chain(it, itemsiter(kw))
             setitem = self.__setitem__
             for key, value in it:
                 setitem(key, value)
@@ -429,85 +426,34 @@ class ItemMapEnum(abcs.Ebc):
 
 class DequeCache(abcs.Abc):
 
-    __slots__ = ('__getitem__', '__setitem__', '_maxlen')
+    __slots__ = ('__getitem__', '__len__', 'queue', 'idx', 'rev')
 
     @property
     def maxlen(self) -> int:
-        return self._maxlen()
+        return self.queue.maxlen
 
-    def __init__(self, maxlen = 10):
+    def __init__(self, maxlen = 100):
 
-        idx   = {}
-        rev   = {}
-        deck  = deque(maxlen = maxlen)
+        self.idx = {}
+        self.rev: dict[object, set] = {}
+        self.queue = deque(maxlen = maxlen)
 
-        self._maxlen = lambda: deck.maxlen
+        self.__getitem__ = self.idx.__getitem__
+        self.__len__ = self.rev.__len__
 
-        self.__getitem__ = idx.__getitem__
-
-        def setitem(key, item, /):
-            if item in rev:
-                item = idx[item]
-            else:
-                if len(deck) == deck.maxlen:
-                    old = deck.popleft()
-                    for k in rev.pop(old):
-                        del(idx[k])
-                idx[item] = item
-                rev[item] = {item}
-                deck.append(item)
-            idx[key] = item
-            rev[item].add(key)
-
-        self.__setitem__ = setitem
-
-
-class ItemsIterator(Iterator[tuple]):
-    'Mapping items iterator.'
-
-    __slots__ = '_gen_',
-
-    def __new__(cls, obj, /, *args, **kw):
-        if type(obj) is cls and not len(args) and not len(kw):
-            return obj
-        return super().__new__(cls)
-
-    def __init__(self, obj, /, *, vget = None, kpred = true,
-        vpred = true, koper = truth, voper = truth):
-        if vget is None:
-            if hasattr(obj, 'keys'):
-                self._gen_ = self._gen1(
-                    obj.keys, obj.__getitem__, kpred, vpred, koper, voper
-                )
-            else:
-                self._gen_ = self._gen2(
-                    obj, kpred, vpred, koper, voper
-                )
+    def __setitem__(self, key, item, /):
+        if item in self.rev:
+            item = self.idx[item]
         else:
-            self._gen_ = self._gen1(
-                obj.__iter__, vget, kpred, vpred, koper, voper
-            )
-
-    def __iter__(self):
-        return self
-
-    def __next__(self) -> tuple:
-        return self._gen_.__next__()
-
-    @staticmethod
-    def _gen1(getkeys, vget, kpred, vpred, koper, voper):
-        for k in getkeys():
-            if koper(kpred(k)):
-                v = vget(k)
-                if voper(vpred(v)):
-                    yield k, v
-
-    @staticmethod
-    def _gen2(items, kpred, vpred, koper, voper):
-        for k, v in items:
-            if koper(kpred(k)) and voper(vpred(v)):
-                yield k, v
-
+            if len(self) >= self.queue.maxlen:
+                old = self.queue.popleft()
+                for k in self.rev.pop(old):
+                    del(self.idx[k])
+            self.idx[item] = item
+            self.rev[item] = {item}
+            self.queue.append(item)
+        self.idx[key] = item
+        self.rev[item].add(key)
 
 @closure
 def _opcache():

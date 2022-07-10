@@ -85,14 +85,14 @@ class DequeCache(Generic[_VT]):
     def maxlen(self) -> int:...
     def __init__(self, maxlen:int|None = ...) -> None: ...
 
-class ItemsIterator(Iterator[tuple[_KT, _VT]]):
-    def __init__(self,
-        obj: Mapping[_KT, _VT]|Iterable[tuple[_KT, _VT]]|Iterable[_KT],
-        /, *, 
-        vget: Callable[[_KT], _VT]|None = ...,
-        kpred: Callable[[_KT], bool] = ...,
-        vpred: Callable[[_VT], bool] = ...,
-        koper: Callable[[bool], bool] = ...,
-        voper: Callable[[bool], bool] = ...,
-    ) -> None: ...
+# class ItemsIterator(Iterator[tuple[_KT, _VT]]):
+#     def __init__(self,
+#         obj: Mapping[_KT, _VT]|Iterable[tuple[_KT, _VT]]|Iterable[_KT],
+#         /, *, 
+#         vget: Callable[[_KT], _VT]|None = ...,
+#         kpred: Callable[[_KT], bool] = ...,
+#         vpred: Callable[[_VT], bool] = ...,
+#         koper: Callable[[bool], bool] = ...,
+#         voper: Callable[[bool], bool] = ...,
+#     ) -> None: ...
 

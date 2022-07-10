@@ -36,9 +36,10 @@ from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Parameter, Predicate, Predicated, Quantified,
                                  Sentence, Variable)
-from pytableaux.tools import abcs, key0, lazy
+from pytableaux.tools import abcs, key0, lazy, itemsiter
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import ItemsIterator, MapCover, dmap
+from pytableaux.tools.mappings import MapCover, dmap
+# from pytableaux.tools.mappings import ItemsIterator
 from pytableaux.tools.sequences import seqf
 
 __all__ = (
@@ -646,7 +647,8 @@ class ParseTable(MapCover, TableStore):
 
         # flipped table
         self.reversed = rev = MapProxy(dict(
-            map(reversed, ItemsIterator(self))
+            # map(reversed, ItemsIterator(self))
+            map(reversed, itemsiter(self))
         ))
 
         # chars for each type in value order, duplicates discarded

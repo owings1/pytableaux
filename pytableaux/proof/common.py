@@ -33,9 +33,9 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang import Constant, Sentence
 from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, SetView, abcs, dmap,
                               dmapattr, isattrstr, isint, lazy, operd, qset,
-                              raisr, setf)
+                              raisr, setf, itemsiter)
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.mappings import ItemsIterator, MapCover
+from pytableaux.tools.mappings import MapCover
 from pytableaux.tools.sequences import SequenceApi
 
 if TYPE_CHECKING:
@@ -646,7 +646,7 @@ class Target(dmapattr[str, Any]):
         return list(self._names())
 
     def __repr__(self):
-        props = dict(ItemsIterator(self._names(), vget = self.get))
+        props = dict(itemsiter(self._names(), vget = self.get))
         return f'<{type(self).__name__} {props}>'
 
     def _names(self) -> Iterator[str]:

@@ -29,6 +29,7 @@ from abc import abstractmethod as abstract
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from keyword import iskeyword
+from operator import truth
 from types import DynamicClassAttribute as dynca
 from types import FunctionType
 from types import MappingProxyType as MapProxy
@@ -46,6 +47,7 @@ __all__ = (
     'isdund',
     'isint',
     'isstr',
+    'itemsiter',
     'key0',
     'lazy',
     'MapProxy',
@@ -175,6 +177,32 @@ def maxceil(ceil, it):
 
 def substitute(coll, old_value, new_value):
     return type(coll)(new_value if x == old_value else x for x in coll)
+
+
+@closure
+def itemsiter():
+
+    def api(obj, /, *, vget = None, kpred = true, vpred = true, koper = truth, voper = truth):
+        if vget is None:
+            try:
+                return gen1(obj.keys, obj.__getitem__, kpred, vpred, koper, voper)
+            except AttributeError:
+                return gen2(obj, kpred, vpred, koper, voper)
+        return gen1(obj.__iter__, vget, kpred, vpred, koper, voper)
+
+    def gen1(getkeys, vget, kpred, vpred, koper, voper):
+        for k in getkeys():
+            if koper(kpred(k)):
+                v = vget(k)
+                if voper(vpred(v)):
+                    yield k, v
+
+    def gen2(items, kpred, vpred, koper, voper):
+        for k, v in items:
+            if koper(kpred(k)) and voper(vpred(v)):
+                yield k, v
+
+    return api
 
 @closure
 def dxopy():
