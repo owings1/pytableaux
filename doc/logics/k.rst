@@ -4,83 +4,181 @@
 K - Kripke Normal Modal Logic
 *****************************
 
-Kripke Logic (K) is the foundation of so-called normal modal logics. It is an extension
-of :ref:`CFOL <CFOL>`, adding the modal operators for possibility and necessity.
+L{K} is the foundation of so-called normal modal logics. It adds
+modal operators :s:`N` and :s:`P` to L{CFOL}.
 
-.. contents:: :local:
+.. contents::
+    :local:
+    :depth: 2
 
-.. automodule:: pytableaux.logics.k
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.k
 
-    A K model makes use of *Frames* to hold information about each world.
+.. _k-semantics:
+.. _k-model:
+.. _k-frame:
 
-    .. _k-frame:
+Semantics
+=========
 
-    .. autoclass:: Frame
+A L{K} `frame` comprises the interpretation of sentences and predicates at a world.
+A L{K} `model` comprises a non-empty collection of K frames, a world access
+relation :m:`R`, and a set of constants (the domain).
 
-        .. autoattribute:: world
+.. _k-truth-values:
 
-        .. autoattribute:: atomics
+Truth Values
+------------
 
-        .. autoattribute:: extensions
+Common labels for the values include:
 
-        .. autoattribute:: anti_extensions
+.. include:: include/cpl/value-table.rst
 
-    .. _k-model:
+.. _k-truth-tables:
 
-    .. autoclass:: Model
+Truth Tables
+------------
 
-        .. autoclass:: pytableaux.logics.k::Model.Value()
-            :members: F, T
-            :undoc-members:
+.. include:: include/truth_table_blurb.rst
 
-        .. include:: include/k/m.attributes.rst
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction
 
-        .. method:: truth_function(operator, a, b)
+.. rubric:: Defined Operators
 
-            The value of a sentence with a truth-functional operator is determined by
-            the values of its operands according to the following tables.
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-            .. truth-tables::
+.. sentence::
 
-        .. automethod:: value_of_predicated(sentence)
+  A > B := ~A V B
 
-        .. automethod:: value_of_existential(sentence)
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-        .. automethod:: value_of_universal(sentence)
+.. sentence::
 
-        .. automethod:: value_of_possibility(sentence)
+  A < B := (A > B) & (B > A)
 
-        .. automethod:: value_of_necessity(sentence)
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
 
-    Consequence
-    -----------
+.. rubric:: Compatibility Tables
 
-    .. _k-consequence:
+L{K} does not have separate `Assertion` or `Conditional` operators,
+but we include tables and rules for them, for cross-compatibility.
 
-    Logical consequence is defined similary as :ref:`CPL <CPL>`, except with
-    reference to a world:
+.. truth-tables::
+  :operators: Assertion, Conditional, Biconditional
 
-    .. include:: include/k/m.consequence.rst
+.. _k-predication:
 
-    Tableaux System
-    ===============
+Predication
+-----------
 
-    .. _k-system:
+The value of predicated sentences are handled in terms of a predicate's *extension*.
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+.. include:: include/cpl/predication.rst
 
-    .. autoclass:: TabRules
-        :members:
+.. _k-quantification:
 
-    Notes
-    -----
+Quantification
+--------------
 
-    For further reading, see:
+.. rubric:: Existential
 
-    - `Stanford Encyclopedia on Modal Logic`_
+.. include:: include/cfol/m.existential.rst
+
+.. rubric:: Universal
+
+.. include:: include/cfol/m.universal.rst
+
+.. _k-consequence:
+
+Modal Operators
+---------------
+
+.. rubric:: Possibility
+
+.. include:: include/k/m.possibility.rst
+
+.. rubric:: Necessity
+
+.. include:: include/k/m.necessity.rst
+
+Consequence
+-----------
+
+**Logical Consequence** is defined similary as {@CPL}, except with
+reference to a world:
+
+.. include:: include/k/m.consequence.rst
+
+.. _k-system:
+
+Tableaux
+========
+
+Nodes
+-----
+
+.. include:: include/k/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/k/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: ContradictionClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: SelfIdentityClosure
+  :legend:
+  :doc:
+
+.. _k-rules:
+
+Rules
+--------
+
+.. include:: include/cpl/rules_blurb.rst
+
+Additional rules are given for the quantifiers.
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion, Conditional, Biconditional
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion, Conditional, Biconditional
+
+
+Notes
+=====
+
+References
+==========
+
+.. rubric:: Futher Reading
+
+- `Stanford Encyclopedia on Modal Logic`_
 
 .. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
