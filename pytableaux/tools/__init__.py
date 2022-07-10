@@ -632,3 +632,7 @@ class NoSetAttr(BaseMember):
         func.__name__ = name
         func.__qualname__ = self.__qualname__
         setattr(owner, name, func)
+
+from pytableaux.tools.sets import EMPTY_SET as EMPTY_SET
+from pytableaux.tools.hybrids import qset as qset
+from pytableaux.tools.hybrids import qsetf as qsetf

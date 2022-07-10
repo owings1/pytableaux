@@ -8,8 +8,12 @@ from pytableaux.tools.abcs import AbcMeta
 
 from pytableaux.typing import _F, _KT, _P, _RT, _T, _VT, _MapT, _Self, property
 
-# MapProxy: type[MappingProxyType]
-# def abstract():...
+
+
+from pytableaux.tools.sets import EMPTY_SET as EMPTY_SET
+from pytableaux.tools.hybrids import qset as qset
+from pytableaux.tools.hybrids import qsetf as qsetf
+
 EMPTY_MAP: Mapping
 re_boolyes: Pattern
 def closure(func: Callable[..., _T]) -> _T: ...
