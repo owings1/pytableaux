@@ -30,10 +30,10 @@ import sphinx.directives.patches
 from docutils import nodes
 from docutils.statemachine import StringList
 from pytableaux import examples, logics, models, tools
-from pytableaux.lang import (Argument, Atomic, LexWriter, Marking,
-                             Notation, Operator, Predicate, Predicates, Lexical,
-                             Quantifier, RenderSet)
+from pytableaux.lang import (Argument, Atomic, Lexical, LexWriter, Marking,
+                             Notation, Predicates, RenderSet)
 from pytableaux.proof import Tableau, TabWriter, writers
+from pytableaux.tools import EMPTY_SET, qset
 from pytableaux.tools.doc import (BaseDirective, ConfKey, DirectiveHelper,
                                   ParserOptionMixin, RenderMixin, SphinxEvent,
                                   attrsopt, boolopt, choice_or_flag, choiceopt,
@@ -41,8 +41,6 @@ from pytableaux.tools.doc import (BaseDirective, ConfKey, DirectiveHelper,
                                   re_comma, snakespace, stropt)
 from pytableaux.tools.doc.misc import EllipsisExampleHelper, rules_sorted
 from pytableaux.tools.doc.nodez import block
-from pytableaux.tools.hybrids import qset
-from pytableaux.tools.sets import EMPTY_SET
 from sphinx import addnodes
 from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
@@ -310,9 +308,10 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
                 if 'legend' in opts:
                     legend = nodes.inline(classes = ['rule-legend'])
                     legend += self.getnodes_rule_legend(rule)
+                    inserts = legend,
                 else:
-                    legend = EMPTY_SET
-                docwrapper, container = self.getnodes_ruledoc_pair(rulecls, legend)
+                    inserts = EMPTY_SET
+                docwrapper, container = self.getnodes_ruledoc_pair(rulecls, *inserts)
                 container += tabwrapper
                 tabwrapper += tabnode
 
