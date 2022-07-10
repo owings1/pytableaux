@@ -14,33 +14,22 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Post 3-valued logic
 from __future__ import annotations
 
 import pytableaux.logics.fde as FDE
 import pytableaux.logics.k3 as K3
-from pytableaux.lang.lex import Constant
-from pytableaux.lang.lex import Operator as Oper
-from pytableaux.lang.lex import Quantified, Quantifier
-from pytableaux.proof.common import Branch, Node
-from pytableaux.proof import adds, group, sdnode
+from pytableaux.lang import Constant, Operator, Quantified, Quantifier
+from pytableaux.proof import Branch, Node, adds, group, sdnode
 
 name = 'P3'
 
 class Meta(K3.Meta):
-    title       = 'Post 3-valued logic'
+    title       = 'Post 3-valued Logic'
     description = 'Emil Post three-valued logic (T, F, and N) with mirror-image negation'
     category_order = 120
 
 
 class Model(K3.Model):
-    """
-    A L{P3} model is just like a :ref:`K3 model <k3-model>` with different tables
-    for some of the connectives.
-    """
 
     def value_of_universal(self, s: Quantified, /, **kw):
         """
@@ -55,64 +44,50 @@ class Model(K3.Model):
         si = s.sentence
         values = {
             self.truth_function(
-                Oper.Negation,
+                Operator.Negation,
                 self.value_of(si.substitute(c, v), **kw)
             )
             for c in self.constants
         }
-        return self.truth_function(Oper.Negation, max(values))
+        return self.truth_function(Operator.Negation, max(values))
 
-    def truth_function(self, oper: Oper, a, b=None, /):
-        oper = Oper(oper)
-        if oper is Oper.Negation:
+    def truth_function(self, oper, a, b=None, /):
+        oper = Operator(oper)
+        if oper is Operator.Negation:
             return self.back_cycle(a)
-        if oper is Oper.Conjunction:
+        if oper is Operator.Conjunction:
             return self.truth_function(
-                Oper.Negation,
+                Operator.Negation,
                 self.truth_function(
-                    Oper.Disjunction,
-                    *(self.truth_function(Oper.Negation, x) for x in (a, b))
+                    Operator.Disjunction,
+                    *(self.truth_function(Operator.Negation, x) for x in (a, b))
                 )
             )
         return super().truth_function(oper, a, b)
-        
+
     def back_cycle(self, value):
         seq = self.Value._seq
-        i = seq.index(value)
-        return seq[i - 1]
+        return seq[seq.index(value) - 1]
 
-class TableauxSystem(FDE.TableauxSystem):
+class TableauxSystem(K3.TableauxSystem):
 
     branchables = {
-        Oper.Negation: (None, (1, 0)),
-        Oper.Assertion: ((0, 0), (0, 0)),
-        Oper.Conjunction: ((3, 0), (2, 1)),
-        Oper.Disjunction: ((0, 1), (1, 0)),
+        Operator.Negation: (None, (1, 0)),
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Conjunction: ((3, 0), (2, 1)),
+        Operator.Disjunction: ((0, 1), (1, 0)),
         # reduction
-        Oper.MaterialConditional: ((0, 0), (0, 0)),
+        Operator.MaterialConditional: ((0, 0), (0, 0)),
         # reduction
-        Oper.MaterialBiconditional: ((0, 0), (0, 0)),
+        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
         # reduction
-        Oper.Conditional: ((0, 0), (0, 0)),
+        Operator.Conditional: ((0, 0), (0, 0)),
         # reduction
-        Oper.Biconditional: ((0, 0), (0, 0)),
+        Operator.Biconditional: ((0, 0), (0, 0)),
     }
 
 @TableauxSystem.initialize
-class TabRules:
-    """
-    The Tableaux System for L{P3} contains the FDE closure rule, and the
-    L{K3} closure rule. Some of the operator rules are the same as L{FDE},
-    most notably disjunction. However, many rules for L{P3} are different
-    from L{FDE}, given the non-standard negation. Notably, an undesignated
-    double-negation will branch.
-    """
-
-    class GlutClosure(K3.TabRules.GlutClosure):
-        pass
-
-    class DesignationClosure(FDE.TabRules.DesignationClosure):
-        pass
+class TabRules(K3.TabRules):
 
     class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """
@@ -122,7 +97,7 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Negation
+        operator    = Operator.Negation
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
@@ -141,7 +116,7 @@ class TabRules:
         """
         designation = False
         negated     = True
-        operator    = Oper.Negation
+        operator    = Operator.Negation
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
@@ -153,18 +128,6 @@ class TabRules:
                 group(sdnode( si, not d)),
             )
 
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
-        pass
-
-    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated):
-        pass
-
-    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated):
-        pass
-
-    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
-        pass
-
     class ConjunctionDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated conjunction node `n` on a branch `b`, add
@@ -172,7 +135,7 @@ class TabRules:
         negation of each conjunct. Then tick `n`.
         """
         designation = True
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
@@ -198,7 +161,7 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         branching   = 1
 
         def _get_node_targets(self, node: Node, _,/):
@@ -220,7 +183,7 @@ class TabRules:
         node with the second conjunct. Then tick `n`.
         """
         designation = False
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         branching   = 3
 
         def _get_node_targets(self, node: Node, _,/):
@@ -244,7 +207,7 @@ class TabRules:
         """
         designation = False
         negated     = True
-        operator    = Oper.Conjunction
+        operator    = Operator.Conjunction
         branching   = 2
 
         def _get_node_targets(self, node: Node, _,/):
@@ -261,24 +224,12 @@ class TabRules:
                 group(sdnode(~rhs, not d)),
             )
 
-    class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
-        pass
-            
-    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
-        pass
-
-    class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
-        pass
-
-    class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
-        pass
-
     class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """
         designation = True
-        operator    = Oper.MaterialConditional
+        operator    = Operator.MaterialConditional
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
@@ -292,7 +243,7 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.MaterialConditional
+        operator    = Operator.MaterialConditional
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
@@ -305,7 +256,7 @@ class TabRules:
         This rule reduces to a disjunction.
         """
         designation = False
-        operator    = Oper.MaterialConditional
+        operator    = Operator.MaterialConditional
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
@@ -319,7 +270,7 @@ class TabRules:
         """
         designation = False
         negated     = True
-        operator    = Oper.MaterialConditional
+        operator    = Operator.MaterialConditional
 
         def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
@@ -332,8 +283,8 @@ class TabRules:
         This rule reduces to a conjunction of material conditionals.
         """
         designation = True
-        operator    = Oper.MaterialBiconditional
-        conjunct_op = Oper.MaterialConditional
+        operator    = Operator.MaterialBiconditional
+        conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
@@ -341,16 +292,16 @@ class TabRules:
         """
         designation = True
         negated     = True
-        operator    = Oper.MaterialBiconditional
-        conjunct_op = Oper.MaterialConditional
+        operator    = Operator.MaterialBiconditional
+        conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
         designation = False
-        operator    = Oper.MaterialBiconditional
-        conjunct_op = Oper.MaterialConditional
+        operator    = Operator.MaterialBiconditional
+        conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
         """
@@ -358,63 +309,60 @@ class TabRules:
         """
         designation = False
         negated     = True
-        operator    = Oper.MaterialBiconditional
-        conjunct_op = Oper.MaterialConditional
+        operator    = Operator.MaterialBiconditional
+        conjunct_op = Operator.MaterialConditional
 
     class ConditionalDesignated(MaterialConditionalDesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        operator = Oper.Conditional
+        operator = Operator.Conditional
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        operator    = Oper.Biconditional
-        conjunct_op = Oper.Conditional
+        operator    = Operator.Biconditional
+        conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        operator    = Oper.Biconditional
-        conjunct_op = Oper.Conditional
+        operator    = Operator.Biconditional
+        conjunct_op = Operator.Conditional
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        operator    = Oper.Biconditional
-        conjunct_op = Oper.Conditional
+        operator    = Operator.Biconditional
+        conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        operator    = Oper.Biconditional
-        conjunct_op = Oper.Conditional
-
-    class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
-        pass
+        operator    = Operator.Biconditional
+        conjunct_op = Operator.Conditional
 
     class ExistentialNegatedDesignated(FDE.QuantifierFatRule):
         """
@@ -431,9 +379,6 @@ class TabRules:
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             return sdnode(c >> self.sentence(node), self.designation),
-
-    class ExistentialUndesignated(FDE.TabRules.ExistentialUndesignated):
-        pass
 
     class ExistentialNegatedUndesignated(FDE.QuantifierFatRule):
         """
@@ -517,23 +462,18 @@ class TabRules:
                 group(sdnode(s, not d)),
             )
 
-    closure_rules = (
-        GlutClosure,
-        DesignationClosure,
-    )
-
     rule_groups = (
         (
             # non-branching rules
-            AssertionDesignated,
-            AssertionUndesignated,
-            AssertionNegatedDesignated,
-            AssertionNegatedUndesignated,
+            FDE.TabRules.AssertionDesignated,
+            FDE.TabRules.AssertionUndesignated,
+            FDE.TabRules.AssertionNegatedDesignated,
+            FDE.TabRules.AssertionNegatedUndesignated,
 
             ConjunctionDesignated,
 
-            DisjunctionUndesignated,
-            DisjunctionNegatedDesignated,
+            FDE.TabRules.DisjunctionUndesignated,
+            FDE.TabRules.DisjunctionNegatedDesignated,
 
             DoubleNegationDesignated,
             
@@ -561,8 +501,8 @@ class TabRules:
 
             ConjunctionNegatedDesignated,
 
-            DisjunctionDesignated,
-            DisjunctionNegatedUndesignated,            
+            FDE.TabRules.DisjunctionDesignated,
+            FDE.TabRules.DisjunctionNegatedUndesignated,            
         ),
         (
             # three-branching rules
@@ -573,14 +513,14 @@ class TabRules:
             ConjunctionUndesignated,
         ),
         (
-            ExistentialDesignated,
+            FDE.TabRules.ExistentialDesignated,
             UniversalUndesignated,
             UniversalNegatedDesignated,
             UniversalNegatedUndesignated,
         ),
         (
             UniversalDesignated,
-            ExistentialUndesignated,
+            FDE.TabRules.ExistentialUndesignated,
             ExistentialNegatedDesignated,
             ExistentialNegatedUndesignated,
         )
