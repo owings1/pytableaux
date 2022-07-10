@@ -14,19 +14,14 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - S4 Normal Modal Logic
 from __future__ import annotations
 
 from typing import Generator
 
-from pytableaux.logics import k as K
-from pytableaux.logics import t as T
-from pytableaux.proof.common import Branch, Node, Target
+import pytableaux.logics.k as K
+import pytableaux.logics.t as T
+from pytableaux.proof import Access, Branch, Node, Target, adds, anode, group
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.proof import Access, adds, anode, group
 
 name = 'S4'
 
@@ -35,17 +30,13 @@ class Meta(K.Meta):
     description = 'Normal modal logic with a reflexive and transitive access relation'
     category_order = 4
 
-
 class Model(T.Model):
-    """
-    An S4 model is just like a :ref:`T model <T>` with an additional *transitive*
-    restriction on the access relation.
-    """
+
     def finish(self):
         finish = super().finish
         vis = self.visibles
         while True:
-            finish
+            finish()
             to_add = set()
             for w1 in self.frames:
                 for w2 in vis(w1):
@@ -61,11 +52,7 @@ class TableauxSystem(K.TableauxSystem):
     pass
 
 @TableauxSystem.initialize
-class TabRules:
-    """
-    The Tableaux Rules for S4 contain the rules for :ref:`T <T>`, as well as an additional
-    Transitive rule, which operates on the accessibility relation for worlds.
-    """
+class TabRules(T.TabRules):
 
     class Transitive(K.DefaultNodeRule):
         """
@@ -107,8 +94,6 @@ class TabRules:
         def example_nodes() -> tuple[dict, dict]:
             w1, w2, w3 = range(3)
             return anode(w1, w2), anode(w2, w3)
-
-    closure_rules = tuple(K.TabRules.closure_rules)
 
     rule_groups = (
         (

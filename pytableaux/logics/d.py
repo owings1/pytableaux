@@ -14,14 +14,10 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Deonitic Normal Modal Logic
 from __future__ import annotations
 
+import pytableaux.logics.k as K
 from pytableaux.lang import Atomic
-from pytableaux.logics import k as K
 from pytableaux.proof import Branch, Target, adds, anode, group, swnode
 from pytableaux.proof.helpers import MaxWorlds, UnserialWorlds
 from pytableaux.proof.rules import BaseSimpleRule
@@ -33,12 +29,8 @@ class Meta(K.Meta):
     description = 'Normal modal logic with a serial access relation'
     category_order = 2
 
-
 class Model(K.Model):
-    """
-    A L{D} model is just like a :ref:`K model <k-model>` with a *serial* restriction
-    on the access relation.
-    """
+
     def finish(self):
         needs_world = set()
         for world in self.frames:
@@ -53,18 +45,10 @@ class Model(K.Model):
         super().finish()
 
 class TableauxSystem(K.TableauxSystem):
-    """
-    L{D}'s Tableaux System inherits directly inherits directly from L{K}.
-    """
     pass
 
 @TableauxSystem.initialize
-class TabRules:
-    """
-    The Tableaux Rules for L{D} contain the rules for :ref:`K <K>`, as well as
-    an additional Serial rule, which operates on the accessibility relation for
-    worlds.
-    """
+class TabRules(K.TabRules):
 
     class Serial(BaseSimpleRule):
         """
@@ -139,8 +123,6 @@ class TabRules:
     #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TabRules.Serial):
     #            return False
     #        return super(TabRules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
-
-    closure_rules = K.TabRules.closure_rules
 
     rule_groups = (
         (

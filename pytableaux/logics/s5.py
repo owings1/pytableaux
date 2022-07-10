@@ -14,18 +14,13 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - S5 Normal Modal Logic
 from __future__ import annotations
 
-from pytableaux.logics import k as K
-from pytableaux.logics import s4 as S4
-from pytableaux.logics import t as T
-from pytableaux.proof.common import Branch, Node
+import pytableaux.logics.k as K
+import pytableaux.logics.s4 as S4
+import pytableaux.logics.t as T
+from pytableaux.proof import Access, Branch, Node, adds, group
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.proof import Access, adds, group
 
 name = 'S5'
 
@@ -44,10 +39,7 @@ class Meta(K.Meta):
 #   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)
 
 class Model(S4.Model):
-    """
-    An S5 model is just like an :ref:`S4 model <s4-model>` with an additional
-    *symmetric* restriction on the access relation.
-    """
+
     def finish(self):
         finish = super().finish
         while True:
@@ -66,12 +58,7 @@ class TableauxSystem(K.TableauxSystem):
     pass
 
 @TableauxSystem.initialize
-class TabRules:
-    """
-    The Tableaux Rules for L{S5} contain the rules for {@S4}, as well
-    as an additional Symmetric rule, which operates on the accessibility
-    relation for worlds.
-    """
+class TabRules(S4.TabRules):
     
     class Symmetric(K.DefaultNodeRule):
         """
@@ -100,8 +87,6 @@ class TabRules:
         @staticmethod
         def example_nodes():
             return Access(0, 1)._asdict(),
-
-    closure_rules = K.TabRules.closure_rules
 
     rule_groups = (
         (

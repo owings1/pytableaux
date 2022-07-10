@@ -14,20 +14,12 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - Reflexive Normal Modal Logic
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from pytableaux.lang.lex import Atomic
 import pytableaux.logics.k as K
-from pytableaux.proof.common import Branch, Node
+from pytableaux.lang import Atomic
+from pytableaux.proof import Access, Branch, Node, adds, group, swnode
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from pytableaux.proof import Access, adds, group, swnode
-from pytableaux.logics import LogicType
 
 name = 'T'
 
@@ -37,10 +29,6 @@ class Meta(K.Meta):
     category_order = 3
 
 class Model(K.Model):
-    """
-    A T model is just like a :ref:`K model <k-model>` with a *reflexive*
-    restriction on the access relation.
-    """
 
     def finish(self):
         for w in self.frames:
@@ -51,11 +39,7 @@ class TableauxSystem(K.TableauxSystem):
     pass
 
 @TableauxSystem.initialize
-class TabRules(LogicType.TabRules):
-    """
-    The Tableaux Rules for T contain the rules for :ref:`K <K>`, as well as an additional
-    Reflexive rule, which operates on the accessibility relation for worlds.
-    """
+class TabRules(K.TabRules):
 
     class Reflexive(K.DefaultNodeRule):
         """
@@ -89,8 +73,6 @@ class TabRules(LogicType.TabRules):
         @staticmethod
         def example_nodes():
             return swnode(Atomic.first(), 0),
-
-    closure_rules = K.TabRules.closure_rules
 
     rule_groups = (
         (
