@@ -36,9 +36,6 @@ from pytableaux.tools.hybrids import QsetView, qset
 from pytableaux.tools.mappings import MappingApi, dmap
 from pytableaux.tools.sets import EMPTY_SET
 
-if TYPE_CHECKING:
-    from typing import overload
-
 __all__ = (
     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
     'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't',
@@ -212,7 +209,7 @@ class Registry(MappingApi, abcs.Copyable):
         Args:
             ref: A ``key`` accepted by ``.get()``, or a class, method, or function
                 defined in a logic module.
-            default: A default value to suppress error.
+            default: A default value to suppress not found error.
         
         Returns:
             The logic module

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytableaux.logics.cpl as CPL
 import pytableaux.logics.k as K
-from pytableaux.lang import Quantified, Sentence
+from pytableaux.lang import Quantified
 
 name = 'CFOL'
 
@@ -35,11 +35,11 @@ class Meta(CPL.Meta):
 
 class Model(CPL.Model):
 
-    def is_sentence_opaque(self, s: Sentence, /) -> bool:
+    def is_sentence_opaque(self, s, /) -> bool:
         """
         A sentence is opaque if its operator is either Necessity or Possibility.
         """
-        if isinstance(s, Quantified):
+        if type(s) is Quantified:
             return False
         return super().is_sentence_opaque(s)
 
