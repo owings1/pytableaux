@@ -4,77 +4,188 @@
 L{RM3} - R-mingle 3
 ***************************
 
-R-mingle 3 (L{RM3}) is a three-valued logic with values V{T}, V{F}, and V{B}.
-It is similar to {@LP}, with a different conditional operator.
+L{RM3} is a three-valued logic with values V{T}, V{F}, and V{B}.
+It is similar to {@LP}, with a different conditional operator. It can be
+considered as the `glutty` dual of {@L3}.
 
-.. contents:: :local:
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-.. automodule:: pytableaux.logics.rm3
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.rm3
 
-    .. _rm3-model:
+.. _rm3-semantics:
+.. _rm3-model:
 
-    .. autoclass:: Model
+Semantics
+=========
 
-        .. autoclass:: pytableaux.logics.rm3::Model.Value()
-            :members: F, B, T
-            :undoc-members:
+.. _rm3-truth-values:
 
-        .. include:: include/fde/m.attributes.rst
+Truth Values
+------------
 
-    .. _rm3-truth-tables:
+Common labels for the values include:
 
-    Truth Tables
-    ------------
+.. include:: include/lp/value-table.rst
 
-    .. include:: include/truth_table_blurb.rst
+.. rubric:: Designated Values
 
-    .. truth-tables::
+The set of *designated values* for L{RM3} is: { V{T}, V{B} }
 
-    .. _rm3-consequence:
+.. _rm3-truth-tables:
 
-    Consequence
-    -----------
+Truth Tables
+------------
 
-    Logical consequence is defined, just as in L{FDE}, in terms of
-    *designated* values V{T} and V{B}:
-    
-    .. include:: include/fde/m.consequence.rst
+.. include:: include/truth_table_blurb.rst
 
-    .. _rm3-system:
+.. truth-tables::
+  :operators: Negation, Conjunction, Disjunction, Conditional
 
-    Tableaux System
-    ===============
+.. rubric:: Defined Operators
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+The `Biconditional` :s:`%` is defined in the usual way:
 
-    .. _rm3-rules:
+.. sentence::
 
-    .. autoclass:: TabRules
-        :members:
+  A % B := (A $ B) & (B $ A)
 
-    Notes
-    =====
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-    * With the Conditional operator :s:`$`, Modus Ponens (:s:`A`, :s:`A $ B`, therefore :s:`B`) is
-      valid in L{RM3}, but it fails in {@LP}.
+.. sentence::
 
-    * The argument :s:`B`, therefore :s:`A $ B` is valid in L{LP}, but not in L{RM3}.
+  A > B := ~A V B
 
-    References
-    ==========
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
-      United Kingdom, Oxford University Press, 2003.
+.. sentence::
 
-    For further reading, see:
+  A < B := (A > B) & (B > A)
 
-    * Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
-      Vol. 38, No. 2. 1979.
+.. truth-tables::
+  :operators: Biconditional, MaterialConditional, MaterialBiconditional
+
+.. rubric:: Compatibility Tables
+
+L{RM3} does not have a separate `Assertion` operator, but we include a table
+and rules for it, for cross-compatibility.
+
+.. truth-tables::
+  :operators: Assertion
+
+.. _rm3-predication:
+
+Predication
+-----------
+
+.. include:: include/lp/m.predication.rst
+
+.. _rm3-quantification:
+
+Quantification
+--------------
+
+.. rubric:: Existential
+
+.. include:: include/fde/m.existential.rst
+
+.. rubric:: Universal
+
+.. include:: include/fde/m.universal.rst
+
+.. _rm3-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T}, V{B} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _rm3-system:
+
+Tableaux
+========
+
+L{RM3} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: GapClosure
+  :legend:
+  :doc:
+
+.. _rm3-rules:
+
+Rules
+--------
+
+.. include:: include/fde/rules_blurb.rst
+
+There are no rules that apply to quantified sentences.
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion
+
+
+Notes
+=====
+
+* With the Conditional operator :s:`$`, Modus Ponens (:s:`A`, :s:`A $ B` !{conseq} :s:`B`) is
+  valid in L{RM3}, which fails in {@LP}.
+
+* The argument :s:`B`, therefore :s:`A $ B` is invalid in L{RM3}, which is valid in L{LP}.
+
+References
+==========
+
+* Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
+  United Kingdom, Oxford University Press, 2003.
+
+.. rubric:: Further Reading
+
+* Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
+  Vol. 38, No. 2. 1979.
 
 
 .. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
+

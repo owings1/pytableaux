@@ -89,7 +89,7 @@ Consequence
 -----------
 
 **Logical Consequence** is defined in terms of the set of *designated* values
-{ V{T} }:
+{ V{T}, V{B} }:
 
   .. include:: include/fde/m.consequence.rst
 
