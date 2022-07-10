@@ -12,91 +12,187 @@ L{P3} - Post 3-valued Logic
 
     Emil Post
 
-Emil Post's three-valued logic (V{T}, V{F}, and V{N}) has a deviant negation
-that performs a *cyclic shift* in value. The result is a system much different
-from :ref:`CFOL`, as well as more well-known many-valued systems.
+Emil Post's three-valued logic, with values V{T}, V{F}, and V{N}. It features
+a deviant negation that performs a *cyclic shift* in value.
 
 .. contents:: Contents
   :local:
+  :depth: 2
 
-.. automodule:: pytableaux.logics.p3
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.p3
 
-    .. _p3-model:
+.. _p3-semantics:
+.. _p3-model:
 
-    .. autoclass:: Model
+Semantics
+=========
 
-        .. autoclass:: pytableaux.logics.p3::Model.Value()
-            :members: F, N, T
-            :undoc-members:
+.. _p3-truth-values:
 
-        .. include:: include/fde/m.attributes.rst
+Truth Values
+------------
 
-        .. method:: truth_function(operator, a, b)
+Common labels for the values include:
 
-            The value of a sentence with a truth-functional operator is determined
-            by the values of its operands according to the following tables.
+.. include:: include/k3/value-table.rst
 
-            Most notable is the behavior of negation. Disjunction :s:`V` is the same
-            as in :ref:`K3 <K3>`, but conjunction is quite different, which is defined
-            in terms of disjunction in the standard way as :s:`~(~A V ~B)`.
+.. rubric:: Designated Values
 
-            .. truth-tables::
+The set of *designated values* for L{P3} is the singleton: { V{T} }
 
-        .. method:: value_of_predicated(sentence)
+.. _p3-truth-tables:
 
-            Predication is given the same treatment as :ref:`K3 <k3-model>`,
-            defined in terms of a predicate's *extenstion* and *anti-extension*.
+Truth Tables
+------------
 
-            .. include:: include/k3/m.predication.rst
+.. include:: include/truth_table_blurb.rst
 
-        .. method:: value_of_existential(sentence)
+.. truth-tables::
+  :operators: Negation, Disjunction
 
-            Existential quantification is defined just as in :ref:`K3 <k3-model>`:
+.. rubric:: Defined Operators
 
-            .. include:: include/k3/m.existential.rst
+Conjunction :s:`&` is defined in terms of :s:`~` and :s:`V` in a standard way:
 
-        .. method:: value_of_universal(sentence)
+.. sentence::
 
-            .. Note:: L{P3} did not originally define quantification. This is a novel
-               construction.
+  A & B := ~(~A V ~B)
 
-            The :s:`L` quantifier is thought of like `generalized conjunction`.
-            Given that :s:`A & B` is defined as :s:`~(~A V ~B)`, we interpret :s:`L`
-            in the following way. Take the set of values of the sentence resulting
-            from the substitution of the variable with each constant. Then apply
-            the negation function to each of those values. Then take the maximum
-            of those values (the `generalized disjunction`), and apply the negation
-            function to that maximum value. The result is the value of the universal
-            sentence.
+Given the behavior of :s:`~`, however, this yields a non-standard table:
 
-    Consequence
-    -----------
+.. truth-tables::
+  :operators: Conjunction
 
-    Logical consequence is defined just like in L{K3}:
-    
-    .. include:: include/k3/m.consequence.rst
+The `Material Conditional` :s:`>` is definable in terms of disjunction:
 
-    .. _p3-system:
+.. sentence::
 
-    Tableaux System
-    ===============
+  A > B := ~A V B
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
+and :s:`&`:
 
-    .. autoclass:: TabRules
-        :members:
+.. sentence::
 
-    References
-    ==========
+  A < B := (A > B) & (B > A)
 
-    - E. L. Post `Introduction to a General Theory of Elementary Propositions`_
-      American Journal of Mathematics, vol. 43. 1921.
+.. truth-tables::
+  :operators: MaterialConditional, MaterialBiconditional
 
-    - Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
+.. rubric:: Compatibility Tables
+
+L{P3} does not have separate `Assertion` or `Conditional` operators,
+but we include tables and rules for them, for cross-compatibility.
+
+.. truth-tables::
+  :operators: Assertion, Conditional, Biconditional
+
+.. _p3-predication:
+
+Predication
+-----------
+
+.. include:: include/k3/m.predication.rst
+
+.. _p3-quantification:
+
+Quantification
+--------------
+
+.. rubric:: Existential
+
+.. include:: include/fde/m.existential.rst
+
+.. rubric:: Universal
+
+The :s:`L` quantifier is thought of like `generalized conjunction`.
+Given that :s:`A & B` is defined as :s:`~(~A V ~B)`, we interpret :s:`L`
+in the following way. Take the set of values of the sentence resulting
+from the substitution of the variable with each constant. Then apply
+the negation function to each of those values. Then take the maximum
+of those values (the `generalized disjunction`), and apply the negation
+function to that maximum value. The result is the value of the universal
+sentence.
+
+.. _p3-consequence:
+
+Consequence
+-----------
+
+**Logical Consequence** is defined in terms of the set of *designated* values
+{ V{T} }:
+
+  .. include:: include/fde/m.consequence.rst
+
+.. _p3-system:
+
+Tableaux
+========
+
+L{P3} tableaux are built similary to L{FDE}.
+
+Nodes
+-----
+
+.. include:: include/fde/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/fde/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau::
+  :rule: DesignationClosure
+  :legend:
+  :doc:
+
+.. tableau::
+  :rule: GlutClosure
+  :legend:
+  :doc:
+
+.. _p3-rules:
+
+Rules
+--------
+
+.. include:: include/fde/rules_blurb.rst
+
+.. tableau-rules::
+  :docflags:
+  :group: operator
+  :exclude: Assertion, Conditional, Biconditional
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :title: Compatibility Rules
+  :group: operator
+  :include: Assertion, Conditional, Biconditional
+
+Notes
+=====
+
+
+References
+==========
+
+- E. L. Post `Introduction to a General Theory of Elementary Propositions`_
+  American Journal of Mathematics, vol. 43. 1921.
+
+- Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
 
 .. _Introduction to a General Theory of Elementary Propositions:
     https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
