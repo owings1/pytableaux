@@ -22,25 +22,19 @@ from __future__ import annotations
 
 from typing import Any, Callable, Optional, cast
 
-from pytableaux.errors import DenotationError, ModelValueError, check
-from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
-                                 Predicate, Predicated, Quantified, Quantifier,
-                                 Sentence)
 import pytableaux.logics.fde as FDE
+from pytableaux.errors import DenotationError, ModelValueError, check
+from pytableaux.lang import (Argument, Atomic, Constant, Operated, Operator,
+                             Predicate, Predicated, Quantified, Quantifier,
+                             Sentence)
+from pytableaux.logics import LogicType
 from pytableaux.models import BaseModel, ValueCPL
-from pytableaux.proof import TableauxSystem as BaseSystem
-from pytableaux.proof import filters, rules
-from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof import (Access, Branch, Node, Tableau, TableauxSystem,
+                              Target, adds, filters, group, rules, swnode)
 from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
-from pytableaux.proof import Tableau
-from pytableaux.proof import Access, adds, group, swnode
-from pytableaux.tools import closure
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.sets import EMPTY_SET
-from pytableaux.logics import LogicType
+from pytableaux.tools import EMPTY_SET, closure, qsetf
 
 name = 'K'
 
@@ -69,7 +63,7 @@ class Model(BaseModel[ValueCPL]):
 
     unassigned_value = Value.F
 
-    frames: dict[int, Frame]
+    frames: Frames
     "A map from worlds to their frame"
 
     access: set[tuple[int, int]]
@@ -78,19 +72,18 @@ class Model(BaseModel[ValueCPL]):
     constants: set[Constant]
     "The fixed domain of constants, common to all worlds in the model"
 
-
     def __init__(self):
 
         super().__init__()
 
-        self.frames = {}
+        self.frames = Frames()
         self.access = set()
         self.constants = set()
 
         self.predicates: set[Predicate] = set(Predicate.System)
 
         # ensure there is a w0
-        self.world_frame(0)
+        self.frames[0]
 
     @staticmethod
     @closure
@@ -236,7 +229,7 @@ class Model(BaseModel[ValueCPL]):
 
         for w in self.frames:
 
-            frame = self.world_frame(w)
+            frame = self.frames[w]
             atomics.update(frame.atomics.keys())
             opaques.update(frame.opaques.keys())
 
@@ -252,7 +245,7 @@ class Model(BaseModel[ValueCPL]):
         # make sure each atomic and opaque is assigned a value in each frame
         unval = self.unassigned_value
         for w in self.frames:
-            frame = self.world_frame(w)
+            frame = self.frames[w]
             for s in atomics:
                 if s not in frame.atomics:
                     self.set_literal_value(s, unval, world = w)
@@ -285,7 +278,7 @@ class Model(BaseModel[ValueCPL]):
             extension.update(to_add)
 
     def _generate_denotation(self, w: int):
-        frame = self.world_frame(w)
+        frame = self.frames[w]
         w = frame.world
         todo = set(self.constants)
         for c in self.constants:
@@ -298,7 +291,7 @@ class Model(BaseModel[ValueCPL]):
         assert not todo
 
     def _generate_property_classes(self, w):
-        frame = self.world_frame(w)
+        frame = self.frames[w]
         w = frame.world
         for pred in self.predicates:
             # Skip identity and existence
@@ -333,7 +326,7 @@ class Model(BaseModel[ValueCPL]):
 
     def set_opaque_value(self, s: Sentence, value: ValueCPL, /, world: int = 0):
         value = self.Value[value]
-        frame = self.world_frame(world)
+        frame = self.frames[world]
         if frame.opaques.get(s, value) is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         # We might have a quantified opaque sentence, in which case we will need
@@ -346,7 +339,7 @@ class Model(BaseModel[ValueCPL]):
 
     def set_atomic_value(self, s: Atomic, value: ValueCPL, /, world: int = 0):
         value = self.Value[value]
-        frame = self.world_frame(world)
+        frame = self.frames[world]
         if s in frame.atomics and frame.atomics[s] is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         frame.atomics[s] = value
@@ -377,7 +370,7 @@ class Model(BaseModel[ValueCPL]):
             extension.add(params)
 
     def get_extension(self, pred: Predicate, /, world: int = 0) -> set[tuple[Constant, ...]]:
-        frame = self.world_frame(world)
+        frame = self.frames[world]
         if pred not in self.predicates:
             self.predicates.add(pred)
         if pred not in frame.extensions:
@@ -387,7 +380,7 @@ class Model(BaseModel[ValueCPL]):
         return frame.extensions[pred]
 
     def get_anti_extension(self, pred: Predicate, /, world: int = 0) -> set[tuple[Constant, ...]]:
-        frame = self.world_frame(world)
+        frame = self.frames[world]
         if pred not in self.predicates:
             self.predicates.add(pred)
         if pred not in frame.extensions:
@@ -398,15 +391,15 @@ class Model(BaseModel[ValueCPL]):
 
     def get_domain(self, world: int = 0):
         # TODO: wip
-        return self.world_frame(world).domain
+        return self.frames[world].domain
 
     def get_denotation(self, world: int = 0):
         # TODO: wip
-        return self.world_frame(world).denotation
+        return self.frames[world].denotation
 
     def get_denotum(self, c: Constant, /, world = 0):
         # TODO: wip
-        frame = self.world_frame(world)
+        frame = self.frames[world]
         world = frame.world
         den = self.get_denotation(world = world)
         try:
@@ -416,8 +409,8 @@ class Model(BaseModel[ValueCPL]):
 
     def add_access(self, w1: int, w2: int, /):
         self.access.add((w1, w2))
-        self.world_frame(w1)
-        self.world_frame(w2)
+        self.frames[w1]
+        self.frames[w2]
 
     def has_access(self, w1: int, w2: int, /) -> bool:
         return (w1, w2) in self.access
@@ -425,20 +418,21 @@ class Model(BaseModel[ValueCPL]):
     def visibles(self, world: int, /) -> set[int]:
         return {w for w in self.frames if (world, w) in self.access}
 
-    def world_frame(self, world: int) -> Frame:
-        if world is None:
-            world = 0
-        if not isinstance(world, int):
-            raise TypeError(world)
-        if world not in self.frames:
-            self.frames[world] = Frame(world)
-        return self.frames[world]
+    # def world_frame(self, world: int) -> Frame:
+    #     return self.frames[world]
+    #     if world is None:
+    #         world = 0
+    #     if not isinstance(world, int):
+    #         raise TypeError(world)
+    #     if world not in self.frames:
+    #         self.frames[world] = Frame(world)
+    #     return self.frames[world]
 
     def value_of_opaque(self, s: Sentence, /, world: int = 0, **kw):
-        return self.world_frame(world).opaques.get(s, self.unassigned_value)
+        return self.frames[world].opaques.get(s, self.unassigned_value)
 
     def value_of_atomic(self, s: Atomic, /, world: int = 0, **kw):
-        return self.world_frame(world).atomics.get(s, self.unassigned_value)
+        return self.frames[world].atomics.get(s, self.unassigned_value)
 
 class Denotum:
     __slots__ = EMPTY_SET
@@ -556,48 +550,15 @@ class Frame:
         )
 
     def is_equivalent_to(self, other: Frame) -> bool:
-        other = check.inst(other, Frame)
-        # check for informational equivalence, ignoring world
-        # check atomic keys
-        akeys_a = set(self.atomics.keys())
-        akeys_b = set(other.atomics.keys())
-        if len(akeys_a.difference(akeys_b)) or len(akeys_b.difference(akeys_a)):
-            return False
-        # check opaque keys
-        okeys_a = set(self.opaques.keys())
-        okeys_b = set(other.opaques.keys())
-        if len(okeys_a.difference(okeys_b)) or len(okeys_b.difference(okeys_a)):
-            return False
-        # check extensions keys
-        ekeys_a = set(self.extensions.keys())
-        ekeys_b = set(other.extensions.keys())
-        if len(ekeys_a.difference(ekeys_b)) or len(ekeys_b.difference(ekeys_a)):
-            return False
-        # check atomic values
-        for s in self.atomics:
-            if other.atomics[s] != self.atomics[s]:
-                return False
-        # check opaque values
-        for s in self.opaques:
-            if other.opaques[s] != self.opaques[s]:
-                return False
-        # check extensions values
-        for p in self.extensions:
-            ext_a = self.extensions[p]
-            ext_b = other.extensions[p]
-            if len(ext_a.difference(ext_b)) or len(ext_b.difference(ext_a)):
-                return False
-        return True
+        check.inst(other, Frame)
+        return (self.atomics == other.atomics and
+            self.opaques == other.opaques and
+            self.extensions == other.extensions)
 
     def __eq__(self, other):
         if not isinstance(other, Frame):
             return NotImplemented
-        return self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        if not isinstance(other, Frame):
-            return NotImplemented
-        return other == None or self.__dict__ != other.__dict__
+        return self.world == other.world and self.is_equivalent_to(other)
 
     def __lt__(self, other):
         if not isinstance(other, Frame):
@@ -619,7 +580,15 @@ class Frame:
             return NotImplemented
         return self.world >= other.world
 
-class TableauxSystem(BaseSystem):
+
+class Frames(dict[int, Frame]):
+    __slots__ = EMPTY_SET
+    def __missing__(self, key):
+        if key is None:
+            return self[0]
+        return self.setdefault(check.inst(key, int), Frame(key))
+
+class TableauxSystem(TableauxSystem):
     """
     Modal tableaux are similar to classical tableaux, with the addition of a
     *world* index for each sentence node, as well as *access* nodes representing
@@ -696,11 +665,6 @@ class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
 
 @TableauxSystem.initialize
 class TabRules(LogicType.TabRules):
-    """
-    Rules for modal operators employ *world* indexes as well access-type
-    nodes. The world indexes are transparent for the rules for classical
-    connectives.
-    """
 
     class ContradictionClosure(rules.BaseClosureRule):
         """
@@ -774,9 +738,9 @@ class TabRules(LogicType.TabRules):
         def node_will_close_branch(self, node: Node, _, /):
             s = node.get('sentence')
             return (
-                isinstance(s, Operated) and
+                type(s) is Operated and
                 s.operator is Operator.Negation and
-                isinstance(s.lhs, Predicated) and
+                type(s.lhs) is Predicated and
                 s.lhs.predicate is Predicate.System.Existence
             )
 
@@ -1243,7 +1207,7 @@ class TabRules(LogicType.TabRules):
             for n in pnodes:
                 if n is node:
                     continue
-                s: Predicated = n['sentence']
+                s = cast(Predicated, n['sentence'])
                 if pa in s.params:
                     p_old, p_new = pa, pb
                 elif pb in s.params:

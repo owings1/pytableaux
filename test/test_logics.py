@@ -1441,8 +1441,8 @@ class Test_K(BaseSuite):
                 model.set_opaque_value(s1, 'T', world=0)
                 model.set_opaque_value(s2, 'T', world=1)
                 model.finish()
-                f1 = model.world_frame(0)
-                f2 = model.world_frame(1)
+                f1 = model.frames[0]
+                f2 = model.frames[1]
                 assert s2 in f1.opaques
                 assert s1 in f2.opaques
 
@@ -1593,8 +1593,8 @@ class Test_K(BaseSuite):
                 model = self.m()
                 model.set_literal_value(self.p('a'), 'T', world=0)
                 model.set_literal_value(self.p('b'), 'T', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert not frame_a.is_equivalent_to(frame_b)
                 assert not frame_b.is_equivalent_to(frame_a)
 
@@ -1603,8 +1603,8 @@ class Test_K(BaseSuite):
                 s1 = self.p('a')
                 model.set_literal_value(s1, 'T', world=0)
                 model.set_literal_value(s1, 'F', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert not frame_a.is_equivalent_to(frame_b)
                 assert not frame_b.is_equivalent_to(frame_a)
 
@@ -1613,8 +1613,8 @@ class Test_K(BaseSuite):
                 s1 = self.p('a')
                 model.set_literal_value(s1, 'T', world=0)
                 model.set_literal_value(s1, 'T', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert frame_a.is_equivalent_to(frame_b)
                 assert frame_b.is_equivalent_to(frame_a)
 
@@ -1622,8 +1622,8 @@ class Test_K(BaseSuite):
                 model = self.m()
                 model.set_opaque_value(self.p('Ma'), 'T', world=0)
                 model.set_opaque_value(self.p('Mb'), 'T', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert not frame_a.is_equivalent_to(frame_b)
                 assert not frame_b.is_equivalent_to(frame_a)
 
@@ -1632,8 +1632,8 @@ class Test_K(BaseSuite):
                 model = self.m()
                 model.set_opaque_value(s1, 'T', world=0)
                 model.set_opaque_value(s1, 'F', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert not frame_a.is_equivalent_to(frame_b)
                 assert not frame_b.is_equivalent_to(frame_a)
 
@@ -1641,8 +1641,8 @@ class Test_K(BaseSuite):
                 model = self.m()
                 model.set_opaque_value(self.p('Ma'), 'T', world=0)
                 model.set_opaque_value(self.p('Ma'), 'T', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert frame_a.is_equivalent_to(frame_b)
                 assert frame_b.is_equivalent_to(frame_a)
 
@@ -1652,8 +1652,8 @@ class Test_K(BaseSuite):
                 model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 model.set_predicated_value(s2, 'T', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert not frame_a.is_equivalent_to(frame_b)
                 assert not frame_b.is_equivalent_to(frame_a)
 
@@ -1663,8 +1663,8 @@ class Test_K(BaseSuite):
                 model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 model.set_predicated_value(s2, 'T', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert not frame_a.is_equivalent_to(frame_b)
                 assert not frame_b.is_equivalent_to(frame_a)
 
@@ -1676,8 +1676,8 @@ class Test_K(BaseSuite):
                 model.set_predicated_value(s2, 'F', world=0)
                 model.set_predicated_value(s1, 'T', world=1)
                 model.set_predicated_value(s2, 'F', world=1)
-                frame_a = model.world_frame(0)
-                frame_b = model.world_frame(1)
+                frame_a = model.frames[0]
+                frame_b = model.frames[1]
                 assert frame_a.is_equivalent_to(frame_b)
                 assert frame_b.is_equivalent_to(frame_a)
 
@@ -1687,8 +1687,8 @@ class Test_K(BaseSuite):
                 model2 = self.m()
                 model1.set_literal_value(s, 'T', world=0)
                 model2.set_literal_value(s, 'F', world=0)
-                f1 = model1.world_frame(0)
-                f2 = model2.world_frame(0)
+                f1 = model1.frames[0]
+                f2 = model2.frames[0]
                 assert f1 != f2
 
             def test_not_equals(self):
@@ -1697,8 +1697,8 @@ class Test_K(BaseSuite):
                 model2 = self.m()
                 model1.set_literal_value(s, 'T', world=0)
                 model2.set_literal_value(s, 'T', world=0)
-                f1 = model1.world_frame(0)
-                f2 = model2.world_frame(0)
+                f1 = model1.frames[0]
+                f2 = model2.frames[0]
                 assert f1 == f2
 
             def test_ordering(self):
@@ -1706,8 +1706,8 @@ class Test_K(BaseSuite):
                 model = self.m()
                 model.set_literal_value(s, 'T', world=0)
                 model.set_literal_value(s, 'F', world=1)
-                f1 = model.world_frame(0)
-                f2 = model.world_frame(1)
+                f1 = model.frames[0]
+                f2 = model.frames[1]
                 assert f2 > f1
                 assert f1 < f2
                 assert f2 >= f1
