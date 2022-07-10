@@ -23,22 +23,20 @@ from __future__ import annotations
 
 import functools
 import re
-from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING
 
 from docutils import nodes
 from pytableaux import logics
-from pytableaux.lang import LexType, LexWriter, Notation, Predicate
-from pytableaux.tools import abcs
-from pytableaux.tools.doc import (BaseRole, ConfKey, ParserOptionMixin,
-                                  classopt, nodeopt, nodez, predsopt)
-from pytableaux.tools.hybrids import qset, qsetf
+from pytableaux.lang import LexType, Notation, Predicate
+from pytableaux.tools import abcs, qset, qsetf
+from pytableaux.tools.doc import (BaseRole, ParserOptionMixin, classopt,
+                                  nodeopt, nodez, predsopt)
 from sphinx.errors import NoUri
 from sphinx.util import logging
 from sphinx.util.docutils import ReferenceRole
 
 if TYPE_CHECKING:
-    from pytableaux.typing import _F
+    from pytableaux.typing import _F  # type: ignore
     from sphinx.application import Sphinx
 
 __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
@@ -204,13 +202,13 @@ class lexdress(BaseRole, ParserOptionMixin):
         classes.update(self.opt_defaults['classes'])
 
         opts = self.options
-        conf = self.config
+        # conf = self.config
 
         parser = self.parser_option()
         preds = parser.preds
         nodecls = opts.get('node', self.opt_defaults['node'])
-        wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
-        lw = LexWriter(wnotn, 'unicode')
+        # wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
+        # lw = LexWriter(wnotn, 'unicode')
 
         text = self.text
 
@@ -318,7 +316,8 @@ class metadress(BaseRole):
         # Math symbol replace.
         math_symbols = {
             r'<': re.escape('\\langle '),
-            r'>': re.escape('\\rangle'),
+            # r'>': re.escape('\\rangle'),
+            r'>': re.escape(' \\rangle'),
         }
     )
     patterns = dict(
@@ -363,7 +362,7 @@ class metadress(BaseRole):
                     if num:
                         break
             else:
-                logger.error(f'No {mode} match for {repr(value)}')
+                logger.error(f'No {mode} match for {value}')
             classes.extend(info['classes'])
             nodecls = info['nodecls']
             return nodecls(text = rend, classes = classes)
