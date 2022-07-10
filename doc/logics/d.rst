@@ -4,76 +4,61 @@
 D - Deontic Normal Modal Logic
 ******************************
 
-Deontic logic, also known as the Logic of Obligation, is an extension of :ref:`K <K>`, with
-a *serial* accessibility relation, which states that for every world *w*, there is
-a world *w'* such that *w* accesses *w'*.
+L{D}, also known as the Logic of Obligation, is an extension of {@K}, with
+a *serial* access relation.
 
-.. contents:: :local:
+.. contents::
+    :local:
+    :depth: 2
 
-.. automodule:: pytableaux.logics.d
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.d
 
-    A D model uses :ref:`K Frames <k-frame>` to hold information about each world.
+.. _d-semantics:
 
-    .. autoclass:: pytableaux.logics.k.Frame
-        :noindex:
 
-        .. autoattribute:: world
-            :noindex:
+Semantics
+=========
 
-        .. autoattribute:: atomics
-            :noindex:
+L{D} semantics behave just like {@K semantics}.
 
-        .. autoattribute:: extensions
-            :noindex:
+Seriality
+---------
 
-    .. class:: Model
+L{D} adds a *serial* restriction on the access relation for models.
 
-        .. autoclass:: pytableaux.logics.d::Model.Value()
-            :members: F, T
-            :undoc-members:
+.. include:: include/d/m.seriality.rst
 
-        .. include:: include/k/m.attributes.rst
+.. _d-system:
 
-    Seriality
-    ---------
+Tableaux
+========
 
-    D adds a *serial* restriction on the access relation for models.
+L{D} tableaux are constructed just like {@K system} tableaux.
 
-    .. cssclass:: definiendum smallcaps
+.. _d-rules:
 
-    Seriality
+Rules
+-----
 
-    .. cssclass:: definiens
+L{D} contains all the {@K rules} plus an additional Serial rule.
 
-    In every model, for each world :m:`w`, there is *some world* :m:`w'` such
-    that :m:`<w,w'>` is in the access relation.
+The Serial rule applies to a an open branch *b* when there is a world *w*
+that appears on *b*, but there is no world *w'* such that *w* accesses *w'*.
 
-    This is witnessed in the tableaux system through the :ref:`Serial Rule <serial-rule>`.
+.. tableau::
+  :rule: Serial
+  :doc:
 
-    Consequence
-    -----------
+Notes
+=====
 
-    Logical Consequence is defined just as in :ref:`K <K>`:
+References
+==========
 
-    .. include:: include/k/m.consequence.rst
+.. rubric:: Further Reading
 
-    Tableaux System
-    ===============
-
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
-
-    .. autoclass:: TabRules
-        :members:
-
-    Notes
-    -----
-
-    .. rubric:: Further Reading
-
-    * `Stanford Encyclopedia on Deontic Logic`_
+* `Stanford Encyclopedia on Deontic Logic`_
 
 .. _Stanford Encyclopedia on Deontic Logic: http://plato.stanford.edu/entries/logic-deontic/

@@ -1,69 +1,65 @@
 .. _S4:
 
-**************************
-S4 - S4 Normal Modal Logic
-**************************
+**********************************
+L{S4} - S4 Normal Modal Logic
+**********************************
 
-Normal modal logic with reflexive and transitive access relation.
+L{S4} is an extension of {@K} with a reflexive and transitive access relation.
 
-.. contents:: :local:
+.. contents::
+    :local:
+    :depth: 2
 
-.. automodule:: pytableaux.logics.s4
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.s4
 
-    An S4 model uses :ref:`K Frames <k-frame>` to hold information about each world.
+.. _s4-semantics:
 
-    .. autoclass:: pytableaux.logics.k.Frame
-        :noindex:
+Semantics
+=========
 
-        .. autoattribute:: world
-            :noindex:
+L{S4} semantics behave just like {@K semantics}.
 
-        .. autoattribute:: atomics
-            :noindex:
+Reflexivity
+-----------
 
-        .. autoattribute:: extensions
-            :noindex:
+L{S4} includes the *reflexivity* restriction of {@T}:
 
-    .. _s4-model:
+.. include:: include/t/m.reflexivity.rst
 
-    .. autoclass:: Model
+Transitivity
+------------
 
-        .. autoclass:: pytableaux.logics.s4::Model.Value()
-            :members: F, T
-            :undoc-members:
+L{S4} adds an additional *transitivity* restriction:
 
-        .. include:: include/k/m.attributes.rst
+.. include:: include/s4/m.transitivity.rst
 
-    Reflexivity & Transitivity
-    --------------------------
+.. _s4-system:
 
-    S4 includes the *reflexivity* restriction of :ref:`T <T>` on the access
-    relation for models:
+Tableaux
+========
 
-    .. include:: include/t/m.reflexivity.rst
+L{S4} tableaux are constructed just like {@K system} tableaux.
 
-    S4 adds an additional *transitivity* restriction on models:
+.. _s4-rules:
 
-    .. include:: include/s4/m.transitivity.rst
+Rules
+-----
 
-    This is witnessed in the tableaux system through the :ref:`Transitive Rule
-    <transitive-rule>`.
+L{S4} contains all the {@K rules}, the {@T} Reflexive rule, plus an
+additional Transitive rule.
 
-    Consequence
-    -----------
+.. tableau::
+  :rule: Reflexive
+  :doc:
 
-    Logical Consequence is defined just as in :ref:`K <K>`:
+.. tableau::
+  :rule: Transitive
+  :doc:
 
-    .. include:: include/k/m.consequence.rst
+Notes
+=====
 
-    Tableaux System
-    ===============
-
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
-
-    .. autoclass:: TabRules
-        :members:
+References
+==========

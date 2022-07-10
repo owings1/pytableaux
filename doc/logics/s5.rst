@@ -1,76 +1,79 @@
 .. _S5:
 
-**************************
-S5 - S5 Normal Modal Logic
-**************************
+**********************************
+L{S5} - S5 Normal Modal Logic
+**********************************
 
-Normal modal logic with reflexive, symmetric, and transitive access relation.
+L{S5} is an extension of {@K} with a reflexive, symmetric, and transitive
+access relation. The access relation provides `Universal Access`, meaning
+all worlds are visible to all worlds.
 
-.. contents:: :local:
+.. contents::
+    :local:
+    :depth: 2
 
-.. automodule:: pytableaux.logics.s5
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.s5
 
-    An S5 model uses :ref:`K Frames <k-frame>` to hold information about each world.
+.. _s5-semantics:
 
-    .. autoclass:: pytableaux.logics.k.Frame
-        :noindex:
+Semantics
+=========
 
-        .. autoattribute:: world
-            :noindex:
+L{S5} semantics behave just like {@K semantics}.
 
-        .. autoattribute:: atomics
-            :noindex:
+Reflexivity
+-----------
 
-        .. autoattribute:: extensions
-            :noindex:
+L{S5} includes the *reflexivity* restriction of {@T}:
 
-    .. autoclass:: Model
+.. include:: include/t/m.reflexivity.rst
 
-        .. autoclass:: pytableaux.logics.s5::Model.Value()
-            :members: F, T
-            :undoc-members:
+Transitivity
+------------
 
-        .. include:: include/k/m.attributes.rst
+L{S5} includes the *transitivity* restriction of {@S4}:
 
-    Universal Access
-    ----------------
+.. include:: include/s4/m.transitivity.rst
 
-    S5 includes both the *reflexivity* restriction of :ref:`T <T>`, and the
-    *transitivity* restriction of :ref:`S4 <S4>`:
+Symmetry
+--------
 
-    .. include:: include/t/m.reflexivity.rst
+L{S5} adds an additional *symmetry* restriction:
 
-    .. include:: include/s4/m.transitivity.rst
+.. include:: include/s5/m.symmetry.rst
 
-    S5 adds an additional *symmetric* restriction on the access relation for models:
+.. _s5-system:
 
-    .. cssclass:: definiendum smallcaps
+Tableaux
+========
 
-    Symmetry
+L{S5} tableaux are constructed just like {@K system} tableaux.
 
-    .. cssclass:: definiens
+.. _s5-rules:
 
-    In every model, for each world :m:`w` and each world :m:`w'`, if :m:`<w,w'>`
-    is in the access relation, then so is :m:`<w',w>`.
+Rules
+-----
 
-    This is witnessed in the tableaux system through the :ref:`Symmetric Rule
-    <symmetric-rule>`.
+L{S5} contains all the {@K rules}, the {@T} Reflexive rule, the
+{@S4} Transitive rule, plus an additional Symmetric rule.
 
-    Consequence
-    -----------
+.. tableau::
+  :rule: Reflexive
+  :doc:
 
-    Logical Consequence is defined just as in :ref:`K <K>`:
+.. tableau::
+  :rule: Transitive
+  :doc:
 
-    .. include:: include/k/m.consequence.rst
+.. tableau::
+  :rule: Symmetric
+  :doc:
 
-    Tableaux System
-    ===============
+Notes
+=====
 
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
+References
+==========
 
-    .. autoclass:: TabRules
-        :members:

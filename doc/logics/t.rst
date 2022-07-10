@@ -1,63 +1,56 @@
 .. _T:
 
-********************************
-T - Reflexive Normal Modal Logic
-********************************
+****************************************
+L{T} - Reflexive Normal Modal Logic
+****************************************
 
-Reflexive Modal Logic is an extension of :ref:`K <K>`, with a *reflexive*
-accessibility relation, which states that for every world *w*,
-*w* accesses *w* (itself).
+L{T} is an extension of {@K}, with a *reflexive* access relation.
 
-.. contents:: :local:
+.. contents::
+    :local:
+    :depth: 2
 
-.. automodule:: pytableaux.logics.t
+------------------------
 
-    Semantics
-    =========
+.. module:: pytableaux.logics.t
 
-    A T model uses :ref:`K Frames <k-frame>` to hold information about each world.
+.. _t-semantics:
 
-    .. autoclass:: pytableaux.logics.k.Frame
-        :noindex:
+Semantics
+=========
 
-        .. autoattribute:: world
-            :noindex:
+L{T} semantics behave just like {@K semantics}.
 
-        .. autoattribute:: atomics
-            :noindex:
+Reflexivity
+-----------
 
-        .. autoattribute:: extensions
-            :noindex:
+L{T} adds a *reflexive* restriction on the access relation for models.
 
-    .. autoclass:: Model
+.. include:: include/t/m.reflexivity.rst
 
-        .. autoclass:: pytableaux.logics.t::Model.Value()
-            :members: F, T
-            :undoc-members:
+.. _t-system:
 
-        .. include:: include/k/m.attributes.rst
+Tableaux
+========
 
-    Reflexivity
-    -----------
+L{T} tableaux are constructed just like {@K system} tableaux.
 
-    T adds a *reflexivity* restriction on the access relation for models.
+.. _t-rules:
 
-    .. include:: include/t/m.reflexivity.rst
+Rules
+-----
 
-    This is witnessed in the tableaux system through the :ref:`Reflexive Rule <reflexive-rule>`.
+L{T} contains all the {@K rules} plus an additional Reflexive rule.
 
-    Consequence
-    -----------
+The Reflexive rule applies to an open branch *b* when there is a node *n*
+on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
 
-    Logical Consequence is defined just as in :ref:`K <K>`:
+.. tableau::
+  :rule: Reflexive
+  :doc:
 
-    .. include:: include/k/m.consequence.rst
+Notes
+=====
 
-    Tableaux System
-    ===============
-
-    .. autoclass:: TableauxSystem
-        :members: build_trunk
-
-    .. autoclass:: TabRules
-        :members:
+References
+==========
