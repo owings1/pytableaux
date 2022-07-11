@@ -2010,14 +2010,16 @@ class TestCFOL(BaseSuite):
         assert len(identicals) == 1
         assert c2 in identicals
 
+    @skip
     def test_model_singleton_domain_two_identical_constants(self):
         m = self.m()
         s1 = self.p('Imn')
         m.set_literal_value(s1, 'T')
         m.finish()
-        d = m.get_domain()
+        d = m.frames[0].domain
         assert len(d) == 1
 
+    @skip
     def test_model_same_denotum_two_identical_constants(self):
         m = self.m()
         s1 = self.p('Imn')

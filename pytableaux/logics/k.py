@@ -60,7 +60,7 @@ class AccessGraph(defaultdict[int, set[int]]):
         w1, w2 = access
         self[w1].add(w2)
 
-    def worlds(self):
+    def worlds(self) -> set[int]:
         worlds = set()
         for w, sees in self.items():
             worlds.add(w)
@@ -222,7 +222,7 @@ class Model(BaseModel[ValueCPL]):
         s = node.get('sentence')
         if s is not None:
             w = node.get('world')
-            if w == None:
+            if w is None:
                 w = 0
             if self.is_sentence_opaque(s):
                 self.set_opaque_value(s, self.Value.T, world = w)
@@ -240,19 +240,11 @@ class Model(BaseModel[ValueCPL]):
         # ensure frames for each world
         for w in self.R.worlds():
             self.frames[w]
-        # for w1, sees in self.R.items():
-        #     self.frames[w1]
-        #     for w2 in sees:
-        #         self.frames[w2]
 
         for w, frame in self.frames.items():
 
             atomics.update(frame.atomics.keys())
             opaques.update(frame.opaques.keys())
-
-            # TODO: WIP
-            self._generate_denotation(w)
-            self._generate_property_classes(w)
 
             for pred in self.predicates:
                 self._agument_extension_with_identicals(pred, w)
@@ -291,31 +283,6 @@ class Model(BaseModel[ValueCPL]):
                         new_params = substitute(params, c, new_c)
                         to_add.add(new_params)
             extension.update(to_add)
-
-    def _generate_denotation(self, w: int):
-        frame = self.frames[w]
-        w = frame.world
-        todo = set(self.constants)
-        for c in self.constants:
-            if c in todo:
-                denotum = Denotum()
-                frame.domain.add(denotum)
-                denoters = {c}.union(self._get_identicals(c, world = w))
-                frame.denotation.update({c: denotum for c in denoters})
-                todo -= denoters
-        assert not todo
-
-    def _generate_property_classes(self, w):
-        frame = self.frames[w]
-        w = frame.world
-        for pred in self.predicates:
-            # Skip identity and existence
-            if pred in Predicate.System:
-                continue
-            frame.property_classes[pred] = {
-                tuple(self.get_denotum(p, world = w) for p in params)
-                for params in self.get_extension(pred, world = w)
-            }
 
     def _get_identicals(self, c: Constant, **kw) -> set[Constant]:
         ext = self.get_extension(Predicate.System.Identity, **kw)
@@ -364,9 +331,8 @@ class Model(BaseModel[ValueCPL]):
         value = Value[value]
         pred = s.predicate
         params = s.params
-        if pred not in self.predicates:
-            self.predicates.add(pred)
-        for param in params:
+        self.predicates.add(pred)
+        for param in s.paramset:
             if param.is_constant:
                 self.constants.add(param)
         extension = self.get_extension(pred, **kw)
@@ -384,8 +350,7 @@ class Model(BaseModel[ValueCPL]):
 
     def get_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
         frame = self.frames[world]
-        if pred not in self.predicates:
-            self.predicates.add(pred)
+        self.predicates.add(pred)
         if pred not in frame.extensions:
             frame.extensions[pred] = set()
         if pred not in frame.anti_extensions:
@@ -394,36 +359,17 @@ class Model(BaseModel[ValueCPL]):
 
     def get_anti_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
         frame = self.frames[world]
-        if pred not in self.predicates:
-            self.predicates.add(pred)
+        self.predicates.add(pred)
         if pred not in frame.extensions:
             frame.extensions[pred] = set()
         if pred not in frame.anti_extensions:
             frame.anti_extensions[pred] = set()
         return frame.anti_extensions[pred]
 
-    def get_domain(self, world: int = 0):
-        # TODO: wip
-        return self.frames[world].domain
-
-    def get_denotation(self, world: int = 0):
-        # TODO: wip
-        return self.frames[world].denotation
-
-    def get_denotum(self, c: Constant, /, world = 0):
-        # TODO: wip
-        frame = self.frames[world]
-        world = frame.world
-        den = self.get_denotation(world = world)
-        try:
-            return den[c]
-        except KeyError:
-            raise DenotationError(f'{c} does not have a reference at w{world}')
-
-    def value_of_opaque(self, s: Sentence, /, world: int = 0, **kw):
+    def value_of_opaque(self, s: Sentence, /, world: int = 0):
         return self.frames[world].opaques.get(s, self.unassigned_value)
 
-    def value_of_atomic(self, s: Atomic, /, world: int = 0, **kw):
+    def value_of_atomic(self, s: Atomic, /, world: int = 0):
         return self.frames[world].atomics.get(s, self.unassigned_value)
 
 class Denotum:
@@ -464,11 +410,6 @@ class Frame:
 
         # Track the anti-extensions to ensure integrity
         self.anti_extensions = {}
-
-        # TODO: WIP
-        self.denotation = {}
-        self.domain = set()
-        self.property_classes = {pred: set() for pred in Predicate.System}
 
     def get_data(self) -> dict:
         return dict(
