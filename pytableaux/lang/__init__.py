@@ -308,6 +308,19 @@ class TableStore(metaclass = LangCommonMeta):
 
     @classmethod
     def load(cls, notn, key, data, /):
+        """Create and store instance from data.
+
+        Args:
+            notn: The notation
+            key: The unique key
+            data: The data mapping
+
+        Raises:
+            Emsg.DuplicateKey: on duplicate key for notation
+
+        Returns:
+            The instance
+        """
         notn = Notation[notn]
         idx = cls._instances[notn]
         if key in idx:
@@ -316,6 +329,15 @@ class TableStore(metaclass = LangCommonMeta):
 
     @classmethod
     def fetch(cls, notn, key = None, /):
+        """Get a loaded instance.
+
+        Args:
+            notn: The notation
+            key: The unique key. Defaults to class default.
+
+        Returns:
+            The instance
+        """        
         if key is None:
             key = cls.default_fetch_key
         notn = Notation[notn]
@@ -330,6 +352,14 @@ class TableStore(metaclass = LangCommonMeta):
 
     @classmethod
     def available(cls, notn):
+        """List the loaded keys for a notation.
+
+        Args:
+            notn: The notation
+
+        Returns:
+            list: The sorted keys
+        """        
         notn = Notation(notn)
         idx = cls._instances[notn]
         store = cls._builtin[notn]

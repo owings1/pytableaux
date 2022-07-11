@@ -33,5 +33,6 @@ classes
 
 .. autoclass:: RenderSet
     :members:
-
+    :show-inheritance:
+    :inherited-members: Mapping
 

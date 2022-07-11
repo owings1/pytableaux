@@ -73,6 +73,7 @@ class NodeAttr(ProofAttr):
     flag    :str
     is_flag :str
     world   :str
+    info    :str
 class PropMap(ItemMapEnum):
     NodeDefaults:Mapping
     ClosureNode:Mapping

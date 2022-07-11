@@ -105,6 +105,7 @@ class NodeAttr(ProofAttr):
     flag    = 'flag'
     is_flag = 'is_flag'
     world   = 'world'
+    info    = 'info'
 
 class PropMap(ItemMapEnum):
 
