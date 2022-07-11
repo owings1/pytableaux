@@ -106,7 +106,7 @@ class BranchCache(dmap[Branch, _T], abcs.Copyable, RuleHelper):
 
     def __init__(self, rule: Rule,/):
         RuleHelper.__init__(self, rule)
-        self.listen_on(rule, rule.tableau)
+        self.listen_on()
 
     def copy(self, /, *, listeners = False):
         cls = type(self)
@@ -114,17 +114,21 @@ class BranchCache(dmap[Branch, _T], abcs.Copyable, RuleHelper):
         inst.rule = self.rule
         inst.config = self.config
         if listeners:
-            self.listen_on(self.rule, self.rule.tableau)
+            inst.listen_on()
         inst.update(self)
         return inst
 
-    def listen_on(self, rule: Rule, tableau, /):
-        rule.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
-        rule.tableau.on(TabEvent.AFTER_BRANCH_CLOSE, self.__after_branch_close)
+    def listen_on(self):
+        self.rule.tableau.on({
+            TabEvent.AFTER_BRANCH_ADD: self.__after_branch_add,
+            TabEvent.AFTER_BRANCH_CLOSE: self.__after_branch_close,
+        })
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.tableau.off(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
-        rule.tableau.off(TabEvent.AFTER_BRANCH_CLOSE, self.__after_branch_close)
+    def listen_off(self):
+        self.rule.tableau.off({
+            TabEvent.AFTER_BRANCH_ADD: self.__after_branch_add,
+            TabEvent.AFTER_BRANCH_CLOSE: self.__after_branch_close,
+        })
 
     def __after_branch_add(self, branch: Branch):
         if branch.parent:
@@ -166,7 +170,7 @@ class BranchDictCache(BranchCache[dmap[_KT, _VT]]):
 
     __slots__ = EMPTY_SET
 
-    def copy(self, /, *, listeners:bool = False):
+    def copy(self, /, *, listeners = False):
         inst = super().copy(listeners = listeners)
         inst.update({
             key: value.copy()
@@ -174,13 +178,13 @@ class BranchDictCache(BranchCache[dmap[_KT, _VT]]):
         })
         return inst
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.tableau.off(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.tableau.off(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
+        super().listen_off()
 
     def __after_branch_add(self, branch: Branch, /):
         if branch.parent is not None:
@@ -195,13 +199,13 @@ class QuitFlag(BranchCache[bool]):
     __slots__ = EMPTY_SET
     _valuetype = bool
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.on(RuleEvent.AFTER_APPLY, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.on(RuleEvent.AFTER_APPLY, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.off(RuleEvent.AFTER_APPLY, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.off(RuleEvent.AFTER_APPLY, self.__call__)
+        super().listen_off()
 
     def __call__(self, target: Target, /) -> None:
         self[target.branch] = bool(target.get('flag'))
@@ -222,13 +226,13 @@ class BranchValueHook(BranchCache[_VT]):
         super().__init__(rule)
         self.hook = getattr(rule, self.hook_method_name)
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
+        super().listen_off()
 
     def __call__(self, node, branch, /) -> None:
         if self[branch]:
@@ -258,13 +262,13 @@ class AplSentCount(BranchCache[dmap[Sentence, int]]):
     __slots__ = EMPTY_SET
     _valuetype = dmap
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.on(RuleEvent.AFTER_APPLY, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.on(RuleEvent.AFTER_APPLY, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.off(RuleEvent.AFTER_APPLY, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.off(RuleEvent.AFTER_APPLY, self.__call__)
+        super().listen_off()
 
     def __call__(self, target: Target):
         if target.get('flag'):
@@ -278,13 +282,13 @@ class NodeCount(BranchCache[dmap[Node, int]]):
     __slots__ = EMPTY_SET
     _valuetype = dmap
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.on(RuleEvent.AFTER_APPLY, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.on(RuleEvent.AFTER_APPLY, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.off(RuleEvent.AFTER_APPLY, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.off(RuleEvent.AFTER_APPLY, self.__call__)
+        super().listen_off()
 
     def min(self, branch: Branch) -> int:
         if branch in self and len(self[branch]):
@@ -311,13 +315,13 @@ class NodesWorlds(BranchCache[setm[tuple[Node, int]]]):
 
     _valuetype = setm
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.on(RuleEvent.AFTER_APPLY, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.on(RuleEvent.AFTER_APPLY, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.off(RuleEvent.AFTER_APPLY, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.off(RuleEvent.AFTER_APPLY, self.__call__)
+        super().listen_off()
 
     def __call__(self, target: Target, /):
         if target.get('flag'):
@@ -330,13 +334,13 @@ class UnserialWorlds(BranchCache[setm[int]]):
 
     _valuetype = setm
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
+        super().listen_off()
 
     def __call__(self, node: Node, branch: Branch, /):
         for w in node.worlds:
@@ -366,15 +370,15 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
         inst.nodes = self.nodes.copy(listeners = listeners)
         return inst
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
+        super().listen_off()
 
-    def has(self, branch: Branch, access: Access) -> bool:
+    def has(self, branch, access):
         'Whether w1 sees w2 on the given branch.'
         return access[1] in self[branch].get(access[0], EMPTY_SET)
 
@@ -384,8 +388,7 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
         """
         # TODO: can we make this more efficient? for each world pair,
         #       track the intransitives?
-        return self[branch].get(w2, EMPTY_SET).difference(
-            self[branch].get(w1, EMPTY_SET))
+        return self[branch].get(w2, EMPTY_SET) - self[branch].get(w1, EMPTY_SET)
 
     def __call__(self, node: Node, branch: Branch):        
         if node.is_access:
@@ -397,7 +400,7 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
 
 class FilterNodeCache(BranchCache[set[Node]]):
 
-    __slots__ = 'ignore_ticked',
+    __slots__ = ('ignore_ticked',)
     _valuetype = set
 
     #: Copied from Rule.ignore_ticked - whether to discard nodes
@@ -418,16 +421,18 @@ class FilterNodeCache(BranchCache[set[Node]]):
         inst.ignore_ticked = self.ignore_ticked
         return inst
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
         if self.ignore_ticked:
-            rule.tableau.on(TabEvent.AFTER_NODE_TICK, self.__after_node_tick)
+            self.rule.tableau.on(TabEvent.AFTER_NODE_TICK, self.__after_node_tick)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
-        rule.tableau.off(TabEvent.AFTER_NODE_TICK, self.__after_node_tick)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.tableau.off({
+            TabEvent.AFTER_NODE_ADD: self.__after_node_add,
+            TabEvent.AFTER_NODE_TICK: self.__after_node_tick,
+        })
+        super().listen_off()
 
     def __after_node_add(self, node, branch, /):
         if self(node, branch):
@@ -467,19 +472,19 @@ class FilterHelper(FilterNodeCache):
 
     _garbage: setm[tuple[Branch, Node]]
 
-    def __init__(self, rule: Rule,/):
+    def __init__(self, rule,/):
         super().__init__(rule)
         self._garbage = setm()
         self.filters, self.pred = self.config
 
-    def copy(self, /, *, listeners:bool = False):
+    def copy(self, /, *, listeners = False):
         inst: FilterHelper = super().copy(listeners = listeners)
         inst._garbage = self._garbage.copy()
         inst.filters = self.filters
         inst.pred = self.pred
         return inst
 
-    def filter(self, node: Node, branch: Branch, /) -> bool:
+    def filter(self, node, branch: Branch, /):
         """Whether the node passes the filter. If `ignore_ticked` is `True`,
         first checks whether the node is ticked, after which the combined
         filters predicate ``.pred()`` is checked.
@@ -489,7 +494,7 @@ class FilterHelper(FilterNodeCache):
             branch: The node's branch.
 
         Return:
-            Whether the node meets the filter conditions and `ignore_ticked`
+            bool: Whether the node meets the filter conditions and `ignore_ticked`
             setting.
         """
         if self.ignore_ticked and branch.is_ticked(node):
@@ -498,7 +503,7 @@ class FilterHelper(FilterNodeCache):
 
     __call__ = filter
 
-    def example_node(self) -> dict[str, Any]:
+    def example_node(self):
         """Construct an example node based on the filter conditions."""
         node = {}
         for filt in self.filters.values():
@@ -507,7 +512,7 @@ class FilterHelper(FilterNodeCache):
                 node.update(n)
         return node
 
-    def release(self, node: Node, branch: Branch, /) -> None:
+    def release(self, node, branch, /) -> None:
         """Mark the node/branch entry for garbage collection.
 
         Args:
@@ -567,14 +572,12 @@ class FilterHelper(FilterNodeCache):
         else:
             if not isabstract:
                 import warnings
-                warnings.warn(
-                    f"EMPTY '{attr}' attribute for {rulecls}. "
-                    "All nodes will be cached."
-                )
+                warnings.warn(f"EMPTY '{attr}' attribute for {rulecls}. "
+                    "All nodes will be cached.")
 
     @staticmethod
     def build_filters_pred(rule: Rule,/):
-        configs = getattr(rule, RuleAttr.NodeFilters)
+        configs: Mapping = getattr(rule, RuleAttr.NodeFilters)
         types = tuple(fcls for fcls, flag in configs.items()
             if flag is not NotImplemented)
         filters = MapProxy(dict(zip(
@@ -606,7 +609,7 @@ class FilterHelper(FilterNodeCache):
                 return tuple(node_targets_gen(rule, helper[branch], branch))
             return get_targets_filtered
 
-        def create(it, r: Rule, b: Branch, n: Node, /) -> Target:
+        def create(it, r, b, n, /):
             return Target(it, rule = r, branch = b, node = n)
 
         def make_targets_iter(node_targets_fn):
@@ -647,27 +650,27 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
 
     consts: NodeConsts.Consts
 
-    def __init__(self, rule: Rule,/):
+    def __init__(self, rule, /):
         super().__init__(rule)
-        self.filter = rule.helpers[FilterHelper]
+        self.filter = self.rule[FilterHelper]
         self.consts = self.Consts(rule)
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.on(RuleEvent.AFTER_APPLY, self.__after_apply)
-        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.on(RuleEvent.AFTER_APPLY, self.__after_apply)
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.off(RuleEvent.AFTER_APPLY, self.__after_apply)
-        rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.off(RuleEvent.AFTER_APPLY, self.__after_apply)
+        self.rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
+        super().listen_off()
 
     def __after_apply(self, target: Target, /):
         if target.get('flag'):
             return
         self[target.branch][target.node].discard(target.constant)
 
-    def __call__(self, node: Node, branch: Branch, /):
+    def __call__(self, node: Node, branch, /):
         if self.filter(node, branch):
             if node not in self[branch]:
                 # By tracking per node, we are tracking per world, a fortiori.
@@ -685,13 +688,13 @@ class WorldConsts(BranchDictCache[int, set[Constant]]):
 
     __slots__ = EMPTY_SET
 
-    def listen_on(self, rule: Rule, tableau, /):
-        super().listen_on(rule, tableau)
-        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
+    def listen_on(self):
+        super().listen_on()
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau, /):
-        rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
-        super().listen_off(rule, tableau)
+    def listen_off(self):
+        self.rule.tableau.off(TabEvent.AFTER_NODE_ADD, self.__call__)
+        super().listen_off()
 
     def __call__(self, node: Node, branch: Branch, /):
         s = node.get('sentence')
@@ -711,7 +714,7 @@ class MaxConsts(dict[Branch, int], RuleHelper):
     """
     __slots__ = ('rule', 'config', 'world_consts')
 
-    def __init__(self, rule: Rule, /):
+    def __init__(self, rule, /):
         RuleHelper.__init__(self, rule)
         self.world_consts = WorldConsts(rule)
         self.listen_on()
@@ -722,7 +725,7 @@ class MaxConsts(dict[Branch, int], RuleHelper):
     def listen_off(self):
         self.rule.tableau.off(TabEvent.AFTER_TRUNK_BUILD, self.__call__)
 
-    def is_reached(self, branch: Branch, world: int = 0, /) -> bool:
+    def is_reached(self, branch: Branch, world = 0, /):
         """
         Whether we have already reached or exceeded the max number of constants
         projected for the branch (origin) at the given world.
@@ -733,10 +736,9 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         """
         if world is None:
             world = 0
-        maxc = self.get(branch.origin, 1)
-        return len(self.world_consts[branch][world]) >= maxc
+        return len(self.world_consts[branch][world]) >= self.get(branch.origin, 1)
 
-    def is_exceeded(self, branch: Branch, world: int = 0, /) -> bool:
+    def is_exceeded(self, branch: Branch, world = 0, /):
         """
         Whether we have exceeded the max number of constants projected for
         the branch (origin) at the given world.
@@ -747,8 +749,7 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         """
         if world is None:
             world = 0
-        maxc = self.get(branch.origin, 1)
-        return len(self.world_consts[branch][world]) > maxc
+        return len(self.world_consts[branch][world]) > self.get(branch.origin, 1)
 
     def quit_flag(self, branch: Branch, /) -> dict:
         """Generate a quit flag node for the branch. Return value is a ``dict``
@@ -765,14 +766,11 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         Returns:
             The node dict.
         """
-        maxc = self.get(branch.origin, 1)
-        info = f'{self.rule.name}:{type(self).__name__}({maxc})'
         return {
             NodeAttr.is_flag: True,
             NodeAttr.flag: 'quit',
-            NodeAttr.info: info,
+            NodeAttr.info: f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin, 1)})',
         }
-        # return dict(is_flag = True, flag = 'quit', info = info)
 
     def __call__(self, tableau: Tableau, /) -> None:
         for branch in tableau:
@@ -805,16 +803,16 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
     def __init__(self, rule: Rule,/):
         RuleHelper.__init__(self, rule)
         self._modal_opfilter = getattr(rule, RuleAttr.ModalOperators).__contains__
-        self._modals: dict[Sentence, int] = {}
-        self.listen_on(rule, rule.tableau)
+        self._modals = {}
+        self.listen_on()
 
-    def listen_on(self, rule: Rule, tableau: Tableau, /):
-        rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__call__)
+    def listen_on(self):
+        self.rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__call__)
 
-    def listen_off(self, rule: Rule, tableau: Tableau, /):
-        rule.tableau.off(TabEvent.AFTER_TRUNK_BUILD, self.__call__)
+    def listen_off(self):
+        self.rule.tableau.off(TabEvent.AFTER_TRUNK_BUILD, self.__call__)
 
-    def is_reached(self, branch: Branch, /) -> bool:
+    def is_reached(self, branch: Branch, /):
         """
         Whether we have already reached or exceeded the max number of worlds
         projected for the branch (origin).
@@ -822,7 +820,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         origin = branch.origin
         return origin in self and len(branch.worlds) >= self[origin]
 
-    def is_exceeded(self, branch: Branch, /) -> bool:
+    def is_exceeded(self, branch: Branch, /):
         """
         Whether we have exceeded the max number of worlds projected for the
         branch (origin).
@@ -849,9 +847,6 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
             NodeAttr.flag: 'quit',
             NodeAttr.info: info,
         }
-        # return dict(is_flag = True, flag = 'quit',
-        #     info = info
-        # )
 
     def __call__(self, tableau: Tableau, /):
         for branch in tableau:
