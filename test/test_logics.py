@@ -1486,17 +1486,17 @@ class Test_K(BaseSuite):
                 branch = Branch()
                 branch.add({'world1': 0, 'world2': 1})
                 model.read_branch(branch)
-                assert model.has_access(0, 1)
+                assert 1 in model.R[0]
 
             def test_model_add_access_sees(self):
                 model = self.m()
-                model.add_access(0, 0)
-                assert 0 in model.visibles(0)
+                model.R.add((0,0))
+                assert model.R.has((0,0))
 
             def test_model_possibly_a_with_access_true(self):
                 model = self.m()
                 a = Atomic(0, 0)
-                model.add_access(0, 1)
+                model.R.add((0,1))
                 model.set_atomic_value(a, 'T', world=1)
                 res = model.value_of(Oper.Possibility(a), world=0)
                 assert res == 'T'
@@ -1519,15 +1519,15 @@ class Test_K(BaseSuite):
                 a = Atomic(0, 0)
                 model.set_atomic_value(a, 'T', world=0)
                 model.set_atomic_value(a, 'F', world=1)
-                model.add_access(0, 1)
-                model.add_access(0, 0)
+                model.R.add((0,1))
+                model.R.add((0,0))
                 res = model.value_of(Operated('Necessity', a), world=0)
                 assert res == 'F'
 
             def test_model_get_data_with_access_has_2_frames(self):
                 model = self.m()
                 model.set_literal_value(self.p('a'), 'T', world=0)
-                model.add_access(0, 1)
+                model.R.add((0,1))
                 model.finish()
                 data = model.get_data()
                 assert len(data['Frames']['values']) == 2
@@ -1838,11 +1838,6 @@ class TestCPL(BaseSuite):
             model = self.m()
             model.read_branch(branch)
             assert model.value_of(s1) == 'T'
-            
-        def test_add_access_not_impl(self):
-            model = self.m()
-            with raises(TypeError):
-                model.add_access(0, 0)
 
         def test_value_of_operated_opaque(self):
             # coverage
@@ -1952,11 +1947,6 @@ class TestCFOL(BaseSuite):
         s1 = self.p('La')
         m._read_node(Node({'sentence': s1}))
         assert m.value_of(s1) == 'T'
-
-    def test_model_add_access_not_impl(self):
-        m = self.m()
-        with raises(TypeError):
-            m.add_access(0, 0)
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
         tab = self.tab('a', ('NLa', 'b'), is_build_models = True)
@@ -2161,10 +2151,14 @@ class TestS4(BaseSuite):
 
     def test_model_finish_transitity_visibles(self):
         model = self.m()
-        model.add_access(0, 1)
-        model.add_access(1, 2)
+        model.R.add((0,1))
+        model.R.add((1,2))
         model.finish()
-        assert 2 in model.visibles(0)
+        assert 2 in model.R[0]
+        # model.add_access(0, 1)
+        # model.add_access(1, 2)
+        # model.finish()
+        # assert 2 in model.visibles(0)
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
 
@@ -2220,9 +2214,12 @@ class TestS5(BaseSuite):
 
     def test_model_finish_symmetry_visibles(self):
         model = self.m()
-        model.add_access(0, 1)
+        model.R.add((0,1))
         model.finish()
-        assert 0 in model.visibles(1)
+        assert 0 in model.R[1]
+        # model.add_access(0, 1)
+        # model.finish()
+        # assert 0 in model.visibles(1)
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
 

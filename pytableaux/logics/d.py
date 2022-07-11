@@ -34,14 +34,14 @@ class Model(K.Model):
     def finish(self):
         needs_world = set()
         for world in self.frames:
-            if len(self.visibles(world)) == 0:
+            if len(self.R[world]) == 0:
                 needs_world.add(world)
         if len(needs_world) > 0:
             # only add one extra world
-            w2 = max(self.frames.keys()) + 1
+            w2 = max(self.frames) + 1
             for w1 in needs_world:
-                self.add_access(w1, w2)
-            self.add_access(w2, w2)
+                self.R.add(w1, w2)
+            self.R.add(w2, w2)
         super().finish()
 
 class TableauxSystem(K.TableauxSystem):

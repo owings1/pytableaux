@@ -33,20 +33,19 @@ class Meta(K.Meta):
 class Model(T.Model):
 
     def finish(self):
-        finish = super().finish
-        vis = self.visibles
+        R = self.R
         while True:
-            finish()
+            super().finish
             to_add = set()
             for w1 in self.frames:
-                for w2 in vis(w1):
-                    for w3 in vis(w2):
-                        a = (w1, w3)
-                        if a not in self.access:
-                            to_add.add(a)
-            if len(to_add) == 0:
+                for w2 in R[w1]:
+                    for w3 in R[w2]:
+                        if w3 not in R[w1]:
+                            to_add.add((w1, w3))
+            if not to_add:
                 return
-            self.access.update(to_add)
+            for w1, w2 in to_add:
+                R[w1].add(w2)
 
 class TableauxSystem(K.TableauxSystem):
     pass

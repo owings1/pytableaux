@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+from collections import defaultdict
 
 from typing import Any, Callable, Optional, cast
 
@@ -46,6 +47,26 @@ class Meta:
     )
     native_operators = FDE.Meta.native_operators + (Operator.Possibility, Operator.Necessity)
 
+class AccessGraph(defaultdict[int, set[int]]):
+
+    def __init__(self, *args, **kw):
+        super().__init__(set, *args, **kw)
+
+    def has(self, access: tuple[int, int], /) -> bool:
+        w1, w2 = access
+        return w1 in self and w2 in self[w1]
+
+    def add(self, access: tuple[int, int], /):
+        w1, w2 = access
+        self[w1].add(w2)
+
+    def worlds(self):
+        worlds = set()
+        for w, sees in self.items():
+            worlds.add(w)
+            worlds.update(sees)
+        return worlds
+
 class Model(BaseModel[ValueCPL]):
     """
     A K model comprises a non-empty collection of K-frames, a world access
@@ -59,8 +80,8 @@ class Model(BaseModel[ValueCPL]):
     frames: Frames
     "A map from worlds to their frame"
 
-    access: set[tuple[int, int]]
-    "A set of pairs of worlds, i.e. the `access` relation"
+    R: AccessGraph
+    "The `access` relation"
 
     constants: set[Constant]
     "The fixed domain of constants, common to all worlds in the model"
@@ -70,7 +91,7 @@ class Model(BaseModel[ValueCPL]):
         super().__init__()
 
         self.frames = Frames()
-        self.access = set()
+        self.R = AccessGraph()
         self.constants = set()
 
         self.predicates: set[Predicate] = set(Predicate.System)
@@ -129,7 +150,7 @@ class Model(BaseModel[ValueCPL]):
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
         """
         Value = self.Value
-        for w2 in self.visibles(world):
+        for w2 in self.R[world]:
             if self.value_of(s.lhs, world=w2, **kw) is Value.T:
                 return Value.T
         return Value.F
@@ -140,7 +161,7 @@ class Model(BaseModel[ValueCPL]):
         each :m:`w'` such that :m:`<w, w'>` is in the access relation.
         """
         Value = self.Value
-        for w2 in self.visibles(world):
+        for w2 in self.R[world]:
             if self.value_of(s.lhs, world=w2, **kw) is Value.F:
                 return Value.F
         return Value.T
@@ -175,7 +196,8 @@ class Model(BaseModel[ValueCPL]):
                 member_datatype = 'tuple',
                 member_typehint = 'access',
                 symbol          = 'R',
-                values          = sorted(self.access),
+                values          = sorted((w1, w2) for w1, sees in self.R.items()
+                                    for w2 in sees),
             ),
             Frames = dict(
                 description     = 'world frames',
@@ -208,16 +230,23 @@ class Model(BaseModel[ValueCPL]):
                 self.set_literal_value(s, self.Value.T, world = w)
             self.predicates.update(s.predicates)
         elif node.is_access:
-            self.add_access(node['world1'], node['world2'])
+            self.R.add(Access.fornode(node))
 
     def finish(self):
         # track all atomics and opaques
         atomics = set()
         opaques = set()
 
-        for w in self.frames:
+        # ensure frames for each world
+        for w in self.R.worlds():
+            self.frames[w]
+        # for w1, sees in self.R.items():
+        #     self.frames[w1]
+        #     for w2 in sees:
+        #         self.frames[w2]
 
-            frame = self.frames[w]
+        for w, frame in self.frames.items():
+
             atomics.update(frame.atomics.keys())
             opaques.update(frame.opaques.keys())
 
@@ -231,15 +260,13 @@ class Model(BaseModel[ValueCPL]):
             self._ensure_self_existence(w)
 
         # make sure each atomic and opaque is assigned a value in each frame
-        unval = self.unassigned_value
-        for w in self.frames:
-            frame = self.frames[w]
+        for w, frame in self.frames.items():
             for s in atomics:
                 if s not in frame.atomics:
-                    self.set_literal_value(s, unval, world = w)
+                    self.set_literal_value(s, self.unassigned_value, world = w)
             for s in opaques:
                 if s not in frame.opaques:
-                    self.set_opaque_value(s, unval, world = w)
+                    self.set_opaque_value(s, self.unassigned_value, world = w)
 
     def _ensure_self_identity(self, w):
         ext = self.get_extension(Predicate.System.Identity, world = w)
@@ -346,15 +373,13 @@ class Model(BaseModel[ValueCPL]):
         anti_extension = self.get_anti_extension(pred, **kw)
         if value is Value.F:
             if params in extension:
-                raise ModelValueError(
-                    f'Cannot set value {value} for tuple {params} already in extension'
-                )
+                raise ModelValueError(f'Cannot set value {value} for tuple '
+                    f'{params} already in extension')
             anti_extension.add(params)
         if value is Value.T:
             if params in anti_extension:
-                raise ModelValueError(
-                    f'Cannot set value {value} for tuple {params} already in anti-extension'
-                )
+                raise ModelValueError(f'Cannot set value {value} for tuple '
+                    f'{params} already in anti-extension')
             extension.add(params)
 
     def get_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
@@ -394,27 +419,6 @@ class Model(BaseModel[ValueCPL]):
             return den[c]
         except KeyError:
             raise DenotationError(f'{c} does not have a reference at w{world}')
-
-    def add_access(self, w1: int, w2: int, /):
-        self.access.add((w1, w2))
-        self.frames[w1]
-        self.frames[w2]
-
-    def has_access(self, w1: int, w2: int, /) -> bool:
-        return (w1, w2) in self.access
-
-    def visibles(self, world: int, /) -> set[int]:
-        return {w for w in self.frames if (world, w) in self.access}
-
-    # def world_frame(self, world: int) -> Frame:
-    #     return self.frames[world]
-    #     if world is None:
-    #         world = 0
-    #     if not isinstance(world, int):
-    #         raise TypeError(world)
-    #     if world not in self.frames:
-    #         self.frames[world] = Frame(world)
-    #     return self.frames[world]
 
     def value_of_opaque(self, s: Sentence, /, world: int = 0, **kw):
         return self.frames[world].opaques.get(s, self.unassigned_value)
@@ -1051,7 +1055,7 @@ class TabRules(LogicType.TabRules):
 
         def score_candidate(self, target: Target, /) -> float:
             """
-            :overrides: AdzHelper closure score
+            Overrides `AdzHelper` closure score
             """
             if target.get('flag'):
                 return 1.0
@@ -1063,7 +1067,7 @@ class TabRules(LogicType.TabRules):
             track_count = self[AplSentCount][branch].get(si, 0)
             if track_count == 0:
                 return 1.0
-            return -1.0 * self[MaxWorlds].modals(s) * track_count
+            return -1.0 * self[MaxWorlds].modals[s] * track_count
 
         def group_score(self, target: Target, /) -> float:
             if target['candidate_score'] > 0:

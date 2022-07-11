@@ -59,9 +59,6 @@ class Model(K.Model):
         del data['world']
         return data
 
-    def add_access(self, *_):
-        raise TypeError("Non-modal model: '%s'" % type(self))
-
 class TableauxSystem(K.TableauxSystem):
 
     modal = False

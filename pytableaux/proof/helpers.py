@@ -21,19 +21,19 @@ pytableaux.proof.helpers
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
+from collections.abc import Set
 from copy import copy
 from itertools import filterfalse
 from types import MappingProxyType as MapProxy
-from typing import (Any, Callable, Iterable, Iterator, Mapping,
-                    Sequence, TypeVar, TYPE_CHECKING)
+from typing import (TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence,
+                    TypeVar)
 
 from pytableaux.errors import Emsg, check
-from pytableaux.lang.lex import Constant, Predicated, Sentence
+from pytableaux.lang import Constant, Predicated, Sentence, Operator
 from pytableaux.proof import (Access, Branch, Node, Rule, RuleAttr, RuleEvent,
-                              RuleHelper, TabEvent, Target, filters, Tableau)
-from pytableaux.tools import EMPTY_MAP, abcs, closure, wraps
-from pytableaux.tools.mappings import dmap
-from pytableaux.tools.sets import EMPTY_SET, setm
+                              RuleHelper, TabEvent, Tableau, Target, filters)
+from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, abcs, closure, minfloor,
+                              wraps)
 
 if TYPE_CHECKING:
     from pytableaux.proof.rules import ClosingRule
@@ -66,9 +66,9 @@ class AdzHelper(RuleHelper):
 
     closure_rules: tuple[ClosingRule, ...]
 
-    def __init__(self, rule: Rule,/):
-        self.rule = rule
-        self.closure_rules = rule.tableau.rules.groups.get('closure', EMPTY_SET)
+    def __init__(self, rule, /):
+        super().__init__(rule)
+        self.closure_rules = self.rule.tableau.rules.groups.get('closure', EMPTY_SET)
 
     def _apply(self, target: Target):
         branch = target.branch
@@ -98,25 +98,13 @@ class AdzHelper(RuleHelper):
                     break
         return close_count / min(1, len(target['adds']))
 
-class BranchCache(dmap[Branch, _T], abcs.Copyable, RuleHelper):
+class BranchCache(dict[Branch, _T], RuleHelper):
+    "Base class for caching per branch."
 
+    __slots__ = ('rule', 'config')
     _valuetype: type[_T] = bool
 
-    __slots__ = 'rule', 'config'
-
-    def __init__(self, rule: Rule,/):
-        RuleHelper.__init__(self, rule)
-        self.listen_on()
-
-    def copy(self, /, *, listeners = False):
-        cls = type(self)
-        inst = cls.__new__(cls)
-        inst.rule = self.rule
-        inst.config = self.config
-        if listeners:
-            inst.listen_on()
-        inst.update(self)
-        return inst
+    __init__ = RuleHelper.__init__
 
     def listen_on(self):
         self.rule.tableau.on({
@@ -131,13 +119,16 @@ class BranchCache(dmap[Branch, _T], abcs.Copyable, RuleHelper):
         })
 
     def __after_branch_add(self, branch: Branch):
+        # Event: TabEvent.AFTER_BRANCH_ADD
         if branch.parent:
             self[branch] = copy(self[branch.parent])
         else:
-            self[branch] = self._empty_value(branch)
+            self[branch] = self._valuetype()
+            # self[branch] = self._empty_value(branch)
 
     def __after_branch_close(self, branch,/):
-        del(self[branch])
+        # Event: TabEvent.AFTER_BRANCH_CLOSE
+        del self[branch]
 
     def __repr__(self):
         info = self._reprdict()
@@ -147,36 +138,15 @@ class BranchCache(dmap[Branch, _T], abcs.Copyable, RuleHelper):
     def _reprdict(self):
         return dict(branches = len(self))
 
-    @classmethod
-    def _empty_value(cls, branch,/):
-        'Override, for example, if the value type takes arguments.'
-        return cls._valuetype()
+    # @classmethod
+    # def _empty_value(cls, branch,/):
+    #     'Override, for example, if the value type takes arguments.'
+    #     return cls._valuetype()
 
-    @classmethod
-    def _from_mapping(cls, mapping):
-        if not isinstance(mapping, BranchCache):
-            return NotImplemented
-        return mapping.copy()
-
-    @classmethod
-    def _from_iterable(cls, it):
-        return NotImplemented
-
-
-class BranchDictCache(BranchCache[dmap[_KT, _VT]]):
+class BranchDictCache(BranchCache[dict[_KT, _VT]]):
     'Copies each K->V item for parent branch via copy(V).'
-
-    _valuetype = dmap
-
     __slots__ = EMPTY_SET
-
-    def copy(self, /, *, listeners = False):
-        inst = super().copy(listeners = listeners)
-        inst.update({
-            key: value.copy()
-            for key, value in self.items()
-        })
-        return inst
+    _valuetype = dict
 
     def listen_on(self):
         super().listen_on()
@@ -187,6 +157,7 @@ class BranchDictCache(BranchCache[dmap[_KT, _VT]]):
         super().listen_off()
 
     def __after_branch_add(self, branch: Branch, /):
+        # Event: TabEvent.AFTER_BRANCH_ADD
         if branch.parent is not None:
             for key in self[branch]:
                 self[branch][key] = copy(self[branch.parent][key])
@@ -207,7 +178,7 @@ class QuitFlag(BranchCache[bool]):
         self.rule.off(RuleEvent.AFTER_APPLY, self.__call__)
         super().listen_off()
 
-    def __call__(self, target: Target, /) -> None:
+    def __call__(self, target: Target, /):
         self[target.branch] = bool(target.get('flag'))
 
 class BranchValueHook(BranchCache[_VT]):
@@ -218,9 +189,9 @@ class BranchValueHook(BranchCache[_VT]):
     a branch. Any truthy return value is cached for the branch. Once a value
     is stored for a branch, no further nodes are check.
     """
+    __slots__ = ('hook',)
     _valuetype = type(None)
     hook_method_name = '_branch_value_hook'
-    __slots__ = 'hook',
 
     def __init__(self, rule, /):
         super().__init__(rule)
@@ -235,6 +206,7 @@ class BranchValueHook(BranchCache[_VT]):
         super().listen_off()
 
     def __call__(self, node, branch, /) -> None:
+        # Event: TabEvent.AFTER_NODE_ADD
         if self[branch]:
             return
         res = self.hook(node, branch)
@@ -253,14 +225,14 @@ class BranchValueHook(BranchCache[_VT]):
 class BranchTarget(BranchValueHook[Target]):
     hook_method_name = '_branch_target_hook'
 
-class AplSentCount(BranchCache[dmap[Sentence, int]]):
+class AplSentCount(BranchCache[dict[Sentence, int]]):
     """
     Count the times the rule has applied for a sentence per branch. This tracks
     the `sentence` property of the rule's target. The target should also include
     the `branch` key.
     """
     __slots__ = EMPTY_SET
-    _valuetype = dmap
+    _valuetype = dict
 
     def listen_on(self):
         super().listen_on()
@@ -271,16 +243,18 @@ class AplSentCount(BranchCache[dmap[Sentence, int]]):
         super().listen_off()
 
     def __call__(self, target: Target):
+        # Event: RuleEvent.AFTER_APPLY
         if target.get('flag'):
             return
         counts = self[target.branch]
         sentence = target.sentence
         counts[sentence] = counts.get(sentence, 0) + 1
 
-class NodeCount(BranchCache[dmap[Node, int]]):
+class NodeCount(BranchCache[dict[Node, int]]):
+    "Track the number of rule applications to each node."
 
     __slots__ = EMPTY_SET
-    _valuetype = dmap
+    _valuetype = dict
 
     def listen_on(self):
         super().listen_on()
@@ -291,29 +265,46 @@ class NodeCount(BranchCache[dmap[Node, int]]):
         super().listen_off()
 
     def min(self, branch: Branch) -> int:
+        """Count the minimum number of applications of any node on the branch.
+
+        Args:
+            branch (Branch): The branch
+
+        Returns:
+            int: The minimum number of applications
+        """        
         if branch in self and len(self[branch]):
-            return min(self[branch].values())
+            return minfloor(0, self[branch].values())
         return 0
 
-    def isleast(self, node: Node, branch: Branch) -> bool:
+    def isleast(self, node, branch, /):
+        """Whether the node is one of the least-applied-to nodes on the branch.
+
+        Args:
+            node (Node): The node
+            branch (Branch): The branch
+
+        Returns:
+            bool: Whether the node is a least node
+        """        
         return self.min(branch) >= self[branch].get(node, 0)
 
-    def __call__(self, target: Target):
+    def __call__(self, target: Target, /):
+        # Event: RuleEvent.AFTER_APPLY
         if target.get('flag'):
             return
         counts = self[target.branch]
         node = target.node
         counts[node] = counts.get(node, 0) + 1
 
-class NodesWorlds(BranchCache[setm[tuple[Node, int]]]):
+class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
     """
     Track the nodes applied to by the rule for each world on the branch. The
     target must have `node`, and `world` attributes. The values of the cache
     are ``(node, world)`` pairs.
     """
     __slots__ = EMPTY_SET
-
-    _valuetype = setm
+    _valuetype = set
 
     def listen_on(self):
         super().listen_on()
@@ -324,15 +315,16 @@ class NodesWorlds(BranchCache[setm[tuple[Node, int]]]):
         super().listen_off()
 
     def __call__(self, target: Target, /):
+        # Event: RuleEvent.AFTER_APPLY
         if target.get('flag'):
             return
         self[target.branch].add((target.node, target.world))
 
-class UnserialWorlds(BranchCache[setm[int]]):
+class UnserialWorlds(BranchCache[set[int]]):
     "Track the unserial worlds on the branch."
-    __slots__ = EMPTY_SET
 
-    _valuetype = setm
+    __slots__ = EMPTY_SET
+    _valuetype = set
 
     def listen_on(self):
         super().listen_on()
@@ -343,32 +335,28 @@ class UnserialWorlds(BranchCache[setm[int]]):
         super().listen_off()
 
     def __call__(self, node: Node, branch: Branch, /):
+        # Event: TabEvent.AFTER_NODE_ADD
         for w in node.worlds:
             if node.get('world1') == w or branch.has({'world1': w}):
                 self[branch].discard(w)
             else:
                 self[branch].add(w)
 
-class WorldIndex(BranchDictCache[int, setm[int]]):
+class WorldIndex(BranchDictCache[int, set[int]]):
     'Index the visible worlds for each world on the branch.'
 
-    __slots__ = 'nodes',
+    __slots__ = ('nodes',)
 
-    class Nodes(BranchCache[dmap[Access, Node]]):
-        _valuetype = dmap
+    class Nodes(BranchCache[dict[Access, Node]]):
         __slots__ = EMPTY_SET
+        _valuetype = dict
 
         def __call__(self, node: Node, branch: Branch):
             self[branch][Access.fornode(node)] = node
 
-    def __init__(self, rule: Rule,/):
+    def __init__(self, rule, /):
         super().__init__(rule)
         self.nodes = self.Nodes(rule)
-
-    def copy(self, /, *, listeners = False):
-        inst: WorldIndex = super().copy(listeners = listeners)
-        inst.nodes = self.nodes.copy(listeners = listeners)
-        return inst
 
     def listen_on(self):
         super().listen_on()
@@ -390,17 +378,19 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
         #       track the intransitives?
         return self[branch].get(w2, EMPTY_SET) - self[branch].get(w1, EMPTY_SET)
 
-    def __call__(self, node: Node, branch: Branch):        
+    def __call__(self, node: Node, branch: Branch):
+        # Event: TabEvent.AFTER_NODE_ADD
         if node.is_access:
             w1, w2 = Access.fornode(node)
             if w1 not in self[branch]:
-                self[branch][w1] = setm()
+                self[branch][w1] = set()
             self[branch][w1].add(w2)
             self.nodes(node, branch)
 
 class FilterNodeCache(BranchCache[set[Node]]):
+    "Base class for caching nodes "
 
-    __slots__ = ('ignore_ticked',)
+    __slots__ = ('ignore_ticked', '_garbage')
     _valuetype = set
 
     #: Copied from Rule.ignore_ticked - whether to discard nodes
@@ -412,14 +402,33 @@ class FilterNodeCache(BranchCache[set[Node]]):
         'Whether to add the node to the branch set.'
         return False
 
-    def __init__(self, rule: Rule,/):
+    def __init__(self, rule, /):
         self.ignore_ticked = bool(getattr(rule, RuleAttr.IgnoreTicked))
+        self._garbage = set()
         super().__init__(rule)
 
-    def copy(self, /, *, listeners = False):
-        inst = super().copy(listeners = listeners)
-        inst.ignore_ticked = self.ignore_ticked
-        return inst
+    def release(self, node, branch, /) -> None:
+        """Mark the node/branch entry for garbage collection.
+
+        Args:
+            node (Node): The node
+            branch (Branch): The branch
+        """
+        self._garbage.add((branch, node))
+
+    def gc(self) -> None:
+        """Run garbage collection. Remove entries queued by ``.release()``.
+        
+        This should be called before iterating over all nodes. It is called
+        automatically by rules that use the ``@node_targets`` decorator.
+        """
+        if self._garbage:
+            for branch, node in self._garbage:
+                try:
+                    self[branch].discard(node)
+                except KeyError:
+                    pass
+            self._garbage.clear()
 
     def listen_on(self):
         super().listen_on()
@@ -435,10 +444,12 @@ class FilterNodeCache(BranchCache[set[Node]]):
         super().listen_off()
 
     def __after_node_add(self, node, branch, /):
+        # Event: TabEvent.AFTER_NODE_ADD
         if self(node, branch):
             self[branch].add(node)
 
     def __after_node_tick(self, node, branch, /):
+        # Event: TabEvent.AFTER_NODE_TICK
         self[branch].discard(node)
 
     @classmethod
@@ -460,7 +471,7 @@ class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
-    __slots__ = 'filters', '_garbage', 'pred',
+    __slots__ = ('filters', 'pred')
 
     filters: Mapping
     "Mapping from ``NodeCompare`` class to instance."
@@ -470,19 +481,11 @@ class FilterHelper(FilterNodeCache):
     setting, use ``.filter()``.
     """
 
-    _garbage: setm[tuple[Branch, Node]]
+    # _garbage: set[tuple[Branch, Node]]
 
-    def __init__(self, rule,/):
+    def __init__(self, rule, /):
         super().__init__(rule)
-        self._garbage = setm()
         self.filters, self.pred = self.config
-
-    def copy(self, /, *, listeners = False):
-        inst: FilterHelper = super().copy(listeners = listeners)
-        inst._garbage = self._garbage.copy()
-        inst.filters = self.filters
-        inst.pred = self.pred
-        return inst
 
     def filter(self, node, branch: Branch, /):
         """Whether the node passes the filter. If `ignore_ticked` is `True`,
@@ -490,8 +493,8 @@ class FilterHelper(FilterNodeCache):
         filters predicate ``.pred()`` is checked.
         
         Args:
-            node: The node.
-            branch: The node's branch.
+            node: The node
+            branch: The branch
 
         Return:
             bool: Whether the node meets the filter conditions and `ignore_ticked`
@@ -504,36 +507,17 @@ class FilterHelper(FilterNodeCache):
     __call__ = filter
 
     def example_node(self):
-        """Construct an example node based on the filter conditions."""
+        """Construct an example node based on the filter conditions.
+        
+        Returns:
+            dict: The node dict
+        """
         node = {}
         for filt in self.filters.values():
             n = filt.example_node()
             if n is not None:
                 node.update(n)
         return node
-
-    def release(self, node, branch, /) -> None:
-        """Mark the node/branch entry for garbage collection.
-
-        Args:
-            node: The node.
-            branch: The node's branch.
-        """
-        self._garbage.add((branch, node))
-
-    def gc(self) -> None:
-        """Run garbage collection. Remove entries queued by ``.release()``.
-        
-        This should be called before iterating over all nodes. It is called
-        automatically by rules that use the ``@node_targets`` decorator.
-        """
-        if self._garbage:
-            for branch, node in self._garbage:
-                try:
-                    self[branch].discard(node)
-                except KeyError:
-                    pass
-            self._garbage.clear()
 
     def _reprdict(self) -> dict:
         return super()._reprdict() | dict(
@@ -544,7 +528,7 @@ class FilterHelper(FilterNodeCache):
         )
 
     @classmethod
-    def configure_rule(cls, rulecls: type[Rule], config, **kw):
+    def configure_rule(cls, rulecls, config, **kw):
         """``RuleHelper`` init hook.
         
         * Verify `NodeFilters`.
@@ -561,27 +545,24 @@ class FilterHelper(FilterNodeCache):
             else:
                 for fcls, flag in dict(v).items():
                     configs.setdefault(fcls, flag)
-
-        isabstract = abcs.isabstract(rulecls)
-        if configs:
-            for fcls in configs:
-                check.subcls(check.inst(fcls, type), filters.NodeCompare)
-            if not isabstract:
+        for fcls in configs:
+            check.subcls(check.inst(fcls, type), filters.NodeCompare)
+        if not abcs.isabstract(rulecls):
+            if configs:
                 setattr(rulecls, attr, configs)
-                return cls.build_filters_pred(rulecls)
-        else:
-            if not isabstract:
+            else:
                 import warnings
                 warnings.warn(f"EMPTY '{attr}' attribute for {rulecls}. "
                     "All nodes will be cached.")
+            return cls._build_config(rulecls)
 
     @staticmethod
-    def build_filters_pred(rule: Rule,/):
-        configs: Mapping = getattr(rule, RuleAttr.NodeFilters)
+    def _build_config(rulecls,/):
+        configs: Mapping = getattr(rulecls, RuleAttr.NodeFilters)
         types = tuple(fcls for fcls, flag in configs.items()
             if flag is not NotImplemented)
         filters = MapProxy(dict(zip(
-            types, funcs := tuple(ftype(rule) for ftype in types)
+            types, funcs := tuple(ftype(rulecls) for ftype in types)
         )))
         def pred(node, /):
             return all(f(node) for f in funcs)
@@ -591,32 +572,32 @@ class FilterHelper(FilterNodeCache):
     @closure
     def node_targets():
 
-        def make_targets_fn(cls: type[FilterHelper], node_targets_fn):
+        def make_targets_fn(cls: type[FilterHelper], source_fn, /):
             """
             Method decorator to only iterate through nodes matching the
-            configured FilterHelper filters.
+            configured `FilterHelper` filters.
 
             The rule may return a falsy value for no targets, a single
-            target (non-empty Mapping), an Iterator or a Sequence.
+            target (non-empty `Mapping`), an `Iterator` or a `Sequence`.
             
             Returns a flat tuple of targets.
             """
-            node_targets_gen = make_targets_iter(node_targets_fn)
-            @wraps(node_targets_gen)
-            def get_targets_filtered(rule: Rule, branch: Branch, /):
+            targiter = make_targiter(source_fn)
+            @wraps(targiter)
+            def get_targets_filtered(rule: Rule, branch, /):
                 helper = rule[cls]
                 helper.gc()
-                return tuple(node_targets_gen(rule, helper[branch], branch))
+                return tuple(targiter(rule, helper[branch], branch))
             return get_targets_filtered
 
         def create(it, r, b, n, /):
             return Target(it, rule = r, branch = b, node = n)
 
-        def make_targets_iter(node_targets_fn):
-            @wraps(node_targets_fn)
-            def targets_gen(rule: Rule, nodes: Iterable[Node], branch: Branch, /):
+        def make_targiter(source_fn):
+            @wraps(source_fn)
+            def targets_gen(rule, nodes, branch, /):
                 for node in nodes:
-                    results = node_targets_fn(rule, node, branch)
+                    results = source_fn(rule, node, branch)
                     if not results:
                         # Filter anything falsy.
                         continue
@@ -625,7 +606,7 @@ class FilterHelper(FilterNodeCache):
                         yield create(results, rule, branch, node)
                     else:
                         # Multiple targets result.
-                        check.inst(results, (Sequence, Iterator))
+                        # check.inst(results, (Sequence, Iterator))
                         for res in results:
                             yield create(res, rule, branch, node)
 
@@ -640,13 +621,13 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
     Only nodes that are applicable according to the rule's ``NodeCompare`` helper.
     method are tracked.
     """
-    __slots__ = ('consts', 'filter')
 
-    _valuetype = dmap
+    __slots__ = ('consts', 'filter')
+    _valuetype = dict
 
     class Consts(BranchCache[set[Constant]]):
-        _valuetype = set
         __slots__ = EMPTY_SET
+        _valuetype = set
 
     consts: NodeConsts.Consts
 
@@ -666,11 +647,13 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
         super().listen_off()
 
     def __after_apply(self, target: Target, /):
+        # Event: RuleEvent.AFTER_APPLY
         if target.get('flag'):
             return
         self[target.branch][target.node].discard(target.constant)
 
     def __call__(self, node: Node, branch, /):
+        # Event: TabEvent.AFTER_NODE_ADD
         if self.filter(node, branch):
             if node not in self[branch]:
                 # By tracking per node, we are tracking per world, a fortiori.
@@ -685,6 +668,9 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
             self.consts[branch].update(consts)
 
 class WorldConsts(BranchDictCache[int, set[Constant]]):
+    """
+    Track the constants appearing at each world.
+    """
 
     __slots__ = EMPTY_SET
 
@@ -712,12 +698,12 @@ class MaxConsts(dict[Branch, int], RuleHelper):
     Project the maximum number of constants per world required for each branch
     by examining the branches after the trunk is built.
     """
-    __slots__ = ('rule', 'config', 'world_consts')
+
+    __slots__ = ('rule', 'config', 'wconsts')
 
     def __init__(self, rule, /):
         RuleHelper.__init__(self, rule)
-        self.world_consts = WorldConsts(rule)
-        self.listen_on()
+        self.wconsts = WorldConsts(rule)
 
     def listen_on(self):
         self.rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__call__)
@@ -731,12 +717,12 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         projected for the branch (origin) at the given world.
 
         Args:
-            branch: The branch.
-            world (int): The world.
+            branch (Branch): The branch
+            world (int): The world. Defaults to 0.
         """
         if world is None:
             world = 0
-        return len(self.world_consts[branch][world]) >= self.get(branch.origin, 1)
+        return len(self.wconsts[branch][world]) >= self.get(branch.origin, 1)
 
     def is_exceeded(self, branch: Branch, world = 0, /):
         """
@@ -744,35 +730,40 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         the branch (origin) at the given world.
 
         Args:
-            branch: The branch.
-            world (int): The world.
+            branch (Branch): The branch
+            world (int): The world. Defaults to 0.
+        
+        Returns:
+            bool: Whether constants are exceeded
         """
         if world is None:
             world = 0
-        return len(self.world_consts[branch][world]) > self.get(branch.origin, 1)
+        return len(self.wconsts[branch][world]) > self.get(branch.origin, 1)
 
-    def quit_flag(self, branch: Branch, /) -> dict:
-        """Generate a quit flag node for the branch. Return value is a ``dict``
-        with the following keys:
-
-        - *is_flag*: ``True``
-        - *flag*: ``'quit'``
-        - *info*: ``'RuleName:MaxConstants({n})'`` where *RuleName* is ``rule.name``,
-            and ``n`` is the computed max allowed constants for the branch.
+    def quit_flag(self, branch: Branch, /):
+        """
+        Generate a quit flag node for the branch.
 
         Args:
-            branch: The branch.
+            branch (Branch): The branch
 
         Returns:
-            The node dict.
+            dict: A dict with the following keys:
+                - *is_flag*: ``True``
+                - *flag*: ``'quit'``
+                - *info*: ``'RuleName:MaxConstants(n)'`` where *RuleName* is
+                    ``rule.name``, and ``n`` is the computed max allowed
+                    constants for the branch.
         """
         return {
             NodeAttr.is_flag: True,
             NodeAttr.flag: 'quit',
-            NodeAttr.info: f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin, 1)})',
+            NodeAttr.info: (f'{self.rule.name}:{type(self).__name__}'
+                f'({self.get(branch.origin, 1)})'),
         }
 
-    def __call__(self, tableau: Tableau, /) -> None:
+    def __call__(self, tableau: Tableau, /):
+        # Event: TabEvent.AFTER_TRUNK_BUILD
         for branch in tableau:
             origin = branch.origin
             if origin in self:
@@ -784,6 +775,12 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         Project the maximum number of constants for a branch (origin) as
         the number of constants already on the branch (min 1) * the number of
         quantifiers (min 1) + 1.
+
+        Args:
+            branch (Branch): The branch
+        
+        Returns:
+            int: The max constants
         """
         needed = sum(map(self._compute_node, branch))
         return max(1, len(branch.constants)) * max(1, needed) + 1
@@ -796,15 +793,26 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
     """Project the maximum number of worlds required for each branch by examining
     the branches after the trunk is built.
     """
-    __slots__ = ('rule', 'config', '_modals', '_modal_opfilter')
 
-    _modals: dict[Sentence, int]
+    __slots__ = ('rule', 'config', 'modals')
+
+    class Modals(dict[Sentence, int]):
+        """
+        Compute and cache the modal complexity of a sentence by counting its
+        modal operators.
+        """
+
+        __slots__ = ('filter',)
+
+        def __init__(self, operators: Set[Operator]):
+            self.filter = operators.__contains__
+
+        def __missing__(self, s: Sentence):
+            return self.setdefault(s, sum(map(self.filter, s.operators)))
 
     def __init__(self, rule: Rule,/):
         RuleHelper.__init__(self, rule)
-        self._modal_opfilter = getattr(rule, RuleAttr.ModalOperators).__contains__
-        self._modals = {}
-        self.listen_on()
+        self.modals = self.Modals(getattr(rule, RuleAttr.ModalOperators))
 
     def listen_on(self):
         self.rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__call__)
@@ -816,6 +824,12 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         """
         Whether we have already reached or exceeded the max number of worlds
         projected for the branch (origin).
+
+        Args:
+            branch (Branch): The branch
+
+        Returns:
+            bool: Whether max constants are reached
         """
         origin = branch.origin
         return origin in self and len(branch.worlds) >= self[origin]
@@ -824,31 +838,52 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         """
         Whether we have exceeded the max number of worlds projected for the
         branch (origin).
+
+        Args:
+            branch (Branch): The branch
+
+        Returns:
+            bool: Whether max constants are exceeded
         """
         origin = branch.origin
         return origin in self and len(branch.worlds) > self[origin]
 
-    def modals(self, s: Sentence, /) -> int:
-        """
-        Compute and cache the modal complexity of a sentence by counting its
-        modal operators.
-        """
-        if s not in self._modals:
-            self._modals[s] = sum(map(self._modal_opfilter, s.operators))
-        return self._modals[s]
+    # def modals(self, s: Sentence, /) -> int:
+    #     """
+    #     Compute and cache the modal complexity of a sentence by counting its
+    #     modal operators.
+
+    #     Args:
+    #         s (Sentence): The sentence
+        
+    #     Returns:
+    #         int: The number of modal operators
+    #     """
+    #     if s not in self._modals:
+    #         self._modals[s] = sum(map(self._modal_opfilter, s.operators))
+    #     return self._modals[s]
 
     def quit_flag(self, branch: Branch, /) -> dict[str, Any]:
         """
         Generate a quit flag node for the branch.
+
+        Returns:
+            dict: A dict with the following keys:
+                - *is_flag*: ``True``
+                - *flag*: ``'quit'``
+                - *info*: ``'RuleName:MaxWorlds(n)'`` where *RuleName* is
+                    ``rule.name``, and ``n`` is the computed max allowed
+                    worlds for the branch.
         """
-        info = f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin)})'
         return {
             NodeAttr.is_flag: True,
             NodeAttr.flag: 'quit',
-            NodeAttr.info: info,
+            NodeAttr.info: (f'{self.rule.name}:{type(self).__name__}'
+                f'({self.get(branch.origin)})'),
         }
 
     def __call__(self, tableau: Tableau, /):
+        # Event: TabEvent.AFTER_TRUNK_BUILD
         for branch in tableau:
             origin = branch.origin
             # For normal logics, we will have only one trunk branch.
@@ -861,10 +896,10 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         # the number of worlds already on the branch + the number of modal
         # operators + 1.
         return 1 + len(branch.worlds) + sum(
-            map(self.modals, (
+            map(self.modals.__getitem__, (
                 node['sentence']
                 for node in filterfalse(branch.is_ticked, branch)
-                if 'sentence' in node
+                    if 'sentence' in node
             ))
         )
 
@@ -872,7 +907,11 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
     def configure_rule(cls, rulecls, config, **kw):
         "``RuleHelper`` init hook. Set the `modal_operators` attribute."
         super().configure_rule(rulecls, config, **kw)
-        if not hasattr(rulecls, RuleAttr.ModalOperators):
+        try:
+            ops = getattr(rulecls, RuleAttr.ModalOperators)
+        except AttributeError:
             raise Emsg.MissingAttribute(RuleAttr.ModalOperators)
+        else:
+            check.inst(ops, Set)
 
 from pytableaux.proof import NodeAttr

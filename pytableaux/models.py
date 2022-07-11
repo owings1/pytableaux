@@ -135,6 +135,8 @@ class BaseModel(Generic[MvalT_co], Abc):
     # Value: ClassVar[type[Mval]]
     Value: ClassVar[type[MvalT_co]]
 
+    unassigned_value: ClassVar[MvalT_co]
+
     truth_functional_operators: ClassVar[setf[Operator]] = setf({
         Operator.Assertion             ,
         Operator.Negation              ,

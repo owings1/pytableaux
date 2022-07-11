@@ -45,6 +45,7 @@ class BaseModel(abcs.Abc, Generic[MvalT_co], metaclass=abcs.AbcMeta):
     Value: ClassVar[type[MvalT_co]]
     truth_functional_operators: ClassVar[sets.setf[Operator]]
     modal_operators: ClassVar[sets.setf[Operator]]
+    unassigned_value: ClassVar[MvalT_co]
     @property
     def id(self) -> int: ...
     def finish(self) -> None: ...

@@ -340,6 +340,13 @@ class RuleHelper(metaclass = abcs.AbcMeta):
     def __init__(self, rule: Rule, /):
         self.rule = rule
         self.config = rule.Helpers.get(type(self))
+        self.listen_on()
+
+    def listen_on(self):
+        pass
+
+    def listen_off(self):
+        pass
 
     @classmethod
     def configure_rule(cls, rulecls, config: Any, /):

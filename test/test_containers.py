@@ -251,7 +251,6 @@ class TestMappingApi(BaseSuite):
 
         classes = get_subclasses(MappingApi) | (
             # Make sure these are tested, for good measure.
-            BranchCache,
             ParseTable,
             EventsListeners,
             Target,

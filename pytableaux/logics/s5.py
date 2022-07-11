@@ -41,18 +41,23 @@ class Meta(K.Meta):
 class Model(S4.Model):
 
     def finish(self):
-        finish = super().finish
         while True:
-            finish()
+            super().finish
             to_add = set()
             for w1 in self.frames:
-                for w2 in self.visibles(w1):
-                    a = (w2, w1)
-                    if a not in self.access:
-                        to_add.add(a)
-            if len(to_add) == 0:
+                for w2 in self.R[w1]:
+                    if w1 not in self.R[w2]:
+                        to_add.add((w2, w1))
+                # for w2 in self.visibles(w1):
+                    # a = (w2, w1)
+                    # if not self.has_access(w2, w1):
+                    #     to_add.add(a)
+            if not to_add:
                 return
-            self.access.update(to_add)
+            for w1, w2 in to_add:
+                self.R[w1].add(w2)
+                # self.add_access(w1, w2)
+            # self.access.update(to_add)
 
 class TableauxSystem(K.TableauxSystem):
     pass
