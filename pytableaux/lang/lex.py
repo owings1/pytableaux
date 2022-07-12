@@ -33,8 +33,8 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang import (BiCoords, LangCommonEnum, LangCommonMeta,
                              LexicalAbcMeta, SysPredEnumMeta, TriCoords,
                              nosetattr, raiseae)
-from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, DequeCache, abcs, dmap,
-                              lazy, membr, qsetf, seqf, setf, wraps)
+from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, DequeCache, abcs,
+                              lazy, membr, qsetf, wraps)
 
 __all__ = (
     'Atomic',
@@ -249,7 +249,7 @@ class Lexical:
     def __init_subclass__(subcls: type[Lexical], /, *,
         lexcopy = False,
         skipnames = {tools.dund('init_subclass')},
-        _cpnames = set(map(tools.dund, ('copy', 'deepcopy'))),
+        _cpnames = frozenset(map(tools.dund, ('copy', 'deepcopy'))),
         _ftypes = (classmethod, staticmethod, FunctionType),
         **kw
     ):
@@ -264,13 +264,14 @@ class Lexical:
         if not lexcopy or __class__ not in subcls.__bases__:
             return
 
-        src = dmap(__class__.__dict__)
-        src -= set(subcls.__dict__)
-        src -= set(skipnames)
+        src = dict(__class__.__dict__)
+        for key in chain(subcls.__dict__, skipnames):
+            src.pop(key, None)
 
         for name in _cpnames:
             if name not in src:
-                src -= _cpnames
+                for name in _cpnames:
+                    src.pop(name, None)
                 break
 
         for name, value in src.items():
@@ -342,7 +343,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
     index: int
     "The member index in the members sequence."
 
-    strings: setf[str]
+    strings: frozenset[str]
     """Name, label, or other strings unique to a member. These are automatically
     added as member keys.
     """
@@ -393,7 +394,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
         self.order = order
         self.sort_tuple = _Ranks[type(self).__name__], order
         self.label = label
-        self.strings = setf((self.name, self.label))
+        self.strings = frozenset((self.name, self.label))
         self.ident = self.identitem(self)
         self.hash = self.hashitem(self)
 
@@ -587,22 +588,22 @@ class Sentence(LexicalAbc):
 
     __slots__ = EMPTY_SET
 
-    predicates: setf[Predicate]
+    predicates: frozenset[Predicate]
     "Set of predicates, recursive."
 
-    constants: setf[Constant]
+    constants: frozenset[Constant]
     "Set of constants, recursive."
 
-    variables: setf[Variable]
+    variables: frozenset[Variable]
     "Set of variables, recursive."
 
-    atomics: setf[Atomic]
+    atomics: frozenset[Atomic]
     "Set of atomic sentences, recursive."
 
-    quantifiers: seqf[Quantifier]
+    quantifiers: tuple[Quantifier, ...]
     "Sequence of quantifiers, recursive."
 
-    operators: seqf[Operator]
+    operators: tuple[Operator, ...]
     "Sequence of operators, recursive."
 
     def negate(self):
@@ -873,7 +874,7 @@ class Atomic(CoordsItem, Sentence):
         """
         self.predicates = self.constants = self.variables = EMPTY_SET
         self.quantifiers = self.operators = EMPTY_SEQ
-        self.atomics = setf((self,))
+        self.atomics = frozenset((self,))
 
     def __new__(cls, *spec):
         return CoordsItem.__new__(cls, *spec)
@@ -910,8 +911,8 @@ class Predicated(Sentence, Sequence[Parameter]):
         if len(params) != pred.arity:
             raise TypeError(self.predicate, len(params), pred.arity)
 
-        self.predicates = setf((pred,))
-        self.paramset = setf(params)
+        self.predicates = frozenset((pred,))
+        self.paramset = frozenset(params)
         self.operators = self.quantifiers = EMPTY_SEQ
         self.atomics = EMPTY_SET
         self.spec = (
@@ -944,16 +945,16 @@ class Predicated(Sentence, Sequence[Parameter]):
     params: tuple
     "The parameters."
 
-    paramset: setf[Parameter]
+    paramset: frozenset[Parameter]
     "A set view of parameters."
 
     @lazy.prop
     def constants(self):
-        return setf(p for p in self.paramset if p.is_constant)
+        return frozenset(p for p in self.paramset if p.is_constant)
 
     @lazy.prop
     def variables(self):
-        return setf(p for p in self.paramset if p.is_variable)
+        return frozenset(p for p in self.paramset if p.is_variable)
 
     def substitute(self, pnew, pold, /):
         if pnew == pold or pold not in self.paramset:
@@ -1052,7 +1053,7 @@ class Quantified(Sentence, Sequence):
 
     @lazy.prop
     def quantifiers(self):
-        return seqf(chain((self.quantifier,), self.sentence.quantifiers))
+        return tuple(chain((self.quantifier,), self.sentence.quantifiers))
 
     def unquantify(self, c, /):
         """Instantiate the variable with a constant.
@@ -1172,15 +1173,15 @@ class Operated(Sentence, Sequence[Sentence]):
 
     @lazy.prop
     def predicates(self):
-        return setf(chain.from_iterable(s.predicates for s in self))
+        return frozenset(chain.from_iterable(s.predicates for s in self))
 
     @lazy.prop
     def constants(self):
-        return setf(chain.from_iterable(s.constants for s in self))
+        return frozenset(chain.from_iterable(s.constants for s in self))
 
     @lazy.prop
     def variables(self):
-        return setf(chain.from_iterable(s.variables for s in self))
+        return frozenset(chain.from_iterable(s.variables for s in self))
 
     @lazy.prop
     def quantifiers(self):
@@ -1188,7 +1189,7 @@ class Operated(Sentence, Sequence[Sentence]):
 
     @lazy.prop
     def operators(self):
-        return seqf(
+        return tuple(
             (self.operator, *chain.from_iterable(
                 s.operators for s in self
             ))
@@ -1196,7 +1197,7 @@ class Operated(Sentence, Sequence[Sentence]):
 
     @lazy.prop
     def atomics(self):
-        return setf(chain.from_iterable(s.atomics for s in self))
+        return frozenset(chain.from_iterable(s.atomics for s in self))
 
     def substitute(self, pnew, pold, /):
         if pnew == pold:

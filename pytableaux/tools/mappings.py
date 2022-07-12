@@ -32,7 +32,7 @@ from pytableaux import __docformat__
 from pytableaux.errors import Emsg
 from pytableaux.tools import (EMPTY_MAP, abcs, closure, isattrstr, itemsiter,
                               membr, thru, wraps)
-from pytableaux.tools.sets import EMPTY_SET, setf
+from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
     'defaultdmap',
@@ -473,7 +473,7 @@ def _opcache():
 
     class FuncCache(dict):
 
-        __slots__ = setf(('get_res_iter', 'get_res_type'))
+        __slots__ = frozenset(('get_res_iter', 'get_res_type'))
 
         get_res_iter: Callable
         get_res_type: Callable
@@ -530,7 +530,7 @@ def _opcache():
 
     class TypeFuncsCache(dict[str, FuncCache]):
 
-        __slots__ = setf({'mapitype'})
+        __slots__ = frozenset({'mapitype'})
 
         def __init__(self, mapitype):
             self.mapitype = mapitype

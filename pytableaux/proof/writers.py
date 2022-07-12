@@ -25,14 +25,14 @@ import os
 from abc import abstractmethod as abstract
 from collections import deque
 from types import MappingProxyType as MapProxy
-from typing import Mapping, TYPE_CHECKING
+from typing import TYPE_CHECKING, Mapping
 
 import jinja2
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import LexWriter, Notation
-from pytableaux.tools import EMPTY_MAP, abcs, closure
-from pytableaux.tools.hybrids import qset
+from pytableaux.tools import EMPTY_MAP, abcs, closure, qset
+
 if TYPE_CHECKING:
     from pytableaux.proof import Tableau, TreeStruct
 

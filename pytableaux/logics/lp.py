@@ -20,7 +20,7 @@ import pytableaux.logics.fde as FDE
 from pytableaux.models import BaseModel, ValueLP
 from pytableaux.proof import Branch, Node, Target, sdnode
 from pytableaux.proof.rules import BaseClosureRule
-from pytableaux.tools import qsetf, setf
+from pytableaux.tools import qsetf
 
 name = 'LP'
 
@@ -37,7 +37,7 @@ class Meta(FDE.Meta):
 
 class Model(FDE.Model, BaseModel[ValueLP]):
     Value = ValueLP
-    designated_values = setf({Value.B, Value.T})
+    designated_values = frozenset({Value.B, Value.T})
     unassigned_value = Value.F
 
 class TableauxSystem(FDE.TableauxSystem):

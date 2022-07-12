@@ -7,7 +7,6 @@ from pytableaux.lang import (Argument, LangCommonMeta, Lexical, LexType,
                              Sentence, TableStore, Variable)
 from pytableaux.tools import abcs
 from pytableaux.tools.mappings import MapCover
-from pytableaux.tools.sequences import seqf
 from pytableaux.typing import _Self
 
 _ParseTableValue = int|Lexical
@@ -56,7 +55,7 @@ class PolishParser(BaseParser):...
 class StandardParser(BaseParser):...
 class ParseTable(MapCover[str, tuple[_ParseTableKey, _ParseTableValue]], TableStore, metaclass=abc.ABCMeta):
     reversed: Mapping[tuple[_ParseTableKey, _ParseTableValue], str]
-    chars: Mapping[_ParseTableKey, seqf[str]]
+    chars: Mapping[_ParseTableKey, tuple[str,...]]
     keypair: tuple[Notation, str]
     @property
     def notation(self) -> Notation: ...

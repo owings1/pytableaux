@@ -4,7 +4,7 @@ _T = TypeVar('_T')
 _T_co = TypeVar('_T_co', covariant=True)
 _SetT = TypeVar('_SetT', bound = SetApi)
 
-EMPTY_SET: setf
+EMPTY_SET: frozenset
 
 class SetApi(Set[_T_co]):
     def __or__(self:_SetT, other: Iterable) -> _SetT: ...

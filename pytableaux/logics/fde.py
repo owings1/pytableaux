@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from types import MappingProxyType as MapProxy
-from typing import Any
+from typing import Any, Optional
 
 from pytableaux.errors import Emsg
 from pytableaux.lang import (Argument, Atomic, Constant, Operated, Operator,
@@ -489,16 +489,16 @@ class TableauxSystem(TableauxSystem):
         s = node.get('sentence')
         if s is None:
             return 0
-        last_is_negated = False
-        complexity = 0
+        lastneg = False
+        result = 0
         for oper in s.operators:
-            if oper is Operator.Negation and not last_is_negated:
-                last_is_negated = True
+            if not lastneg and oper is Operator.Negation:
+                lastneg = True
                 continue
             if oper in cls.branchables:
-                complexity += cls.branchables[oper][last_is_negated][node['designated']]
-                last_is_negated = False
-        return complexity
+                result += cls.branchables[oper][lastneg][node['designated']]
+                lastneg = False
+        return result
     
 
 class DefaultNodeRule(rules.GetNodeTargetsRule):
@@ -511,7 +511,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
     """
     NodeFilters = filters.DesignationNode,
-    designation: bool|None = None
+    designation: Optional[bool] = None
 
 class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
     'Mixin class for typical operator rules.'

@@ -25,11 +25,10 @@ from collections.abc import Set
 from copy import copy
 from itertools import filterfalse
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence,
-                    TypeVar)
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
 
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import Constant, Predicated, Sentence, Operator
+from pytableaux.lang import Constant, Operator, Predicated, Sentence
 from pytableaux.proof import (Access, Branch, Node, Rule, RuleAttr, RuleEvent,
                               RuleHelper, TabEvent, Tableau, Target, filters)
 from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, abcs, closure, minfloor,
@@ -481,8 +480,6 @@ class FilterHelper(FilterNodeCache):
     setting, use ``.filter()``.
     """
 
-    # _garbage: set[tuple[Branch, Node]]
-
     def __init__(self, rule, /):
         super().__init__(rule)
         self.filters, self.pred = self.config
@@ -847,21 +844,6 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         """
         origin = branch.origin
         return origin in self and len(branch.worlds) > self[origin]
-
-    # def modals(self, s: Sentence, /) -> int:
-    #     """
-    #     Compute and cache the modal complexity of a sentence by counting its
-    #     modal operators.
-
-    #     Args:
-    #         s (Sentence): The sentence
-        
-    #     Returns:
-    #         int: The number of modal operators
-    #     """
-    #     if s not in self._modals:
-    #         self._modals[s] = sum(map(self._modal_opfilter, s.operators))
-    #     return self._modals[s]
 
     def quit_flag(self, branch: Branch, /) -> dict[str, Any]:
         """

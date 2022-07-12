@@ -72,7 +72,7 @@ class SequenceSet(SequenceApi, SetApi):
         return f'{type(self).__name__}(''{'f'{repr(list(self))[1:-1]}''})'
 
 class qsetf(SequenceSet):
-    'Immutable sequence set implementation setf and seqf bases.'
+    'Immutable sequence set implementation with frozenset and tuple bases.'
 
     _set_: frozenset
     _seq_: tuple

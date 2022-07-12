@@ -37,7 +37,7 @@ __all__ = (
     'SetView',
 )
 
-EMPTY_SET: setf = frozenset()
+EMPTY_SET = frozenset()
 
 class SetApi(Set, abcs.Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
@@ -87,8 +87,6 @@ class setf(SetApi, frozenset):
     __iter__     = frozenset.__iter__
     __contains__ = frozenset.__contains__
 
-EMPTY_SET = setf()
-
 class setm(MutableSetApi, set):
     'MutableSetApi wrapper around built-in set.'
     __slots__ = EMPTY_SET
@@ -104,7 +102,7 @@ class setm(MutableSetApi, set):
 class SetView(SetApi):
     'SetApi cover.'
 
-    __slots__ = setf(SetApi.__abstractmethods__)
+    __slots__ = frozenset(SetApi.__abstractmethods__)
 
     def __new__(cls, set_, /,):
         check.inst(set_, Set)
@@ -122,7 +120,7 @@ class SetView(SetApi):
 
     @classmethod
     def _from_iterable(cls, it):
-        return cls(setf(it))
+        return cls(frozenset(it))
 
 del(
     abcs,

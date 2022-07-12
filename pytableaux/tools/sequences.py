@@ -27,7 +27,7 @@ from itertools import chain, repeat
 from typing import Iterable, MutableSequence, Sequence, SupportsIndex
 
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import abcs, closure
+from pytableaux.tools import abcs
 from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
@@ -35,7 +35,6 @@ __all__ = (
     'deqseq',
     'EMPTY_SEQ',
     'MutableSequenceApi',
-    'seqf',
     'seqm',
     'SequenceApi',
     'SeqCover',
@@ -112,34 +111,6 @@ class SequenceApi(Sequence, abcs.Copyable):
     def _rconcat_res_type(cls, othrtype, /):
         '''Return the type (or callable) to construct a new instance from __radd__.'''
         return cls._concat_res_type(othrtype)
-
-class seqf(tuple, SequenceApi):
-    'Frozen sequence, fusion of tuple and SequenceApi.'
-
-    # NB: tuple implements all equality and ordering methods,
-    # as well as __hash__ method.
-
-    __slots__ = EMPTY_SET
-
-    # Note that __getitem__ with slice returns a tuple, not a seqf,
-    # because it does not call _from_iterable.
-
-    @classmethod
-    @closure
-    def _rconcat_res_type():
-        passtypes = {tuple, list, deque}
-        def restype(cls: type[seqf], othrtype: type[Iterable], /):
-            if othrtype is seqf or othrtype in passtypes:
-                return othrtype
-            return cls._concat_res_type(othrtype)
-        return restype
-
-    __add__ = SequenceApi.__add__
-    __mul__  = SequenceApi.__mul__
-    __rmul__ = SequenceApi.__rmul__
-
-    def __repr__(self):
-        return type(self).__name__ + super().__repr__()
 
 class MutableSequenceApi(SequenceApi, MutableSequence):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
@@ -238,7 +209,7 @@ class deqseq(deque, MutableSequenceApi):
             return cls(it, maxlen = it.maxlen)
         return cls(it)
 
-EMPTY_SEQ = seqf()
+EMPTY_SEQ = ()
 
 SequenceApi.register(tuple)
 MutableSequenceApi.register(list)

@@ -15,7 +15,6 @@ from pytableaux.tools.mappings import dmap as dmap
 from pytableaux.tools.mappings import dmapattr as dmapattr
 from pytableaux.tools.mappings import dmapns as dmapns
 from pytableaux.tools.sequences import EMPTY_SEQ as EMPTY_SEQ
-from pytableaux.tools.sequences import seqf as seqf
 from pytableaux.tools.sets import EMPTY_SET as EMPTY_SET
 from pytableaux.tools.sets import SetView as SetView
 from pytableaux.tools.sets import setf as setf

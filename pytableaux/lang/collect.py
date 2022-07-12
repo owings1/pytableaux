@@ -28,12 +28,9 @@ from typing import Any, Iterable
 
 from pytableaux import EMPTY_SET, __docformat__, tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import LangCommonMeta, raiseae
-from pytableaux.lang.lex import Predicate, Sentence
-from pytableaux.tools import abcs, lazy, membr, wraps
-from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import dmap
-from pytableaux.tools.sequences import SequenceApi, seqf
+from pytableaux.lang import LangCommonMeta, Predicate, Sentence, raiseae
+from pytableaux.tools import abcs, lazy, membr, qset, wraps
+from pytableaux.tools.sequences import SequenceApi
 
 __all__ = (
     'Argument',
@@ -60,11 +57,11 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     """
 
     def __init__(self, conclusion, premises = None, title = None):
-        self.seq = seqf(
+        self.seq = tuple(
             (Sentence(conclusion),) if premises is None
             else map(Sentence, (conclusion, *premises))
         )
-        self.premises = seqf(self.seq[1:])
+        self.premises = tuple(self.seq[1:])
         if title is not None:
             check.inst(title, str)
         self.title = title
@@ -76,7 +73,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
         'title',
     )
 
-    premises: seqf[Sentence]
+    premises: tuple[Sentence, ...]
 
     @property
     def conclusion(self) -> Sentence:
@@ -144,7 +141,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
 
     def __getitem__(self, index, /):
         if isinstance(index, slice):
-            return seqf(self.seq[index])
+            return tuple(self.seq[index])
         return self.seq[index]
 
     @classmethod
@@ -160,9 +157,9 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
     def _rconcat_res_type(cls, othrtype: type[Iterable], /):
         if issubclass(othrtype, Sentence):
             return NotImplemented
-        if othrtype is tuple or othrtype is list:
+        if othrtype is list:
             return othrtype
-        return seqf
+        return tuple
 
     @classmethod
     def _from_iterable(cls, it):
@@ -202,7 +199,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
 class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dict(cast = Predicate)}):
     'Predicate store. An ordered set with a multi-keyed lookup index.'
 
-    _lookup: dmap[Any, Predicate]
+    _lookup: dict[Any, Predicate]
     __slots__ = '_lookup',
 
     def __init__(self, values = None, /, *,
@@ -216,7 +213,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dic
             key: Optional sort key function.
             reverse: Whether to reverse sort.
         """
-        self._lookup = dmap()
+        self._lookup = {}
         super().__init__(values)
         if sort:
             self.sort(key = key, reverse = reverse)

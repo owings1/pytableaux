@@ -7,8 +7,6 @@ from pytableaux.lang import (BiCoords, LangCommonEnum, LexicalAbcMeta, LangCommo
                              SysPredEnumMeta, TriCoords)
 from pytableaux.tools import abcs
 from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.sequences import seqf
-from pytableaux.tools.sets import setf
 from pytableaux.typing import _T, _LexT, _SenT
 from _typeshed import SupportsRichComparison as _SupportsRichCompare
 
@@ -41,7 +39,7 @@ class _LexicalEnumAttrs:
     order: int
     label: str
     index: int
-    strings: setf[str]
+    strings: frozenset[str]
 class __OperatorMeta(LangCommonEnumMeta):
     lib_opmap: Mapping[str, Operator]
 class _OperatorAttrs:
@@ -126,12 +124,12 @@ class Operator(_OperatorAttrs, LexicalEnum, metaclass = __OperatorMeta):
     def __call__(self, *operands: Sentence) -> Operated: ...
 
 class Sentence(LexicalAbc):
-    predicates: setf[Predicate]
-    constants: setf[Constant]
-    variables: setf[Variable]
-    atomics: setf[Atomic]
-    quantifiers: seqf[Quantifier]
-    operators: seqf[Operator]
+    predicates: frozenset[Predicate]
+    constants: frozenset[Constant]
+    variables: frozenset[Variable]
+    atomics: frozenset[Atomic]
+    quantifiers: tuple[Quantifier, ...]
+    operators: tuple[Operator, ...]
     def negate(self) -> Operated: ...
     def asserted(self) -> Operated: ...
     def disjoin(self, rhs: Sentence) -> Operated: ...
@@ -170,7 +168,7 @@ class Predicated(Sentence, Sequence[Parameter]):
     spec: _PredicatedSpec
     predicate: Predicate
     params: tuple[Parameter, ...]
-    paramset: setf[Parameter]
+    paramset: frozenset[Parameter]
     @overload
     def __init__(self, pred: Predicate, param: Parameter, /) -> None: ...
     @overload

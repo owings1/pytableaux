@@ -42,30 +42,30 @@ class Test_abcm(BaseSuite):
         res = abcs.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
         assert tuple(res) == ('A', 'B1', 'B2')
 
-class Test_seqf(BaseSuite):
-    def test_add_radd(self):
-        lh = seqf('abc')
-        rh = 'd',
-        r = lh + rh
-        assert list(r) == list('abcd')
-        assert type(r) is seqf
-        r = rh + lh
-        assert list(r) == list('dabc')
-        assert type(r) is tuple
-        rh = ['d']
-        r = lh + rh
-        assert list(r) == list('abcd')
-        assert type(r) is seqf
-        r = rh + lh
-        assert list(r) == list('dabc')
-        assert type(r) is list
-        rh = deque('d')
-        r = lh + rh
-        assert list(r) == list('abcd')
-        assert type(r) is seqf
-        r = rh + lh
-        assert list(r) == list('dabc')
-        assert type(r) is deque
+# class Test_seqf(BaseSuite):
+#     def test_add_radd(self):
+#         lh = seqf('abc')
+#         rh = 'd',
+#         r = lh + rh
+#         assert list(r) == list('abcd')
+#         assert type(r) is seqf
+#         r = rh + lh
+#         assert list(r) == list('dabc')
+#         assert type(r) is tuple
+#         rh = ['d']
+#         r = lh + rh
+#         assert list(r) == list('abcd')
+#         assert type(r) is seqf
+#         r = rh + lh
+#         assert list(r) == list('dabc')
+#         assert type(r) is list
+#         rh = deque('d')
+#         r = lh + rh
+#         assert list(r) == list('abcd')
+#         assert type(r) is seqf
+#         r = rh + lh
+#         assert list(r) == list('dabc')
+#         assert type(r) is deque
 
 class TestSetList(BaseSuite):
 
