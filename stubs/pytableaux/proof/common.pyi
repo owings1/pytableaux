@@ -1,20 +1,18 @@
 from typing import (Any, Collection, Iterable, Iterator, Literal, Mapping, Set,
                     SupportsIndex, overload)
-
+from collections.abc import Sequence
 from pytableaux.lang import Constant, Sentence
 from pytableaux.models import BaseModel
 from pytableaux.proof.tableaux import Rule
-from pytableaux.tools import abcs
+from pytableaux.tools import abcs, qset, dictattr
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import MapCover, dictattr
-from pytableaux.tools.sequences import SequenceApi
+from pytableaux.tools.mappings import MapCover
 from pytableaux.tools.sets import SetView
 from pytableaux.typing import _Self
 
 
 class Node(MapCover, abcs.Copyable):
-    def __init__(self, arg: Mapping = ...): ...
+    def __init__(self, arg: Mapping = ...) -> None: ...
     @property
     def id(self) -> int: ...
     @property
@@ -41,7 +39,7 @@ class Node(MapCover, abcs.Copyable):
     @overload
     def __getitem__(self, key: str) -> Any:...
 
-class Branch(SequenceApi[Node], EventEmitter):
+class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
     def __init__(self, parent: Branch = ...) -> None: ...
     def copy(self:_Self, *, parent: Branch = ..., listeners: bool = ...) -> _Self: ...
     @property

@@ -23,6 +23,7 @@ Language collection classes.
 from __future__ import annotations
 
 import operator as opr
+from collections.abc import Sequence
 from itertools import repeat
 from typing import Any, Iterable
 
@@ -30,7 +31,6 @@ from pytableaux import EMPTY_SET, __docformat__, tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import LangCommonMeta, Predicate, Sentence, raiseae
 from pytableaux.tools import abcs, lazy, membr, qset, wraps
-from pytableaux.tools.sequences import SequenceApi
 
 __all__ = (
     'Argument',
@@ -49,10 +49,10 @@ class ArgumentMeta(LangCommonMeta):
             return args[0]
         return super().__call__(*args, **kw)
 
-class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
+class Argument(Sequence[Sentence], abcs.Copyable, immutcopy = True, metaclass = ArgumentMeta):
     """Argument class.
     
-    A container of sentences (premises, conclusion) with sequence implementation
+    A container of sentences (premises, conclusion) with sequence implementation,
     ordering and hashing.
     """
 
@@ -66,12 +66,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
             check.inst(title, str)
         self.title = title
 
-    __slots__ = (
-        '_hash',
-        'premises',
-        'seq',
-        'title',
-    )
+    __slots__ = ('_hash', 'premises', 'seq', 'title')
 
     premises: tuple[Sentence, ...]
 
@@ -140,37 +135,7 @@ class Argument(SequenceApi[Sentence], metaclass = ArgumentMeta):
         return len(self.seq)
 
     def __getitem__(self, index, /):
-        if isinstance(index, slice):
-            return tuple(self.seq[index])
         return self.seq[index]
-
-    @classmethod
-    def _concat_res_type(cls, othrtype: type[Iterable], /):
-        if issubclass(othrtype, Sentence):
-            # Protect against adding an Operated sentence, which counts
-            # as a sequence of sentences. It would add just the operands
-            # but not the sentence.
-            return NotImplemented
-        return super()._concat_res_type(othrtype)
-
-    @classmethod
-    def _rconcat_res_type(cls, othrtype: type[Iterable], /):
-        if issubclass(othrtype, Sentence):
-            return NotImplemented
-        if othrtype is list:
-            return othrtype
-        return tuple
-
-    @classmethod
-    def _from_iterable(cls, it):
-        '''Build an argument from an non-empty iterable using the first element
-        as the conclusion, and the others as the premises.'''
-        it = iter(it)
-        try:
-            conc = next(it)
-        except StopIteration:
-            raise TypeError('empty iterable') from None
-        return cls(conc, it)
 
     #******  Other
 

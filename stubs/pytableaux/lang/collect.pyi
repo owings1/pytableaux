@@ -1,9 +1,8 @@
 from typing import Callable, Hashable, Iterable, SupportsIndex, overload
-
+from collections.abc import Sequence
 from _typeshed import SupportsRichComparison as _SupportsRichCompare
 from pytableaux.lang import LangCommonMeta, Predicate, Sentence
-from pytableaux.tools import qset
-from pytableaux.tools.sequences import SequenceApi
+from pytableaux.tools import qset, abcs
 
 pass
 
@@ -12,7 +11,7 @@ from pytableaux.lang.lex import _PredicateSpec
 
 class ArgumentMeta(LangCommonMeta):...
 
-class Argument(SequenceApi[Sentence], _SupportsRichCompare, Hashable, metaclass=ArgumentMeta):
+class Argument(Sequence[Sentence], abcs.Copyable, _SupportsRichCompare, Hashable, metaclass=ArgumentMeta):
     seq: tuple[Sentence,...]
     title: str|None
     premises:tuple[Sentence,...]

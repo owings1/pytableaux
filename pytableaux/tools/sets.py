@@ -21,66 +21,22 @@ pytableaux.tools.sets
 """
 from __future__ import annotations
 
-import functools
-import operator as opr
-from collections.abc import MutableSet, Set
+from collections.abc import Set
 
 from pytableaux.errors import check
-from pytableaux.tools import abcs, operd
+from pytableaux.tools import abcs
 
 __all__ = (
-    'EMPTY_SET',
-    'MutableSetApi',
-    'SetApi',
     'SetView',
 )
 
 EMPTY_SET = frozenset()
 
-class SetApi(Set, abcs.Copyable):
-    'Fusion interface of collections.abc.Set and built-in frozenset.'
 
-    __slots__ = EMPTY_SET
+class SetView(Set, abcs.Copyable, immutcopy = True):
+    'Set cover.'
 
-    __or__  = Set.__or__
-    __and__ = Set.__and__
-    __sub__ = Set.__sub__
-    __xor__ = Set.__xor__
-
-    red = functools.partial(operd.reduce, freturn = '_from_iterable')
-    app = operd.apply
-
-    issubset     = app(opr.le,   set.issubset)
-    issuperset   = app(opr.ge,   set.issuperset)
-    union        = red(opr.or_,  set.union)
-    intersection = red(opr.and_, set.intersection)
-    difference   = red(opr.sub,  set.difference)
-    symmetric_difference = app(opr.xor, set.symmetric_difference)
-
-    del(red, app)
-
-    def copy(self):
-        return self._from_iterable(self)
-
-    @classmethod
-    def _from_iterable(cls, it):
-        return cls(it)
-
-class MutableSetApi(MutableSet, SetApi):
-    'Fusion interface of collections.abc.MutableSet and built-in set.'
-    __slots__ = EMPTY_SET
-    rep = operd.repeat
-    update = rep(opr.ior, set.update)
-    intersection_update = rep(opr.iand, set.intersection_update)
-    difference_update   = rep(opr.isub, set.difference_update)
-    symmetric_difference_update = operd.apply(opr.ixor,
-        set.symmetric_difference_update)
-    del(rep)
-
-class SetView(SetApi):
-    'SetApi cover.'
-
-    __slots__ = frozenset(SetApi.__abstractmethods__)
+    __slots__ = ('__contains__', '__iter__', '__len__')
 
     def __new__(cls, set_, /,):
         check.inst(set_, Set)
@@ -95,14 +51,3 @@ class SetView(SetApi):
         if len(self):
             return f'{prefix}{set(self)}'
         return f'{prefix}''{}'
-
-    @classmethod
-    def _from_iterable(cls, it):
-        return cls(frozenset(it))
-
-del(
-    abcs,
-    functools,
-    operd,
-    opr,
-)

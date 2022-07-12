@@ -21,86 +21,12 @@ pytableaux.tools.sequences
 """
 from __future__ import annotations
 
-from abc import abstractmethod as abstract
 from collections.abc import Sequence
-from itertools import chain, repeat
-from typing import Iterable, SupportsIndex
+from pytableaux.tools import abcs
 
-from pytableaux.tools import abcs, EMPTY_SET
-
-__all__ = (
-    'SequenceApi',
-    'SeqCover',
-)
+__all__ = ('SeqCover',)
 
 NOARG = object()
-
-# def absindex(seqlen, index, /, strict = True):
-#     'Normalize to positive/absolute index.'
-#     if index < 0:
-#         index = seqlen + index
-#     if strict and (index >= seqlen or index < 0):
-#         raise Emsg.IndexOutOfRange(index)
-#     return index
-
-# def slicerange(seqlen, slice_: slice, values, /, strict = True):
-#     'Get a range of indexes from a slice and new values, and perform checks.'
-#     range_ = range(*slice_.indices(seqlen))
-#     if len(range_) != len(values):
-#         if strict:
-#             raise Emsg.MismatchSliceSize(values, range_)
-#         if abs(slice_.step or 1) != 1:
-#             raise Emsg.MismatchExtSliceSize(values, range_)
-#     return range_
-
-class SequenceApi(Sequence, abcs.Copyable):
-    "Extension of collections.abc.Sequence and built-in sequence (tuple)."
-
-    __slots__ = EMPTY_SET
-
-    @abstract
-    def __getitem__(self, index, /):
-        raise IndexError
-
-    def __add__(self, other):
-        if not isinstance(other, Iterable):
-            return NotImplemented
-        restype = self._concat_res_type(type(other))
-        if not callable(restype):
-            return NotImplemented
-        return restype(chain(self, other))
-
-    def __radd__(self, other):
-        if not isinstance(other, Iterable):
-            return NotImplemented
-        restype = self._rconcat_res_type(type(other))
-        if not callable(restype):
-            return NotImplemented
-        return restype(chain(other, self))
-
-    def __mul__(self, other):
-        if not isinstance(other, SupportsIndex):
-            return NotImplemented
-        return self._from_iterable(chain.from_iterable(repeat(self, other)))
-
-    __rmul__ = __mul__
-
-    def copy(self):
-        return self._from_iterable(self)
-
-    @classmethod
-    def _from_iterable(cls, it, /):
-        return cls(it)
-
-    @classmethod
-    def _concat_res_type(cls, othrtype, /):
-        '''Return the type (or callable) to construct a new instance from __add__.'''
-        return cls._from_iterable
-
-    @classmethod
-    def _rconcat_res_type(cls, othrtype, /):
-        '''Return the type (or callable) to construct a new instance from __radd__.'''
-        return cls._concat_res_type(othrtype)
 
 class SeqCoverAttr(frozenset, abcs.Ebc):
     REQUIRED = {'__len__', '__getitem__', '__contains__', '__iter__',
@@ -126,6 +52,4 @@ class SeqCover(Sequence, abcs.Copyable, immutcopy = True):
     def __repr__(self):
         return f'{type(self).__name__}({list(self)})'
 
-
-SequenceApi.register(tuple)
 

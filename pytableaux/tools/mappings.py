@@ -27,8 +27,7 @@ from itertools import chain
 from types import MappingProxyType as MapProxy
 
 from pytableaux import __docformat__
-from pytableaux.tools import EMPTY_MAP, abcs, isattrstr, itemsiter
-from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, isattrstr, itemsiter
 
 __all__ = (
     'DequeCache',

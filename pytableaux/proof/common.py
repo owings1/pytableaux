@@ -24,7 +24,7 @@ from __future__ import annotations
 import builtins
 import operator as opr
 from collections import defaultdict
-from collections.abc import Mapping, Set
+from collections.abc import Mapping, Set, Sequence
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Iterable, Optional
 
@@ -36,7 +36,6 @@ from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, SetView, abcs, dictattr,
                               raisr)
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.mappings import MapCover
-from pytableaux.tools.sequences import SequenceApi
 
 if TYPE_CHECKING:
 
@@ -144,17 +143,10 @@ class Node(MapCover):
         except KeyError:
             return PropMap.NodeDefaults[key]
 
-
-
-    @classmethod
-    def _oper_res_type(cls, _):
-        'Always produce a ``dict`` on math operations.'
-        return dict
-
     def __repr__(self):
         return f'<{type(self).__name__} id:{self.id} props:{dict(self)}>'
 
-class Branch(SequenceApi[Node], EventEmitter):
+class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
     'A tableau branch.'
 
     __closed: bool
@@ -494,12 +486,6 @@ class Branch(SequenceApi[Node], EventEmitter):
         return (f'<{type(self).__name__} id:{self.id} nodes:{len(self)} '
             f'leaf:{leafid} closed:{self.closed}>')
 
-    @classmethod
-    def _from_iterable(cls, it, /):
-        b = cls()
-        b.extend(it)
-        return b
-
     class Index(dict[str, dict[Any, set]], abcs.Copyable):
         "Branch node index."
 
@@ -581,7 +567,7 @@ class Target(dictattr):
     __slots__ = ('rule', 'branch', 'constant', 'designated', 'flag', 'node',
         'nodes', 'sentence', 'world', 'world1', 'world2')
 
-    # For dmapattr
+    # For dictattr
     _keyattr_ok = staticmethod(frozenset(__slots__).__contains__)
 
     __slots__ += '_entry',

@@ -72,8 +72,7 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
             return list(self)
         return sorted(set(hookname
             for hookname, attrnames in self.items()
-            if attrname in attrnames
-        ))
+                if attrname in attrnames))
 
     def attrnames(self, hookname = None, /):
         'Flat sequence of class attr names'
@@ -81,16 +80,14 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
             return list(self[hookname])
         return sorted(set(attrname
             for attrnames in self.values()
-                for attrname in attrnames
-        ))
+                for attrname in attrnames))
 
     def hookattrs(self):
         'The (hookname, attrname) pairs.'
         return [item
             for items in (
                 zip(repeat(hookname), attrnames)
-                    for hookname, attrnames in self.items()
-                )
+                    for hookname, attrnames in self.items())
                 for item in items
         ]
 
