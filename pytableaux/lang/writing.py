@@ -32,9 +32,7 @@ from pytableaux.lang import (Atomic, Constant, CoordsItem, LangCommonMeta,
                              Lexical, LexType, Marking, Notation, Operated,
                              Operator, Predicate, Predicated, Quantified,
                              RenderSet)
-from pytableaux.tools import abcs, closure
-from pytableaux.tools.sets import EMPTY_SET
-
+from pytableaux.tools import EMPTY_SET, abcs, closure
 
 __all__ = (
     'LexWriter',

@@ -5,7 +5,7 @@ from typing import (Any, Callable, Collection, Iterable, Iterator, Reversible,
 
 from pytableaux.tools.hooks import _ProviderInfo as _HookProviderInfo
 from pytableaux.tools.hooks import _UserInfo as _HookUserInfo
-from pytableaux.typing import _F, _KT, _RT, _T, _TT, _EnumDictType, _EnumT
+from pytableaux.typing import _F, _KT, _RT, _T, _TT, _EnumDictType, _EnumT, _MapT, _SetT
 from enum import auto as eauto
 
 class AbcMeta(_abc.ABCMeta):
@@ -126,3 +126,10 @@ class abcf(FlagEnum):
 
 class IntEnum(int, Ebc): ...
 class IntFlag(int, FlagEnum): ...
+class ItemMapEnum(Ebc):
+    @overload
+    def __init__(self, mapping: Mapping) -> None: ...
+    @overload
+    def __init__(self, *items: tuple[Any, Any]): ...
+    def __or__(self: _MapT, other: Mapping) -> _MapT: ...
+    def __ror__(self, other: _SetT) -> _SetT: ...

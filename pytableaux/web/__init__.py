@@ -25,8 +25,7 @@ from typing import Any, Mapping
 
 from pytableaux import package, tools, __docformat__
 from enum import auto
-from pytableaux.tools.abcs import Ebc
-from pytableaux.tools.mappings import ItemMapEnum
+from pytableaux.tools.abcs import Ebc, ItemMapEnum
 
 __all__ = ()
 

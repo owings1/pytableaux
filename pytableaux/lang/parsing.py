@@ -26,7 +26,7 @@ from collections import deque
 from types import MappingProxyType as MapProxy
 from typing import ClassVar, Iterable, Mapping
 
-from pytableaux import EMPTY_SET, __docformat__
+from pytableaux import __docformat__
 from pytableaux.errors import (BoundVariableError, IllegalStateError,
                                ParseError, UnboundVariableError)
 from pytableaux.lang import (BiCoords, LangCommonMeta, LexType, Marking,
@@ -35,8 +35,7 @@ from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Parameter, Predicate, Predicated, Quantified,
                                  Sentence, Variable)
-from pytableaux.tools import abcs, key0, lazy, itemsiter, for_defaults
-from pytableaux.tools.hybrids import qset
+from pytableaux.tools import abcs, key0, lazy, itemsiter, for_defaults, EMPTY_SET, qset
 from pytableaux.tools.mappings import MapCover
 
 __all__ = (
@@ -712,5 +711,4 @@ class ParseTable(MapCover, TableStore):
 del(
     abstract,
     lazy,
-    EMPTY_SET,
 )

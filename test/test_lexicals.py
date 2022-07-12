@@ -23,7 +23,7 @@ import pickle
 from pytableaux.errors import *
 from pytableaux.lang.collect import *
 from pytableaux.lang.lex import *
-from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools import EMPTY_SET
 
 from pytableaux import errors
 

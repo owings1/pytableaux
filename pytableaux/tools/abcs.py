@@ -49,6 +49,7 @@ __all__ = (
     'FlagEnum',
     'IntEnum',
     'IntFlag',
+    'ItemMapEnum',
 )
 
 EMPTY = ()
@@ -772,6 +773,45 @@ class IntFlag(int, FlagEnum):
     __slots__ = Eset.Empty
     # NB: slots must be empty for int (layout conflict)
     pass
+
+class ItemMapEnum(Ebc):
+    """Fixed mapping enum based on item tuples.
+
+    If a member value is defined as a mapping, the member's ``_value_`` attribute
+    is converted to a tuple of item tuples during ``__init__()``.
+
+    Implementations should always call ``super().__init__()`` if it is overridden.
+
+    Note that ``.get()`` is implemented as ``.mget()``, since ``AbcEnumMeta``
+    uses ``'get'`` as a class method to lookup enum members.
+    """
+
+    __slots__ = ('__iter__', '__getitem__', '__len__', '__reversed__',
+                 'name', 'value', '_value_')
+
+    def __init__(self, *args):
+        if len(args) == 1 and isinstance(args[0], Mapping):
+            self._value_ = args = tuple(args[0].items())
+        m = dict(args)
+        self.__len__ = m.__len__
+        self.__iter__ = m.__iter__
+        self.__getitem__ = m.__getitem__
+        self.__reversed__ = m.__reversed__
+
+    keys = Mapping.keys
+    items = Mapping.items
+    values = Mapping.values
+    mget = Mapping.get # get() is not allowed for Ebc
+
+    def __or__(self, other):
+        return dict(self) | other
+
+    def __ror__(self, other):
+        return other | dict(self)
+
+    def _asdict(self):
+        'Compatibility for JSON serialization.'
+        return dict(self)
 
 #=============================================================================
 #_____________________________________________________________________________

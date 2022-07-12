@@ -27,7 +27,7 @@ import re
 import sys
 from abc import abstractmethod as abstract
 from collections import defaultdict
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Set, Sequence
 from keyword import iskeyword
 from operator import truth
 from types import DynamicClassAttribute as dynca
@@ -691,11 +691,53 @@ class NoSetAttr(BaseMember):
         func.__qualname__ = self.__qualname__
         setattr(owner, name, func)
 
-from pytableaux.tools.sets import SetView as SetView
+
+class SetView(Set, abcs.Copyable, immutcopy = True):
+    'Set cover.'
+
+    __slots__ = ('__contains__', '__iter__', '__len__')
+
+    def __new__(cls, set_, /,):
+        check.inst(set_, Set)
+        self = object.__new__(cls)
+        self.__len__      = set_.__len__
+        self.__iter__     = set_.__iter__
+        self.__contains__ = set_.__contains__
+        return self
+
+    def __repr__(self):
+        prefix = type(self).__name__
+        if len(self):
+            return f'{prefix}{set(self)}'
+        return f'{prefix}''{}'
+
+class SeqCoverAttr(frozenset, abcs.Ebc):
+    REQUIRED = {'__len__', '__getitem__', '__contains__', '__iter__',
+                'count', 'index',}
+    OPTIONAL = {'__reversed__'}
+    ALL = REQUIRED | OPTIONAL
+
+class SeqCover(Sequence, abcs.Copyable, immutcopy = True):
+
+    __slots__ = SeqCoverAttr.ALL
+
+    def __new__(cls, seq: Sequence, /):
+        self = object.__new__(cls)
+        sa = object.__setattr__
+        for name in SeqCoverAttr.REQUIRED:
+            sa(self, name, getattr(seq, name))
+        for name in SeqCoverAttr.OPTIONAL:
+            value = getattr(seq, name, NOARG)
+            if value is not NOARG:
+                sa(self, name, value)
+        return self
+
+    def __repr__(self):
+        return f'{type(self).__name__}({list(self)})'
+
 from pytableaux.tools.hybrids import qset as qset
 from pytableaux.tools.hybrids import qsetf as qsetf
 from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
-from pytableaux.tools.sequences import SeqCover as SeqCover
 from pytableaux.tools.mappings import dictattr as dictattr
 from pytableaux.tools.mappings import dictns as dictns
 from pytableaux.tools.mappings import DequeCache as DequeCache

@@ -9,8 +9,6 @@ from pytableaux.tools.abcs import *
 from pytableaux.tools.events import *
 from pytableaux.tools.hybrids import *
 from pytableaux.tools.linked import *
-from pytableaux.tools.sequences import *
-from pytableaux.tools.sets import *
 from pytest import raises
 
 from .tutils import BaseSuite, get_subclasses, skip

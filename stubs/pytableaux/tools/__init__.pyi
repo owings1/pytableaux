@@ -1,20 +1,19 @@
 from abc import abstractmethod as abstract
+from collections.abc import Set, Sequence
 from types import MappingProxyType as MapProxy
 from typing import (Any, Callable, Concatenate, Generator, Generic, Iterable,
                     Iterator, Mapping, Optional, Pattern, Sized, SupportsIndex, overload)
 
-from pytableaux.typing import _F, _KT, _P, _RT, _T, _VT, _MapT, _Self, property
+from pytableaux.typing import _F, _KT, _P, _RT, _T, _VT, _MapT, _Self, property, _T_co
 
 pass
-from pytableaux.tools.abcs import AbcMeta
+from pytableaux.tools.abcs import AbcMeta, Copyable
 from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
 from pytableaux.tools.hybrids import qset as qset
 from pytableaux.tools.hybrids import qsetf as qsetf
 from pytableaux.tools.mappings import DequeCache as DequeCache
 from pytableaux.tools.mappings import dictattr as dictattr
 from pytableaux.tools.mappings import dictns as dictns
-from pytableaux.tools.sequences import SeqCover as SeqCover
-from pytableaux.tools.sets import SetView as SetView
 
 EMPTY_SET: frozenset
 EMPTY_SEQ: tuple
@@ -127,3 +126,7 @@ class NoSetAttr(BaseMember):
     def __init__(self, *, enabled: bool = ..., **defaults) -> None: ...
     def __call__(self, base: type, **opts): ...
     def cached(func: _F) -> _F: ...
+
+
+class SetView(Set[_T_co], Copyable):...
+class SeqCover(Sequence[_VT], Copyable): ...

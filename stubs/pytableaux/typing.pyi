@@ -36,6 +36,7 @@ _SeqT = TypeVar('_SeqT', bound = Sequence)
 _MSeqT = TypeVar('_MSeqT', bound = MutableSequence)
 _SetT = TypeVar('_SetT', bound = Set)
 
+_T_co = TypeVar('_T_co', covariant=True)
 
 
 _LogicModule = LogicType | ModuleType

@@ -30,7 +30,6 @@ from pytableaux.lang import Operator, Predicate, Quantifier
 from pytableaux.logics import LogicType
 from pytableaux.tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, abcs, closure,
                               qsetf)
-from pytableaux.tools.mappings import ItemMapEnum
 from pytableaux.tools.timing import Counter, StopWatch
 
 __all__ = (
@@ -104,7 +103,7 @@ class NodeAttr(ProofAttr):
     world   = 'world'
     info    = 'info'
 
-class PropMap(ItemMapEnum):
+class PropMap(abcs.ItemMapEnum):
 
     NodeDefaults = {
         NodeAttr.designation: None,

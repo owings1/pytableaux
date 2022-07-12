@@ -1,9 +1,13 @@
 import logging
-from _typeshed import Incomplete
-from pytableaux import __docformat__ as __docformat__, package as package, tools as tools
-from pytableaux.tools.abcs import Ebc as Ebc, eauto as eauto
-from pytableaux.tools.mappings import ItemMapEnum as ItemMapEnum
 from typing import Any, Mapping
+
+from _typeshed import Incomplete
+from pytableaux import __docformat__ as __docformat__
+from pytableaux import package as package
+from pytableaux import tools as tools
+from pytableaux.tools.abcs import Ebc as Ebc
+from pytableaux.tools.abcs import ItemMapEnum
+
 
 class Wevent(Ebc):
     before_dispatch: Incomplete

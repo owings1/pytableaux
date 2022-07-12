@@ -3,7 +3,6 @@ from typing import Any, Mapping, NamedTuple
 from pytableaux.lang import Argument, Sentence
 from pytableaux.proof.tableaux import RulesRoot
 from pytableaux.tools import abcs
-from pytableaux.tools.mappings import ItemMapEnum
 from pytableaux.tools.timing import Counter, StopWatch
 from pytableaux.typing import _T, _SysRulesT
 
@@ -79,7 +78,7 @@ class NodeAttr(ProofAttr):
     world   :str
     info    :str
 
-class PropMap(ItemMapEnum):
+class PropMap(abcs.ItemMapEnum):
     NodeDefaults:Mapping
     ClosureNode:Mapping
 

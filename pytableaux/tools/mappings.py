@@ -34,7 +34,6 @@ __all__ = (
     'dictattr',
     'dictns',
     'EMPTY_MAP',
-    'ItemMapEnum',
     'KeySetAttr',
     'MapCover',
 )
@@ -132,37 +131,7 @@ class dictns(dictattr):
     def _keyattr_ok(cls, name):
         return len(name) and name[0] != '_'
 
-class ItemMapEnum(abcs.Ebc):
-    """Fixed mapping enum based on item tuples.
 
-    If a member value is defined as a mapping, the member's ``_value_`` attribute
-    is converted to a tuple of item tuples during ``__init__()``.
-
-    Implementations should always call ``super().__init__()`` if it is overridden.
-
-    Note that ``.get()`` is implemented as ``.mget()``, since ``AbcEnumMeta``
-    uses ``'get'`` as a class method to lookup enum members.
-    """
-
-    __slots__ = ('__iter__', '__getitem__', '__len__', '__reversed__',
-                 'name', 'value', '_value_')
-
-    def __init__(self, *args):
-        if len(args) == 1 and isinstance(args[0], Mapping):
-            self._value_ = args = tuple(args[0].items())
-        m = dict(args)
-        self.__len__ = m.__len__
-        self.__iter__ = m.__iter__
-        self.__getitem__ = m.__getitem__
-        self.__reversed__ = m.__reversed__
-
-    keys = Mapping.keys
-    items = Mapping.items
-    values = Mapping.values
-    mget = Mapping.get # get() is not allowed for Ebc
-    _asdict = MapCover._asdict
-    __or__ = MapCover.__or__
-    __ror__ = MapCover.__ror__
 
 class DequeCache(abcs.Abc):
 
