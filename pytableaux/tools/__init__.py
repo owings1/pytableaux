@@ -28,14 +28,11 @@ import re
 import sys
 from abc import abstractmethod as abstract
 from collections import defaultdict
-from collections.abc import Callable, Mapping, Set, Sequence
-from keyword import iskeyword
+from collections.abc import Mapping, Set, Sequence
 from operator import truth
 from types import DynamicClassAttribute as dynca
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-
-from pytableaux import __docformat__
 
 __all__ = (
     'absindex',
@@ -74,7 +71,6 @@ __all__ = (
     'undund',
     'wraps',
 )
-
 
 EMPTY_MAP = MapProxy({})
 EMPTY_SEQ = ()
@@ -211,7 +207,6 @@ def slicerange(seqlen, slice_: slice, values, /, strict = True):
             raise Emsg.MismatchExtSliceSize(values, range_)
     return range_
 
-
 @closure
 def itemsiter():
 
@@ -269,9 +264,9 @@ def dxopy():
 from pytableaux.tools import abcs
 from pytableaux.errors import check, Emsg
 
-class BaseMember(metaclass = abcs.AbcMeta):
+class BaseMember:
 
-    __slots__ = '__name__', '__qualname__', '__owner'
+    __slots__ = ('__name__', '__qualname__', '__owner')
 
     def __set_name__(self, owner, name):
         self.__owner = owner
@@ -301,7 +296,6 @@ class BaseMember(metaclass = abcs.AbcMeta):
             return object.__repr__(self)
         return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
 
-
 class membr(BaseMember):
 
     __slots__ = ('cbak',)
@@ -326,22 +320,6 @@ class membr(BaseMember):
         def f(*args, **kw):
             return cls(fd, *args, **kw)
         return f
-
-
-
-def _thru(obj, *_):
-    return obj
-
-def _thru2(_x, obj, *_):
-    return obj
-
-def _methcaller(name: str):
-    if iskeyword(name) or not name.isidentifier():
-        raise TypeError(f"Invalid attr name '{name}'")
-    def f(obj, *args, **kw):
-        return getattr(obj, name)(*args, **kw)
-    f.__name__ = name
-    return f
 
 def _prevmodule(thisname = __name__, /):
     f = sys._getframe()
@@ -575,7 +553,6 @@ class NoSetAttr(BaseMember):
                 sa(obj, name, value)
         return wraps(sa)(f)
 
-    @abcs.abcf.temp
     def cached(func):
         @wraps(func)
         def f(self: NoSetAttr, *args):
@@ -602,12 +579,13 @@ class NoSetAttr(BaseMember):
     def _selfchecker(self, attr):
         return lambda obj: getattr(obj, attr, False)
 
+    del(cached)
+
     def sethook(self, owner, name):
         func = self(owner.__bases__[0])
         func.__name__ = name
         func.__qualname__ = self.__qualname__
         setattr(owner, name, func)
-
 
 class SetView(Set, abcs.Copyable, immutcopy = True):
     'Set cover.'
@@ -727,7 +705,6 @@ class MapCover(Mapping, abcs.Copyable, immutcopy = True):
         'Compatibility for JSON serialization.'
         return dict(self)
 
-
 class dictattr(KeySetAttr, dict):
     "Dict attr base class."
 
@@ -746,8 +723,6 @@ class dictns(dictattr):
     def _keyattr_ok(cls, name):
         return len(name) and name[0] != '_'
 
-
 from pytableaux.tools.hybrids import qset as qset
 from pytableaux.tools.hybrids import qsetf as qsetf
 from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
-
