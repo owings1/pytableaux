@@ -1,12 +1,8 @@
-from typing import (Callable, Collection, Iterable, MutableSequence, Sequence,
-                    Sized, SupportsIndex, overload)
+from typing import Collection, Iterable, Sequence, SupportsIndex, overload
 
+from pytableaux.tools import abcs
 from pytableaux.typing import _VT, _MSeqT, _SeqT
 
-EMPTY_SEQ: tuple
-
-def absindex(seqlen: int, index: SupportsIndex, strict: bool = ...) -> int: ...
-def slicerange(seqlen: int, slice_: slice, values: Sized, strict: bool = ...) -> range: ...
 
 class SequenceApi(Sequence[_VT]):
     @overload
@@ -32,8 +28,4 @@ class SequenceApi(Sequence[_VT]):
     @classmethod
     def _rconcat_res_type(cls, othrtype: type[Iterable], /) -> type[SequenceApi]: ...
 
-class MutableSequenceApi(SequenceApi[_VT], MutableSequence[_VT]):
-    def sort(self, *, key: Callable | None = ..., reverse: bool = ...) -> None: ...
-    def __imul__(self:_MSeqT, other: SupportsIndex) -> _MSeqT: ...
-
-class SeqCover(SequenceApi[_VT]): ...
+class SeqCover(Sequence[_VT], abcs.Copyable): ...

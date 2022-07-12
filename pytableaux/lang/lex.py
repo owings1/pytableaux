@@ -1351,7 +1351,7 @@ class LexType(LangCommonEnum):
                 return Predicate.__new__(Predicate, *spec)
             @classmethod
             def _member_keys(cls, pred: Predicate):
-                return super()._member_keys(pred) | pred.refs.union((pred,))
+                return super()._member_keys(pred) | pred.refs | {pred}
             @abcs.abcf.before
             def expand(ns:dict, bases):
                 members = {name: m.value for name, m in Predicate.System._member_map_.items()}

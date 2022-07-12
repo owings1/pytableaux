@@ -39,11 +39,10 @@ from pytableaux.proof import (BranchEvent, BranchStat, RuleEvent, RuleMeta,
                               TabStatKey, TabTimers)
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.tools import (EMPTY_SET, closure, for_defaults, qset, qsetf,
-                              wraps)
+                              wraps, SeqCover, absindex)
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.linked import linqset
 from pytableaux.tools.mappings import dictns
-from pytableaux.tools.sequences import SeqCover, SequenceApi, absindex
 from pytableaux.tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
@@ -314,7 +313,7 @@ def locking(method: _F) -> _F:
         return method(self, *args, **kw)
     return f
 
-class RuleGroup(SequenceApi[Rule]):
+class RuleGroup(Sequence[Rule]):
     """A rule group of a Tableau's ``rules``.
     
     This class supports the full ``Sequence`` standard interface for iterating,
@@ -444,7 +443,7 @@ class RuleGroup(SequenceApi[Rule]):
     def __repr__(self):
         return f'<{type(self).__name__} name:{self.name} rules:{len(self)}>'
 
-class RuleGroups(SequenceApi[RuleGroup]):
+class RuleGroups(Sequence[RuleGroup]):
 
     __slots__ = ('root', '_seq', '_map')
 
@@ -521,7 +520,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
         return (f'<{type(self).__name__} logic:{lname} groups:{len(self)} '
             f'names:{list(self.names())} rules:{sum(map(len, self))}>')
 
-class RulesRoot(SequenceApi[Rule]):
+class RulesRoot(Sequence[Rule]):
     'Grouped and named collection of rules for a tableau.'
 
     __slots__ = ('_map', 'groups', 'locked', 'root', 'tableau')

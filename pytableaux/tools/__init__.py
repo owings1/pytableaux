@@ -37,11 +37,14 @@ from types import MappingProxyType as MapProxy
 from pytableaux import __docformat__
 
 __all__ = (
+    'absindex',
     'abstract',
     'closure',
     'dund',
     'dxopy',
     'EMPTY_MAP',
+    'EMPTY_SEQ',
+    'EMPTY_SET',
     'for_defaults',
     'getitem',
     'isattrstr',
@@ -51,7 +54,6 @@ __all__ = (
     'itemsiter',
     'key0',
     'lazy',
-    'MapProxy',
     'maxceil',
     'membr',
     'minfloor',
@@ -60,6 +62,7 @@ __all__ = (
     'raisr',
     'sbool',
     'select_fget',
+    'slicerange',
     'substitute',
     'thru',
     'true',
@@ -68,8 +71,9 @@ __all__ = (
 )
 
 
-EMPTY = ()
 EMPTY_MAP = MapProxy({})
+EMPTY_SEQ = ()
+EMPTY_SET = frozenset()
 NOARG = object()
 WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
 
@@ -184,6 +188,25 @@ def for_defaults(defaults: Mapping, override: Mapping, /):
         return dict(defaults)
     return {key: override.get(key, defval) for key, defval in defaults.items()}
 
+def absindex(seqlen, index, /, strict = True):
+    'Normalize to positive/absolute index.'
+    if index < 0:
+        index = seqlen + index
+    if strict and (index >= seqlen or index < 0):
+        raise Emsg.IndexOutOfRange(index)
+    return index
+
+def slicerange(seqlen, slice_: slice, values, /, strict = True):
+    'Get a range of indexes from a slice and new values, and perform checks.'
+    range_ = range(*slice_.indices(seqlen))
+    if len(range_) != len(values):
+        if strict:
+            raise Emsg.MismatchSliceSize(values, range_)
+        if abs(slice_.step or 1) != 1:
+            raise Emsg.MismatchExtSliceSize(values, range_)
+    return range_
+
+
 @closure
 def itemsiter():
 
@@ -238,10 +261,8 @@ def dxopy():
 
     return api
 
-
-
 from pytableaux.tools import abcs
-from pytableaux.errors import check
+from pytableaux.errors import check, Emsg
 
 class BaseMember(metaclass = abcs.AbcMeta):
 
@@ -278,7 +299,7 @@ class BaseMember(metaclass = abcs.AbcMeta):
 
 class membr(BaseMember):
 
-    __slots__ = 'cbak',
+    __slots__ = ('cbak',)
 
     owner: object
     cbak: tuple
@@ -326,9 +347,9 @@ def _prevmodule(thisname = __name__, /):
 
 class wraps(dict):
 
-    __slots__ = 'only', 'original',
+    __slots__ = ('only', 'original')
 
-    def __init__(self, original = None, /, only = WRASS_SET, exclude = EMPTY, **kw):
+    def __init__(self, original = None, /, only = WRASS_SET, exclude = EMPTY_SET, **kw):
         'Initialize argument, initial input function that will be decorated.'
         self.original = original
         only = set(map(dund, only))
@@ -407,7 +428,7 @@ class operd:
 
     class Base(BaseMember, Callable):
 
-        __slots__ = 'oper', 'wrap'
+        __slots__ = ('oper', 'wrap')
 
         def __init__(self, oper, info = None):
             self.oper = oper
@@ -420,7 +441,7 @@ class operd:
         """Create a function or method from an operator, or other
         built-in function.
         """
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
         def __call__(self, info = None):
             oper = check.callable(self.oper)
@@ -451,7 +472,7 @@ class operd:
                 a copy is created in case the number of arguments is 0.
         """
 
-        __slots__ = 'inout',
+        __slots__ = ('inout',)
 
         inout: tuple[Callable, Callable]
 
@@ -477,7 +498,7 @@ class operd:
         first argument).
         """
 
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
         def __call__(self, info = None):
             oper = check.callable(self.oper)
@@ -490,7 +511,7 @@ class raisr(BaseMember):
     """Factory for raising an error. Not to be used as a decorator.
     """
 
-    __slots__ = 'wrap', 'Error'
+    __slots__ = ('wrap', 'Error')
 
     def __init__(self, Error, /):
         self.Error = check.subcls(Error, Exception)
@@ -515,14 +536,14 @@ class raisr(BaseMember):
 
 class lazy:
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     def __new__(cls, *args, **kw):
         return cls.get(*args, **kw)
 
     class get(BaseMember):
 
-        __slots__ = 'key', 'method'
+        __slots__ = ('key', 'method')
         format = '_{}'.format
 
         def __new__(cls, key = None, /, method = None):
@@ -561,7 +582,7 @@ class lazy:
         sure to use the correct attribute.
         """
 
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
         @property
         def propclass(self):
@@ -580,7 +601,7 @@ class lazy:
         def propclass(self):
             return dynca
 
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
 class NoSetAttr(BaseMember):
     'Lame thing that does a lame thing.'
@@ -605,7 +626,7 @@ class NoSetAttr(BaseMember):
         cls = None,
     ))
 
-    __slots__ =  'cache', 'defaults', 'enabled',
+    __slots__ =  ('cache', 'defaults', 'enabled')
 
     defaults: dict
     cache: dict
@@ -670,12 +691,11 @@ class NoSetAttr(BaseMember):
         func.__qualname__ = self.__qualname__
         setattr(owner, name, func)
 
-from pytableaux.tools.sets import EMPTY_SET as EMPTY_SET
 from pytableaux.tools.sets import SetView as SetView
 from pytableaux.tools.hybrids import qset as qset
 from pytableaux.tools.hybrids import qsetf as qsetf
 from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
-from pytableaux.tools.sequences import EMPTY_SEQ as EMPTY_SEQ
+from pytableaux.tools.sequences import SeqCover as SeqCover
 from pytableaux.tools.mappings import dictattr as dictattr
 from pytableaux.tools.mappings import dictns as dictns
 from pytableaux.tools.mappings import DequeCache as DequeCache

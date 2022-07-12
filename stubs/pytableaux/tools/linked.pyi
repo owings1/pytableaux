@@ -1,9 +1,9 @@
+from collections.abc import Sequence, MutableSequence
 from typing import (ClassVar, Generator, Generic, Hashable, Iterable, Iterator, Literal,
                     SupportsIndex, overload)
 
 from pytableaux.tools import abcs
 from pytableaux.tools.hybrids import MutableSequenceSet
-from pytableaux.tools.sequences import MutableSequenceApi, SequenceApi
 from pytableaux.typing import _VT, _LnkT, _Self
 
 
@@ -17,7 +17,7 @@ class LinkRel(abcs.IntEnum):
     self: Literal[0]
     next: Literal[1]
 
-class Link(Generic[_VT], abcs.Copyable):
+class Link(Generic[_VT]):
     value: _VT
     prev: Link[_VT]|None
     next: Link[_VT]|None
@@ -36,13 +36,13 @@ class HashLink(Link[_VT], Hashable):
     prev: HashLink[_VT]
     next: HashLink[_VT]
 
-class LinkSequence(SequenceApi[_VT]):
+class LinkSequence(Sequence[_VT], abcs.Copyable):
     __link_first__: Link[_VT]|None
     __link_last__: Link[_VT]|None
     def _link_at(self, index: SupportsIndex, /) -> Link[_VT]:...
     def _link_of(self, value: _VT, /) -> Link[_VT]:...
     
-class linkseq(LinkSequence[_VT], MutableSequenceApi[_VT]):
+class linkseq(LinkSequence[_VT], MutableSequence[_VT]):
     _link_type_: ClassVar[type[Link[_VT]]]
     __link_first__: Link[_VT]|None
     __link_last__: Link[_VT]|None

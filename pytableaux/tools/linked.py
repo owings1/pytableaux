@@ -19,18 +19,17 @@ pytableaux.tools.linked
 """
 from __future__ import annotations
 
+from abc import abstractmethod as abstract
+from collections.abc import MutableSequence, Sequence
 from itertools import filterfalse
 from typing import Any, Collection, Optional, SupportsIndex
 
-from pytableaux import __docformat__, tools
+from pytableaux import __docformat__
 from pytableaux.errors import Emsg
 from pytableaux.errors import check as echeck
-from pytableaux.tools import abcs
+from pytableaux.tools import abcs, absindex, slicerange, EMPTY_SET
 from pytableaux.tools.hooks import HookProvider
 from pytableaux.tools.hybrids import MutableSequenceSet
-from pytableaux.tools.sequences import (MutableSequenceApi, SequenceApi,
-                                        absindex, slicerange)
-from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
     'HashLink',
@@ -54,7 +53,7 @@ class LinkRel(abcs.IntEnum):
     next = 1
     "Indicates `next` attribute, or `after` position."
 
-class Link(abcs.Copyable):
+class Link:
     'Link value container.'
 
     value: Any
@@ -77,34 +76,28 @@ class Link(abcs.Copyable):
         self.value = value
         self.prev = self.next = None
 
-    def copy(self):
-        inst = type(self)(self.value)
-        inst.prev = self.prev
-        inst.next = self.next
-        return inst
-
     def __getitem__(self, rel: int):
         'Get previous, self, or next with -1, 0, 1, or ``LinkRel`` enum.'
-        return getattr(self, LinkRel(rel)._name_)
+        return getattr(self, LinkRel(rel).name)
 
     def __setitem__(self, rel: int, link: Link):
         'Set previous or next with -1, 1, or ``LinkRel`` enum.'
-        setattr(self, LinkRel(rel)._name_, link)
+        setattr(self, LinkRel(rel).name, link)
 
     def invert(self) -> None:
         'Invert prev and next attributes in place.'
         self.prev, self.next = self.next, self.prev
 
     def __repr__(self):
-        return '%s(%s)' % (type(self).__name__, self.value.__repr__())
+        return f'{type(self).__name__}({self.value})'
 
 class HashLink(Link):
     'Link container for a hashable value.'
 
     __slots__ = EMPTY_SET
 
-    prev: HashLink|None
-    next: HashLink|None
+    prev: Optional[HashLink]
+    next: Optional[HashLink]
 
     def __eq__(self, other):
         if self is other:
@@ -117,11 +110,11 @@ class HashLink(Link):
         return hash(self.value)
 
 
-def iter_links(origin: Link|None, step = 1, count = -1, /):
+def iter_links(origin, step = 1, count = -1, /):
     """Create an iterator over ``Link`` objects.
 
     Args:
-        origin: The origin link. A value of ``None`` returns an empty iterator.
+        origin (Link): The origin link. A value of ``None`` returns an empty iterator.
         step (int): The step increment. A negative value will iterate in reverse.
         count (int): The limit, or ``-1`` for no limit.
     
@@ -160,9 +153,9 @@ def iter_links_sliced(seq: LinkSequence, slice_: slice, /):
         origin = None
     else:
         origin = seq._link_at(start)
-    yield from iter_links(origin, step, count)
+    return iter_links(origin, step, count)
 
-def iter_link_values(origin: Link|None, step = 1, count = -1, /):
+def iter_link_values(origin: Optional[Link], step = 1, count = -1, /):
     """Create an iterator over link values.
 
     Args:
@@ -193,18 +186,18 @@ def iter_link_values_sliced(seq: LinkSequence, slice_, /):
 #  Sequence Classes
 #====================================
 
-class LinkSequence(SequenceApi):
+class LinkSequence(Sequence, abcs.Copyable):
     'Linked sequence read interface.'
 
-    __link_first__ : Link|None
+    __link_first__ : Optional[Link]
     "The first link."
 
-    __link_last__  : Link|None
+    __link_last__  : Optional[Link]
     "The last link."
 
-    __slots__ = '__link_first__', '__link_last__',
+    __slots__ = ('__link_first__', '__link_last__')
 
-    @tools.abstract
+    @abstract
     def __new__(cls, *args, **kw):
         inst = super().__new__(cls)
         inst.__link_first__ = None
@@ -245,8 +238,6 @@ class LinkSequence(SequenceApi):
         if index == length - 1:
             return self.__link_last__
 
-        # TODO: Raise performance warning.
-
         # Choose best iteration direction.
         if index > length / 2:
             # Scan reversed from end.
@@ -270,7 +261,11 @@ class LinkSequence(SequenceApi):
     def __repr__(self):
         return f'{type(self).__name__}({list(self)})'
 
-class linkseq(LinkSequence, MutableSequenceApi):
+    @classmethod
+    def _from_iterable(cls, it, /):
+        return cls(it)
+
+class linkseq(LinkSequence, MutableSequence):
     'Linked sequence mutable base implementation.'
 
     _link_type_ = Link
@@ -394,12 +389,12 @@ class linkseq(LinkSequence, MutableSequenceApi):
 
         raise Emsg.InstCheck(i, (SupportsIndex, slice))
 
-    def sort(self, /, *, key = None, reverse = False) -> None:
-        for link, value in zip(
-            iter_links(self.__link_first__),
-            sorted(self, key = key, reverse = reverse),
-        ):
-            link.value = value
+    # def sort(self, /, *, key = None, reverse = False) -> None:
+    #     for link, value in zip(
+    #         iter_links(self.__link_first__),
+    #         sorted(self, key = key, reverse = reverse),
+    #     ):
+    #         link.value = value
 
     def reverse(self) -> None:
         'Reverse in place.'

@@ -1,6 +1,6 @@
 from typing import (Any, ClassVar, Iterable, Literal, Mapping, Optional,
-                    Sequence, SupportsIndex, overload)
-from collections.abc import Set
+                    SupportsIndex, overload)
+from collections.abc import Set, Sequence
 
 from pytableaux.lang import Argument, Sentence
 from pytableaux.models import BaseModel
@@ -11,7 +11,6 @@ from pytableaux.proof import (Branch, LogicType, Node,
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.mappings import dictns
-from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.timing import StopWatch
 from pytableaux.typing import _T, _LogicLookupKey, _RuleT, _Self, _TypeInstDict
 
@@ -42,7 +41,7 @@ class Rule(EventEmitter, metaclass=RuleMeta):
     @classmethod
     def test(cls, *, noassert: bool = ...): ...
 
-class RulesRoot(SequenceApi[Rule]):
+class RulesRoot(Sequence[Rule]):
     groups: RuleGroups
     root: RulesRoot
     locked: bool
@@ -61,7 +60,7 @@ class RulesRoot(SequenceApi[Rule]):
     @overload
     def __getitem__(self, s: slice) -> Sequence[Rule]: ...
 
-class RuleGroup(SequenceApi[Rule]):
+class RuleGroup(Sequence[Rule]):
     root: RulesRoot
     name: Optional[str]
     def __init__(self, name: Optional[str], root: RulesRoot) -> None: ...
@@ -78,7 +77,7 @@ class RuleGroup(SequenceApi[Rule]):
     @overload
     def __getitem__(self, s: slice) -> Sequence[Rule]: ...
 
-class RuleGroups(SequenceApi[RuleGroup]):
+class RuleGroups(Sequence[RuleGroup]):
     root: RulesRoot
     def __init__(self, root: RulesRoot) -> None: ...
     def create(self, name: Optional[str] = ...) -> RuleGroup: ...

@@ -22,14 +22,12 @@ pytableaux.tools.hybrids
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
+from collections.abc import MutableSequence, MutableSet, Sequence, Set
 from itertools import filterfalse
 from typing import Iterable, SupportsIndex
 
 from pytableaux.errors import DuplicateValueError, Emsg, check
-from pytableaux.tools import abcs
-from pytableaux.tools.sequences import (EMPTY_SEQ, MutableSequenceApi,
-                                        SequenceApi, slicerange)
-from pytableaux.tools.sets import EMPTY_SET, MutableSetApi, SetApi
+from pytableaux.tools import abcs, slicerange, EMPTY_SEQ, EMPTY_SET
 
 __all__ = (
     'EMPTY_QSET',
@@ -40,7 +38,7 @@ __all__ = (
     'SequenceSet',
 )
 
-class SequenceSet(SequenceApi, SetApi):
+class SequenceSet(Sequence, Set, metaclass = abcs.AbcMeta):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
 
     __slots__ = EMPTY_SET
@@ -55,14 +53,6 @@ class SequenceSet(SequenceApi, SetApi):
             raise Emsg.MissingValue(value)
         return super().index(value, start, stop)
 
-    def __mul__(self, other):
-        if isinstance(other, SupportsIndex):
-            if int(other) > 1 and len(self) > 0:
-                raise Emsg.DuplicateValue(self[0])
-        return super().__mul__(other)
-
-    __rmul__ = __mul__
-
     @abstract
     def __contains__(self, value):
         'Set-based `contains` implementation.'
@@ -71,13 +61,17 @@ class SequenceSet(SequenceApi, SetApi):
     def __repr__(self):
         return f'{type(self).__name__}(''{'f'{repr(list(self))[1:-1]}''})'
 
-class qsetf(SequenceSet):
+    @classmethod
+    def _from_iterable(cls, it, /):
+        return cls(it)
+
+class qsetf(SequenceSet, abcs.Copyable, immutcopy = True):
     'Immutable sequence set implementation with frozenset and tuple bases.'
 
     _set_: frozenset
     _seq_: tuple
 
-    __slots__ = '_set_', '_seq_'
+    __slots__ = ('_set_', '_seq_')
 
     def __new__(cls, values: Iterable = None, /):
         self = object.__new__(cls)
@@ -88,12 +82,6 @@ class qsetf(SequenceSet):
             self._seq_ = tuple(dict.fromkeys(values))
             self._set_ = frozenset(self._seq_)
         return self
-
-    def copy(self):
-        inst = object.__new__(type(self))
-        inst._seq_ = self._seq_
-        inst._set_ = self._set_
-        return inst
 
     def __len__(self):
         return len(self._seq_)
@@ -117,7 +105,7 @@ class qsetf(SequenceSet):
 
 EMPTY_QSET = qsetf()
 
-class QsetView(SequenceSet, immutcopy = True):
+class QsetView(SequenceSet, abcs.Copyable, immutcopy = True):
     """SequenceSet view.
     """
 
@@ -144,7 +132,7 @@ class QsetView(SequenceSet, immutcopy = True):
             return cls(it)
         return cls(qsetf(it))
 
-class MutableSequenceSet(SequenceSet, MutableSequenceApi, MutableSetApi):
+class MutableSequenceSet(SequenceSet, MutableSequence, MutableSet):
     """Mutable sequence set (ordered set) interface.
 
     Sequence methods such as :attr:`append` raise :class:`DuplicateValueError`.
@@ -166,13 +154,16 @@ class MutableSequenceSet(SequenceSet, MutableSequenceApi, MutableSetApi):
         if value in self:
             self.remove(value)
 
+    def update(self, it):
+        for _ in map(self.add, it): pass
+
     @abstract
     def reverse(self):
         'Reverse in place.'
         # Must re-implement MutableSequence method.
         raise NotImplementedError
 
-class qset(MutableSequenceSet):
+class qset(MutableSequenceSet, abcs.Copyable):
     'Mutable sequence set implementation backed by built-in set and list.'
 
     _set_type_ = set

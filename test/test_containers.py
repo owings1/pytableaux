@@ -196,7 +196,7 @@ class TestLinkSet(BaseSuite):
         # x.wedge(1, 'e', 'f')
         assert list(x) == list('abcdefg')
 
-    def test_sort(self):
-        x = linqset('fedcba')
-        x.sort()
-        assert list(x) == list('abcdef')
+    # def test_sort(self):
+    #     x = linqset('fedcba')
+    #     x.sort()
+    #     assert list(x) == list('abcdef')

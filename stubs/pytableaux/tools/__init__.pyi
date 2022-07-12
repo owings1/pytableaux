@@ -1,7 +1,7 @@
 from abc import abstractmethod as abstract
 from types import MappingProxyType as MapProxy
 from typing import (Any, Callable, Concatenate, Generator, Generic, Iterable,
-                    Iterator, Mapping, Optional, Pattern, overload)
+                    Iterator, Mapping, Optional, Pattern, Sized, SupportsIndex, overload)
 
 from pytableaux.typing import _F, _KT, _P, _RT, _T, _VT, _MapT, _Self, property
 
@@ -13,13 +13,15 @@ from pytableaux.tools.hybrids import qsetf as qsetf
 from pytableaux.tools.mappings import DequeCache as DequeCache
 from pytableaux.tools.mappings import dictattr as dictattr
 from pytableaux.tools.mappings import dictns as dictns
-from pytableaux.tools.sequences import EMPTY_SEQ as EMPTY_SEQ
-from pytableaux.tools.sets import EMPTY_SET as EMPTY_SET
+from pytableaux.tools.sequences import SeqCover as SeqCover
 from pytableaux.tools.sets import SetView as SetView
 
+EMPTY_SET: frozenset
+EMPTY_SEQ: tuple
 EMPTY_MAP: Mapping
 re_boolyes: Pattern
 
+def absindex(seqlen: int, index: SupportsIndex, strict: bool = ...) -> int: ...
 def closure(func: Callable[..., _T]) -> _T: ...
 def dund(name:str) -> str:...
 def dxopy(a: Mapping[_KT, _VT], proxy = ..., /, ) -> dict[_KT, _VT]:...
@@ -38,6 +40,7 @@ def thru(obj: _T) -> _T:...
 def true(_: Any) ->bool:...
 def undund(name: str) -> str:...
 def select_fget(obj: Any) -> Callable[[Any, Any, Optional[Any]], Any]:...
+def slicerange(seqlen: int, slice_: slice, values: Sized, strict: bool = ...) -> range: ...
 def substitute(coll:_T, old_value:Any, new_value:Any) -> _T:...
 
 
