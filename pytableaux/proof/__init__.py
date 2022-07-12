@@ -25,12 +25,12 @@ from abc import abstractmethod as abstract
 from types import MappingProxyType as MapProxy
 from typing import Any, NamedTuple, Sequence
 
-from pytableaux import _ENV, __docformat__, EMPTY_SET
+from pytableaux import _ENV, __docformat__
 from pytableaux.lang import Operator, Predicate, Quantifier
 from pytableaux.logics import LogicType
-from pytableaux.tools import EMPTY_MAP, abcs, closure
-from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
-from pytableaux.tools.mappings import ItemMapEnum, dmap
+from pytableaux.tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, abcs, closure,
+                              qsetf)
+from pytableaux.tools.mappings import ItemMapEnum
 from pytableaux.tools.timing import Counter, StopWatch
 
 __all__ = (
@@ -76,8 +76,6 @@ class RuleAttr(str, abcs.Ebc):
     "Rule timer names."
     DefaultOpts = '_defaults'
     "Rule default options."
-    OptKeys = '_optkeys'
-    "Rule option keys."
     Name = 'name'
     "Rule class name attribute."
     NodeFilters = 'NodeFilters'
@@ -116,8 +114,8 @@ class PropMap(ItemMapEnum):
     ClosureNode = {
         NodeAttr.closure: True,
         NodeAttr.flag: NodeAttr.closure,
-        NodeAttr.is_flag: True
-    },
+        NodeAttr.is_flag: True,
+    }
 
 
 #******  Branch Enum
@@ -139,19 +137,11 @@ class RuleEvent(abcs.Ebc):
 class RuleState(abcs.FlagEnum):
     'Rule state bit flags.'
 
-    __slots__ = 'value', '_value_'
+    __slots__ = ('value', '_value_')
 
     NONE   = 0
     INIT   = 1
     LOCKED = 2
-
-class RuleClassFlag(abcs.FlagEnum):
-    "WIP: Rule class feature flags."
-
-    __slots__ = 'value', '_value_'
-
-    Modal = 4
-    RankOptimSupported = 8
 
 #******  Tableau Enum
 
@@ -180,7 +170,7 @@ class TabStatKey(abcs.Ebc):
 class TabFlag(abcs.FlagEnum):
     'Tableau state bit flags.'
 
-    __slots__ = 'value', '_value_'
+    __slots__ = ('value', '_value_')
 
     NONE   = 0
     TICKED = 1
@@ -204,6 +194,7 @@ class StepEntry(NamedTuple):
         return f'<StepEntry:{id(self)}:{self.rule.name}:{self.target.type}>'
 
 class Access(NamedTuple):
+    "An `access` int tuple (world1, world2)."
 
     world1: int
     world2: int
@@ -440,23 +431,16 @@ class RuleMeta(abcs.AbcMeta):
         if modal is not NOARG:
             setattr(Class, RuleAttr.Modal, modal)
 
-    #         ancs = list(abcs.mroiter(subcls, supcls = cls))
-    #         flagsmap = {anc: anc.FLAGS for anc in ancs}
-    #         subcls.FLAGS = functools.reduce(opr.or_, flagsmap.values(), cls.FLAGS)
-
-        defaults = abcs.merge_attr(Class, RuleAttr.DefaultOpts, mcls = cls,
-            default = dmap(), transform = MapProxy)
-
-        setattr(Class, RuleAttr.OptKeys, frozenset(defaults))
+        abcs.merge_attr(Class, RuleAttr.DefaultOpts, mcls = cls,
+            default = {}, transform = MapProxy)
 
         abcs.merge_attr(Class, RuleAttr.Timers, mcls = cls,
-            default = EMPTY_QSET, transform = qsetf,
-        )
+            default = EMPTY_QSET, transform = qsetf)
 
         configs = {}
 
-        for relcls in abcs.mroiter(Class, mcls = cls):
-            v = getattr(relcls, RuleAttr.Helpers, EMPTY_MAP)
+        for parent in abcs.mroiter(Class, mcls = cls):
+            v = getattr(parent, RuleAttr.Helpers, EMPTY_MAP)
             if isinstance(v, Sequence):
                 for helpercls in v:
                     configs.setdefault(helpercls, None)
@@ -469,7 +453,8 @@ class RuleMeta(abcs.AbcMeta):
             if setup:
                 configs[helpercls] = setup(Class, config)
                 if modal is False and helpercls is helpers.FilterHelper:
-                    if filters.ModalNode in (v := getattr(Class, RuleAttr.NodeFilters)):
+                    v = getattr(Class, RuleAttr.NodeFilters)
+                    if filters.ModalNode in v:
                         v[filters.ModalNode] = NotImplemented
                         configs[helpercls] = setup(Class, config)
 
@@ -545,9 +530,11 @@ def anode(w1, w2):
 
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.tableaux import Rule, Tableau, TabRuleGroups
-# --
+
+pass
 from pytableaux.proof.rules import ClosingRule as ClosingRule
-# --
+
+pass
 from pytableaux.proof import filters, helpers
 from pytableaux.proof.tableaux import TreeStruct as TreeStruct
 from pytableaux.proof.writers import TabWriter

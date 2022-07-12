@@ -20,7 +20,6 @@ import pytableaux.logics.fde as FDE
 from pytableaux.models import BaseModel, ValueK3
 from pytableaux.proof import Branch, Node, Target, sdnode
 from pytableaux.proof.rules import BaseClosureRule
-from pytableaux.tools import qsetf, setf
 
 name = 'K3'
 
@@ -39,7 +38,7 @@ class Model(FDE.Model, BaseModel[ValueK3]):
 
     Value = ValueK3
 
-    designated_values = setf({Value.T})
+    designated_values = frozenset({Value.T})
     "The (singleton) set of designated values."
 
     unassigned_value = Value.N
@@ -59,7 +58,7 @@ class TabRules(FDE.TabRules):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
                return Target(
-                   nodes = qsetf((node, nnode)),
+                   nodes = (node, nnode),
                    branch = branch,
                 )
 

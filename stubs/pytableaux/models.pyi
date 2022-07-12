@@ -3,7 +3,7 @@ from typing import Any, ClassVar, Generic, Mapping, Sequence, TypeVar, overload
 from pytableaux.lang import (Argument, Atomic, Operated, Operator, Predicated,
                              Quantified, Sentence)
 from pytableaux.proof import Branch
-from pytableaux.tools import abcs, sets
+from pytableaux.tools import abcs
 
 
 class Mval(abcs.Ebc):
@@ -43,8 +43,8 @@ MvalT_co = TypeVar('MvalT_co', bound=Mval, covariant=True)
 
 class BaseModel(abcs.Abc, Generic[MvalT_co], metaclass=abcs.AbcMeta):
     Value: ClassVar[type[MvalT_co]]
-    truth_functional_operators: ClassVar[sets.setf[Operator]]
-    modal_operators: ClassVar[sets.setf[Operator]]
+    truth_functional_operators: ClassVar[frozenset[Operator]]
+    modal_operators: ClassVar[frozenset[Operator]]
     unassigned_value: ClassVar[MvalT_co]
     @property
     def id(self) -> int: ...

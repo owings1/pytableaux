@@ -1,28 +1,28 @@
 from abc import abstractmethod as abstract
 from types import MappingProxyType as MapProxy
-# from types import MappingProxyType as MapProxy
-# from types import MappingProxyType as MappingProxyType
-from typing import (Any, Callable, Concatenate, Generator, Generic, Iterable, Iterator, Mapping, Optional,
-                    Pattern, overload)
-from pytableaux.tools.abcs import AbcMeta
+from typing import (Any, Callable, Concatenate, Generator, Generic, Iterable,
+                    Iterator, Mapping, Optional, Pattern, overload)
 
 from pytableaux.typing import _F, _KT, _P, _RT, _T, _VT, _MapT, _Self, property
 
-
-
-from pytableaux.tools.sets import EMPTY_SET as EMPTY_SET
-from pytableaux.tools.sets import setf as setf
-from pytableaux.tools.sets import SetView as SetView
+pass
+from pytableaux.tools.abcs import AbcMeta
+from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
 from pytableaux.tools.hybrids import qset as qset
 from pytableaux.tools.hybrids import qsetf as qsetf
-from pytableaux.tools.mappings import dmap as dmap
-from pytableaux.tools.mappings import dmapns as dmapns
 from pytableaux.tools.mappings import DequeCache as DequeCache
+from pytableaux.tools.mappings import dmap as dmap
 from pytableaux.tools.mappings import dmapattr as dmapattr
+from pytableaux.tools.mappings import dmapns as dmapns
 from pytableaux.tools.sequences import EMPTY_SEQ as EMPTY_SEQ
 from pytableaux.tools.sequences import seqf as seqf
+from pytableaux.tools.sets import EMPTY_SET as EMPTY_SET
+from pytableaux.tools.sets import SetView as SetView
+from pytableaux.tools.sets import setf as setf
+
 EMPTY_MAP: Mapping
 re_boolyes: Pattern
+
 def closure(func: Callable[..., _T]) -> _T: ...
 def dund(name:str) -> str:...
 def dxopy(a: Mapping[_KT, _VT], proxy = ..., /, ) -> dict[_KT, _VT]:...
@@ -42,8 +42,6 @@ def true(_: Any) ->bool:...
 def undund(name: str) -> str:...
 def select_fget(obj: Any) -> Callable[[Any, Any, Optional[Any]], Any]:...
 def substitute(coll:_T, old_value:Any, new_value:Any) -> _T:...
-
-
 
 
 class BaseMember(Generic[_T], metaclass = AbcMeta):
@@ -81,7 +79,6 @@ class operd:
     @staticmethod
     def repeat(oper: _F) -> _F: ...
 
-
 class wraps(dict[str, str]):
     original: Callable|Mapping
     only: set[str]
@@ -115,13 +112,13 @@ class lazy:
         def __call__(self, method: _F) -> _F: ...
     class prop(get[type[_Self]]):
         @property
-        def propclass(self): ...
+        def propclass(self) -> type[property]: ...
         @overload
         def __new__(cls, func: Callable[[_Self], _T]) -> property[_Self, _T]: ...
         def __call__(self, method: Callable[[_Self], _T]) -> property[_Self, _T]: ...
     class dynca(prop):
         @property
-        def propclass(self): ...
+        def propclass(self) -> type[property]: ...
 
 class NoSetAttr(BaseMember):
     enabled: bool

@@ -39,9 +39,9 @@ class RuleMeta(abcs.AbcMeta):
     def __prepare__(cls, clsname: str, bases: tuple[type, ...], **kw) -> dict[str, Any]: ...
     def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, modal: bool = ..., **kw): ...
 
-
 class NodeStat(dict[TabStatKey, TabFlag|int]):
     def __init__(self) -> None:...
+
 class BranchStat(dict[TabStatKey, TabFlag|int|dict[Any, NodeStat]]):
     def node(self, node: Node) -> NodeStat:...
     def view(self) -> dict[TabStatKey, TabFlag|int|Any]:...
@@ -56,19 +56,21 @@ class TabTimers(NamedTuple):
 
 class HelperAttr(str, abcs.Ebc):
     InitRuleCls :str
+
 class RuleAttr(str, abcs.Ebc):
     Helpers:str
     Timers:str
     DefaultOpts:str
-    OptKeys:str
     Name:str
     NodeFilters :str
     IgnoreTicked:str
     ModalOperators:str
     Modal:str
     Legend:str
+
 class ProofAttr(str, abcs.Ebc):
     pass
+
 class NodeAttr(ProofAttr):
     designation:str
     closure:str
@@ -76,23 +78,25 @@ class NodeAttr(ProofAttr):
     is_flag :str
     world   :str
     info    :str
+
 class PropMap(ItemMapEnum):
     NodeDefaults:Mapping
     ClosureNode:Mapping
+
 class BranchEvent(abcs.Ebc):
     AFTER_CLOSE :object
     AFTER_ADD   :object
     AFTER_TICK  :object
+
 class RuleEvent(abcs.Ebc):
     BEFORE_APPLY:object
     AFTER_APPLY :object
+
 class RuleState(abcs.FlagEnum):
     NONE   :int
     INIT   :int
     LOCKED :int
-class RuleClassFlag(abcs.FlagEnum):
-    Modal:int
-    RankOptimSupported:int
+
 class TabEvent(abcs.Ebc):
     AFTER_BRANCH_ADD    :object
     AFTER_BRANCH_CLOSE  :object
@@ -101,6 +105,7 @@ class TabEvent(abcs.Ebc):
     AFTER_TRUNK_BUILD   :object
     BEFORE_TRUNK_BUILD  :object
     AFTER_FINISH        :object
+
 class TabStatKey(abcs.Ebc):
     FLAGS       :object
     STEP_ADDED  :object
@@ -109,6 +114,7 @@ class TabStatKey(abcs.Ebc):
     INDEX       :object
     PARENT      :object
     NODES       :object
+
 class TabFlag(abcs.FlagEnum):
     NONE   :int
     TICKED :int
@@ -118,10 +124,12 @@ class TabFlag(abcs.FlagEnum):
     TIMED_OUT   :int
     TRUNK_BUILT :int
     TIMING_INACCURATE :int
+
 class StepEntry(NamedTuple):
     rule   : Rule
     target : Target
     duration: Counter
+
 class Access(NamedTuple):
     world1: int
     world2: int

@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from abc import abstractmethod as abstract
 from collections import deque
-from collections.abc import Set
 from types import MappingProxyType as MapProxy
 from typing import ClassVar, Iterable, Mapping
 
@@ -36,11 +35,9 @@ from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Parameter, Predicate, Predicated, Quantified,
                                  Sentence, Variable)
-from pytableaux.tools import abcs, key0, lazy, itemsiter
+from pytableaux.tools import abcs, key0, lazy, itemsiter, for_defaults
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import MapCover, dmap
-# from pytableaux.tools.mappings import ItemsIterator
-from pytableaux.tools.sequences import seqf
+from pytableaux.tools.mappings import MapCover
 
 __all__ = (
     'Parser',
@@ -109,7 +106,7 @@ class Parser(metaclass = ParserMeta):
     "The parser notation."
 
     _defaults: ClassVar[dict] = {}
-    _optkeys: ClassVar[Set] = _defaults.keys()
+    "The default options."
 
     table: ParseTable
     "The parse table instance."
@@ -126,14 +123,7 @@ class Parser(metaclass = ParserMeta):
         elif isinstance(table, str):
             self.table = ParseTable.fetch(self.notation, table)
         self.preds = preds
-
-        if len(opts):
-            opts = dmap(opts)
-            opts &= self._optkeys
-            opts %= self._defaults
-        else:
-            opts = dict(self._defaults)
-        self.opts = opts
+        self.opts = for_defaults(self._defaults, opts)
 
     @abstract
     def parse(self, input_: str, /) -> Sentence:
@@ -187,10 +177,9 @@ class Parser(metaclass = ParserMeta):
         )
 
     def __init_subclass__(subcls, primary = False, **kw):
-        'Merge ``_defaults``, update ``_optkeys``, sync ``__call__()``, set primary.'
+        'Merge ``_defaults``, sync ``__call__()``, set primary.'
         super().__init_subclass__(**kw)
         abcs.merge_attr(subcls, '_defaults', supcls = __class__)
-        subcls._optkeys = subcls._defaults.keys()
         subcls.__call__ = subcls.parse
         if primary:
             subcls.notation.Parser = subcls
@@ -653,7 +642,7 @@ class ParseTable(MapCover, TableStore):
 
         # chars for each type in value order, duplicates discarded
         self.chars = MapProxy({
-            ctype: seqf(rev[ctype, val]
+            ctype: tuple(rev[ctype, val]
                 for val in tvals[ctype])
                     for ctype in ctypes
         })

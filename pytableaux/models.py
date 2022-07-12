@@ -27,11 +27,10 @@ from itertools import product, repeat
 from typing import Any, ClassVar, Generic, Mapping, TypeVar
 
 from pytableaux.errors import check
-from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import (Atomic, LexType, Operated, Operator,
-                                 Predicated, Quantified, Quantifier, Sentence)
-from pytableaux.proof.common import Branch
-from pytableaux.tools import closure, setf
+from pytableaux.lang import (Argument, Atomic, LexType, Operated, Operator,
+                             Predicated, Quantified, Quantifier, Sentence)
+from pytableaux.proof import Branch
+from pytableaux.tools import closure
 from pytableaux.tools.abcs import Abc, Ebc
 
 __all__ = (
@@ -57,12 +56,10 @@ class Mval(Ebc):
     def __eq__(self, other):
         if self is other:
             return True
-        if isinstance(other, float):
+        if isinstance(other, (float, int)):
             return other == self.num
         if isinstance(other, str):
             return other == self.name or other == self.label
-        if isinstance(other, int):
-            return float(other) == self.num
         return NotImplemented
 
     def __hash__(self):
@@ -136,7 +133,7 @@ class BaseModel(Generic[MvalT_co], Abc):
 
     unassigned_value: ClassVar[MvalT_co]
 
-    truth_functional_operators: ClassVar[setf[Operator]] = setf({
+    truth_functional_operators = frozenset({
         Operator.Assertion             ,
         Operator.Negation              ,
         Operator.Conjunction           ,
@@ -147,7 +144,7 @@ class BaseModel(Generic[MvalT_co], Abc):
         Operator.Biconditional         ,
     })
 
-    modal_operators: ClassVar[setf[Operator]] = setf({
+    modal_operators = frozenset({
         Operator.Necessity  ,
         Operator.Possibility,
     })
@@ -246,11 +243,6 @@ class BaseModel(Generic[MvalT_co], Abc):
 
     @abstract
     def truth_function(self, oper: Operator, a, b = None, /) -> MvalT_co:
-        # if oper not in self.truth_functional_operators:
-        #     raise ValueError(oper)
-        # if len(values) != oper.arity:
-        #     raise Emsg.WrongLength(values, oper.arity)
-        # check.inst(oper, Operator)
         raise NotImplementedError
 
     @abstract

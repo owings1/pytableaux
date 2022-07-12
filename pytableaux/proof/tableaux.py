@@ -34,7 +34,7 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import Sentence
 from pytableaux.logics import registry
-from pytableaux.proof import (BranchEvent, BranchStat, RuleClassFlag,
+from pytableaux.proof import (BranchEvent, BranchStat,
                               RuleEvent, RuleMeta, RuleState, StepEntry,
                               TabEvent, TabFlag, TabStatKey, TabTimers)
 from pytableaux.proof.common import Branch, Node, Target
@@ -71,10 +71,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         is_rank_optim = True,
         nolock = False,
     ))
-    _optkeys = frozenset(_defaults)
 
-    FLAGS = RuleClassFlag(0)
     legend: tuple
+    "The rule class legend."
 
     Helpers = {}
     "Helper classes mapped to their settings."
@@ -225,8 +224,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         tab = Tableau()
         tab.rules.append(cls)
         rule = tab.rules.get(cls)
+        nodes = rule.example_nodes()
         branch = tab.branch()
-        branch.extend(nodes := rule.example_nodes())
+        branch.extend(nodes)
         result = tab.step()
         tab.finish()
         if not noassert:
@@ -325,7 +325,7 @@ def locking(method: _F) -> _F:
     @wraps(method)
     def f(self: TabRuleGroups, *args, **kw):
         try:
-            if self._root._locked:
+            if self.root.locked:
                 raise Emsg.IllegalState('locked')
         except AttributeError:
             pass
@@ -335,27 +335,26 @@ def locking(method: _F) -> _F:
 class TabRuleGroups(SequenceApi[Rule]):
     'Grouped and named collection of rules for a tableau.'
 
-    __slots__ = ('_groupindex', '_locked', '_root', '_ruleindex',
-                 '_tab', 'groups')
+    __slots__ = ('_groupindex', '_ruleindex', 'locked', 'root', 'tableau', 'groups')
  
-    #: The rule groups sequence view.
-    groups: RuleGroups
-    _ruleindex: dict[str, Rule]
     _groupindex: dict[str, RuleGroup]
-    _tab: Tableau
-    _root: TabRuleGroups
-    _locked: bool
+    _ruleindex: dict[str, Rule]
+    "Rule name to instance."
+    groups: RuleGroups
+    "The rule groups sequence view."
+    locked: bool
+    root: TabRuleGroups
+    tableau: Tableau
 
-    def __init__(self, tab: Tableau, /):
-        self._locked = False
-        self._root = self
-        #: Rule class name to rule instance.
+    def __init__(self, tableau: Tableau, /):
+        self.locked = False
+        self.root = self
         self._ruleindex = {}
         #: Named groups index.
         self._groupindex = {}
-        self._tab = tab
+        self.tableau = tableau
         self.groups = RuleGroups(self)
-        tab.once(TabEvent.AFTER_BRANCH_ADD, self._lock)
+        tableau.once(TabEvent.AFTER_BRANCH_ADD, self._lock)
 
     def append(self, rulecls, /):
         'Add a single Rule to a new (unnamed) group.'
@@ -386,24 +385,32 @@ class TabRuleGroups(SequenceApi[Rule]):
           KeyError: If rule not found and ``default`` not passed.
           TypeError: For bad ``ref`` type.
         """
-        if not isinstance(ref, str):
-            ref = check.subcls(ref, Rule).name
-        try:
-            return self._ruleindex[ref]
-        except KeyError:
-            if default is NOARG:
-                raise
-            return default
+        return self._ruleindex_get(self._ruleindex, ref, default)
+        # if not isinstance(ref, str):
+        #     ref = check.subcls(ref, Rule).name
+        # try:
+        #     return self._ruleindex[ref]
+        # except KeyError:
+        #     if default is NOARG:
+        #         raise
+        #     return default
 
     def names(self):
-        'List all the rule names in the sequence.'
-        return [rule.name for rule in self]
+        'Return all the rule names.'
+        return self._ruleindex.keys()
 
     def __len__(self):
         return len(self._ruleindex)
 
     def __contains__(self, ref):
-        return self.get(ref, NOGET) is not NOGET
+        # Support name, class, or instance.
+        if isinstance(ref, type):
+            ref = check.subcls(ref, Rule).name
+        if isinstance(ref, str):
+            return ref in self._ruleindex
+        if isinstance(ref, Rule):
+            return ref in self._ruleindex.values()
+        raise Emsg.InstCheck(ref, (str, Rule, type))
 
     def __iter__(self):
         for group in self.groups:
@@ -433,7 +440,7 @@ class TabRuleGroups(SequenceApi[Rule]):
         return getitem
 
     def __repr__(self):
-        logic = self._tab.logic
+        logic = self.tableau.logic
         lname = logic.name if logic else None
         return (f'<{type(self).__name__} logic:{lname} '
             f'groups:{len(self.groups)} rules:{len(self)}>')
@@ -443,29 +450,30 @@ class TabRuleGroups(SequenceApi[Rule]):
 
     @locking
     def _lock(self, _ = None):
-        self._tab.off(TabEvent.AFTER_BRANCH_ADD, self._lock)
+        self.tableau.off(TabEvent.AFTER_BRANCH_ADD, self._lock)
         self.groups._lock()
         self._ruleindex  = MapProxy(self._ruleindex)
         self._groupindex = MapProxy(self._groupindex)
-        self._locked = True
+        self.locked = True
 
     def _checkname(self, name: str, /):
         'Validate a new rule or group name before it is added.'
+        check.inst(name, str)
         if name in self._groupindex or name in self._ruleindex:
             raise Emsg.DuplicateKey(name)
 
-    # @staticmethod
-    # def _ruleindex_get(idx, ref, default = NOARG, /) -> Rule:
-    #     '''Retrieve a rule instance from the given index, by name or type.
-    #     '''
-    #     try:
-    #         if isinstance(ref, str):
-    #             return idx[ref]
-    #         return idx[check.subcls(ref, Rule).name]
-    #     except KeyError:
-    #         if default is not NOARG:
-    #             return default
-    #     raise Emsg.MissingValue(ref)
+    @staticmethod
+    def _ruleindex_get(idx, ref, default = NOARG, /) -> Rule:
+        '''Retrieve a rule instance from the given index, by name or type.
+        '''
+        if not isinstance(ref, str):
+            ref = check.subcls(ref, Rule).name
+        try:
+            return idx[ref]
+        except KeyError:
+            if default is NOARG:
+                raise
+            return default
 
 class RuleGroup(SequenceApi[Rule]):
     """A rule group of a Tableau's ``rules``.
@@ -473,52 +481,48 @@ class RuleGroup(SequenceApi[Rule]):
     This class supports the full ``Sequence`` standard interface for iterating,
     subscripting, and slicing.
 
-    The ``append``, ``extend``, and ``clear`` methods provide mutability
-    until the instance is locked. An input value is a subclass of ``Rule``,
-    which is then instantiated for the tableau before it is added to the
-    sequence.
+    The :attr:`append`, :attr:`extend`, and :attr:`clear` methods provide
+    mutability until the instance is locked. An input value is a subclass of
+    :class:`Rule`, which is instantiated for the tableau before it is added to
+    the sequence.
     
-    Rule instances are indexed, and can be retrieved by its class or class
-    name using the ``get`` method.
+    Rule instances are indexed, and can be retrieved by its class or name
+    using the :attr:`get` method.
     """
 
-    __slots__ = '_root', '_seq', '_name', '_ruleindex'
+    __slots__ = ('root', '_seq', 'name', '_ruleindex')
 
-    _seq: list[Rule]
-    _name: Optional[str]
+    name: Optional[str]
+    "The group name."
     _ruleindex: dict[str, Rule]
-    _root: TabRuleGroups
+    _seq: list[Rule]
+    root: TabRuleGroups
 
-    def __init__(self, name, root,/):
-        self._name = name
-        self._root = root
+    def __init__(self, name, root, /):
+        self.name = name
+        self.root = root
         self._seq = []
         self._ruleindex = {}
-
-    @property
-    def name(self) -> Optional[str]:
-        "The group name."
-        return self._name
 
     @locking
     def append(self, rulecls, /):
         """Instantiate and append a rule class.
 
         Args:
-          rulecls: A :class:`Rule` class.
+          rulecls (type): A :class:`Rule` class.
 
         Raises:
           ValueError: If there is a duplicate name.
           TypeError: If `value` is not a subclass of :class:`Rule`.
           errors.IllegalStateError: If locked.
         """
-        root = self._root
+        root = self.root
         name = check.subcls(rulecls, Rule).name
         root._checkname(name)
-        rule: Rule = rulecls(root._tab, **root._tab.opts)
+        rule: Rule = rulecls(root.tableau, **root.tableau.opts)
         self._seq.append(rule)
         root._ruleindex[name] = self._ruleindex[name] = rule
-        rule.on(RuleEvent.AFTER_APPLY, root._tab._after_rule_apply)
+        rule.on(RuleEvent.AFTER_APPLY, root.tableau._after_rule_apply)
 
     def extend(self, classes, /):
         """Append multiple rules.
@@ -544,9 +548,22 @@ class RuleGroup(SequenceApi[Rule]):
         self._ruleindex.clear()
 
     def get(self, ref, default = NOARG, /) -> Rule:
-        "Get rule instance by name or type. See :attr:`TabRuleGroups.get`."
-        return self._root.get(ref, default)
-        # return self._root._ruleindex_get(self._ruleindex, ref, default)
+        """Get rule instance by name or type.
+
+        Args:
+          ref: A :class:`Rule` class or name.
+          default: A value to return if rule not found.
+
+        Returns:
+          The rule instance, or ``default`` if it is specified and the rule was
+          not found.
+
+        Raises:
+          KeyError: If rule not found and ``default`` not passed.
+          TypeError: For bad ``ref`` type.
+        """
+        return self.root._ruleindex_get(self._ruleindex, ref, default)
+        # return self.root.get(ref, default)
 
     names = TabRuleGroups.names
 
@@ -560,7 +577,14 @@ class RuleGroup(SequenceApi[Rule]):
         return len(self._seq)
 
     def __contains__(self, ref):
-        return self.get(ref, NOGET) is not NOGET
+        # Support name, class, or instance.
+        if isinstance(ref, type):
+            ref = check.subcls(ref, Rule).name
+        if isinstance(ref, str):
+            return ref in self._ruleindex
+        if isinstance(ref, Rule):
+            return ref in self._seq
+        raise Emsg.InstCheck(ref, (str, Rule, type))
 
     def __repr__(self):
         return f'<{type(self).__name__} name:{self.name} rules:{len(self)}>'
@@ -574,19 +598,19 @@ class RuleGroup(SequenceApi[Rule]):
 
 class RuleGroups(SequenceApi[RuleGroup]):
 
-    __slots__ = '_root', '_seq',
+    __slots__ = ('root', '_seq')
 
     _seq: list[RuleGroup]
-    _root: TabRuleGroups
+    root: TabRuleGroups
 
     def __init__(self, root, /):
-        self._root = root
+        self.root = root
         self._seq = []
 
     @locking
     def create(self, name = None):
         'Create and return a new emtpy rule group.'
-        root = self._root
+        root = self.root
         if name is not None:
             root._checkname(name)
         group = RuleGroup(name, root)
@@ -617,15 +641,15 @@ class RuleGroups(SequenceApi[RuleGroup]):
     def get(self, name, default = NOARG, /) -> RuleGroup:
         'Get a rule group by name.'
         try:
-            return self._root._groupindex[name]
+            return self.root._groupindex[name]
         except KeyError:
             if default is NOARG:
                 raise
             return default
 
-    def names(self) -> list[str]:
+    def names(self) -> Set[str]:
         'List the named groups.'
-        return list(filter(isstr, (group.name for group in self)))
+        return self.root._groupindex.keys()
 
     def __iter__(self):
         return iter(self._seq)
@@ -638,17 +662,17 @@ class RuleGroups(SequenceApi[RuleGroup]):
 
     def __contains__(self, item):
         if isinstance(item, str):
-            return item in self._root._groupindex
+            return item in self.root._groupindex
         for grp in self:
             if item is grp:
                 return True
         return False
 
     def __repr__(self):
-        logic = self._root._tab.logic
+        logic = self.root.tableau.logic
         lname = logic.name if logic else None
         return (f'<{type(self).__name__} logic:{lname} groups:{len(self)} '
-            f'names:{self.names()} rules:{sum(map(len, self))}>')
+            f'names:{list(self.names())} rules:{sum(map(len, self))}>')
 
     __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = locking(object.__setattr__)
@@ -1018,20 +1042,27 @@ class Tableau(Sequence[Branch], EventEmitter):
             # branch, node
             stat = stat[TabStatKey.NODES][key]
             try:
-                key = next(kit)
-                # branch, node, key
-                stat = stat[TabStatKey(key)]
-                next(kit)
+                key = TabStatKey(next(kit))
             except StopIteration:
-                return stat
-            raise ValueError('Too many keys to lookup')
+                return MapProxy(stat)
+            else:
+                # branch, node, key
+                stat = stat[key]
+                try:
+                    next(kit)
+                except StopIteration:
+                    # literal value
+                    return stat
+                raise ValueError('Too many keys to lookup')
+        key = TabStatKey(key)
         try:
             # branch, key
-            stat = stat[TabStatKey(key)]
+            stat = stat[key]
             next(kit)
         except StopIteration:
-            if key == TabStatKey.NODES:
-                return stat.copy()
+            if key is TabStatKey.NODES:
+                raise NotImplementedError('Full nodes view not supported')
+            # literal value
             return stat
         raise ValueError('Too many keys to lookup')
 
@@ -1164,7 +1195,8 @@ class Tableau(Sequence[Branch], EventEmitter):
         Returns:
             The highest scoring element.
         """
-        group_scores = tuple(entry.rule.group_score(entry.target) for entry in results)
+        group_scores = tuple(entry.rule.group_score(entry.target)
+            for entry in results)
         max_group_score = max(group_scores)
         min_group_score = min(group_scores)
         for group_score, res in zip(group_scores, results):

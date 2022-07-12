@@ -27,7 +27,7 @@ from pytableaux.logics import LogicType
 from pytableaux.models import BaseModel, ValueFDE
 from pytableaux.proof import (Branch, Node, Tableau, TableauxSystem, Target,
                               adds, filters, group, rules, sdnode)
-from pytableaux.tools import closure, qsetf, setf
+from pytableaux.tools import closure, qsetf
 
 name = 'FDE'
 
@@ -53,7 +53,7 @@ class Model(BaseModel[ValueFDE]):
 
     Value = ValueFDE
 
-    designated_values = setf({Value.B, Value.T})
+    designated_values = frozenset({Value.B, Value.T})
     "The set of designated values."
 
     unassigned_value = Value.N
