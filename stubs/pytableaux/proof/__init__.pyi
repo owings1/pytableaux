@@ -1,7 +1,7 @@
 from typing import Any, Mapping, NamedTuple
 
 from pytableaux.lang import Argument, Sentence
-from pytableaux.proof.tableaux import TabRuleGroups
+from pytableaux.proof.tableaux import RulesRoot
 from pytableaux.tools import abcs
 from pytableaux.tools.mappings import ItemMapEnum
 from pytableaux.tools.timing import Counter, StopWatch
@@ -21,7 +21,7 @@ class TableauxSystem(metaclass=abcs.AbcMeta):
     @classmethod
     def branching_complexity(cls, node: Node) -> int: ...
     @classmethod
-    def add_rules(cls, logic: LogicType, rules: TabRuleGroups) -> None: ...
+    def add_rules(cls, logic: LogicType, rules: RulesRoot) -> None: ...
     @classmethod
     def initialize(cls, RulesClass: type[_SysRulesT]) -> type[_SysRulesT]: ...
 

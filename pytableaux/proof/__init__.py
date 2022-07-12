@@ -300,7 +300,7 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         return 0
 
     @classmethod
-    def add_rules(cls, logic: LogicType, rules: TabRuleGroups, /) -> None:
+    def add_rules(cls, logic: LogicType, rules: RulesRoot, /) -> None:
         """Populate rules/groups for a tableau.
 
         Args:
@@ -529,7 +529,7 @@ def anode(w1, w2):
     return Access(w1, w2)._asdict()
 
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import Rule, Tableau, TabRuleGroups
+from pytableaux.proof.tableaux import Rule, Tableau, RulesRoot
 
 pass
 from pytableaux.proof.rules import ClosingRule as ClosingRule

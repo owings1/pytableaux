@@ -49,7 +49,7 @@ classes
 .. autoclass:: TreeStruct
     :members:
 
-.. autoclass:: TabRuleGroups
+.. autoclass:: RulesRoot
     :members:
 
 .. autoclass:: RuleGroups

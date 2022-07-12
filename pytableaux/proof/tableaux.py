@@ -55,7 +55,7 @@ __all__ = (
     'RuleGroup',
     'RuleGroups',
     'Tableau',
-    'TabRuleGroups',
+    'RulesRoot',
     'TreeStruct',
 )
 
@@ -321,9 +321,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 # ----------------------------------------------
 
 def locking(method: _F) -> _F:
-    'Decorator for locking TabRuleGroups methods after Tableau is started.'
+    'Decorator for locking RulesRoot methods after Tableau is started.'
     @wraps(method)
-    def f(self: TabRuleGroups, *args, **kw):
+    def f(self: RulesRoot, *args, **kw):
         try:
             if self.root.locked:
                 raise Emsg.IllegalState('locked')
@@ -332,29 +332,25 @@ def locking(method: _F) -> _F:
         return method(self, *args, **kw)
     return f
 
-class TabRuleGroups(SequenceApi[Rule]):
+class RulesRoot(SequenceApi[Rule]):
     'Grouped and named collection of rules for a tableau.'
 
-    __slots__ = ('_groupindex', '_ruleindex', 'locked', 'root', 'tableau', 'groups')
+    __slots__ = ('_map', 'groups', 'locked', 'root', 'tableau')
  
-    _groupindex: dict[str, RuleGroup]
-    _ruleindex: dict[str, Rule]
-    "Rule name to instance."
     groups: RuleGroups
     "The rule groups sequence view."
     locked: bool
-    root: TabRuleGroups
+    root: RulesRoot
     tableau: Tableau
+    _map: dict[str, Rule]
 
     def __init__(self, tableau: Tableau, /):
         self.locked = False
         self.root = self
-        self._ruleindex = {}
-        #: Named groups index.
-        self._groupindex = {}
+        self._map = {}
         self.tableau = tableau
         self.groups = RuleGroups(self)
-        tableau.once(TabEvent.AFTER_BRANCH_ADD, self._lock)
+        tableau.once(TabEvent.AFTER_BRANCH_ADD, self.lock)
 
     def append(self, rulecls, /):
         'Add a single Rule to a new (unnamed) group.'
@@ -362,13 +358,12 @@ class TabRuleGroups(SequenceApi[Rule]):
 
     def extend(self, classes, /, name = NOARG):
         'Create a new group from a collection of Rule classes.'
-        self.groups.append(classes, name = name)
+        self.groups.create(name).extend(classes)
 
     def clear(self):
         'Clear all the rules. Raises IllegalStateError if tableau is started.'
         self.groups.clear()
-        self._ruleindex.clear()
-        self._groupindex.clear()
+        self._map.clear()
 
     def get(self, ref, default = NOARG, /) -> Rule:
         """Get rule instance by name or type.
@@ -385,31 +380,23 @@ class TabRuleGroups(SequenceApi[Rule]):
           KeyError: If rule not found and ``default`` not passed.
           TypeError: For bad ``ref`` type.
         """
-        return self._ruleindex_get(self._ruleindex, ref, default)
-        # if not isinstance(ref, str):
-        #     ref = check.subcls(ref, Rule).name
-        # try:
-        #     return self._ruleindex[ref]
-        # except KeyError:
-        #     if default is NOARG:
-        #         raise
-        #     return default
+        return self._rule_get(self._map, ref, default)
 
     def names(self):
         'Return all the rule names.'
-        return self._ruleindex.keys()
+        return self._map.keys()
 
     def __len__(self):
-        return len(self._ruleindex)
+        return len(self._map)
 
     def __contains__(self, ref):
         # Support name, class, or instance.
         if isinstance(ref, type):
             ref = check.subcls(ref, Rule).name
         if isinstance(ref, str):
-            return ref in self._ruleindex
+            return ref in self._map
         if isinstance(ref, Rule):
-            return ref in self._ruleindex.values()
+            return ref in self._map.values()
         raise Emsg.InstCheck(ref, (str, Rule, type))
 
     def __iter__(self):
@@ -426,7 +413,7 @@ class TabRuleGroups(SequenceApi[Rule]):
         select = (((0).__mul__, iter,     opr.add, opr.gt ),
                   ((1).__mul__, reversed, opr.sub, opr.le )).__getitem__
 
-        def getitem(self: TabRuleGroups, index, /,):
+        def getitem(self: RulesRoot, index, /,):
             length = len(self)
             index = absindex(length, index)
             istart, iterfunc, adjust, compare = select(2 * index > length)
@@ -449,27 +436,27 @@ class TabRuleGroups(SequenceApi[Rule]):
     __setattr__ = locking(object.__setattr__)
 
     @locking
-    def _lock(self, _ = None):
-        self.tableau.off(TabEvent.AFTER_BRANCH_ADD, self._lock)
-        self.groups._lock()
-        self._ruleindex  = MapProxy(self._ruleindex)
-        self._groupindex = MapProxy(self._groupindex)
+    def lock(self, _ = None):
+        self.tableau.off(TabEvent.AFTER_BRANCH_ADD, self.lock)
+        self.groups.lock()
+        self._map  = MapProxy(self._map)
         self.locked = True
 
     def _checkname(self, name: str, /):
         'Validate a new rule or group name before it is added.'
         check.inst(name, str)
-        if name in self._groupindex or name in self._ruleindex:
+        if name in self.groups or name in self._map:
+        # if name in self._group_map or name in self._rule_map:
             raise Emsg.DuplicateKey(name)
 
     @staticmethod
-    def _ruleindex_get(idx, ref, default = NOARG, /) -> Rule:
+    def _rule_get(mapping, ref, default = NOARG, /) -> Rule:
         '''Retrieve a rule instance from the given index, by name or type.
         '''
         if not isinstance(ref, str):
             ref = check.subcls(ref, Rule).name
         try:
-            return idx[ref]
+            return mapping[ref]
         except KeyError:
             if default is NOARG:
                 raise
@@ -490,19 +477,19 @@ class RuleGroup(SequenceApi[Rule]):
     using the :attr:`get` method.
     """
 
-    __slots__ = ('root', '_seq', 'name', '_ruleindex')
+    __slots__ = ('_map', '_seq', 'name', 'root')
 
     name: Optional[str]
     "The group name."
-    _ruleindex: dict[str, Rule]
+    root: RulesRoot
+    _map: dict[str, Rule]
     _seq: list[Rule]
-    root: TabRuleGroups
 
     def __init__(self, name, root, /):
         self.name = name
         self.root = root
         self._seq = []
-        self._ruleindex = {}
+        self._map = {}
 
     @locking
     def append(self, rulecls, /):
@@ -521,7 +508,7 @@ class RuleGroup(SequenceApi[Rule]):
         root._checkname(name)
         rule: Rule = rulecls(root.tableau, **root.tableau.opts)
         self._seq.append(rule)
-        root._ruleindex[name] = self._ruleindex[name] = rule
+        root._map[name] = self._map[name] = rule
         rule.on(RuleEvent.AFTER_APPLY, root.tableau._after_rule_apply)
 
     def extend(self, classes, /):
@@ -545,7 +532,7 @@ class RuleGroup(SequenceApi[Rule]):
           errors.IllegalStateError: If locked.
         """
         self._seq.clear()
-        self._ruleindex.clear()
+        self._map.clear()
 
     def get(self, ref, default = NOARG, /) -> Rule:
         """Get rule instance by name or type.
@@ -562,10 +549,13 @@ class RuleGroup(SequenceApi[Rule]):
           KeyError: If rule not found and ``default`` not passed.
           TypeError: For bad ``ref`` type.
         """
-        return self.root._ruleindex_get(self._ruleindex, ref, default)
-        # return self.root.get(ref, default)
+        return self.root._rule_get(self._map, ref, default)
 
-    names = TabRuleGroups.names
+    names = RulesRoot.names
+
+    def lock(self):
+        self._seq = SeqCover(self._seq)
+        self._map = MapProxy(self._map)
 
     def __getitem__(self, index):
         return self._seq[index]
@@ -581,31 +571,29 @@ class RuleGroup(SequenceApi[Rule]):
         if isinstance(ref, type):
             ref = check.subcls(ref, Rule).name
         if isinstance(ref, str):
-            return ref in self._ruleindex
+            return ref in self._map
         if isinstance(ref, Rule):
             return ref in self._seq
         raise Emsg.InstCheck(ref, (str, Rule, type))
 
-    def __repr__(self):
-        return f'<{type(self).__name__} name:{self.name} rules:{len(self)}>'
-
     __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = locking(object.__setattr__)
 
-    def _lock(self):
-        self._seq = SeqCover(self._seq)
-        self._ruleindex = MapProxy(self._ruleindex)
+    def __repr__(self):
+        return f'<{type(self).__name__} name:{self.name} rules:{len(self)}>'
 
 class RuleGroups(SequenceApi[RuleGroup]):
 
-    __slots__ = ('root', '_seq')
+    __slots__ = ('root', '_seq', '_map')
 
     _seq: list[RuleGroup]
-    root: TabRuleGroups
+    _map: dict[str, RuleGroup]
+    root: RulesRoot
 
     def __init__(self, root, /):
         self.root = root
         self._seq = []
+        self._map = {}
 
     @locking
     def create(self, name = None):
@@ -616,7 +604,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
         group = RuleGroup(name, root)
         self._seq.append(group)
         if name is not None:
-            root._groupindex[name] = group
+            self._map[name] = group
         return group
 
     def append(self, Rules, /, name = NOARG):
@@ -637,11 +625,12 @@ class RuleGroups(SequenceApi[RuleGroup]):
         'Clear the groups. Raise IllegalStateError if locked.'
         for _ in map(RuleGroup.clear, self): pass
         self._seq.clear()
+        self._map.clear()
 
     def get(self, name, default = NOARG, /) -> RuleGroup:
-        'Get a rule group by name.'
+        'Get a group by name.'
         try:
-            return self.root._groupindex[name]
+            return self._map[name]
         except KeyError:
             if default is NOARG:
                 raise
@@ -649,7 +638,11 @@ class RuleGroups(SequenceApi[RuleGroup]):
 
     def names(self) -> Set[str]:
         'List the named groups.'
-        return self.root._groupindex.keys()
+        return self._map.keys()
+
+    def lock(self):
+        for _ in map(RuleGroup.lock, self): pass
+        self._seq = SeqCover(self._seq)
 
     def __iter__(self):
         return iter(self._seq)
@@ -662,11 +655,14 @@ class RuleGroups(SequenceApi[RuleGroup]):
 
     def __contains__(self, item):
         if isinstance(item, str):
-            return item in self.root._groupindex
+            return item in self._map
         for grp in self:
             if item is grp:
                 return True
         return False
+
+    __delattr__ = Emsg.ReadOnly.razr
+    __setattr__ = locking(object.__setattr__)
 
     def __repr__(self):
         logic = self.root.tableau.logic
@@ -674,19 +670,12 @@ class RuleGroups(SequenceApi[RuleGroup]):
         return (f'<{type(self).__name__} logic:{lname} groups:{len(self)} '
             f'names:{list(self.names())} rules:{sum(map(len, self))}>')
 
-    __delattr__ = Emsg.ReadOnly.razr
-    __setattr__ = locking(object.__setattr__)
-
-    def _lock(self):
-        for _ in map(RuleGroup._lock, self): pass
-        self._seq = SeqCover(self._seq)
-
 # ----------------------------------------------
 
 class Tableau(Sequence[Branch], EventEmitter):
     'A tableau proof.'
 
-    rules: TabRuleGroups
+    rules: RulesRoot
     "The rule instances."
 
     opts: Mapping
@@ -757,7 +746,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.history = SeqCover(self.__history)
         self.opts    = self._defaults | opts
         self.timers  = TabTimers.create()
-        self.rules   = TabRuleGroups(self)
+        self.rules   = RulesRoot(self)
         self.open    = SeqCover(self.__open)
 
         # Init
