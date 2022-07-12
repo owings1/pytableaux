@@ -35,11 +35,9 @@ from pytableaux.tools import (EMPTY_MAP, abcs, closure, isattrstr, itemsiter,
 from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
-    'defaultdmap',
     'DequeCache',
-    'dmap',
-    'dmapattr',
-    'dmapns',
+    'dictattr',
+    'dictns',
     'EMPTY_MAP',
     'ItemMapEnum',
     'KeySetAttr',
@@ -269,39 +267,6 @@ class MutableMappingApi(MappingApi, MutableMapping, abcs.Copyable):
     def _from_iterable(cls, it, /):
         return cls(it)
 
-class dmap(dict, MutableMappingApi):
-    'Mutable mapping api from dict.'
-
-    __slots__ = EMPTY_SET
-
-    copy    = MutableMappingApi.copy
-    __or__  = MutableMappingApi.__or__
-    __ror__ = MutableMappingApi.__ror__
-
-class defaultdmap(defaultdict, MutableMappingApi):
-    'Mutable mapping api from defaultdict.'
-
-    __slots__ = EMPTY_SET
-
-    copy    = MutableMappingApi.copy
-    __or__  = MutableMappingApi.__or__
-    __ror__ = MutableMappingApi.__ror__
-
-    @classmethod
-    def _from_mapping(cls, mapping, /):
-        if isinstance(mapping, defaultdict):
-            return cls(mapping.default_factory, mapping)
-        return cls(None, mapping)
-
-    @classmethod
-    def _from_iterable(cls, it, /):
-        return cls(None, it)
-
-    @classmethod
-    def _roper_res_type(cls, othrtype, /):
-        if issubclass(othrtype, Mapping):
-            return dmap
-        return super()._roper_res_type(othrtype)
 
 class KeySetAttr(metaclass = abcs.AbcMeta):
     "Mixin class for read-write attribute-key gate."
@@ -335,8 +300,8 @@ class KeySetAttr(metaclass = abcs.AbcMeta):
         'Return whether it is ok to set the attribute name.'
         return not hasattr(cls, name)
 
-class dmapattr(KeySetAttr, dmap):
-    "Dict attr dmap base class."
+class dictattr(KeySetAttr, dict):
+    "Dict attr base class."
 
     __slots__ = EMPTY_SET
 
@@ -346,7 +311,7 @@ class dmapattr(KeySetAttr, dmap):
         if len(kw):
             self.update(kw)
 
-class dmapns(dmapattr):
+class dictns(dictattr):
     "Dict attr namespace with __dict__ slot and liberal key approval."
 
     @classmethod

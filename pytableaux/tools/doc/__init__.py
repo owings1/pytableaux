@@ -62,7 +62,7 @@ from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
 from pytableaux import EMPTY_SET, errors, logics
 from pytableaux.lang import Operator, Parser, Predicates
-from pytableaux.tools import EMPTY_MAP, abcs, qset, dmapns
+from pytableaux.tools import EMPTY_MAP, abcs, qset, dictns
 from sphinx.ext import viewcode
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
@@ -360,7 +360,7 @@ class Processor(AppEnvMixin):
 class AutodocProcessor(Processor):
 
     @dataclass
-    class Record(dmapns):
+    class Record(dictns):
         what: str
         name: str
         obj: Any

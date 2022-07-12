@@ -14,8 +14,8 @@ from pytableaux.proof.helpers import *
 from pytableaux.proof.rules import ClosingRule, NoopRule, Rule
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof import TabEvent, TabFlag, TabStatKey
-from pytableaux.tools import MapProxy
-from pytableaux.tools.mappings import MapCover, dmap
+from pytableaux.tools.mappings import MapCover
+from types import MappingProxyType as MapProxy
 from pytest import raises
 
 from .tutils import BaseSuite, skip, using
@@ -319,7 +319,7 @@ class TestNode:
         exp = {}
         exp.update({'a':1,'b':2,'c':3})
         for inp in [
-            dmap(zip(('a', 'b', 'c'), (1, 2, 3))),
+            dict(zip(('a', 'b', 'c'), (1, 2, 3))),
             MapProxy(exp),
             MapCover._from_iterable(exp.items()),
         ]:

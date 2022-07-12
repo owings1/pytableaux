@@ -1,12 +1,10 @@
-from collections import defaultdict
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (Any, Callable, Generic, Iterable, Iterator, Mapping,
-                    MutableMapping, Reversible, TypeVar, overload)
+from typing import (Any, Generic, Iterable, Mapping, MutableMapping,
+                    Reversible, overload)
 
 from pytableaux.tools import abcs
-from pytableaux.typing import _T, _KT, _VT, _MapT, _SetT, _Self
-
+from pytableaux.typing import _KT, _T, _VT, _MapT, _Self, _SetT
 
 
 class MappingApi(Mapping[_KT, _VT], Reversible[_KT], abcs.Copyable):
@@ -45,18 +43,14 @@ class MutableMappingApi(MappingApi[_KT, _VT], MutableMapping[_KT, _VT]):
     def __iand__(self:_Self, other:Set) -> _MapT: ...
     def __isub__(self:_Self, other:Iterable) -> _MapT: ...
 
-class dmap(MutableMappingApi[_KT, _VT], dict[_KT, _VT]):...
-
-class defaultdmap(MutableMappingApi[_KT, _VT], defaultdict[_KT, _VT]):...
-
 class KeySetAttr:
     def update(self, it: Iterable = ..., /, **kw) -> None: ...
     @classmethod
     def _keyattr_ok(cls, name: str) -> bool:...
 
-class dmapattr(KeySetAttr, dmap[_KT, _VT]):...
+class dictattr(KeySetAttr, dict[_KT, _VT]):...
 
-class dmapns(dmapattr[_KT, _VT]):...
+class dictns(dictattr[_KT, _VT]):...
 
 class ItemMapEnum(abcs.Ebc):
     @overload
@@ -81,15 +75,4 @@ class DequeCache(Generic[_VT]):
     @property
     def maxlen(self) -> int:...
     def __init__(self, maxlen:int|None = ...) -> None: ...
-
-# class ItemsIterator(Iterator[tuple[_KT, _VT]]):
-#     def __init__(self,
-#         obj: Mapping[_KT, _VT]|Iterable[tuple[_KT, _VT]]|Iterable[_KT],
-#         /, *, 
-#         vget: Callable[[_KT], _VT]|None = ...,
-#         kpred: Callable[[_KT], bool] = ...,
-#         vpred: Callable[[_VT], bool] = ...,
-#         koper: Callable[[bool], bool] = ...,
-#         voper: Callable[[bool], bool] = ...,
-#     ) -> None: ...
 

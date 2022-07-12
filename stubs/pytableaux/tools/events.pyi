@@ -2,7 +2,6 @@ from _typeshed import Incomplete
 from enum import Enum
 from pytableaux.tools import abcs
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import dmap
 from pytableaux.typing import _F, _RT, _T
 from typing import Callable, Iterable, overload
 EventId = str | int | Enum
@@ -32,7 +31,7 @@ class Listeners(linqset[Listener]):
     def __init__(self, values: Iterable[Listener] = ...) -> None: ...
     def emit(self, *args, **kw) -> int: ...
 
-class EventsListeners(dmap[EventId, Listeners]):
+class EventsListeners(dict[EventId, Listeners]):
     emitcount: int
     callcount: int
     def __init__(self, *names: EventId) -> None: ...

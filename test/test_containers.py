@@ -253,7 +253,7 @@ class TestMappingApi(BaseSuite):
             # Make sure these are tested, for good measure.
             ParseTable,
             EventsListeners,
-            Target,
+            # Target,
             TreeStruct,
             AppMetrics,
         )
@@ -280,7 +280,7 @@ class TestMappingApi(BaseSuite):
             elif cls is TreeStruct:
                 # TreeStruct has defaults.
                 exp = dict(TreeStruct())
-            elif cls is dmapattr:
+            elif cls is dictattr:
                 exp = dict()
             else:
                 # ParseTable needs [str, item] structure.

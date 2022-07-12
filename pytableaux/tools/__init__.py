@@ -671,14 +671,12 @@ class NoSetAttr(BaseMember):
         setattr(owner, name, func)
 
 from pytableaux.tools.sets import EMPTY_SET as EMPTY_SET
-from pytableaux.tools.sets import setf as setf
 from pytableaux.tools.sets import SetView as SetView
 from pytableaux.tools.hybrids import qset as qset
 from pytableaux.tools.hybrids import qsetf as qsetf
 from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
 from pytableaux.tools.sequences import EMPTY_SEQ as EMPTY_SEQ
-from pytableaux.tools.mappings import dmap as dmap
-from pytableaux.tools.mappings import dmapattr as dmapattr
-from pytableaux.tools.mappings import dmapns as dmapns
+from pytableaux.tools.mappings import dictattr as dictattr
+from pytableaux.tools.mappings import dictns as dictns
 from pytableaux.tools.mappings import DequeCache as DequeCache
 

@@ -31,7 +31,7 @@ from pytableaux.lang import (Lexical, Operated, Operator, Predicated,
                              Quantified, Sentence)
 from pytableaux.proof import Access, Node
 from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, thru
-from pytableaux.tools.mappings import dmapns
+from pytableaux.tools.mappings import dictns
 
 __all__ = (
     'AttrCompare',
@@ -165,7 +165,7 @@ class AttrCompare(Comparer):
 
     def example(self):
         "Build an example object/mapping that satisfies the filter."
-        return dmapns(self.compitem)
+        return dictns(self.compitem)
 
     def __repr__(self):
         props = tuple(f'{k}={v}' for k, v in self.compitem)

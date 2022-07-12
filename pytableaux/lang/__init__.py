@@ -26,9 +26,8 @@ from types import MappingProxyType as MapProxy
 from typing import ClassVar, NamedTuple
 
 from pytableaux.errors import Emsg
-from pytableaux.tools import EMPTY_MAP, abcs, closure, dxopy
-from pytableaux.tools import NoSetAttr, raisr
-from pytableaux.tools.sets import EMPTY_SET, setm
+from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, NoSetAttr, abcs, closure,
+                              dxopy, raisr)
 
 __all__ = (
     # Classes
@@ -119,19 +118,19 @@ class Notation(LangCommonEnum):
     default: ClassVar[Notation]
     "The default notation."
 
-    charsets: setm[str]
+    charsets: set[str]
     "All render charsets for the notation's writer classes."
 
     default_charset: str
     "The render charset of the notation's default writer."
 
-    writers: setm[type[LexWriter]]
+    writers: set[type[LexWriter]]
     "All writer classes for the notation."
 
     DefaultWriter: type[LexWriter]
     "The notations's default writer class."
 
-    rendersets: setm[RenderSet]
+    rendersets: set[RenderSet]
     "All RenderSets of the notation."
 
     Parser: type[Parser]
@@ -147,11 +146,11 @@ class Notation(LangCommonEnum):
 
     def __init__(self, name, /):
         default_charset = 'unicode'
-        self.charsets = setm((default_charset,))
+        self.charsets = set((default_charset,))
         self.default_charset = default_charset
-        self.writers = setm()
+        self.writers = set()
         self.DefaultWriter = None
-        self.rendersets = setm()
+        self.rendersets = set()
 
     __slots__ = (
         'charsets',
@@ -463,8 +462,17 @@ from pytableaux.lang.lex import Atomic, Constant
 from pytableaux.lang.lex import CoordsItem as CoordsItem
 from pytableaux.lang.lex import Lexical, LexType, Operated, Operator
 from pytableaux.lang.lex import Parameter as Parameter
+
+pass
+
 from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
                                  Sentence, Variable)
+
+pass
 from pytableaux.lang.parsing import Parser, ParseTable
+
+pass
 from pytableaux.lang.collect import Argument, Predicates
+
+pass
 from pytableaux.lang.writing import LexWriter

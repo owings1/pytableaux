@@ -33,7 +33,7 @@ from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
 from pytableaux.tools import abcs, closure
 from pytableaux.tools.hybrids import QsetView, qset
-from pytableaux.tools.mappings import MappingApi, dmap
+from pytableaux.tools.mappings import MappingApi
 from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
@@ -376,7 +376,7 @@ class Registry(MappingApi, abcs.Copyable):
             ident = id(self)
         return f'{type(self).__name__}@{ident}{repr(list(names))}'
 
-    class Index(dmap):
+    class Index(dict):
         """Registry index."""
 
         __slots__ = EMPTY_SET

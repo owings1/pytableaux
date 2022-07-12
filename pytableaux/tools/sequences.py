@@ -26,16 +26,14 @@ from collections import deque
 from itertools import chain, repeat
 from typing import Iterable, MutableSequence, Sequence, SupportsIndex
 
-from pytableaux.errors import Emsg, check
+from pytableaux.errors import Emsg
 from pytableaux.tools import abcs
 from pytableaux.tools.sets import EMPTY_SET
 
 __all__ = (
     'absindex',
-    'deqseq',
     'EMPTY_SEQ',
     'MutableSequenceApi',
-    'seqm',
     'SequenceApi',
     'SeqCover',
     'slicerange',
@@ -45,8 +43,6 @@ NOARG = object()
 
 def absindex(seqlen, index, /, strict = True):
     'Normalize to positive/absolute index.'
-    if type(index) is not int:
-        index = int(check.inst(index, SupportsIndex))
     if index < 0:
         index = seqlen + index
     if strict and (index >= seqlen or index < 0):
@@ -128,34 +124,34 @@ class MutableSequenceApi(SequenceApi, MutableSequence):
         return self
 
 
-class CoverAttr(frozenset, abcs.Ebc):
+class SeqCoverAttr(frozenset, abcs.Ebc):
     REQUIRED = {'__len__', '__getitem__', '__contains__', '__iter__',
-        'count', 'index',}
+                'count', 'index',}
     OPTIONAL = {'__reversed__'}
     ALL = REQUIRED | OPTIONAL
 
 class SeqCover(SequenceApi, immutcopy = True):
 
-    __slots__ = CoverAttr.ALL.copy()
+    __slots__ = SeqCoverAttr.ALL
 
     def __new__(cls, seq: Sequence, /):
         self = object.__new__(cls)
         sa = object.__setattr__
-        for name in CoverAttr.REQUIRED:
+        for name in SeqCoverAttr.REQUIRED:
             sa(self, name, getattr(seq, name))
-        for name in CoverAttr.OPTIONAL:
+        for name in SeqCoverAttr.OPTIONAL:
             value = getattr(seq, name, NOARG)
             if value is not NOARG:
                 sa(self, name, value)
         return self
 
     def __delattr__(self, name, /):
-        if name in CoverAttr.ALL:
+        if name in SeqCoverAttr.ALL:
             raise Emsg.ReadOnly(self, name)
         super().__delattr__(name)
 
     def __setattr__(self, name, value, /):
-        if name in CoverAttr.ALL:
+        if name in SeqCoverAttr.ALL:
             raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
 
@@ -169,45 +165,6 @@ class SeqCover(SequenceApi, immutcopy = True):
         if isinstance(it, Sequence):
             return cls(it)
         return cls(tuple(it))
-
-class seqm(list, MutableSequenceApi):
-
-    __slots__ = EMPTY_SET
-
-    __imul__ = MutableSequenceApi.__imul__
-    __mul__  = MutableSequenceApi.__mul__
-    __rmul__ = MutableSequenceApi.__rmul__
-    __add__  = MutableSequenceApi.__add__
-    __radd__ = MutableSequenceApi.__radd__
-    copy     = MutableSequenceApi.copy
-
-    def __getitem__(self, i, /):
-        if isinstance(i, slice):
-            # Ensure slice returns this type, not a list.
-            return self._from_iterable(super().__getitem__(i))
-        return super().__getitem__(i)
-
-class deqseq(deque, MutableSequenceApi):
-
-    __slots__ = EMPTY_SET
-
-    __imul__ = MutableSequenceApi.__imul__
-    __mul__  = MutableSequenceApi.__mul__
-    __rmul__ = MutableSequenceApi.__rmul__
-    __add__  = MutableSequenceApi.__add__
-    __radd__ = MutableSequenceApi.__radd__
-    copy     = MutableSequenceApi.copy
-
-    def sort(self, /, *, key = None, reverse = False):
-        values = sorted(self, key = key, reverse = reverse)
-        self.clear()
-        self.extend(values)
-
-    @classmethod
-    def _from_iterable(cls, it: Iterable):
-        if isinstance(it, deque):
-            return cls(it, maxlen = it.maxlen)
-        return cls(it)
 
 EMPTY_SEQ = ()
 

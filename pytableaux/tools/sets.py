@@ -32,8 +32,6 @@ __all__ = (
     'EMPTY_SET',
     'MutableSetApi',
     'SetApi',
-    'setf',
-    'setm',
     'SetView',
 )
 
@@ -78,26 +76,6 @@ class MutableSetApi(MutableSet, SetApi):
     symmetric_difference_update = operd.apply(opr.ixor,
         set.symmetric_difference_update)
     del(rep)
-
-class setf(SetApi, frozenset):
-    'SetApi wrapper around built-in frozenset.'
-    __slots__ = EMPTY_SET
-
-    __len__      = frozenset.__len__
-    __iter__     = frozenset.__iter__
-    __contains__ = frozenset.__contains__
-
-class setm(MutableSetApi, set):
-    'MutableSetApi wrapper around built-in set.'
-    __slots__ = EMPTY_SET
-
-    __len__      = set.__len__
-    __iter__     = set.__iter__
-    __contains__ = set.__contains__
-
-    clear   = set.clear
-    add     = set.add
-    discard = set.discard
 
 class SetView(SetApi):
     'SetApi cover.'

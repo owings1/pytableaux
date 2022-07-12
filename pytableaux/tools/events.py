@@ -28,8 +28,6 @@ from typing import Callable, Mapping, Any
 from pytableaux.errors import Emsg
 from pytableaux.tools import abcs, wraps
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import dmap
-
 
 __all__ = (
     'EventEmitter',
@@ -37,7 +35,6 @@ __all__ = (
     'Listener',
     'Listeners',
 )
-
 
 class EventEmitter(abcs.Copyable):
 
@@ -107,17 +104,12 @@ class Listeners(linqset[Listener]):
     emitcount: int
     callcount: int
 
-    __slots__ = 'emitcount', 'callcount'
+    __slots__ = ('emitcount', 'callcount')
 
     def __init__(self, values = None):
         super().__init__(values)
         self.callcount = 0
         self.emitcount = 0
-
-    # @abcs.abcf.temp
-    # @linqset.hook('cast')
-    # def cast(value):
-    #     return check.inst(value, Listener)
 
     def emit(self, *args, **kw) -> int:
         self.emitcount += 1
@@ -141,12 +133,12 @@ class Listeners(linqset[Listener]):
             f'<{type(self).__name__} listeners:{len(self)} '
             f'emitcount:{self.emitcount} callcount:{self.callcount}>')
 
-class EventsListeners(dmap[Any, Listeners]):
+class EventsListeners(dict[Any, Listeners]):
 
     emitcount: int
     callcount: int
 
-    __slots__ = 'emitcount', 'callcount',
+    __slots__ = ('emitcount', 'callcount')
 
     def __init__(self, *events):
         self.emitcount = self.callcount = 0
@@ -225,7 +217,7 @@ class EventsListeners(dmap[Any, Listeners]):
             **kw: Listener kwargs.
         
         Returns:
-            The number of listeners called.
+            int: The number of listeners called.
         """
         listeners = self[event]
         self.emitcount += 1
@@ -247,16 +239,8 @@ class EventsListeners(dmap[Any, Listeners]):
         inst.create(*self)
         return inst
 
-    # def __setitem__(self, key, value):
-    #     # Override for type check
-    #     super().__setitem__(key, check.inst(value, Listeners))
-
-    # Alternate update impl uses setitem.
-    # update = dmap._setitem_update
-
     def __repr__(self):
-        return (
-            f'<{type(self).__name__} events:{len(self)} '
+        return (f'<{type(self).__name__} events:{len(self)} '
             f'listeners:{sum(map(len, self.values()))} '
             f'emitcount:{self.emitcount} callcount:{self.callcount}>')
 

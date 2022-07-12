@@ -7,7 +7,7 @@ from pytableaux.proof.tableaux import Rule
 from pytableaux.tools import abcs
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import MapCover, dmapattr
+from pytableaux.tools.mappings import MapCover, dictattr
 from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.sets import SetView
 from pytableaux.typing import _Self
@@ -84,7 +84,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         def add(self, node: Node): ...
         def select(self, props: Mapping, default: Collection[Node]) -> Collection[Node]: ...
 
-class Target(dmapattr[str, Any]):
+class Target(dictattr[str, Any]):
     branch: Branch
     constant: Constant
     designated: bool

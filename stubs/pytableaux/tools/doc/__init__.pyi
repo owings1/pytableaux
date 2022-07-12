@@ -9,7 +9,7 @@ from pytableaux.lang import Operator, Parser, Predicates
 from pytableaux.logics import LogicType
 from pytableaux.tools import abcs
 from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import dmapns
+from pytableaux.tools.mappings import dictns
 from pytableaux.typing import _T, _DictT
 from sphinx.application import Sphinx
 from sphinx.config import Config
@@ -86,7 +86,7 @@ class AutodocProcessor(Processor):
     lines: list[str]
     record: AutodocProcessor.Record
 
-    class Record(dmapns):
+    class Record(dictns):
         what: str
         name: str
         obj: Any

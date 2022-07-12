@@ -3,7 +3,7 @@ from typing import (Any, Callable, ClassVar, Generic, Hashable, Mapping,
 
 from pytableaux.lang import Lexical, Operator, Predicate, Quantifier, Sentence
 from pytableaux.proof.common import Node
-from pytableaux.tools.mappings import dmapns
+from pytableaux.tools.mappings import dictns
 from pytableaux.typing import _LHS, _RHS, _T
 
 
@@ -38,7 +38,7 @@ class AttrCompare(Comparer[_LHS, _RHS, __Item]):
     def rget(self, rhs: _RHS, name: str) -> Any: ...
     def fcmp(self, a: Any, b: Any) -> bool: ...
     def __call__(self, rhs: _RHS) -> bool: ...
-    def example(self) -> _RHS|dmapns[str, Any]: ...
+    def example(self) -> _RHS|dictns[str, Any]: ...
 
 class SentenceCompare(Comparer[__SentenceComparable, _RHS, CompSentenceCompItem]):
     compmap: ClassVar[__CompSentMap]

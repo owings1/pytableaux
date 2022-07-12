@@ -31,7 +31,7 @@ class LogicType:
         rule_groups: ClassVar[tuple[tuple[type[Rule], ...], ...]]
         all_rules: ClassVar[tuple[type[Rule], ...]]
 
-class Registry(mappings.MappingApi[_LogicLookupKey, _LogicModule], abcs.Copyable, Reversible[_LogicLookupKey]):
+class Registry(mappings.MappingApi[_LogicLookupKey, _LogicModule], abcs.Copyable):
     packages: hybrids.qset[str]
     modules: hybrids.QsetView[str]
     index: Mapping[_LogicLookupKey, str]
@@ -63,4 +63,4 @@ class Registry(mappings.MappingApi[_LogicLookupKey, _LogicModule], abcs.Copyable
     def _module_keys(logic: _LogicModule, /) -> tuple[_LogicModule, str, str, str]:...
     @staticmethod
     def _package_all(package: ModuleType, /) -> Iterator[str]:...
-    class Index(mappings.dmap):...
+    class Index(dict):...

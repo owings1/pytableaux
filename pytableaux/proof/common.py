@@ -24,16 +24,16 @@ from __future__ import annotations
 import builtins
 import operator as opr
 from collections import defaultdict
-from collections.abc import Set
+from collections.abc import Mapping, Set
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 from pytableaux import tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import Constant, Sentence
-from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, SetView, abcs, dmap,
-                              dmapattr, isattrstr, isint, lazy, operd, qset,
-                              raisr, itemsiter)
+from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, SetView, abcs, dictattr,
+                              isattrstr, isint, itemsiter, lazy, operd, qset,
+                              raisr)
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.mappings import MapCover
 from pytableaux.tools.sequences import SequenceApi
@@ -146,8 +146,8 @@ class Node(MapCover):
 
     @classmethod
     def _oper_res_type(cls, _):
-        'Always produce a ``dmap`` on math operations.'
-        return dmap
+        'Always produce a ``dict`` on math operations.'
+        return dict
 
     def __repr__(self):
         return f'<{type(self).__name__} id:{self.id} props:{dict(self)}>'
@@ -287,11 +287,11 @@ class Branch(SequenceApi[Node], EventEmitter):
         "The set of constants on the branch."
         return SetView(self.__constants)
 
-    def has(self, props: Mapping, /) -> bool:
+    def has(self, props, /) -> bool:
         """Whether there is a node on the branch that matches the given properties.
         
         Args:
-            props: A mapping of properties.
+            props (Mapping): A mapping of properties.
         
         Returns:
             bool: Whether there is a match.
@@ -300,28 +300,28 @@ class Branch(SequenceApi[Node], EventEmitter):
             return True
         return False
 
-    def any(self, mappings: Iterable[Mapping], /) -> bool:
-        """Check a list of property mappings against the ``has()`` method.
+    def any(self, mappings, /) -> bool:
+        """Check a list of property mappings against the :attr:`has` method.
         
         Args:
-            mappings: An iterable of property mappings.
+            mappings (Iterable[Mapping]): An iterable of property mappings.
         
         Returns:
-            ``True`` when the first match is found, else ``False``.
+            bool: True when the first match is found, else False.
         """
         for props in mappings:
             for _ in self.search(props, limit = 1):
                 return True
         return False
 
-    def all(self, mappings: Iterable[Mapping], /) -> bool:
-        """Check a list of property mappings against the ``has()`` method.
+    def all(self, mappings, /) -> bool:
+        """Check a list of property mappings against the :attr:`has` method.
         
         Args:
-            mappings: An iterable of property mappings.
+            mappings (Iterable[Mapping]): An iterable of property mappings.
         
         Returns:
-            ``False`` when the first non-match is found, else ``True``.
+            bool: False when the first non-match is found, else True.
         """
         for props in mappings:
             for _ in self.search(props, limit = 1):
@@ -342,7 +342,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         for node in self.search(props, limit = 1):
             return node
 
-    def search(self, props, /, limit = None) -> Iterator[Node]:
+    def search(self, props, /, limit = None):
         """
         Search the nodes on the branch that match the given properties, up to the
         limit, if given.
@@ -352,7 +352,7 @@ class Branch(SequenceApi[Node], EventEmitter):
             limit (int): An optional result limit.
 
         Returns:
-            A generator.
+            Generator[Node]: Results generator.
         """
         n = 0
         for node in self.__index.select(props, self):
@@ -559,7 +559,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                 best = default
             return best
 
-class Target(dmapattr):
+class Target(dictattr):
     """Rule application target.
     """
 

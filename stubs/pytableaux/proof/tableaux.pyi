@@ -10,7 +10,7 @@ from pytableaux.proof import (Branch, LogicType, Node,
                               Target)
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.mappings import dmapns
+from pytableaux.tools.mappings import dictns
 from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.timing import StopWatch
 from pytableaux.typing import _T, _LogicLookupKey, _RuleT, _Self, _TypeInstDict
@@ -137,7 +137,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     @overload
     def __getitem__(self, i: SupportsIndex) -> Branch: ...
 
-class TreeStruct(dmapns):
+class TreeStruct(dictns):
     root: bool
     nodes: list[Node]
     ticksteps: list[int|None]

@@ -44,9 +44,8 @@ from pytableaux.lang import (Argument, LexType, LexWriter, Operator,
                              ParseTable, Predicate, Predicates, Quantifier,
                              TriCoords)
 from pytableaux.proof import Tableau, writers
+from pytableaux.tools import EMPTY_MAP, qsetf
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.mappings import EMPTY_MAP, dmap
 from pytableaux.tools.timing import StopWatch
 from pytableaux.web import Wevent
 from pytableaux.web.mail import Mailroom, validate_feedback_form
@@ -625,7 +624,7 @@ class WebApp(EventEmitter):
         config = self.config
         errors = {}
 
-        body = dmap(
+        body = dict(
             logic        = None,
             argument     = EMPTY_MAP,
             build_models = False,
@@ -634,7 +633,7 @@ class WebApp(EventEmitter):
             group_optimizations = True,
         ) | body
 
-        odata = dmap(
+        odata = dict(
             notation = self.api_defaults['output_notation'],
             format   = self.api_defaults['output_format'],
             charset  = None,

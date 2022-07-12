@@ -42,7 +42,7 @@ from pytableaux.tools import (EMPTY_SET, closure, for_defaults, qset, qsetf,
                               wraps)
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import dmapns
+from pytableaux.tools.mappings import dictns
 from pytableaux.tools.sequences import SeqCover, SequenceApi, absindex
 from pytableaux.tools.timing import Counter, StopWatch
 
@@ -220,7 +220,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         tab.finish()
         if not noassert:
             assert len(rule.history) > 0
-        return dmapns(
+        return dictns(
             cls     = cls,
             rule    = rule,
             tableau = tab,
@@ -1336,7 +1336,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             s.balanced_line_width = s.balanced_line_margin = 0
 
 
-class TreeStruct(dmapns):
+class TreeStruct(dictns):
     'Recursive tree structure representation of a tableau.'
 
     root: bool

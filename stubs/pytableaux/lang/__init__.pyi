@@ -3,7 +3,6 @@ from typing import (Any, Callable, ClassVar, Iterable, Iterator, Mapping,
 
 
 from pytableaux.tools import abcs
-from pytableaux.tools.sets import setm
 from pytableaux.typing import _T, _RsetSectKT
 
 
@@ -31,11 +30,11 @@ class LangCommonEnum(abcs.Ebc, metaclass=LangCommonEnumMeta): ...
 class __NotationMeta(LangCommonEnumMeta):
     default: Notation
 class _NotationAttrs:
-    charsets: setm[str]
+    charsets: set[str]
     default_charset: str
-    writers: setm[type[LexWriter]]
+    writers: set[type[LexWriter]]
     DefaultWriter: type[LexWriter]
-    rendersets: setm[RenderSet]
+    rendersets: set[RenderSet]
     Parser: type[Parser]
 
 class Notation(_NotationAttrs, LangCommonEnum, metaclass = __NotationMeta):
