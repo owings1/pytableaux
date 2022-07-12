@@ -64,8 +64,8 @@ del(dataclasses,_Settings)
 # ---- tools
 
 # import pytableaux.tools.decorators
-import pytableaux.tools.sets
-from pytableaux.tools.sets import EMPTY_SET
+# import pytableaux.tools.sets
+from pytableaux.tools import EMPTY_SET
 
 import pytableaux.tools.timing
 import pytableaux.tools.mappings

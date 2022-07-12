@@ -51,7 +51,7 @@ from abc import abstractmethod as abstract
 from dataclasses import dataclass
 from importlib import import_module
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Mapping, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import jinja2
 import sphinx.directives
@@ -62,9 +62,7 @@ from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
 from pytableaux import EMPTY_SET, errors, logics
 from pytableaux.lang import Operator, Parser, Predicates
-from pytableaux.tools import EMPTY_MAP, abcs
-from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import dmapns
+from pytableaux.tools import EMPTY_MAP, abcs, qset, dmapns
 from sphinx.ext import viewcode
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring

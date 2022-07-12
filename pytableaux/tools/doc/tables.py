@@ -28,10 +28,9 @@ from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 from pytableaux.lang import LexType, LexWriter, Operator, ParseTable, RenderSet
-from pytableaux.tools import abcs, closure
+from pytableaux.tools import abcs, closure, qset
 from pytableaux.tools.doc import ConfKey, Tabler, directives
 from pytableaux.tools.doc.directives import TableGenerator
-from pytableaux.tools.hybrids import qset
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx

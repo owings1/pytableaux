@@ -20,7 +20,7 @@ pytableaux.tools.linked
 from __future__ import annotations
 
 from itertools import filterfalse
-from typing import Any, Collection, SupportsIndex
+from typing import Any, Collection, Optional, SupportsIndex
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg
@@ -60,13 +60,13 @@ class Link(abcs.Copyable):
     value: Any
     "The value."
 
-    prev: Link|None
+    prev: Optional[Link]
     "The previous link."
 
-    next: Link|None
+    next: Optional[Link]
     "The next link."
 
-    __slots__ = 'prev', 'next', 'value'
+    __slots__ = ('prev', 'next', 'value')
     __iter__ = None
 
     @property

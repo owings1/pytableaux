@@ -31,7 +31,6 @@ from pytableaux.logics import LogicType
 from pytableaux.tools import EMPTY_MAP, abcs, closure
 from pytableaux.tools.hybrids import EMPTY_QSET, qsetf
 from pytableaux.tools.mappings import ItemMapEnum, dmap
-from pytableaux.tools.sets import setf
 from pytableaux.tools.timing import Counter, StopWatch
 
 __all__ = (
@@ -446,10 +445,9 @@ class RuleMeta(abcs.AbcMeta):
     #         subcls.FLAGS = functools.reduce(opr.or_, flagsmap.values(), cls.FLAGS)
 
         defaults = abcs.merge_attr(Class, RuleAttr.DefaultOpts, mcls = cls,
-            default = dmap(), transform = MapProxy,
-        )
+            default = dmap(), transform = MapProxy)
 
-        setattr(Class, RuleAttr.OptKeys, setf(defaults))
+        setattr(Class, RuleAttr.OptKeys, frozenset(defaults))
 
         abcs.merge_attr(Class, RuleAttr.Timers, mcls = cls,
             default = EMPTY_QSET, transform = qsetf,

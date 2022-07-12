@@ -21,7 +21,8 @@ from pytableaux.tools.hybrids import qset
 
 if TYPE_CHECKING:
     from typing import overload
-    from pytableaux.typing import _TT, _F, _T
+    from pytableaux.typing import _TT, _F, _T # type: ignore
+
 __all__ = (
     'BaseSuite',
     'larg',
@@ -298,7 +299,7 @@ class BaseSuite:
         t = self.tab()
         try:
             rule = t.rules.get(rule)
-        except ValueError:
+        except KeyError:
             if isinstance(rule, str):
                 rule = getattr(t.logic.TabRules, rule)
             t.rules.append(rule)

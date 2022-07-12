@@ -1,5 +1,5 @@
 from typing import (Any, Collection, Iterable, Iterator, Literal, Mapping, Set,
-                    SupportsIndex, TypedDict, overload)
+                    SupportsIndex, overload)
 
 from pytableaux.lang import Constant, Sentence
 from pytableaux.models import BaseModel
@@ -9,7 +9,7 @@ from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qset
 from pytableaux.tools.mappings import MapCover, dmapattr
 from pytableaux.tools.sequences import SequenceApi
-from pytableaux.tools.sets import SetView, setf
+from pytableaux.tools.sets import SetView
 from pytableaux.typing import _Self
 
 
@@ -24,7 +24,7 @@ class Node(MapCover, abcs.Copyable):
     @property
     def is_access(self) -> bool: ...
     @property
-    def worlds(self, *, names=...) -> setf[int]: ...
+    def worlds(self, *, names=...) -> frozenset[int]: ...
     def has(self, *names: str) -> bool: ...
     def any(self, *names: str) -> bool: ...
     def meets(self, props: Mapping) -> bool: ...

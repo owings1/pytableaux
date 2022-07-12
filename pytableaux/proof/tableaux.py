@@ -38,12 +38,12 @@ from pytableaux.proof import (BranchEvent, BranchStat, RuleClassFlag,
                               RuleEvent, RuleMeta, RuleState, StepEntry,
                               TabEvent, TabFlag, TabStatKey, TabTimers)
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.tools import (EMPTY_SET, closure, dmap, isstr, qset, qsetf,
-                              seqf, setf, wraps)
+from pytableaux.tools import (EMPTY_SET, closure, isstr, qset, qsetf,
+                              wraps, for_defaults)
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.linked import linqset
 from pytableaux.tools.mappings import dmapns
-from pytableaux.tools.sequences import SeqCover, SequenceApi, absindex, seqm
+from pytableaux.tools.sequences import SeqCover, SequenceApi, absindex
 from pytableaux.tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
@@ -62,7 +62,6 @@ __all__ = (
 NOARG = object()
 NOGET = object()
 
-
 # ----------------------------------------------
 
 class Rule(EventEmitter, metaclass = RuleMeta):
@@ -72,7 +71,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         is_rank_optim = True,
         nolock = False,
     ))
-    _optkeys = setf(_defaults)
+    _optkeys = frozenset(_defaults)
 
     FLAGS = RuleClassFlag(0)
     legend: tuple
@@ -125,18 +124,10 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         self.tableau = tableau
 
         # options
-        if opts:
-            opts = dmap(opts)
-            opts &= self._optkeys
-            opts %= self._defaults
-        else:
-            opts = self._defaults
-        self.opts = MapProxy(opts)
+        self.opts = MapProxy(for_defaults(self._defaults, opts))
 
         # timers
-        self.timers = {
-            name: StopWatch() for name in self.Timers
-        }
+        self.timers = {name: StopWatch() for name in self.Timers}
 
         # history
         history = deque()
@@ -170,7 +161,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         "Return example nodes that would trigger the rule."
         raise NotImplementedError
 
-    def sentence(self, node: Node, /) -> Sentence|None:
+    def sentence(self, node: Node, /) -> Optional[Sentence]:
         'Get the sentence for the node, or ``None``.'
         return node.get('sentence')
 
@@ -184,7 +175,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         return 0.0
 
     @final
-    def target(self, branch: Branch, /) -> Target|None:
+    def target(self, branch: Branch, /) -> Optional[Target]:
         "Get the rule target if it applies."
         with self.timers['search']:
             targets = self._get_targets(branch)
@@ -256,7 +247,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     @closure
     def __setattr__(*, slots = __slots__):
         LockedVal = RuleState.LOCKED.value
-        protected: Callable[[str], bool] = set(slots).__contains__
+        protected: Callable[[str], bool] = frozenset(slots).__contains__
         def fset(self: Rule, name, value, /):
             statev = self.state.value
             if statev and statev & LockedVal == statev and protected(name):
@@ -266,14 +257,13 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     @closure
     def __delattr__(*, slots = __slots__):
-        protected: Callable[[str], bool] = set(slots).__contains__
+        protected: Callable[[str], bool] = frozenset(slots).__contains__
         def fdel(self: Rule, name,/):
             if protected(name):
                 raise Emsg.ReadOnly(self, name)
             super().__delattr__(name)
         return fdel
 
-    @final
     @closure
     def __lock():
         sa = object.__setattr__
@@ -345,14 +335,8 @@ def locking(method: _F) -> _F:
 class TabRuleGroups(SequenceApi[Rule]):
     'Grouped and named collection of rules for a tableau.'
 
-    __slots__ = (
-        '_groupindex',
-        '_locked',
-        '_root',
-        '_ruleindex',
-        '_tab',
-        'groups',
-    )
+    __slots__ = ('_groupindex', '_locked', '_root', '_ruleindex',
+                 '_tab', 'groups')
  
     #: The rule groups sequence view.
     groups: RuleGroups
@@ -373,13 +357,13 @@ class TabRuleGroups(SequenceApi[Rule]):
         self.groups = RuleGroups(self)
         tab.once(TabEvent.AFTER_BRANCH_ADD, self._lock)
 
-    def append(self, rule,/):
+    def append(self, rulecls, /):
         'Add a single Rule to a new (unnamed) group.'
-        self.groups.create(None).append(rule)
+        self.groups.create(None).append(rulecls)
 
-    def extend(self, rules, /, name = NOARG):
+    def extend(self, classes, /, name = NOARG):
         'Create a new group from a collection of Rule classes.'
-        self.groups.append(rules, name = name)
+        self.groups.append(classes, name = name)
 
     def clear(self):
         'Clear all the rules. Raises IllegalStateError if tableau is started.'
@@ -388,8 +372,28 @@ class TabRuleGroups(SequenceApi[Rule]):
         self._groupindex.clear()
 
     def get(self, ref, default = NOARG, /) -> Rule:
-        'Get a rule instance by name or type.'
-        return self._ruleindex_get(self._ruleindex, ref, default)
+        """Get rule instance by name or type.
+
+        Args:
+          ref: A :class:`Rule` class or name.
+          default: A value to return if rule not found.
+
+        Returns:
+          The rule instance, or ``default`` if it is specified and the rule was
+          not found.
+
+        Raises:
+          KeyError: If rule not found and ``default`` not passed.
+          TypeError: For bad ``ref`` type.
+        """
+        if not isinstance(ref, str):
+            ref = check.subcls(ref, Rule).name
+        try:
+            return self._ruleindex[ref]
+        except KeyError:
+            if default is NOARG:
+                raise
+            return default
 
     def names(self):
         'List all the rule names in the sequence.'
@@ -412,10 +416,8 @@ class TabRuleGroups(SequenceApi[Rule]):
     @closure
     def __getitem__():
 
-        select = (
-            ( (0).__mul__, iter,     opr.add, opr.gt ),
-            ( (1).__mul__, reversed, opr.sub, opr.le ),
-        ).__getitem__
+        select = (((0).__mul__, iter,     opr.add, opr.gt ),
+                  ((1).__mul__, reversed, opr.sub, opr.le )).__getitem__
 
         def getitem(self: TabRuleGroups, index, /,):
             length = len(self)
@@ -452,18 +454,18 @@ class TabRuleGroups(SequenceApi[Rule]):
         if name in self._groupindex or name in self._ruleindex:
             raise Emsg.DuplicateKey(name)
 
-    @staticmethod
-    def _ruleindex_get(idx, ref, default = NOARG, /) -> Rule:
-        '''Retrieve a rule instance from the given index, by name or type.
-        '''
-        try:
-            if isinstance(ref, str):
-                return idx[ref]
-            return idx[check.subcls(ref, Rule).__name__]
-        except KeyError:
-            if default is not NOARG:
-                return default
-        raise Emsg.MissingValue(ref)
+    # @staticmethod
+    # def _ruleindex_get(idx, ref, default = NOARG, /) -> Rule:
+    #     '''Retrieve a rule instance from the given index, by name or type.
+    #     '''
+    #     try:
+    #         if isinstance(ref, str):
+    #             return idx[ref]
+    #         return idx[check.subcls(ref, Rule).name]
+    #     except KeyError:
+    #         if default is not NOARG:
+    #             return default
+    #     raise Emsg.MissingValue(ref)
 
 class RuleGroup(SequenceApi[Rule]):
     """A rule group of a Tableau's ``rules``.
@@ -511,7 +513,7 @@ class RuleGroup(SequenceApi[Rule]):
           errors.IllegalStateError: If locked.
         """
         root = self._root
-        name = check.subcls(rulecls, Rule).__name__
+        name = check.subcls(rulecls, Rule).name
         root._checkname(name)
         rule: Rule = rulecls(root._tab, **root._tab.opts)
         self._seq.append(rule)
@@ -542,21 +544,9 @@ class RuleGroup(SequenceApi[Rule]):
         self._ruleindex.clear()
 
     def get(self, ref, default = NOARG, /) -> Rule:
-        """Get a member instance by name, type, or instance of same type.
-
-        Args:
-          ref: A :class:`Rule` class or name.
-          default: A value to return if rule not found.
-
-        Returns:
-          The rule instance, or ``default`` if it is specified and the rule was
-          not found.
-
-        Raises:
-          ValueError: If rule not found and ``default`` not passed.
-          TypeError: For bad ``ref`` type.
-        """
-        return self._root._ruleindex_get(self._ruleindex, ref, default)
+        "Get rule instance by name or type. See :attr:`TabRuleGroups.get`."
+        return self._root.get(ref, default)
+        # return self._root._ruleindex_get(self._ruleindex, ref, default)
 
     names = TabRuleGroups.names
 
@@ -589,7 +579,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
     _seq: list[RuleGroup]
     _root: TabRuleGroups
 
-    def __init__(self, root,/):
+    def __init__(self, root, /):
         self._root = root
         self._seq = []
 
@@ -633,9 +623,9 @@ class RuleGroups(SequenceApi[RuleGroup]):
                 raise
             return default
 
-    def names(self) -> seqm[str]:
+    def names(self) -> list[str]:
         'List the named groups.'
-        return seqm(filter(isstr, (group.name for group in self)))
+        return list(filter(isstr, (group.name for group in self)))
 
     def __iter__(self):
         return iter(self._seq)
@@ -692,7 +682,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     stats: dict[str, Any]
     "The stats, built after finished."
 
-    models: setf
+    models: frozenset
     """The models, built after finished if the tableau is `invalid` and the
     `is_build_models` option is enabled."""
 
@@ -980,7 +970,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.__flag |= TabFlag.FINISHED
         if self.invalid and self.opts['is_build_models'] and self.logic is not None:
             with self.timers.models:
-                self.models = setf(self._gen_models())
+                self.models = frozenset(self._gen_models())
         if TabFlag.TIMED_OUT not in self.__flag:
             # In case of a timeout, we do `not` build the tree in order to best
             # respect the timeout. In case of `max_steps` excess, however, we
@@ -1361,7 +1351,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         for i, node in enumerate(depth_nodes):
 
             # recurse
-            child = self._build_tree(seqf(
+            child = self._build_tree(tuple(
                 b for b in branches if b[node_depth] == node
             ), node_depth, track)
 

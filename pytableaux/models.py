@@ -31,9 +31,8 @@ from pytableaux.lang.collect import Argument
 from pytableaux.lang.lex import (Atomic, LexType, Operated, Operator,
                                  Predicated, Quantified, Quantifier, Sentence)
 from pytableaux.proof.common import Branch
-from pytableaux.tools import closure
+from pytableaux.tools import closure, setf
 from pytableaux.tools.abcs import Abc, Ebc
-from pytableaux.tools.sets import setf
 
 __all__ = (
     'BaseModel',

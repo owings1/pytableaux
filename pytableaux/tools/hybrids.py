@@ -28,8 +28,8 @@ from typing import Iterable, SupportsIndex
 from pytableaux.errors import DuplicateValueError, Emsg, check
 from pytableaux.tools import abcs
 from pytableaux.tools.sequences import (EMPTY_SEQ, MutableSequenceApi,
-                                        SequenceApi, seqf, seqm, slicerange)
-from pytableaux.tools.sets import EMPTY_SET, MutableSetApi, SetApi, setf, setm
+                                        SequenceApi, slicerange)
+from pytableaux.tools.sets import EMPTY_SET, MutableSetApi, SetApi
 
 __all__ = (
     'EMPTY_QSET',
@@ -74,8 +74,8 @@ class SequenceSet(SequenceApi, SetApi):
 class qsetf(SequenceSet):
     'Immutable sequence set implementation setf and seqf bases.'
 
-    _set_: SetApi
-    _seq_: SequenceApi
+    _set_: frozenset
+    _seq_: tuple
 
     __slots__ = '_set_', '_seq_'
 
@@ -85,8 +85,8 @@ class qsetf(SequenceSet):
             self._seq_ = EMPTY_SEQ
             self._set_ = EMPTY_SET
         else:
-            self._seq_ = seqf(dict.fromkeys(values))
-            self._set_ = setf(self._seq_)
+            self._seq_ = tuple(dict.fromkeys(values))
+            self._set_ = frozenset(self._seq_)
         return self
 
     def copy(self):
@@ -175,11 +175,11 @@ class MutableSequenceSet(SequenceSet, MutableSequenceApi, MutableSetApi):
 class qset(MutableSequenceSet):
     'Mutable sequence set implementation backed by built-in set and list.'
 
-    _set_type_ = setm
-    _seq_type_ = seqm
+    _set_type_ = set
+    _seq_type_ = list
 
-    _set_: setm
-    _seq_: seqm
+    _set_: set
+    _seq_: list
 
     __slots__ = qsetf.__slots__
 

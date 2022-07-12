@@ -33,7 +33,7 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang import Constant, Sentence
 from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, SetView, abcs, dmap,
                               dmapattr, isattrstr, isint, lazy, operd, qset,
-                              raisr, setf, itemsiter)
+                              raisr, itemsiter)
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.mappings import MapCover
 from pytableaux.tools.sequences import SequenceApi
@@ -103,12 +103,12 @@ class Node(MapCover):
         return self.has('world1', 'world2')
 
     @lazy.prop
-    def worlds(self, /, *, names = ('world', 'world1', 'world2')) -> setf[int]:
+    def worlds(self, /, *, names = ('world', 'world1', 'world2')):
         """
         The set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, and `world2`.
         """
-        return setf(filter(isint, map(self.get, names)))
+        return frozenset(filter(isint, map(self.get, names)))
 
     def has(self, *names):
         'Whether the node has a non-``None`` property of all the given names.'
@@ -580,7 +580,7 @@ class Target(dmapattr):
         'nodes', 'sentence', 'world', 'world1', 'world2')
 
     # For dmapattr
-    _keyattr_ok = staticmethod(setf(__slots__).__contains__)
+    _keyattr_ok = staticmethod(frozenset(__slots__).__contains__)
 
     __slots__ += '_entry',
 

@@ -46,9 +46,8 @@ NOARG = object()
 
 def absindex(seqlen, index, /, strict = True):
     'Normalize to positive/absolute index.'
-    if not isinstance(index, int):
-        check.inst(index, SupportsIndex)
-        index = int(index)
+    if type(index) is not int:
+        index = int(check.inst(index, SupportsIndex))
     if index < 0:
         index = seqlen + index
     if strict and (index >= seqlen or index < 0):

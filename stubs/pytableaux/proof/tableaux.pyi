@@ -10,15 +10,14 @@ from pytableaux.proof import (Branch, LogicType, Node, RuleClassFlag,
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.hybrids import qsetf
 from pytableaux.tools.mappings import dmapns
-from pytableaux.tools.sequences import SequenceApi, seqm
-from pytableaux.tools.sets import setf
+from pytableaux.tools.sequences import SequenceApi
 from pytableaux.tools.timing import StopWatch
 from pytableaux.typing import _T, _LogicLookupKey, _RuleT, _Self, _TypeInstDict
 
 
 class Rule(EventEmitter, metaclass=RuleMeta):
     _defaults: ClassVar[Mapping[str, Any]]
-    _optkeys: ClassVar[setf[str]]
+    _optkeys: ClassVar[frozenset[str]]
     FLAGS: ClassVar[RuleClassFlag]
     Helpers: ClassVar[Mapping[type[RuleHelper], Any]]
     Timers: ClassVar[qsetf[str]]
@@ -84,11 +83,11 @@ class RuleGroups(SequenceApi[RuleGroup]):
     def extend(self, groups: Iterable[Iterable[type[Rule]]]) -> None: ...
     def clear(self) -> None: ...
     def get(self, name: str, default=...) -> RuleGroup: ...
-    def names(self) -> seqm[str]: ...
+    def names(self) -> list[str]: ...
 
 class Tableau(Sequence[Branch], EventEmitter):
     history: Sequence[StepEntry]
-    models: setf[BaseModel]
+    models: frozenset[BaseModel]
     open: Sequence[Branch]
     opts: Mapping[str, Optional[bool|int]]
     rules: TabRuleGroups

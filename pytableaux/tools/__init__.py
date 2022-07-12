@@ -42,6 +42,7 @@ __all__ = (
     'dund',
     'dxopy',
     'EMPTY_MAP',
+    'for_defaults',
     'getitem',
     'isattrstr',
     'isdund',
@@ -178,6 +179,10 @@ def maxceil(ceil, it):
 def substitute(coll, old_value, new_value):
     return type(coll)(new_value if x == old_value else x for x in coll)
 
+def for_defaults(defaults: Mapping, override: Mapping, /):
+    if not override:
+        return dict(defaults)
+    return {key: override.get(key, defval) for key, defval in defaults.items()}
 
 @closure
 def itemsiter():
@@ -674,5 +679,6 @@ from pytableaux.tools.sequences import EMPTY_SEQ as EMPTY_SEQ
 from pytableaux.tools.sequences import seqf as seqf
 from pytableaux.tools.mappings import dmap as dmap
 from pytableaux.tools.mappings import dmapattr as dmapattr
+from pytableaux.tools.mappings import dmapns as dmapns
 from pytableaux.tools.mappings import DequeCache as DequeCache
 
