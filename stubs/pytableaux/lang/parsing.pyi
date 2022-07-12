@@ -5,8 +5,7 @@ from typing import Any, ClassVar, Iterable, Mapping, overload
 from pytableaux.lang import (Argument, LangCommonMeta, Lexical, LexType,
                              Marking, Notation, Predicate, Predicates,
                              Sentence, TableStore, Variable)
-from pytableaux.tools import abcs
-from pytableaux.tools.mappings import MapCover
+from pytableaux.tools import abcs, MapCover
 from pytableaux.typing import _Self
 
 _ParseTableValue = int|Lexical

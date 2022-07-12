@@ -14,7 +14,6 @@ from pytableaux.proof.helpers import *
 from pytableaux.proof.rules import ClosingRule, NoopRule, Rule
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof import TabEvent, TabFlag, TabStatKey
-from pytableaux.tools.mappings import MapCover
 from types import MappingProxyType as MapProxy
 from pytest import raises
 

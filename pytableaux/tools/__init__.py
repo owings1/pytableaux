@@ -22,6 +22,7 @@ pytableaux.tools
 from __future__ import annotations
 
 import functools
+import itertools
 import keyword
 import re
 import sys
@@ -40,6 +41,8 @@ __all__ = (
     'absindex',
     'abstract',
     'closure',
+    'dictattr',
+    'dictns',
     'dund',
     'dxopy',
     'EMPTY_MAP',
@@ -54,6 +57,7 @@ __all__ = (
     'itemsiter',
     'key0',
     'lazy',
+    'MapCover',
     'maxceil',
     'membr',
     'minfloor',
@@ -62,6 +66,8 @@ __all__ = (
     'raisr',
     'sbool',
     'select_fget',
+    'SeqCover',
+    'SetView',
     'slicerange',
     'substitute',
     'thru',
@@ -735,10 +741,102 @@ class SeqCover(Sequence, abcs.Copyable, immutcopy = True):
     def __repr__(self):
         return f'{type(self).__name__}({list(self)})'
 
+class KeySetAttr:
+    "Mixin class for read-write attribute-key gate."
+
+    __slots__ = EMPTY_SET
+
+    def __setitem__(self, key, value, /):
+        super().__setitem__(key, value)
+        if isattrstr(key) and self._keyattr_ok(key):
+            super().__setattr__(key, value)
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if self._keyattr_ok(name):
+            super().__setitem__(name, value)
+
+    def __delitem__(self, key, /):
+        super().__delitem__(key)
+        if isattrstr(key) and self._keyattr_ok(key):
+            super().__delattr__(key)
+
+    def __delattr__(self, name):
+        super().__delattr__(name)
+        if self._keyattr_ok(name) and name in self:
+            super().__delitem__(name)
+
+    def update(self, it = None, /, **kw):
+        if it is None:
+            it = iter(EMPTY_SET)
+        else:
+            it = itemsiter(it)
+        if len(kw):
+            it = itertools.chain(it, itemsiter(kw))
+        setitem = self.__setitem__
+        for key, value in it:
+            setitem(key, value)
+
+    @classmethod
+    def _keyattr_ok(cls, name: str) -> bool:
+        'Return whether it is ok to set the attribute name.'
+        return not hasattr(cls, name)
+
+class MapCover(Mapping, abcs.Copyable, immutcopy = True):
+    'Mapping reference.'
+
+    __slots__ = ('__getitem__', '_cov_mapping')
+    _cov_mapping: Mapping
+
+    def __init__(self, mapping, /):
+        if type(mapping) is not MapProxy:
+            mapping = MapProxy(mapping)
+        self._cov_mapping = mapping
+        self.__getitem__ = mapping.__getitem__
+
+    def __reversed__(self):
+        return reversed(self._cov_mapping)
+
+    def __len__(self):
+        return len(self._cov_mapping)
+
+    def __iter__(self):
+        return iter(self._cov_mapping)
+
+    def __repr__(self):
+        return repr(self._asdict())
+
+    def __or__(self, other):
+        return dict(self) | other
+
+    def __ror__(self, other):
+        return other | dict(self)
+
+    def _asdict(self):
+        'Compatibility for JSON serialization.'
+        return dict(self)
+
+
+class dictattr(KeySetAttr, dict):
+    "Dict attr base class."
+
+    __slots__ = EMPTY_SET
+
+    def __init__(self, it = None, /, **kw):
+        if it is not None:
+            self.update(it)
+        if len(kw):
+            self.update(kw)
+
+class dictns(dictattr):
+    "Dict attr namespace with __dict__ slot and liberal key approval."
+
+    @classmethod
+    def _keyattr_ok(cls, name):
+        return len(name) and name[0] != '_'
+
+
 from pytableaux.tools.hybrids import qset as qset
 from pytableaux.tools.hybrids import qsetf as qsetf
 from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
-from pytableaux.tools.mappings import dictattr as dictattr
-from pytableaux.tools.mappings import dictns as dictns
-from pytableaux.tools.mappings import DequeCache as DequeCache
 

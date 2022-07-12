@@ -66,7 +66,6 @@ del(dataclasses,_Settings)
 from pytableaux.tools import EMPTY_SET
 
 import pytableaux.tools.timing
-import pytableaux.tools.mappings
 import pytableaux.tools.hybrids
 import pytableaux.tools.linked
 

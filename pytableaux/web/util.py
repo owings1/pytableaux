@@ -31,7 +31,7 @@ from prometheus_client.registry import CollectorRegistry
 from pytableaux import __docformat__, package
 from pytableaux.errors import Emsg
 from pytableaux.lang.lex import Lexical
-from pytableaux.tools import abcs, mappings
+from pytableaux.tools import abcs, MapCover
 
 if TYPE_CHECKING:
     class HasRegistry:
@@ -64,7 +64,7 @@ def mwrap(fn: _F) -> _F:
     metric_defs.append((key, (metcls, desc, labels)))
     return f
 
-class AppMetrics(mappings.MapCover[str, MetricType], abcs.Abc):
+class AppMetrics(MapCover[str, MetricType], abcs.Abc):
 
     __slots__ = ('config', 'registry')
 

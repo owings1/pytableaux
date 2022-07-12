@@ -2,8 +2,8 @@ from typing import (Any, Callable, ClassVar, Generic, Hashable, Mapping,
                     NamedTuple, overload)
 
 from pytableaux.lang import Lexical, Operator, Predicate, Quantifier, Sentence
-from pytableaux.proof.common import Node
-from pytableaux.tools.mappings import dictns
+from pytableaux.proof import Node
+from pytableaux.tools import dictns
 from pytableaux.typing import _LHS, _RHS, _T
 
 

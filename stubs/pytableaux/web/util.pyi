@@ -2,7 +2,7 @@ from collections import deque
 import prometheus_client.metrics as pm
 import prometheus_client.metrics_core as pmc
 from prometheus_client.registry import CollectorRegistry
-from pytableaux.tools import abcs, mappings
+from pytableaux.tools import abcs, MapCover
 from typing import Any, Mapping, TypeVar
 
 class HasRegistry:
@@ -10,7 +10,7 @@ class HasRegistry:
 _MetricType = pmc.Metric|pm.MetricWrapperBase|HasRegistry
 MetrT = TypeVar('MetrT', bound=_MetricType)
 metric_defs: deque[tuple[str, tuple[type[_MetricType], str, list[str]]]]
-class AppMetrics(mappings.MapCover[str, _MetricType], abcs.Abc):
+class AppMetrics(MapCover[str, _MetricType], abcs.Abc):
     config: Mapping[str, Any]
     registry: CollectorRegistry
     def app_requests_count(*labels: str) -> pm.Counter: ...

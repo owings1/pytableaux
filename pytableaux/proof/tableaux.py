@@ -39,10 +39,9 @@ from pytableaux.proof import (BranchEvent, BranchStat, RuleEvent, RuleMeta,
                               TabStatKey, TabTimers)
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.tools import (EMPTY_SET, closure, for_defaults, qset, qsetf,
-                              wraps, SeqCover, absindex)
+                              wraps, SeqCover, absindex, dictns)
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.linked import linqset
-from pytableaux.tools.mappings import dictns
 from pytableaux.tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:

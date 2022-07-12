@@ -33,9 +33,8 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang import Constant, Sentence
 from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, SetView, abcs, dictattr,
                               isattrstr, isint, itemsiter, lazy, operd, qset,
-                              raisr)
+                              raisr, MapCover)
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.mappings import MapCover
 
 if TYPE_CHECKING:
 
@@ -611,12 +610,5 @@ class Target(dictattr):
         return (name for name in __class__.__slots__ if self._keyattr_ok(name))
 
 
-del(
-    builtins,
-    lazy,
-    operd,
-    opr,
-    raisr,
-)
 
 from pytableaux.proof import BranchEvent, PropMap

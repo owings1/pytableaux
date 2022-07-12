@@ -35,8 +35,8 @@ from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Parameter, Predicate, Predicated, Quantified,
                                  Sentence, Variable)
-from pytableaux.tools import abcs, key0, lazy, itemsiter, for_defaults, EMPTY_SET, qset
-from pytableaux.tools.mappings import MapCover
+from pytableaux.tools import (EMPTY_SET, MapCover, abcs, for_defaults,
+                              itemsiter, key0, lazy, qset)
 
 __all__ = (
     'Parser',

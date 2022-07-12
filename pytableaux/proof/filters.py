@@ -30,8 +30,7 @@ from pytableaux import __docformat__
 from pytableaux.lang import (Lexical, Operated, Operator, Predicated,
                              Quantified, Sentence)
 from pytableaux.proof import Access, Node
-from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, thru
-from pytableaux.tools.mappings import dictns
+from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, thru, dictns
 
 __all__ = (
     'AttrCompare',

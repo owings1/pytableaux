@@ -1,22 +1,20 @@
 from types import ModuleType
-from typing import (Any, Callable, ClassVar, Collection, Generic, Mapping, NamedTuple,
-                    Pattern, overload)
+from typing import (Any, Callable, ClassVar, Collection, Generic, Mapping,
+                    NamedTuple, Pattern, overload)
 
 import jinja2
 import sphinx.config
+import sphinx.directives
 from docutils import nodes
 from pytableaux.lang import Operator, Parser, Predicates
 from pytableaux.logics import LogicType
-from pytableaux.tools import abcs
-from pytableaux.tools.hybrids import qset
-from pytableaux.tools.mappings import dictns
+from pytableaux.tools import abcs, dictns, qset
 from pytableaux.typing import _T, _DictT
 from sphinx.application import Sphinx
 from sphinx.config import Config
 from sphinx.environment import BuildEnvironment
 from sphinx.util.docutils import SphinxRole
 from sphinx.util.typing import RoleFunction
-import sphinx.directives
 
 APPSTATE: dict[Sphinx, dict]
 

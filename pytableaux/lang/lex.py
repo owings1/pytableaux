@@ -33,8 +33,8 @@ from pytableaux.errors import Emsg, check
 from pytableaux.lang import (BiCoords, LangCommonEnum, LangCommonMeta,
                              LexicalAbcMeta, SysPredEnumMeta, TriCoords,
                              nosetattr, raiseae)
-from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, DequeCache, abcs,
-                              lazy, membr, qsetf, wraps)
+from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, abcs, lazy, membr, qsetf,
+                              wraps)
 
 __all__ = (
     'Atomic',
@@ -1375,6 +1375,38 @@ class LexType(LangCommonEnum):
 @tools.closure
 def metacall():
 
+    from collections import deque
+    class DequeCache:
+
+        __slots__ = ('__getitem__', '__len__', 'queue', 'idx', 'rev')
+
+        @property
+        def maxlen(self) -> int:
+            return self.queue.maxlen
+
+        def __init__(self, maxlen = 100):
+
+            self.idx = {}
+            self.rev: dict[object, set] = {}
+            self.queue = deque(maxlen = maxlen)
+
+            self.__getitem__ = self.idx.__getitem__
+            self.__len__ = self.rev.__len__
+
+        def __setitem__(self, key, item, /):
+            if item in self.rev:
+                item = self.idx[item]
+            else:
+                if len(self) >= self.queue.maxlen:
+                    old = self.queue.popleft()
+                    for k in self.rev.pop(old):
+                        del(self.idx[k])
+                self.idx[item] = item
+                self.rev[item] = {item}
+                self.queue.append(item)
+            self.idx[key] = item
+            self.rev[item].add(key)
+
     cache = DequeCache(maxlen = _ENV.ITEM_CACHE_SIZE)
     supercall = LangCommonMeta.__call__
 
@@ -1451,7 +1483,6 @@ LexicalAbcMeta.__call__ = metacall
 # del(
 #     _ENV,
 #     _Ranks,
-#     DequeCache,
 #     FunctionType,
 #     lazy,
 #     membr,

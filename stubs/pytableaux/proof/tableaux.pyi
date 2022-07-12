@@ -1,16 +1,14 @@
+from collections.abc import Sequence, Set
 from typing import (Any, ClassVar, Iterable, Literal, Mapping, Optional,
                     SupportsIndex, overload)
-from collections.abc import Set, Sequence
 
 from pytableaux.lang import Argument, Sentence
 from pytableaux.models import BaseModel
-from pytableaux.proof import (Branch, LogicType, Node,
-                              RuleHelper, RuleMeta, RuleState, StepEntry,
-                              TabFlag, TableauxSystem, TabStatKey, TabTimers,
-                              Target)
+from pytableaux.proof import (Branch, LogicType, Node, RuleHelper, RuleMeta,
+                              RuleState, StepEntry, TabFlag, TableauxSystem,
+                              TabStatKey, TabTimers, Target)
+from pytableaux.tools import dictns, qsetf
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.hybrids import qsetf
-from pytableaux.tools.mappings import dictns
 from pytableaux.tools.timing import StopWatch
 from pytableaux.typing import _T, _LogicLookupKey, _RuleT, _Self, _TypeInstDict
 

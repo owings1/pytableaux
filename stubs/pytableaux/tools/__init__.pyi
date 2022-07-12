@@ -11,9 +11,6 @@ from pytableaux.tools.abcs import AbcMeta, Copyable
 from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
 from pytableaux.tools.hybrids import qset as qset
 from pytableaux.tools.hybrids import qsetf as qsetf
-from pytableaux.tools.mappings import DequeCache as DequeCache
-from pytableaux.tools.mappings import dictattr as dictattr
-from pytableaux.tools.mappings import dictns as dictns
 
 EMPTY_SET: frozenset
 EMPTY_SEQ: tuple
@@ -130,3 +127,13 @@ class NoSetAttr(BaseMember):
 
 class SetView(Set[_T_co], Copyable):...
 class SeqCover(Sequence[_VT], Copyable): ...
+class KeySetAttr:
+    def update(self, it: Iterable = ..., /, **kw) -> None: ...
+    @classmethod
+    def _keyattr_ok(cls, name: str) -> bool:...
+
+class MapCover(Mapping[_KT, _VT], Copyable):
+    def __init__(self, mapping: Mapping, /) -> None:...
+class dictattr(KeySetAttr, dict[_KT, _VT]):...
+class dictns(dictattr[_KT, _VT]):...
+

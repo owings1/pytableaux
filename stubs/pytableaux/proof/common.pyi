@@ -1,13 +1,12 @@
+from collections.abc import Sequence
 from typing import (Any, Collection, Iterable, Iterator, Literal, Mapping, Set,
                     SupportsIndex, overload)
-from collections.abc import Sequence
+
 from pytableaux.lang import Constant, Sentence
 from pytableaux.models import BaseModel
 from pytableaux.proof.tableaux import Rule
-from pytableaux.tools import abcs, qset, dictattr
+from pytableaux.tools import MapCover, SetView, abcs, dictattr, qset
 from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.mappings import MapCover
-from pytableaux.tools.sets import SetView
 from pytableaux.typing import _Self
 
 
