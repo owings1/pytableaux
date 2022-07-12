@@ -21,20 +21,20 @@ pytableaux.logics
 """
 from __future__ import annotations
 
-from types import MappingProxyType as MapProxy
 import itertools
 import sys
 from collections import defaultdict
+from collections.abc import Mapping
 from importlib import import_module
-from types import FunctionType, MethodType, ModuleType
-from typing import TYPE_CHECKING, Mapping
+from types import FunctionType
+from types import MappingProxyType as MapProxy
+from types import MethodType, ModuleType
+from typing import TYPE_CHECKING
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg, check
-from pytableaux.tools import abcs, closure
-from pytableaux.tools.hybrids import QsetView, qset
-from pytableaux.tools.mappings import MappingApi
-from pytableaux.tools.sets import EMPTY_SET
+from pytableaux.tools import EMPTY_SET, abcs, closure, qset
+from pytableaux.tools.hybrids import QsetView
 
 __all__ = (
     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
@@ -60,7 +60,7 @@ class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None)
         all_rules: tuple
 
 
-class Registry(MappingApi, abcs.Copyable):
+class Registry(Mapping, abcs.Copyable):
     """Logic module registry.
     """
 

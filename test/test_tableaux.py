@@ -321,7 +321,6 @@ class TestNode:
         for inp in [
             dict(zip(('a', 'b', 'c'), (1, 2, 3))),
             MapProxy(exp),
-            MapCover._from_iterable(exp.items()),
         ]:
             assert dict(Node(inp)) == exp
 

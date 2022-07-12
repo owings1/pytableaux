@@ -144,6 +144,8 @@ class Node(MapCover):
         except KeyError:
             return PropMap.NodeDefaults[key]
 
+
+
     @classmethod
     def _oper_res_type(cls, _):
         'Always produce a ``dict`` on math operations.'

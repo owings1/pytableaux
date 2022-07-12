@@ -1,12 +1,13 @@
+from collections.abc import Mapping
 from types import ModuleType
 from typing import (Any, Callable, ClassVar, Collection, Iterable, Iterator,
-                    Mapping, Reversible, overload)
+                    Reversible, overload)
 
 from pytableaux import proof
 from pytableaux.lang import Operator
 from pytableaux.models import BaseModel
 from pytableaux.proof import Rule
-from pytableaux.tools import abcs, hybrids, mappings
+from pytableaux.tools import abcs, hybrids, qset
 from pytableaux.typing import (_T, _LogicLocatorRef, _LogicLookupKey,
                                _LogicModule)
 
@@ -31,8 +32,8 @@ class LogicType:
         rule_groups: ClassVar[tuple[tuple[type[Rule], ...], ...]]
         all_rules: ClassVar[tuple[type[Rule], ...]]
 
-class Registry(mappings.MappingApi[_LogicLookupKey, _LogicModule], abcs.Copyable):
-    packages: hybrids.qset[str]
+class Registry(Mapping[_LogicLookupKey, _LogicModule], abcs.Copyable):
+    packages: qset[str]
     modules: hybrids.QsetView[str]
     index: Mapping[_LogicLookupKey, str]
     def __init__(self, *, source: Registry = ...) -> None: ...

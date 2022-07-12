@@ -1,5 +1,4 @@
 import operator as opr
-from collections import deque
 from itertools import filterfalse
 from typing import TypeVar
 
@@ -7,10 +6,9 @@ from pytableaux.errors import *
 from pytableaux.lang.lex import *
 from pytableaux.tools import abcs
 from pytableaux.tools.abcs import *
-from pytableaux.tools.events import EventsListeners, Listeners
+from pytableaux.tools.events import *
 from pytableaux.tools.hybrids import *
 from pytableaux.tools.linked import *
-from pytableaux.tools.mappings import *
 from pytableaux.tools.sequences import *
 from pytableaux.tools.sets import *
 from pytest import raises
@@ -41,31 +39,6 @@ class Test_abcm(BaseSuite):
             pass
         res = abcs.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
         assert tuple(res) == ('A', 'B1', 'B2')
-
-# class Test_seqf(BaseSuite):
-#     def test_add_radd(self):
-#         lh = seqf('abc')
-#         rh = 'd',
-#         r = lh + rh
-#         assert list(r) == list('abcd')
-#         assert type(r) is seqf
-#         r = rh + lh
-#         assert list(r) == list('dabc')
-#         assert type(r) is tuple
-#         rh = ['d']
-#         r = lh + rh
-#         assert list(r) == list('abcd')
-#         assert type(r) is seqf
-#         r = rh + lh
-#         assert list(r) == list('dabc')
-#         assert type(r) is list
-#         rh = deque('d')
-#         r = lh + rh
-#         assert list(r) == list('abcd')
-#         assert type(r) is seqf
-#         r = rh + lh
-#         assert list(r) == list('dabc')
-#         assert type(r) is deque
 
 class TestSetList(BaseSuite):
 
@@ -227,77 +200,3 @@ class TestLinkSet(BaseSuite):
         x = linqset('fedcba')
         x.sort()
         assert list(x) == list('abcdef')
-
-class TestMappingApi(BaseSuite):
-
-    def test_subclasses(self):
-        # Ensure modules are loaded
-        from pytableaux.lang.parsing import ParseTable
-        from pytableaux.proof.common import Target
-        from pytableaux.proof.helpers import BranchCache
-        from pytableaux.proof.tableaux import TreeStruct
-        from pytableaux.tools.doc import AutodocProcessor
-        from pytableaux.web.util import AppMetrics
-        from pytableaux.logics import Registry
-
-        rule = self.rule_tab('Conjunction').rule
-
-        def clean(*dd):
-            dd = tuple(map(dict, dd))
-            for d in dd:
-                # TreeStruct
-                d.pop('id', None)
-            return dd
-
-        classes = get_subclasses(MappingApi) | (
-            # Make sure these are tested, for good measure.
-            ParseTable,
-            EventsListeners,
-            # Target,
-            TreeStruct,
-            AppMetrics,
-        )
-
-        skip = {
-            AutodocProcessor.Record,
-            Registry,
-        }
-        for cls in classes:
-            if cls in skip:
-    
-                # elif (f := getattr(cls, '__dataclass_fields__', None)):
-                # exp = dict(zip(f, f))
-                continue
-            if cls is AppMetrics:
-                # AppMetrics copies the metrics, which makes equality fail.
-                exp = dict(AppMetrics._from_mapping({}))
-            elif cls is EventsListeners:
-                # EventsListeners expects Listeners value type.
-                exp = dict(test = Listeners())
-            elif issubclass(cls, BranchCache):
-                # BranchCache classes want BranchCache instances.
-                exp = BranchCache(rule)
-            elif cls is TreeStruct:
-                # TreeStruct has defaults.
-                exp = dict(TreeStruct())
-            elif cls is dictattr:
-                exp = dict()
-            else:
-                # ParseTable needs [str, item] structure.
-                # Target requires branch key.
-                exp = dict(branch = (..., ...),)
-
-            inst = cls._from_iterable(exp.items())
-            if inst is not NotImplemented:
-                a, b = clean(inst, exp)
-                assert a == b
-
-            inst = cls._from_mapping(exp)
-            assert inst is not NotImplemented
-            a, b = clean(inst, exp)
-            assert a == b
-
-            inst = inst.copy()
-            a, b = clean(inst, exp)
-            assert a == b
-
