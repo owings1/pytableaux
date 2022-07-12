@@ -62,7 +62,6 @@ __all__ = (
     'membr',
     'minfloor',
     'NoSetAttr',
-    'operd',
     'raisr',
     'sbool',
     'select_fget',
@@ -424,94 +423,6 @@ class wraps(dict):
 
     def __repr__(self):
         return f'{type(self).__name__}({dict(self)})'
-
-class operd:
-    """Build operational functions: `apply` (default), `reduce`, `order`, `repeat`.
-    """
-
-    def __new__(cls, *args, **kw):
-        return cls.apply(*args, **kw)
-
-    class Base(BaseMember, Callable):
-
-        __slots__ = ('oper', 'wrap')
-
-        def __init__(self, oper, info = None):
-            self.oper = oper
-            self.wrap = wraps(info).update(oper)
-
-        def sethook(self, owner, name):
-            setattr(owner, name, self())
-
-    class apply(Base):
-        """Create a function or method from an operator, or other
-        built-in function.
-        """
-        __slots__ = EMPTY_SET
-
-        def __call__(self, info = None):
-            oper = check.callable(self.oper)
-            @self.wrap.update(info)
-            def f(*args):
-                return oper(*args)
-            return f
-
-    class reduce(Base):
-        """Create a reducing method using functools.reduce to apply
-        a single operator/function to an arbitrarily number of arguments.
-
-        Args:
-
-            oper: The operator, or any two-argument function.
-
-            info: The original or stub method being replaced, or an
-                object with informational attributes (`__name__`, `__doc__`, etc.)
-                to be passed through `wraps`.
-
-            freturn: A two-argument function that takes `self` and the
-                end result, e.g. to create a copy of an object, etc. This could
-                be a method-caller, which would invoke the method on the first
-                argument (self). Default is to return the second argument (result).
-
-            finit: A single-argument function that takes `self` to seed
-                the initial value. This could be used, for example, to ensure
-                a copy is created in case the number of arguments is 0.
-        """
-
-        __slots__ = ('inout',)
-
-        inout: tuple[Callable, Callable]
-
-        def __init__(self, oper, /, info = None, freturn = _thru2, finit = _thru):
-            super().__init__(oper, info)
-            self.inout = (
-                _methcaller(val)
-                    if isinstance(val, str) else
-                check.callable(val)
-                    for val in (freturn, finit))
-
-        def __call__(self, info = None):
-            oper, freturn, finit = (self.oper, *self.inout)
-            @self.wrap.update(info)
-            def freduce(self, *operands):
-                return freturn(self, functools.reduce(oper, operands, finit(self)))
-            return freduce
-
-    class repeat(Base):
-        """Create a method that accepts an arbitrary number of positional
-        arguments, and repeatedly calls a one argument method for each
-        argument (or, equivalently, a two-argument function with self as the
-        first argument).
-        """
-
-        __slots__ = EMPTY_SET
-
-        def __call__(self, info = None):
-            oper = check.callable(self.oper)
-            @self.wrap.update(info)
-            def f(self, *args):
-                for arg in args: oper(self, arg)
-            return f
 
 class raisr(BaseMember):
     """Factory for raising an error. Not to be used as a decorator.

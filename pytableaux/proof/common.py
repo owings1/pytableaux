@@ -21,19 +21,16 @@ pytableaux.proof.common
 """
 from __future__ import annotations
 
-import builtins
-import operator as opr
 from collections import defaultdict
-from collections.abc import Mapping, Set, Sequence
+from collections.abc import Mapping, Sequence, Set
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Iterable, Optional
 
-from pytableaux import tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import Constant, Sentence
-from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, SetView, abcs, dictattr,
-                              isattrstr, isint, itemsiter, lazy, operd, qset,
-                              raisr, MapCover)
+from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs,
+                              dictattr, isattrstr, isint, itemsiter, lazy,
+                              qset, raisr)
 from pytableaux.tools.events import EventEmitter
 
 if TYPE_CHECKING:
@@ -131,9 +128,15 @@ class Node(MapCover):
                 return False
         return True
 
-    __bool__    = operd(tools.true)
-    __eq__      = operd(opr.is_)
-    __hash__    = operd(builtins.id)
+    def __bool__(self):
+        return True
+
+    def __eq__(self, other):
+        return self is other
+
+    def __hash__(self):
+        return id(self)
+
     __delattr__ = raisr(AttributeError)
 
     def __getitem__(self, key):
@@ -473,9 +476,14 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
     def __iter__(self):
         return iter(self.__nodes)
 
-    __bool__ = operd(tools.true)
-    __eq__   = operd(opr.is_)
-    __hash__ = operd(builtins.id)
+    def __bool__(self):
+        return True
+
+    def __eq__(self, other):
+        return self is other
+
+    def __hash__(self):
+        return id(self)
 
     def __contains__(self, node, /):
         return node in self.__nodes
@@ -595,7 +603,9 @@ class Target(dictattr):
             raise Emsg.BadAttrName(key)
         super().__setitem__(key, value)
 
-    __bool__    = operd(tools.true)
+    def __bool__(self):
+        return True
+
     __delitem__ = raisr(TypeError)
     __delattr__ = raisr(AttributeError)
 
