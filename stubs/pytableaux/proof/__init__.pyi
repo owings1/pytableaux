@@ -83,6 +83,7 @@ class NodeAttr(ProofAttr):
 class PropMap(abcs.ItemMapEnum):
     NodeDefaults:Mapping
     ClosureNode:Mapping
+    QuitFlag:Mapping
 
 class BranchEvent(abcs.Ebc):
     AFTER_CLOSE :object
