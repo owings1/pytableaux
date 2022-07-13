@@ -90,7 +90,7 @@ class AdzHelper(RuleHelper):
         close_count = 0
         branch = target.branch
         for nodes in target['adds']:
-            nodes = tuple(map(Node, nodes))
+            # nodes = tuple(map(Node, nodes))
             for rule in rules:
                 if rule.nodes_will_close_branch(nodes, branch):
                     close_count += 1
@@ -122,8 +122,7 @@ class BranchCache(dict[Branch, _T], RuleHelper):
         if branch.parent:
             self[branch] = copy(self[branch.parent])
         else:
-            self[branch] = self._valuetype()
-            # self[branch] = self._empty_value(branch)
+            self[branch] = self._empty_value(branch)
 
     def __after_branch_close(self, branch,/):
         # Event: TabEvent.AFTER_BRANCH_CLOSE
@@ -137,10 +136,10 @@ class BranchCache(dict[Branch, _T], RuleHelper):
     def _reprdict(self):
         return dict(branches = len(self))
 
-    # @classmethod
-    # def _empty_value(cls, branch,/):
-    #     'Override, for example, if the value type takes arguments.'
-    #     return cls._valuetype()
+    @classmethod
+    def _empty_value(cls, branch,/):
+        'Override, for example, if the value type takes arguments.'
+        return cls._valuetype()
 
 class BranchDictCache(BranchCache[dict[_KT, _VT]]):
     'Copies each K->V item for parent branch via copy(V).'
@@ -243,7 +242,7 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
 
     def __call__(self, target: Target):
         # Event: RuleEvent.AFTER_APPLY
-        if target.get('flag'):
+        if target.get(NodeAttr.flag):
             return
         counts = self[target.branch]
         sentence = target.sentence
@@ -290,7 +289,7 @@ class NodeCount(BranchCache[dict[Node, int]]):
 
     def __call__(self, target: Target, /):
         # Event: RuleEvent.AFTER_APPLY
-        if target.get('flag'):
+        if target.get(NodeAttr.flag):
             return
         counts = self[target.branch]
         node = target.node

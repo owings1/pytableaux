@@ -82,6 +82,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     name: ClassVar[str]
     "The rule class name."
 
+    ticking = False
+    "Whether this is a ticking rule."
+
     branching = 0
     "The number of additional branches created."
 

@@ -15,14 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
 import pytableaux.logics.k as K
-from pytableaux.lang import Operated, Quantified, Sentence, Operator
+from pytableaux.lang import Argument, Operated, Operator, Quantified, Sentence
 from pytableaux.proof import Branch, Node, Tableau, snode
-
-if TYPE_CHECKING:
-    from pytableaux.lang import Argument
 
 name = 'CPL'
 

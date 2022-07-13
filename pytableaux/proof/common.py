@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import Constant, Sentence
+from pytableaux.proof import Access, BranchEvent, NodeAttr, PropMap
 from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs,
                               dictattr, isattrstr, isint, itemsiter, lazy,
                               qset, raisr)
@@ -36,8 +37,7 @@ from pytableaux.tools.events import EventEmitter
 if TYPE_CHECKING:
 
     from pytableaux.models import BaseModel
-    from pytableaux.proof import StepEntry
-    from pytableaux.proof.tableaux import Rule
+    from pytableaux.proof import StepEntry, Rule
 
 __all__ = (
     'Branch',
@@ -49,15 +49,15 @@ _first_const = Constant.first()
 
 NOARG = object()
 
-class Node(MapCover):
+class Node(MapCover, abcs.Copyable):
     'A tableau node.'
 
     __slots__ = ('_is_access', '_is_modal', '_worlds', 'step', 'ticked')
 
-    def __new__(cls, arg = None, /):
-        if type(arg) is cls:
-            return arg
-        return object.__new__(cls)
+    # def __new__(cls, arg = None, /):
+    #     if type(arg) is cls:
+    #         return arg
+    #     return object.__new__(cls)
 
     def __init__(self, mapping = EMPTY_MAP, /):
         if mapping is self:
@@ -72,7 +72,7 @@ class Node(MapCover):
             raise
         self._cov_mapping = mapping
 
-    def copy(self) -> Node:
+    def copy(self):
         inst = object.__new__(type(self))
         inst._cov_mapping = self._cov_mapping
         return inst
@@ -85,20 +85,25 @@ class Node(MapCover):
     @property
     def is_closure(self) -> bool:
         "Whether this is a closure node."
-        return self.get('flag') == PropMap.ClosureNode['flag']
+        return self.get(NodeAttr.flag) == PropMap.ClosureNode[NodeAttr.flag]
 
     @lazy.prop
-    def is_modal(self) -> bool:
+    def is_modal(self, /, *, names = (NodeAttr.world, NodeAttr.w1, NodeAttr.w2)) -> bool:
         "Whether this is a modal node."
-        return self.any('world', 'world1', 'world2')
+        return self.any(*names)
 
     @lazy.prop
     def is_access(self) -> bool:
         "Whether this is a modal access node."
-        return self.has('world1', 'world2')
+        return self.has(NodeAttr.w1, NodeAttr.w2)
+
+    @property
+    def is_flag(self) -> bool:
+        "Whether this is a flag node."
+        return self.has(NodeAttr.is_flag)
 
     @lazy.prop
-    def worlds(self, /, *, names = ('world', 'world1', 'world2')):
+    def worlds(self, /, *, names = (NodeAttr.world, NodeAttr.w1, NodeAttr.w2)):
         """
         The set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, and `world2`.
@@ -176,7 +181,8 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
             parent: The parent branch, if any.
         """
 
-        self.__init_parent(parent)
+        # self.__init_parent(parent)
+        self.parent = parent
 
         EventEmitter.__init__(self, *BranchEvent)
 
@@ -207,7 +213,8 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         cls = type(self)
         b = cls.__new__(cls)
 
-        b.__init_parent(parent)
+        b.parent = parent
+        # b.__init_parent(parent)
 
         b.events = self.events.copy(listeners = listeners)
 
@@ -370,10 +377,11 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         Raises:
             DuplicateValueError: if the node is already on the branch.
         """
-        node = Node(node)
+        if not isinstance(node, Node):
+            node = Node(node)
         self.__nodes.append(node)
 
-        if (s := node.get('sentence')) is not None:
+        if (s := node.get(NodeAttr.sentence)) is not None:
             if len(cons := s.constants):
                 if self.__nextconst in cons:
                     self.__nextconst = max(cons).next()
@@ -449,7 +457,9 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         """
         return self.__nextworld
 
-    def __init_parent(self, parent: Optional[Branch], /):
+    # def __init_parent(self, parent: Optional[Branch], /):
+    @parent.setter
+    def parent(self, parent: Optional[Branch]):
         try:
             self.__parent
         except AttributeError:
@@ -513,8 +523,8 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
                 value = None
                 found = False
                 if prop == 'w1Rw2':
-                    if node.get('world1') is not None and node.get('world2') is not None:
-                        value = (node['world1'], node['world2'])
+                    if node.is_access:
+                        value = Access.fornode(node)
                         found = True
                 elif prop in node:
                     value = node[prop]
@@ -535,8 +545,8 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
                 value = None
                 found = False
                 if prop == 'w1Rw2':
-                    if 'world1' in props and 'world2' in props:
-                        value = (props['world1'], props['world2'])
+                    if NodeAttr.w1 in props and NodeAttr.w2 in props:
+                        value = Access.fornode(props)
                         found = True
                 elif prop in props:
                     value = props[prop]
@@ -577,7 +587,7 @@ class Target(dictattr):
     # For dictattr
     _keyattr_ok = staticmethod(frozenset(__slots__).__contains__)
 
-    __slots__ += '_entry',
+    __slots__ += ('_entry',)
 
     def __init__(self, it: Iterable = None, /, **kw):
         if it is not None:
@@ -606,7 +616,7 @@ class Target(dictattr):
     def __bool__(self):
         return True
 
-    __delitem__ = raisr(TypeError)
+    __delitem__ = pop = popitem = raisr(TypeError)
     __delattr__ = raisr(AttributeError)
 
     def __dir__(self):
@@ -617,8 +627,4 @@ class Target(dictattr):
         return f'<{type(self).__name__} {props}>'
 
     def _names(self):
-        return (name for name in __class__.__slots__ if self._keyattr_ok(name))
-
-
-
-from pytableaux.proof import BranchEvent, PropMap
+        return filter(self._keyattr_ok, self)

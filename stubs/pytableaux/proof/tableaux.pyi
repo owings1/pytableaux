@@ -17,6 +17,7 @@ class Rule(EventEmitter, metaclass=RuleMeta):
     _defaults: ClassVar[Mapping[str, Any]]
     Helpers: ClassVar[Mapping[type[RuleHelper], Any]]
     Timers: ClassVar[qsetf[str]]
+    ticking: ClassVar[bool]
     branching: ClassVar[int]
     helpers: _TypeInstDict[RuleHelper]
     history: Sequence[Target]
@@ -37,7 +38,7 @@ class Rule(EventEmitter, metaclass=RuleMeta):
     def stats(self) -> dict[str, Any]: ...
     def target(self, branch: Branch) -> Optional[Target]: ...
     @classmethod
-    def test(cls, *, noassert: bool = ...): ...
+    def test(cls, *, noassert: bool = ...) -> dictns: ...
 
 class RulesRoot(Sequence[Rule]):
     groups: RuleGroups

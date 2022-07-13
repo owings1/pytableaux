@@ -9,10 +9,6 @@ from pytableaux.typing import _T, _SysRulesT
 
 def group(*items: _T) -> tuple[_T, ...]:...
 def adds(*groups: tuple[dict, ...], **kw) -> dict[str, tuple[dict, ...]|Any]:...
-def snode(s: Sentence) -> dict: ...
-def sdnode(s: Sentence, d: bool) -> dict: ...
-def swnode(s: Sentence, w: int) -> dict: ...
-def anode(w1: int, w2: int) -> dict: ...
 
 class TableauxSystem(metaclass=abcs.AbcMeta):
     @classmethod
@@ -71,12 +67,18 @@ class ProofAttr(str, abcs.Ebc):
     pass
 
 class NodeAttr(ProofAttr):
-    designation:str
-    closure:str
-    flag    :str
-    is_flag :str
-    world   :str
-    info    :str
+    designation: str
+    designated: str
+    closure: str
+    flag: str
+    is_flag: str
+    world: str
+    world1: str
+    w1: str
+    world2: str
+    w2: str
+    info: str
+    sentence: str
 
 class PropMap(abcs.ItemMapEnum):
     NodeDefaults:Mapping
@@ -139,6 +141,13 @@ class Access(NamedTuple):
     @classmethod
     def fornode(cls, node: Mapping) -> Access:...
     def reversed(self) -> Access:...
+
+
+def snode(s: Sentence) -> Node:...
+def sdnode(s: Sentence, d:bool) -> Node:...
+def swnode(s: Sentence, w:int) -> Node:...
+def anode(w1:int, w2:int) -> Node:...
+
 
 from pytableaux.logics import LogicType as LogicType
 from pytableaux.proof.common import Branch as Branch

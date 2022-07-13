@@ -24,9 +24,9 @@ from __future__ import annotations
 from abc import abstractmethod as abstract
 from typing import Generator, Iterable, final
 
-from pytableaux import EMPTY_SET
 from pytableaux.lang import Constant, Sentence
-from pytableaux.proof import adds, filters, group, Branch, Node, Target, Rule
+from pytableaux.proof import adds, filters, group, Branch, Node, Target, Rule, NodeAttr
+from pytableaux.tools import EMPTY_SET
 
 __all__ = (
     'BaseClosureRule',
@@ -122,7 +122,6 @@ class BaseClosureRule(ClosingRule):
 class BaseSimpleRule(Rule):
 
     Helpers = AdzHelper,
-    #: (AdzHelper) Whether the target node should be ticked after application.
     ticking = True
 
     def _apply(self, target: Target, /) -> None:
@@ -172,12 +171,12 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch, /):
-        if self[MaxConsts].is_exceeded(branch, node.get('world')):
+        if self[MaxConsts].is_exceeded(branch, node.get(NodeAttr.world)):
             self[FilterHelper].release(node, branch)
             if self[QuitFlag].get(branch):
                 return
             fnode = self[MaxConsts].quit_flag(branch)
-            return adds(group(fnode), flag = fnode['flag'])
+            return adds(group(fnode), flag = fnode[NodeAttr.flag])
 
         return self._get_node_targets(node, branch)
 
@@ -215,7 +214,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
         raise NotImplementedError
 
     def score_candidate(self, target: Target) -> float:
-        if target.get('flag'):
+        if target.get(NodeAttr.flag):
             return 1.0
         if self[AdzHelper].closure_score(target) == 1:
             return 1.0

@@ -268,7 +268,7 @@ class TextTabWriter(TemplateTabWriter):
 
     def write(self, tab: Tableau, /) -> str:
         strs = deque()
-        opts = self.opts
+        # opts = self.opts
         # if opts['title']:
         #     strs.append(self._write_title(tab))
         # if opts['summary']:

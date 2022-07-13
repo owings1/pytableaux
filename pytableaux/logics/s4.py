@@ -76,11 +76,8 @@ class TabRules(T.TabRules):
 
             return (
                 adds(
-                    group(anode(w1, w3)),
-                    ** anode(w1, w3),
-                    nodes = {
-                        node, branch.find(anode(w2, w3))
-                    },
+                    group(a := anode(w1, w3)), **a,
+                    nodes = (node, branch.find(anode(w2, w3))),
                 )
                 for w3 in self[WorldIndex].intransitives(branch, w1, w2)
             )
@@ -90,9 +87,8 @@ class TabRules(T.TabRules):
             return float(target.world2)
 
         @staticmethod
-        def example_nodes() -> tuple[dict, dict]:
-            w1, w2, w3 = range(3)
-            return anode(w1, w2), anode(w2, w3)
+        def example_nodes() -> tuple[anode, anode]:
+            return anode(0, 1), anode(1, 2)
 
     rule_groups = (
         (

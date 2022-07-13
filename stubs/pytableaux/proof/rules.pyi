@@ -17,7 +17,6 @@ class BaseClosureRule(ClosingRule):
     def node_will_close_branch(self, node: Node, branch: Branch) -> bool: ...
 
 class BaseSimpleRule(Rule):
-    ticking: ClassVar[bool]
     def score_candidate(self, target: Target) -> float: ...
 
 class BaseNodeRule(BaseSimpleRule):

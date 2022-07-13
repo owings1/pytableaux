@@ -19,7 +19,7 @@ from __future__ import annotations
 import pytableaux.logics.k as K
 import pytableaux.logics.s4 as S4
 import pytableaux.logics.t as T
-from pytableaux.proof import Access, Branch, Node, adds, group
+from pytableaux.proof import Access, Branch, Node, adds, group, anode
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 
 name = 'S5'
@@ -48,16 +48,10 @@ class Model(S4.Model):
                 for w2 in self.R[w1]:
                     if w1 not in self.R[w2]:
                         to_add.add((w2, w1))
-                # for w2 in self.visibles(w1):
-                    # a = (w2, w1)
-                    # if not self.has_access(w2, w1):
-                    #     to_add.add(a)
             if not to_add:
                 return
             for w1, w2 in to_add:
                 self.R[w1].add(w2)
-                # self.add_access(w1, w2)
-            # self.access.update(to_add)
 
 class TableauxSystem(K.TableauxSystem):
     pass
@@ -87,11 +81,12 @@ class TabRules(S4.TabRules):
             access = Access.fornode(node).reversed()
 
             if not self[WorldIndex].has(branch, access):
-                return adds(group(anode := access._asdict()), **anode)
+                return adds(group(a := anode(*access)), **a)
+                # return adds(group(anode := access._asdict()), **anode)
 
         @staticmethod
         def example_nodes():
-            return Access(0, 1)._asdict(),
+            return anode(0, 1),
 
     rule_groups = (
         (

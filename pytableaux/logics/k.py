@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
-from collections import defaultdict
 
+from collections import defaultdict
 from typing import Any, Callable, Optional, cast
 
 import pytableaux.logics.fde as FDE
@@ -27,11 +27,12 @@ from pytableaux.lang import (Argument, Atomic, Constant, Operated, Operator,
 from pytableaux.logics import LogicType
 from pytableaux.models import BaseModel, ValueCPL
 from pytableaux.proof import (Access, Branch, Node, Tableau, TableauxSystem,
-                              Target, adds, filters, group, rules, swnode)
+                              Target, adds, anode, filters, group, rules,
+                              swnode)
 from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper,
                                       MaxWorlds, NodeCount, NodesWorlds,
                                       PredNodes, QuitFlag, WorldIndex)
-from pytableaux.tools import EMPTY_SET, closure, qsetf, substitute
+from pytableaux.tools import EMPTY_SET, closure, substitute
 
 name = 'K'
 
@@ -610,7 +611,7 @@ class TabRules(LogicType.TabRules):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
                 return Target(
-                    nodes = qsetf((node, nnode)),
+                    nodes = (node, nnode),
                     branch = branch,
                 )
 
@@ -990,7 +991,7 @@ class TabRules(LogicType.TabRules):
             w1 = node['world']
             w2 = branch.new_world()
             return adds(
-                group(swnode(si, w2), Access(w1, w2)._asdict()),
+                group(swnode(si, w2), anode(w1, w2)),
                 sentence = si
             )
 
@@ -1073,7 +1074,7 @@ class TabRules(LogicType.TabRules):
                     yield adds(group(add),
                         sentence = si,
                         world    = w2,
-                        nodes    = qsetf({node, anode}),
+                        nodes    = (node, anode),
                     )
 
         def score_candidate(self, target: Target, /) -> float:
@@ -1104,10 +1105,10 @@ class TabRules(LogicType.TabRules):
             return -1.0 * self[NodeCount][target.branch].get(target.node, 0)
 
         @classmethod
-        def example_nodes(cls) -> tuple[dict, dict]:
+        def example_nodes(cls):
             s = Operated.first(cls.operator)
             a = Access(0, 1)
-            return swnode(s, a.w1), a._asdict()
+            return swnode(s, a.w1), anode(*a)
 
     class NecessityNegated(PossibilityNegated):
         """
@@ -1161,13 +1162,13 @@ class TabRules(LogicType.TabRules):
                     continue
                 # The rule applies.
                 targets.append(dict(
-                    nodes = qsetf({node, n}),
+                    nodes = (node, n),
                     ** adds(group(n_new)),
                 ))
             return targets
 
         @classmethod
-        def example_nodes(cls) -> tuple[dict, dict]:
+        def example_nodes(cls):
             w = 0 if cls.modal else None
             s1 = Predicated.first()
             s2 = cls.predicate((s1[0], s1[0].next()))

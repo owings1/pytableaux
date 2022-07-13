@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytableaux.logics.k as K
 from pytableaux.lang import Atomic
-from pytableaux.proof import Access, Branch, Node, adds, group, swnode
+from pytableaux.proof import Access, Branch, Node, adds, group, swnode, anode
 from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 
 name = 'T'
@@ -69,7 +69,8 @@ class TabRules(K.TabRules):
             for w in node.worlds:
                 access = Access(w, w)
                 if not self[WorldIndex].has(branch, access):
-                    return adds(group(access._asdict()), world = w)
+                    return adds(group(anode(*access)), world = w)
+                    # return adds(group(access._asdict()), world = w)
 
         @staticmethod
         def example_nodes():

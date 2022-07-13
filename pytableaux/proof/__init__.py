@@ -22,6 +22,7 @@ pytableaux.proof
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
+from enum import auto
 from types import MappingProxyType as MapProxy
 from typing import Any, NamedTuple, Sequence
 
@@ -101,7 +102,10 @@ class NodeAttr(ProofAttr):
     flag    = 'flag'
     is_flag = 'is_flag'
     world   = 'world'
+    world1 = w1 = 'world1'
+    world2 = w2 = 'world2'
     info    = 'info'
+    sentence = 'sentence'
 
 class PropMap(abcs.ItemMapEnum):
 
@@ -121,17 +125,17 @@ class PropMap(abcs.ItemMapEnum):
 
 class BranchEvent(abcs.Ebc):
     'Branch events.'
-    AFTER_CLOSE = abcs.eauto()
-    AFTER_ADD   = abcs.eauto()
-    AFTER_TICK  = abcs.eauto()
+    AFTER_CLOSE = auto()
+    AFTER_ADD   = auto()
+    AFTER_TICK  = auto()
 
 #******  Helper Enum
 
 class RuleEvent(abcs.Ebc):
     'Rule events.'
 
-    BEFORE_APPLY = abcs.eauto()
-    AFTER_APPLY  = abcs.eauto()
+    BEFORE_APPLY = auto()
+    AFTER_APPLY  = auto()
 
 class RuleState(abcs.FlagEnum):
     'Rule state bit flags.'
@@ -147,24 +151,24 @@ class RuleState(abcs.FlagEnum):
 class TabEvent(abcs.Ebc):
     'Tableau events.'
 
-    AFTER_BRANCH_ADD    = abcs.eauto()
-    AFTER_BRANCH_CLOSE  = abcs.eauto()
-    AFTER_NODE_ADD      = abcs.eauto()
-    AFTER_NODE_TICK     = abcs.eauto()
-    AFTER_TRUNK_BUILD   = abcs.eauto()
-    BEFORE_TRUNK_BUILD  = abcs.eauto()
-    AFTER_FINISH        = abcs.eauto()
+    AFTER_BRANCH_ADD    = auto()
+    AFTER_BRANCH_CLOSE  = auto()
+    AFTER_NODE_ADD      = auto()
+    AFTER_NODE_TICK     = auto()
+    AFTER_TRUNK_BUILD   = auto()
+    BEFORE_TRUNK_BUILD  = auto()
+    AFTER_FINISH        = auto()
 
 class TabStatKey(abcs.Ebc):
     'Tableau ``stat()`` keys.'
 
-    FLAGS       = abcs.eauto()
-    STEP_ADDED  = abcs.eauto()
-    STEP_TICKED = abcs.eauto()
-    STEP_CLOSED = abcs.eauto()
-    INDEX       = abcs.eauto()
-    PARENT      = abcs.eauto()
-    NODES       = abcs.eauto()
+    FLAGS       = auto()
+    STEP_ADDED  = auto()
+    STEP_TICKED = auto()
+    STEP_CLOSED = auto()
+    INDEX       = auto()
+    PARENT      = auto()
+    NODES       = auto()
 
 class TabFlag(abcs.FlagEnum):
     'Tableau state bit flags.'
@@ -510,22 +514,22 @@ def adds(*groups, **kw):
     return dict(adds = groups, **kw)
 
 def snode(s):
-    'Make a sentence node dict.'
-    return dict(sentence = s)
+    'Make a sentence node.'
+    return Node(dict(sentence = s))
 
 def sdnode(s, d):
-    'Make a sentence/designated node dict.'
-    return dict(sentence = s, designated = d)
+    'Make a sentence/designated node.'
+    return Node(dict(sentence = s, designated = d))
 
 def swnode(s, w):
-    'Make a sentence/world node dict. Excludes world if None.'
+    'Make a sentence/world node. Excludes world if None.'
     if w is None:
         return snode(s)
-    return dict(sentence = s, world = w)
+    return Node(dict(sentence = s, world = w))
 
 def anode(w1, w2):
-    'Make an Access node dict.'
-    return Access(w1, w2)._asdict()
+    'Make an Access node.'
+    return Node(dict(world1 = w1, world2 = w2))
 
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.tableaux import Rule, Tableau, RulesRoot

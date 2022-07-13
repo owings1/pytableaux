@@ -612,7 +612,8 @@ class SeqCoverAttr(frozenset, abcs.Ebc):
     OPTIONAL = {'__reversed__'}
     ALL = REQUIRED | OPTIONAL
 
-class SeqCover(Sequence, abcs.Copyable, immutcopy = True):
+# class SeqCover(Sequence, abcs.Copyable, immutcopy = True):
+class SeqCover(Sequence):
 
     __slots__ = SeqCoverAttr.ALL
 
@@ -671,7 +672,8 @@ class KeySetAttr:
         'Return whether it is ok to set the attribute name.'
         return not hasattr(cls, name)
 
-class MapCover(Mapping, abcs.Copyable, immutcopy = True):
+# class MapCover(Mapping, abcs.Copyable, immutcopy = True):
+class MapCover(Mapping):
     'Mapping reference.'
 
     __slots__ = ('__getitem__', '_cov_mapping')

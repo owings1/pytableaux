@@ -29,7 +29,7 @@ from typing import Any, Callable, NamedTuple
 from pytableaux import __docformat__
 from pytableaux.lang import (Lexical, Operated, Operator, Predicated,
                              Quantified, Sentence)
-from pytableaux.proof import Access, Node
+from pytableaux.proof import Access, Node, NodeAttr
 from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, thru, dictns
 
 __all__ = (
@@ -244,7 +244,7 @@ class SentenceCompare(Comparer):
         clsname = type(self).__qualname__
         if (compitem := self.compitem) is None:
             return f'<{clsname}:NONE>'
-        nstr = '(negate)' if compitem.negated else ''
+        nstr = '(negated)' if compitem.negated else ''
         return (
             f'<{clsname}:'
             f'{compitem.name}' '=' f'{compitem.item}' f'{nstr}''>'
@@ -257,19 +257,19 @@ class SentenceNode(SentenceCompare, NodeCompare):
 
     @staticmethod
     def rget(node: Node, /):
-        return node.get('sentence')
+        return node.get(NodeAttr.sentence)
 
     def example_node(self):
         n = {}
         s = self.example()
         if s is not None:
-            n['sentence'] = s
+            n[NodeAttr.sentence] = s
         return n
 
 class DesignationNode(AttrCompare, NodeCompare):
     "Designation node filter."
 
-    attrmap = MapProxy(dict(designation = 'designated'))
+    attrmap = MapProxy(dict(designation = NodeAttr.designated))
 
     __slots__ = EMPTY_SET
 
@@ -296,6 +296,5 @@ class ModalNode(AttrCompare, NodeCompare):
         if attrs.get('is_access'):
             n.update(Access(0, 1)._asdict())
         elif attrs.get('is_modal'):
-            n['world'] = 0
+            n[NodeAttr.world] = 0
         return n
-
