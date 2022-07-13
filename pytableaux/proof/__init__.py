@@ -116,10 +116,14 @@ class PropMap(abcs.ItemMapEnum):
 
     ClosureNode = {
         NodeAttr.closure: True,
-        NodeAttr.flag: NodeAttr.closure,
+        NodeAttr.flag: 'closure',
         NodeAttr.is_flag: True,
     }
 
+    QuitFlag = {
+        NodeAttr.is_flag: True,
+        NodeAttr.flag: 'quit',
+    }
 
 #******  Branch Enum
 

@@ -54,11 +54,6 @@ class Node(MapCover, abcs.Copyable):
 
     __slots__ = ('_is_access', '_is_modal', '_worlds', 'step', 'ticked')
 
-    # def __new__(cls, arg = None, /):
-    #     if type(arg) is cls:
-    #         return arg
-    #     return object.__new__(cls)
-
     def __init__(self, mapping = EMPTY_MAP, /):
         if mapping is self:
             return
