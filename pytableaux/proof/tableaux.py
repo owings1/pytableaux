@@ -26,7 +26,7 @@ from abc import abstractmethod as abstract
 from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
+from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Mapping,
                     Optional, Sequence, final)
 
 from pytableaux import __docformat__
@@ -542,9 +542,9 @@ class RulesRoot(Sequence[Rule]):
         self.groups = RuleGroups(self)
         tableau.once(TabEvent.AFTER_BRANCH_ADD, self.lock)
 
-    def append(self, rulecls, /):
-        'Add a single Rule to a new (unnamed) group.'
-        self.groups.create(None).append(rulecls)
+    def append(self, rulecls, /, name = None):
+        'Add a single Rule to a new group.'
+        self.groups.create(name).append(rulecls)
 
     def extend(self, classes, /, name = None):
         'Create a new group from a collection of Rule classes.'
@@ -629,7 +629,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     is finished. If the `build_timeout` was exceeded, the tree is `not`
     built."""
 
-    stats: dict[str, Any]
+    stats: dict
     "The stats, built after finished."
 
     models: frozenset
@@ -639,19 +639,20 @@ class Tableau(Sequence[Branch], EventEmitter):
     timers: TabTimers
     "The tableau timers."
 
+    flag: TabFlag
+    "The :class:`FlagEnum` value."
+
     _defaults = MapProxy(dict(
         is_group_optim  = True,
         is_build_models = False,
         build_timeout   = None,
         max_steps       = None,
     ))
-
-    __flag        : TabFlag
-    __history     : list[StepEntry]
-    __branch_list : list[Branch]
-    __open        : linqset[Branch]
-    __branchstat  : dict[Branch, BranchStat]
-    __branching_complexities: dict[Node, int]
+    _history: list[StepEntry]
+    _branches: list[Branch]
+    _open: linqset[Branch]
+    _stat: dict[Branch, BranchStat]
+    _complexities: dict[Node, int]
 
     def __init__(self, logic = None, argument = None, /, **opts):
         """
@@ -670,21 +671,21 @@ class Tableau(Sequence[Branch], EventEmitter):
         })
 
         # Protected attributes
-        self.__flag = TabFlag.PREMATURE
-        self.__history = []
-        self.__branch_list = []
-        self.__open = linqset()
-        self.__branchstat = {}
+        self._history = []
+        self._branches = []
+        self._open = linqset()
+        self._stat = {}
 
         # Private
-        self.__branching_complexities = {}
+        self._complexities = {}
 
         # Exposed attributes
-        self.history = SeqCover(self.__history)
+        self.flag    = TabFlag.PREMATURE
+        self.history = SeqCover(self._history)
         self.opts    = self._defaults | opts
         self.timers  = TabTimers.create()
         self.rules   = RulesRoot(self)
-        self.open    = SeqCover(self.__open)
+        self.open    = SeqCover(self._open)
 
         # Init
         if logic is not None:
@@ -696,11 +697,6 @@ class Tableau(Sequence[Branch], EventEmitter):
     def id(self):
         "The unique object ID of the tableau."
         return id(self)
-
-    @property
-    def flag(self):
-        "The :class:`FlagEnum` value."
-        return self.__flag
 
     @property
     def argument(self):
@@ -734,19 +730,19 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     @argument.setter
     def argument(self, value):
-        self.__check_not_started()
+        self._check_not_started()
         self.__argument = Argument(value)
         if self.logic is not None:
-            self.__build_trunk()
+            self._build_trunk()
 
     @logic.setter
     def logic(self, value):
-        self.__check_not_started()
+        self._check_not_started()
         self.__logic = registry(value)
         self.rules.clear()
         self.System.add_rules(self.logic, self.rules)
         if self.argument is not None:
-            self.__build_trunk()
+            self._build_trunk()
 
     @property
     def finished(self):
@@ -758,19 +754,19 @@ class Tableau(Sequence[Branch], EventEmitter):
         * The `build_timeout` option is exceeded.
         * The :attr:`finish` method is manually invoked.
         """
-        return TabFlag.FINISHED in self.__flag
+        return TabFlag.FINISHED in self.flag
 
     @property
     def completed(self):
         """Whether the tableau is completed. A tableau is `completed` iff all rules
         that can be applied have been applied."""
-        return TabFlag.FINISHED in self.__flag and TabFlag.PREMATURE not in self.__flag
+        return TabFlag.FINISHED in self.flag and TabFlag.PREMATURE not in self.flag
 
     @property
     def premature(self):
         """Whether the tableau is finished prematurely. A tableau is `premature` iff
         it is `finished` but not `completed`."""
-        return TabFlag.FINISHED in self.__flag and TabFlag.PREMATURE in self.__flag
+        return TabFlag.FINISHED in self.flag and TabFlag.PREMATURE in self.flag
 
     @property
     def valid(self):
@@ -796,13 +792,13 @@ class Tableau(Sequence[Branch], EventEmitter):
     def current_step(self):
         """The current step number. This is the number of rule applications, plus 1
         if the argument trunk is built."""
-        return len(self.history) + (TabFlag.TRUNK_BUILT in self.__flag)
+        return len(self.history) + (TabFlag.TRUNK_BUILT in self.flag)
 
     def build(self):
         'Build the tableau. Returns self.'
         with self.timers.build:
             while not self.finished:
-                self.__check_timeout()
+                self._check_timeout()
                 self.step()
         self.finish()
         return self
@@ -815,7 +811,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         """
         for branch in self.open:
             for group in self.rules.groups:
-                res = self.__get_group_application(branch, group)
+                res = self._get_group_application(branch, group)
                 if res:
                     return res
 
@@ -836,18 +832,17 @@ class Tableau(Sequence[Branch], EventEmitter):
         Raises:
             errors.IllegalStateError: if the trunk is not built.
         """
-        if TabFlag.FINISHED in self.__flag:
+        if TabFlag.FINISHED in self.flag:
             return False
         entry = None
         with StopWatch() as timer:
-            if not self.__is_max_steps_exceeded():
+            if not self._is_max_steps_exceeded():
                 entry = self.next()
                 if entry is None:
-                    self.__flag &= ~TabFlag.PREMATURE
+                    self.flag &= ~TabFlag.PREMATURE
             if entry is not None:
                 entry.rule.apply(entry.target)
                 entry.duration.inc(timer.elapsed_ms())
-                # self.__history.append(entry)
             else:
                 self.finish()
         return entry
@@ -880,11 +875,11 @@ class Tableau(Sequence[Branch], EventEmitter):
         index = len(self)
         if not branch.closed:
             # Append to linqset will raise duplicate value error.
-            self.__open.append(branch)
+            self._open.append(branch)
         elif branch in self:
             raise Emsg.DuplicateValue(branch.id)
-        self.__branch_list.append(branch)
-        self.__branchstat[branch] = BranchStat({
+        self._branches.append(branch)
+        self._stat[branch] = BranchStat({
             TabStatKey.STEP_ADDED : self.current_step,
             TabStatKey.INDEX      : index,
             TabStatKey.PARENT     : branch.parent,
@@ -915,19 +910,19 @@ class Tableau(Sequence[Branch], EventEmitter):
         Returns:
             self
         """
-        if TabFlag.FINISHED in self.__flag:
+        if TabFlag.FINISHED in self.flag:
             return self
-        self.__flag |= TabFlag.FINISHED
+        self.flag |= TabFlag.FINISHED
         if self.invalid and self.opts['is_build_models'] and self.logic is not None:
             with self.timers.models:
                 self.models = frozenset(self._gen_models())
-        if TabFlag.TIMED_OUT not in self.__flag:
+        if TabFlag.TIMED_OUT not in self.flag:
             # In case of a timeout, we do `not` build the tree in order to best
             # respect the timeout. In case of `max_steps` excess, however, we
             # `do` build the tree.
             with self.timers.tree:
                 self.tree = self._build_tree(self)
-        self.stats = self.__compute_stats()
+        self.stats = self._compute_stats()
         self.emit(TabEvent.AFTER_FINISH, self)
         return self
 
@@ -944,7 +939,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         # TODO: Consider potential optimization using hash equivalence for nodes,
         #       to avoid redundant calculations. Perhaps the TableauxSystem should
         #       provide a special branch-complexity node hashing function.
-        cache = self.__branching_complexities
+        cache = self._complexities
         if node not in cache:
             system = self.System
             if system is None:
@@ -958,7 +953,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         # - branch, key
         # - branch, node
         # - branch, node, key
-        stat = self.__branchstat[branch]
+        stat = self._stat[branch]
         if len(keys) == 0:
             # branch
             return stat.view()
@@ -993,22 +988,22 @@ class Tableau(Sequence[Branch], EventEmitter):
         raise ValueError('Too many keys to lookup')
 
     def __getitem__(self, index):
-        return self.__branch_list[index]
+        return self._branches[index]
 
     def __len__(self):
-        return len(self.__branch_list)
+        return len(self._branches)
 
     def __bool__(self):
         return True
 
     def __iter__(self):
-        return iter(self.__branch_list)
+        return iter(self._branches)
 
     def __reversed__(self):
-        return reversed(self.__branch_list)
+        return reversed(self._branches)
 
     def __contains__(self, branch):
-        return branch in self.__branchstat
+        return branch in self._stat
 
     def __repr__(self):
         info = dict(
@@ -1034,32 +1029,32 @@ class Tableau(Sequence[Branch], EventEmitter):
     # *** Events
 
     def __after_branch_close(self, branch):
-        stat = self.__branchstat[branch]
+        stat = self._stat[branch]
         stat[TabStatKey.STEP_CLOSED] = self.current_step
         stat[TabStatKey.FLAGS] |= TabFlag.CLOSED
-        self.__open.remove(branch)
+        self._open.remove(branch)
         self.emit(TabEvent.AFTER_BRANCH_CLOSE, branch)
 
     def __after_node_add(self, node, branch):
-        stat = self.__branchstat[branch].node(node)
+        stat = self._stat[branch].node(node)
         stat[TabStatKey.STEP_ADDED] = node.step = self.current_step
         self.emit(TabEvent.AFTER_NODE_ADD, node, branch)
 
     def __after_node_tick(self, node, branch):
-        stat = self.__branchstat[branch].node(node)
+        stat = self._stat[branch].node(node)
         stat[TabStatKey.STEP_TICKED] = self.current_step
         stat[TabStatKey.FLAGS] |= TabFlag.TICKED
         self.emit(TabEvent.AFTER_NODE_TICK, node, branch)
 
     def _after_rule_apply(self, target: Target):
         try:
-            self.__history.append(target._entry)
+            self._history.append(target._entry)
         except AttributeError:
-            self.__history.append(StepEntry(target.rule, target, Counter()))
-            self.__flag |= TabFlag.TIMING_INACCURATE
+            self._history.append(StepEntry(target.rule, target, Counter()))
+            self.flag |= TabFlag.TIMING_INACCURATE
     # *** Util
 
-    def __get_group_application(self, branch, group: Sequence[Rule], /) -> StepEntry:
+    def _get_group_application(self, branch, group: Sequence[Rule], /) -> StepEntry:
         """Find and return the next available rule application for the given open
         branch and rule group. 
         
@@ -1098,9 +1093,9 @@ class Tableau(Sequence[Branch], EventEmitter):
                     return entry
                 results.append(entry)
         if results:
-            return self.__select_optim_group_application(results)
+            return self._select_optim_group_application(results)
 
-    def __select_optim_group_application(self, results: Sequence[StepEntry], /) -> StepEntry:
+    def _select_optim_group_application(self, results: Sequence[StepEntry], /) -> StepEntry:
         """Choose the highest scoring element from given results. The ``results``
         parameter is assumed to be a non-empty list/tuple of (rule, target) pairs.
 
@@ -1135,7 +1130,7 @@ class Tableau(Sequence[Branch], EventEmitter):
                 )
                 return res
 
-    def __build_trunk(self):
+    def _build_trunk(self):
         """Build the trunk of the tableau. Delegates to the ``build_trunk()``
         method of ``TableauxSystem``. This is called automatically when the
         tableau has non-empty ``argument`` and ``logic`` properties.
@@ -1143,14 +1138,14 @@ class Tableau(Sequence[Branch], EventEmitter):
         Raises:
             errors.IllegalStateError: if the trunk is already built.
         """
-        self.__check_not_started()
+        self._check_not_started()
         with self.timers.trunk:
             self.emit(TabEvent.BEFORE_TRUNK_BUILD, self)
             self.System.build_trunk(self, self.argument)
-            self.__flag |= TabFlag.TRUNK_BUILT
+            self.flag |= TabFlag.TRUNK_BUILT
             self.emit(TabEvent.AFTER_TRUNK_BUILD, self)
 
-    def __compute_stats(self):
+    def _compute_stats(self):
         'Compute the stats property after the tableau is finished.'
         try:
             distinct_nodes = self.tree.distinct_nodes
@@ -1178,24 +1173,24 @@ class Tableau(Sequence[Branch], EventEmitter):
                     for name in ('search', 'apply')),
         )
 
-    def __check_timeout(self):
+    def _check_timeout(self):
         timeout = self.opts['build_timeout']
         if timeout is None or timeout < 0:
             return
         if self.timers.build.elapsed_ms() > timeout:
             self.timers.build.stop()
-            self.__flag |= TabFlag.TIMED_OUT
+            self.flag |= TabFlag.TIMED_OUT
             self.finish()
             raise Emsg.Timeout(timeout)
 
-    def __is_max_steps_exceeded(self) -> bool:
+    def _is_max_steps_exceeded(self) -> bool:
         max_steps = self.opts['max_steps']
         return (max_steps is not None and
             max_steps >= 0 and
             len(self.history) >= max_steps)
 
-    def __check_not_started(self):
-        if TabFlag.TRUNK_BUILT in self.__flag or len(self.history) > 0:
+    def _check_not_started(self):
+        if TabFlag.TRUNK_BUILT in self.flag or len(self.history) > 0:
             raise Emsg.IllegalState("Tableau already started.")
 
     def __result_word(self) -> str:
@@ -1211,7 +1206,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         'Build models for the open branches.'
         Model = self.logic.Model
         for branch in self.open:
-            self.__check_timeout()
+            self._check_timeout()
             model = Model()
             model.read_branch(branch)
             branch.model = model
@@ -1231,7 +1226,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             left  = track['pos'],
         )
 
-        branchstat = self.__branchstat
+        branchstat = self._stat
 
         while True:
             # Branches with a node at node_depth.
@@ -1284,7 +1279,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     def _build_tree_leaf(self, s: TreeStruct, branch: Branch, track: dict, /):
         'Finalize attributes for leaf structure.'
-        stat = self.__branchstat[branch]
+        stat = self._stat[branch]
         s.closed = TabFlag.CLOSED in stat[TabStatKey.FLAGS]
         # s.open = not branch.closed
         # assert s.closed == branch.closed
