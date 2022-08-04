@@ -66,7 +66,8 @@ class AdzHelper(RuleHelper):
 
     def __init__(self, rule, /):
         super().__init__(rule)
-        self.closure_rules = self.rule.tableau.rules.groups.get('closure', EMPTY_SET)
+        self.closure_rules = self.rule.tableau.rules.groups.get(
+            'closure', EMPTY_SET)
 
     def _apply(self, target: Target):
         branch = target.branch
@@ -107,14 +108,12 @@ class BranchCache(dict[Branch, _VT], RuleHelper):
     def listen_on(self):
         self.rule.tableau.on({
             TabEvent.AFTER_BRANCH_ADD: self.__after_branch_add,
-            TabEvent.AFTER_BRANCH_CLOSE: self.__after_branch_close,
-        })
+            TabEvent.AFTER_BRANCH_CLOSE: self.__after_branch_close})
 
     def listen_off(self):
         self.rule.tableau.off({
             TabEvent.AFTER_BRANCH_ADD: self.__after_branch_add,
-            TabEvent.AFTER_BRANCH_CLOSE: self.__after_branch_close,
-        })
+            TabEvent.AFTER_BRANCH_CLOSE: self.__after_branch_close})
 
     def __after_branch_add(self, branch: Branch):
         # Event: TabEvent.AFTER_BRANCH_ADD
@@ -371,6 +370,14 @@ class WorldIndex(BranchDictCache[int, set[int]]):
     def intransitives(self, branch: Branch, w1: int, w2: int) -> set[int]:
         """Get all the worlds on the branch that are visible to w2, but are not
         visible to w1.
+
+        Args:
+            branch (Branch): The branch.
+            w1 (int): World 1.
+            w2 (int): World 2.
+
+        Returns:
+            set[int]: The set of worlds.
         """
         # TODO: can we make this more efficient? for each world pair,
         #       track the intransitives?
@@ -620,7 +627,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
         __slots__ = EMPTY_SET
         _valuetype = set
 
-    consts: NodeConsts.Consts
+    consts: NodeConsts.Consts # type: ignore
 
     def __init__(self, rule, /):
         super().__init__(rule)
@@ -695,7 +702,7 @@ class MaxConsts(dict[Branch, int], RuleHelper):
 
     def __init__(self, rule, /):
         RuleHelper.__init__(self, rule)
-        self.wconsts = WorldConsts(rule)
+        self.wconsts = WorldConsts(self.rule)
 
     def listen_on(self):
         self.rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__after_trunk_build)
@@ -801,7 +808,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
 
     def __init__(self, rule: Rule,/):
         RuleHelper.__init__(self, rule)
-        self.modals = self.Modals(getattr(rule, RuleAttr.ModalOperators))
+        self.modals = self.Modals(getattr(self.rule, RuleAttr.ModalOperators))
 
     def listen_on(self):
         self.rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__after_trunk_build)

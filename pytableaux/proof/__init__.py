@@ -24,14 +24,16 @@ from __future__ import annotations
 from abc import abstractmethod as abstract
 from enum import auto
 from types import MappingProxyType as MapProxy
-from typing import Any, NamedTuple, Sequence
+from typing import TYPE_CHECKING, Any, NamedTuple, Sequence
 
-from pytableaux import _ENV, __docformat__
+from pytableaux import __docformat__
 from pytableaux.lang import Operator, Predicate, Quantifier
 from pytableaux.logics import LogicType
-from pytableaux.tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, abcs, closure,
-                              qsetf)
+from pytableaux.tools import EMPTY_MAP, EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from pytableaux.tools.timing import Counter, StopWatch
+
+if TYPE_CHECKING:
+    from pytableaux.proof import Rule
 
 __all__ = (
     'adds',
@@ -76,8 +78,6 @@ class RuleAttr(str, abcs.Ebc):
     "Rule timer names."
     DefaultOpts = '_defaults'
     "Rule default options."
-    Name = 'name'
-    "Rule class name attribute."
     NodeFilters = 'NodeFilters'
     "For `FilterHelper`."
     IgnoreTicked = 'ignore_ticked'
@@ -89,7 +89,6 @@ class RuleAttr(str, abcs.Ebc):
     Legend = 'legend'
     "Rule legend"
 
-
 class ProofAttr(str, abcs.Ebc):
 
     def __str__(self):
@@ -97,33 +96,30 @@ class ProofAttr(str, abcs.Ebc):
 
 class NodeAttr(ProofAttr):
 
+    sentence = 'sentence'
     designation = designated = 'designated'
-    closure = 'closure'
-    flag    = 'flag'
-    is_flag = 'is_flag'
     world   = 'world'
     world1 = w1 = 'world1'
     world2 = w2 = 'world2'
+    is_flag = 'is_flag'
+    flag    = 'flag'
+    closure = 'closure'
     info    = 'info'
-    sentence = 'sentence'
 
 class PropMap(abcs.ItemMapEnum):
 
     NodeDefaults = {
         NodeAttr.designation: None,
-        NodeAttr.world: None,
-    }
+        NodeAttr.world: None}
 
     ClosureNode = {
         NodeAttr.closure: True,
         NodeAttr.flag: 'closure',
-        NodeAttr.is_flag: True,
-    }
+        NodeAttr.is_flag: True}
 
     QuitFlag = {
         NodeAttr.is_flag: True,
-        NodeAttr.flag: 'quit',
-    }
+        NodeAttr.flag: 'quit'}
 
 #******  Branch Enum
 
@@ -190,9 +186,9 @@ class TabFlag(abcs.FlagEnum):
 
 #******  Auxilliary Classes
 class StepEntry(NamedTuple):
-    rule   : Rule
+    rule: Rule
     "The rule instance."
-    target : Target
+    target: Target
     "The target produced by the rule."
     duration: Counter
     "The duration counter."
@@ -204,23 +200,32 @@ class Access(NamedTuple):
     "An `access` int tuple (world1, world2)."
 
     world1: int
+    "world 1"
     world2: int
+    "world 2"
 
     @property
     def w1(self) -> int:
+        """Alias for :attr:`world1`."""
         return self.world1
 
     @property
     def w2(self) -> int:
+        """Alias for :attr:`world2`."""
         return self.world2
 
     @classmethod
     def fornode(cls, node):
+        """Create instance from a node."""
         return cls._make(map(node.__getitem__, cls._fields))
 
-    def reversed(self):
-        return self._make(reversed(self))
+    def tonode(self):
+        """Create node from this instance."""
+        return anode(*self)
 
+    def reversed(self):
+        """Create reversed instance."""
+        return self._make(reversed(self))
 
 class NodeStat(dict):
 
@@ -229,8 +234,7 @@ class NodeStat(dict):
     _defaults = MapProxy({
         TabStatKey.FLAGS       : TabFlag.NONE,
         TabStatKey.STEP_ADDED  : TabFlag.NONE,
-        TabStatKey.STEP_TICKED : None,
-    })
+        TabStatKey.STEP_TICKED : None})
 
     def __init__(self):
         super().__init__(self._defaults)
@@ -244,8 +248,7 @@ class BranchStat(dict):
         TabStatKey.STEP_ADDED  : TabFlag.NONE,
         TabStatKey.STEP_CLOSED : TabFlag.NONE,
         TabStatKey.INDEX       : None,
-        TabStatKey.PARENT      : None,
-    })
+        TabStatKey.PARENT      : None})
 
     def __init__(self, mapping = None, /, **kw):
         super().__init__(self._defaults)
@@ -282,14 +285,16 @@ class TabTimers(NamedTuple):
 class TableauxSystem(metaclass = abcs.AbcMeta):
     'Tableaux system base class.'
 
+    Rules: LogicType.TabRules
+
     @classmethod
     @abstract
     def build_trunk(cls, tableau, argument, /) -> None:
         """Build the trunk for an argument on the tableau.
         
         Args:
-            tableau: The tableau instance.
-            argument: The argument.
+            tableau (Tableau): The tableau instance.
+            argument (Argument): The argument.
         """
         raise NotImplementedError
 
@@ -299,10 +304,10 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         applied to the node.
 
         Args:
-            node: The node instance.
+            node (Node): The node instance.
         
         Returns:
-            The number of new branches.
+            int: The number of new branches.
         """
         return 0
 
@@ -311,8 +316,8 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         """Populate rules/groups for a tableau.
 
         Args:
-            logic: The logic.
-            rules: The tableau's rules.
+            logic (LogicType): The logic.
+            rules (RulesRoot): The tableau's rules.
         """
         Rules = logic.TabRules
         rules.groups.create('closure').extend(Rules.closure_rules)
@@ -324,6 +329,7 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
     def initialize(cls, RulesClass:LogicType.TabRules, /):
         RulesClass.all_rules = RulesClass.closure_rules + tuple(
             r for g in RulesClass.rule_groups for r in g)
+        cls.Rules = RulesClass
         return RulesClass
 
 class RuleHelper(metaclass = abcs.AbcMeta):
@@ -355,72 +361,6 @@ class RuleHelper(metaclass = abcs.AbcMeta):
         """
         pass
 
-    @classmethod
-    @closure
-    def __subclasshook__():
-
-        from inspect import Parameter as Param
-        from inspect import Signature
-
-        POSMASK = Param.POSITIONAL_ONLY | Param.POSITIONAL_OR_KEYWORD | Param.VAR_POSITIONAL
-
-        def is_descriptor(obj, /, *, names = ('__get__', '__set__', '__delete__')) -> bool:
-            return any(hasattr(obj, name) for name in names)
-
-        def is_positional(param: Param) -> bool:
-            return param.kind & POSMASK == param.kind
-
-        def get_params(value, /) -> list[Param]:
-            return list(Signature.from_callable(value).parameters.values())
-
-        # ---------------------
-        def insp_rule(subcls: type):
-            yield abcs.check_mrodict(subcls.__mro__, name := 'rule')
-            yield is_descriptor(getattr(subcls, name))
-
-        def insp_init(subcls: type):
-            yield callable(value := subcls.__init__)
-            if len(params := get_params(value)) < 2:
-                yield callable(value := subcls.__new__)
-                yield len(params := get_params(value)) > 1
-            yield is_positional(params[1])
-
-        # def insp_configure_rule(subcls: type):
-        #     yield abcs.check_mrodict(subcls.__mro__, name := HelperAttr.InitRuleCls)
-        #     yield callable(value := getattr(subcls, name))
-        #     yield len(params := get_params(value)) > 1
-        #     yield is_positional(params[1])
-        # ---------------------
-
-        inspections = (
-            insp_rule,
-            insp_init,
-            # insp_configure_rule,
-        )
-
-        def compute(subcls: type):
-            for fn in inspections:
-                for i, v in enumerate(fn(subcls)):
-                    if v is not True:
-                        return NotImplemented, (fn.__name__, i)
-            return True, None
-
-        cache: dict = {}
-
-        def hook_cached(cls, subcls: type, /):
-            if cls is not __class__:
-                return NotImplemented
-            try:
-                return cache[subcls][0]
-            except KeyError:
-                return cache.setdefault(subcls, compute(subcls))[0]
-
-        if _ENV.DEBUG:
-            hook_cached.cache = cache
-
-        return hook_cached
-
-
 class RuleMeta(abcs.AbcMeta):
     """Rule meta class."""
 
@@ -428,12 +368,11 @@ class RuleMeta(abcs.AbcMeta):
     def __prepare__(cls, clsname, bases, **kw):
         return dict(__slots__ = EMPTY_SET)
 
-    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /,
-        modal: bool = NOARG, **kw):
+    def __new__(cls, clsname, bases, ns, /, modal = NOARG, **kw):
 
-        Class = super().__new__(cls, clsname, bases, ns, **kw)
+        Class: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
 
-        setattr(Class, RuleAttr.Name, clsname)
+        Class.name = clsname
 
         if modal is not NOARG:
             setattr(Class, RuleAttr.Modal, modal)
@@ -465,11 +404,12 @@ class RuleMeta(abcs.AbcMeta):
                         v[filters.ModalNode] = NotImplemented
                         configs[helpercls] = setup(Class, config)
 
-        setattr(Class, RuleAttr.Legend, _rule_legend(Class))
+        setattr(Class, RuleAttr.Legend, _build_legend(Class))
         return Class
 
 
-def _rule_legend(rulecls):
+def _build_legend(rulecls):
+    """Build rule class legend."""
 
     legend = {}
 
@@ -487,7 +427,7 @@ def _rule_legend(rulecls):
         legend['designation'] = des
 
     try:
-        if (issubclass(rulecls, ClosingRule)):
+        if issubclass(rulecls, ClosingRule):
             legend['closure'] = True
     except NameError:
         pass
@@ -536,7 +476,7 @@ def anode(w1, w2):
     return Node(dict(world1 = w1, world2 = w2))
 
 from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import Rule, Tableau, RulesRoot
+from pytableaux.proof.tableaux import Rule, RulesRoot, Tableau
 
 pass
 from pytableaux.proof.rules import ClosingRule as ClosingRule

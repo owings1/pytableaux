@@ -85,6 +85,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     ticking = False
     "Whether this is a ticking rule."
 
+    modal = False
+    "Whether this is a modal rule."
+
     branching = 0
     "The number of additional branches created."
 

@@ -66,8 +66,8 @@ class TabRules(K3.TabRules):
         designated nodes with the negation of each conjunct. Then tick *n*.
         """
         negated     = True
-        operator    = Operator.Conjunction
         designation = True
+        operator    = Operator.Conjunction
         branching   = 2
 
         def _get_node_targets(self, node: Node, _: Branch, /):
@@ -151,8 +151,8 @@ class TabRules(K3.TabRules):
         disjunct and its negation, respectively. Then tick *n*.
         """
         negated     = True
-        operator    = Operator.Disjunction
         designation = False
+        operator    = Operator.Disjunction
         branching   = 2
 
         def _get_node_targets(self, node: Node, _: Branch, /):
@@ -208,8 +208,8 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        operator    = Operator.MaterialBiconditional
         designation = True
+        operator    = Operator.MaterialBiconditional
         conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
@@ -217,8 +217,8 @@ class TabRules(K3.TabRules):
         This rule reduces to a negated conjunction of material conditionals.
         """
         negated     = True
-        operator    = Operator.MaterialBiconditional
         designation = True
+        operator    = Operator.MaterialBiconditional
         conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):

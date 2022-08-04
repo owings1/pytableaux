@@ -18,6 +18,7 @@ class Rule(EventEmitter, metaclass=RuleMeta):
     Helpers: ClassVar[Mapping[type[RuleHelper], Any]]
     Timers: ClassVar[qsetf[str]]
     ticking: ClassVar[bool]
+    modal: ClassVar[bool]
     branching: ClassVar[int]
     helpers: _TypeInstDict[RuleHelper]
     history: Sequence[Target]

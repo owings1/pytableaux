@@ -30,6 +30,8 @@ class Emsg(abcs.Ebc, Generic[_ExT], Callable[..., _ExT]):
     SubclsCheck: Emsg[TypeError]
     NotSubclsCheck: Emsg[TypeError]
     CantJsonify: Emsg[TypeError]
+    Type: Emsg[TypeError]
+    Attribute: Emsg[AttributeError]
     ReadOnly: Emsg[AttributeError]
     IndexOutOfRange: Emsg[IndexError]
     WrongValue: Emsg[ValueError]

@@ -87,7 +87,7 @@ class TabRules(T.TabRules):
             return float(target.world2)
 
         @staticmethod
-        def example_nodes() -> tuple[anode, anode]:
+        def example_nodes():
             return anode(0, 1), anode(1, 2)
 
     rule_groups = (

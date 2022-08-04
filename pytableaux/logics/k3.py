@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytableaux.logics.fde as FDE
 from pytableaux.models import BaseModel, ValueK3
-from pytableaux.proof import Branch, Node, Target, sdnode
+from pytableaux.proof import Branch, Node, NodeAttr, Target, sdnode
 from pytableaux.proof.rules import BaseClosureRule
 
 name = 'K3'
@@ -66,7 +66,7 @@ class TabRules(FDE.TabRules):
             return bool(self._find_closing_node(node, branch))
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
-            if node.get('designated'):
+            if node.get(NodeAttr.designated):
                 s = self.sentence(node)
                 if s is not None:
                     return branch.find(sdnode(s.negative(), True))

@@ -64,12 +64,10 @@ class Model(K3W.Model):
         the set of values for the substitution of each constant in the model for
         the variable.
         """
-        v = s.variable
-        sub = s.sentence.substitute
         return self.Value[
             self.mc_cvals[
                 minfloor(1, (
-                    self.mc_nvals[self.value_of(sub(c, v), **kw)]
+                    self.mc_nvals[self.value_of(c >> s, **kw)]
                     for c in self.constants
                 ))
             ].name
@@ -83,12 +81,10 @@ class Model(K3W.Model):
         the set of values for the substitution of each constant in the model for
         the variable.
         """
-        v = s.variable
-        sub = s.sentence.substitute
         return self.Value[
             self.md_cvals[
                 maxceil(3, (
-                    self.md_nvals[self.value_of(sub(c, v), **kw)]
+                    self.md_nvals[self.value_of(c >> s, **kw)]
                     for c in self.constants
                 ))
             ].name

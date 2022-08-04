@@ -373,18 +373,6 @@ class Model(BaseModel[ValueCPL]):
     def value_of_atomic(self, s: Atomic, /, world: int = 0):
         return self.frames[world].atomics.get(s, self.unassigned_value)
 
-class Denotum:
-    __slots__ = EMPTY_SET
-    # WIP - Generating "objects" like k-constants for a domain, dentation, and
-    #       predicate "property" extensions.
-    #
-    #       With the current implemtation of how values are set and checked
-    #       dynamically for integrity, we can't easily generate a useful
-    #       domain until we know the model is finished.
-    #
-    #       For now, the purpose of this WIP feature is merely informational.
-    pass
-
 class Frame:
     """
     A K-frame comprises the interpretation of sentences and predicates at a world.
@@ -523,13 +511,8 @@ class Frames(dict[int, Frame]):
         return self.setdefault(check.inst(key, int), Frame(key))
 
 class TableauxSystem(TableauxSystem):
-    """
-    Modal tableaux are similar to classical tableaux, with the addition of a
-    *world* index for each sentence node, as well as *access* nodes representing
-    "visibility" of worlds. The worlds and access nodes come into play with
-    the rules for Possibility and Necessity. All other rules function equivalently
-    to their classical counterparts.
-    """
+
+    modal = True
 
     neg_branchable = {
         Operator.Conjunction,
@@ -541,8 +524,6 @@ class TableauxSystem(TableauxSystem):
         Operator.MaterialConditional,
         Operator.Conditional,
     }
-
-    modal = True
 
     @classmethod
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
@@ -591,7 +572,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     """
     NodeFilters = filters.ModalNode,
     modal  : bool = True
-    access : bool|None = None
+    access : Optional[bool] = None
 
 class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
     'Convenience mixin class for most common rules.'

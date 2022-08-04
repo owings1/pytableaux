@@ -72,7 +72,7 @@ class CompSentenceCompItem(NamedTuple):
 class Comparer(abcs.Abc):
     "Filter/comparer base class."
 
-    __slots__ = 'compitem',
+    __slots__ = ('compitem',)
 
     compitem: object
     "The hashable comparison item tuple."
@@ -109,17 +109,18 @@ class NodeCompare(Comparer):
     "Node filter mixin class."
 
     @abstract
-    def example_node(self) -> dict: ...
+    def example_node(self) -> dict:
+        raise NotImplementedError
 
 class AttrCompare(Comparer):
     "Attribute filter/comparer."
+
+    __slots__ = EMPTY_SET
 
     attrmap = EMPTY_MAP
     "LHS attr -> RHS attr mapping."
     rget = staticmethod(getattr)
     fcmp = staticmethod(opr.eq)
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def _build(cls, lhs, /, attrs = None, attrmap = None, getitem = False,):
@@ -174,6 +175,8 @@ class AttrCompare(Comparer):
 class SentenceCompare(Comparer):
     "Sentence filter/comparer."
 
+    __slots__ = EMPTY_SET
+
     compmap = (
         *dict(
             operator   = (Operated, opr.is_),
@@ -184,8 +187,6 @@ class SentenceCompare(Comparer):
         
     rget = staticmethod(thru)
     compitem: CompSentenceCompItem
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def _build(cls, lhs, /, getitem = False,):
@@ -208,9 +209,7 @@ class SentenceCompare(Comparer):
                 break
         else:
             return None
-        return CompSentenceCompItem(
-            s_type, s_item, s_name, s_fcmp, s_negated
-        )
+        return CompSentenceCompItem(s_type, s_item, s_name, s_fcmp, s_negated)
 
     def sentence(self, rhs):
         """Get the sentence to be examined from the rhs, or None. For a `negated`
@@ -228,8 +227,7 @@ class SentenceCompare(Comparer):
         "Return whether the rhs passes the filter."
         return (compitem := self.compitem) is None or (
             type(s := self.sentence(rhs)) is compitem.type and
-            compitem.fcmp(getattr(s, compitem.name), compitem.item)
-        )
+            compitem.fcmp(getattr(s, compitem.name), compitem.item))
 
     def example(self):
         "Construct an example sentence that matches the filter conditions."
@@ -245,10 +243,8 @@ class SentenceCompare(Comparer):
         if (compitem := self.compitem) is None:
             return f'<{clsname}:NONE>'
         nstr = '(negated)' if compitem.negated else ''
-        return (
-            f'<{clsname}:'
-            f'{compitem.name}' '=' f'{compitem.item}' f'{nstr}''>'
-        )
+        return (f'<{clsname}:'
+            f'{compitem.name}' '=' f'{compitem.item}' f'{nstr}''>')
 
 class SentenceNode(SentenceCompare, NodeCompare):
     "Sentence node filter."
@@ -269,9 +265,9 @@ class SentenceNode(SentenceCompare, NodeCompare):
 class DesignationNode(AttrCompare, NodeCompare):
     "Designation node filter."
 
-    attrmap = MapProxy(dict(designation = NodeAttr.designated))
-
     __slots__ = EMPTY_SET
+
+    attrmap = MapProxy(dict(designation = NodeAttr.designated))
 
     @staticmethod
     def rget(node: Node, key: str, /):
@@ -283,12 +279,12 @@ class DesignationNode(AttrCompare, NodeCompare):
 class ModalNode(AttrCompare, NodeCompare):
     "Modal node filter."
 
+    __slots__ = EMPTY_SET
+
     attrmap = MapProxy(dict(
         modal = 'is_modal',
         access = 'is_access',
     ))
-
-    __slots__ = EMPTY_SET
 
     def example_node(self):
         n = {}

@@ -31,7 +31,7 @@ from pytableaux.lang import Constant, Sentence
 from pytableaux.proof import Access, BranchEvent, NodeAttr, PropMap
 from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs,
                               dictattr, isattrstr, isint, itemsiter, lazy,
-                              qset, raisr)
+                              qset)
 from pytableaux.tools.events import EventEmitter
 
 if TYPE_CHECKING:
@@ -45,7 +45,7 @@ __all__ = (
     'Target',
 )
 
-_first_const = Constant.first()
+_FIRST_CONST = Constant.first()
 
 NOARG = object()
 
@@ -63,8 +63,7 @@ class Node(MapCover, abcs.Copyable):
             else:
                 mapping = EMPTY_MAP
         except TypeError:
-            check.inst(mapping, Mapping)
-            raise
+            raise Emsg.InstCheck(mapping, Mapping)
         self._cov_mapping = mapping
 
     def copy(self):
@@ -121,10 +120,10 @@ class Node(MapCover, abcs.Copyable):
                 return True
         return False
 
-    def meets(self, props, /):
-        'Whether the node properties match all those give in ``props``.'
-        for prop in props:
-            if prop not in self or props[prop] != self[prop]:
+    def meets(self, mapping, /):
+        'Whether the node properties match all those given in `mapping`.'
+        for prop in mapping:
+            if prop not in self or mapping[prop] != self[prop]:
                 return False
         return True
 
@@ -137,7 +136,7 @@ class Node(MapCover, abcs.Copyable):
     def __hash__(self):
         return id(self)
 
-    __delattr__ = raisr(AttributeError)
+    __delattr__ = Emsg.Attribute.razr
 
     def __getitem__(self, key):
         try:
@@ -148,12 +147,74 @@ class Node(MapCover, abcs.Copyable):
     def __repr__(self):
         return f'<{type(self).__name__} id:{self.id} props:{dict(self)}>'
 
+class NodeIndex(dict[str, dict[Any, set]], abcs.Copyable):
+    "Branch node index."
+
+    __slots__ = EMPTY_SET
+    _ACCESSKEY = 'w1Rw2'
+
+    def __init__(self):
+        self.update(
+            sentence   = defaultdict(set),
+            designated = defaultdict(set),
+            world      = defaultdict(set),
+            world1     = defaultdict(set),
+            world2     = defaultdict(set),
+            w1Rw2      = defaultdict(set),
+        )
+
+    def add(self, node: Node, /):
+        for prop in self:
+            value = None
+            found = False
+            if prop == self._ACCESSKEY:
+                if node.is_access:
+                    value = Access.fornode(node)
+                    found = True
+            elif prop in node:
+                value = node[prop]
+                found = True
+            if found:
+                self[prop][value].add(node)
+
+    def copy(self):
+        inst = type(self)()
+        for prop, index in self.items():
+            for value, nodes in index.items():
+                inst[prop][value].update(nodes)
+        return inst
+
+    def select(self, props, default, /) -> set[Node]:
+        best = None
+        for prop in self:
+            value = None
+            found = False
+            if prop == self._ACCESSKEY:
+                if NodeAttr.w1 in props and NodeAttr.w2 in props:
+                    value = Access.fornode(props)
+                    found = True
+            elif prop in props:
+                value = props[prop]
+                found = True
+            if found:
+                if value not in self[prop]:
+                    return EMPTY_SET
+                nodes = self[prop][value]
+                if best is None or len(nodes) < len(best):
+                    best = nodes
+                # we could do no better
+                if len(best) == 1:
+                    break
+        if best is None:
+            best = default
+        return best
+
 class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
     'A tableau branch.'
 
     __closed: bool
     __constants: set[Constant]
-    __index: Branch.Index
+    __index: NodeIndex
     __model: BaseModel
     __nextconst: Constant
     __nextworld: int
@@ -173,13 +234,11 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         """Create a branch.
         
         Args:
-            parent: The parent branch, if any.
+            parent (Optional[Branch]): The parent branch, if any.
         """
-
-        # self.__init_parent(parent)
-        self.parent = parent
-
         EventEmitter.__init__(self, *BranchEvent)
+
+        self.parent = parent
 
         # Make sure properties are copied if needed in copy()
 
@@ -188,28 +247,28 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         self.__nodes = qset()
         self.__ticked = set()
 
-        self.__index = self.Index()
+        self.__index = NodeIndex()
         self.__worlds = set()
         self.__constants = set()
 
         self.__nextworld = 0
-        self.__nextconst = _first_const
+        self.__nextconst = _FIRST_CONST
 
     def copy(self, *, parent = None, listeners = False):
         """Copy of the branch.
         
         Args:
-            parent: The branch to set as the new branch's parent.
-            listeners: Whether to copy event listeners, default ``False``.
+            parent (Optional[Branch]): The branch to set as the new branch's parent.
+                Defaults to None.
+            listeners (bool): Whether to copy event listeners. Defaults to `False`.
         
         Returns:
-            The new branch.
+            Branch: The new branch.
         """
         cls = type(self)
         b = cls.__new__(cls)
 
         b.parent = parent
-        # b.__init_parent(parent)
 
         b.events = self.events.copy(listeners = listeners)
 
@@ -285,7 +344,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         "The set of constants on the branch."
         return SetView(self.__constants)
 
-    def has(self, props, /) -> bool:
+    def has(self, mapping, /) -> bool:
         """Whether there is a node on the branch that matches the given properties.
         
         Args:
@@ -294,7 +353,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         Returns:
             bool: Whether there is a match.
         """
-        for _ in self.search(props, limit = 1):
+        for _ in self.search(mapping, limit = 1):
             return True
         return False
 
@@ -328,35 +387,35 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
                 return False
         return True
 
-    def find(self, props, /):
+    def find(self, mapping, /):
         """Find the first node on the branch that matches the given properties.
 
         Args:
-            props: A mapping of properties.
+            props (Mapping): A mapping of properties.
         
         Returns:
-            The node, or ``None`` if not found.
+            Optional[Node]: The node, or ``None`` if not found.
         """
-        for node in self.search(props, limit = 1):
+        for node in self.search(mapping, limit = 1):
             return node
 
-    def search(self, props, /, limit = None):
+    def search(self, mapping, /, limit = None):
         """
         Search the nodes on the branch that match the given properties, up to the
         limit, if given.
 
         Args:
-            props: A mapping of properties.
+            props (Mapping): A mapping of properties.
             limit (int): An optional result limit.
 
         Returns:
             Generator[Node]: Results generator.
         """
         n = 0
-        for node in self.__index.select(props, self):
+        for node in self.__index.select(mapping, self):
             if limit is not None and n >= limit:
                 return
-            if node.meets(props):
+            if node.meets(mapping):
                 n += 1
                 yield node
 
@@ -364,10 +423,10 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         """Append a node.
 
         Args:
-            node: Node object or mapping.
+            node (Mapping): Node object or mapping.
         
         Returns:
-            self
+            Branch: self
         
         Raises:
             DuplicateValueError: if the node is already on the branch.
@@ -376,7 +435,8 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
             node = Node(node)
         self.__nodes.append(node)
 
-        if (s := node.get(NodeAttr.sentence)) is not None:
+        s: Sentence = node.get(NodeAttr.sentence)
+        if s is not None:
             if len(cons := s.constants):
                 if self.__nextconst in cons:
                     self.__nextconst = max(cons).next()
@@ -397,10 +457,10 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         """Add multiple nodes.
 
         Args:
-            nodes: An iterable of node objects/mappings.
+            nodes (Iterable): An iterable of node objects/mappings.
 
         Returns:
-            self
+            Branch: self
 
         Raises:
             DuplicateValueError: if a node is already on the branch.
@@ -424,7 +484,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         event.
         
         Returns:
-            self.
+            Branch: self.
         """
         if not self.__closed:
             self.__closed = True
@@ -444,15 +504,21 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         return node in self.__ticked
 
     def new_constant(self):
-        'Return a new constant that does not appear on the branch.'
+        """Return a new constant that does not appear on the branch.
+
+        Returns:
+            Constant: The new constant.
+        """
         return self.__nextconst
 
     def new_world(self):
         """Return a new world that does not appear on the branch.
+
+        Returns:
+            int: A new word.
         """
         return self.__nextworld
 
-    # def __init_parent(self, parent: Optional[Branch], /):
     @parent.setter
     def parent(self, parent: Optional[Branch]):
         try:
@@ -494,70 +560,10 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         return node in self.__nodes
 
     def __repr__(self):
-        leafid = leaf.id if (leaf := self.leaf) else None
+        leafid = self.leaf.id if self.leaf else None
         return (f'<{type(self).__name__} id:{self.id} nodes:{len(self)} '
             f'leaf:{leafid} closed:{self.closed}>')
 
-    class Index(dict[str, dict[Any, set]], abcs.Copyable):
-        "Branch node index."
-
-        __slots__ = EMPTY_SET
-
-        def __init__(self):
-            self.update(
-                sentence   = defaultdict(set),
-                designated = defaultdict(set),
-                world      = defaultdict(set),
-                world1     = defaultdict(set),
-                world2     = defaultdict(set),
-                w1Rw2      = defaultdict(set),
-            )
-
-        def add(self, node: Node, /):
-            for prop in self:
-                value = None
-                found = False
-                if prop == 'w1Rw2':
-                    if node.is_access:
-                        value = Access.fornode(node)
-                        found = True
-                elif prop in node:
-                    value = node[prop]
-                    found = True
-                if found:
-                    self[prop][value].add(node)
-
-        def copy(self):
-            inst = type(self)()
-            for prop, index in self.items():
-                for value, nodes in index.items():
-                    inst[prop][value].update(nodes)
-            return inst
-
-        def select(self, props, default, /) -> set[Node]:
-            best = None
-            for prop in self:
-                value = None
-                found = False
-                if prop == 'w1Rw2':
-                    if NodeAttr.w1 in props and NodeAttr.w2 in props:
-                        value = Access.fornode(props)
-                        found = True
-                elif prop in props:
-                    value = props[prop]
-                    found = True
-                if found:
-                    if value not in self[prop]:
-                        return EMPTY_SET
-                    nodes = self[prop][value]
-                    if best is None or len(nodes) < len(best):
-                        best = nodes
-                    # we could do no better
-                    if len(best) == 1:
-                        break
-            if best is None:
-                best = default
-            return best
 
 class Target(dictattr):
     """Rule application target.
@@ -611,8 +617,8 @@ class Target(dictattr):
     def __bool__(self):
         return True
 
-    __delitem__ = pop = popitem = raisr(TypeError)
-    __delattr__ = raisr(AttributeError)
+    __delitem__ = pop = popitem = Emsg.Type.razr
+    __delattr__ = Emsg.Attribute.razr
 
     def __dir__(self):
         return list(self._names())

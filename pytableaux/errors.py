@@ -102,40 +102,32 @@ def _len(o): return o if isinstance(o, int) else len(o)
 class Emsg(_enum.Enum):
 
     InstCheck = (TypeError,
-        "Expected instance of '{1}' but got type '{0}'", (type, _thru)
-    )
+        "Expected instance of '{1}' but got type '{0}'", (type, _thru))
     SubclsCheck = (TypeError,
-        "Expected subclass of '{1}' but got type '{0}'", 2
-    )
+        "Expected subclass of '{1}' but got type '{0}'", 2)
     NotSubclsCheck = (TypeError,
-        "Unexpected type '{0}', subclass of '{1}'", 2
-    )
+        "Unexpected type '{0}', subclass of '{1}'", 2)
     CantJsonify = (TypeError,
-        "Object of type {0} is not JSON serializable", (type,)
-    )
+        "Object of type {0} is not JSON serializable", (type,))
+    Type = TypeError,
+    Attribute = AttributeError,
 
     ReadOnly = (AttributeError,
-        "'{0.__name__}' object attribute '{1}' is read-only", (type, str)
-    )
+        "'{0.__name__}' object attribute '{1}' is read-only", (type, str))
     
     IndexOutOfRange = IndexError, 'Index out of range'
 
     WrongValue = (ValueError,
-        "Value '{0}' does not match expected: '{1}'", 2
-    )
+        "Value '{0}' does not match expected: '{1}'", 2)
     WrongLength = (ValueError,
-        "Expected value of length '{1}' but got length '{0}'", (_len, _len)
-    )
+        "Expected value of length '{1}' but got length '{0}'", (_len, _len))
     MismatchSliceSize = (ValueError,
-        'Attempt to assign sequence of size {0} to slice of size {1}', (_len, _len)
-    )
+        'Attempt to assign sequence of size {0} to slice of size {1}', (_len, _len))
     MismatchExtSliceSize = (ValueError,
-        'Attempt to assign sequence of size {0} to extended slice of size {1}', (_len, _len)
-    )
+        'Attempt to assign sequence of size {0} to extended slice of size {1}', (_len, _len))
     ValueConflict = ValueError, "Value conflict: '{0}' conflicts with '{1}'", 2
     ValueConflictFor = (ValueError,
-        "Value conflict for '{0}': '{1}' conflicts with existing '{2}'", 3
-    )
+        "Value conflict for '{0}': '{1}' conflicts with existing '{2}'", 3)
     BadAttrName = ValueError, "Invalid attribute identifier: '{}'", (str,)
 
     NotLogicsPackage = ValueError, "{0} not a registered logics package", 1
@@ -157,17 +149,13 @@ class Emsg(_enum.Enum):
     Timeout = ProofTimeoutError, "Timeout of {}ms exceeded", (int,)
 
     UnknownForSentence = (ModelValueError,
-        'Non-existent value {0} for sentence {1}', (str, str)
-    )
+        'Non-existent value {0} for sentence {1}', (str, str))
     ConflictForSentence = (ModelValueError,
-        'Inconsistent value {0} for sentence {1}', (str, str)
-    )
+        'Inconsistent value {0} for sentence {1}', (str, str))
     ConflictForExtension = (ModelValueError,
-        'Cannot set value {0} for tuple {1} already in extension', (str, str)
-    )
+        'Cannot set value {0} for tuple {1} already in extension', (str, str))
     ConflictForAntiExtension = (ModelValueError,
-        'Cannot set value {0} for tuple {1} already in anti-extension', (str, str)
-    )
+        'Cannot set value {0} for tuple {1} already in anti-extension', (str, str))
 
     if TYPE_CHECKING:
         @overload
