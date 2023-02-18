@@ -1,0 +1,10 @@
+cherrypy
+coverage
+jinja2
+prometheus_client
+pytest
+simplejson
+Sphinx
+sphinx_rtd_theme
+sphinx-toolbox
+tabulate

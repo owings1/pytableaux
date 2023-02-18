@@ -22,7 +22,7 @@ pytableaux.proof
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
-from enum import auto
+from enum import auto, Enum, Flag
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, NamedTuple, Sequence
 
@@ -62,14 +62,14 @@ __all__ = (
 
 NOARG = object()
 
-class HelperAttr(str, abcs.Ebc):
+class HelperAttr(str, Enum):
     'Special ``RuleHelper`` class attribute names.'
 
     InitRuleCls = 'configure_rule'
 
 #******  Rule Enum
 
-class RuleAttr(str, abcs.Ebc):
+class RuleAttr(str, Enum):
     'Special ``Rule`` class attribute names.'
 
     Helpers = 'Helpers'
@@ -89,7 +89,7 @@ class RuleAttr(str, abcs.Ebc):
     Legend = 'legend'
     "Rule legend"
 
-class ProofAttr(str, abcs.Ebc):
+class ProofAttr(str, Enum):
 
     def __str__(self):
         return self.value
@@ -123,7 +123,7 @@ class PropMap(abcs.ItemMapEnum):
 
 #******  Branch Enum
 
-class BranchEvent(abcs.Ebc):
+class BranchEvent(Enum):
     'Branch events.'
     AFTER_CLOSE = auto()
     AFTER_ADD   = auto()
@@ -131,16 +131,16 @@ class BranchEvent(abcs.Ebc):
 
 #******  Helper Enum
 
-class RuleEvent(abcs.Ebc):
+class RuleEvent(Enum):
     'Rule events.'
 
     BEFORE_APPLY = auto()
     AFTER_APPLY  = auto()
 
-class RuleState(abcs.FlagEnum):
+class RuleState(Flag):
     'Rule state bit flags.'
 
-    __slots__ = ('value', '_value_')
+    # __slots__ = ('value', '_value_')
 
     NONE   = 0
     INIT   = 1
@@ -148,7 +148,7 @@ class RuleState(abcs.FlagEnum):
 
 #******  Tableau Enum
 
-class TabEvent(abcs.Ebc):
+class TabEvent(Enum):
     'Tableau events.'
 
     AFTER_BRANCH_ADD    = auto()
@@ -159,7 +159,7 @@ class TabEvent(abcs.Ebc):
     BEFORE_TRUNK_BUILD  = auto()
     AFTER_FINISH        = auto()
 
-class TabStatKey(abcs.Ebc):
+class TabStatKey(Enum):
     'Tableau ``stat()`` keys.'
 
     FLAGS       = auto()
@@ -170,10 +170,10 @@ class TabStatKey(abcs.Ebc):
     PARENT      = auto()
     NODES       = auto()
 
-class TabFlag(abcs.FlagEnum):
+class TabFlag(Flag):
     'Tableau state bit flags.'
 
-    __slots__ = ('value', '_value_')
+    # __slots__ = ('value', '_value_')
 
     NONE   = 0
     TICKED = 1

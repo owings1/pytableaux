@@ -30,7 +30,7 @@ __all__ = ('package',)
 __version__ = 2, 0, 3, 'dev'
 'Version tuple (major, minor, patch, release).'
 
-__year__ = 2022
+__year__ = 2023
 'Last updated year, for copyright end date.'
 
 class SemVer(typing.NamedTuple):
@@ -67,7 +67,7 @@ def sdata(c: type):
     'Singleton dataclass instance factory.'
     return typing.cast(c, dataclasses.dataclass(init = False)(c)())
 
-@sdata
+# @sdata
 class package:
     'Package info.'
 
@@ -75,28 +75,28 @@ class package:
 
     version: SemVer = SemVer(*__version__)
 
-    author     : object
-    license    : object
-    repository : object
-    issues     : object
+    # author     : object
+    # license    : object
+    # repository : object
+    # issues     : object
 
-    @sdata
+    # @sdata
     class author:
         name  : str = 'Doug Owings'
         email : str = 'doug@dougowings.net'
 
-    @sdata
+    # @sdata
     class license:
         id    : str = 'AGPL-3.0-or-later'
         title : str = 'GNU Affero General Public License v3.0 or later'
         url   : str = 'https://www.gnu.org/licenses/agpl-3.0.en.html'
 
-    @sdata
+    # @sdata
     class repository:
         type : str = 'git'
         url  : str = 'https://github.com/owings1/pytableaux'
 
-    @sdata
+    # @sdata
     class issues:
         url: str = 'https://github.com/owings1/pytableaux/issues'
 

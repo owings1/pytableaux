@@ -643,7 +643,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     "The tableau timers."
 
     flag: TabFlag
-    "The :class:`FlagEnum` value."
+    "The :class:`TabFlag` value."
 
     _defaults = MapProxy(dict(
         is_group_optim  = True,

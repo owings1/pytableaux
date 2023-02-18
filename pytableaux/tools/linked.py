@@ -19,6 +19,7 @@ pytableaux.tools.linked
 """
 from __future__ import annotations
 
+import enum as _enum
 from abc import abstractmethod as abstract
 from collections.abc import MutableSequence, Sequence
 from itertools import filterfalse
@@ -44,7 +45,7 @@ __all__ = (
     'linqset',
 )
 
-class LinkRel(abcs.IntEnum):
+class LinkRel(_enum.IntEnum):
     'Link directional/subscript enum.'
     prev = -1
     "Indicates `prev` attribute, or `before` position."

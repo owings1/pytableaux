@@ -33,7 +33,6 @@ from typing import Callable, Iterable, Sequence
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg, check
-               
 
 __all__ = (
     'Abc',
@@ -46,11 +45,7 @@ __all__ = (
     'EbcMeta',
     'EnumLookup',
     'Eset',
-    'FlagEnum',
-    'IntEnum',
-    'IntFlag',
-    'ItemMapEnum',
-)
+    'ItemMapEnum')
 
 EMPTY = ()
 NOARG = object()
@@ -229,14 +224,12 @@ class EnumLookup(Mapping):
         """Build the main index map for the sequence of proper (named) members
         with the given keys functions.
         """
-        return {
-            key : member
+        return {key: member
             for member_keys, member in zip(
                 ({key for func in keyfuncs for key in func(member)}
                     for member in members),
-                members
-            ) for key in member_keys
-        }
+                members)
+                for key in member_keys}
 
     @classmethod
     def _pseudomap(cls, pseudos, /) -> dict:
@@ -247,18 +240,19 @@ class EnumLookup(Mapping):
         return {key: entry
             for pseudo_keys, entry in (
                 (getkeys(pseudo), pseudo)
-                for pseudo in pseudos
-            ) for key in pseudo_keys
-        }
+                for pseudo in pseudos)
+                for key in pseudo_keys}
 
     @classmethod
     def _check_pseudo(cls, pseudo, Owner: type[Ebc], /) -> set:
         "Verify a pseudo member, returning index keys."
         check = Owner._value2member_map_[pseudo._value_]
         if check is not pseudo:
-            raise TypeError from Emsg.ValueConflict(pseudo, check)
-        if pseudo._name_ is not None:
-            raise TypeError from Emsg.WrongValue(pseudo._name_, None)
+            raise TypeError from ValueError(
+                f"Value conflict: '{pseudo}' conflicts with '{check}'")
+        if pseudo._name_ is not None: # and pseudo._value_ != 0: (TODO: Python 3.11)
+            raise TypeError from ValueError(
+                f"Value '{pseudo._name_}' does not match expected: None")
         return cls._pseudo_keys(pseudo)
 
     @classmethod
@@ -357,6 +351,7 @@ class EbcMeta(_enum.EnumMeta):
         try:
             return cls._lookup[value]
         except KeyError:
+            # TODO: Python 3.11 will not have named 0 value for Flag
             pass
         # It must be a pseudo member, since it was not in _lookup.
         return cls._lookup.pseudo(
@@ -464,38 +459,14 @@ class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
         except AttributeError:
             return f'<{clsname}.?ERR?>'
 
-class Astr(str, Ebc, skipflags = True, skipabcm = True):
+class Astr(str, _enum.Enum):
     "Attribute names for abc functionality."
 
     flag     = '_abc_flag'
     hookuser = '_abc_hook_user'
     hookinfo = '_abc_hook_info'
 
-class FlagEnum(_enum.Flag, Ebc, skipflags = True, skipabcm = True):
-
-    name  : str|None
-    value : int
-
-    _invert_ : tuple[int, FlagEnum]
-
-    @classmethod
-    def _missing_(cls, value, /):
-        member: FlagEnum = super()._missing_(value)
-        member.value = member._value_
-        member.name  = member._name_
-        return member
-
-    def __invert__(self):
-        cached = self._invert_
-        value = self.value
-        if cached is not None and cached[0] == value:
-            return cached[1]
-        other = super().__invert__()
-        self._invert_ = value, other
-        other._invert_ = other.value, self
-        return other
-
-class abcf(FlagEnum, skipflags = True, skipabcm = True):
+class abcf(_enum.Flag):
     'Enum flag for AbcMeta functionality.'
 
     __slots__ = 'name', 'value', '_value_', '_invert_'
@@ -763,16 +734,6 @@ from pytableaux.tools.hooks import hookutil
 #
 #       Enum Base Classes
 #_____________________________________________________________________________
-
-class IntEnum(int, Ebc):
-    __slots__ = Eset.Empty
-    # NB: "nonempty __slots__ not supported for subtype of 'IntEnum'"
-    pass
-
-class IntFlag(int, FlagEnum):
-    __slots__ = Eset.Empty
-    # NB: slots must be empty for int (layout conflict)
-    pass
 
 class ItemMapEnum(Ebc):
     """Fixed mapping enum based on item tuples.

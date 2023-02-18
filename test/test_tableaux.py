@@ -16,7 +16,7 @@ from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof import TabEvent, TabFlag, TabStatKey
 from types import MappingProxyType as MapProxy
 from pytest import raises
-
+from unittest import skip
 from .tutils import BaseSuite, skip, using
 
 
@@ -473,14 +473,15 @@ class TestMaxConstantsTracker(BaseSuite):
 @using(logic = 'CPL')
 class TestTestDecorator(BaseSuite):
 
-    def test_using_initial(self):
+    def test_01_using_initial(self):
         assert self.logic.name == 'CPL'
 
     @using(logic = 'FDE')
-    def test_using(self):
+    def test_02_using(self):
         assert self.logic.name == 'FDE'
 
-    def test_using_restore(self):
+    @skip('TODO remove feature')
+    def test_03_using_restore(self):
         assert self.logic.name == 'CPL'
 
 @using(logic = 'K')

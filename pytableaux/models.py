@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from abc import abstractmethod as abstract
 from dataclasses import dataclass
+from enum import Enum
 from itertools import product, repeat
 from typing import Any, ClassVar, Generic, Mapping, TypeVar
 
@@ -42,6 +43,7 @@ __all__ = (
     'ValueCPL',
 )
 
+# TODO: Refactor for Python 3.11, get rid of Ebc
 class Mval(Ebc):
 
     __slots__ = 'name', 'label', 'num',
@@ -52,6 +54,7 @@ class Mval(Ebc):
     def __init__(self, label: str, num: float, /):
         self.label = label
         self.num = num
+        # self.name = self._name_
 
     def __eq__(self, other):
         if self is other:
@@ -80,9 +83,9 @@ class Mval(Ebc):
     def __str__(self):
         return self.name
 
-    @classmethod
-    def _member_keys(cls, member: Mval):
-        return super()._member_keys(member) | {member.label, member.num}
+    # @classmethod
+    # def _member_keys(cls, member: Mval):
+    #     return super()._member_keys(member) | {member.label, member.num}
 
 
 class ValueFDE(Mval):

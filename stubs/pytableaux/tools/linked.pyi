@@ -1,4 +1,5 @@
 from collections.abc import Sequence, MutableSequence
+import enum as _enum
 from typing import (ClassVar, Generator, Generic, Hashable, Iterable, Iterator, Literal,
                     SupportsIndex, overload)
 
@@ -12,7 +13,7 @@ def iter_links_sliced(seq: LinkSequence[_VT], slice_: slice) -> Generator[Link[_
 def iter_link_values(origin: Link[_VT]|None, step: SupportsIndex = ..., count: SupportsIndex = ...) -> Generator[_VT, None, None]: ...
 def iter_link_values_sliced(seq: LinkSequence[_VT], slice_: slice) -> Generator[_VT, None, None]: ...
 
-class LinkRel(abcs.IntEnum):
+class LinkRel(_enum.IntEnum):
     prev: Literal[-1]
     self: Literal[0]
     next: Literal[1]

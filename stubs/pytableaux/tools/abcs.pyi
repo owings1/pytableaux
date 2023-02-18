@@ -101,17 +101,12 @@ class Eset(frozenset, _enum.Enum):
     hook_methods: frozenset
     clean_methods: frozenset
 
-class Astr(str, Ebc):
+class Astr(str, _enum.Enum):
     flag: str
     hookuser: str
     hookinfo: str
 
-class FlagEnum(_enum.Flag, Ebc):
-    name: str|None
-    value: int
-    def __invert__(self:_EnumT) -> _EnumT: ...
-
-class abcf(FlagEnum):
+class abcf(_enum.Flag):
     blank: int
     before: int
     temp: int
@@ -124,8 +119,6 @@ class abcf(FlagEnum):
     @classmethod
     def save(cls, obj: _F, value: abcf|SupportsIndex, *, attr: str = ...) -> _F: ...
 
-class IntEnum(int, Ebc): ...
-class IntFlag(int, FlagEnum): ...
 class ItemMapEnum(Ebc):
     @overload
     def __init__(self, mapping: Mapping) -> None: ...

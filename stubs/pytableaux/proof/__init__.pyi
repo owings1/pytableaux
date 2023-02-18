@@ -1,5 +1,5 @@
 from typing import Any, Mapping, NamedTuple
-
+import enum as _enum
 from pytableaux.lang import Argument, Sentence
 from pytableaux.proof.tableaux import RulesRoot
 from pytableaux.tools import abcs
@@ -50,10 +50,10 @@ class TabTimers(NamedTuple):
     @staticmethod
     def create() -> TabTimers:...
 
-class HelperAttr(str, abcs.Ebc):
+class HelperAttr(str, _enum.Enum):
     InitRuleCls :str
 
-class RuleAttr(str, abcs.Ebc):
+class RuleAttr(str, _enum.Enum):
     Helpers:str
     Timers:str
     DefaultOpts:str
@@ -64,7 +64,7 @@ class RuleAttr(str, abcs.Ebc):
     Modal:str
     Legend:str
 
-class ProofAttr(str, abcs.Ebc):
+class ProofAttr(str, _enum.Enum):
     pass
 
 class NodeAttr(ProofAttr):
@@ -86,21 +86,21 @@ class PropMap(abcs.ItemMapEnum):
     ClosureNode:Mapping
     QuitFlag:Mapping
 
-class BranchEvent(abcs.Ebc):
+class BranchEvent(_enum.Enum):
     AFTER_CLOSE :object
     AFTER_ADD   :object
     AFTER_TICK  :object
 
-class RuleEvent(abcs.Ebc):
+class RuleEvent(_enum.Enum):
     BEFORE_APPLY:object
     AFTER_APPLY :object
 
-class RuleState(abcs.FlagEnum):
+class RuleState(_enum.Flag):
     NONE   :int
     INIT   :int
     LOCKED :int
 
-class TabEvent(abcs.Ebc):
+class TabEvent(_enum.Enum):
     AFTER_BRANCH_ADD    :object
     AFTER_BRANCH_CLOSE  :object
     AFTER_NODE_ADD      :object
@@ -109,7 +109,7 @@ class TabEvent(abcs.Ebc):
     BEFORE_TRUNK_BUILD  :object
     AFTER_FINISH        :object
 
-class TabStatKey(abcs.Ebc):
+class TabStatKey(_enum.Enum):
     FLAGS       :object
     STEP_ADDED  :object
     STEP_TICKED :object
@@ -118,7 +118,7 @@ class TabStatKey(abcs.Ebc):
     PARENT      :object
     NODES       :object
 
-class TabFlag(abcs.FlagEnum):
+class TabFlag(_enum.Flag):
     NONE   :int
     TICKED :int
     CLOSED :int
