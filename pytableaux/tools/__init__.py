@@ -29,6 +29,7 @@ import sys
 from abc import abstractmethod as abstract
 from collections import defaultdict
 from collections.abc import Mapping, Set, Sequence
+from enum import Enum
 from operator import truth
 from types import DynamicClassAttribute as dynca
 from types import FunctionType
@@ -602,7 +603,7 @@ class SetView(Set, abcs.Copyable, immutcopy = True):
             return f'{prefix}{set(self)}'
         return f'{prefix}''{}'
 
-class SeqCoverAttr(frozenset, abcs.Ebc):
+class SeqCoverAttr(frozenset, Enum):
     REQUIRED = {'__len__', '__getitem__', '__contains__', '__iter__',
                 'count', 'index',}
     OPTIONAL = {'__reversed__'}

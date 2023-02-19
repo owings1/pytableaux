@@ -39,8 +39,7 @@ __all__ = (
     'lex_eg_table',
     'member_table',
     'oper_sym_table',
-    'Reprer',
-)
+    'Reprer')
 
 def fmt_raw(obj: Any):
     "No formatting."
@@ -77,8 +76,7 @@ class Reprer(reprlib.Repr, dict, metaclass = abcs.AbcMeta):
         maxlong   =   40 * 2,
         maxother  =   30 * 2,
 
-        lw = repr,
-    ))
+        lw = repr))
 
     attropts = set(defaults)
 
@@ -129,8 +127,7 @@ def oper_sym_table():
         ParseTable.fetch('polish'),
         ParseTable.fetch('standard'),
         RenderSet.fetch('standard', 'unicode'),
-        RenderSet.fetch('standard', 'html'),
-    )
+        RenderSet.fetch('standard', 'html'))
 
     def sources_info():
         for src in sources:
@@ -158,8 +155,7 @@ def oper_sym_table():
     def datarow(o) -> list[str]:
         return [
             fmt(value) for fmt, value in
-            zip(formats, src_func(o))
-        ]
+            zip(formats, src_func(o))]
 
     def build():
         """Table data for the Operators symbols table.
@@ -332,8 +328,9 @@ def main():
     from typing import Iterator
 
     import tabulate as Tb
-    from pytableaux.lang import LexType, Operator
     from tabulate import tabulate as tb
+
+    from pytableaux.lang import LexType, Operator
 
     theformats = qset(Tb.tabulate_formats)
     theformats -= {f for f in theformats if

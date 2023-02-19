@@ -25,12 +25,13 @@ import re
 import shutil
 from typing import TYPE_CHECKING, Optional
 
+from sphinx.ext import autodoc
+from sphinx.util import logging
+
 from pytableaux.errors import check
 from pytableaux.logics import registry
 from pytableaux.tools.doc import (AutodocProcessor, ConfKey, Processor,
                                   ReplaceProcessor, SphinxEvent, misc)
-from sphinx.ext import autodoc
-from sphinx.util import logging
 
 if TYPE_CHECKING:
 
@@ -43,8 +44,7 @@ if TYPE_CHECKING:
 __all__ = (
     'BuildtrunkExample',
     'RuledocExample',
-    'RuledocInherit',
-)
+    'RuledocInherit')
 
 logger = logging.getLogger(__name__)
 
@@ -133,12 +133,10 @@ class RolewrapReplace(ReplaceProcessor):
         defns = self._defns
         if defns is not None:
             return defns
-
         from pytableaux.tools.doc import role_name, roles
         rolewrap = {
             roles.metadress: ['prefixed'],
-            roles.refplus  : ['logicref'],
-        }
+            roles.refplus  : ['logicref']}
         defns = []
         for rolecls, patnames in rolewrap.items():
             name = role_name(rolecls)
@@ -150,7 +148,6 @@ class RolewrapReplace(ReplaceProcessor):
                         pat = pat.pattern
                     pat = re.compile(r'(?<!`)' + pat)
                     defns.append((pat, rep))
-
         self._defns = defns
         return defns
 
@@ -169,7 +166,6 @@ class CopyFileTree(Processor):
             self.run()
     
     def validate(self):
-
         for entry in self.config[ConfKey.copy_file_tree]:
             check.inst(entry, (list, tuple))
             src, dest = entry[0:2]
@@ -179,9 +175,7 @@ class CopyFileTree(Processor):
                 check.inst(entry[2], dict)
 
     def run(self):
-
         app = self.app
-
         for entry in app.config[ConfKey.copy_file_tree]:
             src = os.path.join(app.srcdir, entry[0])
             dest = os.path.join(app.outdir, entry[1])
@@ -211,8 +205,7 @@ def setup(app: Sphinx):
     app.connect(ev, BuildtrunkExample())
 
     replacers = (
-        RolewrapReplace(),
-    )
+        RolewrapReplace(),)
 
     for inst in replacers:
         app.connect(SphinxEvent.IncludeRead, inst)

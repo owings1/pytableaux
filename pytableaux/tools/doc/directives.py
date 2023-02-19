@@ -60,8 +60,7 @@ __all__ = (
     'TableauDirective',
     'TableGenerator',
     'TruthTables',
-    'table_generators',
-)
+    'table_generators')
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +102,11 @@ class SentenceBlock(BaseDirective, ParserOptionMixin):
     has_content = True
     option_spec = dict(
         defn = flagopt,
-        wnotn   = Notation,
+        wnotn = Notation,
         classes = classopt,
         pnotn = Notation,
         preds = predsopt,
-        caption = stropt,
-    )
+        caption = stropt)
 
     def run(self):
 
@@ -133,21 +131,18 @@ class SentenceBlock(BaseDirective, ParserOptionMixin):
                 nodes.inline(' ', ' '),
                 nodes.math(':=', ':='),
                 nodes.inline(' ', ' '),
-                nodez.sentence(sentence = s2, notn = wnotn)
-            ]
+                nodez.sentence(sentence = s2, notn = wnotn)]
         else:
             literal += nodez.sentence(sentence = parser(text), notn = wnotn)
         cont = nodes.container(
             literal_block = True,
-            classes = classes
-        )
+            classes = classes)
 
         cont += self._parse_caption(literal)
         cont += literal
 
         wrapper = block(
-            classes = ['highlight-sentence', 'literal-block-wrapper']
-        )
+            classes = ['highlight-sentence', 'literal-block-wrapper'])
         wrapper += cont
         return [wrapper]
 
@@ -158,8 +153,10 @@ class SentenceBlock(BaseDirective, ParserOptionMixin):
         if not line:
             return []
         parsed = nodes.Element()
-        self.state.nested_parse(StringList([line], source=''),
-                                self.content_offset, parsed)
+        self.state.nested_parse(
+            StringList([line], source=''),
+            self.content_offset,
+            parsed)
         if isinstance(parsed[0], nodes.system_message):
             raise ValueError('Invalid caption: %s' % parsed[0].astext())
         caption = nodes.caption(parsed[0].rawsource, '',
@@ -219,15 +216,13 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         doc = flagopt,
         # build-trunk mode
         **{'build-trunk': flagopt,},
-        prolog = flagopt,
-    )
+        prolog = flagopt)
 
     modes = {
         'rule'        : {'rule', 'legend', 'doc'},
         'build-trunk' : {'build-trunk', 'prolog'},
         'argument'    : {'argument', 'conclusion', 'premises', 'pnotn', 'preds'},
-        ... : {'format', 'classes', 'wnotn', 'logic'},
-    }
+        ... : {'format', 'classes', 'wnotn', 'logic'}}
     _trunk_argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
     mode: str
@@ -246,13 +241,15 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
 
         opts = self.options
         conf = self.config
-        opts['classes'] = classes = self.set_classes()
+        opts['classes'] = self.set_classes()
+        classes = opts['classes']
 
         if 'logic' not in opts:
             opts['logic'] = self.current_logic()
 
         wformat = opts.setdefault('format', 'html')
-        opts['wnotn'] = wnotn = Notation[opts.get('wnotn', conf[ConfKey.wnotn])]
+        opts['wnotn'] = Notation[opts.get('wnotn', conf[ConfKey.wnotn])]
+        wnotn = opts['wnotn']
 
         self.mode = self._check_options_mode()
         classes.add(self.mode)
@@ -431,13 +428,11 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
             nodes.inline(text = ' ... '),
             prem2,
             nodes.inline(text = ' ∴ '),
-            nodez.sentence(sentence = Atomic(1, 0), notn = notn)
-        )
+            nodez.sentence(sentence = Atomic(1, 0), notn = notn))
         return [
             nodes.inline(text = 'For the argument '),
             argnode,
-            nodes.inline(text = ' write:'),
-        ]
+            nodes.inline(text = ' write:')]
 
     @classmethod
     def get_trunk_renderset(cls, notn, charset):
@@ -454,8 +449,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
             return prev.string(Marking.subscript, sub)
         data = dict(prev.data)
         data.update(renders = dict(data['renders']) | {
-            Marking.subscript: rendersub
-        })
+            Marking.subscript: rendersub})
         return RenderSet.load(notn, rskey, data)
 
     def _check_options_mode(self) -> Literal['argument','rule','build-trunk']:
@@ -506,8 +500,7 @@ class RuleGroupDirective(TableauDirective):
         subgroup = stropt,
         legend   = flagopt,
         captions = flagopt,
-        docs     = flagopt,
-    )
+        docs     = flagopt)
 
     default_docflags = ('title', 'titles', 'legend', 'doc')
 
@@ -549,7 +542,8 @@ class RuleGroupDirective(TableauDirective):
         if self.include is not None:
             self.include = set(self.include)
 
-        self.ruleinfo = info = rules_sorted(opts['logic'])
+        self.ruleinfo = rules_sorted(opts['logic'])
+        info = self.ruleinfo
         group: list[type[Rule]] = info['legend_groups'][opts['group']]
 
         subgroups = info['legend_subgroups'].get(opts['group'])
@@ -590,8 +584,7 @@ class RuleGroupDirective(TableauDirective):
                     continue
                 cont = nodes.section(
                     classes = ['tableau-rule-subgroup'],
-                    ids = [f'{obj.name.lower()}-rules'],
-                )
+                    ids = [f'{obj.name.lower()}-rules'])
                 if 'titles' in opts:
                     if (o := opts['titles']) == 'labels':
                         prefix = getattr(obj, 'label', obj.name)
@@ -636,8 +629,7 @@ class RuleGroupDirective(TableauDirective):
             nodecls = nodes.container
         cont = nodecls(
             classes = classes,
-            ids = [self.groupid],
-        )
+            ids = [self.groupid])
         if self.title:
             cont += nodes.title(text = self.title)
 
@@ -660,8 +652,7 @@ class TruthTables(BaseDirective, RenderMixin):
         template = stropt,
         reverse = boolopt,
         clear = boolopt,
-        classes = classopt,
-    )
+        classes = classopt)
 
     def run(self):
         classes = self.set_classes()
@@ -685,13 +676,11 @@ class TruthTables(BaseDirective, RenderMixin):
 
         tables = (
             model.truth_table(oper, reverse = reverse)
-            for oper in opers
-        )
+            for oper in opers)
         context = dict(lw = lw, classes = classes)
         renders = (
             self.render(template, context, table = table)
-            for table in tables
-        )
+            for table in tables)
         content = '\n'.join(renders)
 
         nlist = [nodes.raw(format = 'html', text = content)]
@@ -708,8 +697,7 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     option_spec = dict(sphinx.directives.patches.CSVTable.option_spec) | {
         'generator'      : table_generators.__getitem__,
         'generator-args' : stropt,
-        'classes'        : classopt,
-    }
+        'classes'        : classopt}
 
     option_spec.pop('class', None)
 
@@ -769,7 +757,8 @@ class Include(sphinx.directives.other.Include, BaseDirective):
         def intercept(lines, source):
             self.app.emit(SphinxEvent.IncludeRead, lines)
             return origin.insert_input(lines, source)
-        self.state_machine = proxy = self.StateMachineProxy()
+        self.state_machine = self.StateMachineProxy()
+        proxy = self.state_machine
         proxy._origin = origin
         proxy.insert_input = intercept
         try:

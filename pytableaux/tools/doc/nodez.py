@@ -28,20 +28,23 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from docutils import nodes
 from docutils.nodes import Element
-from pytableaux.lang import LexWriter, Notation
-from pytableaux.tools.doc import ConfKey
 from sphinx.util import logging
 from sphinx.writers.html5 import HTML5Translator as BaseTranslator
+
+from pytableaux.lang import LexWriter, Notation
+from pytableaux.tools.doc import ConfKey
+
 if TYPE_CHECKING:
-    from pytableaux.tools.doc.nodez import BaseTranslator
     from sphinx.application import Sphinx
+
+    from pytableaux.tools.doc.nodez import BaseTranslator
 
 
 __all__ = (
     'sentence',
     'block',
-    'HTML5Translator',
-)
+    'HTML5Translator')
+
 logger = logging.getLogger(__name__)
 
 
@@ -69,9 +72,12 @@ class HTML5Translator(BaseTranslator):
         if (s := node.get('sentence')):
             lw = LexWriter(notn, charset)
             try:
-                content = node['rendered'] = node['escaped'] = lw(s)
+                content = lw(s)
+                node['rendered'] = content
+                node['escaped'] = content
                 if lw.charset != 'html':
-                    content = node['escaped'] = html.escape(content)
+                    content = html.escape(content)
+                    node['escaped'] = content
             except:
                 logger.error(f'Failed to render sentence {s} for node: {node}, '
                     f' {self.document["source"]}')
@@ -111,6 +117,7 @@ def _noop(self, node): pass
 
 def __visit_inline(self, node):
     self.visit_inline(node)
+
 def __depart_inline(self, node):
     self.depart_inline(node)
 

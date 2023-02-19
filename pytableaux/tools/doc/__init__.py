@@ -49,6 +49,7 @@ import sys
 import warnings
 from abc import abstractmethod as abstract
 from dataclasses import dataclass
+from enum import Enum
 from importlib import import_module
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -60,13 +61,14 @@ from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
-from pytableaux import EMPTY_SET, errors, logics
-from pytableaux.lang import Operator, Parser, Predicates
-from pytableaux.tools import EMPTY_MAP, abcs, qset, dictns
 from sphinx.ext import viewcode
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
+
+from pytableaux import errors, logics
+from pytableaux.lang import Operator, Parser, Predicates
+from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, qset
 
 if TYPE_CHECKING:
 
@@ -95,8 +97,7 @@ __all__ = (
     'role_name',
     'RoleItem',
     'SphinxEvent',
-    'Tabler',
-)
+    'Tabler')
 
 NOARG = object()
 
@@ -104,12 +105,12 @@ logger = logging.getLogger(__name__)
 
 # ------------------------------------------------
 
-class SphinxEvent(str, abcs.Ebc):
+class SphinxEvent(str, Enum):
     'Custom Sphinx event names.'
 
     IncludeRead = 'include-read'
 
-class ConfKey(str, abcs.Ebc):
+class ConfKey(str, Enum):
     'Custom config keys.'
 
     copy_file_tree = 'copy_file_tree'
@@ -153,13 +154,11 @@ def init_app(app: Sphinx, config: Config):
 
     paths = [
         os.path.join(app.srcdir, tp) for tp in
-        config[ConfKey.templates_path]
-    ]
+        config[ConfKey.templates_path]]
     APPSTATE[app][jinja2.Environment]  = jinja2.Environment(
         loader = jinja2.FileSystemLoader(paths),
         trim_blocks = True,
-        lstrip_blocks = True,
-    )
+        lstrip_blocks = True)
 
     if not sys.warnoptions:
         warnings.simplefilter('ignore', category=errors.RepeatValueWarning)

@@ -47,8 +47,7 @@ __all__ = (
     'get_logic_names',
     'is_concrete_build_trunk',
     'is_concrete_rule',
-    'is_transparent_rule',
-)
+    'is_transparent_rule')
 
 
 def is_concrete_rule(obj: Any, /) -> bool:
@@ -70,12 +69,9 @@ def is_transparent_rule(obj: Any) -> bool:
         _is_nodoc(obj) and
         _is_nocode(obj) and
         _rule_is_self_grouped(obj) and
-        _rule_is_parent_grouped(obj)
-    )
-
+        _rule_is_parent_grouped(obj))
 
 def rules_sorted(logic: LogicType, rules = None, /) -> dict:
-
     logic = registry(logic)
     RulesCls = logic.TabRules
     if rules is None:
@@ -86,17 +82,13 @@ def rules_sorted(logic: LogicType, rules = None, /) -> dict:
         legend_order = [rule for group in groups.values() for rule in group],
         legend_subgroups = (subgrouped := rules_legend_subgroups(groups)),
         subgroups_named = {
-            name: {o.name : [r.name for r in subgroup] for o, subgroup in group.items()}
-            for name, group in subgrouped.items()
-        },
+            name: {o.name : [r.name for r in subgroup]for o, subgroup in group.items()}
+            for name, group in subgrouped.items()},
         subgroup_types = {
             name: type(next(iter(group)))
             for name, group in subgrouped.items()
-            if len(group)
-        }
-    )
+            if len(group)})
     return results
-
 
 def rule_sortkey_legend(rule: type[Rule]):
     if (c := SentenceCompare(rule).compitem) is None:
@@ -116,17 +108,15 @@ def rules_grouped_legend_order(rules: Collection[type[Rule]], /) -> dict:
                 break
         else:
             ungrouped.append(rule)
-
     for name in ('operator', 'quantifier', 'predicate'):
         groups[name].sort(key = rule_sortkey_legend)
-    
     groups['ungrouped'] = ungrouped
     return groups
 
 def rules_legend_subgroups(groups: dict[str, list[type[Rule]]]) -> dict:
     subgroups: dict[str, dict[Any, list]] = {
-        name: {} for name in ('operator', 'quantifier', 'predicate')
-    }
+        name: {}
+        for name in ('operator', 'quantifier', 'predicate')}
     for name, group in groups.items():
         if name in subgroups:
             subgroup = subgroups[name]
@@ -150,10 +140,11 @@ def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /
     for rule in todo:
         inherit_map[registry.locate(rule)].add(rule)
     for parent, values in inherit_map.items():
-        others = inherit_map[parent] = rules_sorted_member_order(parent, values)
+        others = rules_sorted_member_order(parent, values)
+        inherit_map[parent] = others
         keys_member_order.update({
-            rule: i for i, rule in enumerate(others, len(keys_member_order))
-        })
+            rule: i
+            for i, rule in enumerate(others, len(keys_member_order))})
     return sorted(rules, key = keys_member_order.__getitem__)
 # ------------------------------------------------
 
@@ -266,7 +257,7 @@ def _methmro(meth: Any) -> list[str]:
 
 class EllipsisExampleHelper:
 
-    mynode = {'ellipsis': True}
+    mynode = dict(ellipsis = True)
     closenodes: list[Node]
     applied: set[Branch]
     isclosure: bool
@@ -276,20 +267,17 @@ class EllipsisExampleHelper:
         self.rule = rule
         self.applied = set()
         self.closenodes = []
-        
         self.isclosure = isinstance(rule, ClosingRule)
         if self.isclosure:
             self.closenodes = list(
                 dict(n)
-                for n in reversed(rule.example_nodes())
-            )
+                for n in reversed(rule.example_nodes()))
         self.istrunk = False
         rule.tableau.on({
             TabEvent.BEFORE_TRUNK_BUILD : self.before_trunk_build,
             TabEvent.AFTER_TRUNK_BUILD  : self.after_trunk_build,
             TabEvent.AFTER_BRANCH_ADD   : self.after_branch_add,
-            TabEvent.AFTER_NODE_ADD     : self.after_node_add,
-        })
+            TabEvent.AFTER_NODE_ADD     : self.after_node_add})
         rule.on(RuleEvent.BEFORE_APPLY, self.before_apply)
 
     def before_trunk_build(self, *_):

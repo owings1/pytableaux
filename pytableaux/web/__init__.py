@@ -24,12 +24,12 @@ import logging
 from typing import Any, Mapping
 
 from pytableaux import package, tools, __docformat__
-from enum import auto
-from pytableaux.tools.abcs import Ebc, ItemMapEnum
+from enum import auto, Enum
+from pytableaux.tools.abcs import ItemMapEnum
 
 __all__ = ()
 
-class Wevent(Ebc):
+class Wevent(Enum):
     before_dispatch = auto()
 
 def get_logger(name: str|Any, conf: Mapping[str, Any] = None) -> logging.Logger:

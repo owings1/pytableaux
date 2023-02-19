@@ -23,21 +23,24 @@ from __future__ import annotations
 
 import functools
 import re
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from docutils import nodes
-from pytableaux import logics
-from pytableaux.lang import LexType, Notation, Predicate
-from pytableaux.tools import abcs, qset, qsetf
-from pytableaux.tools.doc import (BaseRole, ParserOptionMixin, classopt,
-                                  nodeopt, nodez, predsopt)
 from sphinx.errors import NoUri
 from sphinx.util import logging
 from sphinx.util.docutils import ReferenceRole
 
+from pytableaux import logics
+from pytableaux.lang import LexType, Notation, Predicate
+from pytableaux.tools import qset, qsetf
+from pytableaux.tools.doc import (BaseRole, ParserOptionMixin, classopt,
+                                  nodeopt, nodez, predsopt)
+
 if TYPE_CHECKING:
-    from pytableaux.typing import _F  # type: ignore
     from sphinx.application import Sphinx
+
+    from pytableaux.typing import _F  # type: ignore
 
 __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
 
@@ -83,9 +86,7 @@ class refplus(ReferenceRole, BaseRole):
         
         if self._logic_ref():
             self.classes |= 'logicref', 'internal'
-
             mmnn = metadress.logicname_node(self.logicname)
-
             node = nodes.reference(self.rawtext, '',
                 refuri = self.refuri,
                 logicname = self.logicname,
@@ -93,9 +94,7 @@ class refplus(ReferenceRole, BaseRole):
                 title = self.title,
                 refdomain = self.refdomain,
                 reftype = self.reftype,
-                classes = self.classes,
-            )
-
+                classes = self.classes)
             a, b = self.title, mmnn.astext()
             if a == b:
                 node += mmnn
@@ -106,9 +105,7 @@ class refplus(ReferenceRole, BaseRole):
                     node += nodes.inline(text = a.removeprefix(b))
                 else:
                     node += nodes.inline(text = a)
-
             return [node], []
-
         else:
             if self.has_explicit_title:
                 fallback_text = self.title
@@ -129,9 +126,7 @@ class refplus(ReferenceRole, BaseRole):
             self.title = f'{self.logicname} {self.section}'.strip()
         else:
             self.title = self.logicname
-
         self.has_explicit_title = True
-
         if self.anchor:
             self.target = self.anchor[1:-1]
         else:
@@ -141,21 +136,17 @@ class refplus(ReferenceRole, BaseRole):
                 self.target = '-'.join(re.split(r'\s+', self.title.lower()))
         self.target = self.target.lower()
         self.text = f'{self.title} <{self.target}>'
-
         self.refuri = f'{self.logicname.lower()}.html#{self.target}'
-
         return True
 
     _logic_union = '|'.join(
         sorted((n.split('.')[-1].upper() for n in 
-        logics.registry.all()), key = len, reverse = True)
-    )
+        logics.registry.all()), key = len, reverse = True))
+
     patterns = dict(
         logicref = re.compile(
             r'({@(?P<name>%s)' % _logic_union +
-            r'(?:\s+(?P<sect>[\sa-zA-Z-]+)?(?P<anchor><.*?>)?)?})'
-        )
-    )
+            r'(?:\s+(?P<sect>[\sa-zA-Z-]+)?(?P<anchor><.*?>)?)?})'))
 
     def _checkregex(self):
         if not re.match(self.patterns['logicref'], '{@FDE}'):
@@ -166,16 +157,13 @@ class refplus(ReferenceRole, BaseRole):
         logger.info(
             f'rawtext={self.rawtext}, text={self.text}, '
             f'logicname={self.name}, section={self.section}, anchor={self.anchor}, '
-            f'title={self.title}, self.target={self.target}'
-        )
+            f'title={self.title}, self.target={self.target}')
 
-class _Ctype(frozenset, abcs.Ebc):
+class _Ctype(frozenset, Enum):
     valued = {
-        LexType.Operator, LexType.Quantifier, Predicate.System
-    }
+        LexType.Operator, LexType.Quantifier, Predicate.System}
     nosent = valued | {
-        LexType.Constant, LexType.Variable, LexType.Predicate,
-    }
+        LexType.Constant, LexType.Variable, LexType.Predicate}
 
 _re_nosent = re.compile(r'^(.)([0-9]*)$')
 
@@ -187,13 +175,11 @@ class lexdress(BaseRole, ParserOptionMixin):
         wnotn = Notation,
         pnotn = Notation,
         preds = predsopt,
-        classes = classopt,
-    )
+        classes = classopt)
 
     opt_defaults = dict({'class': None},
         node = nodes.inline,
-        classes = qsetf(['lexitem']),
-    )
+        classes = qsetf(['lexitem']))
 
     @rolerun
     def run(self):
@@ -247,57 +233,46 @@ class metadress(BaseRole):
     prefixes = {
         'L': 'logic_name',
         'V': 'truth_value',
-        '!': 'rewrite',
-    }
+        '!': 'rewrite'}
 
     modes = dict(
         logic_name = dict(
             match_map = {
                 r'^(?:(?P<main>B|G|K|L|Ł|P|RM)(?P<down>3))$' : ('subber',),
                 r'^(?:(?P<main>B)(?P<up>3)(?P<down>E))$'  : ('subsup',),
-                r'^(?:(?P<main>K)(?P<up>3)(?P<down>WQ?))$': ('subsup',),
-            },
+                r'^(?:(?P<main>K)(?P<up>3)(?P<down>WQ?))$': ('subsup',)},
             nodecls = nodes.inline,
             nodecls_map = dict(
                 main= nodes.inline,
                 up  = nodes.superscript,
-                down= nodes.subscript
-            ),
-        ),
+                down= nodes.subscript)),
         truth_value = dict(
-            nodecls = nodes.strong,
-        ),
+            nodecls = nodes.strong),
         # Regex rewrite.
         rewrite = {
             r'^(?:([a-zA-Z])-)?ntuple$': dict(
                 rep = lambda m, a = 'a': (
                     f'\\langle {m[1] or a}_0'
                     ', ... ,'
-                    f'{m[1] or a}_n\\rangle'
-                ),
+                    f'{m[1] or a}_n\\rangle'),
                 classes = ('tuple', 'ntuple'),
-                nodecls = nodes.math,
-            ),
+                nodecls = nodes.math),
             r'^(w)([0-9]+)$': dict(
                 rep = r'\1_\2',
                 classes = ('modal', 'world'),
-                nodecls = nodes.math,
-            ),
+                nodecls = nodes.math),
             r"^(L'*?)$": dict(
                 rep = r'\1',
                 classes = ('big-l',),
-                nodecls = nodes.inline,
-            ),
+                nodecls = nodes.inline),
             r'^(\|-|conseq|impl(ies)?)$': dict(
                 rep = '⊢',
                 classes = ('conseq',),
-                nodecls = nodes.inline,
-            ),
+                nodecls = nodes.inline),
             r'^(\|(/|!)-|no(n|t)?-?(conseq|impl(ies)?))$': dict(
                 rep = '⊬',
                 classes = ('non-conseq',),
-                nodecls = nodes.inline,
-            ),
+                nodecls = nodes.inline),
             r'^(\|\?-|(conseq|impl(ies)?)\?)$' : dict(
                 static = True,
                 nodes = [
@@ -305,11 +280,8 @@ class metadress(BaseRole):
                         '', '',
                         nodes.inline(text = '⊢', classes = ['conseq']),
                         nodes.superscript(text = '?'),
-                        classes = ['metawrite', 'conseqq',],
-                    )
-                ]
-            )
-        },
+                        classes = ['metawrite', 'conseqq',])])
+        }
     )
 
     generic = dict(
@@ -317,17 +289,12 @@ class metadress(BaseRole):
         math_symbols = {
             r'<': re.escape('\\langle '),
             # r'>': re.escape('\\rangle'),
-            r'>': re.escape(' \\rangle'),
-        }
-    )
+            r'>': re.escape(' \\rangle')})
     patterns = dict(
         prefixed = r'(?P<raw>(?P<prefix>[%s]){(?P<value>.*?)})' % (
-            re.escape(''.join(prefixes.keys()))
-        ),
-    )
+            re.escape(''.join(prefixes.keys()))),)
     patterns.update(
-        prefixed_role = '^%s$' % patterns['prefixed']
-    )
+        prefixed_role = '^%s$' % patterns['prefixed'])
 
     def __init__(self, **_):
         pass
@@ -335,8 +302,8 @@ class metadress(BaseRole):
     @rolerun
     def run(self):
         text = self.text
-        classes = self.classes = ['metawrite']
-
+        self.classes = ['metawrite']
+        classes = self.classes
         match = re.match(self.patterns['prefixed_role'], text)
 
         if not match:
@@ -438,8 +405,7 @@ def setup(app: Sphinx):
     app.add_role('s', role_s := lexdress())
     app.add_role(name_sc := 'sc', role_s.wrapped(name_sc, dict(
         node = 'literal',
-        classes = ['code'],
-    )))
+        classes = ['code'],)))
 
     app.add_role('m', metadress())
     app.add_role('refp', refplus())

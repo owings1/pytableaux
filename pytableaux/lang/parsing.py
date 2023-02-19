@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from abc import abstractmethod as abstract
 from collections import deque
+from enum import Enum
 from types import MappingProxyType as MapProxy
 from typing import ClassVar, Iterable, Mapping
 
@@ -303,7 +304,7 @@ class ParseContext:
             pfx = f'Unexpected {ctype} symbol'
         return f"{pfx} '{char}' at position {self.pos}"
 
-class Ctype(frozenset, abcs.Ebc):
+class Ctype(frozenset, Enum):
 
     pred = {LexType.Predicate, Predicate.System}
 
@@ -622,13 +623,13 @@ class ParseTable(MapCover, TableStore):
             tvals[ctype].sort()
 
         # flipped table
-        self.reversed = rev = MapProxy(dict(
+        self.reversed = MapProxy(dict(
             # map(reversed, ItemsIterator(self))
             map(reversed, itemsiter(self))))
 
         # chars for each type in value order, duplicates discarded
         self.chars = MapProxy({
-            ctype: tuple(rev[ctype, val]
+            ctype: tuple(self.reversed[ctype, val]
                 for val in tvals[ctype])
                     for ctype in ctypes})
 
@@ -694,7 +695,3 @@ class ParseTable(MapCover, TableStore):
         keypair = (Notation.default, f'_mapping{id(mapping)}')
         return cls(mapping, keypair)
 
-del(
-    abstract,
-    lazy,
-)
