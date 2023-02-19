@@ -87,10 +87,13 @@ import pytableaux.lang._repr
 @tools.closure
 def _():
 
+    from pytableaux.errors import Emsg
     from pytableaux.lang import lex
-    from pytableaux.lang import LangCommonEnum
+    from pytableaux.lang import LangCommonEnum, LangCommonEnumMeta
     from pytableaux.lang.collect import Argument, Predicates
     from pytableaux.lang.lex import Lexical, LexicalAbc
+    LangCommonEnumMeta.__delattr__ = Emsg.ReadOnly.razr
+    LangCommonEnum.__delattr__ = Emsg.ReadOnly.razr
     for c in (
         LangCommonEnum,
         LexicalAbc,
@@ -98,6 +101,7 @@ def _():
         Argument,
         Lexical,
     ):
+        pass
         c._readonly = True
 
     lex.nosetattr.enabled = True

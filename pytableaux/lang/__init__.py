@@ -27,7 +27,7 @@ from typing import ClassVar, NamedTuple
 
 from pytableaux.errors import Emsg
 from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, NoSetAttr, abcs, closure,
-                              dxopy, raisr)
+                              dxopy)
 
 __all__ = (
     # Classes
@@ -63,7 +63,6 @@ __all__ = (
     'Variable')
 
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
-raiseae = raisr(AttributeError)
 
 #==========================+
 #  Meta classes            |
@@ -76,14 +75,15 @@ class LangCommonMeta(abcs.AbcMeta):
     # the modules are fully initialized.
 
     _readonly : bool
-    __delattr__ = raiseae
+    __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = nosetattr(abcs.AbcMeta)
 
 class LangCommonEnumMeta(abcs.EbcMeta):
     'Common Enum metaclass for lang classes.'
 
     _readonly : bool
-    __delattr__ = raiseae
+    # Set in base __init__ for Python 3.11 Enum compat
+    # __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = nosetattr(abcs.EbcMeta)
 
 class LexicalAbcMeta(LangCommonMeta):
@@ -104,7 +104,8 @@ class LangCommonEnum(abcs.Ebc, metaclass = LangCommonEnumMeta):
 
     # __slots__   = 'value', '_value_', '_name_',
 
-    __delattr__ = raiseae
+    # Set in base __init__ for Python 3.11 Enum compat
+    # __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = nosetattr(abcs.Ebc, cls = True)
 
 #==========================+

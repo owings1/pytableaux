@@ -32,7 +32,7 @@ from pytableaux import _ENV, __docformat__, errors, tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import (BiCoords, LangCommonEnum, LangCommonMeta,
                              LexicalAbcMeta, SysPredEnumMeta, TriCoords,
-                             nosetattr, raiseae)
+                             nosetattr)
 from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, abcs, lazy, membr, qsetf,
                               wraps)
 
@@ -230,7 +230,7 @@ class Lexical:
 
     #******   Behaviors
 
-    __delattr__ = raiseae
+    __delattr__ = Emsg.ReadOnly.razr
 
     __setattr__ = nosetattr(object, cls = LexicalAbcMeta)
 
@@ -299,7 +299,7 @@ class LexicalAbc(Lexical, metaclass = LexicalAbcMeta, lexcopy = True):
     @tools.abstract
     def __init__(self): ...
 
-    __delattr__ = raiseae
+    __delattr__ = Emsg.ReadOnly.razr
 
     def __setattr__(self, name, value, /):
         if (v := getattr(self, name, NOARG)) is not NOARG:
@@ -736,6 +736,7 @@ class Predicate(CoordsItem):
         '_name_',
         '_refs',
         '_value_',
+        '_sort_order_',
         'arity',
         'bicoords',
         'is_system',
@@ -1317,7 +1318,15 @@ class LexType(LangCommonEnum):
             def expand(ns:dict, bases):
                 members = {name: m.value for name, m in Predicate.System._member_map_.items()}
                 ns.update(members)
-                ns._member_names += members.keys()
+                if isinstance(ns._member_names, list):
+                    # In Python 3.10 _member_names is a list
+                    ns._member_names += members.keys()
+                elif isinstance(ns._member_names, dict):
+                    # In Python 3.11 _member_names is a dict
+                    for key in members:
+                        ns._member_names[key] = None
+                else:
+                    raise TypeError(f"Unhandled _member_names type: {type(ns._member_names)}")
                 Predicate.System = EMPTY_SET
             @classmethod
             def _after_init(cls):

@@ -29,7 +29,7 @@ from typing import Any, Iterable
 
 from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg, check
-from pytableaux.lang import LangCommonMeta, Predicate, Sentence, raiseae
+from pytableaux.lang import LangCommonMeta, Predicate, Sentence
 from pytableaux.tools import abcs, lazy, membr, qset, wraps
 
 __all__ = (
@@ -155,7 +155,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy = True, metaclass = 
             raise AttributeError(attr)
         super().__setattr__(attr, value)
 
-    __delattr__ = raiseae
+    __delattr__ = Emsg.ReadOnly.razr
 
 
 class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dict(cast = Predicate)}):

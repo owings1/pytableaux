@@ -26,6 +26,7 @@ import enum as _enum
 import functools
 import itertools
 import operator as opr
+from enum import Enum, Flag
 from collections.abc import Mapping, Set
 from enum import auto as eauto
 from types import MappingProxyType as MapProxy
@@ -57,7 +58,7 @@ def is_enumcls(obj):
 def em_mixins(Class):
     return *itertools.filterfalse(is_enumcls, Class.__bases__),
 
-class Eset(frozenset, _enum.Enum):
+class Eset(frozenset, Enum):
     'Enum meta enumeration.'
 
     Empty = frozenset()
@@ -414,7 +415,7 @@ class EbcMeta(_enum.EnumMeta):
 #           skipabcm = True
 #_____________________________________________________________________________
 
-class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
+class Ebc(Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
 
     __slots__ = Eset.Empty
 
@@ -455,14 +456,14 @@ class Ebc(_enum.Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
         except AttributeError:
             return f'<{clsname}.?ERR?>'
 
-class Astr(str, _enum.Enum):
+class Astr(str, Enum):
     "Attribute names for abc functionality."
 
     flag     = '_abc_flag'
     hookuser = '_abc_hook_user'
     hookinfo = '_abc_hook_info'
 
-class abcf(_enum.Flag):
+class abcf(Flag):
     'Enum flag for AbcMeta functionality.'
 
     __slots__ = 'name', 'value', '_value_', '_invert_'
@@ -731,7 +732,7 @@ from pytableaux.tools.hooks import hookutil
 #       Enum Base Classes
 #_____________________________________________________________________________
 
-class ItemMapEnum(_enum.Enum):
+class ItemMapEnum(Enum):
     """Fixed mapping enum based on item tuples.
 
     If a member value is defined as a mapping, the member's ``_value_`` attribute

@@ -28,10 +28,10 @@ from types import MappingProxyType as MapProxy
 from typing import ClassVar, Iterable, Mapping
 
 from pytableaux import __docformat__
-from pytableaux.errors import (BoundVariableError, IllegalStateError,
+from pytableaux.errors import (BoundVariableError, IllegalStateError, Emsg,
                                ParseError, UnboundVariableError)
 from pytableaux.lang import (BiCoords, LangCommonMeta, LexType, Marking,
-                             Notation, TableStore, raiseae)
+                             Notation, TableStore)
 from pytableaux.lang.collect import Argument, Predicates
 from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
                                  Parameter, Predicate, Predicated, Quantified,
@@ -453,7 +453,7 @@ class BaseParser(Parser):
         context.advance()
         return BiCoords(index, self._read_subscript(context))
 
-    __delattr__ = raiseae
+    __delattr__ = Emsg.ReadOnly.razr
 
 class PolishParser(BaseParser, primary = True):
     "Polish notation parser."
@@ -688,7 +688,7 @@ class ParseTable(MapCover, TableStore):
             raise AttributeError(name)
         sa(self, name, value)
 
-    __delattr__ = raiseae
+    __delattr__ = Emsg.ReadOnly.razr
 
     @classmethod
     def _from_mapping(cls, mapping):
