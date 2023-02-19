@@ -38,8 +38,7 @@ __all__ = (
     'data',
     'preds',
     'tabiter',
-    'titles',
-)
+    'titles')
 
 EMPTY = ()
 
@@ -181,8 +180,7 @@ aliases = MapProxy({
     'Reflexive Inference 1': ('T', 'Reflexive', 'Reflexivity'),
     'S4 Material Inference 1': ('S4', 'S41', 'Transitive', 'RT', 'Transitivity'),
     'S4 Material Inference 2': ('S42',),
-    'S5 Material Inference 1': ('S5', 'S51', 'RST'),
-})
+    'S5 Material Inference 1': ('S5', 'S51', 'RST')})
 
 titles = tuple(sorted(data))
 
@@ -199,9 +197,7 @@ def argument():
             k.lower(): name for k in (
                 name,
                 name.replace(' ', ''),
-                *aliases.get(name, ''),
-            )
-        })
+                *aliases.get(name, ''),)})
 
     parsearg = Parser('polish', preds.copy()).argument
 
@@ -235,6 +231,3 @@ def tabiter(*logics, build = True, grouparg = False, registry = logics.registry,
         if build:
             tab.build()
         yield tab
-
-
-del(closure, EMPTY, MapProxy, Parser, Predicates, logics)

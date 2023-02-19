@@ -57,8 +57,7 @@ __all__ = (
     'TableauxSystem',
     'TabWriter',
     'TreeStruct',
-    'Target',
-)
+    'Target')
 
 NOARG = object()
 
@@ -97,10 +96,13 @@ class ProofAttr(str, Enum):
 class NodeAttr(ProofAttr):
 
     sentence = 'sentence'
-    designation = designated = 'designated'
+    designation = 'designated'
+    designated = designation
     world   = 'world'
-    world1 = w1 = 'world1'
-    world2 = w2 = 'world2'
+    w1 = 'world1'
+    world1 = w1
+    w2 = 'world2'
+    world2 = w2
     is_flag = 'is_flag'
     flag    = 'flag'
     closure = 'closure'

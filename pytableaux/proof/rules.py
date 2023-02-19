@@ -38,8 +38,7 @@ __all__ = (
     'OperatedSentenceRule',
     'PredicatedSentenceRule',
     'QuantifiedSentenceRule',
-    'Rule',
-)
+    'Rule')
 
 FIRST_CONST_SET = frozenset({Constant.first()})
 
@@ -177,7 +176,6 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
                 return
             fnode = self[MaxConsts].quit_flag(branch)
             return adds(group(fnode), flag = fnode[NodeAttr.flag])
-
         return self._get_node_targets(node, branch)
 
     @abstract
@@ -203,7 +201,6 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
             constants = unapplied
         else:
             constants = FIRST_CONST_SET
-        
         for c in constants:
             nodes = self._get_constant_nodes(node, c, branch)
             if unapplied_count or not branch.all(nodes):

@@ -42,8 +42,7 @@ __all__ = (
     'TemplateTabWriter',
     'TextTabWriter',
     'registry',
-    'register',
-)
+    'register')
 
 registry: Mapping
 """The tableau writer class registry.
@@ -69,16 +68,13 @@ def register():
         Returns:
             The writer class.
         """
-
         wcls = check.subcls(wcls, TabWriter)
         if abcs.isabstract(wcls):
             raise TypeError(f'Cannot register abstract class: {wcls}')
-
         fmt = wcls.format
         if not force and fmt in registry:
             raise KeyError(f"Format {fmt} already registered")
         regtable[fmt] = wcls
-
         return wcls
 
     return register
@@ -117,8 +113,7 @@ class TabWriter(metaclass = TabWriterMeta):
     "The format registry identifier."
 
     default_charsets = MapProxy({
-        notn: notn.default_charset for notn in Notation
-    })
+        notn: notn.default_charset for notn in Notation})
     "Default ``LexWriter`` charset for each notation."
 
     defaults = EMPTY_MAP
@@ -163,8 +158,7 @@ class TabWriter(metaclass = TabWriterMeta):
         subcls.__call__ = subcls.write
 
 _templates_base_dir = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'templates'
-)
+    os.path.dirname(os.path.abspath(__file__)), 'templates')
 
 class TemplateTabWriter(TabWriter):
 
@@ -172,8 +166,7 @@ class TemplateTabWriter(TabWriter):
 
     jinja_opts = MapProxy(dict(
         trim_blocks   = True,
-        lstrip_blocks = True,
-    ))
+        lstrip_blocks = True))
     _jenv:jinja2.Environment
 
     @classmethod
@@ -205,8 +198,7 @@ class HtmlTabWriter(TemplateTabWriter):
         wrapper      = True,
         classes      = (),
         wrap_classes = (),
-        inline_css   = False,
-    ))
+        inline_css   = False))
 
     def write(self, tab, /, *, classes = None) -> str:
         """"
@@ -227,8 +219,7 @@ class HtmlTabWriter(TemplateTabWriter):
             lw = self.lw,
             opts = opts,
             wrap_classes = wrap_classes,
-            tab_classes = tab_classes,
-        )
+            tab_classes = tab_classes)
 
     def attachments(self, /) -> dict[str, str]:
         """
@@ -237,8 +228,7 @@ class HtmlTabWriter(TemplateTabWriter):
               - `css`: The static css.
         """
         return dict(
-            css = self.render('static/tableau.css')
-        )
+            css = self.render('static/tableau.css'))
 
     # classes:
     #   wrapper : tableau-wrapper

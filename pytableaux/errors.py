@@ -190,8 +190,6 @@ class check:
 
 from warnings import warn as warn
 
-
-
 # Some external assembly required.
 class EmsgBase:
     __slots__ = ()
@@ -220,13 +218,7 @@ class EmsgBase:
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
 
-
-
 __all__ = 'check', 'Emsg', *(
     name for name, value in locals().items()
-    if isinstance(value, type) and issubclass(value, (Exception, Warning))
-)
+    if isinstance(value, type) and issubclass(value, (Exception, Warning)))
 
-
-
-# del(_len, _thru, TypeVar)

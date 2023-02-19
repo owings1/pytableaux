@@ -957,13 +957,13 @@ class TestGO(BaseSuite):
         assert tbl.outputs[8] == 'T'
 
     def test_truth_table_mat_cond(self):
-        tbl = self.m().truth_table('Material Conditional')
+        tbl = self.m().truth_table('MaterialConditional')
         assert tbl.outputs[0] == 'T'
         assert tbl.outputs[1] == 'T'
         assert tbl.outputs[4] == 'F'
 
     def test_truth_table_mat_bicond(self):
-        tbl = self.m().truth_table('Material Biconditional')
+        tbl = self.m().truth_table('MaterialBiconditional')
         assert tbl.outputs[0] == 'T'
         assert tbl.outputs[1] == 'F'
         assert tbl.outputs[4] == 'F'

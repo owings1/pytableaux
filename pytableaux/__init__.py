@@ -56,8 +56,7 @@ def _():
     _ENV = _Settings(
         DEBUG = tools.sbool(env.get('DEBUG', '')),
         ITEM_CACHE_SIZE = int(env.get('ITEM_CACHE_SIZE', 1000) or 0),
-        DOC_MODE = tools.sbool(env.get('DOC_MODE', '')),
-    )
+        DOC_MODE = tools.sbool(env.get('DOC_MODE', '')))
 
 del(dataclasses,_Settings)
 
@@ -137,5 +136,4 @@ __all__ = (
 
 del(
     _,
-    pytableaux,
-)
+    pytableaux)

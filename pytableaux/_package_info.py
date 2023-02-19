@@ -20,7 +20,6 @@ pytableaux._package_info
 
 """
 from __future__ import annotations
-import dataclasses
 import os.path
 import typing
 
@@ -63,11 +62,6 @@ class SemVer(typing.NamedTuple):
         "Full version, e.g. ``'1.2.3-alpha'``"
         return f'{self.display}-{self.release}'
 
-def sdata(c: type):
-    'Singleton dataclass instance factory.'
-    return typing.cast(c, dataclasses.dataclass(init = False)(c)())
-
-# @sdata
 class package:
     'Package info.'
 
@@ -75,28 +69,19 @@ class package:
 
     version: SemVer = SemVer(*__version__)
 
-    # author     : object
-    # license    : object
-    # repository : object
-    # issues     : object
-
-    # @sdata
     class author:
         name  : str = 'Doug Owings'
         email : str = 'doug@dougowings.net'
 
-    # @sdata
     class license:
         id    : str = 'AGPL-3.0-or-later'
         title : str = 'GNU Affero General Public License v3.0 or later'
         url   : str = 'https://www.gnu.org/licenses/agpl-3.0.en.html'
 
-    # @sdata
     class repository:
         type : str = 'git'
         url  : str = 'https://github.com/owings1/pytableaux'
 
-    # @sdata
     class issues:
         url: str = 'https://github.com/owings1/pytableaux/issues'
 
@@ -104,8 +89,7 @@ class package:
     'Last updated year'
 
     copyright: str = (
-        f'2014-{year}, {author.name}. Released under the {license.title}'
-    )
+        f'2014-{year}, {author.name}. Released under the {license.title}')
     'Project copyright string.'
 
     root: str = os.path.dirname(os.path.abspath(__file__))

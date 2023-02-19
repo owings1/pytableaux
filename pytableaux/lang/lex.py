@@ -53,8 +53,7 @@ __all__ = (
     'Quantifier',
     'Quantifier',
     'Sentence',
-    'Variable',
-)
+    'Variable')
 
 NOARG = object()
 
@@ -67,8 +66,7 @@ _Ranks: Mapping[str, int] = MapProxy(dict(
     Atomic     = 60,
     Predicated = 70,
     Quantified = 80,
-    Operated   = 90,
-))
+    Operated   = 90))
 
 #----------------------------------------------------------
 #
@@ -235,8 +233,13 @@ class Lexical:
     __delattr__ = raiseae
 
     __setattr__ = nosetattr(object, cls = LexicalAbcMeta)
-    __copy__     = abcs.Ebc.__copy__
-    __deepcopy__ = abcs.Ebc.__deepcopy__
+
+    def __copy__(self):
+        return self
+
+    def __deepcopy__(self, memo):
+        memo[id(self)] = self
+        return self
 
     def __bool__(self):
         'Always returns ``True``.'
@@ -251,8 +254,7 @@ class Lexical:
         skipnames = {tools.dund('init_subclass')},
         _cpnames = frozenset(map(tools.dund, ('copy', 'deepcopy'))),
         _ftypes = (classmethod, staticmethod, FunctionType),
-        **kw
-    ):
+        **kw):
         """Subclass init hook.
 
         If `lexcopy` is ``True``, copy the class members to the next class,
@@ -260,20 +262,16 @@ class Lexical:
         applies to direct sub classes.
         """
         super().__init_subclass__(**kw)
-    
         if not lexcopy or __class__ not in subcls.__bases__:
             return
-
         src = dict(__class__.__dict__)
         for key in chain(subcls.__dict__, skipnames):
             src.pop(key, None)
-
         for name in _cpnames:
             if name not in src:
                 for name in _cpnames:
                     src.pop(name, None)
                 break
-
         for name, value in src.items():
             if isinstance(value, _ftypes):
                 setattr(subcls, name, value)
@@ -331,8 +329,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
         'order',
         'sort_tuple',
         'spec',
-        'strings',
-    )
+        'strings')
 
     order: int
     "A number to signify relative member order (need not be sequence index)."
@@ -340,12 +337,11 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
     label: str
     "Label with spaces allowed."
 
-    index: int
-    "The member index in the members sequence."
+    # index: int
+    # "The member index in the members sequence."
 
     strings: frozenset[str]
-    """Name, label, or other strings unique to a member. These are automatically
-    added as member keys.
+    """Name, label, or other strings unique to a member.
     """
 
     def __eq__(self, other):
@@ -398,13 +394,13 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
         self.ident = self.identitem(self)
         self.hash = self.hashitem(self)
 
-    @classmethod
-    def _member_keys(cls, member: LexicalEnum):
-        """``EbcMeta`` hook.
+    # @classmethod
+    # def _member_keys(cls, member: LexicalEnum):
+    #     """``EbcMeta`` hook.
         
-        Add any values in ``.strings`` as keys for the member index.
-        """
-        return super()._member_keys(member) | member.strings
+    #     Add any values in ``.strings`` as keys for the member index.
+    #     """
+    #     return super()._member_keys(member) | member.strings
 
     @classmethod
     def _on_init(cls, subcls: type[LexicalEnum]):
@@ -415,7 +411,6 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
         super()._on_init(subcls)
         for i, member in enumerate(subcls._seq):
             member.index = i
-
 
 class CoordsItem(LexicalAbc):
     """Common implementation for lexical types that are based on integer
@@ -429,8 +424,7 @@ class CoordsItem(LexicalAbc):
         'index',
         'sort_tuple',
         'spec',
-        'subscript',
-    )
+        'subscript')
 
     Coords = BiCoords
 
@@ -457,30 +451,23 @@ class CoordsItem(LexicalAbc):
         return cls(self.spec._replace(index = idx, subscript = sub))
 
     def __new__(cls, *spec):
-
         self = object.__new__(cls)
         sa = object.__setattr__
-
         sa(self, 'spec', spec := self.Coords._make(
-            spec[0] if len(spec) == 1 else spec
-        ))
-
+            spec[0] if len(spec) == 1 else spec))
         try:
             for field, value in zip(spec._fields, spec):
                 sa(self, field, value.__index__())
         except:
             check.inst(value, int)
             raise
-
         try:
             if spec.index > self.TYPE.maxi:
                 raise ValueError(f'{spec.index} > {self.TYPE.maxi}')
         except AttributeError:
             raise TypeError(f'Abstract: {type(self)}') from None
-
         if spec.subscript < 0:
             raise ValueError(f'subscript {spec.subscript} < 0')
-
         sa(self, 'sort_tuple', (self.TYPE.rank, *spec.sorting()))
         return self
 
@@ -574,8 +561,7 @@ class Operator(LexicalEnum):
         "Class init hook. Build the :attr:`lib_opmap`."
         super()._after_init()
         cls.lib_opmap = MapProxy({
-            o.libname: o for o in cls if o.libname is not None
-        })
+            o.libname: o for o in cls if o.libname is not None})
 
 #----------------------------------------------------------
 #
@@ -711,14 +697,11 @@ class Predicate(CoordsItem):
                 a negative number, or too large an `index` coordinate.
             TypeError: for the wrong number of arguments, or wrong type.
         """
-
         if len(spec) == 1:
             spec = spec[0]
         if self.arity <= 0:
             raise ValueError('`arity` must be > 0')
-
         self.bicoords = BiCoords(self.index, self.subscript)
-
         if self.index < 0:
             if len(self.System):
                 raise ValueError('`index` must be >= 0')
@@ -732,7 +715,6 @@ class Predicate(CoordsItem):
             self.is_system = False
             self.name = self.spec
             self.__objclass__ = __class__
-
         self._name_ = self.name
         self._value_ = self
 
@@ -758,8 +740,7 @@ class Predicate(CoordsItem):
         'bicoords',
         'is_system',
         'name',
-        'value',
-    )
+        'value')
 
     Coords = TriCoords
 
@@ -833,8 +814,7 @@ class Constant(Parameter):
 
     __slots__ = (
         'is_constant',
-        'is_variable',
-    )
+        'is_variable')
 
     def __rshift__(self, other):
         'Same as ``other.unquantify(self)``.'
@@ -885,8 +865,7 @@ class Atomic(CoordsItem, Sentence):
         'operators',
         'predicates',
         'quantifiers',
-        'variables',
-    )
+        'variables')
 
 class Predicated(Sentence, Sequence[Parameter]):
     'Predicated sentence implementation.'
@@ -894,7 +873,8 @@ class Predicated(Sentence, Sequence[Parameter]):
     def __init__(self, pred, params, /):
         """
         Args:
-            pred (Predicate): The :class:`Predicate`, or :attr:`spec`, such as ``(1, 0, 2)``.
+            pred (Predicate): The :class:`Predicate`, or :attr:`spec`, such as
+                ``(1, 0, 2)``.
             params (Parameter): An iterable of :class:`Parameter`, or
                 :obj:`ParameterSpec`, such as ``(1, 0)``. For a unary predicate,
                 a single parameter/spec is accepted.
@@ -902,28 +882,27 @@ class Predicated(Sentence, Sequence[Parameter]):
         Raises:
             TypeError: if the number of params does not equal the predicate's arity.
         """
-        self.predicate = pred = Predicate(pred)
+        self.predicate = Predicate(pred)
+        pred = self.predicate
         if isinstance(params, Parameter):
-            self.params = params = params,
+            self.params = params,
         else:
-            self.params = params = tuple(map(Parameter, params))
-
+            self.params = tuple(map(Parameter, params))
+        params = self.params
         if len(params) != pred.arity:
             raise TypeError(self.predicate, len(params), pred.arity)
-
         self.predicates = frozenset((pred,))
         self.paramset = frozenset(params)
-        self.operators = self.quantifiers = EMPTY_SEQ
+        self.operators = EMPTY_SEQ
+        self.quantifiers = EMPTY_SEQ
         self.atomics = EMPTY_SET
         self.spec = (
             pred.spec,
-            tuple(p.ident for p in params),
-        )
+            tuple(p.ident for p in params))
         self.sort_tuple = (
             self.TYPE.rank,
             *pred.sort_tuple,
-            *(n for p in params for n in p.sort_tuple),
-        )
+            *(n for p in params for n in p.sort_tuple))
 
     __slots__ = (
         '_constants',
@@ -936,8 +915,7 @@ class Predicated(Sentence, Sequence[Parameter]):
         'predicates',
         'quantifiers',
         'sort_tuple',
-        'spec',
-    )
+        'spec')
 
     predicate: Predicate
     "The predicate."
@@ -960,8 +938,7 @@ class Predicated(Sentence, Sequence[Parameter]):
         if pnew == pold or pold not in self.paramset:
             return self
         return Predicated(self.predicate, tuple(
-            (pnew if p == pold else p for p in self.params)
-        ))
+            (pnew if p == pold else p for p in self.params)))
 
     @classmethod
     def first(cls, pred = None, /):
@@ -998,16 +975,15 @@ class Quantified(Sentence, Sequence):
             v (Variable): The :class:`Variable` to bind, or coords, such as ``(0, 0)``.
             s (Sentence): The inner :class:`Sentence`.
         """
-        self.quantifier, self.variable, self.sentence = self.items = (
-            q := Quantifier(q), v := Variable(v), s := Sentence(s)
-        )
+        self.items = (
+            q := Quantifier(q), v := Variable(v), s := Sentence(s))
+        self.quantifier, self.variable, self.sentence = self.items
         self.spec = (*q.spec, v.spec, s.ident)
         self.sort_tuple = (
             self.TYPE.rank,
             *q.sort_tuple,
             *v.sort_tuple,
-            *s.sort_tuple
-        )
+            *s.sort_tuple)
 
     __slots__ = (
         '_quantifiers',
@@ -1016,8 +992,7 @@ class Quantified(Sentence, Sequence):
         'sentence',
         'sort_tuple',
         'spec',
-        'variable',
-    )
+        'variable')
 
     quantifier: Quantifier
     "The quantifier."
@@ -1070,8 +1045,7 @@ class Quantified(Sentence, Sequence):
         if pnew == pold:
             return self
         return Quantified(
-            self.quantifier, self.variable, self.sentence.substitute(pnew, pold)
-        )
+            self.quantifier, self.variable, self.sentence.substitute(pnew, pold))
 
     @classmethod
     def first(cls, q = Quantifier.first(), /):
@@ -1118,29 +1092,22 @@ class Operated(Sentence, Sequence[Sentence]):
             oper: The operator.
             operands: The operands.
         """
-
         if len(operands) == 1:
             operands, = operands
-
         self.operator = oper = Operator(oper)
-
         if isinstance(operands, Sentence):
             self.operands = operands = operands,
         else:
             self.operands = operands = tuple(map(Sentence, operands))
-
         self.lhs = operands[0]
         self.rhs = operands[-1]
-
         if len(operands) != oper.arity:
             raise Emsg.WrongLength(operands, oper.arity)
-
         self.spec = (*oper.spec, tuple(s.ident for s in operands))
         self.sort_tuple = (
             self.TYPE.rank,
             *oper.sort_tuple,
-            *(n for s in operands for n in s.sort_tuple),
-        )
+            *(n for s in operands for n in s.sort_tuple))
 
     __slots__ =  (
         '_atomics',
@@ -1154,8 +1121,7 @@ class Operated(Sentence, Sequence[Sentence]):
         'operator',
         'rhs',
         'sort_tuple',
-        'spec',
-    )
+        'spec')
 
     spec: tuple   #OperatedSpec
 
@@ -1191,9 +1157,7 @@ class Operated(Sentence, Sequence[Sentence]):
     def operators(self):
         return tuple(
             (self.operator, *chain.from_iterable(
-                s.operators for s in self
-            ))
-        )
+                s.operators for s in self)))
 
     @lazy.prop
     def atomics(self):
@@ -1203,8 +1167,7 @@ class Operated(Sentence, Sequence[Sentence]):
         if pnew == pold:
             return self
         return Operated(self.operator, tuple(
-            s.substitute(pnew, pold) for s in self)
-        )
+            s.substitute(pnew, pold) for s in self))
 
     def negative(self) -> Sentence:
         if self.operator is Operator.Negation:
@@ -1248,8 +1211,7 @@ class LexType(LangCommonEnum):
         'cls',
         'role',
         'maxi',
-        'hash',
-    )
+        'hash')
 
     rank: int
     "A number to order items of different types."
@@ -1313,8 +1275,7 @@ class LexType(LangCommonEnum):
         return (
             self is other or
             self.cls is other or
-            self is LexType.get(other, None)
-        )
+            self is LexType.get(other, None))
 
     def __repr__(self, /):
         name = type(self).__name__
@@ -1335,10 +1296,10 @@ class LexType(LangCommonEnum):
         self.hash = hash(type(self)) + self.rank
         self.cls.TYPE = self
 
-    @classmethod
-    def _member_keys(cls, member: LexType):
-        """``EbcMeta`` hook. Add the class object to the member lookup keys."""
-        return super()._member_keys(member) | {member.cls}
+    # @classmethod
+    # def _member_keys(cls, member: LexType):
+    #     """``EbcMeta`` hook. Add the class object to the member lookup keys."""
+    #     return super()._member_keys(member)# | {member.cls}
 
 
     @classmethod

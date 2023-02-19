@@ -160,8 +160,7 @@ class NodeIndex(dict[str, dict[Any, set]], abcs.Copyable):
             world      = defaultdict(set),
             world1     = defaultdict(set),
             world2     = defaultdict(set),
-            w1Rw2      = defaultdict(set),
-        )
+            w1Rw2      = defaultdict(set))
 
     def add(self, node: Node, /):
         for prop in self:

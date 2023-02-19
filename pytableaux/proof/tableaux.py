@@ -54,8 +54,7 @@ __all__ = (
     'RuleGroups',
     'Tableau',
     'RulesRoot',
-    'TreeStruct',
-)
+    'TreeStruct')
 
 NOARG = object()
 NOGET = object()
@@ -67,8 +66,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     _defaults = MapProxy(dict(
         is_rank_optim = True,
-        nolock = False,
-    ))
+        nolock = False))
 
     legend: tuple
     "The rule class legend."
@@ -124,17 +122,14 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         self.tableau = tableau
         self.opts = MapProxy(for_defaults(self._defaults, opts))
         self.timers = {name: StopWatch() for name in self.Timers}
-
         history = deque()
         self.on(RuleEvent.AFTER_APPLY, history.append)
         self.history = SeqCover(history)
-
-        self.helpers = helpers = {}
-        self.__getitem__ = helpers.__getitem__
+        self.helpers = {}
+        self.__getitem__ = self.helpers.__getitem__
         # Add one at a time, to support helper dependency checks.
         for Helper in self.Helpers:
-            helpers[Helper] = Helper(self)
-
+            self.helpers[Helper] = Helper(self)
         if not self.opts['nolock']:
             tableau.once(TabEvent.AFTER_BRANCH_ADD, self.__lock)
         self.state |= RuleState.INIT
@@ -202,14 +197,11 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             name    = self.name,
             applied = len(self.history),
             timers  = {
-                name : dict(
+                name: dict(
                     duration_ms  = timer.elapsed_ms(),
                     duration_avg = timer.elapsed_avg(),
-                    count        = timer.count,
-                )
-                for name, timer in self.timers.items()
-            },
-        )
+                    count        = timer.count)
+                for name, timer in self.timers.items()})
 
     @classmethod
     def test(cls, /, *, noassert = False):
@@ -230,8 +222,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             tableau = tab,
             branch  = branch,
             nodes   = nodes,
-            result  = result,
-        )
+            result  = result)
 
     def __repr__(self):
         return (f'<{type(self).__name__} module:{self.__module__} '
@@ -284,7 +275,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             min_score = min(scores)
         else:
             scores = None,
-            max_score = min_score = None
+            max_score = None
+            min_score = None
         for score, target in zip(scores, targets):
             target.update(
                 rule             = self,
@@ -292,8 +284,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
                 total_candidates = len(targets),
                 candidate_score  = score,
                 min_candidate_score = min_score,
-                max_candidate_score = max_score,
-            )
+                max_candidate_score = max_score)
 
     def __select_best_target(self, targets: Iterable[Target], /) -> Target:
         'Selects the best target. Assumes targets have been extended.'
@@ -366,7 +357,8 @@ class RuleGroup(Sequence[Rule]):
         root._checkname(name)
         rule = rulecls(tab, **tab.opts)
         self._seq.append(rule)
-        root._map[name] = self._map[name] = rule
+        self._map[name] = rule
+        root._map[name] = rule
         rule.on(RuleEvent.AFTER_APPLY, tab._after_rule_apply)
 
     def extend(self, classes, /):
@@ -649,8 +641,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         is_group_optim  = True,
         is_build_models = False,
         build_timeout   = None,
-        max_steps       = None,
-    ))
+        max_steps       = None))
     _history: list[StepEntry]
     _branches: list[Branch]
     _open: linqset[Branch]
@@ -664,24 +655,19 @@ class Tableau(Sequence[Branch], EventEmitter):
             argument: The argument for the tableau.
             **opts: The build options.
         """
-
         # Events init
         super().__init__(*TabEvent)
         self.__branch_listeners = MapProxy({
             BranchEvent.AFTER_CLOSE : self.__after_branch_close,
             BranchEvent.AFTER_ADD   : self.__after_node_add,
-            BranchEvent.AFTER_TICK  : self.__after_node_tick,
-        })
-
+            BranchEvent.AFTER_TICK  : self.__after_node_tick})
         # Protected attributes
         self._history = []
         self._branches = []
         self._open = linqset()
         self._stat = {}
-
         # Private
         self._complexities = {}
-
         # Exposed attributes
         self.flag    = TabFlag.PREMATURE
         self.history = SeqCover(self._history)
@@ -689,7 +675,6 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.timers  = TabTimers.create()
         self.rules   = RulesRoot(self)
         self.open    = SeqCover(self._open)
-
         # Init
         if logic is not None:
             self.logic = logic
@@ -885,8 +870,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         self._stat[branch] = BranchStat({
             TabStatKey.STEP_ADDED : self.current_step,
             TabStatKey.INDEX      : index,
-            TabStatKey.PARENT     : branch.parent,
-        })
+            TabStatKey.PARENT     : branch.parent})
         # self.__after_branch_add(branch)
         # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
         # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
@@ -1015,8 +999,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             len   = len(self),
             open  = len(self.open),
             step  = self.current_step,
-            finished = self.finished,
-        )
+            finished = self.finished)
         if self.finished:
             if self.premature:
                 info['premature'] = True
@@ -1091,8 +1074,7 @@ class Tableau(Sequence[Branch], EventEmitter):
                         group_score         = None,
                         total_group_targets = 1,
                         min_group_score     = None,
-                        is_group_optim      = False,
-                    )
+                        is_group_optim      = False)
                     return entry
                 results.append(entry)
         if results:
@@ -1129,8 +1111,7 @@ class Tableau(Sequence[Branch], EventEmitter):
                     group_score         = max_group_score,
                     total_group_targets = len(results),
                     min_group_score     = min_group_score,
-                    is_group_optim      = True,
-                )
+                    is_group_optim      = True)
                 return res
 
     def _build_trunk(self):
@@ -1164,8 +1145,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             distinct_nodes  = distinct_nodes,
             rules_duration_ms = sum(
                 step.duration.value
-                for step in self.history
-            ),
+                for step in self.history),
             build_duration_ms  = timers.build.elapsed_ms(),
             trunk_duration_ms  = timers.trunk.elapsed_ms(),
             tree_duration_ms   = timers.tree.elapsed_ms(),
@@ -1173,8 +1153,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             rules_time_ms = sum(
                 rule.timers[name].elapsed_ms()
                 for rule in self.rules
-                    for name in ('search', 'apply')),
-        )
+                    for name in ('search', 'apply')))
 
     def _check_timeout(self):
         timeout = self.opts['build_timeout']
@@ -1226,8 +1205,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
         s.update(
             depth = track['depth'],
-            left  = track['pos'],
-        )
+            left  = track['pos'])
 
         branchstat = self._stat
 
@@ -1424,7 +1402,3 @@ class TreeStruct(dictns):
         return inst
 
     _from_mapping = _from_iterable
-
-# ----------------------------------------------
-
-del(abstract, final, locking)

@@ -69,8 +69,7 @@ __all__ = (
     'thru',
     'true',
     'undund',
-    'wraps',
-)
+    'wraps')
 
 EMPTY_MAP = MapProxy({})
 EMPTY_SEQ = ()
@@ -109,8 +108,7 @@ def isdund(name: str) -> bool:
         len(name) > 4 and
         name[:2] == name[-2:] == '__' and
         name[2] != '_' and
-        name[-3] != '_'
-    )
+        name[-3] != '_')
 
 def undund(name: str) -> str:
     "Remove dunder from the name."
@@ -127,8 +125,7 @@ def isattrstr(obj) -> bool:
     return (
         isinstance(obj, str) and
         obj.isidentifier() and
-        not keyword.iskeyword(obj)
-    )
+        not keyword.iskeyword(obj))
 
 def isstr(obj) -> bool:
     'Whether the argument is an :obj:`str` instance'
@@ -518,8 +515,7 @@ class NoSetAttr(BaseMember):
         # If `True`: Check `attr` on the object's class;
         # If set to a `type`, check the `attr` on that class;
         # If Falsy, only check for this object's `enabled` setting.
-        cls = None,
-    ))
+        cls = None))
 
     __slots__ =  ('cache', 'defaults', 'enabled')
 

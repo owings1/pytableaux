@@ -39,8 +39,7 @@ from pytableaux.tools import abcs, closure, dund
 __all__ = (
     'HookConn',
     'HookProvider',
-    'hookutil',
-)
+    'hookutil')
 
 class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
     'Mapping view and query API for hook provider.'
@@ -88,15 +87,13 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
             for items in (
                 zip(repeat(hookname), attrnames)
                     for hookname, attrnames in self.items())
-                for item in items
-        ]
+                for item in items]
 
     def attrs(self, hookname = None, /):
         'The (name, member) pairs from the class attributes.'
         p = self.provider
         return [(attrname, getattr(p, attrname))
-            for attrname in self.attrnames(hookname)
-        ]
+            for attrname in self.attrnames(hookname)]
 
     def users(self):
         'List the user classes.'
@@ -108,11 +105,9 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
             for usermap in (
                     self.xmap.values()
                 if user is None else
-                    (self.xmap[user],)
-                )
+                    (self.xmap[user],))
                 for conns in usermap.values()
-                    for conn in conns
-        )
+                    for conn in conns)
         if hookname is not None:
             it = filter(lambda c: c.hookname == hookname, it)
         if attrname is not None:
@@ -124,8 +119,7 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
         check.inst(hooknames, Set)
         return {
             key: self[key]
-            for key in filterfalse(hooknames.__contains__, self)
-        }
+            for key in filterfalse(hooknames.__contains__, self)}
 
     def only(self, hooknames, /):
         'Return the mapping with only specified hooknames (__and__).'
@@ -136,8 +130,7 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
             type(self).__name__,
             self.provider.__name__,
             '|'.join(self.hooknames()),
-            len(self.xmap),
-        )
+            len(self.xmap))
 
     #******  Mapping Behavior
 
@@ -181,8 +174,7 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
                             return set_oper(self, other)
                         return NotImplemented
                     return build(sorted(
-                        oper(set(flatten(self)), set(flatten(other)))
-                    ))
+                        oper(set(flatten(self)), set(flatten(other)))))
                 return f
     
             setattr(cls, opername, f)
@@ -217,8 +209,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
             def init(provider, initial = None, /):
                 if provider in providers:
                     raise TypeError(
-                        f'Hook config already processed for {provider}'
-                    )
+                        f'Hook config already processed for {provider}')
                 info = build(provider, initial)
                 if len(info):
                     providers[provider] = MapProxy(info)
@@ -234,8 +225,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
                         builder.update(inherit(provider.__bases__))
                     else:
                         builder.update((key, set(value))
-                            for key, value in initial.items()
-                        )
+                            for key, value in initial.items())
 
                 for attrname, member in provider.__dict__.items():
                     if not isinstance(member, FunctionType):
@@ -254,8 +244,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
 
                 return {
                     hookname: tuple(sorted(builder[hookname]))
-                    for hookname in sorted(builder)
-                }
+                    for hookname in sorted(builder)}
 
             def inherit(bases, /):
                 builder = defaultdict(set)
@@ -288,8 +277,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
                             hookname: tuple(conns)
                                 for hookname, conns in
                                 # Connect
-                                connect(user, provider, usermap).items()
-                        })
+                                connect(user, provider, usermap).items()})
                 return user
 
             def build(user: type, initial:Mapping):
@@ -298,8 +286,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
 
                 if initial is not None:
                     builder.update((key, dict(value))
-                        for key, value in initial.items()
-                    )
+                        for key, value in initial.items())
 
                 for member in user.__dict__.values():
                     # Scan each member in the sub class ns for the attribute.
@@ -318,8 +305,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
                     delattr(member, ATTR)
 
                 return {provider: MapProxy(usermap)
-                    for (provider, usermap) in builder.items()
-                }
+                    for (provider, usermap) in builder.items()}
 
             return init
 
@@ -327,8 +313,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
 
         ns.update(
             init_provider = staticmethod(provider),
-            init_user     = staticmethod(user),
-        )
+            init_user     = staticmethod(user))
 
         #******  Populate HookProvider attributes
 
@@ -378,8 +363,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
                         declared  = declared,
                         resolved  = resolved,
                         is_copied = is_copied,
-                        callback  = callback,
-                    ))
+                        callback  = callback))
 
             return dict(conns)
 

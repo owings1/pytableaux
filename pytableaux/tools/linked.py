@@ -19,16 +19,16 @@ pytableaux.tools.linked
 """
 from __future__ import annotations
 
-import enum as _enum
 from abc import abstractmethod as abstract
 from collections.abc import MutableSequence, Sequence
+from enum import IntEnum
 from itertools import filterfalse
 from typing import Any, Collection, Optional, SupportsIndex
 
 from pytableaux import __docformat__
 from pytableaux.errors import Emsg
 from pytableaux.errors import check as echeck
-from pytableaux.tools import abcs, absindex, slicerange, EMPTY_SET
+from pytableaux.tools import EMPTY_SET, abcs, absindex, slicerange
 from pytableaux.tools.hooks import HookProvider
 from pytableaux.tools.hybrids import MutableSequenceSet
 
@@ -42,10 +42,9 @@ __all__ = (
     'LinkRel',
     'linkseq',
     'LinkSequence',
-    'linqset',
-)
+    'linqset')
 
-class LinkRel(_enum.IntEnum):
+class LinkRel(IntEnum):
     'Link directional/subscript enum.'
     prev = -1
     "Indicates `prev` attribute, or `before` position."
@@ -75,7 +74,8 @@ class Link:
 
     def __init__(self, value, /):
         self.value = value
-        self.prev = self.next = None
+        self.prev = None
+        self.next = None
 
     def __getitem__(self, rel: int):
         'Get previous, self, or next with -1, 0, 1, or ``LinkRel`` enum.'
@@ -580,8 +580,7 @@ class linqset(linkseq, MutableSequenceSet, hookinfo = HookProvider(linkseq) - {'
 
         for v in filterfalse(
             departures.__contains__,
-            filter(self.__contains__, arrivals)
-        ):
+            filter(self.__contains__, arrivals)):
             raise Emsg.DuplicateValue(v)
         if check is not None:
             check(self, arrivals, departures)

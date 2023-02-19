@@ -112,8 +112,7 @@ class StopWatch(TimingCommon):
         return dict(
             elapsed_ms  = self.elapsed_ms(),
             count       = self.count,
-            elapsed_avg = self.elapsed_avg(),
-        )
+            elapsed_avg = self.elapsed_avg())
 
     def _asdict(self):
         'JSON Comptibility'
@@ -159,7 +158,8 @@ class Counter(TimingCommon):
     def __index__(self):
         return self.value
 
-    for_json = __int__ = __index__
+    for_json = __index__
+    __int__ = __index__
 
     def __repr__(self):
         return '<%s:%s>' % (type(self).__name__, self.value)

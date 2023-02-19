@@ -39,8 +39,7 @@ __all__ = (
     'ModalNode',
     'NodeCompare',
     'SentenceCompare',
-    'SentenceNode',
-)
+    'SentenceNode')
 
 def getattr_safe(obj: Any, name: str) -> Any:
     return getattr(obj, name, None)
@@ -149,10 +148,8 @@ class AttrCompare(Comparer):
             (trans(name, name), value)
             for name, value in (
                 (name, lget(lhs, name))
-                for name in attrmap
-            )
-            if value is not None
-        )
+                for name in attrmap)
+            if value is not None)
 
     def __call__(self, rhs, /) -> bool:
         "Return whether the rhs passes the filter."
@@ -182,8 +179,7 @@ class SentenceCompare(Comparer):
             operator   = (Operated, opr.is_),
             quantifier = (Quantified, opr.is_),
             predicate  = (Predicated, opr.eq),
-        ).items(),
-    )
+        ).items(),)
         
     rget = staticmethod(thru)
     compitem: CompSentenceCompItem
@@ -283,8 +279,7 @@ class ModalNode(AttrCompare, NodeCompare):
 
     attrmap = MapProxy(dict(
         modal = 'is_modal',
-        access = 'is_access',
-    ))
+        access = 'is_access'))
 
     def example_node(self):
         n = {}

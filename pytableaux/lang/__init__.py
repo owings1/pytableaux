@@ -60,8 +60,7 @@ __all__ = (
     'Quantified',
     'Quantifier',
     'Sentence',
-    'Variable',
-)
+    'Variable')
 
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
 raiseae = raisr(AttributeError)
@@ -158,8 +157,7 @@ class Notation(LangCommonEnum):
         'DefaultWriter',
         'Parser',
         'rendersets',
-        'writers',
-    )
+        'writers')
 
     @classmethod
     def get_common_charsets(cls) -> list[str]:
@@ -167,8 +165,7 @@ class Notation(LangCommonEnum):
         charsets: set[str] = set(
             charset
             for notn in Notation
-                for charset in notn.charsets
-        )
+                for charset in notn.charsets)
         for notn in Notation:
             charsets.intersection_update(notn.charsets)
         return sorted(charsets)
@@ -253,7 +250,8 @@ class BiCoords(NamedTuple):
         # finds the mimimum available by searching for gaps.
         if not used:
             return BiCoords.first
-        index = sub = 0
+        index = 0
+        sub = 0
         while (index, sub) in used:
             index += 1
             if index > maxi:
@@ -368,8 +366,8 @@ class TableStore(metaclass = LangCommonMeta):
     def _initcache(cls, notns, builtin):
         if cls is __class__ or hasattr(cls, '_builtin'):
             raise TypeError
-        cls._builtin = builtin = MapProxy(dict(builtin))
-        notns = set(notns).union(builtin)
+        cls._builtin = MapProxy(dict(builtin))
+        notns = set(notns).union(cls._builtin)
         cls._instances = {notn: {} for notn in notns}
         # Prefetch
         for notn in notns:
@@ -413,8 +411,7 @@ class RenderSet(TableStore, Mapping):
         'notation',
         'renders',
         'strings',
-        'hash',
-    )
+        'hash')
 
     def __init__(self, data, keypair, /):
         self.data = data = dxopy(data, True)
@@ -439,7 +436,7 @@ class RenderSet(TableStore, Mapping):
         return iter(self.data)
 
     def __reversed__(self):
-        return iter(self.data)
+        return reversed(self.data)
 
     def __hash__(self):
         return self.hash

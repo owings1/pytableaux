@@ -53,8 +53,7 @@ __all__ = (
     'PredNodes',
     'QuitFlag',
     'UnserialWorlds',
-    'WorldIndex',
-)
+    'WorldIndex')
 
 NOGET = object()
 
@@ -444,8 +443,7 @@ class FilterNodeCache(BranchCache[set[Node]]):
     def listen_off(self):
         self.rule.tableau.off({
             TabEvent.AFTER_NODE_ADD: self.__after_node_add,
-            TabEvent.AFTER_NODE_TICK: self.__after_node_tick,
-        })
+            TabEvent.AFTER_NODE_TICK: self.__after_node_tick})
         super().listen_off()
 
     def __after_node_add(self, node, branch, /):
@@ -606,8 +604,7 @@ class FilterHelper(FilterNodeCache):
         types = tuple(fcls for fcls, flag in configs.items()
             if flag is not NotImplemented)
         filters = MapProxy(dict(zip(
-            types, funcs := tuple(ftype(rulecls) for ftype in types)
-        )))
+            types, funcs := tuple(ftype(rulecls) for ftype in types))))
         def pred(node, /):
             return all(f(node) for f in funcs)
         return filters, pred

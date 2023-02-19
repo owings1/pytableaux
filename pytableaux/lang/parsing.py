@@ -375,17 +375,14 @@ class BaseParser(Parser):
             vchr = self.table.char(LexType.Variable, v.index)
             raise BoundVariableError(
                 "Cannot rebind variable '{0}' ({1}) at position {2}.".format(
-                    vchr, v.subscript, context.pos
-                )
-            )
+                    vchr, v.subscript, context.pos))
         context.bound.add(v)
         s = self._read(context)
         if v not in s.variables:
             vchr = self.table.reversed[LexType.Variable, v.index]
             raise BoundVariableError(
                 f"Unused bound variable '{vchr}' ({v.subscript}) "
-                f"at position {context.pos}"
-            )
+                f"at position {context.pos}")
         context.bound.remove(v)
         return Quantified(q, v, s)
 
@@ -402,8 +399,7 @@ class BaseParser(Parser):
             return self.preds.get(self._read_coords(context))
         except KeyError:
             raise ParseError(
-                f"Undefined predicate symbol '{pchar}' at position {cpos}"
-            )
+                f"Undefined predicate symbol '{pchar}' at position {cpos}")
 
     def _read_params(self, context: ParseContext, num: int, /) -> tuple[Parameter, ...]:
         'Read the given number of parameters.'
@@ -419,8 +415,7 @@ class BaseParser(Parser):
         if v not in context.bound:
             vchr = self.table.reversed[LexType.Variable, v.index]
             raise UnboundVariableError(
-                f"Unbound variable '{vchr}_{v.subscript}' at position {cpos}"
-            )
+                f"Unbound variable '{vchr}_{v.subscript}' at position {cpos}")
         return v
 
     def _read_variable(self, context: ParseContext, /) -> Variable:
@@ -471,8 +466,7 @@ class PolishParser(BaseParser, primary = True):
         context.advance()
         return Operated(
             oper,
-            tuple(self._read(context) for _ in range(oper.arity))
-        )
+            tuple(self._read(context) for _ in range(oper.arity)))
 
 class StandardParser(BaseParser, primary = True):
     "Standard notation parser."
@@ -515,8 +509,7 @@ class StandardParser(BaseParser, primary = True):
         if oper.arity != 1:
             raise ParseError(
                 f"Unexpected non-prefix operator symbol '{context.current()}' "
-                f"at position {context.pos}"
-            )
+                f"at position {context.pos}")
         context.advance()
         return Operated(oper, (self._read(context),))
 
@@ -528,8 +521,7 @@ class StandardParser(BaseParser, primary = True):
         arity = pred.arity
         if arity < 2:
             raise ParseError(
-                f"Unexpected infixed {arity}-ary predicate symbol at position {ppos}"
-            )
+                f"Unexpected infixed {arity}-ary predicate symbol at position {ppos}")
         return Predicated(pred, (lhp, *self._read_params(context, arity - 1)))
 
     def _read_from_paren_open(self, context: ParseContext, /) -> Operated:
@@ -542,8 +534,7 @@ class StandardParser(BaseParser, primary = True):
         while depth:
             if not context.has_next(length):
                 raise ParseError(
-                    f'Unterminated open paren at position {context.pos}'
-                )
+                    f'Unterminated open paren at position {context.pos}')
             peek = context.next(length)
             ptype = context.type(peek, None)
             if ptype is Marking.paren_close:
@@ -556,14 +547,12 @@ class StandardParser(BaseParser, primary = True):
                     oper_pos = context.pos + length
                     if oper is not None:
                         raise ParseError(
-                            f'Unexpected {oper.name} symbol at position {oper_pos}'
-                        )
+                            f'Unexpected {oper.name} symbol at position {oper_pos}')
                     oper = peek_oper
             length += 1
         if oper is None:
             raise ParseError(
-                f'Missing binary operator at position {context.pos}'
-            )
+                f'Missing binary operator at position {context.pos}')
         # now we can divide the string into lhs and rhs
         lhs_start = context.pos + 1
         # move past the open paren
@@ -575,8 +564,7 @@ class StandardParser(BaseParser, primary = True):
             raise ParseError(
                 f'Invalid left side expression starting at position {lhs_start} '
                 f'and ending at position {context.pos}, which proceeds past operator '
-                f'({oper.name}) at position {oper_pos}'
-            )
+                f'({oper.name}) at position {oper_pos}')
         # move past the operator
         context.advance()
         # read the rhs
@@ -636,15 +624,13 @@ class ParseTable(MapCover, TableStore):
         # flipped table
         self.reversed = rev = MapProxy(dict(
             # map(reversed, ItemsIterator(self))
-            map(reversed, itemsiter(self))
-        ))
+            map(reversed, itemsiter(self))))
 
         # chars for each type in value order, duplicates discarded
         self.chars = MapProxy({
             ctype: tuple(rev[ctype, val]
                 for val in tvals[ctype])
-                    for ctype in ctypes
-        })
+                    for ctype in ctypes})
 
     def type(self, char, default = NOARG, /):
         """Get the item type for the character.

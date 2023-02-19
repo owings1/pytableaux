@@ -27,7 +27,7 @@ from collections.abc import Sequence
 from itertools import repeat
 from typing import Any, Iterable
 
-from pytableaux import EMPTY_SET, __docformat__, tools
+from pytableaux import __docformat__, tools
 from pytableaux.errors import Emsg, check
 from pytableaux.lang import LangCommonMeta, Predicate, Sentence, raiseae
 from pytableaux.tools import abcs, lazy, membr, qset, wraps
@@ -35,11 +35,10 @@ from pytableaux.tools import abcs, lazy, membr, qset, wraps
 __all__ = (
     'Argument',
     'ArgumentMeta',
-    'Predicates',
-)
+    'Predicates')
 
 NOARG = object()
-EMPTY_IT = iter(EMPTY_SET)
+EMPTY_IT = iter(())
 
 class ArgumentMeta(LangCommonMeta):
     'Argument Metaclass.'
@@ -59,8 +58,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy = True, metaclass = 
     def __init__(self, conclusion, premises = None, title = None):
         self.seq = tuple(
             (Sentence(conclusion),) if premises is None
-            else map(Sentence, (conclusion, *premises))
-        )
+            else map(Sentence, (conclusion, *premises)))
         self.premises = tuple(self.seq[1:])
         if title is not None:
             check.inst(title, str)
@@ -143,8 +141,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy = True, metaclass = 
         'JSON Comptibility'
         return dict(
             conclusion = self.conclusion,
-            premises = self.premises
-        )
+            premises = self.premises)
 
     def __repr__(self):
         if self.title:
@@ -240,13 +237,3 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dic
         inst = super().copy()
         inst._lookup = self._lookup.copy()
         return inst
-
-
-
-del(
-    lazy,
-    membr,
-    opr,
-    tools,
-    wraps,
-)

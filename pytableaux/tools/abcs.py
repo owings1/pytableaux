@@ -195,28 +195,23 @@ class EnumLookup(Mapping):
     @classmethod
     def _makemap(cls, Owner: type[Ebc], keyfuncs, /) -> dict:
         "Build an index source dictionary."
-
         # Named members, including aliases, but not pseudos.
         member_map = Owner._member_map_
         # Canonical names, no aliases.
         canon_names = Owner._member_names_
         # Unique members, including unnamed (pseudos), but not aliases.
         unique_members = set(Owner._value2member_map_.values())
-
         # Canonical members, named, unique, and ordered.
         member_seq = tuple(map(member_map.get, canon_names))
         # Unnamed (pseudo) members.
         pseudos = unique_members.difference(member_map.values())
         # Alias names
         aliases = set(member_map).difference(canon_names)
-
         builder = cls._seqmap(member_seq, keyfuncs)
-
         if len(pseudos):
             builder |= cls._pseudomap(pseudos)
         if len(aliases):
             builder |= {alias: member_map[alias] for alias in aliases}
-
         return builder
 
     @classmethod
@@ -313,7 +308,8 @@ class EbcMeta(_enum.EnumMeta):
             clsafter(Class, ns, skipflags = skipflags)
 
         # Freeze Enum class attributes.
-        Class._member_map_ = Class.__members__ = MapProxy(Class._member_map_)
+        Class._member_map_ = MapProxy(Class._member_map_)
+        Class.__members__ = Class._member_map_
         Class._member_names_ = tuple(Class._member_names_)
 
         # Create lookup index.
@@ -735,20 +731,17 @@ from pytableaux.tools.hooks import hookutil
 #       Enum Base Classes
 #_____________________________________________________________________________
 
-class ItemMapEnum(Ebc):
+class ItemMapEnum(_enum.Enum):
     """Fixed mapping enum based on item tuples.
 
     If a member value is defined as a mapping, the member's ``_value_`` attribute
     is converted to a tuple of item tuples during ``__init__()``.
 
     Implementations should always call ``super().__init__()`` if it is overridden.
-
-    Note that ``.get()`` is implemented as ``.mget()``, since ``AbcEnumMeta``
-    uses ``'get'`` as a class method to lookup enum members.
     """
 
     __slots__ = ('__iter__', '__getitem__', '__len__', '__reversed__',
-                 'name', 'value', '_value_')
+                 'name', 'value', '_name_', '_value_')
 
     def __init__(self, *args):
         if len(args) == 1 and isinstance(args[0], Mapping):
@@ -758,11 +751,14 @@ class ItemMapEnum(Ebc):
         self.__iter__ = m.__iter__
         self.__getitem__ = m.__getitem__
         self.__reversed__ = m.__reversed__
+        self.name = self._name_
+        self.value = self._value_
 
     keys = Mapping.keys
     items = Mapping.items
     values = Mapping.values
-    mget = Mapping.get # get() is not allowed for Ebc
+    # mget = Mapping.get # get() is not allowed for Ebc
+    get = Mapping.get
 
     def __or__(self, other):
         return dict(self) | other

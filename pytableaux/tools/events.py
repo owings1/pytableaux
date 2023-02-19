@@ -33,8 +33,7 @@ __all__ = (
     'EventEmitter',
     'EventsListeners',
     'Listener',
-    'Listeners',
-)
+    'Listeners')
 
 class EventEmitter(abcs.Copyable):
 
@@ -86,8 +85,7 @@ class Listener(Callable, abcs.Abc):
     def __eq__(self, other):
         return self is other or self.cb == other or (
             isinstance(other, type(self)) and
-            self.cb == other.cb
-        )
+            self.cb == other.cb)
 
     def __hash__(self):
         return hash(self.cb)
@@ -141,7 +139,8 @@ class EventsListeners(dict[Any, Listeners]):
     __slots__ = ('emitcount', 'callcount')
 
     def __init__(self, *events):
-        self.emitcount = self.callcount = 0
+        self.emitcount = 0
+        self.callcount = 0
         if events:
             self.create(*events)
 
@@ -235,7 +234,8 @@ class EventsListeners(dict[Any, Listeners]):
             return super().copy()
         cls = type(self)
         inst = cls.__new__(cls)
-        inst.emitcount = inst.callcount = 0
+        inst.emitcount = 0
+        inst.callcount = 0
         inst.create(*self)
         return inst
 

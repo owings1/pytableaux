@@ -46,7 +46,7 @@ __all__ = (
 # TODO: Refactor for Python 3.11, get rid of Ebc
 class Mval(Ebc):
 
-    __slots__ = 'name', 'label', 'num',
+    __slots__ = 'name', 'label', 'num'
 
     label: str
     num: float
@@ -55,6 +55,7 @@ class Mval(Ebc):
         self.label = label
         self.num = num
         # self.name = self._name_
+        # self.value = self._value_
 
     def __eq__(self, other):
         if self is other:

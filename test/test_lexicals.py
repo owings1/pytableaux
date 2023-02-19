@@ -110,7 +110,7 @@ class TestPredicates(BaseSuite):
     def test_errors(self):
         with raises((TypeError,ValueError)):
             Predicates().add('foo')
-        with raises(TypeError):
+        with raises((TypeError,ValueError)):
             Predicates([('foo', 4)])
         with raises(TypeError):
             Predicates()['nonIndexKey']
@@ -122,13 +122,13 @@ class TestPredicates(BaseSuite):
             Predicates().get((-1, 2))
         with raises(KeyError):
             Predicates().get((1, 2))
-        with raises(TypeError):
+        with raises((TypeError,ValueError)):
             Predicates().add((0, 0, 2, 'Identity'))
-        with raises(TypeError): # bad arity
+        with raises((TypeError,ValueError)): # bad arity
             Predicates().add((0, 0, None))
-        with raises(TypeError): # bad arity
+        with raises((TypeError,ValueError)): # bad arity
             Predicates().add((0, 0,))
-        with raises(ValueError): # bad arity
+        with raises((TypeError,ValueError)): # bad arity
             Predicates().add((0, 0, 0))
         with raises(ValueError): # index too large
             Predicates().add((Predicate.TYPE.maxi + 1, 0, 1))

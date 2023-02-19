@@ -35,8 +35,7 @@ __all__ = (
     'qset',
     'qsetf',
     'QsetView',
-    'SequenceSet',
-)
+    'SequenceSet')
 
 class SequenceSet(Sequence, Set, metaclass = abcs.AbcMeta):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
@@ -112,16 +111,13 @@ class QsetView(SequenceSet, abcs.Copyable, immutcopy = True):
     __slots__ = ('__len__', '__contains__', '__getitem__', '__iter__', '__reversed__')
 
     def __new__(cls, base: SequenceSet, /,):
-
         check.inst(base, SequenceSet)
-
         self = object.__new__(cls)
         self.__len__ = base.__len__
         self.__iter__ = base.__iter__
         self.__getitem__ = base.__getitem__
         self.__contains__ = base.__contains__
         self.__reversed__ = base.__reversed__
-
         return self
 
     @classmethod

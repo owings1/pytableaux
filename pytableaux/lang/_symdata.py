@@ -379,8 +379,7 @@ def dmerged():
             key: dcopy(value)
                 if isinstance(value, Mapping)
                 else value
-            for key, value in a.items()
-        }
+            for key, value in a.items()}
 
     return merger
 

@@ -68,7 +68,6 @@ class LexWriterMeta(LangCommonMeta):
         def fget(cls) -> LexWriter:
             'The system instance for representing.'
             checkcls(cls)
-            # print(syslws)
             if syslws['set'] is not None:
                 return syslws['set']
             if syslws['unset'] is None:
@@ -77,7 +76,6 @@ class LexWriterMeta(LangCommonMeta):
 
         def fset(cls, lw: LexWriter|None):
             checkcls(cls)
-            # print('SET', syslws)
             if lw is not None:
                 check.inst(lw, LexWriter)
             syslws['unset'] = None
@@ -121,8 +119,10 @@ class LexWriter(metaclass = LexWriterMeta):
     @classmethod
     def canwrite(cls, obj: Any) -> bool:
         "Whether the object can be written."
-        try: return obj.TYPE in cls._methodmap
-        except AttributeError: return False
+        try:
+            return obj.TYPE in cls._methodmap
+        except AttributeError:
+            return False
 
     #******  Instance Init
 
@@ -178,8 +178,7 @@ class LexWriter(metaclass = LexWriterMeta):
         'Merge and freeze method map from mro. Sync ``__call__()``.'
         super().__init_subclass__(**kw)
         abcs.merge_attr(
-            subcls, '_methodmap', supcls = __class__, transform = MapProxy
-        )
+            subcls, '_methodmap', supcls = __class__, transform = MapProxy)
         subcls.__call__ = subcls.write
 
 class BaseLexWriter(LexWriter):
@@ -196,8 +195,7 @@ class BaseLexWriter(LexWriter):
         LexType.Atomic     : '_write_coordsitem',
         LexType.Predicated : '_write_predicated',
         LexType.Quantified : '_write_quantified',
-        LexType.Operated   : '_write_operated',
-    }
+        LexType.Operated   : '_write_operated'}
 
     @abstract
     def _write_operated(self, item: Operated) -> str: ...
@@ -211,14 +209,12 @@ class BaseLexWriter(LexWriter):
     def _write_coordsitem(self, item: CoordsItem) -> str:
         return ''.join((
             self._strfor(item.TYPE, item.index),
-            self._write_subscript(item.subscript),
-        ))
+            self._write_subscript(item.subscript)))
 
     def _write_predicate(self, item: Predicate) -> str:
         return ''.join((
             self._strfor((LexType.Predicate, item.is_system), item.index),
-            self._write_subscript(item.subscript),
-        ))
+            self._write_subscript(item.subscript)))
 
     def _write_quantified(self, item: Quantified) -> str:
         return ''.join(map(self._write, item.items))
@@ -271,8 +267,7 @@ class StandardLexWriter(BaseLexWriter):
             ws,
             self._write(pred),
             ws,
-            ''.join(map(self._write, item.params[1:])),
-        ))
+            ''.join(map(self._write, item.params[1:]))))
 
     def _write_operated(self, item: Operated, drop_parens = False) -> str:
         oper = item.operator
@@ -292,8 +287,7 @@ class StandardLexWriter(BaseLexWriter):
             return ''.join((
                 self._strfor(Marking.paren_open, 0) if not drop_parens else '',
                 self._strfor(Marking.whitespace, 0).join(map(self._write, (lhs, oper, rhs))),
-                self._strfor(Marking.paren_close, 0) if not drop_parens else '',
-            ))
+                self._strfor(Marking.paren_close, 0) if not drop_parens else ''))
         raise NotImplementedError('arity %s' % arity)
 
     def _write_negated_identity(self, item: Operated) -> str:
@@ -302,12 +296,10 @@ class StandardLexWriter(BaseLexWriter):
         return self._strfor(Marking.whitespace, 0).join((
             self._write(params[0]),
             self._strfor((LexType.Predicate, True), (item.operator, si.predicate)),
-            self._write(params[1]),
-        ))
+            self._write(params[1])))
 
     def _test(self) -> list[str]:
         s1 = Predicate.System.Identity(Constant.gen(2)).negate()
         s2 = Operator.Conjunction(Atomic.gen(2))
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
-
