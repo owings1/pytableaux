@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from abc import abstractmethod as abstract
 from collections.abc import MutableSequence, MutableSet, Sequence, Set
-from itertools import filterfalse
+from itertools import filterfalse, chain
 from typing import Iterable, SupportsIndex
 
 from pytableaux.errors import DuplicateValueError, Emsg, check
@@ -63,6 +63,16 @@ class SequenceSet(Sequence, Set, metaclass = abcs.AbcMeta):
     @classmethod
     def _from_iterable(cls, it, /):
         return cls(it)
+
+    def __add__(self, other):
+        if isinstance(other, (Sequence, Set)):
+            return self._from_iterable(chain(self, other))
+        return NotImplemented
+
+    def __radd__(self, other):
+        if type(other) in (list, set):
+            return type(other)(chain(other, self))
+        return NotImplemented
 
 class qsetf(SequenceSet, abcs.Copyable, immutcopy = True):
     'Immutable sequence set implementation with frozenset and tuple bases.'
