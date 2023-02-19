@@ -1,15 +1,15 @@
 import logging
+from enum import Enum
 from typing import Any, Mapping
 
 from _typeshed import Incomplete
+
 from pytableaux import __docformat__ as __docformat__
 from pytableaux import package as package
 from pytableaux import tools as tools
-from pytableaux.tools.abcs import Ebc as Ebc
 from pytableaux.tools.abcs import ItemMapEnum
 
-
-class Wevent(Ebc):
+class Wevent(Enum):
     before_dispatch: Incomplete
 
 def get_logger(name: str|Any, conf: Mapping[str, Any] = ...) -> logging.Logger: ...

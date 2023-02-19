@@ -45,8 +45,7 @@ __all__ = (
     'ParserMeta',
     'ParseTable',
     'PolishParser',
-    'StandardParser',
-)
+    'StandardParser')
 
 NOARG = object()
 
@@ -173,8 +172,7 @@ class Parser(metaclass = ParserMeta):
         return Argument(
             self(conclusion),
             premises and tuple(map(self, premises)),
-            title = title,
-        )
+            title = title)
 
     def __init_subclass__(subcls, primary = False, **kw):
         'Merge ``_defaults``, sync ``__call__()``, set primary.'

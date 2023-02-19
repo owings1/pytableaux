@@ -1,8 +1,10 @@
+from enum import Enum
+
 from _typeshed import Incomplete
-from pytableaux.tools import abcs
-from pytableaux.tools.doc import BaseRole, ParserOptionMixin
-from sphinx.util.docutils import ReferenceRole
 from sphinx.application import Sphinx
+from sphinx.util.docutils import ReferenceRole
+
+from pytableaux.tools.doc import BaseRole, ParserOptionMixin
 
 class refplus(ReferenceRole, BaseRole):
     section: str
@@ -18,7 +20,7 @@ class refplus(ReferenceRole, BaseRole):
     def run(self): ...
     patterns: Incomplete
 
-class _Ctype(frozenset, abcs.Ebc):
+class _Ctype(frozenset, Enum):
     valued: Incomplete
     nosent: Incomplete
 

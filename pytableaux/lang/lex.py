@@ -394,13 +394,13 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
         self.ident = self.identitem(self)
         self.hash = self.hashitem(self)
 
-    # @classmethod
-    # def _member_keys(cls, member: LexicalEnum):
-    #     """``EbcMeta`` hook.
+    @classmethod
+    def _member_keys(cls, member: LexicalEnum):
+        """``EbcMeta`` hook.
         
-    #     Add any values in ``.strings`` as keys for the member index.
-    #     """
-    #     return super()._member_keys(member) | member.strings
+        Add any values in ``.strings`` as keys for the member index.
+        """
+        return super()._member_keys(member) | member.strings
 
     @classmethod
     def _on_init(cls, subcls: type[LexicalEnum]):
@@ -1297,11 +1297,10 @@ class LexType(LangCommonEnum):
         self.hash = hash(type(self)) + self.rank
         self.cls.TYPE = self
 
-    # @classmethod
-    # def _member_keys(cls, member: LexType):
-    #     """``EbcMeta`` hook. Add the class object to the member lookup keys."""
-    #     return super()._member_keys(member)# | {member.cls}
-
+    @classmethod
+    def _member_keys(cls, member: LexType):
+        """``EbcMeta`` hook. Add the class object to the member lookup keys."""
+        return super()._member_keys(member)# | {member.cls}
 
     @classmethod
     def _after_init(cls):
@@ -1448,17 +1447,3 @@ def metacall():
     return call
 
 LexicalAbcMeta.__call__ = metacall
-
-
-# del(
-#     _ENV,
-#     _Ranks,
-#     FunctionType,
-#     lazy,
-#     membr,
-#     metacall,
-#     opr,
-#     tools,
-#     wraps,
-# )
-

@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from abc import abstractmethod as abstract
 from dataclasses import dataclass
-from enum import Enum
 from itertools import product, repeat
 from typing import Any, ClassVar, Generic, Mapping, TypeVar
 
@@ -40,10 +39,8 @@ __all__ = (
     'ValueFDE',
     'ValueK3',
     'ValueLP',
-    'ValueCPL',
-)
+    'ValueCPL')
 
-# TODO: Refactor for Python 3.11, get rid of Ebc
 class Mval(Ebc):
 
     __slots__ = 'name', 'label', 'num'
@@ -54,8 +51,6 @@ class Mval(Ebc):
     def __init__(self, label: str, num: float, /):
         self.label = label
         self.num = num
-        # self.name = self._name_
-        # self.value = self._value_
 
     def __eq__(self, other):
         if self is other:
@@ -84,45 +79,37 @@ class Mval(Ebc):
     def __str__(self):
         return self.name
 
-    # @classmethod
-    # def _member_keys(cls, member: Mval):
-    #     return super()._member_keys(member) | {member.label, member.num}
+    @classmethod
+    def _member_keys(cls, member: Mval):
+        return super()._member_keys(member) | {member.label, member.num}
 
 
 class ValueFDE(Mval):
     "Model values for gappy + glutty 4-valued logics, like FDE."
 
     F = 'False',   0.0
-
     N = 'Neither', 0.25
-
     B = 'Both',    0.75
-
     T = 'True',    1.0
 
 class ValueK3(Mval):
     "Model values for gappy 3-valued logics, like K3 and others."
 
     F = 'False',   0.0
-
     N = 'Neither', 0.5
-
     T = 'True',    1.0
 
 class ValueLP(Mval):
     "Model values for glutty 3-valued logics, like LP and others."
 
     F = 'False', 0.0
-
     B = 'Both', 0.5
-
     T = 'True', 1.0
 
 class ValueCPL(Mval):
     'Model values for 2-valued "classical" logics.'
 
     F = 'False', 0.0
-
     T = 'True' , 1.0
 
 MvalId = Mval | str | float
@@ -138,20 +125,18 @@ class BaseModel(Generic[MvalT_co], Abc):
     unassigned_value: ClassVar[MvalT_co]
 
     truth_functional_operators = frozenset({
-        Operator.Assertion             ,
-        Operator.Negation              ,
-        Operator.Conjunction           ,
-        Operator.Disjunction           ,
-        Operator.MaterialConditional   ,
-        Operator.Conditional           ,
-        Operator.MaterialBiconditional ,
-        Operator.Biconditional         ,
-    })
+        Operator.Assertion,
+        Operator.Negation,
+        Operator.Conjunction,
+        Operator.Disjunction,
+        Operator.MaterialConditional,
+        Operator.Conditional,
+        Operator.MaterialBiconditional,
+        Operator.Biconditional})
 
     modal_operators = frozenset({
-        Operator.Necessity  ,
-        Operator.Possibility,
-    })
+        Operator.Necessity,
+        Operator.Possibility})
 
     @property
     def id(self) -> int:
@@ -163,8 +148,7 @@ class BaseModel(Generic[MvalT_co], Abc):
             LexType.Atomic     : 'value_of_atomic',
             LexType.Operated   : 'value_of_operated',
             LexType.Predicated : 'value_of_predicated',
-            LexType.Quantified : 'value_of_quantified',
-        }
+            LexType.Quantified : 'value_of_quantified'}
         def value_of(self: BaseModel, s: Sentence, /, **kw) -> MvalT_co:
             if self.is_sentence_opaque(s):
                 return self.value_of_opaque(s, **kw)
@@ -194,11 +178,8 @@ class BaseModel(Generic[MvalT_co], Abc):
         if s.operator in self.truth_functional_operators:
             return self.truth_function(
                 s.operator,
-                *(
-                    self.value_of(operand, **kw)
-                    for operand in s.operands
-                )
-            )
+                *(self.value_of(operand, **kw)
+                    for operand in s.operands))
         if s.operator in self.modal_operators:
             return self.value_of_modal(s, **kw)
         check.inst(s, Operated)
@@ -219,12 +200,9 @@ class BaseModel(Generic[MvalT_co], Abc):
         stype = type(s)
         return stype is Atomic or stype is Predicated or (
             stype is Operated and
-            s.operator is Operator.Negation and
-            (
+            s.operator is Operator.Negation and (
                 type(s.lhs) in (Atomic, Predicated) or
-                self.is_sentence_opaque(s.lhs)
-            )
-        )
+                self.is_sentence_opaque(s.lhs)))
 
     def truth_table(self, oper: Operator, / , reverse = False) -> TruthTable[MvalT_co]:
         oper = Operator(oper)
@@ -236,11 +214,9 @@ class BaseModel(Generic[MvalT_co], Abc):
             inputs = inputs,
             outputs = tuple(
                 trfunc(oper, *values)
-                for values in inputs
-            ),
+                for values in inputs),
             operator = oper,
-            Value = self.Value,
-        )
+            Value = self.Value)
 
     def finish(self):
         pass

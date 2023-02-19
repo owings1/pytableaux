@@ -119,7 +119,7 @@ class abcf(_enum.Flag):
     @classmethod
     def save(cls, obj: _F, value: abcf|SupportsIndex, *, attr: str = ...) -> _F: ...
 
-class ItemMapEnum(Ebc):
+class ItemMapEnum(_enum.Enum):
     @overload
     def __init__(self, mapping: Mapping) -> None: ...
     @overload

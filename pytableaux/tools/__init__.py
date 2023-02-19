@@ -60,7 +60,6 @@ __all__ = (
     'membr',
     'minfloor',
     'NoSetAttr',
-    'raisr',
     'sbool',
     'select_fget',
     'SeqCover',
@@ -399,33 +398,6 @@ class wraps(dict):
 
     def __repr__(self):
         return f'{type(self).__name__}({dict(self)})'
-
-class raisr(BaseMember):
-    """Factory for raising an error. Not to be used as a decorator.
-    """
-
-    __slots__ = ('wrap', 'Error')
-
-    def __init__(self, Error, /):
-        self.Error = check.subcls(Error, Exception)
-        self.wrap = wraps(only = ('name', 'qualname', 'module', 'doc'),
-            doc = f"""
-            Raises:
-                {Error.__name__}: always
-            """)
-
-    def __call__(self, original = None, /):
-        wrap = self.wrap
-        if original:
-            wrap.original = original
-            wrap.update(original)
-        Error = self.Error
-        def f(self, *args, **_):
-            raise Error(*args[0:1])
-        return wrap(f)
-
-    def sethook(self, owner, name):
-        setattr(owner, name, self(getattr(owner.__bases__[0], name, self)))
 
 class lazy:
 

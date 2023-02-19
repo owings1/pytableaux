@@ -72,20 +72,16 @@ class Eset(frozenset, Enum):
     clean_methods = hook_methods.copy()
 
 def _em_fix_name_value(Class):
-
     # cache attribute for flag enum.
     if callable(getattr(Class, '__invert__', None)):
         Class._invert_ = None # type: ignore
-
     # Clear DynCa from class layout
     Class.name  = None # type: ignore
     Class.value = None # type: ignore
-
     # Assign name & value directly.
     for member in Class:
         member.name = member._name_
         member.value = member._value_
-    
     # Compatible as decorator.
     return Class
 
@@ -246,7 +242,7 @@ class EnumLookup(Mapping):
         if check is not pseudo:
             raise TypeError from ValueError(
                 f"Value conflict: '{pseudo}' conflicts with '{check}'")
-        if pseudo._name_ is not None: # and pseudo._value_ != 0: (TODO: Python 3.11)
+        if pseudo._name_ is not None:
             raise TypeError from ValueError(
                 f"Value '{pseudo._name_}' does not match expected: None")
         return cls._pseudo_keys(pseudo)
@@ -565,7 +561,7 @@ def merge_attr(obj, name, it = None, /, *, setter = setattr, **kw):
 
     """
     if it is None:
-        check.inst(kw.setdefault('cls', obj), type)
+        kw.setdefault('cls', check.inst(obj, type))
     value = merged_attr(name, it, **kw)
     setter(obj, name, value)
     return value
@@ -758,7 +754,6 @@ class ItemMapEnum(Enum):
     keys = Mapping.keys
     items = Mapping.items
     values = Mapping.values
-    # mget = Mapping.get # get() is not allowed for Ebc
     get = Mapping.get
 
     def __or__(self, other):
@@ -779,7 +774,7 @@ class ItemMapEnum(Enum):
 
 from pytableaux import errors
 
-Eset = _em_rebase(Eset, Ebc)
+# Eset = _em_rebase(Eset, Ebc)
 Emsg = errors.Emsg = _em_rebase(Emsg, errors.EmsgBase, Ebc)
 
 del(

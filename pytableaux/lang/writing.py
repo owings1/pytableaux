@@ -37,8 +37,7 @@ from pytableaux.tools import EMPTY_SET, abcs, closure
 __all__ = (
     'LexWriter',
     'StandardLexWriter',
-    'PolishLexWriter',
-)
+    'PolishLexWriter')
 
 class LexWriterMeta(LangCommonMeta):
     'LexWriter Metaclass.'

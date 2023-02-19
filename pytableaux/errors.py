@@ -25,7 +25,7 @@ from __future__ import annotations
 
 # __all__ defined at the bottom.
 
-import enum as _enum
+from enum import Enum
 from typing import Callable, TYPE_CHECKING
 
 if  TYPE_CHECKING:
@@ -99,7 +99,7 @@ class DenotationError(ModelValueError):
 def _thru(o): return o
 def _len(o): return o if isinstance(o, int) else len(o)
 
-class Emsg(_enum.Enum):
+class Emsg(Enum):
 
     InstCheck = (TypeError,
         "Expected instance of '{1}' but got type '{0}'", (type, _thru))

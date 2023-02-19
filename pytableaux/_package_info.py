@@ -22,6 +22,7 @@ pytableaux._package_info
 from __future__ import annotations
 import os.path
 import typing
+from dataclasses import dataclass
 
 __docformat__ = 'google'
 __all__ = ('package',)
@@ -62,40 +63,69 @@ class SemVer(typing.NamedTuple):
         "Full version, e.g. ``'1.2.3-alpha'``"
         return f'{self.display}-{self.release}'
 
-class package:
+@dataclass(slots=True)
+class Author:
+    name: str
+    email: str
+
+@dataclass(slots=True)
+class License:
+    id: str
+    title: str
+    url: str
+
+@dataclass(slots=True)
+class Repository:
+    type: str
+    url: str
+
+@dataclass(slots=True)
+class Issues:
+    url: str
+
+@dataclass(slots=True)
+class Package:
     'Package info.'
-
-    name: str = 'pytableaux'
-
-    version: SemVer = SemVer(*__version__)
-
-    class author:
-        name  : str = 'Doug Owings'
-        email : str = 'doug@dougowings.net'
-
-    class license:
-        id    : str = 'AGPL-3.0-or-later'
-        title : str = 'GNU Affero General Public License v3.0 or later'
-        url   : str = 'https://www.gnu.org/licenses/agpl-3.0.en.html'
-
-    class repository:
-        type : str = 'git'
-        url  : str = 'https://github.com/owings1/pytableaux'
-
-    class issues:
-        url: str = 'https://github.com/owings1/pytableaux/issues'
-
-    year: int = __year__
-    'Last updated year'
-
-    copyright: str = (
-        f'2014-{year}, {author.name}. Released under the {license.title}')
-    'Project copyright string.'
-
-    root: str = os.path.dirname(os.path.abspath(__file__))
+    name: str
+    version: SemVer
+    author: Author
+    license: License
+    repository: Repository
+    issues: Issues
+    root: str
     'Base package directory.'
 
-    docformat: str = __docformat__
-    'The doc format.'
+    @property
+    def year(self) -> int:
+        'Last updated year'
+        return __year__
 
-    __slots__ = ()
+    @property
+    def docformat(self) -> str:
+        'The doc format.'
+        return __docformat__
+
+    @property
+    def copyright(self) -> str:
+        'Project copyright string.'
+        return (
+            f'2014-{self.year}, {self.author.name}. '
+            f'Released under the {self.license.title}')
+
+package = Package(
+    name = 'pytableaux',
+    version = SemVer(*__version__),
+    author = Author(
+        name = 'Doug Owings',
+        email = 'doug@dougowings.net'),
+    license = License(
+        id = 'AGPL-3.0-or-later',
+        title = 'GNU Affero General Public License v3.0 or later',
+        url = 'https://www.gnu.org/licenses/agpl-3.0.en.html'),
+    repository = Repository(
+        type = 'git',
+        url = 'https://github.com/owings1/pytableaux'),
+    issues = Issues(
+        url = 'https://github.com/owings1/pytableaux/issues'),
+    root = os.path.dirname(os.path.abspath(__file__)))
+'Package info.'

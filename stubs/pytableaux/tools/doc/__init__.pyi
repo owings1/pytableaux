@@ -1,3 +1,4 @@
+from enum import Enum
 from types import ModuleType
 from typing import (Any, Callable, ClassVar, Collection, Generic, Mapping,
                     NamedTuple, Pattern, overload)
@@ -6,22 +7,23 @@ import jinja2
 import sphinx.config
 import sphinx.directives
 from docutils import nodes
-from pytableaux.lang import Operator, Parser, Predicates
-from pytableaux.logics import LogicType
-from pytableaux.tools import abcs, dictns, qset
-from pytableaux.typing import _T, _DictT
 from sphinx.application import Sphinx
 from sphinx.config import Config
 from sphinx.environment import BuildEnvironment
 from sphinx.util.docutils import SphinxRole
 from sphinx.util.typing import RoleFunction
 
+from pytableaux.lang import Operator, Parser, Predicates
+from pytableaux.logics import LogicType
+from pytableaux.tools import abcs, dictns, qset
+from pytableaux.typing import _T, _DictT
+
 APPSTATE: dict[Sphinx, dict]
 
-class SphinxEvent(str, abcs.Ebc):
+class SphinxEvent(str, Enum):
     IncludeRead: str
 
-class ConfKey(str, abcs.Ebc):
+class ConfKey(str, Enum):
     copy_file_tree: str
     auto_skip_enum_value: str
     wnotn: str
