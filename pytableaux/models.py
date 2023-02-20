@@ -26,12 +26,12 @@ from dataclasses import dataclass
 from itertools import product, repeat
 from typing import Any, ClassVar, Generic, Mapping, TypeVar
 
-from pytableaux.errors import check
-from pytableaux.lang import (Argument, Atomic, LexType, Operated, Operator,
-                             Predicated, Quantified, Quantifier, Sentence)
-from pytableaux.proof import Branch
-from pytableaux.tools import closure
-from pytableaux.tools.abcs import Abc, Ebc
+from .errors import check
+from .lang import (Argument, Atomic, LexType, Operated, Operator, Predicated,
+                   Quantified, Quantifier, Sentence)
+from .proof import Branch
+from .tools import closure
+from .tools.abcs import Abc, Ebc
 
 __all__ = (
     'BaseModel',

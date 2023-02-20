@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import reprlib
 
-from pytableaux.lang.lex import (Lexical, LexicalEnum, LexicalAbc, LexType,
+from .lex import (Lexical, LexicalEnum, LexicalAbc, LexType,
                                  Predicate)
-from pytableaux.lang.writing import LexWriter
-from pytableaux.tools import closure
+from .writing import LexWriter
+from ..tools import closure
 
 
 class LangRepr(reprlib.Repr):

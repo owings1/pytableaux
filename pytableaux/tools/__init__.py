@@ -258,8 +258,8 @@ def dxopy():
 
     return api
 
-from pytableaux.tools import abcs
-from pytableaux.errors import check, Emsg
+from . import abcs
+from ..errors import check, Emsg
 
 class BaseMember:
 
@@ -694,6 +694,6 @@ class dictns(dictattr):
     def _keyattr_ok(cls, name):
         return len(name) and name[0] != '_'
 
-from pytableaux.tools.hybrids import qset as qset
-from pytableaux.tools.hybrids import qsetf as qsetf
-from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
+from .hybrids import qset as qset
+from .hybrids import qsetf as qsetf
+from .hybrids import EMPTY_QSET as EMPTY_QSET

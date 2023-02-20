@@ -25,22 +25,17 @@ import enum
 import re
 from collections import defaultdict
 from inspect import getsource
-from typing import TYPE_CHECKING
+from typing import Any, Collection
 
-from pytableaux.lang import LexType
-from pytableaux.logics import registry
-from pytableaux.proof import (Branch, ClosingRule, Rule, RuleEvent,
-                              TabEvent)
-from pytableaux.proof import TableauxSystem as TabSys
-from pytableaux.proof.filters import SentenceCompare
-from pytableaux.tools.abcs import isabstract
 from sphinx.ext.autodoc.importer import import_object
 
-if TYPE_CHECKING:
-    from typing import Any, Collection
-
-    from pytableaux.proof import Node, Rule, Target
-    from pytableaux.logics import LogicType
+from ...lang import LexType
+from ...logics import LogicType, registry
+from ...proof import Branch, ClosingRule, Node, Rule, RuleEvent, TabEvent
+from ...proof import TableauxSystem as TabSys
+from ...proof import Target
+from ...proof.filters import SentenceCompare
+from ..abcs import isabstract
 
 __all__ = (
     'EllipsisExampleHelper',

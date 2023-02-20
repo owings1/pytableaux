@@ -16,9 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.k as K
-from pytableaux.lang import Argument, Operated, Operator, Quantified, Sentence
-from pytableaux.proof import Branch, Node, Tableau, snode
+from ..lang import Argument, Operated, Operator, Quantified, Sentence
+from ..proof import Branch, Node, Tableau, snode
+from . import k as K
 
 name = 'CPL'
 
@@ -29,12 +29,10 @@ class Meta:
     category_order = 1
     tags = (
         'bivalent',
-        'non-modal',
-    )
+        'non-modal')
     native_operators = (
         Operator.Negation, Operator.Conjunction, Operator.Disjunction,
-        Operator.MaterialConditional, Operator.MaterialBiconditional,
-    )
+        Operator.MaterialConditional, Operator.MaterialBiconditional)
 
 class Model(K.Model):
 

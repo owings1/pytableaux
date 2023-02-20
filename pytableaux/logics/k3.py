@@ -16,10 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.fde as FDE
-from pytableaux.models import BaseModel, ValueK3
-from pytableaux.proof import Branch, Node, NodeAttr, Target, sdnode
-from pytableaux.proof.rules import BaseClosureRule
+from ..models import BaseModel, ValueK3
+from ..proof import Branch, Node, NodeAttr, Target, sdnode
+from ..proof.rules import BaseClosureRule
+from . import fde as FDE
 
 name = 'K3'
 

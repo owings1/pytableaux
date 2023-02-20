@@ -27,17 +27,15 @@ from enum import Enum
 from types import MappingProxyType as MapProxy
 from typing import ClassVar, Iterable, Mapping
 
-from pytableaux import __docformat__
-from pytableaux.errors import (BoundVariableError, IllegalStateError, Emsg,
-                               ParseError, UnboundVariableError)
-from pytableaux.lang import (BiCoords, LangCommonMeta, LexType, Marking,
-                             Notation, TableStore)
-from pytableaux.lang.collect import Argument, Predicates
-from pytableaux.lang.lex import (Atomic, Constant, Operated, Operator,
-                                 Parameter, Predicate, Predicated, Quantified,
-                                 Sentence, Variable)
-from pytableaux.tools import (EMPTY_SET, MapCover, abcs, for_defaults,
-                              itemsiter, key0, lazy, qset)
+from .. import __docformat__
+from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
+                      UnboundVariableError)
+from ..tools import (EMPTY_SET, MapCover, abcs, for_defaults, itemsiter, key0,
+                     lazy, qset)
+from . import BiCoords, LangCommonMeta, LexType, Marking, Notation, TableStore
+from .collect import Argument, Predicates
+from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate,
+                  Predicated, Quantified, Sentence, Variable)
 
 __all__ = (
     'Parser',
@@ -692,4 +690,3 @@ class ParseTable(MapCover, TableStore):
     def _from_mapping(cls, mapping):
         keypair = (Notation.default, f'_mapping{id(mapping)}')
         return cls(mapping, keypair)
-

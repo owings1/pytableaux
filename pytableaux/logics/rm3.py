@@ -16,10 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.fde as FDE
-import pytableaux.logics.lp as LP
-from pytableaux.lang import Operator
-from pytableaux.proof import adds, group, sdnode, Node
+from ..lang import Operator
+from ..proof import Node, adds, group, sdnode
+from . import fde as FDE
+from . import lp as LP
 
 name = 'RM3'
 

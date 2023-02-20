@@ -27,10 +27,10 @@ from collections.abc import Sequence
 from itertools import repeat
 from typing import Any, Iterable
 
-from pytableaux import __docformat__, tools
-from pytableaux.errors import Emsg, check
-from pytableaux.lang import LangCommonMeta, Predicate, Sentence
-from pytableaux.tools import abcs, lazy, membr, qset, wraps
+from .. import __docformat__, tools
+from ..errors import Emsg, check
+from ..tools import abcs, lazy, membr, qset, wraps
+from . import LangCommonMeta, Predicate, Sentence
 
 __all__ = (
     'Argument',

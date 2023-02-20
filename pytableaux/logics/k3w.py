@@ -16,10 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.fde as FDE
-import pytableaux.logics.k3 as K3
-from pytableaux.lang import Operator
-from pytableaux.proof import Branch, Node, adds, group, sdnode
+from ..lang import Operator
+from ..proof import Branch, Node, adds, group, sdnode
+from . import fde as FDE
+from . import k3 as K3
 
 name = 'K3W'
 

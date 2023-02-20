@@ -22,37 +22,31 @@ from __future__ import annotations
 
 import csv
 import sys
-from typing import TYPE_CHECKING
+from typing import Any, Literal
 
+import sphinx.config
 import sphinx.directives.code
 import sphinx.directives.other
 import sphinx.directives.patches
 from docutils import nodes
 from docutils.statemachine import StringList
-from pytableaux import examples, logics, models, tools
-from pytableaux.lang import (Argument, Atomic, Lexical, LexWriter, Marking,
-                             Notation, Predicates, RenderSet)
-from pytableaux.proof import Tableau, TabWriter, writers
-from pytableaux.tools import EMPTY_SET, qset
-from pytableaux.tools.doc import (BaseDirective, ConfKey, DirectiveHelper,
-                                  ParserOptionMixin, RenderMixin, SphinxEvent,
-                                  attrsopt, boolopt, choice_or_flag, choiceopt,
-                                  classopt, flagopt, nodez, opersopt, predsopt,
-                                  re_comma, snakespace, stropt)
-from pytableaux.tools.doc.misc import EllipsisExampleHelper, rules_sorted
-from pytableaux.tools.doc.nodez import block
 from sphinx import addnodes
+from sphinx.application import Sphinx
 from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
 
-if TYPE_CHECKING:
-    from typing import Any, Literal
+from ... import examples, logics, models, tools
+from ...lang import (Argument, Atomic, Lexical, LexWriter, Marking, Notation,
+                     Predicates, RenderSet)
+from ...proof import Rule, Tableau, TabWriter, writers
+from .. import EMPTY_SET, qset
+from . import (BaseDirective, ConfKey, DirectiveHelper, ParserOptionMixin,
+               RenderMixin, SphinxEvent, Tabler, attrsopt, boolopt,
+               choice_or_flag, choiceopt, classopt, flagopt, nodez, opersopt,
+               predsopt, re_comma, snakespace, stropt)
+from .misc import EllipsisExampleHelper, rules_sorted
+from .nodez import block
 
-    import sphinx.config
-    from pytableaux.proof import Rule
-    from pytableaux.tools.doc import Tabler
-    from sphinx.application import Sphinx
- 
 __all__ = (
     'CSVTable',
     'Include',

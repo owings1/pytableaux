@@ -31,14 +31,14 @@ from sphinx.errors import NoUri
 from sphinx.util import logging
 from sphinx.util.docutils import ReferenceRole
 
-from pytableaux import logics
-from pytableaux.lang import LexType, Notation, Predicate
-from pytableaux.tools import qset, qsetf
-from pytableaux.tools.doc import (BaseRole, ParserOptionMixin, classopt,
+from ... import logics
+from ...lang import LexType, Notation, Predicate
+from ...tools import qset, qsetf
+from . import (BaseRole, ParserOptionMixin, classopt,
                                   nodeopt, nodez, predsopt)
 
+from sphinx.application import Sphinx
 if TYPE_CHECKING:
-    from sphinx.application import Sphinx
 
     from pytableaux.typing import _F  # type: ignore
 
@@ -183,24 +183,15 @@ class lexdress(BaseRole, ParserOptionMixin):
 
     @rolerun
     def run(self):
-
         classes = self.set_classes()
         classes.update(self.opt_defaults['classes'])
-
         opts = self.options
-        # conf = self.config
-
         parser = self.parser_option()
         preds = parser.preds
         nodecls = opts.get('node', self.opt_defaults['node'])
-        # wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
-        # lw = LexWriter(wnotn, 'unicode')
-
         text = self.text
-
         item = None
         match = _re_nosent.match(text)
-
         if match is not None:
             char, sub = match.groups()
             table = parser.table
@@ -217,13 +208,10 @@ class lexdress(BaseRole, ParserOptionMixin):
                     item = preds.get((table.value(char), sub))
                 else:
                     item = ctype.cls(table.value(char), sub)
-
         if item is None:
             # Parse as sentence.
             item = parser(text)
-
         classes.add(item.TYPE.name.lower())
-
         node = nodecls(classes = classes)
         node += nodez.sentence(sentence = item)
         return node
@@ -411,4 +399,4 @@ def setup(app: Sphinx):
     app.add_role('refp', refplus())
     APPSTATE[app][refplus] = {}
 
-from pytableaux.tools.doc import APPSTATE
+from . import APPSTATE

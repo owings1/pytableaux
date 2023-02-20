@@ -28,10 +28,11 @@ import prometheus_client.metrics as pm
 import prometheus_client.metrics_core as pmc
 import simplejson as json
 from prometheus_client.registry import CollectorRegistry
-from pytableaux import __docformat__, package
-from pytableaux.errors import Emsg
-from pytableaux.lang.lex import Lexical
-from pytableaux.tools import abcs, MapCover
+
+from .. import __docformat__, package
+from ..errors import Emsg
+from ..lang.lex import Lexical
+from ..tools import MapCover, abcs
 
 if TYPE_CHECKING:
     class HasRegistry:
@@ -98,8 +99,7 @@ class AppMetrics(MapCover[str, MetricType], abcs.Abc):
         self.registry = registry
         mapping: dict[str, MetricType] = {
             name: metrcls(name, *spec, registry = registry)
-            for name, (metrcls, *spec) in metric_defs
-        }
+            for name, (metrcls, *spec) in metric_defs}
         for metric in mapping.values():
             metric.registry = registry
         super().__init__(mapping)
@@ -113,52 +113,41 @@ class AppMetrics(MapCover[str, MetricType], abcs.Abc):
         metric = type(m)(m._name,
             documentation = m._documentation,
             labelnames = m._labelnames,
-            registry = registry,
-        )
+            registry = registry)
         metric.registry = registry
         return metric
 
     @classmethod
-    def _from_mapping(cls, mapping):
-
+    def _from_mapping(cls, mapping: Mapping):
         inst = cls.__new__(cls)
-
         inst.config = {}
         inst.registry = cls._new_registry()
-
         mapping = {
             mkey: cls._copy_metric(m, inst.registry)
-            for mkey, m in mapping.items()
-        }
-
+            for mkey, m in mapping.items()}
         super().__init__(inst, mapping)
-
         return inst
 
 
 # ------------------------------------------------------------------
 
 def json_default(obj: Any):
-
     if isinstance(obj, Lexical):
         return obj.ident
-
     if isinstance(obj, Mapping):
         if callable(asdict := getattr(obj, '_asdict', None)):
             return asdict()
         return dict(obj)
-
     if isinstance(obj, Sequence):
         return list(obj)
-
     raise Emsg.CantJsonify(obj)
 
 tojson_defaults = dict(
     cls = json.JSONEncoderForHTML,
     namedtuple_as_object = False,
     for_json = True,
-    default = json_default,
-)
+    default = json_default)
+
 def tojson(*args, **kw):
     "Wrapper for ``json.dumps`` with html safe encoder and other defaults."
     return json.dumps(*args, **(tojson_defaults | kw))
@@ -173,7 +162,3 @@ def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]:
             if isinstance(form_data[param], str):
                 form_data[param] = [form_data[param]]
     return form_data
-
-del(
-    mwrap,
-)

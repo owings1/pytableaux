@@ -26,11 +26,11 @@ from abc import abstractmethod as abstract
 from types import MappingProxyType as MapProxy
 from typing import Any, Callable, NamedTuple
 
-from pytableaux import __docformat__
-from pytableaux.lang import (Lexical, Operated, Operator, Predicated,
-                             Quantified, Sentence)
-from pytableaux.proof import Access, Node, NodeAttr
-from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, thru, dictns
+from .. import __docformat__
+from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
+                    Sentence)
+from ..tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, thru
+from . import Access, Node, NodeAttr
 
 __all__ = (
     'AttrCompare',

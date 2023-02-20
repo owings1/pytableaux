@@ -31,15 +31,14 @@ from types import MappingProxyType as MapProxy
 from types import MethodType, ModuleType
 from typing import TYPE_CHECKING
 
-from pytableaux import __docformat__
-from pytableaux.errors import Emsg, check
-from pytableaux.tools import EMPTY_SET, abcs, closure, qset
-from pytableaux.tools.hybrids import QsetView
+from .. import __docformat__
+from ..errors import Emsg, check
+from ..tools import EMPTY_SET, abcs, closure, qset
+from ..tools.hybrids import QsetView
 
 __all__ = (
     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
-    'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't',
-)
+    'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't')
 
 NOARG = object()
 
@@ -82,17 +81,14 @@ class Registry(Mapping, abcs.Copyable):
     __slots__ = 'packages', 'modules', 'index', 'add', 'remove', 
 
     def __init__(self, *, source = None):
-        
         self.packages = qset()
         modules = qset()
         index = self.Index()
-
         if source is not None:
             source = check.inst(source, Registry)
             self.packages.update(source.packages)
             modules.update(source.modules)
             index.update(source.index)
-
         self.modules = QsetView(modules)
         self.index = MapProxy(index)
 
@@ -101,8 +97,7 @@ class Registry(Mapping, abcs.Copyable):
             modname = logic.__name__
             if modname not in modules:
                 index.update(
-                    zip(self._module_keys(logic), itertools.repeat(modname))
-                )
+                    zip(self._module_keys(logic), itertools.repeat(modname)))
                 modules.add(modname)
 
         def remove(logic):
@@ -129,7 +124,7 @@ class Registry(Mapping, abcs.Copyable):
         for logic in set(self.values()):
             self.remove(logic)
 
-    def __call__(self, key, /):
+    def __call__(self, key: str|ModuleType, /):
         """Get a logic from the registry, importing if needed.
 
         Args:
@@ -163,7 +158,6 @@ class Registry(Mapping, abcs.Copyable):
             if module.__package__ not in self.packages:
                 raise Emsg.NotLogicsPackage(module.__package__)
         else:
-
             if '.' in key:
                 pkgstr = '.'.join(key.split('.')[0:-1])
                 if pkgstr not in self.packages:
@@ -173,9 +167,7 @@ class Registry(Mapping, abcs.Copyable):
                 keylc = key.lower()
                 searchit = itertools.chain(
                     (f'{pkgname}.{keylc}' for pkgname in self.packages),
-                    (f'{pkgname}.{key}' for pkgname in self.packages),
-                )
-
+                    (f'{pkgname}.{key}' for pkgname in self.packages))
             tried = []
             for srchname in searchit:
                 tried.append(srchname)
@@ -316,8 +308,7 @@ class Registry(Mapping, abcs.Copyable):
             group.sort(key = key, reverse = reverse)
         return {
             category: groups[category]
-            for category in sorted(groups)
-        }
+            for category in sorted(groups)}
 
     def _check_package(self, pkgref: str|ModuleType, /):
         if pkgref in self.packages:
@@ -340,8 +331,7 @@ class Registry(Mapping, abcs.Copyable):
         """
         return (
             logic, logic.name, logic.__name__,
-            logic.__name__.split('.')[-1].lower(),
-        )
+            logic.__name__.split('.')[-1].lower())
         
     @staticmethod
     def _package_all(package: ModuleType, /):

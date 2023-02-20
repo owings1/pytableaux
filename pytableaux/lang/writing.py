@@ -27,12 +27,11 @@ from types import DynamicClassAttribute as dynca
 from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar
 
-from pytableaux.errors import Emsg, check
-from pytableaux.lang import (Atomic, Constant, CoordsItem, LangCommonMeta,
-                             Lexical, LexType, Marking, Notation, Operated,
-                             Operator, Predicate, Predicated, Quantified,
-                             RenderSet)
-from pytableaux.tools import EMPTY_SET, abcs, closure
+from ..errors import Emsg, check
+from ..tools import EMPTY_SET, abcs, closure
+from . import (Atomic, Constant, CoordsItem, LangCommonMeta, Lexical, LexType,
+               Marking, Notation, Operated, Operator, Predicate, Predicated,
+               Quantified, RenderSet)
 
 __all__ = (
     'LexWriter',

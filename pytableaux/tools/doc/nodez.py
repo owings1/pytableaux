@@ -28,14 +28,14 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from docutils import nodes
 from docutils.nodes import Element
+from sphinx.application import Sphinx
 from sphinx.util import logging
 from sphinx.writers.html5 import HTML5Translator as BaseTranslator
 
-from pytableaux.lang import LexWriter, Notation
-from pytableaux.tools.doc import ConfKey
+from ...lang import LexWriter, Notation
+from . import ConfKey
 
 if TYPE_CHECKING:
-    from sphinx.application import Sphinx
 
     from pytableaux.tools.doc.nodez import BaseTranslator
 

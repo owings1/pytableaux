@@ -27,15 +27,14 @@ from itertools import filterfalse
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
 
-from pytableaux.errors import Emsg, check
-from pytableaux.lang import Constant, Operator, Predicated, Sentence
-from pytableaux.proof import (Access, Branch, Node, NodeAttr, PropMap, Rule, RuleAttr, RuleEvent,
-                              RuleHelper, TabEvent, Tableau, Target, filters)
-from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, abcs, closure, minfloor,
-                              wraps)
+from ..errors import Emsg, check
+from ..lang import Constant, Operator, Predicated, Sentence
+from ..tools import EMPTY_MAP, EMPTY_SET, abcs, closure, minfloor, wraps
+from . import (Access, Branch, Node, NodeAttr, PropMap, Rule, RuleAttr,
+               RuleEvent, RuleHelper, TabEvent, Tableau, Target, filters)
 
 if TYPE_CHECKING:
-    from pytableaux.proof.rules import ClosingRule
+    from .rules import ClosingRule
 
 _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')

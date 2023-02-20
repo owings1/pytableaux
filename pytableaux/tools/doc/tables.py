@@ -25,15 +25,14 @@ import reprlib
 import sys
 from functools import partial
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Sequence
+from typing import Any, Callable, Sequence
 
-from pytableaux.lang import LexType, LexWriter, Operator, ParseTable, RenderSet
-from pytableaux.tools import abcs, closure, qset
-from pytableaux.tools.doc import ConfKey, Tabler, directives
-from pytableaux.tools.doc.directives import TableGenerator
+from sphinx.application import Sphinx
 
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
+from ...lang import LexType, LexWriter, Operator, ParseTable, RenderSet
+from .. import abcs, closure, qset
+from . import ConfKey, Tabler, directives
+from .directives import TableGenerator
 
 __all__ = (
     'lex_eg_table',
@@ -286,8 +285,7 @@ def member_table(owner: Sequence, columns: list[str], /, *, getitem = False):
     header = columns
     body = [
         [getter(m, name) for name in columns]
-        for m in owner
-    ]
+        for m in owner]
 
     return Tabler(body, header).apply_repr(srepr)
 
@@ -334,36 +332,24 @@ def main():
 
     theformats = qset(Tb.tabulate_formats)
     theformats -= {f for f in theformats if
-        'latex' in f or
-        'html' in f
-    }
+        'latex' in f or 'html' in f}
     prblock('Formats:', theformats)
     fmtit = _randgen(theformats)
    
     lexatrs = ['spec', 'ident', 'sort_tuple']
     shuffle(lexatrs)
 
-    def callspec_it() -> Iterator[
-        tuple[Callable[..., Tabler], Any,]
-    ]:
+    def callspec_it() -> Iterator[tuple[Callable[..., Tabler], Any]]:
         callspecs = [
-
             (oper_sym_table,),
-
             (lex_eg_table, lexatrs[0:2]),
-
             *((lex_eg_table, [name]) for name in lexatrs),
-
             (member_table, Operator, [
                 'name','order', 'label', 'arity', 'libname']),
-
             (member_table, LexType, [
-                'name', 'rank', 'cls', 'role', 'maxi'])
-        ]
-
+                'name', 'rank', 'cls', 'role', 'maxi'])]
         shuffle(callspecs)
         return iter(callspecs)
-
 
     for func, *args in callspec_it():
 

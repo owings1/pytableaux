@@ -25,13 +25,13 @@ from types import MappingProxyType as MapProxy
 import re
 from typing import Any, Callable, Mapping
 
-from pytableaux.tools import closure
+from ..tools import closure
 
 __all__ = ()
 
 def parsetables():
-    from pytableaux.lang import Marking, Notation
-    from pytableaux.lang.lex import LexType, Operator, Predicate, Quantifier
+    from . import Marking, Notation
+    from .lex import LexType, Operator, Predicate, Quantifier
 
     data = {
         Notation.standard: dict(
@@ -135,7 +135,7 @@ def rendersets():
 
     from html import unescape as html_unescape
 
-    from pytableaux.lang import (LexType, Marking, Notation, Operator,
+    from . import (LexType, Marking, Notation, Operator,
                                  Predicate, Quantifier)
 
     def dunesc(d: dict, inplace = False) -> None:

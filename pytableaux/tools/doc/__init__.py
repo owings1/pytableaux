@@ -52,7 +52,7 @@ from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import Any, NamedTuple
 
 import jinja2
 import sphinx.directives
@@ -61,20 +61,17 @@ from docutils import nodes
 from docutils.parsers.rst.directives import class_option
 from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
+from sphinx.application import Sphinx
+from sphinx.config import Config
+from sphinx.environment import BuildEnvironment
 from sphinx.ext import viewcode
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
 
-from pytableaux import errors, logics
-from pytableaux.lang import Operator, Parser, Predicates
-from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, qset
-
-if TYPE_CHECKING:
-
-    from sphinx.application import Sphinx
-    from sphinx.config import Config
-    from sphinx.environment import BuildEnvironment
+from ... import errors, logics
+from ...lang import Operator, Parser, Predicates
+from .. import EMPTY_MAP, EMPTY_SET, abcs, dictns, qset
 
 __all__ = (
     'AutodocProcessor',
@@ -228,8 +225,7 @@ class RoleDirectiveMixin(AppEnvMixin):
                 builder['classes'] = todo.pop('classes')
         builder.update({
             key: optspec[key](value)
-            for key, value in todo.items()
-        })
+            for key, value in todo.items()})
         return builder
 
     @abstract
@@ -321,14 +317,11 @@ class BaseRole(SphinxRole, RoleDirectiveMixin):
         inst.option_spec = MapProxy(dict(self.option_spec))
 
         def run():
-
             options = dict(buildopts) | inst.options
             content = newcontent.copy()
-
             if content and inst.content:
                 content += '\n'
             content.extend(inst.content)
-
             return self(name, inst.rawtext, inst.text, inst.lineno, inst.inliner,
                 options, content)
 
@@ -576,4 +569,4 @@ def predsopt(arg):
     return Predicates(map(int, spec.split(':'))
         for spec in re_comma.split(cleanws(arg)))
 
-from pytableaux.tools.doc import nodez
+from . import nodez

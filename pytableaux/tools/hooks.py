@@ -31,8 +31,8 @@ from types import FunctionType
 from types import MappingProxyType as MapProxy
 from typing import Callable
 
-from pytableaux.errors import Emsg, check
-from pytableaux.tools import abcs, closure, dund
+from ..errors import Emsg, check
+from . import abcs, closure, dund
 
 # Allowed local imports: errors, tools, tools.abcs
 

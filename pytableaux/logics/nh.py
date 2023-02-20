@@ -16,11 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.fde as FDE
-import pytableaux.logics.lp as LP
-import pytableaux.logics.mh as MH
-from pytableaux.lang import Operator, Quantified
-from pytableaux.proof import Branch, Node, adds, group, sdnode
+from ..lang import Operator, Quantified
+from ..proof import Branch, Node, adds, group, sdnode
+from . import fde as FDE
+from . import lp as LP
+from . import mh as MH
 
 name = 'NH'
 

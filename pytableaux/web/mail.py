@@ -23,6 +23,7 @@ pytableaux.web.mail
 
 __all__ = ('Mailroom',)
 
+import logging
 import re
 import smtplib
 import ssl
@@ -30,13 +31,11 @@ import threading
 import time
 from collections import deque
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
-from pytableaux import errors, web
-from pytableaux.errors import Emsg, check
-
-if TYPE_CHECKING:
-    import logging
+from .. import errors
+from ..errors import Emsg, check
+from . import get_logger
 
 re_email = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
 'Email regex.'
@@ -86,20 +85,15 @@ class Mailroom:
     _thread: threading.Thread
 
     def __init__(self, config: Mapping[str, Any]):
-
         self.config = MapProxy(config)
-        self.logger = web.get_logger(self, self.config)
-
+        self.logger = get_logger(self, self.config)
         self.queue = deque()
         self.failqueue = deque()
-
         self.loaded = False
         self.should_stop = False
         self.last_was_success = True
-
         self.tlscontext = None
         self._thread = None
-
         # Validate email addresses in config if applicable.
         if self.enabled and config['feedback_enabled']:
             for key in ('feedback_to_address', 'feedback_from_address'):
@@ -140,13 +134,11 @@ class Mailroom:
             return
 
         def process_queue():
-
             sent, tried = process_mail(
                 queue = self.queue,
                 failqueue = self.failqueue,
                 logger = self.logger,
-                connect = self._connect
-            )
+                connect = self._connect)
             if sent > 0:
                 self.last_was_success = True
             elif tried > 0:
@@ -176,28 +168,21 @@ class Mailroom:
         rq_interval: int = config['mailroom_requeue_interval']
 
         def loop():
-
             self.logger.info(f'Starting interval {interval}s, requeue {rq_interval}s')
-
             # TODO: Use a stopwatch instead of just counting ticks.
-
             # Ticks since main queue checked.
             tick = 0
             # Ticks since failqueue checked.
             rq_tick = 0
-
             while True:
-
                 if rq_tick >= rq_interval:
                     if len(self.failqueue):
                         requeue()
                     rq_tick = 0
-
                 if tick >= interval:
                     if len(self.queue):
                         process_queue()
                     tick = 0
-
                 while tick < interval:
                     time.sleep(1)
                     if self.should_stop:
@@ -267,8 +252,7 @@ class Mailroom:
             self.tlscontext.load_cert_chain(
                 config['smtp_tlscertfile'],
                 keyfile = config['smtp_tlskeyfile'],
-                password = config['smtp_tlskeypass'],
-            )
+                password = config['smtp_tlskeypass'])
 
     def _connect(self) -> smtplib.SMTP:
         config = self.config
@@ -293,14 +277,11 @@ class Mailroom:
 
 
 def process_mail(*, queue: deque, failqueue: deque, logger: logging.Logger, connect: Callable[[], smtplib.SMTP]) -> tuple[int, int]:
-
     if not len(queue):
         logger.error('No mail to process.')
         return
-
     requeue = deque()
     tried = sent = failed = 0
-
     try:
         try:
             smtp = connect()
@@ -322,18 +303,14 @@ def process_mail(*, queue: deque, failqueue: deque, logger: logging.Logger, conn
                     failed += 1
                     logger.error(
                         f'Sendmail failed with error: {err}',
-                        exc_info = err, stack_info = True
-                    )
+                        exc_info = err, stack_info = True)
                     requeue.append(job)
                 else:
                     sent += 1
-
     except Exception as err:
         logger.error(
             f'SMTP failed with error: {err}',
-            exc_info = err, stack_info = True
-        )
-
+            exc_info = err, stack_info = True)
     finally:
         if smtp is not None:
             logger.info('Disconnecting from SMTP server')
@@ -342,19 +319,13 @@ def process_mail(*, queue: deque, failqueue: deque, logger: logging.Logger, conn
             except Exception as err:
                 logger.warn(
                     f'Failed to quit SMTP connection: {err}',
-                    exc_info = err, stack_info = True
-                )
-
+                    exc_info = err, stack_info = True)
     if len(requeue):
         logger.info(f'Requeuing {len(requeue)} failed messages')
         failqueue.extend(requeue)
-
     return sent, tried
 
 
 def _dump_queue(queue):
-    return '\n'.join(
-        [
-            '\n', *[str(job['msg']) for job in queue]
-        ]
-    )
+    return '\n'.join([
+        '\n', *[str(job['msg']) for job in queue]])

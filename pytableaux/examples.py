@@ -25,11 +25,11 @@ from __future__ import annotations
 
 from types import MappingProxyType as MapProxy
 
-from pytableaux import logics
-from pytableaux.errors import check
-from pytableaux.lang import Argument, Parser, Predicates
-from pytableaux.proof import Tableau
-from pytableaux.tools import closure
+from . import logics
+from .errors import check
+from .lang import Argument, Parser, Predicates
+from .proof import Tableau
+from .tools import closure
 
 __all__ = (
     'aliases',

@@ -20,6 +20,7 @@ pytableaux._package_info
 
 """
 from __future__ import annotations
+
 import os.path
 import typing
 from dataclasses import dataclass

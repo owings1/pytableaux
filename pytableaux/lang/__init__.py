@@ -25,9 +25,8 @@ from collections.abc import Mapping
 from types import MappingProxyType as MapProxy
 from typing import ClassVar, NamedTuple
 
-from pytableaux.errors import Emsg
-from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, NoSetAttr, abcs, closure,
-                              dxopy)
+from ..errors import Emsg
+from ..tools import EMPTY_MAP, EMPTY_SET, NoSetAttr, abcs, closure, dxopy
 
 __all__ = (
     # Classes
@@ -456,21 +455,21 @@ class RenderSet(TableStore, Mapping):
 
 
 
-from pytableaux.lang.lex import Atomic, Constant
-from pytableaux.lang.lex import CoordsItem as CoordsItem
-from pytableaux.lang.lex import Lexical, LexType, Operated, Operator
-from pytableaux.lang.lex import Parameter as Parameter
+from .lex import Atomic, Constant
+from .lex import CoordsItem as CoordsItem
+from .lex import Lexical, LexType, Operated, Operator
+from .lex import Parameter as Parameter
 
 pass
 
-from pytableaux.lang.lex import (Predicate, Predicated, Quantified, Quantifier,
-                                 Sentence, Variable)
+from .lex import (Predicate, Predicated, Quantified, Quantifier, Sentence,
+                  Variable)
 
 pass
-from pytableaux.lang.parsing import Parser, ParseTable
+from .parsing import Parser, ParseTable
 
 pass
-from pytableaux.lang.collect import Argument, Predicates
+from .collect import Argument, Predicates
 
 pass
-from pytableaux.lang.writing import LexWriter
+from .writing import LexWriter

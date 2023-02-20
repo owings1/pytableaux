@@ -29,20 +29,19 @@ from types import MappingProxyType as MapProxy
 from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Mapping,
                     Optional, Sequence, final)
 
-from pytableaux import __docformat__
-from pytableaux.errors import Emsg, check
-from pytableaux.lang.collect import Argument
-from pytableaux.lang.lex import Sentence
-from pytableaux.logics import registry
-from pytableaux.proof import (BranchEvent, BranchStat, RuleEvent, RuleMeta,
-                              RuleState, StepEntry, TabEvent, TabFlag,
-                              TabStatKey, TabTimers)
-from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.tools import (EMPTY_SET, closure, for_defaults, qset, qsetf,
-                              wraps, SeqCover, absindex, dictns)
-from pytableaux.tools.events import EventEmitter
-from pytableaux.tools.linked import linqset
-from pytableaux.tools.timing import Counter, StopWatch
+from .. import __docformat__
+from ..errors import Emsg, check
+from ..lang.collect import Argument
+from ..lang.lex import Sentence
+from ..logics import registry
+from ..tools import (EMPTY_SET, SeqCover, absindex, closure, dictns,
+                     for_defaults, qset, qsetf, wraps)
+from ..tools.events import EventEmitter
+from ..tools.linked import linqset
+from ..tools.timing import Counter, StopWatch
+from . import (BranchEvent, BranchStat, RuleEvent, RuleMeta, RuleState,
+               StepEntry, TabEvent, TabFlag, TabStatKey, TabTimers)
+from .common import Branch, Node, Target
 
 if TYPE_CHECKING:
     from pytableaux.typing import _F  # type: ignore

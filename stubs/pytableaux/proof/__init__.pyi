@@ -5,6 +5,8 @@ from pytableaux.proof.tableaux import RulesRoot
 from pytableaux.tools import abcs
 from pytableaux.tools.timing import Counter, StopWatch
 from pytableaux.typing import _T, _SysRulesT
+from pytableaux.proof import filters as filters
+
 
 _Node = dict
 

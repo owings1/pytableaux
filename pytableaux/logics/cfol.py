@@ -16,9 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.cpl as CPL
-import pytableaux.logics.k as K
-from pytableaux.lang import Quantified
+from . import cpl as CPL
+from . import k as K
+from ..lang import Quantified
 
 name = 'CFOL'
 
@@ -30,8 +30,7 @@ class Meta(CPL.Meta):
     tags = (
         'bivalent',
         'non-modal',
-        'first-order',
-    )
+        'first-order')
 
 class Model(CPL.Model):
 

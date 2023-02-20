@@ -23,11 +23,11 @@ from __future__ import annotations
 
 from enum import Enum
 from itertools import filterfalse
-from typing import Callable, Mapping, Any
+from typing import Any, Callable, Mapping
 
-from pytableaux.errors import Emsg
-from pytableaux.tools import abcs, wraps
-from pytableaux.tools.linked import linqset
+from ..errors import Emsg
+from . import abcs, wraps
+from .linked import linqset
 
 __all__ = (
     'EventEmitter',

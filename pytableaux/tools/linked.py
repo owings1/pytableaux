@@ -25,12 +25,12 @@ from enum import IntEnum
 from itertools import filterfalse
 from typing import Any, Collection, Optional, SupportsIndex
 
-from pytableaux import __docformat__
-from pytableaux.errors import Emsg
-from pytableaux.errors import check as echeck
-from pytableaux.tools import EMPTY_SET, abcs, absindex, slicerange
-from pytableaux.tools.hooks import HookProvider
-from pytableaux.tools.hybrids import MutableSequenceSet
+from .. import __docformat__
+from ..errors import Emsg
+from ..errors import check as echeck
+from . import EMPTY_SET, abcs, absindex, slicerange
+from .hooks import HookProvider
+from .hybrids import MutableSequenceSet
 
 __all__ = (
     'HashLink',

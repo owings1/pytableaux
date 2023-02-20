@@ -28,13 +28,11 @@ from types import FunctionType
 from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar, Mapping, Sequence
 
-from pytableaux import _ENV, __docformat__, errors, tools
-from pytableaux.errors import Emsg, check
-from pytableaux.lang import (BiCoords, LangCommonEnum, LangCommonMeta,
-                             LexicalAbcMeta, SysPredEnumMeta, TriCoords,
-                             nosetattr)
-from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, abcs, lazy, membr, qsetf,
-                              wraps)
+from .. import _ENV, __docformat__, errors, tools
+from ..errors import Emsg, check
+from ..tools import EMPTY_SEQ, EMPTY_SET, abcs, lazy, membr, qsetf, wraps
+from . import (BiCoords, LangCommonEnum, LangCommonMeta, LexicalAbcMeta,
+               SysPredEnumMeta, TriCoords, nosetattr)
 
 __all__ = (
     'Atomic',
@@ -337,8 +335,8 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
     label: str
     "Label with spaces allowed."
 
-    # index: int
-    # "The member index in the members sequence."
+    index: int
+    "The member index in the members sequence."
 
     strings: frozenset[str]
     """Name, label, or other strings unique to a member.

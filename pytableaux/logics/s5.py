@@ -16,11 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.k as K
-import pytableaux.logics.s4 as S4
-import pytableaux.logics.t as T
-from pytableaux.proof import Access, Branch, Node, adds, group, anode
-from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from ..proof import Access, Branch, Node, adds, anode, group
+from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from . import k as K
+from . import s4 as S4
+from . import t as T
 
 name = 'S5'
 

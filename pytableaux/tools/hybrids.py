@@ -23,11 +23,11 @@ from __future__ import annotations
 
 from abc import abstractmethod as abstract
 from collections.abc import MutableSequence, MutableSet, Sequence, Set
-from itertools import filterfalse, chain
+from itertools import chain, filterfalse
 from typing import Iterable, SupportsIndex
 
-from pytableaux.errors import DuplicateValueError, Emsg, check
-from pytableaux.tools import abcs, slicerange, EMPTY_SEQ, EMPTY_SET
+from ..errors import DuplicateValueError, Emsg, check
+from . import EMPTY_SEQ, EMPTY_SET, abcs, slicerange
 
 __all__ = (
     'EMPTY_QSET',

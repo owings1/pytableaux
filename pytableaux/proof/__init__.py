@@ -22,18 +22,18 @@ pytableaux.proof
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
-from enum import auto, Enum, Flag
+from enum import Enum, Flag, auto
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, NamedTuple, Sequence
 
-from pytableaux import __docformat__
-from pytableaux.lang import Operator, Predicate, Quantifier
-from pytableaux.logics import LogicType
-from pytableaux.tools import EMPTY_MAP, EMPTY_QSET, EMPTY_SET, abcs, qsetf
-from pytableaux.tools.timing import Counter, StopWatch
+from .. import __docformat__
+from ..lang import Operator, Predicate, Quantifier
+from ..logics import LogicType
+from ..tools import EMPTY_MAP, EMPTY_QSET, EMPTY_SET, abcs, qsetf
+from ..tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
-    from pytableaux.proof import Rule
+    from ..proof import Rule
 
 __all__ = (
     'adds',
@@ -477,13 +477,13 @@ def anode(w1, w2):
     'Make an Access node.'
     return Node(dict(world1 = w1, world2 = w2))
 
-from pytableaux.proof.common import Branch, Node, Target
-from pytableaux.proof.tableaux import Rule, RulesRoot, Tableau
+from .common import Branch, Node, Target
+from .tableaux import Rule, RulesRoot, Tableau
 
 pass
-from pytableaux.proof.rules import ClosingRule as ClosingRule
+from .rules import ClosingRule as ClosingRule
 
 pass
-from pytableaux.proof import filters, helpers
-from pytableaux.proof.tableaux import TreeStruct as TreeStruct
-from pytableaux.proof.writers import TabWriter
+from . import filters, helpers
+from .tableaux import TreeStruct as TreeStruct
+from .writers import TabWriter

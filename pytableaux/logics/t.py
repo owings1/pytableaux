@@ -16,10 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.k as K
-from pytableaux.lang import Atomic
-from pytableaux.proof import Access, Branch, Node, adds, group, swnode, anode
-from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from ..lang import Atomic
+from ..proof import Access, Branch, Node, adds, anode, group, swnode
+from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from . import k as K
 
 name = 'T'
 

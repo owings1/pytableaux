@@ -23,23 +23,18 @@ from __future__ import annotations
 import os
 import re
 import shutil
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
+from sphinx.application import Sphinx
+from sphinx.config import Config
 from sphinx.ext import autodoc
 from sphinx.util import logging
 
-from pytableaux.errors import check
-from pytableaux.logics import registry
-from pytableaux.tools.doc import (AutodocProcessor, ConfKey, Processor,
-                                  ReplaceProcessor, SphinxEvent, misc)
-
-if TYPE_CHECKING:
-
-    # import sphinx_toolbox.more_autodoc.overloads
-    from proof.tableaux import Rule
-    from sphinx.application import Sphinx
-    from sphinx.config import Config
-    
+from ...errors import check
+from ...logics import registry
+from ...proof.tableaux import Rule
+from . import (AutodocProcessor, ConfKey, Processor, ReplaceProcessor,
+               SphinxEvent, misc, role_name, roles)
 
 __all__ = (
     'BuildtrunkExample',
@@ -69,8 +64,7 @@ class RuledocInherit(AutodocProcessor):
         logic = registry.locate(base)
         self += (
             f'*This rule is the same as* :class:`{logic.name} {base.name} '
-            f'<{base.__module__}.{base.__qualname__}>`'
-        )
+            f'<{base.__module__}.{base.__qualname__}>`')
         self += base.__doc__
 
 class RuledocExample(AutodocProcessor):
@@ -133,7 +127,6 @@ class RolewrapReplace(ReplaceProcessor):
         defns = self._defns
         if defns is not None:
             return defns
-        from pytableaux.tools.doc import role_name, roles
         rolewrap = {
             roles.metadress: ['prefixed'],
             roles.refplus  : ['logicref']}

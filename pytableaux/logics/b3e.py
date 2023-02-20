@@ -16,11 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-import pytableaux.logics.fde as FDE
-import pytableaux.logics.k3 as K3
-import pytableaux.logics.k3w as K3W
-from pytableaux.lang import Operator as Operator
-from pytableaux.proof import Branch, Node, adds, group, sdnode
+from ..lang import Operator as Operator
+from ..proof import Branch, Node, adds, group, sdnode
+from . import fde as FDE
+from . import k3 as K3
+from . import k3w as K3W
 
 name = 'B3E'
 
@@ -59,8 +59,7 @@ class TableauxSystem(K3.TableauxSystem):
         # reduction
         Operator.Conditional: ((0, 0), (0, 0)),
         # reduction
-        Operator.Biconditional: ((0, 0), (0, 0)),
-    }
+        Operator.Biconditional: ((0, 0), (0, 0)),}
 
 @TableauxSystem.initialize
 class TabRules(K3W.TabRules):
@@ -138,8 +137,7 @@ class TabRules(K3W.TabRules):
             s = self.sentence(node)
             # Keep designation fixed for inheritance below.
             return adds(
-                group(sdnode(s.lhs, True), sdnode(s.rhs, False))
-            )
+                group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):
         """
@@ -184,8 +182,7 @@ class TabRules(K3W.TabRules):
             # Keep designation neutral for inheritance below.
             d = self.designation
             return adds(
-                group(sdnode(sn1, d), sdnode(sn2, d))
-            )
+                group(sdnode(sn1, d), sdnode(sn2, d)))
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated):
         """

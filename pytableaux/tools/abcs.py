@@ -32,8 +32,8 @@ from enum import auto as eauto
 from types import MappingProxyType as MapProxy
 from typing import Callable, Iterable, Sequence
 
-from pytableaux import __docformat__, tools
-from pytableaux.errors import Emsg, check
+from .. import __docformat__, tools
+from ..errors import Emsg, check
 
 __all__ = (
     'Abc',
@@ -267,12 +267,6 @@ class EnumLookup(Mapping):
         return {member._name_, (member._name_,), member, member._value_}
 
 
-#=============================================================================
-#_____________________________________________________________________________
-#
-#       Enum Meta
-#_____________________________________________________________________________
-
 class EbcMeta(_enum.EnumMeta):
     'General-purpose base Metaclass for all Enum classes.'
 
@@ -402,14 +396,6 @@ class EbcMeta(_enum.EnumMeta):
         'Init hook once the class is initialized. Includes abstract classes.'
         pass
 
-#=============================================================================
-#_____________________________________________________________________________
-#
-#       Ebc Support Classes
-#
-#           skipflags = True
-#           skipabcm = True
-#_____________________________________________________________________________
 
 class Ebc(Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
 
@@ -489,12 +475,6 @@ class abcf(Flag):
         'Write the value, returns obj for decorator use.'
         setattr(obj, attr, cls(value))
         return obj
-
-#=============================================================================
-#_____________________________________________________________________________
-#
-#       Abc Meta
-#_____________________________________________________________________________
 
 def nsinit(ns, bases, /, skipflags = False):
     'Class namespace prepare routine.'
@@ -680,14 +660,6 @@ class AbcMeta(_abc.ABCMeta):
             return func
         return decorator
 
-#=============================================================================
-#_____________________________________________________________________________
-#
-#       Abc Base Classes
-#
-#           skiphooks = True
-#_____________________________________________________________________________
-
 class Abc(metaclass = AbcMeta, skiphooks = True):
     'Convenience for using AbcMeta as metaclass.'
 
@@ -721,12 +693,6 @@ class Copyable(metaclass = AbcMeta, skiphooks = True):
         subcls.__copy__ = subcls.copy
 
 from pytableaux.tools.hooks import hookutil
-
-#=============================================================================
-#_____________________________________________________________________________
-#
-#       Enum Base Classes
-#_____________________________________________________________________________
 
 class ItemMapEnum(Enum):
     """Fixed mapping enum based on item tuples.
@@ -772,7 +738,7 @@ class ItemMapEnum(Enum):
 #       Rebases
 #_____________________________________________________________________________
 
-from pytableaux import errors
+from .. import errors
 
 # Eset = _em_rebase(Eset, Ebc)
 Emsg = errors.Emsg = _em_rebase(Emsg, errors.EmsgBase, Ebc)

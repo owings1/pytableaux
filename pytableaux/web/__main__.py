@@ -35,5 +35,5 @@ if  __name__ == '__main__':
         if addpath not in sys.path:
             sys.path.insert(1, addpath)
 
-    from pytableaux.web.application import WebApp
+    from .application import WebApp
     WebApp().start()

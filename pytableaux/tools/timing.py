@@ -22,8 +22,9 @@ pytableaux.tools.timing
 from __future__ import annotations
 
 from time import time as _time
+from typing import Self
 
-from pytableaux.errors import IllegalStateError
+from ..errors import IllegalStateError
 
 __all__ = 'StopWatch', 'Counter'
 
@@ -32,6 +33,8 @@ def _nowms() -> int:
     return int(round(_time() * 1000))
 
 class TimingCommon:
+
+    __slots__ = ()
 
     @classmethod
     def gen(cls, n: int, *args, **kw):
@@ -73,7 +76,7 @@ class StopWatch(TimingCommon):
         self._running = False
         self._accum += _nowms() - self._start_time
 
-    def reset(self) -> StopWatch:
+    def reset(self) -> Self:
         'Reset elapsed to 0.'
         self._accum = 0
         if self._running:
@@ -82,7 +85,7 @@ class StopWatch(TimingCommon):
             self._start_time = None
         return self
 
-    def clear(self):
+    def clear(self) -> Self:
         self.reset()
         self.count = 0
         return self
@@ -132,7 +135,7 @@ class StopWatch(TimingCommon):
     def __str__(self):
         return str(self.elapsed())
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         'Start/stop context entry.'
         self.start()
         return self

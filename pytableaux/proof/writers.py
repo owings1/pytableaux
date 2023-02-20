@@ -28,13 +28,14 @@ from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Mapping
 
 import jinja2
-from pytableaux import __docformat__
-from pytableaux.errors import Emsg, check
-from pytableaux.lang import LexWriter, Notation
-from pytableaux.tools import EMPTY_MAP, abcs, closure, qset
+
+from .. import __docformat__
+from ..errors import Emsg, check
+from ..lang import LexWriter, Notation
+from ..tools import EMPTY_MAP, abcs, closure, qset
 
 if TYPE_CHECKING:
-    from pytableaux.proof import Tableau, TreeStruct
+    from . import Tableau, TreeStruct
 
 __all__ = (
     'HtmlTabWriter',

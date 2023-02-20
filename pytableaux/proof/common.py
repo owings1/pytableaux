@@ -26,18 +26,17 @@ from collections.abc import Mapping, Sequence, Set
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Iterable, Optional
 
-from pytableaux.errors import Emsg, check
-from pytableaux.lang import Constant, Sentence
-from pytableaux.proof import Access, BranchEvent, NodeAttr, PropMap
-from pytableaux.tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs,
-                              dictattr, isattrstr, isint, itemsiter, lazy,
-                              qset)
-from pytableaux.tools.events import EventEmitter
+from ..errors import Emsg, check
+from ..lang import Constant, Sentence
+from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs, dictattr,
+                     isattrstr, isint, itemsiter, lazy, qset)
+from ..tools.events import EventEmitter
+from . import Access, BranchEvent, NodeAttr, PropMap
 
 if TYPE_CHECKING:
 
-    from pytableaux.models import BaseModel
-    from pytableaux.proof import StepEntry, Rule
+    from ..models import BaseModel
+    from . import Rule, StepEntry
 
 __all__ = (
     'Branch',

@@ -7,6 +7,7 @@ from typing import (Any, Callable, Concatenate, Generator, Generic, Iterable,
 from pytableaux.typing import _F, _KT, _P, _RT, _T, _VT, _MapT, _Self, property, _T_co
 
 pass
+from pytableaux.tools import abcs as abcs
 from pytableaux.tools.abcs import AbcMeta, Copyable
 from pytableaux.tools.hybrids import EMPTY_QSET as EMPTY_QSET
 from pytableaux.tools.hybrids import qset as qset

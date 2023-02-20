@@ -21,16 +21,16 @@ pytableaux.errors
 """
 from __future__ import annotations
 
+from enum import Enum
+from typing import TYPE_CHECKING, Callable
+
 # No local imports!
 
 # __all__ defined at the bottom.
 
-from enum import Enum
-from typing import Callable, TYPE_CHECKING
 
 if  TYPE_CHECKING:
-    from typing import overload
-    from typing import TypeVar
+    from typing import TypeVar, overload
     _ExT = TypeVar('_ExT', bound = Exception)
     _T = TypeVar('_T')
 
@@ -189,6 +189,7 @@ class check:
 
 
 from warnings import warn as warn
+
 
 # Some external assembly required.
 class EmsgBase:
