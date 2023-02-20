@@ -16,8 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified
-from ..proof import Branch, Node, adds, group, sdnode
+from pytableaux.lang import Operator, Quantified
+from pytableaux.proof import Branch, Node, adds, group, sdnode
+
 from . import fde as FDE
 from . import lp as LP
 from . import mh as MH
@@ -25,18 +26,17 @@ from . import mh as MH
 name = 'NH'
 
 class Meta(LP.Meta):
-    title       = 'Paraconsistent Hybrid Logic'
+    title = 'Paraconsistent Hybrid Logic'
     description = (
         'Three-valued logic (True, False, Both) with non-standard conjunction, '
-        'and a classical-like conditional'
-    )
+        'and a classical-like conditional')
     category_order = 110
     tags = ( # remove first-order
         'many-valued',
         'glutty',
-        'non-modal',
-    )
-    native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
+        'non-modal')
+    native_operators = FDE.Meta.native_operators + (
+        Operator.Conditional, Operator.Biconditional)
 
 class Model(LP.Model):
 
@@ -67,8 +67,7 @@ class TableauxSystem(LP.TableauxSystem):
         Operator.MaterialBiconditional: ((0, 0), (0, 0)),
         Operator.Conditional: ((0, 1), (1, 0)),
         # for now, reduce to conjunction
-        Operator.Biconditional: ((0, 0), (0, 0)),
-    }
+        Operator.Biconditional: ((0, 0), (0, 0))}
 
 @TableauxSystem.initialize
 class TabRules(LP.TabRules):

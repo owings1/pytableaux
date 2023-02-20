@@ -16,24 +16,24 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations as annotations
 
-from ..models import BaseModel, ValueLP
-from ..proof import Branch, Node, Target, sdnode
-from ..proof.rules import BaseClosureRule
-from ..tools import qsetf
+from pytableaux.models import BaseModel, ValueLP
+from pytableaux.proof import Branch, Node, Target, sdnode
+from pytableaux.proof.rules import BaseClosureRule
+from pytableaux.tools import qsetf
+
 from . import fde as FDE
 
 name = 'LP'
 
 class Meta(FDE.Meta):
-    title       = 'Logic of Paradox'
+    title = 'Logic of Paradox'
     description = 'Three-valued logic (T, F, B)'
     category_order = 100
     tags = (
         'many-valued',
         'glutty',
         'non-modal',
-        'first-order',
-    )
+        'first-order')
 
 class Model(FDE.Model, BaseModel[ValueLP]):
     Value = ValueLP
@@ -56,8 +56,7 @@ class TabRules(FDE.TabRules):
             if nnode is not None:
                 return Target(
                     nodes = qsetf((node, nnode)),
-                    branch = branch,
-                )
+                    branch = branch)
 
         def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
             return bool(self._find_closing_node(node, branch))
@@ -70,11 +69,10 @@ class TabRules(FDE.TabRules):
 
         @staticmethod
         def example_nodes():
-            from ..lang import Atomic
+            from pytableaux.lang import Atomic
             s = Atomic.first()
             return sdnode(s, False), sdnode(~s, False)
 
     closure_rules = (
         GapClosure,
-        FDE.TabRules.DesignationClosure,
-    )
+        FDE.TabRules.DesignationClosure)

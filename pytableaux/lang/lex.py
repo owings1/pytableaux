@@ -26,7 +26,7 @@ import operator as opr
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar, Mapping, Sequence
+from typing import Any, ClassVar, Iterator, Mapping, Self, Sequence
 
 from .. import _ENV, __docformat__, errors, tools
 from ..errors import Emsg, check
@@ -110,19 +110,19 @@ class Lexical:
     #******  Item Generation
 
     @classmethod
-    def first(cls):
+    def first(cls) -> Self:
         "Get the canonically first item of the type."
         if cls is __class__:
             return Predicate.first()
         raise TypeError(f'Abstract type {cls}')
 
     @tools.abstract
-    def next(self, **kw):
+    def next(self, **kw) -> Self:
         "Get the canonically next item of the type."
         raise NotImplementedError
 
     @classmethod
-    def gen(cls, stop: int|None, /, first = None, **nextkw):
+    def gen(cls, stop: int|None, /, first = None, **nextkw) -> Iterator[Self]:
         """Generate items of the type, using :func:`first` and :func:`next` methods.
 
         Args:
@@ -1298,7 +1298,7 @@ class LexType(LangCommonEnum):
     @classmethod
     def _member_keys(cls, member: LexType):
         """``EbcMeta`` hook. Add the class object to the member lookup keys."""
-        return super()._member_keys(member)# | {member.cls}
+        return super()._member_keys(member) | {member.cls}
 
     @classmethod
     def _after_init(cls):

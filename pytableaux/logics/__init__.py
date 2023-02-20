@@ -29,7 +29,7 @@ from importlib import import_module
 from types import FunctionType
 from types import MappingProxyType as MapProxy
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .. import __docformat__
 from ..errors import Emsg, check
@@ -59,7 +59,7 @@ class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None)
         all_rules: tuple
 
 
-class Registry(Mapping, abcs.Copyable):
+class Registry(Mapping[Any, LogicType], abcs.Copyable):
     """Logic module registry.
     """
 
@@ -318,7 +318,7 @@ class Registry(Mapping, abcs.Copyable):
         raise Emsg.NotLogicsPackage(pkgref.__name__)
 
     @staticmethod
-    def _module_keys(logic, /):
+    def _module_keys(logic: LogicType|ModuleType, /):
         """Get the index keys for a logic module.
 
         Args:

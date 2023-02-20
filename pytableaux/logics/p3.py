@@ -16,16 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Constant, Operator, Quantified, Quantifier
-from ..proof import Branch, Node, adds, group, sdnode
-from ..tools import maxceil
+from pytableaux.lang import Constant, Operator, Quantified, Quantifier
+from pytableaux.proof import Branch, Node, adds, group, sdnode
+from pytableaux.tools import maxceil
+
 from . import fde as FDE
 from . import k3 as K3
 
 name = 'P3'
 
 class Meta(K3.Meta):
-    title       = 'Post 3-valued Logic'
+    title = 'Post 3-valued Logic'
     description = 'Emil Post three-valued logic (T, F, and N) with mirror-image negation'
     category_order = 120
 
@@ -42,10 +43,12 @@ class Model(K3.Model):
         """
         v = s.variable
         sub = s.sentence.substitute
-        return self.truth_function(Operator.Negation, maxceil(self.Value.T, (
-            self.truth_function(Operator.Negation, self.value_of(sub(c, v), **kw))
-            for c in self.constants
-        )))
+        return self.truth_function(
+            Operator.Negation,
+            maxceil(
+                self.Value.T,
+                (self.truth_function(Operator.Negation, self.value_of(sub(c, v), **kw))
+                    for c in self.constants)))
 
     def truth_function(self, oper, a, b=None, /):
         oper = Operator(oper)
@@ -56,9 +59,7 @@ class Model(K3.Model):
                 Operator.Negation,
                 self.truth_function(
                     Operator.Disjunction,
-                    *(self.truth_function(Operator.Negation, x) for x in (a, b))
-                )
-            )
+                    *(self.truth_function(Operator.Negation, x) for x in (a, b))))
         return super().truth_function(oper, a, b)
 
     def back_cycle(self, value):
@@ -79,8 +80,7 @@ class TableauxSystem(K3.TableauxSystem):
         # reduction
         Operator.Conditional: ((0, 0), (0, 0)),
         # reduction
-        Operator.Biconditional: ((0, 0), (0, 0)),
-    }
+        Operator.Biconditional: ((0, 0), (0, 0))}
 
 @TableauxSystem.initialize
 class TabRules(K3.TabRules):

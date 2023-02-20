@@ -18,8 +18,9 @@ from __future__ import annotations
 
 from typing import Generator
 
-from ..proof import Access, Branch, Node, Target, adds, anode, group
-from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.proof import Access, Branch, Node, Target, adds, anode, group
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+
 from . import k as K
 from . import t as T
 
@@ -35,7 +36,7 @@ class Model(T.Model):
     def finish(self):
         R = self.R
         while True:
-            super().finish
+            super().finish()
             to_add = set()
             for w1 in self.frames:
                 for w2 in R[w1]:

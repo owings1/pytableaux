@@ -16,9 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Quantified, Quantifier
-from ..proof import Branch, Node, adds, group, sdnode
-from ..tools import maxceil, minfloor
+from pytableaux.lang import Quantified, Quantifier
+from pytableaux.proof import Branch, Node, adds, group, sdnode
+from pytableaux.tools import maxceil, minfloor
+
 from . import fde as FDE
 from . import k3w as K3W
 

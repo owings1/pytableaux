@@ -16,8 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator as Operator
-from ..proof import Branch, Node, adds, group, sdnode
+from pytableaux.lang import Operator as Operator
+from pytableaux.proof import Branch, Node, adds, group, sdnode
+
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
@@ -46,8 +47,7 @@ class Model(K3W.Model):
             return self.truth_function(
                 Operator.Disjunction,
                 self.truth_function(Operator.Negation, self.truth_function(Operator.Assertion, a)),
-                self.truth_function(Operator.Assertion, b)
-            )
+                self.truth_function(Operator.Assertion, b))
         elif oper is Operator.Biconditional:
             return FDE.Model.truth_function(self, oper, a, b)
         return super().truth_function(oper, a, b)

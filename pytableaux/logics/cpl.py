@@ -16,8 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Argument, Operated, Operator, Quantified, Sentence
-from ..proof import Branch, Node, Tableau, snode
+from pytableaux.lang import Argument, Operated, Operator, Quantified, Sentence
+from pytableaux.proof import Branch, Node, Tableau, snode
+
 from . import k as K
 
 name = 'CPL'

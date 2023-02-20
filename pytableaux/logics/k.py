@@ -19,17 +19,17 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Callable, Optional, cast
 
-from ..errors import DenotationError, ModelValueError, check
-from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
+from pytableaux.errors import DenotationError, ModelValueError, check
+from pytableaux.lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
-from ..models import BaseModel, ValueCPL
-from ..proof import (Access, Branch, Node, Tableau, TableauxSystem, Target,
+from pytableaux.models import BaseModel, ValueCPL
+from pytableaux.proof import (Access, Branch, Node, Tableau, TableauxSystem, Target,
                      adds, anode, filters, group, rules, swnode)
-from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
+from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
                              WorldIndex)
-from ..tools import EMPTY_SET, closure, substitute
-from . import LogicType
+from pytableaux.tools import EMPTY_SET, closure, substitute
+from pytableaux.logics import LogicType
 from . import fde as FDE
 
 name = 'K'
@@ -105,8 +105,7 @@ class Model(BaseModel[ValueCPL]):
         model.Value = Value
         return cast(
             Callable[[Operator, Any, Optional[Any]], ValueCPL],
-            model.truth_function,
-        )
+            model.truth_function)
 
     def value_of_predicated(self, s: Predicated, **kw):
         """
@@ -185,8 +184,7 @@ class Model(BaseModel[ValueCPL]):
                 member_datatype = 'int',
                 member_typehint = 'world',
                 symbol          = 'W',
-                values          = sorted(self.frames),
-            ),
+                values          = sorted(self.frames)),
             Access = dict(
                 description     = 'access relation',
                 in_summary      = True,
@@ -196,8 +194,7 @@ class Model(BaseModel[ValueCPL]):
                 member_typehint = 'access',
                 symbol          = 'R',
                 values          = sorted((w1, w2) for w1, sees in self.R.items()
-                                    for w2 in sees),
-            ),
+                                    for w2 in sees)),
             Frames = dict(
                 description     = 'world frames',
                 datatype        = 'list',
@@ -207,10 +204,7 @@ class Model(BaseModel[ValueCPL]):
                 symbol          = 'F',
                 values          = [
                     frame.get_data()
-                    for frame in sorted(self.frames.values())
-                ]
-            )
-        )
+                    for frame in sorted(self.frames.values())]))
 
     def read_branch(self, branch: Branch, /):
         for _ in map(self._read_node, branch):
@@ -241,10 +235,8 @@ class Model(BaseModel[ValueCPL]):
             self.frames[w]
 
         for w, frame in self.frames.items():
-
-            atomics.update(frame.atomics.keys())
-            opaques.update(frame.opaques.keys())
-
+            atomics.update(frame.atomics)
+            opaques.update(frame.opaques)
             for pred in self.predicates:
                 self._agument_extension_with_identicals(pred, w)
             self._ensure_self_identity(w)
@@ -389,12 +381,10 @@ class Frame:
     "A map of predicates to their extension."
 
     def __init__(self, world):
-
         self.world = world
         self.atomics = {}
         self.opaques = {}
         self.extensions = {pred: set() for pred in Predicate.System}
-
         # Track the anti-extensions to ensure integrity
         self.anti_extensions = {}
 
@@ -502,7 +492,9 @@ class Frame:
 
 
 class Frames(dict[int, Frame]):
+
     __slots__ = EMPTY_SET
+
     def __missing__(self, key):
         if key is None:
             return self[0]
@@ -515,13 +507,12 @@ class TableauxSystem(TableauxSystem):
     neg_branchable = {
         Operator.Conjunction,
         Operator.MaterialBiconditional,
-        Operator.Biconditional,
-    }
+        Operator.Biconditional}
+
     pos_branchable = {
         Operator.Disjunction,
         Operator.MaterialConditional,
-        Operator.Conditional,
-    }
+        Operator.Conditional}
 
     @classmethod
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
@@ -654,8 +645,7 @@ class TabRules(LogicType.TabRules):
                 type(s) is Operated and
                 s.operator is Operator.Negation and
                 type(s.lhs) is Predicated and
-                s.lhs.predicate is Predicate.System.Existence
-            )
+                s.lhs.predicate is Predicate.System.Existence)
 
         @classmethod
         def example_nodes(cls) -> tuple[dict]:
@@ -673,8 +663,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
-                group(swnode(self.sentence(node).lhs, node.get('world')))
-            )
+                group(swnode(self.sentence(node).lhs, node.get('world'))))
 
     class Assertion(OperatorNodeRule):
         """
@@ -685,8 +674,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
-                group(swnode(self.sentence(node).lhs, node.get('world')))
-            )
+                group(swnode(self.sentence(node).lhs, node.get('world'))))
 
     class AssertionNegated(OperatorNodeRule):
         """
@@ -699,8 +687,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
-                group(swnode(~self.sentence(node).lhs, node.get('world')))
-            )
+                group(swnode(~self.sentence(node).lhs, node.get('world'))))
 
     class Conjunction(OperatorNodeRule):
         """
@@ -714,8 +701,7 @@ class TabRules(LogicType.TabRules):
             s = self.sentence(node)
             w = node.get('world')
             return adds(
-                group(swnode(s.lhs, w), swnode(s.rhs, w))
-            )
+                group(swnode(s.lhs, w), swnode(s.rhs, w)))
 
     class ConjunctionNegated(OperatorNodeRule):
         """
@@ -732,8 +718,7 @@ class TabRules(LogicType.TabRules):
             w = node.get('world')
             return adds(
                 group(swnode(~s.lhs, w)),
-                group(swnode(~s.rhs, w)),
-            )
+                group(swnode(~s.rhs, w)))
 
     class Disjunction(OperatorNodeRule):
         """
@@ -749,8 +734,7 @@ class TabRules(LogicType.TabRules):
             w = node.get('world')
             return adds(
                 group(swnode(s.lhs, w)),
-                group(swnode(s.rhs, w)),
-            )
+                group(swnode(s.rhs, w)))
 
     class DisjunctionNegated(OperatorNodeRule):
         """
@@ -764,8 +748,7 @@ class TabRules(LogicType.TabRules):
             s = self.sentence(node)
             w = node.get('world')
             return adds(
-                group(swnode(~s.lhs, w), swnode(~s.rhs, w))
-            )
+                group(swnode(~s.lhs, w), swnode(~s.rhs, w)))
 
     class MaterialConditional(OperatorNodeRule):
         """
@@ -782,8 +765,7 @@ class TabRules(LogicType.TabRules):
             w = node.get('world')
             return adds(
                 group(swnode(~s.lhs, w)),
-                group(swnode( s.rhs, w)),
-            )
+                group(swnode( s.rhs, w)))
 
     class MaterialConditionalNegated(OperatorNodeRule):
         """
@@ -798,8 +780,7 @@ class TabRules(LogicType.TabRules):
             s = self.sentence(node)
             w = node.get('world')
             return adds(
-                group(swnode(s.lhs, w), swnode(~s.rhs, w))
-            )
+                group(swnode(s.lhs, w), swnode(~s.rhs, w)))
 
     class MaterialBiconditional(OperatorNodeRule):
         """
@@ -818,8 +799,7 @@ class TabRules(LogicType.TabRules):
             lhs, rhs = s
             return adds(
                 group(swnode(~lhs, w), swnode(~rhs, w)),
-                group(swnode( rhs, w), swnode( lhs, w)),
-            )
+                group(swnode( rhs, w), swnode( lhs, w)))
 
     class MaterialBiconditionalNegated(OperatorNodeRule):
         """
@@ -839,8 +819,7 @@ class TabRules(LogicType.TabRules):
             lhs, rhs = s
             return adds(
                 group(swnode( lhs, w), swnode(~rhs, w)),
-                group(swnode(~lhs, w), swnode( rhs, w)),
-            )
+                group(swnode(~lhs, w), swnode( rhs, w)))
 
     class Conditional(MaterialConditional):
         """
@@ -902,8 +881,7 @@ class TabRules(LogicType.TabRules):
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             return adds(
-                group(swnode(branch.new_constant() >> s, node.get('world')))
-            )
+                group(swnode(branch.new_constant() >> s, node.get('world'))))
 
     class ExistentialNegated(rules.QuantifiedSentenceRule, DefaultNodeRule):
         """
@@ -919,8 +897,7 @@ class TabRules(LogicType.TabRules):
             v, si = self.sentence(node)[1:]
             # Keep conversion neutral for inheritance below.
             return adds(
-                group(swnode(self.convert(v, ~si), node.get('world')))
-            )
+                group(swnode(self.convert(v, ~si), node.get('world'))))
 
     class Universal(rules.ExtendedQuantifierRule, DefaultNodeRule):
         """
@@ -971,8 +948,7 @@ class TabRules(LogicType.TabRules):
             w2 = branch.new_world()
             return adds(
                 group(swnode(si, w2), anode(w1, w2)),
-                sentence = si
-            )
+                sentence = si)
 
         def score_candidate(self, target: Target, /) -> float:
             """
@@ -1010,8 +986,7 @@ class TabRules(LogicType.TabRules):
         def _get_node_targets(self, node: Node, _, /):
             s = self.sentence(node)
             return adds(
-                group(swnode(self.convert(~s.lhs), node['world']))
-            )
+                group(swnode(self.convert(~s.lhs), node['world'])))
 
     class Necessity(rules.OperatedSentenceRule, DefaultNodeRule):
         """
@@ -1052,9 +1027,8 @@ class TabRules(LogicType.TabRules):
                     anode = self[WorldIndex].nodes[branch][w1, w2]
                     yield adds(group(add),
                         sentence = si,
-                        world    = w2,
-                        nodes    = (node, anode),
-                    )
+                        world = w2,
+                        nodes = (node, anode))
 
         def score_candidate(self, target: Target, /) -> float:
 
@@ -1142,8 +1116,7 @@ class TabRules(LogicType.TabRules):
                 # The rule applies.
                 targets.append(dict(
                     nodes = (node, n),
-                    ** adds(group(n_new)),
-                ))
+                    ** adds(group(n_new))))
             return targets
 
         @classmethod
@@ -1156,8 +1129,7 @@ class TabRules(LogicType.TabRules):
     closure_rules = (
         ContradictionClosure,
         SelfIdentityClosure,
-        NonExistenceClosure,
-    )
+        NonExistenceClosure)
 
     rule_groups = (
         (

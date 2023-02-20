@@ -16,26 +16,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified, Sentence
-from ..proof import Node, adds, group, sdnode
+from pytableaux.lang import Operator, Quantified, Sentence
+from pytableaux.proof import Node, adds, group, sdnode
+
 from . import fde as FDE
 from . import k3 as K3
 
 name = 'MH'
 
 class Meta(K3.Meta):
-    title       = 'Paracomplete Hybrid Logic'
+    title = 'Paracomplete Hybrid Logic'
     description = (
         'Three-valued logic (True, False, Neither) with non-standard disjunction, '
-        'and a classical-like conditional'
-    )
+        'and a classical-like conditional')
     category_order = 70
     tags = ( # remove first-order
         'many-valued',
         'gappy',
-        'non-modal',
-    )
-    native_operators = K3.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
+        'non-modal')
+    native_operators = K3.Meta.native_operators + (
+        Operator.Conditional, Operator.Biconditional)
 
 class Model(K3.Model):
 
@@ -68,8 +68,7 @@ class TableauxSystem(K3.TableauxSystem):
         Operator.MaterialBiconditional: ((0, 0), (0, 0)),
         Operator.Conditional: ((0, 1), (1, 0)),
         # for now, reduce to conjunction
-        Operator.Biconditional: ((0, 0), (0, 0)),
-    }
+        Operator.Biconditional: ((0, 0), (0, 0))}
 
 @TableauxSystem.initialize
 class TabRules(K3.TabRules):
@@ -95,13 +94,10 @@ class TabRules(K3.TabRules):
                     sdnode( lhs, not d),
                     sdnode(~lhs, not d),
                     sdnode( rhs, not d),
-                    sdnode(~rhs, not d),
-                ),
+                    sdnode(~rhs, not d)),
                 group(
                     sdnode(~lhs, d),
-                    sdnode(~rhs, d),
-                )
-            )
+                    sdnode(~rhs, d)))
 
     class DisjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -134,18 +130,13 @@ class TabRules(K3.TabRules):
             d = self.designation
             return adds(
                 group(
-                    sdnode(lhs, not d)
-                ),
+                    sdnode(lhs, not d)),
                 group(
-                    sdnode(rhs, not d)
-                ),
+                    sdnode(rhs, not d)),
                 group(
-                    sdnode(lhs, d), sdnode(~lhs, d), sdnode(~rhs, not d)
-                ),
+                    sdnode(lhs, d), sdnode(~lhs, d), sdnode(~rhs, not d)),
                 group(
-                    sdnode(rhs, d), sdnode(~rhs, d), sdnode(~lhs, not d)
-                ),
-            )
+                    sdnode(rhs, d), sdnode(~rhs, d), sdnode(~lhs, not d)))
 
     class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -157,8 +148,7 @@ class TabRules(K3.TabRules):
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
             return adds(
-                group(sdnode(~lhs | rhs, self.designation))
-            )
+                group(sdnode(~lhs | rhs, self.designation)))
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -171,8 +161,7 @@ class TabRules(K3.TabRules):
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
             return adds(
-                group(sdnode(~(~s.lhs | s.rhs), self.designation))
-            )
+                group(sdnode(~(~s.lhs | s.rhs), self.designation)))
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
         """
@@ -230,8 +219,7 @@ class TabRules(K3.TabRules):
             # Keep designation fixed for inheritance below.
             return adds(
                 group(sdnode(s.lhs, False)),
-                group(sdnode(s.rhs, True)),
-            )
+                group(sdnode(s.rhs, True)))
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -251,8 +239,7 @@ class TabRules(K3.TabRules):
             s = self.sentence(node)
             # Keep designation fixed for inheritance below.
             return adds(
-                group(sdnode(s.lhs, True), sdnode(s.rhs, False))
-            )
+                group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):
         """

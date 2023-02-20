@@ -16,8 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator
-from ..proof import Branch, Node, adds, group, sdnode
+from pytableaux.lang import Operator
+from pytableaux.proof import Branch, Node, adds, group, sdnode
 from . import fde as FDE
 from . import k3 as K3
 
@@ -50,8 +50,7 @@ class TableauxSystem(K3.TableauxSystem):
         # reduction
         Operator.Conditional: ((0, 0), (0, 0)),
         # reduction
-        Operator.Biconditional: ((0, 0), (0, 0)),
-    }
+        Operator.Biconditional: ((0, 0), (0, 0))}
 
 @TableauxSystem.initialize
 class TabRules(K3.TabRules):
@@ -75,8 +74,7 @@ class TabRules(K3.TabRules):
             return adds(
                 group(sdnode( lhs, True), sdnode(~rhs, True)),
                 group(sdnode(~lhs, True), sdnode( rhs, True)),
-                group(sdnode(~lhs, True), sdnode(~rhs, True)),
-            )
+                group(sdnode(~lhs, True), sdnode(~rhs, True)))
 
     class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -96,8 +94,7 @@ class TabRules(K3.TabRules):
             return adds(
                 group(sdnode(lhs, False), sdnode(~lhs, False)),
                 group(sdnode(rhs, False), sdnode(~rhs, False)),
-                group(sdnode(lhs, True),  sdnode( rhs, True)),
-            )
+                group(sdnode(lhs, True),  sdnode( rhs, True)))
 
     class DisjunctionDesignated(FDE.OperatorNodeRule):
         """
@@ -117,8 +114,7 @@ class TabRules(K3.TabRules):
             return adds(
                 group(sdnode( lhs, True), sdnode(~rhs, True)),
                 group(sdnode(~lhs, True), sdnode( rhs, True)),
-                group(sdnode( lhs, True), sdnode( rhs, True)),
-            )
+                group(sdnode( lhs, True), sdnode( rhs, True)))
             
     class DisjunctionUndesignated(FDE.OperatorNodeRule):
         """
@@ -137,8 +133,7 @@ class TabRules(K3.TabRules):
             return adds(
                 group(sdnode( lhs, False), sdnode(~lhs, False)),
                 group(sdnode( rhs, False), sdnode(~rhs, False)),
-                group(sdnode(~lhs, True),  sdnode(~rhs, True)),
-            )
+                group(sdnode(~lhs, True),  sdnode(~rhs, True)))
 
     class DisjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -160,8 +155,7 @@ class TabRules(K3.TabRules):
             return adds(
                 group(sdnode(s, True)),
                 group(sdnode(s.lhs, False), sdnode(~s.lhs, False)),
-                group(sdnode(s.rhs, False), sdnode(~s.rhs, False)),
-            )
+                group(sdnode(s.rhs, False), sdnode(~s.rhs, False)))
 
     class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -173,8 +167,7 @@ class TabRules(K3.TabRules):
         def _get_node_targets(self, node: Node, _: Branch, /):
             s = self.sentence(node)
             return adds(
-                group(sdnode(~s.lhs | s.rhs, self.designation))
-            )
+                group(sdnode(~s.lhs | s.rhs, self.designation)))
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -187,8 +180,7 @@ class TabRules(K3.TabRules):
         def _get_node_targets(self, node: Node, _: Branch, /):
             s = self.sentence(node)
             return adds(
-                group(sdnode(~(~s.lhs | s.rhs), self.designation))
-            )
+                group(sdnode(~(~s.lhs | s.rhs), self.designation)))
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
         """

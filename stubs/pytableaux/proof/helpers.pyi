@@ -1,9 +1,9 @@
 from collections.abc import Set
-from typing import Any, Optional, overload
+from typing import Any, Optional
 
 from pytableaux.lang import Constant, Operator, Sentence
 from pytableaux.proof import (Access, Branch, ClosingRule, Node, Rule,
-                              RuleHelper, Tableau, Target)
+                              RuleHelper, Target)
 from pytableaux.typing import (_KT, _T, _VT, _FiltersDict, _NodePredFunc,
                                _NodeTargetsFn, _NodeTargetsGen)
 

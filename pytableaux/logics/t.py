@@ -16,15 +16,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Atomic
-from ..proof import Access, Branch, Node, adds, anode, group, swnode
-from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.lang import Atomic
+from pytableaux.proof import Access, Branch, Node, adds, anode, group, swnode
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+
 from . import k as K
 
 name = 'T'
 
 class Meta(K.Meta):
-    title       = 'Reflexive Normal Modal Logic'
+    title = 'Reflexive Normal Modal Logic'
     description = 'Normal modal logic with a reflexive access relation'
     category_order = 3
 
@@ -33,7 +34,6 @@ class Model(K.Model):
     def finish(self):
         for w in self.frames:
             self.R[w].add(w)
-            # self.add_access(w, w)
         super().finish()
 
 class TableauxSystem(K.TableauxSystem):

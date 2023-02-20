@@ -1,5 +1,5 @@
 from typing import (Any, Callable, ClassVar, Generic, Hashable, Mapping,
-                    NamedTuple, overload)
+                    NamedTuple)
 
 from pytableaux.lang import Lexical, Operator, Predicate, Quantifier, Sentence
 from pytableaux.proof import Node

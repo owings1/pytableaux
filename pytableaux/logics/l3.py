@@ -16,9 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator
-from ..models import ValueK3
-from ..proof import Node, adds, group, sdnode
+from pytableaux.lang import Operator
+from pytableaux.models import ValueK3
+from pytableaux.proof import Node, adds, group, sdnode
+
 from . import fde as FDE
 from . import k3 as K3
 

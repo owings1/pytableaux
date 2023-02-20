@@ -16,8 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import Access, Branch, Node, adds, anode, group
-from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from pytableaux.proof import Access, Branch, Node, adds, anode, group
+from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+
 from . import k as K
 from . import s4 as S4
 from . import t as T
@@ -42,7 +43,7 @@ class Model(S4.Model):
 
     def finish(self):
         while True:
-            super().finish
+            super().finish()
             to_add = set()
             for w1 in self.frames:
                 for w2 in self.R[w1]:
@@ -73,16 +74,12 @@ class TabRules(S4.TabRules):
         modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: Node, branch: Branch,/):
-
             if self[MaxWorlds].is_exceeded(branch):
                 self[FilterHelper].release(node, branch)
                 return
-
             access = Access.fornode(node).reversed()
-
             if not self[WorldIndex].has(branch, access):
                 return adds(group(a := anode(*access)), **a)
-                # return adds(group(anode := access._asdict()), **anode)
 
         @staticmethod
         def example_nodes():

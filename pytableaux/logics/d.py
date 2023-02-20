@@ -16,10 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Atomic
-from ..proof import Branch, Target, adds, anode, group, swnode
-from ..proof.helpers import MaxWorlds, UnserialWorlds
-from ..proof.rules import BaseSimpleRule
+from pytableaux.lang import Atomic
+from pytableaux.proof import Branch, Target, adds, anode, group, swnode
+from pytableaux.proof.helpers import MaxWorlds, UnserialWorlds
+from pytableaux.proof.rules import BaseSimpleRule
+
 from . import k as K
 
 name = 'D'

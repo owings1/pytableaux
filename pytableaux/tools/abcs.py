@@ -53,7 +53,7 @@ NOARG = object()
 
 
 def is_enumcls(obj):
-    return isinstance(obj, type) and issubclass(obj, _enum.Enum)
+    return isinstance(obj, type) and issubclass(obj, Enum)
 
 def em_mixins(Class):
     return *itertools.filterfalse(is_enumcls, Class.__bases__),
@@ -139,15 +139,15 @@ class EnumLookup(Mapping):
 
     __slots__ = '__getitem__', '_mapping', 'build', 'pseudo'
 
-    def __init__(self, Owner, /, build = False, _sa = object.__setattr__):
+    def __init__(self, Owner, /, build = False):
 
         if hasattr(self, '_mapping'):
             raise TypeError
 
         source = {}
-
-        _sa(self, '__getitem__', source.__getitem__)
-        _sa(self, '_mapping', MapProxy(source))
+        sa = object.__setattr__
+        sa(self, '__getitem__', source.__getitem__)
+        sa(self, '_mapping', MapProxy(source))
 
         def _pseudo(member):
             for key in self._check_pseudo(member, Owner):
@@ -161,8 +161,8 @@ class EnumLookup(Mapping):
                 source.update(builder)
             return self
 
-        _sa(self, 'build', _build)
-        _sa(self, 'pseudo', _pseudo)
+        sa(self, 'build', _build)
+        sa(self, 'pseudo', _pseudo)
 
         if build:
             _build()
@@ -236,7 +236,7 @@ class EnumLookup(Mapping):
                 for key in pseudo_keys}
 
     @classmethod
-    def _check_pseudo(cls, pseudo, Owner: type[Ebc], /) -> set:
+    def _check_pseudo(cls, pseudo: Ebc, Owner: type[Ebc], /) -> set:
         "Verify a pseudo member, returning index keys."
         check = Owner._value2member_map_[pseudo._value_]
         if check is not pseudo:

@@ -16,9 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..models import BaseModel, ValueK3
-from ..proof import Branch, Node, NodeAttr, Target, sdnode
-from ..proof.rules import BaseClosureRule
+from pytableaux.models import BaseModel, ValueK3
+from pytableaux.proof import Branch, Node, NodeAttr, Target, sdnode
+from pytableaux.proof.rules import BaseClosureRule
+
 from . import fde as FDE
 
 name = 'K3'
@@ -44,7 +45,7 @@ class Model(FDE.Model, BaseModel[ValueK3]):
 
 class TableauxSystem(FDE.TableauxSystem):
     pass
-        
+
 @TableauxSystem.initialize
 class TabRules(FDE.TabRules):
 
@@ -58,8 +59,7 @@ class TabRules(FDE.TabRules):
             if nnode is not None:
                return Target(
                    nodes = (node, nnode),
-                   branch = branch,
-                )
+                   branch = branch)
 
         def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
             return bool(self._find_closing_node(node, branch))
@@ -72,11 +72,10 @@ class TabRules(FDE.TabRules):
 
         @staticmethod
         def example_nodes():
-            from ..lang import Atomic
+            from pytableaux.lang import Atomic
             a = Atomic.first()
             return sdnode(a, True), sdnode(~a, True)
 
     closure_rules = (
         FDE.TabRules.DesignationClosure,
-        GlutClosure,
-    )
+        GlutClosure)

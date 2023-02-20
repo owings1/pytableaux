@@ -16,8 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator
-from ..proof import Branch, Node, adds, group, sdnode
+from pytableaux.lang import Operator
+from pytableaux.proof import Branch, Node, adds, group, sdnode
+
 from . import fde as FDE
 from . import k3 as K3
 from . import l3 as L3
@@ -25,7 +26,7 @@ from . import l3 as L3
 name = 'G3'
 
 class Meta(L3.Meta):
-    title    = 'Gödel 3-valued Logic'
+    title = 'Gödel 3-valued Logic'
     description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
     category_order = 90
 
@@ -57,8 +58,7 @@ class TabRules(L3.TabRules):
 
         def _get_node_targets(self, node: Node, _,/):
             return adds(
-                group(sdnode(self.sentence(node), not self.designation))
-            )
+                group(sdnode(self.sentence(node), not self.designation)))
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
@@ -87,14 +87,11 @@ class TabRules(L3.TabRules):
             return adds(
                 group(
                     sdnode( lhs, d),
-                    sdnode(~rhs, d),
-                ),
+                    sdnode(~rhs, d)),
                 group(
                     sdnode( lhs, not d),
                     sdnode(~lhs, not d),
-                    sdnode(~rhs, d),
-                ),
-            )
+                    sdnode(~rhs, d)))
     
     class ConditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -113,8 +110,7 @@ class TabRules(L3.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(~s.lhs, not d)),
-                group(sdnode(~s.rhs, d)),
-            )
+                group(sdnode(~s.rhs, d)))
 
     class BiconditionalDesignated(FDE.ConjunctionReducingRule):
         """

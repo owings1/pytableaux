@@ -16,9 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified, Quantifier
-from ..proof import Branch, Node, adds, group, rules, sdnode
-from ..tools import maxceil, minfloor
+from pytableaux.lang import Operator, Quantified, Quantifier
+from pytableaux.proof import Branch, Node, adds, group, rules, sdnode
+from pytableaux.tools import maxceil, minfloor
+
 from . import b3e as B3E
 from . import fde as FDE
 from . import k3 as K3
@@ -127,8 +128,7 @@ class TabRules(B3E.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(s.lhs, not d)),
-                group(sdnode(s.rhs, not d)),
-            )
+                group(sdnode(s.rhs, not d)))
             
     class ConjunctionUndesignated(FDE.OperatorNodeRule):
         """
@@ -140,8 +140,7 @@ class TabRules(B3E.TabRules):
 
         def _get_node_targets(self, node: Node, _):
             return adds(
-                group(sdnode(~self.sentence(node), not self.designation))
-            )
+                group(sdnode(~self.sentence(node), not self.designation)))
 
     class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -154,8 +153,7 @@ class TabRules(B3E.TabRules):
 
         def _get_node_targets(self, node: Node, _):
             return adds(
-                group(sdnode(self.sentence(node), not self.designation))
-            )
+                group(sdnode(self.sentence(node), not self.designation)))
         
     class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -170,8 +168,7 @@ class TabRules(B3E.TabRules):
             s = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(s.lhs, not d), sdnode(s.rhs, not d))
-            )
+                group(sdnode(s.lhs, not d), sdnode(s.rhs, not d)))
 
     class DisjunctionUndesignated(ConjunctionUndesignated):
         """
@@ -201,8 +198,7 @@ class TabRules(B3E.TabRules):
             s = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(~s.lhs, not d), sdnode(s.rhs, not d))
-            )
+                group(sdnode(~s.lhs, not d), sdnode(s.rhs, not d)))
 
     class MaterialConditionalUndesignated(ConjunctionUndesignated):
         """
@@ -235,8 +231,7 @@ class TabRules(B3E.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(~s.lhs, not d), sdnode( s.rhs, not d)),
-                group(sdnode( s.lhs, not d), sdnode(~s.rhs, not d)),
-            )
+                group(sdnode( s.lhs, not d), sdnode(~s.rhs, not d)))
 
     class MaterialBiconditionalUndesignated(ConjunctionUndesignated):
         """
@@ -268,15 +263,12 @@ class TabRules(B3E.TabRules):
             d = self.designation
             return adds(
                 group(
-                    sdnode(~lhs | rhs, d)
-                ),
+                    sdnode(~lhs | rhs, d)),
                 group(
                     sdnode( lhs, not d),
                     sdnode( rhs, not d),
                     sdnode(~lhs, not d),
-                    sdnode(~rhs, not d),
-                )
-            )
+                    sdnode(~rhs, not d)))
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -296,8 +288,7 @@ class TabRules(B3E.TabRules):
             d = self.designation
             return adds(
                 group(sdnode( lhs,     d), sdnode( rhs, not d)),
-                group(sdnode(~lhs, not d), sdnode(~rhs,     d)),
-            )
+                group(sdnode(~lhs, not d), sdnode(~rhs,     d)))
 
     class ConditionalUndesignated(ConjunctionUndesignated):
         """
@@ -331,8 +322,7 @@ class TabRules(B3E.TabRules):
             Cond = Operator.Conditional
             d = self.designation
             return adds(
-                group(sdnode(Cond(lhs, rhs), d), sdnode(Cond(rhs, lhs), d))
-            )
+                group(sdnode(Cond(lhs, rhs), d), sdnode(Cond(rhs, lhs), d)))
 
     class BiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -352,8 +342,7 @@ class TabRules(B3E.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(~Cond(lhs, rhs), d)),
-                group(sdnode(~Cond(rhs, lhs), d)),
-            )
+                group(sdnode(~Cond(rhs, lhs), d)))
 
     class BiconditionalUndesignated(ConjunctionUndesignated):
         """
@@ -386,8 +375,7 @@ class TabRules(B3E.TabRules):
         def _get_node_targets(self, node: Node, _):
             v, si = self.sentence(node)[1:]
             return adds(
-                group(sdnode(self.convert(v, ~si | ~(si | ~si)), self.designation))
-            )
+                group(sdnode(self.convert(v, ~si | ~(si | ~si)), self.designation)))
 
     class ExistentialUndesignated(ConjunctionUndesignated):
         """
@@ -434,8 +422,7 @@ class TabRules(B3E.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(self.convert(v, ~si), d)),
-                group(sdnode(r, not d), sdnode(~r, not d)),
-            )
+                group(sdnode(r, not d), sdnode(~r, not d)))
             
     class UniversalUndesignated(ExistentialUndesignated):
         """
