@@ -23,15 +23,15 @@ import operator as opr
 import pickle
 from copy import copy
 from itertools import product
+from typing import cast
 
 from pytableaux import errors
 from pytableaux.errors import *
 from pytableaux.lang import *
-from pytableaux.lang.collect import *
 from pytableaux.lang.lex import *
 from pytableaux.tools import EMPTY_SET
 
-from .tutils import BaseCase
+from . import BaseCase
 
 Firsts = dict(
     (cls, cls.first()) for cls in LexType.classes)
@@ -41,7 +41,6 @@ a, b, c = Constant.gen(3)
 x, y, z = Variable.gen(3)
 A, B, C = Atomic.gen(3)
 
-Pred, Preds, Sys = Predicate, Predicates, Predicate.System
 
 class TestAbstract(BaseCase):
 
@@ -91,10 +90,10 @@ class TestPredicate(BaseCase):
         #     F.__objclass__ = F.__class__
 
     def test_sys_attrs(self):
-        p = Sys.Identity
+        p = Predicate.Identity
         self.assertIs(p._value_, p)
         self.assertEqual(p._name_, p.name)
-        self.assertIs(p.__objclass__, Sys)
+        self.assertIs(p.__objclass__, Predicate.System)
         self.assertTrue(p.is_system)
 
 class TestPredicates(BaseCase):
@@ -164,10 +163,10 @@ class TestPredicates(BaseCase):
 
     def test_compare_id_with_user_pred(self):
         pred, = Predicates({(0, 0, 1)})
-        self.assertLess(Sys.Identity, pred)
-        self.assertLessEqual(Sys.Identity, pred)
-        self.assertGreater(pred, Sys.Identity)
-        self.assertGreaterEqual(pred, Sys.Identity)
+        self.assertLess(Predicate.Identity, pred)
+        self.assertLessEqual(Predicate.Identity, pred)
+        self.assertGreater(pred, Predicate.Identity)
+        self.assertGreaterEqual(pred, Predicate.Identity)
 
     def test_lookup_refs(self):
         v = Predicates(((0, 0, 1),))
@@ -206,9 +205,8 @@ class TestSystem(BaseCase):
         self.assertEqual(Predicate.System['Identity'], Predicate.System.Identity)
 
     def test_sys_preds_enum_value(self):
-        self.assertIs(Sys, Predicate.System)
-        self.assertIs(Sys.Identity, Sys['Identity'])
-        self.assertEqual(sorted(Pred.System), list(Pred.System))
+        self.assertIs(Predicate.System.Identity, Predicate.System['Identity'])
+        self.assertEqual(sorted(Predicate.System), list(Predicate.System))
 
 
 class TestAbstract(BaseCase):
@@ -315,7 +313,7 @@ class TestQuantified(BaseCase):
 
     def test_complex_quantified_substitution(self):
         preds = Predicates({(0, 0, 2)})
-        s1: Quantified = self.p('SxMVyFxy', preds)
+        s1 = cast(Quantified, self.p('SxMVyFxy', preds))
         m = Constant(0, 0)
         s2 = s1.sentence.substitute(m, s1.variable)
         s3 = self.p('MVyFmy', preds)
@@ -412,6 +410,7 @@ class TestGenericApi(BaseCase):
 class TestCrossSorting(BaseCase):
 
     def test_le_lt_ge_gt_symmetry(self):
+
         self.assertLess(F, a)
         self.assertLess(a, x)
         self.assertLess(x, A)
@@ -443,12 +442,11 @@ class TestNotImplTypes(BaseCase):
         itms = Firsts.values()
         itms = [Atomic.first()]
         others = [
-            1, None, False, '', slice(None, None, None), [], set(), {}
-        ]
+            1, None, False, '', slice(None, None, None), [], set(), {}]
         opers = (opr.lt, opr.le, opr.gt, opr.ge, opr.eq)
         it = product(opers, itms, others)
         for oper, itm, other in it:
-            print(oper, itm, other)
+            # print(oper, itm, other)
             meth = getattr(itm, '__%s__' % oper.__name__)
             res = meth(other)
             self.assertIs(res, NotImplemented)
@@ -483,8 +481,8 @@ class TestSorting(BaseCase):
             a1 = a2
 
 
-
 class TestClasses(BaseCase):
+
     def test_readonly(self):
         with self.assertRaises(AttributeError):
             Predicate.x = 1
@@ -495,7 +493,6 @@ class TestClasses(BaseCase):
         with self.assertRaises(AttributeError):
             s = Atomic.first()
             s.index = 2
-        # A.index = A.index
 
     def test_pickle(self):
         import warnings

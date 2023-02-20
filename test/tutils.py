@@ -1,89 +1,15 @@
 from __future__ import annotations
 
-from inspect import getmembers, isclass
-from itertools import chain, filterfalse
-from typing import (TYPE_CHECKING, Callable, Collection, Iterable, Iterator,
-                    NamedTuple)
+from typing import Collection, Iterable, NamedTuple, TypeVar
+from unittest import TestCase
 
 from pytableaux import examples
-from pytableaux.lang import Notation
-from pytableaux.lang.collect import *
-from pytableaux.lang.lex import Predicate, Sentence
-from pytableaux.lang.parsing import Parser
-from pytableaux.lang.writing import LexWriter
+from pytableaux.lang import *
 from pytableaux.logics import registry
 from pytableaux.models import BaseModel
-from pytableaux.proof.common import Branch, Node
-from pytableaux.proof.rules import ClosingRule, Rule
-from pytableaux.proof.tableaux import Tableau
-from pytableaux.tools import abcs
-from pytableaux.tools.hybrids import qset
-from unittest import TestCase
-if TYPE_CHECKING:
-    from typing import overload
-    from pytableaux.typing import _TT, _F, _T # type: ignore
+from pytableaux.proof import Branch, Node, Tableau, ClosingRule, Rule
 
-__all__ = (
-    'BaseSuite',
-    'larg',
-    'using',
-    'skip',
-)
-
-def _setattrs(obj, **attrs):
-    if isclass(obj):
-        cls = obj
-    else:
-        cls = type(obj)
-    dyn = getattr(cls, '_dynattrs', set())
-    for attr, val in attrs.items():
-        if attr in dyn:
-            cls.dynamic(attr, val)
-        else:
-            setattr(obj, attr, val)
-
-def using(**attrs) -> Callable[[_F], _F]:
-    def wrapper(func: _F) -> _F:
-        if isclass(func):
-            _setattrs(func, **attrs)
-            return func
-        def wrapped(obj, *args, **kw):
-            saved = {
-                attr: getattr(obj, attr)
-                for attr in attrs
-                if hasattr(obj, attr)
-            }
-            err = None
-            try:
-                _setattrs(obj, **attrs)
-                return func(obj, *args, **kw)
-            except Exception as e:
-                err = e
-            for attr, val in saved.items():
-                setattr(obj, attr, val)
-            if err:
-                raise err
-        return wrapped
-    return wrapper
-
-
-def dynattrs(*names) -> Callable[[_TT], _TT]:
-    def wrapper(cls):
-        assert isclass(cls)
-        cls._dynattrs = getattr(cls, '_dynattrs', tuple()) + names
-        for attr in names:
-            if hasattr(cls, attr):
-                cls.dynamic(attr, getattr(cls, attr))
-        return cls
-    return wrapper
-
-def larg(*largs) -> Callable[[_F], _F]:
-    def decor(what: _F) -> _F:
-        if isclass(what): raise TypeError
-        def operwrap(self, *args, **kw):
-            what(self, *largs, *args, **kw)
-        return operwrap
-    return decor
+_T = TypeVar('_T')
 
 def loopgen(c: Collection[_T], n: int = None):
     if not len(c) and (n is None or n > 0):
@@ -99,43 +25,6 @@ def loopgen(c: Collection[_T], n: int = None):
         if n is not None:
             i += 1
 
-SKIPPED = []
-
-if TYPE_CHECKING:
-    @overload
-    def skip(cls: _TT) -> _TT: ...
-
-    @overload
-    def skip(func: _F) -> _F: ...
-
-def skip(what):
-    def skipped(*_, **__):
-        SKIPPED.append(what)
-    if isclass(what):
-        class Skipped:
-            test_skipped = skipped
-        return Skipped
-    return skipped
-
-def clsmbrsrecurse(cls) -> Iterator[type]:
-    mine = list(
-        m for n,m in getmembers(cls)
-        if isclass(m) and n[0] != '_'
-    )
-    return chain(mine, chain.from_iterable(
-        clsmbrsrecurse(c) for c in mine
-    ))
-
-def get_subclasses(supcls: type[_T]) -> qset[type[_T]]:
-    'Get all (non-abstract) subclasses recusively.'
-    classes = qset()
-    todo = [supcls]
-    while len(todo):
-        for child in filterfalse(classes.__contains__, todo.pop().__subclasses__()):
-            todo.append(child)
-            if not abcs.isabstract(child):
-                classes.append(child)
-    return classes
 
 class RuleTab(NamedTuple):
     rule: Rule
@@ -149,25 +38,25 @@ class ArgModels(NamedTuple):
     arg: Argument
     models: list[BaseModel]
 
-@dynattrs('logic')
-class BaseSuite:
+class BaseCase(TestCase):
 
     preds = Predicates(Predicate.gen(3))
     notn = Notation.polish
-    logic = registry('CFOL')
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
-    lw = LexWriter(Notation.standard)
 
-    @classmethod
-    def dynamic(cls, attr, val):
-        if attr == 'logic':
-            val = registry(val)
-            cls.logic = val
-            for member in clsmbrsrecurse(cls):
-                member.logic = val
+    @property
+    def Model(self) -> type[BaseModel]:
+        return self.logic.Model
 
-    def set_logic(self, logic):
-        self.logic = registry(logic)
+    def valid_tab(self, *args, **kw):
+        tab = self.tab(*args, **kw)
+        self.assertTrue(tab.valid)
+        return tab
+
+    def invalid_tab(self, *args, **kw):
+        tab = self.tab(*args, **kw)
+        self.assertTrue(tab.invalid)
+        return tab
 
     def crparser(self, *args, **kw):
         for val in args:
@@ -227,8 +116,7 @@ class BaseSuite:
                 kw[key] = val
         kw.setdefault('preds', self.preds)
         kw.setdefault('notn', self.notn)
-        parser = Parser(kw['notn'], kw['preds'])
-        return parser.argument(conc, premises)
+        return Parser(kw['notn'], kw['preds']).argument(conc, premises)
 
     def tab(self, *args, is_build = None, nn = None, ss = None, **kw) -> Tableau:
         kw.setdefault('is_build_models', True)
@@ -239,13 +127,11 @@ class BaseSuite:
                 arg = examples.argument(val)
             except KeyError:
                 pass
-
         if arg is None:
             if isinstance(val, Argument):
                 arg = val
             elif len(args):
                 arg = self.parg(*args, **kw)
-
         if arg is not None and is_build is None:
             is_build = True
         tab = Tableau(self.logic, arg, **kw)
@@ -256,17 +142,6 @@ class BaseSuite:
             b.extend(nn)
         if is_build:
             tab.build()
-        self.t = tab
-        return tab
-
-    def valid_tab(self, *args, **kw):
-        tab = self.tab(*args, **kw)
-        assert tab.valid
-        return tab
-
-    def invalid_tab(self, *args, **kw):
-        tab = self.tab(*args, **kw)
-        assert tab.invalid
         return tab
 
     def tabb(self, nn = None, *args, **kw):
@@ -280,9 +155,9 @@ class BaseSuite:
         kw['is_build_models'] = True
         tab = self.invalid_tab(*args, **kw)
         arg, models = tab.argument, list(tab.models)
-        assert bool(models)
+        self.assertTrue(models)
         for m in models:
-            assert m.is_countermodel_to(arg)
+            self.assertTrue(m.is_countermodel_to(arg))
         return ArgModels(arg, models)
 
     def cmm(self, *args, **kw):
@@ -317,15 +192,15 @@ class BaseSuite:
     def rule_eg(self, rule, step = True, **kw):
         rule, tab = rt = self.rule_tab(rule, **kw)
         tab.branch().extend(rule.example_nodes())
-        assert len(tab) == 1
-        assert len(tab.open) == 1
+        self.assertEqual(len(tab), 1)
+        self.assertEqual(len(tab.open), 1)
         if step:
             entry = tab.step()
             tab.finish()
-            assert entry.rule == rule
-            assert len(tab.history) == 1
+            self.assertEqual(entry.rule, rule)
+            self.assertEqual(len(tab.history), 1)
             if isinstance(rule, ClosingRule):
-                assert len(tab.open) == 0
+                self.assertEqual(len(tab.open), 0)
         return rt
 
     def m(self, b: Branch = None):
@@ -333,27 +208,6 @@ class BaseSuite:
         if b:
             m.read_branch(b)
         return m
-
-    @property
-    def Model(self) -> type[BaseModel]:
-        return self.logic.Model
-
-
-class BaseCase(TestCase):
-
-    p = BaseSuite.p
-    pp = BaseSuite.pp
-    preds = BaseSuite.preds
-    notn = BaseSuite.notn
-    crparser = BaseSuite.crparser
-    parg = BaseSuite.parg
-    tab = BaseSuite.tab
-    tabb = BaseSuite.tabb
-    sgen = BaseSuite.sgen
-    ngen = BaseSuite.ngen
-    rule_tab = BaseSuite.rule_tab
-    rule_eg = BaseSuite.rule_eg
-    fix_ss = BaseSuite.fix_ss
 
     def __init_subclass__(subcls, **kw):
         super().__init_subclass__(**kw)

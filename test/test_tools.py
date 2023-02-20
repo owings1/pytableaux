@@ -1,6 +1,6 @@
 from pytableaux.tools import *
 
-from .tutils import BaseCase
+from . import BaseCase
 
 class TestMinFloor(BaseCase):
 
@@ -13,4 +13,3 @@ class TestMaxCeil(BaseCase):
     def test_simple(self):
         self.assertEqual(maxceil(3, [1,2,3,4]), 3)
         self.assertEqual(maxceil(5, [1,2,3,4]), 4)
-        

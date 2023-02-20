@@ -9,9 +9,8 @@ from pytableaux.tools.abcs import *
 from pytableaux.tools.events import *
 from pytableaux.tools.hybrids import *
 from pytableaux.tools.linked import *
-from pytest import raises
 
-from .tutils import BaseCase
+from unittest import TestCase as Base
 
 _T = TypeVar('_T')
 
@@ -25,7 +24,8 @@ def subclasses(supcls: type[_T]) -> qset[type[_T]]:
                 classes.append(child)
     return classes
 
-class Test_abcm(BaseCase):
+class Test_abcm(Base):
+
     def test_merged_mroattr(self):
         class A:
             x = 'A',
@@ -38,15 +38,15 @@ class Test_abcm(BaseCase):
         res = abcs.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
         self.assertEqual(tuple(res), ('A', 'B1', 'B2'))
 
-class TestSetList(BaseCase):
+class TestSetList(Base):
 
     def test_equalities(self):
 
-        _ = qset
-        def g(*items) -> qset: return _(items)
+        def g(*items) -> qset:
+            return qset(items)
 
         self.assertEqual({1, 2, 3}, g(2, 1, 2, 3))
-        self.assertEqual(_(range(5)) | _(range(6)), set(range(6)))
+        self.assertEqual(qset(range(5)) | qset(range(6)), set(range(6)))
 
         s = s1 = g(1, 2, 3)
         s -= {3}
@@ -57,13 +57,13 @@ class TestSetList(BaseCase):
 
     def test_errors(self):
 
-        _ = qset
-        def g(*items): return _(items)
+        def g(*items):
+            return qset(items)
 
         with self.assertRaises(ValueError):
             g(1).append(1)
 
-class TestListeners(BaseCase):
+class TestListeners(Base):
 
     def test_once_listener(self):
         e = EventsListeners()
@@ -84,7 +84,7 @@ class TestListeners(BaseCase):
         e.off('test', cb)
         self.assertEqual(len(e['test']), 0)
 
-class TestLinkSet(BaseCase):
+class TestLinkSet(Base):
 
     def test_iter(self):
         x = linqset(range(10))
@@ -123,7 +123,8 @@ class TestLinkSet(BaseCase):
         self.assertEqual(list(x[3::2]), y[3::2])
 
     def test_delitem(self):
-        def fnew(): return linqset(range(0,8,2))
+        def fnew():
+            return linqset(range(0,8,2))
         x = fnew()
         del x[0]
         self.assertEqual(list(x), [2,4,6])
@@ -137,28 +138,29 @@ class TestLinkSet(BaseCase):
         del x[-3]
         self.assertEqual(list(x), [0,4,6])
         x = fnew()
-        with raises(IndexError): del x[4]
-        with raises(IndexError): del x[-5]
+        with self.assertRaises(IndexError): del x[4]
+        with self.assertRaises(IndexError): del x[-5]
 
     def test_setitem(self):
-        fnew = lambda: linqset([5,6])
+        def fnew():
+            return linqset([5,6])
         x = fnew()
         x[0] = 7
         self.assertEqual(list(x), [7,6])
         x = fnew()
         x[-1] = 7
         self.assertEqual(list(x), [5,7])
-        with raises(IndexError): x[2] = 10
-        with raises(IndexError): x[-3] = 10
-        with raises(ValueError): x[1] = 5
+        with self.assertRaises(IndexError): x[2] = 10
+        with self.assertRaises(IndexError): x[-3] = 10
+        with self.assertRaises(ValueError): x[1] = 5
 
     def test_reverse(self):
         x = linqset()
         x.reverse()
         self.assertEqual(list(x), [])
         self.assertEqual(len(x), 0)
-        with raises(IndexError): x[0]
-        with raises(IndexError): x[-1]
+        with self.assertRaises(IndexError): x[0]
+        with self.assertRaises(IndexError): x[-1]
 
         x = linqset('a')
         x.reverse()

@@ -17,13 +17,15 @@
 # ------------------
 #
 # pytableaux - web server test cases
+from __future__ import annotations
+
 from urllib.parse import urlencode
 
 import cherrypy
 import pytest
 import simplejson as json
 from cherrypy.test import helper
-from pytableaux import web
+
 from pytableaux.errors import *
 from pytableaux.web import util
 from pytableaux.web.application import WebApp

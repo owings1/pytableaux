@@ -16,7 +16,7 @@ from pytableaux.proof import TabEvent, TabFlag, TabStatKey
 from types import MappingProxyType as MapProxy
 from pytest import raises
 from unittest import skip
-from .tutils import BaseCase
+from . import BaseCase
 
 
 def mock_sleep_5ms():

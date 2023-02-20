@@ -25,7 +25,7 @@ from pytableaux.lang.writing import LexWriter
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof.writers import TabWriter
 
-from .tutils import BaseCase
+from . import BaseCase
 # Sentence Writers
 
 std = LexWriter('standard')

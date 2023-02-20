@@ -23,7 +23,7 @@ from pytableaux.errors import ParseError
 from pytableaux.lang.lex import Predicate, LexType
 from pytableaux.lang.collect import Predicates
 from pytableaux.lang.parsing import Parser
-from .tutils import BaseCase
+from . import BaseCase
 
 preds = Predicates(Predicate.gen(3))
 std = Parser('standard', preds)
