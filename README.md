@@ -103,7 +103,7 @@ You can file any issues on [github][issues], or contact me directly [via email][
 ## Copyright & License
 
 <!-- [copyright-begin] -->
-Copyright (C) 2014-2022 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
+Copyright (C) 2014-2023 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
 <!-- [copyright-end] -->
 
 [site]: http://logic.dougowings.net
