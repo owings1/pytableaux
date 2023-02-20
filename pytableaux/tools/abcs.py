@@ -414,17 +414,17 @@ class Ebc(Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
     @classmethod
     def _on_init(cls, subcls: type):
         'Propagate hook up to metaclass.'
-        EbcMeta._on_init(cls, subcls)
+        type(cls)._on_init(cls, subcls)
 
     @classmethod
     def _member_keys(cls, member):
         'Propagate hook up to metaclass.'
-        return EbcMeta._member_keys(cls, member)
+        return type(cls)._member_keys(cls, member)
 
     @classmethod
     def _after_init(cls):
         'Propagate hook up to metaclass.'
-        EbcMeta._after_init(cls)
+        type(cls)._after_init(cls)
 
     def __repr__(self):
         clsname = type(self).__name__
@@ -476,7 +476,7 @@ class abcf(Flag):
         setattr(obj, attr, cls(value))
         return obj
 
-def nsinit(ns, bases, /, skipflags = False):
+def nsinit(ns: dict, bases, /, skipflags = False):
     'Class namespace prepare routine.'
     # iterate over copy since hooks may modify ns.
     if not skipflags:
@@ -489,7 +489,7 @@ def nsinit(ns, bases, /, skipflags = False):
     if isinstance(slots, Iterable) and not isinstance(slots, Set):
         ns['__slots__'] = frozenset(slots)
 
-def clsafter(Class, ns = None, /, skipflags = False, deleter = type.__delattr__):
+def clsafter(Class: type, ns: dict|None = None, /, skipflags = False, deleter = type.__delattr__):
     'After class init routine. Usable as standalone class decorator.'
     if ns is None:
         ns = Class.__dict__.copy()

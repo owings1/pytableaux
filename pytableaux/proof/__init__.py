@@ -368,13 +368,11 @@ class RuleMeta(abcs.AbcMeta):
 
     @classmethod
     def __prepare__(cls, clsname, bases, **kw):
-        return dict(__slots__ = EMPTY_SET)
+        return dict(__slots__ = EMPTY_SET, name = clsname)
 
     def __new__(cls, clsname, bases, ns, /, modal = NOARG, **kw):
 
         Class: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
-
-        Class.name = clsname
 
         if modal is not NOARG:
             setattr(Class, RuleAttr.Modal, modal)

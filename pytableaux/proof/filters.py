@@ -107,6 +107,8 @@ class Comparer(abcs.Abc):
 class NodeCompare(Comparer):
     "Node filter mixin class."
 
+    __slots__ = EMPTY_SET
+
     @abstract
     def example_node(self) -> dict:
         raise NotImplementedError

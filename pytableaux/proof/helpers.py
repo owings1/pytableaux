@@ -218,6 +218,7 @@ class BranchValueHook(BranchCache[_VT]):
         check.callable(value)
 
 class BranchTarget(BranchValueHook[Target]):
+    __slots__ = EMPTY_SET
     hook_method_name = '_branch_target_hook'
 
 class AplSentCount(BranchCache[dict[Sentence, int]]):

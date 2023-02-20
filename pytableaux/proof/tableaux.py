@@ -67,7 +67,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         is_rank_optim = True,
         nolock = False))
 
-    legend: tuple
+    legend: ClassVar[tuple]
     "The rule class legend."
 
     Helpers = {}
