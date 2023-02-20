@@ -31,8 +31,7 @@ class Meta(FDE.Meta):
         'many-valued',
         'gappy',
         'non-modal',
-        'first-order',
-    )
+        'first-order')
 
 class Model(FDE.Model, BaseModel[ValueK3]):
 
@@ -73,7 +72,7 @@ class TabRules(FDE.TabRules):
 
         @staticmethod
         def example_nodes():
-            from pytableaux.lang import Atomic
+            from ..lang import Atomic
             a = Atomic.first()
             return sdnode(a, True), sdnode(~a, True)
 

@@ -20,8 +20,6 @@ pytableaux.web.application
 """
 from __future__ import annotations
 
-from pytableaux.lang import Notation
-
 __all__ = ('WebApp',)
 
 import logging
@@ -43,8 +41,8 @@ from cherrypy._cprequest import Request, Response
 
 from .. import examples, logics, package, proof, web
 from ..errors import ProofTimeoutError, RequestDataError
-from ..lang import (Argument, LexType, LexWriter, Operator, ParseTable,
-                    Predicate, Predicates, Quantifier, TriCoords)
+from ..lang import (Argument, LexType, LexWriter, Notation, Operator,
+                    ParseTable, Predicate, Predicates, Quantifier, TriCoords)
 from ..proof import Tableau, writers
 from ..tools import EMPTY_MAP, qsetf
 from ..tools.events import EventEmitter

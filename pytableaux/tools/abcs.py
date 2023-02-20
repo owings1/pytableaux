@@ -692,7 +692,7 @@ class Copyable(metaclass = AbcMeta, skiphooks = True):
                 subcls.__deepcopy__ = Ebc.__deepcopy__
         subcls.__copy__ = subcls.copy
 
-from pytableaux.tools.hooks import hookutil
+from .hooks import hookutil
 
 class ItemMapEnum(Enum):
     """Fixed mapping enum based on item tuples.

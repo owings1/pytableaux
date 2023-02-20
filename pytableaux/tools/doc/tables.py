@@ -328,7 +328,7 @@ def main():
     import tabulate as Tb
     from tabulate import tabulate as tb
 
-    from pytableaux.lang import LexType, Operator
+    from ...lang import LexType, Operator
 
     theformats = qset(Tb.tabulate_formats)
     theformats -= {f for f in theformats if

@@ -70,7 +70,7 @@ class TabRules(FDE.TabRules):
 
         @staticmethod
         def example_nodes():
-            from pytableaux.lang import Atomic
+            from ..lang import Atomic
             s = Atomic.first()
             return sdnode(s, False), sdnode(~s, False)
 

@@ -133,7 +133,7 @@ APPSTATE: dict[Sphinx, dict] = {}
 
 def setup(app: Sphinx):
 
-    from pytableaux.tools.doc import directives, processors, roles, tables
+    from . import directives, processors, roles, tables
 
     APPSTATE[app] = {}
     app.connect('config-inited', init_app)
