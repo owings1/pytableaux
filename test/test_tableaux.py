@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-
 from pytableaux import examples
 from pytableaux.errors import *
 from pytableaux.lang.lex import Atomic, Constant, Predicated
@@ -17,7 +16,7 @@ from pytableaux.proof import TabEvent, TabFlag, TabStatKey
 from types import MappingProxyType as MapProxy
 from pytest import raises
 from unittest import skip
-from .tutils import BaseSuite, skip, using
+from .tutils import BaseCase
 
 
 def mock_sleep_5ms():
@@ -27,29 +26,30 @@ exarg = examples.argument
 sen = 'sentence'
 
 
-class TestTableauxSystem(BaseSuite):
+class TestTableauxSystem(BaseCase):
 
     def test_build_trunk_base_not_impl(self):
         proof = Tableau()
-        with raises(NotImplementedError):
+        with self.assertRaises(NotImplementedError):
             TabSys.build_trunk(proof, None)
 
-@using(logic = 'CPL')
-class TestTableau(BaseSuite):
+class TestTableau(BaseCase):
+
+    logic = 'CPL'
 
     def test_step_returns_false_when_finished(self):
-        assert Tableau().finish().step() == False
+        self.assertFalse(Tableau().finish().step())
 
     def test_repr_contains_finished(self):
-        assert 'finished' in self.tab('Addition').__repr__()
+        self.assertIn('finished', self.tab('Addition').__repr__())
 
     def test_build_premature_max_steps(self):
-        assert self.tab('MMP', max_steps=1).premature
+        self.assertTrue(self.tab('MMP', max_steps=1).premature)
 
     def test_construct_sets_is_rank_optim_option(self):
         tab = self.tab(is_rank_optim=False)
-        assert tab.rules.get('Conjunction')
-        assert not tab.opts['is_rank_optim']
+        self.assertTrue(tab.rules.get('Conjunction'))
+        self.assertFalse(tab.opts['is_rank_optim'])
 
     def test_timeout_1ms(self):
         proof = Tableau('cpl', exarg('Addition'), build_timeout=1)
@@ -58,7 +58,7 @@ class TestTableau(BaseSuite):
             proof.build()
 
     def test_finish_empty_sets_build_duration_ms_0(self):
-        assert Tableau().finish().stats['build_duration_ms'] == 0
+        self.assertEqual(Tableau().finish().stats['build_duration_ms'], 0)
 
     def test_add_closure_rule_instance_mock(self):
         class MockRule(ClosingRule):
@@ -71,14 +71,14 @@ class TestTableau(BaseSuite):
         tab = Tableau()
         tab.rules.append(MockRule)
         tab.branch()
-        assert len(tab.open) == 1
+        self.assertEqual(len(tab.open), 1)
         tab.build()
-        assert len(tab.open) == 0
+        self.assertEqual(len(tab.open), 0)
 
     def test_regress_structure_has_model_id(self):
         tab = Tableau('CPL', exarg('Triviality 1'), is_build_models=True)
         tab.build()
-        assert tab.tree.model_id
+        self.assertTrue(tab.tree.model_id)
 
 
     def test_after_branch_add_with_nodes_no_parent(self):
@@ -100,8 +100,8 @@ class TestTableau(BaseSuite):
         tab.add(b)
 
         rule = tab.rules.get(MockRule)
-        assert rule._checkbranch is b
-        assert rule._checkparent == None
+        self.assertIs(rule._checkbranch, b)
+        self.assertIs(rule._checkparent, None)
 
     def test_ticked_step_flag_refactored_from_node(self):
         sen = 'sentence'
@@ -110,15 +110,15 @@ class TestTableau(BaseSuite):
         ])
         step = tab.step()
         stat = tab.stat(b, step.target.node, TabStatKey.FLAGS)
-        assert TabFlag.TICKED in stat
+        self.assertIn(TabFlag.TICKED, stat)
 
-class TestBranch:
+class TestBranch(BaseCase):
 
     def test_next_world_returns_w0(self):
-        assert Branch().new_world() == 0
+        self.assertEqual(Branch().new_world(), 0)
 
     def test_new_constant_returns_m(self):
-        assert Branch().new_constant() == Constant(0, 0)
+        self.assertEqual(Branch().new_constant(), Constant(0, 0))
 
     def test_new_constant_returns_m1_after_s0(self):
         b = Branch()
@@ -128,34 +128,34 @@ class TestBranch:
             sen = Predicated('Identity', (c, c))
             b.add({'sentence': sen})
             i += 1
-        assert b.new_constant() == Constant(0, 1)
+        self.assertEqual(b.new_constant(), Constant(0, 1))
 
     def test_repr_contains_closed(self):
-        assert 'closed' in Branch().__repr__()
+        self.assertIn('closed', Branch().__repr__())
 
     def test_has_all_true_1(self):
         b = Branch()
         s1, s2, s3 = Atomic.gen(3)
         b.extend([{sen: s1}, {sen: s2}, {sen: s3}])
         check = [{sen: s1, sen: s2}]
-        assert b.all(check)
+        self.assertTrue(b.all(check))
 
     def test_has_all_false_1(self):
         b = Branch()
         s1, s2, s3 = Atomic.gen(3)
         b.extend([{sen: s1}, {sen: s3}])
         check = [{sen: s1, sen: s2}]
-        assert not b.all(check)
+        self.assertFalse(b.all(check))
 
     def test_branch_has_world1(self):
         proof = Tableau()
         branch = proof.branch().add({'world1': 4, 'world2': 1})
-        assert branch.has({'world1': 4})
+        self.assertTrue(branch.has({'world1': 4}))
 
     # def test_append_existing_node_fails(self):
     #     b, n = Branch(), Node()
     #     b.append(n)
-    #     assert len(b) == 1 and n in b
+    #     self.assertEqual(len(b), 1 and n in b)
     #     with raises(ValueError):
     #         b.append(n)
 
@@ -180,15 +180,15 @@ class TestBranch:
         rule = proof.rules.get(MyRule)
         proof.branch().add({'world1': 7})
 
-        assert rule.should_be
-        assert not rule.shouldnt_be
+        self.assertTrue(rule.should_be)
+        self.assertFalse(rule.shouldnt_be)
 
 
     def test_select_index_non_indexed_prop(self):
         branch = Branch()
         branch.add({'foo': 'bar'})
         idx = branch._Branch__index.select({'foo': 'bar'}, branch)
-        assert list(idx) == list(branch)
+        self.assertEqual(list(idx), list(branch))
 
     def test_select_index_access(self):
         b = Branch().extend((
@@ -196,20 +196,20 @@ class TestBranch:
             {'foo': 'bar'},
         ))
         idx = b._Branch__index.select({'world1': 0, 'world2': 1}, b)
-        assert set(idx) == {b[0]}
+        self.assertEqual(set(idx), {b[0]})
 
     def test_close_adds_flag_node(self):
         branch = Branch()
         branch.close()
-        assert branch.has({'is_flag': True, 'flag': 'closure'})
+        self.assertTrue(branch.has({'is_flag': True, 'flag': 'closure'}))
 
 
     # def test_constants_or_new_returns_pair_no_constants(self):
     #     branch = Branch()
     #     res = branch.constants_or_new()
-    #     assert len(res) == 2
+    #     self.assertEqual(len(res), 2)
     #     constants, is_new = res
-    #     assert len(constants) == 1
+    #     self.assertEqual(len(constants), 1)
     #     assert is_new
 
     # def test_constants_or_new_returns_pair_with_constants(self):
@@ -217,9 +217,9 @@ class TestBranch:
     #     s1 = Predicated('Identity', [Constant(0, 0), Constant(1, 0)])
     #     branch.add({sen: s1})
     #     res = branch.constants_or_new()
-    #     assert len(res) == 2
+    #     self.assertEqual(len(res), 2)
     #     constants, is_new = res
-    #     assert len(constants) == 2
+    #     self.assertEqual(len(constants), 2)
     #     assert not is_new
 
     def nn1(self, n = 3):
@@ -237,10 +237,10 @@ class TestBranch:
     def test_for_in_iter_nodes(self):
         b, nn = self.case1()
         npp = tuple(dict(n) for n in nn)
-        assert tuple(n for n in iter(b)) == nn
-        assert tuple(n for n in b) == nn
-        assert tuple(dict(n) for n in iter(b)) == npp
-        assert tuple(dict(n) for n in b) == npp
+        self.assertEqual(tuple(n for n in iter(b)), nn)
+        self.assertEqual(tuple(n for n in b), nn)
+        self.assertEqual(tuple(dict(n) for n in iter(b)), npp)
+        self.assertEqual(tuple(dict(n) for n in b), npp)
 
     def gcase1(self, *a, **k):
         b, nn = self.case1(*a, *k)
@@ -255,8 +255,8 @@ class TestBranch:
         size = 5
         gen, branch, nodes = self.gcase1(size)
 
-        assert len(branch) == len(nodes)
-        assert len(branch) == size
+        self.assertEqual(len(branch), len(nodes))
+        self.assertEqual(len(branch), size)
 
         # indexes
         it = gen(
@@ -264,8 +264,8 @@ class TestBranch:
         )
 
         for a, b in it:
-            assert a is b
-            assert branch.index(a) == nodes.index(b)
+            self.assertIs(a, b)
+            self.assertEqual(branch.index(a), nodes.index(b))
 
         # slices
         it = gen(
@@ -273,17 +273,17 @@ class TestBranch:
         )
 
         for a, b in it:
-            assert list(a) == list(b)
+            self.assertEqual(list(a), list(b))
 
 
     def test_create_list_tuple_set_from_branch(self):
         b, nn = self.case1(5)
         nodes = list(b)
-        assert tuple(b) == nn
-        assert set(b) == set(nn)
-        assert nodes == list(nn)
-        assert len(nodes) == len(b)
-        assert len(nodes) == 5
+        self.assertEqual(tuple(b), nn)
+        self.assertEqual(set(b), set(nn))
+        self.assertEqual(nodes, list(nn))
+        self.assertEqual(len(nodes), len(b))
+        self.assertEqual(len(nodes), 5)
 
     def case2(self, n = 2):
         return Branch().extend(self.nn1(n=n))
@@ -296,17 +296,17 @@ class TestBranch:
             b[2]
 
     def test_len_0_6(self):
-        assert len(self.case2(0)) == 0
-        assert len(self.case2(6)) == 6
+        self.assertEqual(len(self.case2(0)), 0)
+        self.assertEqual(len(self.case2(6)), 6)
 
 
-class TestNode:
+class TestNode(BaseCase):
 
     def test_worlds_contains_worlds(self):
         node = Node({'world1': 0, 'world2': 1})
         res = node.worlds
-        assert 0 in res
-        assert 1 in res
+        self.assertIn(0, res)
+        self.assertIn(1, res)
 
     def test_clousre_flag_node_has_is_flag(self):
         branch = Branch()
@@ -321,7 +321,7 @@ class TestNode:
             dict(zip(('a', 'b', 'c'), (1, 2, 3))),
             MapProxy(exp),
         ]:
-            assert dict(Node(inp)) == exp
+            self.assertEqual(dict(Node(inp)), exp)
 
     def test_or_ror_operators(self):
         pa = dict(world = None, designated = None)
@@ -331,28 +331,28 @@ class TestNode:
         exp1 = pa | pb
         exp2 = pb | pa
         n1, n2 = map(Node, (pa, pb))
-        assert n1 | n2 == exp1
-        assert n1 | dict(n2) == exp1
-        assert dict(n1) | n2 == exp1
-        assert dict(n1) | dict(n2) == exp1
-        assert n2 | n1 == exp2
-        assert n2 | dict(n1) == exp2
-        assert dict(n2) | n1 == exp2
-        assert dict(n2) | dict(n1) == exp2
+        self.assertEqual(n1 | n2, exp1)
+        self.assertEqual(n1 | dict(n2), exp1)
+        self.assertEqual(dict(n1) | n2, exp1)
+        self.assertEqual(dict(n1) | dict(n2), exp1)
+        self.assertEqual(n2 | n1, exp2)
+        self.assertEqual(n2 | dict(n1), exp2)
+        self.assertEqual(dict(n2) | n1, exp2)
+        self.assertEqual(dict(n2) | dict(n1), exp2)
         
-class TestRule(BaseSuite):
+class TestRule(BaseCase):
 
     def test_base_not_impl_various(self):
         with raises(TypeError):
             Rule(Tableau())
 
-class TestClosureRule(BaseSuite):
+class TestClosureRule(BaseCase):
 
     def test_base_not_impl_various(self):
         with raises(TypeError):
             ClosingRule(Tableau())
 
-class TestFilters(BaseSuite):
+class TestFilters(BaseCase):
 
     def test_AttrFilter_node_is_modal(self):
         class Lhs(object):
@@ -373,28 +373,29 @@ class TestFilters(BaseSuite):
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
 
-class TestHelper(BaseSuite):
 
-    @using(logic = 'FDE')
-    class TestEllispsisHelper(BaseSuite):
+class TestEllispsisHelper(BaseCase):
 
-        from pytableaux.tools.doc.misc import EllipsisExampleHelper
-        Rcls = EllipsisExampleHelper
+    logic = 'FDE'
 
-        def test_closing_rule_ellipsis(self):
-            tab = self.tab()
-            rule = tab.rules.get('DesignationClosure')
-            helper = self.Rcls(rule)
-            rule.helpers[self.Rcls] = helper
-            b = tab.branch().extend(rule.example_nodes())
-            tab.build()
-            node = b.find(helper.mynode)
-            assert node is not None
-            assert len(b) == 4
-            assert node is b[1]
+    from pytableaux.tools.doc.misc import EllipsisExampleHelper
+    Rcls = EllipsisExampleHelper
 
-@using(logic = 'K')
-class Test_K_DefaultNodeFilterRule(BaseSuite):
+    def test_closing_rule_ellipsis(self):
+        tab = self.tab()
+        rule = tab.rules.get('DesignationClosure')
+        helper = self.Rcls(rule)
+        rule.helpers[self.Rcls] = helper
+        b = tab.branch().extend(rule.example_nodes())
+        tab.build()
+        node = b.find(helper.mynode)
+        self.assertIsNot(node, None)
+        self.assertEqual(len(b), 4)
+        self.assertIs(node, b[1])
+
+class Test_K_DefaultNodeFilterRule(BaseCase):
+
+    logic = 'K'
 
     def ngen(self, n):
         sgen = self.sgen(n)
@@ -422,8 +423,10 @@ class Test_K_DefaultNodeFilterRule(BaseSuite):
     def test_rule_sentence_impl(self):
         rule, tab = self.case1()
 
-@using(logic = 'S5')
-class TestMaxConstantsTracker(BaseSuite):
+
+class TestMaxConstantsTracker(BaseCase):
+
+    logic = 'S5'
 
     def test_argument_trunk_two_qs_returns_3(self):
     
@@ -444,9 +447,9 @@ class TestMaxConstantsTracker(BaseSuite):
         proof.argument = self.parg('NLVxNFx', 'LMSxFx')
         rule = proof.rules.get(MtrTestRule)
         branch = proof[0]
-        assert rule[MaxConsts]._compute(branch) == 3
+        self.assertEqual(rule[MaxConsts]._compute(branch), 3)
 
-    @skip
+    @skip(None)
     def xtest_compute_for_node_one_q_returns_1(self):
         n = {sen: self.p('VxFx'), 'world': 0}
         node = Node(n)
@@ -455,9 +458,9 @@ class TestMaxConstantsTracker(BaseSuite):
         branch = proof.branch()
         branch.add(node)
         res = rule[MaxConsts]._compute_needed_constants_for_node(node, branch)
-        assert res == 1
+        self.assertEqual(res, 1)
 
-    @skip
+    @skip(None)
     def test_compute_for_branch_two_nodes_one_q_each_returns_3(self):
         s1 = self.p('LxFx')
         s2 = self.p('SxFx')
@@ -468,31 +471,20 @@ class TestMaxConstantsTracker(BaseSuite):
         branch = proof.branch()
         branch.extend([n1, n2])
         res = rule[MaxConsts]._compute_max_constants(branch)
-        assert res == 3
+        self.assertEqual(res, 3)
 
-@using(logic = 'CPL')
-class TestTestDecorator(BaseSuite):
 
-    def test_01_using_initial(self):
-        assert self.logic.name == 'CPL'
 
-    @using(logic = 'FDE')
-    def test_02_using(self):
-        assert self.logic.name == 'FDE'
+class TestKNewExistential(BaseCase):
 
-    @skip('TODO remove feature')
-    def test_03_using_restore(self):
-        assert self.logic.name == 'CPL'
+    logic = 'K'
 
-@using(logic = 'K')
-class TestNewQuantifierRules(BaseSuite):
+    def test_rule_applies(self):
+        rule, tab = self.rule_eg('Existential', bare = True)
 
-    class TestKNewExistential(BaseSuite):
+class TestKNewUniversal(BaseCase):
 
-        def test_rule_applies(self):
-            rule, tab = self.rule_eg('Existential', bare = True)
+    logic = 'K'
 
-    class TestKNewUniversal(BaseSuite):
-
-        def test_rule_applies(self):
-            rule, tab = self.rule_eg('Universal', bare = True)
+    def test_rule_applies(self):
+        rule, tab = self.rule_eg('Universal', bare = True)

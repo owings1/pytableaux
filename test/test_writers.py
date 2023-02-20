@@ -17,7 +17,6 @@
 # ------------------
 #
 # pytableaux - writers test cases
-import pytest
 from pytableaux import examples
 from pytableaux.errors import *
 from pytableaux.lang import Atomic, Predicate
@@ -26,6 +25,7 @@ from pytableaux.lang.writing import LexWriter
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.proof.writers import TabWriter
 
+from .tutils import BaseCase
 # Sentence Writers
 
 std = LexWriter('standard')
@@ -39,64 +39,54 @@ pstd = Parser('standard')
 
 htm = TabWriter('html', 'standard')
 
-class TestBase(object):
-
-    pass
-    # def test_write_operated_not_impl(self):
-    #     s = Operated('Negation', [Atomic(0, 0)])
-    #     symset = SymbolSet.get_instance('standard.ascii')
-    #     w = BaseLexWriter(symset)
-    #     with pytest.raises(NotImplementedError):
-    #         w.write(s) 
-        
-class TestStandard(object):
+class TestStandard(BaseCase):
 
     def test_atomic(self):
         s = Atomic(0, 0)
         res = std(s)
-        assert res == 'A'
+        self.assertEqual(res, 'A')
 
     def test_writes_parens_asc(self):
         s = ppol('UUaba')
         res = stdasc(s)
-        assert '(' in res
-        assert ')' in res
+        self.assertIn('(', res)
+        self.assertIn(')', res)
     def test_writes_parens_uni(self):
         s = ppol('UUaba')
         res = stduni(s)
-        assert '(' in res
-        assert ')' in res
+        self.assertIn('(', res)
+        self.assertIn(')', res)
     def test_writes_parens_htm(self):
         s = ppol('UUaba')
         res = stdhtm(s)
-        assert '(' in res
-        assert ')' in res
+        self.assertIn('(', res)
+        self.assertIn(')', res)
     def test_drop_parens_asc(self):
         s = ppol('Uab')
         lw = LexWriter('standard', 'ascii', drop_parens=True)
         res = lw(s)
-        assert '(' not in res
-        assert ')' not in res
+        self.assertNotIn('(', res)
+        self.assertNotIn(')', res)
     def test_drop_parens_uni(self):
         s = ppol('Uab')
         lw = LexWriter('standard', 'unicode', drop_parens=True)
         res = lw.write(s)
-        assert '(' not in res
-        assert ')' not in res
+        self.assertNotIn('(', res)
+        self.assertNotIn(')', res)
     def test_drop_parens_htm(self):
         s = ppol('Uab')
         lw = LexWriter('standard', 'html', drop_parens=True)
         res = lw(s)
-        assert '(' not in res
-        assert ')' not in res
+        self.assertNotIn('(', res)
+        self.assertNotIn(')', res)
     # def test_symset_returns_same(self):
         # ss = std.symset('default')
         # res = std.symset(ss)
-        # assert res == ss
+        # self.assertEqual(res, ss)
 
     def test_write_predicate_sys(self):
         res = std(Predicate.System['Identity'])
-        assert res == '='
+        self.assertEqual(res, '=')
 
     # def test_write_parameter_not_impl_base_param(self):
     #     param = Parameter(0, 0)
@@ -106,12 +96,12 @@ class TestStandard(object):
     def test_write_subscript_html(self):
 
         res = stdhtm._write_subscript(1)
-        assert '>1</s' in res
+        self.assertIn('>1</s', res)
 
     def test_write_neg_ident_html(self):
         s1 = ppol('NImn')
         res = stdhtm(s1)
-        assert '&ne;' in res
+        self.assertIn('&ne;', res)
 
     # def test_write_operated_3ary_not_impl(self):
     #     operators['Schmoogation'] = 3
@@ -126,21 +116,21 @@ class TestStandard(object):
 
     def test_parse_errors_various_parens(self):
         # coverage
-        with pytest.raises(ParseError):
+        with self.assertRaises(ParseError):
             pstd('(A & &A)')
-        with pytest.raises(ParseError):
+        with self.assertRaises(ParseError):
             pstd('(A & ())')
 
-class TestPolish(object):
+class TestPolish(BaseCase):
 
     def test_atomic(self):
         s = Atomic(0, 0)
         res = pol(s)
-        assert res == 'a'
+        self.assertEqual(res, 'a')
 
 # Proof writers
 
-class TestHtml(object):
+class TestHtml(BaseCase):
 
     def test_write_no_arg(self):
         tab = Tableau('FDE')

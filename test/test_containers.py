@@ -11,7 +11,7 @@ from pytableaux.tools.hybrids import *
 from pytableaux.tools.linked import *
 from pytest import raises
 
-from .tutils import BaseSuite, get_subclasses, skip
+from .tutils import BaseCase
 
 _T = TypeVar('_T')
 
@@ -25,7 +25,7 @@ def subclasses(supcls: type[_T]) -> qset[type[_T]]:
                 classes.append(child)
     return classes
 
-class Test_abcm(BaseSuite):
+class Test_abcm(BaseCase):
     def test_merged_mroattr(self):
         class A:
             x = 'A',
@@ -36,108 +36,106 @@ class Test_abcm(BaseSuite):
         class C(B2, B1):
             pass
         res = abcs.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
-        assert tuple(res) == ('A', 'B1', 'B2')
+        self.assertEqual(tuple(res), ('A', 'B1', 'B2'))
 
-class TestSetList(BaseSuite):
+class TestSetList(BaseCase):
 
     def test_equalities(self):
 
         _ = qset
         def g(*items) -> qset: return _(items)
-        
-        assert {1, 2, 3} == g(2, 1, 2, 3)
-        assert _(range(5)) | _(range(6)) == set(range(6))
+
+        self.assertEqual({1, 2, 3}, g(2, 1, 2, 3))
+        self.assertEqual(_(range(5)) | _(range(6)), set(range(6)))
 
         s = s1 = g(1, 2, 3)
         s -= {3}
-        assert s == {1, 2}
-        assert s is s1
-
-        assert g(1) ^ g(2) == {1, 2}
-
-        assert sorted({2, 3, 1, 1, 2}) == [1, 2, 3]
+        self.assertEqual(s, {1,2})
+        self.assertIs(s, s1)
+        self.assertEqual(g(1) ^ g(2), {1, 2})
+        self.assertEqual(sorted({2, 3, 1, 1, 2}), [1, 2, 3])
 
     def test_errors(self):
 
         _ = qset
         def g(*items): return _(items)
 
-        with raises(ValueError):
+        with self.assertRaises(ValueError):
             g(1).append(1)
 
-class TestListeners(BaseSuite):
+class TestListeners(BaseCase):
 
     def test_once_listener(self):
         e = EventsListeners()
         e.create('test')
         def cb(): pass
         e.once('test', cb)
-        assert len(e['test']) == 1
-        assert cb in e['test']
+        self.assertEqual(len(e['test']), 1)
+        self.assertIn(cb, e['test'])
         e.emit('test')
-        assert len(e['test']) == 0
+        self.assertEqual(len(e['test']), 0)
 
     def test_off(self):
         def cb(): pass
         e = EventsListeners()
         e.create('test')
         e.on('test', cb)
-        assert cb in e['test']
+        self.assertIn(cb, e['test'])
         e.off('test', cb)
-        assert len(e['test']) == 0
+        self.assertEqual(len(e['test']), 0)
 
-class TestLinkSet(BaseSuite):
+class TestLinkSet(BaseCase):
 
     def test_iter(self):
         x = linqset(range(10))
-        assert list(reversed(x)) == list(reversed(range(10)))
-        assert list(x.iter_from_value(6)) == [6,7,8,9]
-        assert list(x.iter_from_value(6, reverse=True)) == [6,5,4,3,2,1,0]
-        with raises(ValueError):
+        self.assertEqual(list(reversed(x)), list(reversed(range(10))))
+        self.assertEqual(list(x.iter_from_value(6)), [6,7,8,9])
+        self.assertEqual(list(x.iter_from_value(6, reverse=True)), [6,5,4,3,2,1,0])
+        with self.assertRaises(ValueError):
             next(x.iter_from_value(11))
 
     def test_getitem(self):
         x = linqset(range(0,8,2))
-        assert x[0] == 0
-        assert x[1] == 2
-        assert x[2] == 4
-        assert x[3] == 6
-        assert x[-1] == 6
-        assert x[-2] == 4
-        assert x[-3] == 2
-        assert x[-4] == 0
-        with raises(IndexError): x[-5]
-        with raises(IndexError): x[4]
+        self.assertEqual(x[0], 0)
+        self.assertEqual(x[1], 2)
+        self.assertEqual(x[2], 4)
+        self.assertEqual(x[3], 6)
+        self.assertEqual(x[-1], 6)
+        self.assertEqual(x[-2], 4)
+        self.assertEqual(x[-3], 2)
+        self.assertEqual(x[-4], 0)
+        with self.assertRaises(IndexError): x[-5]
+        with self.assertRaises(IndexError): x[4]
         x.clear()
-        with raises(IndexError): x[0]
-        with raises(IndexError): x[-1]
+        with self.assertRaises(IndexError): x[0]
+        with self.assertRaises(IndexError): x[-1]
 
     def test_getitem_slice(self):
         x = linqset(range(10))
         y = list(range(10))
-        assert list(x[:]) == y[:]
-        assert list(x[-1:]) == y[-1:]
-        assert list(x[-1:4]) == y[-1:4]
-        assert list(x[-1:4:-1]) == y[-1:4:-1]
-        assert list(x[::2]) == y[::2]
-        assert list(x[::4]) == y[::4]
-        assert list(x[::9]) == y[::9]
-        assert list(x[3::2]) == y[3::2]
+        self.assertEqual(list(x[:]), y[:])
+        self.assertEqual(list(x[-1:]), y[-1:])
+        self.assertEqual(list(x[-1:4]), y[-1:4])
+        self.assertEqual(list(x[-1:4:-1]), y[-1:4:-1])
+        self.assertEqual(list(x[::2]), y[::2])
+        self.assertEqual(list(x[::4]), y[::4])
+        self.assertEqual(list(x[::9]), y[::9])
+        self.assertEqual(list(x[3::2]), y[3::2])
 
     def test_delitem(self):
-        fnew = lambda: linqset(range(0,8,2))
+        def fnew(): return linqset(range(0,8,2))
         x = fnew()
         del x[0]
-        assert list(x) == [2,4,6]
+        self.assertEqual(list(x), [2,4,6])
         x = fnew()
         del x[-1]
-        assert list(x) == [0,2,4]
+        self.assertEqual(list(x), [0,2,4])
         x = fnew()
         del x[2]
-        assert list(x) == [0,2,6]
+        self.assertEqual(list(x), [0,2,6])
         x = fnew()
         del x[-3]
-        assert list(x) == [0,4,6]
+        self.assertEqual(list(x), [0,4,6])
         x = fnew()
         with raises(IndexError): del x[4]
         with raises(IndexError): del x[-5]
@@ -146,10 +144,10 @@ class TestLinkSet(BaseSuite):
         fnew = lambda: linqset([5,6])
         x = fnew()
         x[0] = 7
-        assert list(x) == [7,6]
+        self.assertEqual(list(x), [7,6])
         x = fnew()
         x[-1] = 7
-        assert list(x) == [5,7]
+        self.assertEqual(list(x), [5,7])
         with raises(IndexError): x[2] = 10
         with raises(IndexError): x[-3] = 10
         with raises(ValueError): x[1] = 5
@@ -157,44 +155,38 @@ class TestLinkSet(BaseSuite):
     def test_reverse(self):
         x = linqset()
         x.reverse()
-        assert list(x) == []
-        assert len(x) == 0
+        self.assertEqual(list(x), [])
+        self.assertEqual(len(x), 0)
         with raises(IndexError): x[0]
         with raises(IndexError): x[-1]
 
         x = linqset('a')
         x.reverse()
-        assert list(x) == list('a')
-        assert len(x) == 1
-        assert x[0] == 'a'
-        assert x[-1] == 'a'
+        self.assertEqual(list(x), list('a'))
+        self.assertEqual(len(x), 1)
+        self.assertEqual(x[0], 'a')
+        self.assertEqual(x[-1], 'a')
 
         x = linqset('ab')
         x.reverse()
-        assert list(x) == list('ba')
-        assert len(x) == 2
-        assert x[0] == 'b'
-        assert x[-1] == 'a'
-        assert x[1] == 'a'
+        self.assertEqual(list(x), list('ba'))
+        self.assertEqual(len(x), 2)
+        self.assertEqual(x[0], 'b')
+        self.assertEqual(x[-1], 'a')
+        self.assertEqual(x[1], 'a')
 
         x = linqset('abc')
         x.reverse()
-        assert list(x) == list('cba')
+        self.assertEqual(list(x), list('cba'))
         x.reverse()
-        assert list(x) == list('abc')
+        self.assertEqual(list(x), list('abc'))
 
     def test_wedge(self):
         x = linqset('abcdeg')
         x.wedge('f', 'g', -1)
-        # x.wedge(-1, 'g', 'f')
-        assert list(x) == list('abcdefg')
+        self.assertEqual(list(x), list('abcdefg'))
 
         x = linqset('abcdeg')
         x.wedge('f', 'e', 1)
-        # x.wedge(1, 'e', 'f')
-        assert list(x) == list('abcdefg')
+        self.assertEqual(list(x), list('abcdefg'))
 
-    # def test_sort(self):
-    #     x = linqset('fedcba')
-    #     x.sort()
-    #     assert list(x) == list('abcdef')

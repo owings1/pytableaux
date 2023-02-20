@@ -18,7 +18,7 @@ from pytableaux.proof.rules import ClosingRule, Rule
 from pytableaux.proof.tableaux import Tableau
 from pytableaux.tools import abcs
 from pytableaux.tools.hybrids import qset
-
+from unittest import TestCase
 if TYPE_CHECKING:
     from typing import overload
     from pytableaux.typing import _TT, _F, _T # type: ignore
@@ -338,3 +338,24 @@ class BaseSuite:
     def Model(self) -> type[BaseModel]:
         return self.logic.Model
 
+
+class BaseCase(TestCase):
+
+    p = BaseSuite.p
+    pp = BaseSuite.pp
+    preds = BaseSuite.preds
+    notn = BaseSuite.notn
+    crparser = BaseSuite.crparser
+    parg = BaseSuite.parg
+    tab = BaseSuite.tab
+    tabb = BaseSuite.tabb
+    sgen = BaseSuite.sgen
+    ngen = BaseSuite.ngen
+    rule_tab = BaseSuite.rule_tab
+    rule_eg = BaseSuite.rule_eg
+    fix_ss = BaseSuite.fix_ss
+
+    def __init_subclass__(subcls, **kw):
+        super().__init_subclass__(**kw)
+        if getattr(subcls, 'logic', None):
+            subcls.logic = registry(subcls.logic)
