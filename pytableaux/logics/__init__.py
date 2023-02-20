@@ -193,7 +193,6 @@ class Registry(Mapping, abcs.Copyable):
                 raise
             return default
 
-
     def locate(self, ref, default = NOARG, /):
         """Like ``.get()`` but also searches the ``__module__`` attribute of
         classes, methods, and functions to locate the logic in which it was defined.
@@ -219,7 +218,6 @@ class Registry(Mapping, abcs.Copyable):
             if default is NOARG:
                 raise
             return default
-
 
     def all(self):
         for package in self.packages:

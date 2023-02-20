@@ -376,7 +376,7 @@ class TabRules(B3E.TabRules):
         disjunction, whose first disjunct is the negated inner sentence of *n*,
         and whose second disjunct is the negation of a disjunction *d*, where the
         first disjunct of *d* is the inner sentence of *n*, and the second disjunct
-        of *d* is the negation of the inner setntence of *n*. Then tick *n*.
+        of *d* is the negation of the inner sentence of *n*. Then tick *n*.
         """
         designation = True
         negated     = True

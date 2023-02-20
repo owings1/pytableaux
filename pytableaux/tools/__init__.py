@@ -28,11 +28,10 @@ import re
 import sys
 from abc import abstractmethod as abstract
 from collections import defaultdict
-from collections.abc import Mapping, Set, Sequence
+from collections.abc import Mapping, Sequence, Set
 from enum import Enum
 from operator import truth
-from types import DynamicClassAttribute as dynca
-from types import FunctionType
+from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
 
 __all__ = (
@@ -241,25 +240,26 @@ def dxopy():
             wrap = MapProxy
         else:
             wrap = thru
-        return runner(a, {}, wrap, runner)
+        return runner(a, {}, wrap)
 
-    def runner(a: Mapping, memo, wrap, recur):
+    def runner(a: Mapping, memo, wrap):
         if (i := id(a)) in memo:
             return a
         memo[i] = True
         m = wrap({
-            key: recur(value, memo, wrap, recur)
+            key: runner(value, memo, wrap)
                 if isinstance(value, Mapping)
                 else value
-            for key, value in a.items()
-        })
+            for key, value in a.items()})
         memo[id(m)] = True
         return m
 
     return api
 
 from . import abcs
-from ..errors import check, Emsg
+pass
+from ..errors import Emsg, check
+
 
 class BaseMember:
 
@@ -464,7 +464,7 @@ class lazy:
 
         @property
         def propclass(self):
-            return dynca
+            return DynamicClassAttribute
 
         __slots__ = EMPTY_SET
 
@@ -477,14 +477,11 @@ class NoSetAttr(BaseMember):
     _defaults = MapProxy(dict(
         efmt = (
             "Attribute '{0}' of '{1.__class__.__name__}' "
-            "objects is readonly"
-        ).format,
-
+            "objects is readonly").format,
         # Control attribute name to check on the object,
         # e.g. '_readonly', in addition to this object's
         # `enabled` setting.
         attr = None,
-
         # If `True`: Check `attr` on the object's class;
         # If set to a `type`, check the `attr` on that class;
         # If Falsy, only check for this object's `enabled` setting.
@@ -493,7 +490,7 @@ class NoSetAttr(BaseMember):
     __slots__ =  ('cache', 'defaults', 'enabled')
 
     defaults: dict
-    cache: dict
+    cache: dict[tuple, dict]
 
     def __init__(self, /, *, enabled = True, **defaults):
         self.enabled = bool(enabled)
@@ -564,8 +561,8 @@ class SetView(Set, abcs.Copyable, immutcopy = True):
     def __new__(cls, set_, /,):
         check.inst(set_, Set)
         self = object.__new__(cls)
-        self.__len__      = set_.__len__
-        self.__iter__     = set_.__iter__
+        self.__len__ = set_.__len__
+        self.__iter__ = set_.__iter__
         self.__contains__ = set_.__contains__
         return self
 
@@ -694,6 +691,6 @@ class dictns(dictattr):
     def _keyattr_ok(cls, name):
         return len(name) and name[0] != '_'
 
+from .hybrids import EMPTY_QSET as EMPTY_QSET
 from .hybrids import qset as qset
 from .hybrids import qsetf as qsetf
-from .hybrids import EMPTY_QSET as EMPTY_QSET

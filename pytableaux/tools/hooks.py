@@ -190,7 +190,6 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
         return HookProvider(provider)
 
     @abcs.abcf.before
-
     def prepare(ns: dict, bases): # type: ignore
 
         providers = {}
@@ -200,7 +199,6 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
         #******  Closure for init_provider()
 
         @closure
-
         def provider():
 
             ATTR = abcs.Astr.hookinfo
@@ -259,7 +257,6 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
         #******  Closure for init_user()
 
         @closure
-
         def user():
 
             ATTR = abcs.Astr.hookuser
@@ -329,7 +326,6 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
 
     @abcs.abcf.temp
     @closure
-
     def connect():
 
         def connect(user, provider, usermap: Mapping, /):

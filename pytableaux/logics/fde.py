@@ -40,12 +40,10 @@ class Meta:
         'gappy',
         'glutty',
         'non-modal',
-        'first-order',
-    )
+        'first-order')
     native_operators = (
         Operator.Negation, Operator.Conjunction, Operator.Disjunction,
-        Operator.MaterialConditional, Operator.MaterialBiconditional,
-    )
+        Operator.MaterialConditional, Operator.MaterialBiconditional)
 
 class Model(BaseModel[ValueFDE]):
     'An FDE Model.'
@@ -76,14 +74,11 @@ class Model(BaseModel[ValueFDE]):
     "An assignment of each opaque (un-interpreted) sentence to a value."
 
     def __init__(self):
-
         super().__init__()
-
         self.extensions = {}
         self.anti_extensions = {}
         self.atomics = {}
         self.opaques = {}
-
         #: Track set of atomics for performance.
         self.all_atomics: set[Atomic] = set()
         #: Track set of constants for performance.
@@ -167,15 +162,12 @@ class Model(BaseModel[ValueFDE]):
                 input_datatype  = 'sentence',
                 output_datatype = 'string',
                 output_typehint = 'truth_value',
-                symbol          = 'v',
-                values          = [
+                symbol = 'v',
+                values = [
                     dict(
                         input  = s,
-                        output = self.atomics[s]
-                    )
-                    for s in sorted(self.atomics)
-                ]
-            ),
+                        output = self.atomics[s])
+                    for s in sorted(self.atomics)]),
             Opaques = dict(
                 description     = 'opaque values',
                 datatype        = 'function',
@@ -183,15 +175,12 @@ class Model(BaseModel[ValueFDE]):
                 input_datatype  = 'sentence',
                 output_datatype = 'string',
                 output_typehint = 'truth_value',
-                symbol          = 'v',
-                values          = [
+                symbol = 'v',
+                values = [
                     dict(
                         input  = s,
-                        output = self.opaques[s]
-                    )
-                    for s in sorted(self.opaques)
-                ]
-            ),
+                        output = self.opaques[s])
+                    for s in sorted(self.opaques)]),
             Predicates = dict(
                 description = 'predicate extensions/anti-extensions',
                 in_summary  = True,
@@ -205,14 +194,11 @@ class Model(BaseModel[ValueFDE]):
                             input_datatype  = 'predicate',
                             output_datatype = 'set',
                             output_typehint = 'extension',
-                            symbol          = 'P+',
-                            values          = [
+                            symbol = 'P+',
+                            values = [
                                 dict(
                                     input  = predicate,
-                                    output = self.get_extension(predicate),
-                                )
-                            ]
-                        ),
+                                    output = self.get_extension(predicate))]),
                         dict(
                             description     = 'predicate anti-extension',
                             datatype        = 'function',
@@ -220,19 +206,13 @@ class Model(BaseModel[ValueFDE]):
                             input_datatype  = 'predicate',
                             output_datatype = 'set',
                             output_typehint = 'extension',
-                            symbol          = 'P-',
-                            values          = [
+                            symbol = 'P-',
+                            values = [
                                 dict(
                                     input  = predicate,
-                                    output = self.get_anti_extension(predicate),
-                                )
-                            ]
-                        )
+                                    output = self.get_anti_extension(predicate))])
                     ]
-                    for predicate in sorted(self.predicates)
-                ]
-            )
-        )
+                    for predicate in sorted(self.predicates)]))
 
     def read_branch(self, branch: Branch, /):
         for node in branch:
@@ -314,8 +294,7 @@ class Model(BaseModel[ValueFDE]):
             if stype is Operated and s.operator is Operator.Negation:
                 self.set_literal_value(
                     s.lhs,
-                    self.truth_function(s.operator, value)
-                )
+                    self.truth_function(s.operator, value))
             elif stype is Atomic:
                 self.set_atomic_value(s, value)
             elif stype is Predicated:
@@ -426,33 +405,29 @@ class Model(BaseModel[ValueFDE]):
             return self.truth_function(
                 Operator.Conjunction,
                 self.truth_function(Operator.Conditional, a, b),
-                self.truth_function(Operator.Conditional, b, a)
-            )
+                self.truth_function(Operator.Conditional, b, a) )
 
         def material_conditional(self: Model, a, b, /):
             return self.truth_function(
                 Operator.Disjunction,
                 self.truth_function(Operator.Negation, a),
-                b
-            )
+                b)
 
         def material_biconditional(self: Model, a, b, /):
             return self.truth_function(
                 Operator.Conjunction,
                 self.truth_function(Operator.MaterialConditional, a, b),
-                self.truth_function(Operator.MaterialConditional, b, a)
-            )
+                self.truth_function(Operator.MaterialConditional, b, a))
 
         _funcmap = MapProxy({
-            Operator.Assertion : assertion,
-            Operator.Negation  : negation,
-            Operator.Conjunction : conjunction,
-            Operator.Disjunction : disjunction,
-            Operator.Conditional : conditional,
-            Operator.Biconditional : biconditional,
-            Operator.MaterialConditional   : material_conditional,
-            Operator.MaterialBiconditional : material_biconditional,
-        })
+            Operator.Assertion: assertion,
+            Operator.Negation: negation,
+            Operator.Conjunction: conjunction,
+            Operator.Disjunction: disjunction,
+            Operator.Conditional: conditional,
+            Operator.Biconditional: biconditional,
+            Operator.MaterialConditional: material_conditional,
+            Operator.MaterialBiconditional: material_biconditional})
 
         def func_mapper(self: Model, oper: Operator, a, b = None, /):
             try:
@@ -473,8 +448,7 @@ class TableauxSystem(TableauxSystem):
         Operator.MaterialConditional: ((0, 1), (1, 0)),
         Operator.MaterialBiconditional: ((0, 1), (1, 0)),
         Operator.Conditional: ((0, 1), (1, 0)),
-        Operator.Biconditional: ((1, 1), (1, 1)),
-    }
+        Operator.Biconditional: ((1, 1), (1, 1))}
 
     @classmethod
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
@@ -550,8 +524,7 @@ class TabRules(LogicType.TabRules):
             if nnode is not None:
                 return Target(
                     nodes = qsetf((node, nnode)),
-                    branch = branch,
-                )
+                    branch = branch)
 
         def node_will_close_branch(self, node: Node, branch: Branch, /):
             return bool(self._find_closing_node(node, branch))
@@ -577,8 +550,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
-                group(sdnode(self.sentence(node).lhs, self.designation))
-            )
+                group(sdnode(self.sentence(node).lhs, self.designation)))
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
@@ -598,8 +570,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
-                group(sdnode(self.sentence(node).lhs, self.designation))
-            )
+                group(sdnode(self.sentence(node).lhs, self.designation)))
 
     class AssertionUndesignated(AssertionDesignated):
         """
@@ -619,8 +590,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, _, /):
             return adds(
-                group(sdnode(~self.sentence(node).lhs, self.designation))
-            )
+                group(sdnode(~self.sentence(node).lhs, self.designation)))
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated):
         """
@@ -641,8 +611,7 @@ class TabRules(LogicType.TabRules):
             s = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(s.lhs, d), sdnode(s.rhs, d))
-            )
+                group(sdnode(s.lhs, d), sdnode(s.rhs, d)))
 
     class ConjunctionNegatedDesignated(OperatorNodeRule):
         """
@@ -660,8 +629,7 @@ class TabRules(LogicType.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(~s.lhs, d)),
-                group(sdnode(~s.rhs, d)),
-            )
+                group(sdnode(~s.rhs, d)))
 
     class ConjunctionUndesignated(OperatorNodeRule):
         """
@@ -678,8 +646,7 @@ class TabRules(LogicType.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(s.lhs, d)),
-                group(sdnode(s.rhs, d)),
-            )
+                group(sdnode(s.rhs, d)))
 
     class ConjunctionNegatedUndesignated(OperatorNodeRule):
         """
@@ -695,8 +662,7 @@ class TabRules(LogicType.TabRules):
             s = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(~s.lhs, d), sdnode(~s.rhs, d))
-            )
+                group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)))
 
     class DisjunctionDesignated(ConjunctionUndesignated):
         """
@@ -748,8 +714,7 @@ class TabRules(LogicType.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(~s.lhs, d)),
-                group(sdnode( s.rhs, d)),
-            )
+                group(sdnode( s.rhs, d)))
 
     class MaterialConditionalNegatedDesignated(OperatorNodeRule):
         """
@@ -765,8 +730,7 @@ class TabRules(LogicType.TabRules):
             s = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(s.lhs, d), sdnode(~s.rhs, d))
-            )
+                group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
 
     class MaterialConditionalUndesignated(OperatorNodeRule):
         """
@@ -781,8 +745,7 @@ class TabRules(LogicType.TabRules):
             s = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(~s.lhs, d), sdnode(s.rhs, d))
-            )
+                group(sdnode(~s.lhs, d), sdnode(s.rhs, d)))
 
     class MaterialConditionalNegatedUndesignated(OperatorNodeRule):
         """
@@ -801,8 +764,7 @@ class TabRules(LogicType.TabRules):
             d = self.designation
             return adds(
                 group(sdnode( s.lhs, d)),
-                group(sdnode(~s.rhs, d)),
-            )
+                group(sdnode(~s.rhs, d)))
 
     class MaterialBiconditionalDesignated(OperatorNodeRule):
         """
@@ -821,8 +783,7 @@ class TabRules(LogicType.TabRules):
             d = self.designation
             return adds(
                 group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)),
-                group(sdnode( s.rhs, d), sdnode( s.lhs, d)),
-            )
+                group(sdnode( s.rhs, d), sdnode( s.lhs, d)))
 
     class MaterialBiconditionalNegatedDesignated(OperatorNodeRule):
         """
@@ -842,8 +803,7 @@ class TabRules(LogicType.TabRules):
             d = self.designation
             return adds(
                 group(sdnode( s.lhs, d), sdnode(~s.rhs, d)),
-                group(sdnode(~s.lhs, d), sdnode( s.rhs, d)),
-            )
+                group(sdnode(~s.lhs, d), sdnode( s.rhs, d)))
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
         """
@@ -969,8 +929,7 @@ class TabRules(LogicType.TabRules):
         def _get_node_targets(self, node: Node, branch: Branch,/):
             s = self.sentence(node)
             return adds(
-                group(sdnode(branch.new_constant() >> s, self.designation))
-            )
+                group(sdnode(branch.new_constant() >> s, self.designation)))
 
     class ExistentialNegatedDesignated(rules.QuantifiedSentenceRule, DefaultNodeRule):
         """
@@ -987,8 +946,7 @@ class TabRules(LogicType.TabRules):
         def _get_node_targets(self, node: Node, _, /):
             v, si = self.sentence(node)[1:]
             return adds(
-                group(sdnode(self.convert(v, ~si), self.designation))
-            )
+                group(sdnode(self.convert(v, ~si), self.designation)))
 
     class ExistentialUndesignated(QuantifierFatRule):
         """

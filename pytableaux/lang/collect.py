@@ -67,9 +67,11 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy = True, metaclass = 
     __slots__ = ('_hash', 'premises', 'seq', 'title')
 
     premises: tuple[Sentence, ...]
+    "The argument's premises"
 
     @property
     def conclusion(self) -> Sentence:
+        """The argument's conclusion."""
         return self.seq[0]
 
     @lazy.prop
@@ -205,6 +207,9 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dic
             return default
 
     def specs(self):
+        """
+        Return a tuple of all the predicate spec attributes.
+        """
         return tuple(p.spec for p in self)
 
     @abcs.abcf.temp
