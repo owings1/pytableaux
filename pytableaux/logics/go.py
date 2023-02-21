@@ -129,7 +129,7 @@ class TabRules(B3E.TabRules):
             return adds(
                 group(sdnode(s.lhs, not d)),
                 group(sdnode(s.rhs, not d)))
-            
+
     class ConjunctionUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated conjunction node *n* on a branch *b*, add a
