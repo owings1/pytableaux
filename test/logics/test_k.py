@@ -6,6 +6,12 @@ from pytableaux.proof import *
 class Base(BaseCase):
     logic = 'K'
 
+class TestTabRules(Base):
+
+    def test_rules_modal(self):
+        for rcls in self.logic.TabRules.all_rules:
+            self.assertIs(rcls.modal, True)
+
 class TestClosureRules(Base):
 
     def test_ContradictionClosure(self):

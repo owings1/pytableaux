@@ -44,27 +44,27 @@ class Model(CPL.Model):
 class TableauxSystem(CPL.TableauxSystem):
     pass
 
-@TableauxSystem.initialize
+@TableauxSystem.initialize(modal = False)
 class TabRules(CPL.TabRules):
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,
     including the CPL closure rules, and adds additional rules for the quantifiers.
     """
-    class Existential(K.TabRules.Existential, modal = False):
+    class Existential(K.TabRules.Existential):
         """
         From an unticked existential node *n* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node to *b* with the substitution
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
 
-    class ExistentialNegated(K.TabRules.ExistentialNegated, modal = False):
+    class ExistentialNegated(K.TabRules.ExistentialNegated):
         """
         From an unticked negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
         node to *b* over *v* into the negation of *s*, then tick *n*.
         """
 
-    class Universal(K.TabRules.Universal, modal = False):
+    class Universal(K.TabRules.Universal):
         """
         From a universal node on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -72,7 +72,7 @@ class TabRules(CPL.TabRules):
         *b*. The node *n* is never ticked.
         """
 
-    class UniversalNegated(K.TabRules.UniversalNegated, modal = False):
+    class UniversalNegated(K.TabRules.UniversalNegated):
         """
         From an unticked negated universal node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add an existentially

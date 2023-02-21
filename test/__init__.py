@@ -18,7 +18,7 @@ from unittest import TestCase
 
 from pytableaux import examples
 from pytableaux.lang import *
-from pytableaux.logics import registry
+from pytableaux.logics import registry, LogicType
 from pytableaux.models import BaseModel
 from pytableaux.proof import Branch, Node, Tableau, ClosingRule, Rule
 
@@ -53,6 +53,7 @@ class ArgModels(NamedTuple):
 
 class BaseCase(TestCase):
 
+    logic: LogicType
     preds = Predicates(Predicate.gen(3))
     notn = Notation.polish
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')

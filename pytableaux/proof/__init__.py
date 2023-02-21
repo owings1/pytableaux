@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import abstractmethod as abstract
 from enum import Enum, Flag, auto
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, NamedTuple, Sequence
+from typing import TYPE_CHECKING, Any, NamedTuple, Sequence, TypeVar
 
 from .. import __docformat__
 from ..lang import Operator, Predicate, Quantifier
@@ -34,6 +34,8 @@ from ..tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
     from ..proof import Rule
+
+_TT = TypeVar('_TT', bound=type)
 
 __all__ = (
     'adds',
@@ -328,11 +330,19 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
 
 
     @classmethod
-    def initialize(cls, RulesClass:LogicType.TabRules, /):
-        RulesClass.all_rules = RulesClass.closure_rules + tuple(
-            r for g in RulesClass.rule_groups for r in g)
-        cls.Rules = RulesClass
-        return RulesClass
+    def initialize(cls, RulesClass=None, /, *, modal=None):
+        def dec(RulesClass:type[LogicType.TabRules]|_TT) -> _TT:
+            RulesClass.all_rules = RulesClass.closure_rules + tuple(
+                r for g in RulesClass.rule_groups for r in g)
+            cls.Rules = RulesClass
+            for rulecls in RulesClass.all_rules:
+                if modal is not None:
+                    setattr(rulecls, RuleAttr.Modal, modal)
+                    _disable_filter(rulecls, filters.ModalNode)
+            return RulesClass
+        if RulesClass:
+            return dec(RulesClass)
+        return dec
 
 class RuleHelper(metaclass = abcs.AbcMeta):
     'Rule helper interface.'
@@ -394,19 +404,27 @@ class RuleMeta(abcs.AbcMeta):
                 configs.update(v)
 
         setattr(Class, RuleAttr.Helpers, MapProxy(configs))
-        for helpercls, config in configs.items():
+        for helpercls, _ in configs.items():
             setup = getattr(helpercls, HelperAttr.InitRuleCls, None)
             if setup:
-                configs[helpercls] = setup(Class, config)
-                if modal is False and helpercls is helpers.FilterHelper:
-                    v = getattr(Class, RuleAttr.NodeFilters)
-                    if filters.ModalNode in v:
-                        v[filters.ModalNode] = NotImplemented
-                        configs[helpercls] = setup(Class, config)
-
+                configs[helpercls] = setup(Class, ...)
+        if modal is False:
+            _disable_filter(Class, filters.ModalNode)
         setattr(Class, RuleAttr.Legend, _build_legend(Class))
         return Class
 
+def _disable_filter(rulecls, filtercls):
+    if filtercls not in (filts := getattr(rulecls, RuleAttr.NodeFilters, EMPTY_SET)):
+        return
+    filts[filtercls] = NotImplemented
+    helpercls = helpers.FilterHelper
+    if not (setup := getattr(helpercls, HelperAttr.InitRuleCls, None)):
+        return
+    if helpercls not in (configs := getattr(rulecls, RuleAttr.Helpers)):
+        return
+    configs = dict(configs)
+    configs[helpercls] = setup(rulecls, ...)
+    setattr(rulecls, RuleAttr.Helpers, MapProxy(configs))
 
 def _build_legend(rulecls):
     """Build rule class legend."""

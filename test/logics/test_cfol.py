@@ -9,6 +9,11 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'CFOL'
 
+class TestTabRules(Base):
+    def test_rules_not_modal(self):
+        for rcls in self.logic.TabRules.all_rules:
+            self.assertIs(rcls.modal, False)
+
 class TestArguments(Base):
 
     def test_valid_syllogism(self):
