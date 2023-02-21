@@ -239,7 +239,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         classes = opts['classes']
 
         if 'logic' not in opts:
-            opts['logic'] = self.current_logic()
+            opts['logic'] = self.current_logic
 
         wformat = opts.setdefault('format', 'html')
         opts['wnotn'] = Notation[opts.get('wnotn', conf[ConfKey.wnotn])]
@@ -654,7 +654,7 @@ class TruthTables(BaseDirective, RenderMixin):
         conf = self.config
 
         if 'logic' not in opts:
-            opts['logic'] = self.current_logic()
+            opts['logic'] = self.current_logic
 
         model: models.BaseModel = opts['logic'].Model()
         opers = opts.get('operators')

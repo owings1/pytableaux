@@ -1,4 +1,4 @@
-FROM python:3.10.2-alpine
+FROM python:3.11.2-alpine
 
 WORKDIR /app
 EXPOSE 8080 8181
@@ -11,10 +11,8 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup -h /app
 RUN apk add --no-cache --update bash python3 curl py3-pip python3-dev build-base 
 
 USER appuser
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir \
-    future jinja2 cherrypy prometheus_client simplejson tabulate \
-    pytest coverage Sphinx sphinx_rtd_theme
+COPY requirements.txt .
+RUN pip3 install -r requirements.txt
 
 COPY --chown=appuser:appgroup . .
 

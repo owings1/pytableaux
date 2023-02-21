@@ -11,7 +11,7 @@ For the live site, [see here][site].
 The docker image is available on [Docker Hub][dockerhub].
 
 ```bash
-docker run -d -p 8080:8080 owings1/pytableaux:latest
+docker run -p 8080:8080 owings1/pytableaux:latest
 ```
 
 The web UI should then be available on port 8080, e.g. `http://localhost:8080`.
@@ -36,10 +36,12 @@ Many-valued
 - **K3WQ** - Weak Kleene with alternate quantification
 - **B3E** - Bochvar 3-valued External Logic
 - **GO** - Gappy Object Logic
+- **MH** - Paracomplete Hybrid Logic
 - **L3** - Łukasiewicz 3-valued Logic
 - **G3** - Gödel 3-valued Logic
-- **P3** - Emil Post 3-valued Logic
 - **LP** - Logic of Paradox
+- **NH** - Paraconsistent Hybrid Logic
+- **P3** - Emil Post 3-valued Logic
 - **RM3** - R-mingle 3
 
 Bivalent Modal
@@ -52,23 +54,17 @@ Bivalent Modal
 
 ## Dependencies
 
-Python **3.10.1** or later is required.
+Python **3.11** or later is required.
+
+To install requirements:
 
 ```bash
-python3 -m pip install --upgrade \
-    future jinja2 cherrypy prometheus_client simplejson tabulate
+pip3 install -r requirements.txt
 ```
 
-For system-level dependencies, refer to [res/python3.dockerfile][dockerfile].
+For system-level dependencies, refer to the [Dockerfile][dockerfile].
 
 ## Development
-
-Test dependencies:
-
-```bash
-python3 -m pip install --upgrade \
-    pytest coverage
-```
 
 Run tests:
 
@@ -76,12 +72,6 @@ Run tests:
 python3 -m pytest test
 ```
 
-Doc dependencies:
-
-```bash
-python3 -m pip install --upgrade \
-    Sphinx sphinx_rtd_theme sphinx-toolbox
-```
 <!-- optional: python-Levenshtein -->
 
 Build docs:
@@ -93,7 +83,7 @@ cd doc && make clean html
 Build docker image
 
 ```bash
-docker build -f res/python3.dockerfile .
+docker build  .
 ```
 
 ## Contributing

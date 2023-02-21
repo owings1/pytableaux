@@ -137,9 +137,7 @@ def setup(app: Sphinx):
 
     APPSTATE[app] = {}
     app.connect('config-inited', init_app)
-    def clear_state(app, e: Exception|None):
-        del(APPSTATE[app])
-    app.connect('build-finished', clear_state)
+    app.connect('build-finished', lambda *_: APPSTATE.pop(app))
 
     nodez.setup(app)
     directives.setup(app)
@@ -148,7 +146,6 @@ def setup(app: Sphinx):
     roles.setup(app)
 
 def init_app(app: Sphinx, config: Config):
-
     paths = [
         os.path.join(app.srcdir, tp) for tp in
         config[ConfKey.templates_path]]
@@ -156,7 +153,6 @@ def init_app(app: Sphinx, config: Config):
         loader = jinja2.FileSystemLoader(paths),
         trim_blocks = True,
         lstrip_blocks = True)
-
     if not sys.warnoptions:
         warnings.simplefilter('ignore', category=errors.RepeatValueWarning)
 
@@ -184,18 +180,21 @@ class AppEnvMixin(abcs.Abc):
         "jinja2 Environment"
         return self.appstate[jinja2.Environment]
 
+    @property
     def current_module(self):
         return import_module(self.env.ref_context['py:module'])
 
+    @property
     def current_class(self):
-        return getattr(self.current_module(), self.env.ref_context['py:class'])
+        return getattr(self.current_module, self.env.ref_context['py:class'])
 
+    @property
     def current_logic(self):
-        return logics.registry(self.current_module())
+        return logics.registry(self.current_module)
 
     def viewcode_target(self, obj = None):
         if obj is None:
-            obj = self.current_module()
+            obj = self.current_module
         return viewcode_target(obj)
 
 class RenderMixin(AppEnvMixin):

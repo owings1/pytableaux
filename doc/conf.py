@@ -7,24 +7,26 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 from __future__ import annotations
+
 import os
 import sys
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
+from sphinx.application import Sphinx
+
+os.environ['DOC_MODE'] = 'True'
 
 # =================================================================================
 # =================================================================================
 
 addpath = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')
-)
+    os.path.join(os.path.dirname(__file__), '..'))
 if addpath not in sys.path:
     sys.path.insert(1, addpath)
-os.environ['DOC_MODE'] = 'True'
-from pytableaux import package
+
 # General information about the project.
+
+from pytableaux import package
+
 project = package.name
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -43,39 +45,35 @@ copyright = package.copyright
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.napoleon',
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',
-    # ,
-]
+    'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
+    # 'sphinx_toolbox.more_autodoc.overloads',
+    'pytableaux.tools.doc']
 
 # =================================================================================
 # =================================================================================
 
 
+# sphinx.ext.napoleon
 # -------------------
-# -  Napoleon
-# -------------------
-#
 # https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#configuration
-#  
-#
-extensions.insert(1, 'sphinx.ext.napoleon')
 
 napoleon_numpy_docstring = False
+"We don't use the numpy format"
+
 napoleon_preprocess_types = True
 napoleon_attr_annotations = True
 napoleon_type_aliases = {
 
 }
 
-# -------------------
-# -  Autodoc
-# -------------------
-#
+# sphinx.ext.autodoc
+# ------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
-#
-#
-extensions.append('sphinx.ext.autodoc')
+
 
 # autodoc_class_signature = 'separated'
 
@@ -153,6 +151,8 @@ Changed in version 4.0: Overloaded signatures do not need to be separated by a b
 
 autodoc_member_order = 'bysource' # 'groupwise'
 
+auto_skip_enum_value = True
+
 autodoc_default_options = {
     'exclude-members': 'for_json',
     # 'no-value': True,
@@ -162,35 +162,21 @@ autodoc_default_options = {
     # unless you give the ignore-module-all flag option.
     # Without ignore-module-all, the order of the members will also
     # be the order in __all__.
-    'ignore-module-all': True,
-}
-
-auto_skip_enum_value = True
+    'ignore-module-all': True}
 
 
-
-# -----------------------------
-# - sphinx_toolbox More Autodoc
-# -----------------------------
-#
+# sphinx_toolbox.more_autodoc.overloads
+# -------------------------------------
 # https://sphinx-toolbox.readthedocs.io/en/latest/extensions/more_autodoc/overloads.html
-#
 
-# extensions.append('sphinx_toolbox.more_autodoc.overloads')
-
-overloads_location = [ 'signature',
-                       'top',
-                      'bottom'][  2 ]
+overloads_location = [
+    'signature',
+    'top',
+    'bottom'][ 2 ]
 
 
-# -------------------
-# - Custom Extension
-# -------------------
-#
-#
-extensions.append('pytableaux.tools.doc')
-
-
+# pytableaux.tools.doc
+# --------------------
 
 copy_file_tree = [
     (
@@ -199,23 +185,17 @@ copy_file_tree = [
     ),
 ]
 
-# -------------------
-# -  Intersphinx
-# -------------------
-#
+# sphinx.ext.intersphinx
+# ----------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
-# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
-#
-#
-extensions.append('sphinx.ext.intersphinx')
 
 intersphinx_mapping = dict(
     python = (
         'https://docs.python.org/3',
         # local cache of https://docs.python.org/3/objects.inv
-        os.environ.get('ISPX_PY3_OBJINV'),
-    )
-)
+        os.environ.get('ISPX_PY3_OBJINV')))
+
+
 
 # -------------------
 # -  Prolog/Epilog
@@ -232,8 +212,6 @@ rst_epilog = """
 
 
 rst_prolog = """
-.. include:: /_inc/attn-doc-freewheel.rsti
-
 .. testsetup:: *
 
     from pytableaux.lang import *

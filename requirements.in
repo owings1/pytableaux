@@ -1,10 +1,10 @@
 cherrypy
 coverage
 jinja2
-prometheus_client
+prometheus-client
 pytest
 simplejson
 Sphinx
-sphinx_rtd_theme
+sphinx-rtd-theme
 sphinx-toolbox
 tabulate

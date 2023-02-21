@@ -1,3 +1,5 @@
+.. include:: /_inc/attn-doc-freewheel.rsti
+
 ######
 Design
 ######

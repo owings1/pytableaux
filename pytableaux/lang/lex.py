@@ -125,6 +125,11 @@ class Lexical:
     def gen(cls, stop: int|None, /, first: Lexical|None = None, **nextkw) -> Iterator[Self]:
         """Generate items of the type, using :func:`first` and :func:`next` methods.
 
+        This is convenient for making sequential lexical items quickly, without
+        going through parsing.
+
+        >>> 
+
         Args:
             stop: The number at which to stop generating. If ``None``,
                 never stop.
@@ -156,7 +161,7 @@ class Lexical:
             pass
 
     @staticmethod
-    def identitem(item: Lexical, /) -> tuple:# -> IdentType:
+    def identitem(item: Lexical, /) -> tuple:
         """Build an :attr:`ident` tuple for the item from the class name and :attr:`spec`.
 
         This method should generally not need to be called, as it is used to
@@ -502,7 +507,15 @@ class Parameter(CoordsItem):
 
 
 class Quantifier(LexicalEnum):
-    'Quantifier lexical enum class.'
+    """Quantifier enum class.
+
+    Behaviors
+    ---------
+
+    * Calling a quantifier constructs a :class:`Quantified` sentence
+
+      >>> 
+    """
 
     Existential = (0, 'Existential')
     "The :s:`X` Existential quantifier"

@@ -295,7 +295,7 @@ class MemberTable(TableGenerator):
     optional_arguments = sys.maxsize
 
     def gentable(self):
-        return member_table(self.current_class(), self.arguments)
+        return member_table(self.current_class, self.arguments)
 
 directives.table_generators['member-table'] = MemberTable
 
