@@ -79,7 +79,9 @@ extensions.append('sphinx.ext.autodoc')
 
 # autodoc_class_signature = 'separated'
 
-autodoc_inherit_docstrings = True
+# Note: Turning this off keeps overriden members from showing up if
+#       they do not have a docstring.
+autodoc_inherit_docstrings = False
 """
 This value controls the docstrings inheritance. If set to True the
 docstring for classes or methods, if not explicitly set, is inherited
@@ -88,7 +90,7 @@ from parents.
 The default is True.
 """
 
-autodoc_typehints = 'none'
+autodoc_typehints = 'description'
 """
 This value controls how to represent typehints. The setting takes the
 following values:
@@ -122,6 +124,30 @@ following values:
 New in version 4.4.
 
 Changed in version 5.0: The default setting was changed to 'short'
+"""
+
+
+autodoc_docstring_signature = True
+"""
+Functions imported from C modules cannot be introspected, and therefore the
+signature for such functions cannot be automatically determined. However, it is
+an often-used convention to put the signature into the first line of the
+function's docstring.
+
+If this boolean value is set to True (which is the default), autodoc will look
+at the first line of the docstring for functions and methods, and if it looks
+like a signature, use the line as the signature and remove it from the
+docstring content.
+
+autodoc will continue to look for multiple signature lines, stopping at the
+first line that does not look like a signature. This is useful for declaring
+overloaded function signatures.
+
+New in version 1.1.
+
+Changed in version 3.1: Support overloaded signatures
+
+Changed in version 4.0: Overloaded signatures do not need to be separated by a backslash
 """
 
 
@@ -210,9 +236,9 @@ rst_prolog = """
 
 .. testsetup:: *
 
-    import logics
     from pytableaux.lang import *
     from pytableaux.proof import *
+    from pytableaux.logics import registry
 """
 
 # -------------------
@@ -297,11 +323,9 @@ cssflag = {
     'tableau.css'     : True,
 }
 
-exclude_patterns.extend(
-    file
+exclude_patterns.extend(file
     for file, flag in cssflag.items()
-        if not flag
-)
+        if not flag)
 
 def setup(app: Sphinx):
     for file, flag in cssflag.items():

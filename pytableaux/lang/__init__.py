@@ -413,16 +413,16 @@ class RenderSet(TableStore, Mapping):
         'strings',
         'hash')
 
-    def __init__(self, data, keypair, /):
-        self.data = data = dxopy(data, True)
-        self.__getitem__ = data.__getitem__
+    def __init__(self, data: Mapping, keypair: tuple, /):
+        self.data = dxopy(data, True)
+        self.__getitem__ = self.data.__getitem__
         self.keypair = keypair
-        self.notation = notn = Notation(data['notation'])
-        self.renders = data.get('renders', EMPTY_MAP)
-        self.strings = data.get('strings', EMPTY_MAP)
+        self.notation = Notation(self.data['notation'])
+        self.renders = self.data.get('renders', EMPTY_MAP)
+        self.strings = self.data.get('strings', EMPTY_MAP)
         self.hash = self._compute_hash()
-        notn.charsets.add(self.charset)
-        notn.rendersets.add(self)
+        self.notation.charsets.add(self.charset)
+        self.notation.rendersets.add(self)
 
     def string(self, ctype, value) -> str:
         if ctype in self.renders:
@@ -444,7 +444,7 @@ class RenderSet(TableStore, Mapping):
     def __eq__(self, other):
         if self is other:
             return True
-        return type(self) is type(other) and self.data == other.data
+        return type(self) is type(other) and hash(self) == hash(other)
 
     def _compute_hash(self) -> int:
         r, s = self.renders, self.strings

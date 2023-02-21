@@ -23,14 +23,17 @@ pytableaux.lang.lex
 Lexical classes.
 """
 import operator as opr
+from abc import abstractmethod
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar, Iterator, Mapping, Self, Sequence
 
-from .. import _ENV, __docformat__, errors, tools
-from ..errors import Emsg, check
-from ..tools import EMPTY_SEQ, EMPTY_SET, abcs, lazy, membr, qsetf, wraps
+from pytableaux import _ENV, __docformat__, errors
+from pytableaux.errors import Emsg, check
+from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, abcs, closure, dund, lazy,
+                              membr, qsetf, wraps)
+
 from . import (BiCoords, LangCommonEnum, LangCommonMeta, LexicalAbcMeta,
                SysPredEnumMeta, TriCoords, nosetattr)
 
@@ -99,15 +102,12 @@ class Lexical:
     """Sorting identifier, to order tokens of the same type. Numbers only
     (no strings). This is also used in hashing, so equal objects should
     have equal sort_tuples.
-
-    **NB**: The first value must be the lexical rank of the type as specified
-    in the :class:`LexType` enum class.
     """
+    # **NB**: The first value of the sort_tuple must be the lexical rank of the
+    # type as specified in the :class:`LexType` enum class.
 
     hash: int
-    "The integer hash."
-
-    #******  Item Generation
+    "The integer hash. Same as ``hash(obj)``."
 
     @classmethod
     def first(cls) -> Self:
@@ -116,19 +116,19 @@ class Lexical:
             return Predicate.first()
         raise TypeError(f'Abstract type {cls}')
 
-    @tools.abstract
+    @abstractmethod
     def next(self, **kw) -> Self:
         "Get the canonically next item of the type."
         raise NotImplementedError
 
     @classmethod
-    def gen(cls, stop: int|None, /, first = None, **nextkw) -> Iterator[Self]:
+    def gen(cls, stop: int|None, /, first: Lexical|None = None, **nextkw) -> Iterator[Self]:
         """Generate items of the type, using :func:`first` and :func:`next` methods.
 
         Args:
-            stop (int|None): The number at which to stop generating. If ``None``,
+            stop: The number at which to stop generating. If ``None``,
                 never stop.
-            first (Lexical): The first item. If ``None``, starts with :func:`first`.
+            first: The first item. If ``None``, starts with :func:`first`.
             **nextkw: Parameters to pass to each call to :func:`next`.
 
         Returns:
@@ -155,22 +155,48 @@ class Lexical:
         except StopIteration:
             pass
 
-    #******  Equality, Ordering, & Comparison
-
     @staticmethod
     def identitem(item: Lexical, /) -> tuple:# -> IdentType:
-        'Build an :attr:`ident` tuple for the item from the class name and :attr:`spec`.'
+        """Build an :attr:`ident` tuple for the item from the class name and :attr:`spec`.
+
+        This method should generally not need to be called, as it is used to
+        generate and cache the instance :attr:`ident` property.
+        """
         return type(item).__name__, item.spec
 
     @staticmethod
     def hashitem(item: Lexical, /) -> int:
-        'Compute a hash for the item based on class name and :attr:`sort_tuple`.'
+        """Compute a hash for the item based on class name and :attr:`sort_tuple`.
+
+        This method should generally not need to be called, as it is used to
+        generate and cache the instance :attr:`hash` property.
+        """
         return hash((type(item).__name__, item.sort_tuple))
 
     @staticmethod
-    @tools.closure
+    @closure
     def orderitems():
+        """orderitems(lhs: Lexical, rhs: Lexical, /) -> int
+        Pairwise ordering comparison based on type rank and :attr:`sort_tuple`.
+        This is the base method used to support equality and rich comparison
+        operators between any Lexical instance, regardless of subclass.
 
+        Args:
+            lhs: The left-hand item.
+            rhs: The right-hand item.
+
+        Returns:
+            The relative order of ``lhs`` and ``rhs``. The return value
+            will be either:
+
+                * Less than ``0`` if ``lhs`` precedes ``rhs`` in order.
+                * Greater than ``0`` if ``rhs`` precedes ``lhs`` in order.
+                * Equal to ``0`` if `lhs` is equal to ``rhs`` in order.
+
+        Raises:
+            TypeError: if an argument is not an instance of :class:`Lexical` with
+                a valid :attr:`TYPE` attribute.
+        """
         def cmpgen(a: Lexical, b: Lexical, /):
             yield a.TYPE.rank - b.TYPE.rank
             it = zip(ast := a.sort_tuple, bst := b.sort_tuple)
@@ -178,24 +204,6 @@ class Lexical:
             yield len(ast) - len(bst)
 
         def orderitems(lhs, rhs, /) -> int:
-            """Pairwise ordering comparison based on type rank and :attr:`sort_tuple`.
-
-            Args:
-                lhs (Lexical): The left-hand item.
-                rhs (Lexical): The right-hand item.
-
-            Returns:
-                int: The relative order of ``lhs`` and ``rhs``. The return value
-                will be either:
-
-                   * Less than ``0`` if ``lhs`` precedes ``rhs`` in order.
-                   * Greater than ``0`` if ``rhs`` precedes ``lhs`` in order.
-                   * Equal to ``0`` if `lhs` is equal to ``rhs`` in order.
-
-            Raises:
-                TypeError: if an argument is not an instance of :class:`Lexical` with
-                    a valid :attr:`TYPE` attribute.
-            """
             if lhs is rhs:
                 return 0
             try:
@@ -226,8 +234,6 @@ class Lexical:
     def __hash__(self):
         return self.hash
 
-    #******   Behaviors
-
     __delattr__ = Emsg.ReadOnly.razr
 
     __setattr__ = nosetattr(object, cls = LexicalAbcMeta)
@@ -249,8 +255,8 @@ class Lexical:
 
     def __init_subclass__(subcls: type[Lexical], /, *,
         lexcopy = False,
-        skipnames = {tools.dund('init_subclass')},
-        _cpnames = frozenset(map(tools.dund, ('copy', 'deepcopy'))),
+        skipnames = {dund('init_subclass')},
+        _cpnames = frozenset(map(dund, ('copy', 'deepcopy'))),
         _ftypes = (classmethod, staticmethod, FunctionType),
         **kw):
         """Subclass init hook.
@@ -294,7 +300,7 @@ class LexicalAbc(Lexical, metaclass = LexicalAbcMeta, lexcopy = True):
             return Lexical.first()
         raise TypeError(f'Abstract type {cls}')
 
-    @tools.abstract
+    @abstractmethod
     def __init__(self): ...
 
     __delattr__ = Emsg.ReadOnly.razr
@@ -347,6 +353,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
         if self is other:
             return True
         if type(self) is type(other):
+            # Non-identical members are assumed non-equal.
             return False
         try:
             if other in self.strings:
@@ -365,7 +372,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
             return Quantifier._seq[0]
         return cls._seq[0]
 
-    def next(self, /, *, loop: bool = False):
+    def next(self, /, *, loop: bool = False) -> Self:
         """
         Args:
             loop (bool): If ``True``, returns the first member after the last.
@@ -438,7 +445,7 @@ class CoordsItem(LexicalAbc):
             return Predicate.first()
         return cls(cls.Coords.first)
 
-    def next(self):
+    def next(self) -> Self:
         cls = type(self)
         idx, sub = self.spec[0:2]
         if idx < cls.TYPE.maxi:
@@ -529,15 +536,25 @@ class Operator(LexicalEnum):
     """
 
     Assertion             = (10,  'Assertion',              1, None)
+    'The Assertion operator'
     Negation              = (20,  'Negation',               1, '__invert__')
+    'The Negation (not) operator'
     Conjunction           = (30,  'Conjunction',            2, '__and__')
+    'The Conjunction (and) operator'
     Disjunction           = (40,  'Disjunction',            2, '__or__')
+    'The Disjunction (or) operator'
     MaterialConditional   = (50,  'Material Conditional',   2, None)
+    'The Material Conditional operator'
     MaterialBiconditional = (60,  'Material Biconditional', 2, None)
+    'The Material Biconditional operator'
     Conditional           = (70,  'Conditional',            2, None)
+    'The Conditional operator'
     Biconditional         = (80,  'Biconditional',          2, None)
+    'The Biconditional operator'
     Possibility           = (90,  'Possibility',            1, None)
+    'The Possibility operator'
     Necessity             = (100, 'Necessity',              1, None)
+    'The Necessity operator'
 
     lib_opmap: ClassVar[Mapping[str, Operator]]
 
@@ -568,7 +585,24 @@ class Operator(LexicalEnum):
 #----------------------------------------------------------
 
 class Sentence(LexicalAbc):
-    'Sentence base class.'
+    """Sentence base class. This provides common attributes and methods for the
+    concrete sentence classes :class:`Atomic`, :class:`Predicated`, :class:`Quantified`,
+    and :class:`Operated`.
+
+    Behaviors
+    ---------
+
+    * Sentences support the built-in operators ``~``, ``|``, and ``&``, for
+      negation, disjunction, and conjunction, respectively.
+
+      >>> a, b = Sentence.gen(2)
+      >>> ~a == a.negate()
+      True
+      >>> a | b == a.disjoin(b)
+      True
+      >>> a & b == a.conjoin(b)
+      True
+    """
 
     __slots__ = EMPTY_SET
 
@@ -590,11 +624,16 @@ class Sentence(LexicalAbc):
     operators: tuple[Operator, ...]
     "Sequence of operators, recursive."
 
-    def negate(self):
-        'Negate this sentence, returning the new sentence.'
+    def negate(self) -> Operated:
+        """Negate this sentence, returning the new sentence. This can also be
+        invoked using the ``~`` operator.
+
+        Returns:
+            The new sentence.
+        """
         return Operated(Operator.Negation, (self,))
 
-    def asserted(self):
+    def asserted(self) -> Operated:
         """Apply the :obj:`Assertion` operator.
         
         Returns:
@@ -602,37 +641,55 @@ class Sentence(LexicalAbc):
         """
         return Operated(Operator.Assertion, (self,))
 
-    def disjoin(self, rhs, /):
+    def disjoin(self, rhs: Sentence, /) -> Operated:
         """Apply the :obj:`Disjunction` operator to the right-hand sentence.
+        This can also be invoked using the ``|`` operator.
 
         Args:
-            rhs (Sentence): The right-hand disjunct.
+            rhs: The right-hand disjunct.
         
         Returns:
             The new sentence.
         """
         return Operated(Operator.Disjunction, (self, rhs))
 
-    def conjoin(self, rhs, /):
+    def conjoin(self, rhs: Sentence, /) -> Operated:
         """Apply the :obj:`Conjunction` operator to the right-hand sentence.
+        This can also be invoked using the ``&`` operator.
 
         Args:
-            rhs (Sentence): The right-hand conjunct.
+            rhs: The right-hand conjunct.
         
         Returns:
             The new sentence.
         """
         return Operated(Operator.Conjunction, (self, rhs))
 
-    def negative(self):
+    def negative(self) -> Sentence:
         """Either negate this sentence, or, if this is already a negated
         sentence return its negatum, i.e., "un-negate" the sentence.
+
+        >>> a = Atomic.first()
+        >>> a.negate() == a.negative()
+        True
+        >>> a.negate().negative() == a
+        True
+        
+        Returns:
+            The new sentence.
         """
         return Operated(Operator.Negation, (self,))
 
-    def substitute(self, pnew, pold, /):
+    def substitute(self, pnew: Parameter, pold: Parameter, /) -> Self:
         """Return the recursive substitution of ``pnew`` for all occurrences
         of ``pold``.
+
+        Args:
+            pnew: The new parameter.
+            pold: The old parameter.
+        
+        Returns:
+            The new sentence.
         """
         return self
 
@@ -670,26 +727,46 @@ class Sentence(LexicalAbc):
 #----------------------------------------------------------
 
 class Predicate(CoordsItem):
-    """Predicate implementation."""
+    """
+    A predicate is specified by an integer 3-tuple of ``(index, subscript, arity)``.
+    The index can range from 0-3, and the subscript and arity can be any
+    positive integer.
+
+    To create a predicate, the spec can be passed either as separate arguments,
+    or as a single :obj:`tuple`:
+
+    >>> p = Predicate(0, 0, 1)
+    >>> p == Predicate((0, 0, 1))
+    True
+
+    System Predicates
+    -----------------
+
+    There are two built-in system predicates, :obj:`Identity` and :obj:`Existence`.
+    These are specified internal by the special indexes -1 and -2, respectively.
+    They are defined in an enum class :obj:`Predicate.System`, and can be accessed
+    in several ways:
+
+    >>> p = Predicate('Identity')
+    >>> p is Predicate.Identity
+    True
+    >>> p is Predicate.System.Identity
+    True
+
+    Behaviors
+    ---------
+
+    * Calling a predicate will construct a :class:`Predicated` sentence:
+
+      >>> p = Predicate(0, 0, 2)
+      >>> a, b = Constant.gen(2)
+      >>> p((a, b)) == Predicated(p, (a, b))
+      True
+
+    """
 
     def __init__(self, *spec):
-        """Create a predicate, or get a system predicate.
-
-        Args:
-            index (int): The `index` coordinate.
-            subscript (int): The `subscript` coordinate.
-            arity (int): The predicate's arity.
-
-        The parameters can be passed either expanded, or as a single
-        :obj:`tuple`, for example::
-
-            Predicate(0, 0, 1)
-            Predicate((0, 0, 1))
-        
-        To get a system predicate instance, use the name, for example::
-
-            Predicate('Identity')
-        
+        """
         Raises:
             ValueError: if an invalid coordinate value is passed, e.g.
                 a negative number, or too large an `index` coordinate.
@@ -753,7 +830,14 @@ class Predicate(CoordsItem):
     "Whether this is a system predicate."
 
     name: tuple[int, ...] | str
-    "The name, for system predicates. Same as :attr:`spec` for user predicates."
+    """The name, for system predicates. For non-system predicates, this is the
+    same as the :attr:`spec`.
+    
+    >>> Predicate.Identity.name
+    'Identity'
+    >>> Predicate(0, 0, 1).name # For compatibility only
+    (0, 0, 1)
+    """
 
     @lazy.prop
     def refs(self):
@@ -764,7 +848,7 @@ class Predicate(CoordsItem):
         ================  =============================  ==========================================
         :attr:`bicoords`  ``(1, 0)``                     symbol coordinates (`index`, `subscript`)
 
-        :attr:`spec`      ``(1, 0, 2)``                  including `arity`
+        :attr:`spec`      ``(1, 0, 2)``                  coordinates including `arity`
 
         :attr:`ident`     ``('Predicate', (1, 0, 2))``   full lexical identifier
 
@@ -772,7 +856,6 @@ class Predicate(CoordsItem):
         ================  =============================  ==========================================
         """
         return qsetf({self.spec, self.ident, self.bicoords, self.name})
-
 
     def __call__(self, *spec):
         'Apply the predicate to parameters to make a predicated sentence.'
@@ -795,14 +878,32 @@ class Predicate(CoordsItem):
         "The Identity predicate :sc:`=`"
 
 class Constant(Parameter):
-    """Constant parameter implementation."""
+    """
+    A constant is specified by an integer 2-tuple of ``(index, subscript)``.
+    The index can range from 0-3, and the subscript can be any positive integer.
+
+    To create a constant, the spec can be passed either as separate arguments,
+    or as a single :obj:`tuple`:
+
+    >>> c = Constant(2, 9)
+    >>> c == Constant((2, 9))
+    True
+
+    Behaviors
+    ---------
+
+    * A constant can be right-shifted ``>>`` into a :class:`Quantified` sentence
+      as a convenience for the sentence's :attr:`unquantify()` method:
+
+      >>> c = Constant(0, 0)
+      >>> s1 = Quantified.first()
+      >>> s2 = c >> s1
+      >>> s2.constants == {c}
+      True
+    """
 
     def __init__(self, *spec):
-        """
-        Args:
-            index (int): The index coordinate.
-            subscript (int): The subscript coordinate.
-        """
+        pass
 
     def __new__(cls, *spec):
         self = CoordsItem.__new__(cls, *spec)
@@ -823,14 +924,17 @@ class Constant(Parameter):
 
 
 class Variable(Parameter):
-    """Variable parameter implementation."""
+    """
+    A variable, just like a :class:`Constant`, is specified by an integer 2-tuple
+    of ``(index, subscript)``. The index can range from 0-3, and the subscript
+    can be any positive integer.
+
+    >>> Variable(2, 10) == Variable((2, 10))
+    True
+    """
 
     def __init__(self, *spec):
-        """
-        Args:
-            index (int): The index coordinate.
-            subscript (int): The subscript coordinate.
-        """
+        pass
 
     def __new__(cls, *spec):
         self = CoordsItem.__new__(cls, *spec)
@@ -843,14 +947,16 @@ class Variable(Parameter):
 
 
 class Atomic(CoordsItem, Sentence):
-    'Atomic sentence implementation.'
+    """
+    An atomic sentence sentence, like a :class:`Parameter`, is specified by an
+    integer 2-tuple of ``(index, subscript)``. The index can range from 0-4, and the
+    subscript can be any positive integer.
+
+    >>> Atomic(4, 0) == Atomic((4, 0))
+    True
+    """
 
     def __init__(self, *spec):
-        """
-        Args:
-            index (int): The index coordinate.
-            subscript (int): The subscript coordinate.
-        """
         self.predicates = self.constants = self.variables = EMPTY_SET
         self.quantifiers = self.operators = EMPTY_SEQ
         self.atomics = frozenset((self,))
@@ -881,6 +987,7 @@ class Predicated(Sentence, Sequence[Parameter]):
         Raises:
             TypeError: if the number of params does not equal the predicate's arity.
         """
+        # TODO: Support *-ary params, Predicated(pred, a, b, c)
         self.predicate = Predicate(pred)
         pred = self.predicate
         if isinstance(params, Parameter):
@@ -952,8 +1059,6 @@ class Predicated(Sentence, Sequence[Parameter]):
 
     def next(self):
         return Predicated(self.predicate.next(), self.params)
-
-    #******  Sequence Behavior
 
     def __len__(self):
         return len(self.params)
@@ -1339,7 +1444,7 @@ class LexType(LangCommonEnum):
 #
 #----------------------------------------------------------
 
-@tools.closure
+@closure
 def metacall():
 
     from collections import deque

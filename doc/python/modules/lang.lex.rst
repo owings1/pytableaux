@@ -12,21 +12,19 @@ Base classes
 
 .. autoclass:: Lexical()
     :members:
+    :exclude-members: identitem, hashitem, for_json
 
 .. autoclass:: LexicalEnum()
     :members:
     :show-inheritance:
 
-
 .. autoclass:: CoordsItem()
     :members:
     :exclude-members: Coords
 
-
 .. autoclass:: Parameter()
     :members:
     :show-inheritance:
-
 
 .. autoclass:: Sentence()
     :members:
@@ -38,19 +36,12 @@ Concrete classes
 
 .. autoclass:: Predicate
     :members:
-    :special-members: __init__
     :exclude-members: Coords
 
-
 .. autoclass:: Constant()
-    :members:
-    :special-members: __init__
     :show-inheritance:
 
-
 .. autoclass:: Variable()
-    :members:
-    :special-members: __init__
     :show-inheritance:
 
 Enum classes
@@ -58,13 +49,11 @@ Enum classes
 
 .. autoclass:: Quantifier()
     :members:
-    :special-members: __init__
     :show-inheritance:
 
 
 .. autoclass:: Operator()
     :members:
-    :special-members: __init__
     :show-inheritance:
 
 Sentence classes
