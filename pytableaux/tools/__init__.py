@@ -236,11 +236,7 @@ def dxopy():
         Safe for circular reference. Second arg supports
         deep proxy.
         """
-        if proxy:
-            wrap = MapProxy
-        else:
-            wrap = thru
-        return runner(a, {}, wrap)
+        return runner(a, {}, MapProxy if proxy else thru)
 
     def runner(a: Mapping, memo, wrap):
         if (i := id(a)) in memo:
