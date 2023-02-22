@@ -12,5 +12,6 @@ doc/_build
 /extras
 /res
 .vscode
+.venv*
 /settings.json
 /.github

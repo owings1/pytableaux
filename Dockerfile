@@ -5,14 +5,13 @@ EXPOSE 8080 8181
 ENV PT_HOST=0.0.0.0
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/app/.local/bin
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup -h /app
-
-# Required packages
-RUN apk add --no-cache --update bash python3 curl py3-pip python3-dev build-base 
+RUN addgroup -S appgroup &&\
+    adduser -S appuser -G appgroup -h /app &&\
+    apk add --no-cache curl make
 
 USER appuser
 COPY requirements.txt .
-RUN pip3 install -r requirements.txt
+RUN pip install -r requirements.txt
 
 COPY --chown=appuser:appgroup . .
 
