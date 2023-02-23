@@ -151,31 +151,28 @@ def select_fget(obj):
         return getitem
     return getattr
 
-def minfloor(floor, it):
-    it = iter(it)
-    try:
-        minval = next(it)
-    except StopIteration:
-        raise ValueError(f"minfloor() arg is an empty sequence") from None
-    for val in it:
-        if val == floor:
-            return val
-        if val < minval:
-            minval = val
-    return minval
+def minfloor(floor, it, default=None):
+    return _limit_best(lt, floor, it, default, 'minfloor')
 
-def maxceil(ceil, it):
+def maxceil(ceil, it, default=None):
+    return _limit_best(gt, ceil, it, default, 'maxceil')
+
+def _limit_best(better, limit, it, default, _name, /):
     it = iter(it)
-    try:
-        maxval = next(it)
-    except StopIteration:
-        raise ValueError(f"maxceil() arg is an empty sequence") from None
+    if default is not None:
+        best = default
+    else:
+        try:
+            best = next(it)
+        except StopIteration:
+            raise ValueError(
+                f"{_name}() arg is an empty sequence") from None
     for val in it:
-        if val == ceil:
+        if val == limit:
             return val
-        if val > maxval:
-            maxval = val
-    return maxval
+        if better(val, best):
+            best = val
+    return best
 
 def substitute(coll, old_value, new_value):
     return type(coll)(new_value if x == old_value else x for x in coll)
