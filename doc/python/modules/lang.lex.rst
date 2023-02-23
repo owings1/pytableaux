@@ -51,7 +51,6 @@ Enum classes
     :members:
     :show-inheritance:
 
-
 .. autoclass:: Operator()
     :members:
     :show-inheritance:

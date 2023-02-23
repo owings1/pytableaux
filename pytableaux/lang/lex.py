@@ -27,7 +27,7 @@ from abc import abstractmethod
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar, Iterator, Mapping, Self, Sequence
+from typing import Any, ClassVar, Iterator, Mapping, Self, Sequence, Set
 
 from pytableaux import _ENV, __docformat__, errors
 from pytableaux.errors import Emsg, check
@@ -514,7 +514,11 @@ class Quantifier(LexicalEnum):
 
     * Calling a quantifier constructs a :class:`Quantified` sentence
 
-      >>> 
+      >>> x = Variable(0, 0)
+      >>> s1 = Predicated.first()
+      >>> s2 = Quantifier.Existential(x, s1)
+      >>> s2 == Quantified(Quantifier.Existential, x, s1)
+      True
     """
 
     Existential = (0, 'Existential')
@@ -528,9 +532,17 @@ class Quantifier(LexicalEnum):
         return Quantified(self, *spec)
 
 class Operator(LexicalEnum):
-    """Operator lexical enum class. Member definitions correspond to
-    (`order`, `label`, `arity`, `libname`).
+    """Operator enum class.
 
+    Behaviors
+    ---------
+
+    * Calling an operator constructs an :class:`Operated` sentence
+
+    >>> s1 = Atomic(0, 0)
+    >>> s2 = Operator.Conditional(s1, s1)
+    >>> s2 == Operated(Operator.Conditional, (s1, s1))
+    True
     """
     
     # .. member-table:: pytableaux.lang.lex.Operator
@@ -853,7 +865,7 @@ class Predicate(CoordsItem):
     """
 
     @lazy.prop
-    def refs(self):
+    def refs(self) -> Set[tuple|str]:
         """References used to create indexes for predicate stores.
 
         ================  =============================  ==========================================

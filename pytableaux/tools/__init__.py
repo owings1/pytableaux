@@ -30,7 +30,7 @@ from abc import abstractmethod as abstract
 from collections import defaultdict
 from collections.abc import Mapping, Sequence, Set
 from enum import Enum
-from operator import truth
+from operator import gt, lt, truth
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
 
@@ -177,12 +177,12 @@ def _limit_best(better, limit, it, default, _name, /):
 def substitute(coll, old_value, new_value):
     return type(coll)(new_value if x == old_value else x for x in coll)
 
-def for_defaults(defaults: Mapping, override: Mapping, /):
+def for_defaults(defaults: Mapping, override: Mapping, /) -> dict:
     if not override:
         return dict(defaults)
     return {key: override.get(key, defval) for key, defval in defaults.items()}
 
-def absindex(seqlen, index, /, strict = True):
+def absindex(seqlen: int, index: int, /, strict = True):
     'Normalize to positive/absolute index.'
     if index < 0:
         index = seqlen + index
@@ -190,7 +190,7 @@ def absindex(seqlen, index, /, strict = True):
         raise Emsg.IndexOutOfRange(index)
     return index
 
-def slicerange(seqlen, slice_: slice, values, /, strict = True):
+def slicerange(seqlen: int, slice_: slice, values, /, strict = True):
     'Get a range of indexes from a slice and new values, and perform checks.'
     range_ = range(*slice_.indices(seqlen))
     if len(range_) != len(values):
@@ -204,12 +204,12 @@ def slicerange(seqlen, slice_: slice, values, /, strict = True):
 def itemsiter():
 
     def api(obj, /, *, vget = None, kpred = true, vpred = true, koper = truth, voper = truth):
-        if vget is None:
-            try:
-                return gen1(obj.keys, obj.__getitem__, kpred, vpred, koper, voper)
-            except AttributeError:
-                return gen2(obj, kpred, vpred, koper, voper)
-        return gen1(obj.__iter__, vget, kpred, vpred, koper, voper)
+        if vget:
+            return gen1(obj.__iter__, vget, kpred, vpred, koper, voper)
+        try:
+            return gen1(obj.keys, obj.__getitem__, kpred, vpred, koper, voper)
+        except AttributeError:
+            return gen2(obj, kpred, vpred, koper, voper)
 
     def gen1(getkeys, vget, kpred, vpred, koper, voper):
         for k in getkeys():
@@ -250,6 +250,7 @@ def dxopy():
     return api
 
 from . import abcs
+
 pass
 from ..errors import Emsg, check
 
@@ -545,6 +546,7 @@ class NoSetAttr(BaseMember):
         func.__name__ = name
         func.__qualname__ = self.__qualname__
         setattr(owner, name, func)
+
 
 class SetView(Set, abcs.Copyable, immutcopy = True):
     'Set cover.'
