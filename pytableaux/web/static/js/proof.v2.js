@@ -17,7 +17,7 @@
  * 
  * pytableaux - Tableau UI jQuery Plugin
  */
- ;(function() {
+;(function() {
 
     if (typeof(jQuery) !== 'function') {
         console.error(new Error('jQuery not loaded. Cannot load tableau plugin.'))
@@ -61,11 +61,9 @@
     */
     // class names
     const Cls = {
-
         // page components
         UiControls      : 'tableau-controls'     ,
         ModelsArea      : 'tableau-models'       ,
-        
         // tableau classes
         Root            : 'root'                 ,
         Structure       : 'structure'            ,
@@ -82,7 +80,6 @@
         Node            : 'node'                 ,
         Ticked          : 'ticked'               ,
         Closed          : 'closed'               ,
-
         // controls classes
         StepStart       : 'step-start'           ,
         StepPrev        : 'step-prev'            ,
@@ -107,7 +104,6 @@
         AutoWidth       : 'auto-width'           ,
         AutoScroll      : 'auto-scroll'          ,
         DragScroll      : 'drag-scroll'          ,
-
         // stateful classes
         Hidden          : 'hidden'               ,
         Zoomed          : 'zoomed'               ,
@@ -131,7 +127,7 @@
 
     // Class names preceded with a '.' for selecting
     const Dcls = {}
-    for (var c in Cls) {
+    for (const c in Cls) {
         Dcls[c] = '.' + Cls[c]
     }
 
@@ -161,19 +157,20 @@
 
     // Selectors
     const Sel = {
-        SteppedChilds  : [
+        SteppedChilds: [
             '>' + Dcls.NodeSegment + '>' + Dcls.Node,
             '>' + Dcls.VL,
         ].join(','),
-        Filtered       : [
+        Filtered: [
             Dcls.StepFiltered,
             Dcls.ZoomFiltered,
             Dcls.BranchFiltered,
         ].join(','),
-        CanBranchFilter : [
+        CanBranchFilter: [
             Dcls.HasOpen,
             Dcls.HasClosed,
-        ].join('')
+        ].join(''),
+        Unfiltered: '...',
     }
     Sel.Unfiltered = ':not(' + Sel.Filtered + ')'
 
@@ -308,11 +305,11 @@
             return Api.getInstance(this)
         }
         return this.each(function() {
-            var $tableau = $(this)
-            var api = Api.getInstance($tableau)
+            const $tableau = $(this)
+            let api = Api.getInstance($tableau)
             if (api) {
                 if (typeof(api[opts]) === 'function') {
-                    var args = Array.prototype.slice.call(arguments, 1)
+                    const args = Array.prototype.slice.call(arguments, 1)
                     api[opts].apply(api, args)
                 }
             } else {
@@ -326,21 +323,21 @@
     }
     $.fn.tableau = Plugin
 
-    Plugin.defaults = $.extend(Object.create(null), {
-        controls: function($tableau) {
-            var $controls = $(Dcls.UiControls)
+    Plugin.defaults = Object.assign(Object.create(null), {
+        controls: function() {
+            const $controls = $(Dcls.UiControls)
             if ($controls.length > 1) {
-                var $specific = $controls.filter(getAttrSelector(Attrib.TableauId, this.id))
+                const $specific = $controls.filter(getAttrSelector(Attrib.TableauId, this.id))
                 if ($specific.length) {
                     return $specific
                 }
             }
             return $controls
         },
-        models: function($tableau) {
-            var $models = $(Dcls.ModelsArea)
+        models: function() {
+            const $models = $(Dcls.ModelsArea)
             if ($models.length > 1) {
-                var $specific = $models.filter(getAttrSelector(Attrib.TableauId, this.id))
+                const $specific = $models.filter(getAttrSelector(Attrib.TableauId, this.id))
                 if ($specific.length) {
                     return $specific
                 }
@@ -363,8 +360,8 @@
         Api.instances[this.id] = this
         opts = this.opts = $.extend(true, Plugin.defaults, this.opts, opts)
         const that = this
-        for (var opt of ['controls', 'models', 'scrollContainer']) {
-            var prop = '$' + opt, value = opts[opt]
+        for (const opt of ['controls', 'models', 'scrollContainer']) {
+            const prop = '$' + opt, value = opts[opt]
             if (typeof value === 'function') {
                 this[prop] = $(value.call(this, this.$tableau))
             } else if (value === true) {
@@ -376,7 +373,7 @@
                 this[prop] = $(value)
             }
             this[prop].each(function(i) {
-                var id = $(this).attr('id')
+                let id = $(this).attr('id')
                 if (!id) {
                     id = [opt, that.id, String(i)].join('_')
                     while ($('#' + id).length) {
@@ -419,7 +416,9 @@
         if (!this._isAutoScroll && opts.center) {
             scrollToCenter.call(this)
         }
-        this.actionKeysHash = opts.actionKeys ? $.extend({}, ActionKeys) : {}
+        this.actionKeysHash = opts.actionKeys
+            ? $.extend({}, ActionKeys)
+            : {}
         if (opts.actionKeys) {
             ensureKeypressHandlers()
         }
@@ -568,7 +567,7 @@
     }
 
     // Keypress handlers
-    var IsKeyHandlersLoaded = false
+    let IsKeyHandlersLoaded = false
 
     // mod key state
     const ModKey = {
@@ -604,7 +603,7 @@
     }
 
     function onKeypress(e) {
-        var api = Api.activeInstance
+        const api = Api.activeInstance
         const key = String.fromCharCode(e.which)
         if (!api || !api.actionKeysHash[key]) {
             return
@@ -624,9 +623,7 @@
         }
         const $tableau = this.$tableau
         const stmap = Object.create(null)
-        const cache = $.extend(Object.create(null), {
-            
-        })
+        const cache = Object.create(null)
         const sts = $(Dcls.Structure, $tableau).toArray().map(function(s) {
             const $s = $(s)
             const st = {
@@ -676,21 +673,17 @@
      * @return {void}
      */
     function zoom(st, next) {
-
         st = getStructObj.call(this, st)
         const $s = st.$s
         // if we are currently zoomed to this structure, there is nothing to do
         if ($s.hasClass(Cls.Zoomed)) {
             return
         }
-
         const $tableau = this.$tableau
         // get the previously zoomed structure
         const $prev = $(Dcls.Zoomed, $tableau)
-
         const hides = []
         const shows = []
-
         $.each(this.sts, function(i, other) {
             if (getRelation(other, st) === Rel.Outside) {
                 hides.push(other.s)
@@ -700,15 +693,13 @@
         })
         // unmark the previous structure as zoomed
         $prev.removeClass(Cls.Zoomed)
-
         // mark the current structure as zoomed
         $s.addClass(Cls.Zoomed)
         const fopts = {
-            $hides    : $(hides),
-            $shows    : $(shows),
-            className : Cls.ZoomFiltered
+            $hides: $(hides),
+            $shows: $(shows),
+            className: Cls.ZoomFiltered,
         }
-
         doFilter.call(this, fopts, next)
     }
 
@@ -720,24 +711,22 @@
      * @return {void}
      */
     function setInspectedBranch($structure) {
-
         // if we are currently inspecting this structure, there is nothing to do
         if ($structure.hasClass(Cls.Inspected)) {
             return
         }
-
         $(Dcls.Inspected, this.$tableau).removeClass(Cls.Inspected)
         $structure.addClass(Cls.Inspected)
-
         const $models = this.$models
         if ($models.length) {
-            var $modelElements = $(Dcls.Model, $models)
-            var modelId = $structure.attr(Attrib.ModelId)
-
+            const $modelElements = $(Dcls.Model, $models)
+            const modelId = $structure.attr(Attrib.ModelId)
             $modelElements.hide()
             if (modelId) {
                 $models.addClass(Cls.Inspected)
-                $modelElements.filter(getAttrSelector(Attrib.ModelId, modelId)).show(Anim.Fast)
+                $modelElements
+                    .filter(getAttrSelector(Attrib.ModelId, modelId))
+                    .show(Anim.Fast)
             } else {
                 $models.removeClass(Cls.Inspected)
             }
@@ -753,39 +742,29 @@
      * @return {void}
      */
     function step(n, next) {
-
-        const $tableau = this.$tableau
-        const $controls = this.$controls
-        const that = this
-
-        const numSteps = this.numSteps
+        const {$tableau, $controls, numSteps} = this
         const prevStep = +$tableau.attr(Attrib.Step)
-
         if (n < 0) {
             n = 0
         }
         if (n > numSteps) {
             n = numSteps
         }
-        if (n == prevStep) {
+        if (n === prevStep) {
             return
         }
-
-        const shows  = []
+        const shows = []
         const toHide = {}
-        const showChilds  = []
-        const hideChilds  = []
-        const tickNodes   = []
+        const showChilds = []
+        const hideChilds = []
+        const tickNodes = []
         const untickNodes = []
-
-        var highlightDelay = Anim.Med
-
+        const highlightDelay = Anim.Med
         $.each(this.sts, function(i, st) {
             const $s = st.$s
             const sStep = st.step
             const s = st.s
             const sPos = st
-
             if (sStep > n) {
                 // only hide the highest structures
                 trackHighests(toHide, sPos)
@@ -818,62 +797,51 @@
                 }
             })
         })
-
         // hide nodes, vertical lines
-        $(hideChilds).hide(/*Anim.Fast*/)
-
+        $(hideChilds).hide()
         // untick nodes
         $(Dcls.NodeProps, untickNodes).removeClass(Cls.Ticked)
-
         // filter structures
-        const hides = $.map(toHide, function(st) { return st.s })
+        const hides = $.map(toHide, st => st.s)
         const fopts = {
-            $hides    : $(hides),
-            $shows    : $(shows),
-            className : Cls.StepFiltered,
-            adjust    : (n > prevStep) ? E_AdjustWhen.Before : E_AdjustWhen.After,
+            $hides: $(hides),
+            $shows: $(shows),
+            className: Cls.StepFiltered,
+            adjust: n > prevStep
+                ? E_AdjustWhen.Before
+                : E_AdjustWhen.After,
         }
-        doFilter.call(this, fopts, function() {
-
-                // show nodes, vertical lines
-                $(showChilds).show(/*Anim.Med*/)
-                if (that._isAutoWidth) {
-                    stretchWidth.call(that)
+        doFilter.call(this, fopts, () => {
+            // show nodes, vertical lines
+            $(showChilds).show()
+            if (this._isAutoWidth) {
+                stretchWidth.call(this)
+            }
+            // scroll to node
+            if (this._isAutoScroll) {
+                const $node = $(Dcls.Node + getAttrSelector(Attrib.Step, n), $tableau).last()
+                if ($node.length) {
+                    scrollTo.call(this, $node.children(Dcls.NodeProps))
                 }
-                
-                // scroll to node
-                if (that._isAutoScroll) {
-                    var $node = $(Dcls.Node + getAttrSelector(Attrib.Step, n), $tableau).last()
-                    if ($node.length) {
-                        scrollTo.call(that, $node.children(Dcls.NodeProps))
-                    }
-                }
-                // highlight the result
-                setTimeout(function() {
-
-                    highlightStepResult.call(that, n)
-
-                    // delay the ticking of the nodes for animated effect
-                    setTimeout(function() {
-
-                        $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked)
-
-                        // unhighlight
-                        setTimeout(function() {
-
-                            highlightStepOff.call(that)
-
-                            if (typeof next === 'function') {
-                                next()
-                            }
-                        }, highlightDelay)
+            }
+            // highlight the result
+            setTimeout(() => {
+                highlightStepResult.call(this, n)
+                // delay the ticking of the nodes for animated effect
+                setTimeout(() => {
+                    $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked)
+                    // unhighlight
+                    setTimeout(() => {
+                        highlightStepOff.call(this)
+                        if (typeof next === 'function') {
+                            next()
+                        }
                     }, highlightDelay)
                 }, highlightDelay)
+            }, highlightDelay)
         })
-
         // set the current step attribute on the proof
         $tableau.attr(Attrib.Step, n)
-
         if ($controls.length) {
             // show the rule and target in the controls panel
             const attrSelector = getAttrSelector(Attrib.Step, n)
@@ -881,8 +849,8 @@
             // update the input box
             $(Dcls.StepInput, $controls).val(n)
             // update disabled properties on forward/backward buttons
-            var $backward = $([Dcls.StepStart, Dcls.StepPrev].join(', '), $controls)
-            var $forward = $([Dcls.StepEnd, Dcls.StepNext].join(', '), $controls)
+            const $backward = $([Dcls.StepStart, Dcls.StepPrev].join(', '), $controls)
+            const $forward = $([Dcls.StepEnd, Dcls.StepNext].join(', '), $controls)
             if (n === numSteps) {
                 $forward.addClass(Cls.MarkDisabled)
             }
@@ -891,8 +859,7 @@
             }
             if (n === 0) {
                 $backward.addClass(Cls.MarkDisabled)
-            }
-            if (n > 0) {
+            } else if (n > 0) {
                 $backward.removeClass(Cls.MarkDisabled)
             }
         }
@@ -907,10 +874,8 @@
      * @return {void}
      */
     function filterBranches(type, next) {
-
         const $tableau = this.$tableau
         const $controls = this.$controls
-        const that = this
         // Track current state so we don't filter if not needed.
         const markClass = [Cls.MarkFiltered, type].join('-')
         if ($tableau.hasClass(markClass)) {
@@ -919,22 +884,20 @@
             }
             return
         }
-
-        var $active
+        let $active
         if ($controls.length) {
-            var $ctrl = $(Dcls.BranchFilter, $controls)
+            const $ctrl = $(Dcls.BranchFilter, $controls)
             $active = $ctrl.filter('.' + type)
             if ($active.length) {
                 $ctrl.removeClass(Cls.MarkActive)
             }
         }
-
         if (!this.cache.filterBranches) {
             this.cache.filterBranches = {}
         }
         const cache = this.cache.filterBranches
         if (!cache[type]) {
-            var rmClasses
+            let rmClasses
             switch (type) {
                 case E_FilterType.All:
                     rmClasses = [
@@ -957,8 +920,8 @@
             }
             const toHide = []
             const toShow = []
-            $.each(this.sts, function(i, st) {
-                var shown
+            $.each(this.sts, (i, st) => {
+                let shown
                 switch (type) {
                     case E_FilterType.All:
                         shown = true
@@ -984,17 +947,13 @@
                 removeClasses: rmClasses,
             }
         }
-        const $hides = cache[type].$hides
-        const $shows = cache[type].$shows
-        const removeClasses = cache[type].removeClasses
-
+        const {$hides, $shows, removeClasses} = cache[type]
         const fopts = {
-            $hides    : $hides,
-            $shows    : $shows,
+            $hides: $hides,
+            $shows: $shows,
             className : Cls.BranchFiltered
         }
-        setTimeout(function() {doFilter.call(that, fopts, next)})
-
+        setTimeout(() => doFilter.call(this, fopts, next))
         $tableau.removeClass(removeClasses).addClass(markClass)
         if ($active && $active.length) {
             $active.addClass(Cls.MarkActive)
@@ -1024,25 +983,16 @@
      * @return {void}
      */
     function doFilter(opts, next) {
-
         opts = $.extend({}, FuncDefaults.Filter, opts)
-        const that = this
         const $hides = opts.$hides
         const $shows = opts.$shows
         const className = opts.className
-        var showSpeed = 0//Anim.Fast
-        var hideSpeed = 0//Anim.Fast
-        var animateWidths = false//true
-
         // track the lowest structures to adjust widths
         const lowests = {}
-        
         $hides.addClass(className).each(function() {
             trackLowests(lowests, getPos($(this)))
         })
-
         const shows = []
-
         $shows.removeClass(className).each(function() {
             const pos = getPos($(this))
             trackLowests(lowests, pos)
@@ -1051,37 +1001,32 @@
                 shows.push(this)
             }
         })
-
         // sort the elements to show from higher to lower
-        shows.sort(function(a, b) { return $(a).attr(Attrib.Depth) - $(b).attr(Attrib.Depth) })
-
+        shows.sort((a, b) => $(a).attr(Attrib.Depth) - $(b).attr(Attrib.Depth))
         // collect the dom elements of the lowest structures
-        const leaves = $.map(lowests, function(pos) { return pos.$structure.get(0) })
-
+        const leaves = $.map(lowests, pos => pos.$structure.get(0))
         // hide elements that have a filter
-        $hides.hide(hideSpeed)
-
+        $hides.hide()
         this._lastShows = $shows
-        var finish
+        let finish
         // adjust the widths (or do this 'after' below)
         if (opts.adjust == E_AdjustWhen.Before) {
-            // adjustWidths.call(this, $(leaves), false, next)
-            finish = function finish() {
-                adjustWidths.call(that, $(leaves), false, function() {
-                    $(shows).show(showSpeed)
+            finish = () => {
+                adjustWidths.call(this, $(leaves), () => {
+                    $(shows).show()
                     if (typeof next === 'function') {
                         next()
                     }
                 })
             }
         } else if (opts.adjust) {
-            finish = function finish() {
-                $(shows).show(showSpeed)
-                adjustWidths.call(that, $(leaves), animateWidths, next)
+            finish = () => {
+                $(shows).show()
+                adjustWidths.call(this, $(leaves), next)
             }
         } else {
-            finish = function finish() {
-                $(shows).show(showSpeed)
+            finish = () => {
+                $(shows).show()
                 if (typeof next === 'function') {
                     next()
                 }
@@ -1101,49 +1046,33 @@
      * @private
      * @param {object} $leaves The jQuery element with the leaves, or deepest
      *   affected structures.
-     * @param {boolean} isAnimate Whether to animate the width transitions. Default
-     *   is to animate all horizontal lines changes, and to animate width
-     *   changes if the adjusted width is known to be an increase.
      * @param {function} next The next function.
      * @return {void}
      */
-    function adjustWidths($leaves, isAnimate, next) {
-
-        isAnimate = false
-        const that = this
+    function adjustWidths($leaves, next) {
         // traverse upward through the ancestors
-        $leaves.parents(Dcls.Structure + Sel.Unfiltered).each(function(pi, parent) {
-
-            const $parent            = $(parent)
-
+        $leaves.parents(Dcls.Structure + Sel.Unfiltered).each((pi, parent) => {
+            const $parent = $(parent)
             // The horizontal line.
-            const $hl                = $parent.children(Dcls.HL)
-
+            const $hl = $parent.children(Dcls.HL)
             // All the child-wrapper elements.
-            const $cws               = $parent.children(Dcls.Child)
-
+            const $cws = $parent.children(Dcls.Child)
             // The child-wrapper elements of the structures that are 'visible'.
-            const $cwsUnfiltered     = $cws.has('> ' + Sel.Unfiltered)
-
+            const $cwsUnfiltered = $cws.has('> ' + Sel.Unfiltered)
             // The total number of children.
-            const totalChildren      = $cws.length
-
+            const totalChildren = $cws.length
             // The number of 'visible' children.
             const unfilteredChildren = $cwsUnfiltered.length
-
             // The list of child widths.
-            const childWidths        = $cwsUnfiltered.map(function() {
+            const childWidths = $cwsUnfiltered.map(function() {
                 return +(
                     $(this).attr(Attrib.FilteredWidth) ||
                     $(this).children(Dcls.Structure).attr(Attrib.Width)
                 )
             }).get()
-
             // The total width that the parent should consume.
             const width = sum(childWidths)
-
             // Modify the widths of the visible children.
-
             $cwsUnfiltered.each(function(ci, cw) {
                 const $cw = $(cw)
                 // calculate the new percentage
@@ -1153,23 +1082,14 @@
                 // round for comparisons
                 const cmpNew = Math.floor(parseFloat(newWidthPct) * 10000) / 10000
                 const cmpCur = Math.floor(parseFloat(curWidthPct) * 10000) / 10000
-                if (cmpNew != cmpCur) {
+                if (cmpNew !== cmpCur) {
                     // set the current percentage attribute
                     $cw.attr(Attrib.CurWidthPct, newWidthPct)
-                    const css = {width: newWidthPct}
-                    // only animate if the width is increasing
-                    if (isAnimate && cmpNew > cmpCur) {
-                        $cw.animate(css, Anim.Fast)
-                    } else {
-                        $cw.css(css)
-                    }
+                        .css({width: newWidthPct})
                 }
             })
-
             // Modify the horizontal line.
-
             const hlcss = {}
-
             if (unfilteredChildren < 2) {
                 // If we have 1 or 0 visible children, then make the line span 33% and center it.
                 hlcss.width = (100 / 3) + '%'
@@ -1179,41 +1099,21 @@
                 // If there there are 2 or more visible children, calculate
                 // the line width and left margin. This is a repetition of 
                 // the server-side calculations for the initial state.
-                const first    = childWidths[0] / 2
-                const last     = childWidths[childWidths.length - 1] / 2
+                const first = childWidths[0] / 2
+                const last = childWidths[childWidths.length - 1] / 2
                 const betweens = sum(childWidths.slice(1, childWidths.length - 1))
                 hlcss.marginLeft = ((first * 100 ) / width) + '%'
                 hlcss.width = (((first + betweens + last) * 100) / width) + '%'
             }
-
             // If all children are visible, then restore the line style, otherwise make it dotted.
-            if (totalChildren == unfilteredChildren) {
-                $hl.removeClass(Cls.Collapsed)
-            } else {
-                $hl.addClass(Cls.Collapsed)
-            }
-
+            $hl.toggleClass(Cls.Collapsed, totalChildren !== unfilteredChildren)
             // Show the horizontal line if there are visible children, otherwise hide it.
-            if (unfilteredChildren > 0) {
-                if (isAnimate) {
-                    $hl.show(Anim.Fast).animate(hlcss, Anim.Fast)
-                } else {
-                    $hl.show().css(hlcss)
-                }
-            } else {
-                $hl.css(hlcss)
-                if (isAnimate) {
-                    $hl.hide(Anim.Fast)
-                } else {
-                    $hl.hide()
-                }
-            }
-
+            $hl.css(hlcss).toggle(unfilteredChildren > 0)
             // If this parent has a parent, mark the filtered width attribute
             // for the next traversal.
             const $pcw = $parent.closest(Dcls.Child)
             if ($pcw.length) {
-                if (width == +$parent.attr(Attrib.Width)) {
+                if (width === +$parent.attr(Attrib.Width)) {
                     $pcw.removeAttr(Attrib.FilteredWidth)
                 } else {
                     $pcw.attr(Attrib.FilteredWidth, width || 1)
@@ -1234,7 +1134,6 @@
      */
     function highlightStepResult(step) {
         const $tableau = this.$tableau
-        const $controls = this.$controls
         if (step == null) {
             step = +$tableau.attr(Attrib.Step)
         }
@@ -1269,14 +1168,14 @@
         }
         const nodeIdStr = $ruleTarget.attr(Attrib.NodeIds)
         if (nodeIdStr) {
-            var nodeIdsArr = nodeIdStr.split(',').filter(Boolean)
-            for (var i = 0; i < nodeIdsArr.length; ++i) {
+            const nodeIdsArr = nodeIdStr.split(',').filter(Boolean)
+            for (let i = 0; i < nodeIdsArr.length; ++i) {
                 nodeIds.push(+nodeIdsArr[i])
             }
         }
-        var $nodes
+        let $nodes
         if (nodeIds.length) {
-            var nodeSel = $.map(nodeIds, function(id) { return '#' + NodeIdPrefix + id }).join(', ')
+            const nodeSel = $.map(nodeIds, id => '#' + NodeIdPrefix + id).join(', ')
             $nodes = $(nodeSel, $tableau)
         } else {
             $nodes = $E
@@ -1299,6 +1198,7 @@
         $(Dcls.HighlightClosed, $tableau).removeClass(Cls.HighlightClosed)
         $(Dcls.Highlight, $controls).removeClass(Cls.Highlight)
     }
+
     /**
      * Make various incremental UI adjustments.
      *
@@ -1308,19 +1208,18 @@
      * @return {void}
      */
     function adjust(what, howMuch) {
-
         const $tableau = this.$tableau
         switch (what) {
             case E_AdjustWhat.Font  :
-                if (howMuch == E_HowMuch.Reset) {
+                if (howMuch === E_HowMuch.Reset) {
                     $tableau.css({fontSize: 'inherit'})
                 } else {
                     $tableau.css({fontSize: parseInt($tableau.css('fontSize')) + (parseFloat(howMuch) || 0)})
                 }
                 break
             case E_AdjustWhat.Width :
-                var p
-                if (howMuch == E_HowMuch.Reset) {
+                let p
+                if (howMuch === E_HowMuch.Reset) {
                     p = 100
                 } else if (howMuch === E_HowMuch.Stretch) {
                     stretchWidth.call(this)
@@ -1329,17 +1228,17 @@
                     p = +$tableau.attr(Attrib.CurWidthPct) + (parseFloat(howMuch) || 0)
                 }
                 if (p < 0) {
-                    p == 0
+                    p = 0
                 }
                 $tableau.attr(Attrib.CurWidthPct, p)
                 $tableau.css({width: p + '%'})
                 break
             case E_AdjustWhat.Step:
-                var maxSteps = this.numSteps
-                var n
-                if (howMuch == E_HowMuch.Beginning || howMuch == E_HowMuch.Start) {
+                const maxSteps = this.numSteps
+                let n
+                if (howMuch === E_HowMuch.Beginning || howMuch === E_HowMuch.Start) {
                     n = 0
-                } else if (howMuch == E_HowMuch.Reset || howMuch == E_HowMuch.End) {
+                } else if (howMuch === E_HowMuch.Reset || howMuch === E_HowMuch.End) {
                     n = maxSteps
                 } else {
                     n = +$tableau.attr(Attrib.Step) + (parseInt(howMuch) || 0)
@@ -1362,14 +1261,14 @@
      * @private
      * @return {void}
      */
-    function scrollToCenter(opts) {
+    function scrollToCenter() {
         const $cont = this.$scrollContainer
         const $tableau = this.$tableau
-        var current = $cont.scrollLeft()
-        var windowWidth = $(window).width()
-        var sel = [Dcls.Root, Dcls.NodeSegment, Dcls.Node, Dcls.NodeProps].join(' > ')
-        var centerPos = $(sel, $tableau).position().left
-        var scroll = centerPos - (windowWidth / 2)
+        const current = $cont.scrollLeft()
+        const windowWidth = $(window).width()
+        const sel = [Dcls.Root, Dcls.NodeSegment, Dcls.Node, Dcls.NodeProps].join(' > ')
+        const centerPos = $(sel, $tableau).position().left
+        const scroll = centerPos - (windowWidth / 2)
         // var scroll = centerPos - (windowWidth / 2) + current
         debug({current, centerPos, scroll, windowWidth})
         $cont.scrollLeft(scroll)
@@ -1384,20 +1283,16 @@
      */
     function scrollTo($what, opts) {
         opts = $.extend({}, FuncDefaults.ScrollTo, opts)
-        const $cont = this.$scrollContainer
-        // var scrollLeft = pos.left - (windowWidth / 2) + currentLeft
-        // var scrollTop = pos.top - (windowHeight / 2) + currentTop
-        var windowWidth = $(window).width()
-        var windowHeight = $(window).height()
-        var pos = $what.position()
-        var scrollLeft = pos.left - (windowWidth / 2)
-        var scrollTop = pos.top - (windowHeight / 2)
-        // debug($what.attr('id'), {scrollLeft, scrollTop, pos, windowWidth, windowHeight, currentLeft, currentTop})
-        $cont.scrollLeft(scrollLeft).scrollTop(scrollTop)
+        const pos = $what.position()
+        const scrollLeft = pos.left - ($(window).width() / 2)
+        const scrollTop = pos.top - ($(window).height() / 2)
+        this.$scrollContainer
+            .scrollLeft(scrollLeft)
+            .scrollTop(scrollTop)
     }
 
     /**
-     * Execute give callback and return to previous scroll position.
+     * Execute given callback and return to previous scroll position.
      * 
      * @private
      * @param {function} cb The callback.
@@ -1405,8 +1300,8 @@
      */
     function returnScroll(cb) {
         const $cont = this.$scrollContainer
-        var left = $cont.scrollLeft()
-        var top = $cont.scrollTop()
+        const left = $cont.scrollLeft()
+        const top = $cont.scrollTop()
         try {
             cb()
         } finally {
@@ -1422,21 +1317,18 @@
      * @return {void}
      */
     function stretchWidth($leaves) {
-        const $tableau = this.$tableau
-        const that = this
-        returnScroll.call(this, function () {
-            $tableau.css({width: '100%'})
-            $tableau.attr(Attrib.CurWidthPct, '100')
-            var currWidth = +$tableau.attr(Attrib.CurWidthPct)
-            var guess = guessNoWrapWidth.call(that, $leaves)
+        returnScroll.call(this, () => {
+            const $tableau = this.$tableau
+            $tableau.css({width: '100%'}).attr(Attrib.CurWidthPct, '100')
+            const currWidth = +$tableau.attr(Attrib.CurWidthPct)
+            const guess = guessNoWrapWidth.call(this, $leaves)
             debug({guess})
             if (!guess || guess <= 1) {
                 return
             }
-            var p = currWidth * guess
+            const p = currWidth * guess
             debug({p, currWidth})
-            $tableau.attr(Attrib.CurWidthPct, p)
-            $tableau.css({width: p + '%'})
+            $tableau.attr(Attrib.CurWidthPct, p).css({width: p + '%'})
         })
     }
 
@@ -1479,14 +1371,14 @@
             $leaves = $(Dcls.Leaf + ':visible:eq(0) ' + Dcls.NodeProps, $tableau)
         }
 
-        var maxDiffPct = 0
+        let maxDiffPct = 0
         $leaves.each(function() {
             const $me = $(this)
-            var h = $me.height()
-            var h2 = $me.css('position', 'absolute').height()
+            const h = $me.height()
+            const h2 = $me.css('position', 'absolute').height()
             $me.css('position', 'inherit')
             if (h > h2) {
-                var diff = h / h2
+                const diff = h / h2
                 if (diff > maxDiffPct) {
                     debug($me.text(), {h, h2, nid: $me.parent().attr('id')})
                     maxDiffPct = diff
@@ -1494,7 +1386,7 @@
             }
             // debug({h, h2})
         })
-        var guess = maxDiffPct
+        let guess = maxDiffPct
         if (guess > 1) {
             if (guess <= 1.5) {
                 guess = guess - ((guess - 1) / 2)
@@ -1521,12 +1413,11 @@
      * @return {void}
      */
     function handleTableauClick($target) {
-
         const $structure = $target.closest(Dcls.Structure)
-        const $tableau = this.$tableau
-
         if ($structure.length) {
-            const behavior = ModKey.ctrlalt ? E_Behave.Zoom : E_Behave.Inspect
+            const behavior = ModKey.ctrlalt
+                ? E_Behave.Zoom
+                : E_Behave.Inspect
             switch (behavior) {
                 case E_Behave.Zoom:
                     zoom.call(this, $structure)
@@ -1549,16 +1440,14 @@
      * @return {void}
      */
     function handleControlsClick($target) {
-
         if ($target.is(Dcls.MarkDisabled + ', :disabled, :checkbox, select')) {
             return
         }
         const classMap = Object.create(null)
         const classes = $target.attr('class').split(' ')
-        for (var i = 0; i < classes.length; ++i) {
+        for (let i = 0; i < classes.length; ++i) {
             classMap[classes[i]] = true
         }
-        const $tableau = this.$tableau
         if (classMap[Cls.StepStart]) {
             adjust.call(this, E_AdjustWhat.Step, E_HowMuch.Start)
         } else if (classMap[Cls.StepNext]) {
@@ -1598,8 +1487,8 @@
                 $target.addClass(markClass)
             }
         } else if (classMap[Cls.StepRuleName]) {
-            var markClass = Cls.MarkActive
-            var off = Boolean(classMap[markClass])
+            const markClass = Cls.MarkActive
+            const off = Boolean(classMap[markClass])
             if (off) {
                 highlightStepOff.call(this)
                 $target.removeClass(markClass)
@@ -1608,7 +1497,7 @@
                 $target.addClass(markClass)
             }
         } else if (classMap[Cls.BranchFilter]) {
-            for (var filterType of Object.values(E_FilterType)) {
+            for (const filterType of Object.values(E_FilterType)) {
                 if (classMap[filterType]) {
                     filterBranches.call(this, filterType)
                     break
@@ -1629,12 +1518,10 @@
      * @return {void}
      */
     function handleControlsChange($target) {
-
         const $tableau = this.$tableau
         if ($target.hasClass(Cls.StepInput)) {
-            var n = +$target.val()
-            var maxSteps = +$tableau.attr(Attrib.NumSteps)
-            if (isNaN(n) || n < 0 || n > maxSteps) {
+            const n = +$target.val()
+            if (isNaN(n) || n < 0 || n > +$tableau.attr(Attrib.NumSteps)) {
                 $target.val($tableau.attr(Attrib.Step))
                 return
             }
@@ -1669,9 +1556,7 @@
      * @return {void}
      */
     function handleActionKey(key) {
-
-        const $tableau = this.$tableau
-        const $controls = this.$controls
+        const {$tableau, $controls} = this
         switch (key) {
             case '>':
                 adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepInc)
@@ -1841,25 +1726,25 @@
      * Track only the highest or lowest positions of a lineage. This is the
      * generic function for trackHighests() and tackLowests().
      *
-     * @param dropIf The relation to drop, either descendant or ancestor.
-     * @param replaceIf The relation to replace, either ancestor or descendant.
-     * @param trackObj The object store to check and modify.
-     * @param The position object to potentially add.
+     * @param {Rel} dropIf The relation to drop, either descendant or ancestor.
+     * @param {Rel} replaceIf The relation to replace, either ancestor or descendant.
+     * @param {object} trackObj The object store to check and modify.
+     * @param {object} pos The position object to potentially add.
      * @return {void}
      */
     function consolidateRelated(dropIf, replaceIf, trackObj, pos) {
         const replaces = []
-        for (var hleft in trackObj) {
-            var hpos = trackObj[hleft]
-            var relation = getRelation(pos, hpos)
-            if (relation == dropIf) {
+        for (const hleft in trackObj) {
+            const hpos = trackObj[hleft]
+            const relation = getRelation(pos, hpos)
+            if (relation === dropIf) {
                 return
             }
-            if (relation == replaceIf) {
+            if (relation === replaceIf) {
                 replaces.push(hleft)
             }
         }
-        for (var i = 0; i < replaces.length; i++) {
+        for (let i = 0; i < replaces.length; i++) {
             delete(trackObj[replaces[i]])
         }
         trackObj[pos.left] = pos
@@ -1868,30 +1753,30 @@
     /**
      * Sum all elements in an array. Return 0 if empty.
      *
-     * @param arr The array.
-     * @return The sum, or 0 if empty.
+     * @param {array} arr The array.
+     * @return {number} The sum, or 0 if empty.
      */
     function sum(arr) {
-        return arr.reduce(function(a, b) { return a + b }, 0)
+        return arr.reduce((a, b) => a + b, 0)
     }
 
     /**
      * Form a selector string for an attribute.
      *
-     * @param attr The attribute name.
-     * @param val The attribute value.
-     * @param oper The operator, default is '='.
+     * @param {string} attr The attribute name.
+     * @param {string} val The attribute value.
+     * @param {string} oper The operator, default is '='.
      * @return The attribute selector string.
      */
     function getAttrSelector(attr, val, oper) {
-        oper = oper || '='
-        return ['[', attr, oper, '"', val, '"]'].join('')
+        return ['[', attr, oper || '=', '"', val, '"]'].join('')
     }
+
     /**
      * Compute the right offset from the left position.
      *
      * @param {object} $el The jQuery element.
-     * @return float The right offset value.
+     * @return {number} The right offset value.
      */
     function getRightOffset($el) {
         return $(document).width() - $el.offset().left - $el.width() - parseFloat($el.css('marginRight') || 0)
@@ -1902,7 +1787,7 @@
      * the parent element,
      *
      * @param {object} $el The jQuery element.
-     * @return float The right offset value.
+     * @return {number} The right offset value.
      */
     function computeRightZeroOffset($el) {
         var n = parseFloat($el.css('marginRight') || 0)
