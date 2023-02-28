@@ -24,6 +24,7 @@
         return
     }
 
+    const PLUGIN_NAME = window.PYTABLEAUX_PLUGIN_NAME || 'tableau'
     const $ = jQuery
     const $E = $()
     const debug = console.debug
@@ -37,10 +38,10 @@
 
     // relationship string constants
     const Rel = {
-        Self       : 'self'       ,
-        Ancestor   : 'ancestor'   ,
+        Self       : 'self',
+        Ancestor   : 'ancestor',
         Descendant : 'descendant' ,
-        Outside    : 'outside'    ,
+        Outside    : 'outside',
     }
 
     /*
@@ -101,8 +102,8 @@
         ScrollCenter    : 'scroll-center'        ,
         BranchFilter    : 'branch-filter'        ,
         ColorOpen       : 'color-open'           ,
-        AutoWidth       : 'auto-width'           ,
-        AutoScroll      : 'auto-scroll'          ,
+        WidthAuto       : 'auto-width'           ,
+        ScrollAuto      : 'auto-scroll'          ,
         DragScroll      : 'drag-scroll'          ,
         // stateful classes
         Hidden          : 'hidden'               ,
@@ -175,74 +176,63 @@
     Sel.Unfiltered = ':not(' + Sel.Filtered + ')'
 
     // Relevant action keys
-    const ActionKeys = {
-        '>' : true,
-        '<' : true,
-        'B' : true,
-        'E' : true,
-        '+' : true,
-        '-' : true,
-        '=' : true,
-        ']' : true,
-        '}' : true,
-        '[' : true,
-        '{' : true,
-        '|' : true,
-        'O' : true,
-        'C' : true,
-        'A' : true,
-        'r' : true,
-        'R' : true,
-        't' : true,
-        'T' : true,
-        'Z' : true,
-        // 'q' : true,
-        // 'Q' : true,
-        // 'm' : true,
-        // 'M' : true,
-        '@' : true,
-        '$' : true,
-        'W' : true,
-        'S' : true,
+    const ActionKeyMap = {
+        StepNext: '>',
+        StepPrev: '<',
+        StepStart: 'B',
+        StepEnd: 'E',
+        FontPlus: '+',
+        FontMinus: '-',
+        FontReset: '=',
+        WidthPlus: ']',
+        WidthMinus: '[',
+        WidthPlusPlus: '}',
+        WidthMinusMinus: '{',
+        WidthReset: '|',
+        WidthStretch: '@',
+        WidthAuto: 'W',
+        ScrollCenter: '$',
+        ScrollAuto: 'S',
+        FilterOpen: 'O',
+        FilterClosed: 'C',
+        FilterAll: 'A',
+        HighlightRule: 'r',
+        HighlightRuleStay: 'R',
+        HighlightTarget: 't',
+        HighlightTargetStay: 'T',
+        ZoomCancel: 'Z',
     }
 
-    // enums
-    const E_AdjustWhat = {
+    const AdjustWhat = {
         Font  : 'font'  ,
         Width : 'width' ,
         Step  : 'step'  ,
     }
 
-    const E_AdjustWhen = {
+    const AdjustWhen = {
         Before : 'before',
-        After  : 'after' ,
+        After  : 'after',
     }
 
-    const E_HowMuch = {
-        Start           : 'start'     ,
-        End             : 'end'       ,
-        Beginning       : 'beginning' ,
-        Reset           : 'reset'     ,
-        Stretch         : 'stretch'   ,
-        StepInc         :   1         ,
-        StepDec         :  -1         ,
-        FontInc         :   1         ,
-        FontDec         :  -1         ,
-        WidthInc        :   1         ,
-        WidthDec        :  -1         ,
-        WidthUpMed      :  10         ,
-        WidthDownMed    : -10         ,
-        WidthUpLarge    :  25         ,
-        WidthDownLarge  : -25         ,
+    const HowMuch = {
+        Start       : 'start',
+        End         : 'end',
+        Beginning   : 'beginning',
+        Reset       : 'reset',
+        Stretch     : 'stretch',
+        StepInc     :   1,
+        FontInc     :   1,
+        WidthMedium :  10,
+        WidthLarge  :  25,
     }
 
-    const E_FilterType = {
+    const FilterType = {
         Open   : 'open'   ,
         Closed : 'closed' ,
         All    : 'all'    ,
     }
 
-    const E_Behave = {
+    const Behave = {
         Inspect : 'inspect',
         Zoom    : 'zoom'   ,
     }
@@ -253,7 +243,7 @@
             $hides     : $E,
             $shows     : $E,
             className  : null,
-            adjust     : E_AdjustWhen.After,
+            adjust     : AdjustWhen.After,
         },
         Highlight : {
             stay       : true  ,
@@ -266,63 +256,187 @@
         },
     }
 
-    function Api($tableau) {
-        if ($tableau.length !== 1) {
-            throw new Error('Cannot create Api for length ' + $tableau.length)
+    class Api {
+
+        static getInstance(ref, setActive = false) {
+            let api
+            if (this.instances[ref]) {
+                api = this.instances[ref]
+            } else {
+                if (typeof ref.attr !== 'function') {
+                    ref = $(ref)
+                }
+                if (ref.length > 1) {
+                    $.error('Cannot get instance for object with length ' + ref.length)
+                }
+                api = this.instances[ref.attr('id')]
+            }
+            if (setActive) {
+                this.activeInstance = api
+            }
+            return api
         }
-        const id = $tableau.attr('id')
-        if (Api.instances[id]) {
-            throw new Error('Instance already created for id ' + id)
+
+        constructor($tableau) {
+            if ($tableau.length !== 1) {
+                throw new Error('Cannot create Api for length ' + $tableau.length)
+            }
+            const id = $tableau.attr('id')
+            const {instances} = this.constructor
+            if (instances[id]) {
+                throw new Error('Instance already created for id ' + id)
+            }
+            if (id == null || !id.length) {
+                throw new Error('Cannot create Api for id "' + String(id) + '"')
+            }
+            Object.defineProperties(this, {
+                id       : {value: id},
+                $tableau : {value: $tableau},
+            })
+            instances[id] = this
+            if (!this.constructor.activeInstance) {
+                this.constructor.activeInstance = this
+            }
         }
-        if (id == null || !id.length) {
-            throw new Error('Cannot create Api for id "' + String(id) + '"')
+
+        init(opts) {
+            this.destroy()
+            this.constructor.instances[this.id] = this
+            opts = this.opts = $.extend(true, Plugin.defaults, this.opts, opts)
+            for (const opt of ['controls', 'models', 'scrollContainer']) {
+                initSmartOpt.call(this, opts, opts[opt])
+            }
+            this.$tableau
+                .on('click', onTableauClick)
+                .on('mousedown', onMouseDown)
+                .on('mouseup', onMouseUp)
+                .on('mousemove', onMouseMove)
+            this.$controls
+                .on('click', onControlsClick)
+                .on('change', onControlsChange)
+            this.$models.on('click', onModelsClick)
+            if (opts.autoWidth == null) {
+                if ($(Dcls.WidthAuto + Dcls.MarkActive, this.$controls).length) {
+                    setAutoWidth.call(this, true)
+                }
+            } else {
+                setAutoWidth.call(this, opts.autoWidth)
+            }
+            if (opts.autoScroll == null) {
+                if ($(Dcls.ScrollAuto + Dcls.MarkActive, this.$controls).length) {
+                    setAutoScroll.call(this, true)
+                }
+            } else {
+                setAutoScroll.call(this, opts.autoScroll)
+            }
+            if (opts.dragScroll) {
+                this.$tableau.addClass(Cls.DragScroll)
+            }
+            if (!this._isAutoWidth && opts.stretch) {
+                stretchWidth.call(this)
+            }
+            if (!this._isAutoScroll && opts.center) {
+                scrollToCenter.call(this)
+            }
+            if (opts.actionKeys) {
+                this.actionKeysHash = Object.fromEntries(
+                    Object.entries(ActionKeyMap).map(
+                        ([action, key]) => [key, action]
+                    )
+                )
+                ensureKeypressHandlers()
+            } else {
+                this.actionKeysHash = {}
+            }
+            initCaches.call(this)
+            return this
         }
-        Object.defineProperties(this, {
-            id       : {value: id},
-            $tableau : {value: $tableau},
-        })
-        Api.instances[id] = this
+    
+        destroy() {
+            if (this.$controls) {
+                this.$controls
+                    .off('click', onControlsClick)
+                    .off('change', onControlsChange)
+                this.$controls.each(function() {
+                    delete App.instances[$(this).attr('id')]
+                })
+            }
+            if (this.$models) {
+                this.$models.off('click', onModelsClick)
+                this.$models.each(function() {
+                    delete App.instances[$(this).attr('id')]
+                })
+            }
+            this.$tableau
+                .off('click', onTableauClick)
+                .off('mousedown', onMouseDown)
+                .off('mouseup', onMouseUp)
+                .off('mousemove', onMouseMove)
+            delete Api.instances[this.id]
+            if (Api.activeInstance === this) {
+                Api.activeInstance = null
+            }
+            if (!Object.keys(Api.instances).length) {
+                unloadKeypressHandlers()
+            }
+            return this
+        }
+    
+        width(value) {
+            if (typeof value === 'undefined') {
+                return this.$tableau.width()
+            }
+            adjust.call(this, AdjustWhat.Width, value)
+            return this
+        }
+    
+        center() {
+            scrollToCenter.call(this)
+            return this
+        }
+    
+        autoWidth(value) {
+            if (typeof value === 'undefined') {
+                return Boolean(this._isAutoWidth)
+            }
+            setAutoWidth.call(this, value)
+            return this
+        }
+    
+        autoScroll(value) {
+            if (typeof value === 'undefined') {
+                return Boolean(this._isAutoScroll)
+            }
+            setAutoScroll.call(this, value)
+            return this
+        }
     }
     Api.instances = Object.create(null)
     Api.activeInstance = null
 
-    Api.getInstance = function getApiInstance(ref) {
-        if (Api.instances[ref]) {
-            return Api.instances[ref]
-        }
-        if (typeof ref.attr !== 'function') {
-            ref = $(ref)
-        }
-        if (ref.length > 1) {
-            $.error('Cannot get instance for object with length ' + ref.length)
-        }
-        return Api.instances[ref.attr('id')]
-    }
-    Api.fn = Api.prototype
-
-    function Plugin(opts) {
-        if (opts === 'instance') {
+    function Plugin(opt) {
+        if (opt === 'instance') {
             return Api.getInstance(this)
         }
         return this.each(function() {
             const $tableau = $(this)
             let api = Api.getInstance($tableau)
             if (api) {
-                if (typeof(api[opts]) === 'function') {
+                if (typeof(api[opt]) === 'function') {
                     const args = Array.prototype.slice.call(arguments, 1)
-                    api[opts].apply(api, args)
+                    api[opt].apply(api, args)
                 }
             } else {
                 api = new Api($tableau)
-                api.init(opts)
-                if (!Api.activeInstance) {
-                    Api.activeInstance = api
-                }
+                api.init(opt)
             }
         })
     }
-    $.fn.tableau = Plugin
+    $.fn[PLUGIN_NAME] = Plugin
 
+    /**
+     * Plugin option defaults.
+     */
     Plugin.defaults = Object.assign(Object.create(null), {
         controls: function() {
             const $controls = $(Dcls.UiControls)
@@ -355,136 +469,31 @@
         dragScroll: true,
     })
 
-    Api.fn.init = function init(opts) {
-        this.destroy()
-        Api.instances[this.id] = this
-        opts = this.opts = $.extend(true, Plugin.defaults, this.opts, opts)
+    function initSmartOpt(opt, value) {
+        const prop = '$' + opt
+        if (typeof value === 'function') {
+            this[prop] = $(value.call(this, this.$tableau))
+        } else if (value === true) {
+            this[prop] = Plugin.defaults[opt].call(this, this.$tableau)
+        } else {
+            if (typeof value === 'string') {
+                value = value.replace('{id}', this.id)
+            }
+            this[prop] = $(value)
+        }
         const that = this
-        for (const opt of ['controls', 'models', 'scrollContainer']) {
-            const prop = '$' + opt, value = opts[opt]
-            if (typeof value === 'function') {
-                this[prop] = $(value.call(this, this.$tableau))
-            } else if (value === true) {
-                this[prop] = Plugin.defaults[opt].call(this, this.$tableau)
-            } else {
-                if (typeof value === 'string') {
-                    value = value.replace('{id}', this.id)
+        this[prop].each(function(i) {
+            let id = $(this).attr('id')
+            if (!id) {
+                id = [opt, that.id, String(i)].join('_')
+                while ($('#' + id).length) {
+                    id += [id, ++i].join('_')
                 }
-                this[prop] = $(value)
+                $(this).attr('id', id)
             }
-            this[prop].each(function(i) {
-                let id = $(this).attr('id')
-                if (!id) {
-                    id = [opt, that.id, String(i)].join('_')
-                    while ($('#' + id).length) {
-                        id += [id, ++i].join('_')
-                    }
-                    $(this).attr('id', id)
-                }
-                Api.instances[id] = that
-            })
-        }
-        this.$tableau
-            .on('click', onTableauClick)
-            .on('mousedown', onMouseDown)
-            .on('mouseup', onMouseUp)
-            .on('mousemove', onMouseMove)
-        this.$controls
-            .on('click', onControlsClick)
-            .on('change', onControlsChange)
-        this.$models.on('click', onModelsClick)
-        if (opts.autoWidth == null) {
-            if ($(Dcls.AutoWidth + Dcls.MarkActive, this.$controls).length) {
-                setAutoWidth.call(this, true)
-            }
-        } else {
-            setAutoWidth.call(this, opts.autoWidth)
-        }
-        if (opts.autoScroll == null) {
-            if ($(Dcls.AutoScroll + Dcls.MarkActive, this.$controls).length) {
-                setAutoScroll.call(this, true)
-            }
-        } else {
-            setAutoScroll.call(this, opts.autoScroll)
-        }
-        if (opts.dragScroll) {
-            this.$tableau.addClass(Cls.DragScroll)
-        }
-        if (!this._isAutoWidth && opts.stretch) {
-            stretchWidth.call(this)
-        }
-        if (!this._isAutoScroll && opts.center) {
-            scrollToCenter.call(this)
-        }
-        this.actionKeysHash = opts.actionKeys
-            ? $.extend({}, ActionKeys)
-            : {}
-        if (opts.actionKeys) {
-            ensureKeypressHandlers()
-        }
-        initCaches.call(this)
-        return this
+            Api.instances[id] = that
+        })
     }
-
-    Api.fn.destroy = function destroy() {
-        if (this.$controls) {
-            this.$controls
-                .off('click', onControlsClick)
-                .off('change', onControlsChange)
-            this.$controls.each(function() {
-                delete App.instances[$(this).attr('id')]
-            })
-        }
-        if (this.$models) {
-            this.$models.off('click', onModelsClick)
-            this.$models.each(function() {
-                delete App.instances[$(this).attr('id')]
-            })
-        }
-        this.$tableau
-            .off('click', onTableauClick)
-            .off('mousedown', onMouseDown)
-            .off('mouseup', onMouseUp)
-            .off('mousemove', onMouseMove)
-        delete Api.instances[this.id]
-        if (Api.activeInstance === this) {
-            Api.activeInstance = null
-        }
-        if (!Object.keys(Api.instances).length) {
-            unloadKeypressHandlers()
-        }
-        return this
-    }
-
-    Api.fn.width = function width(value) {
-        if (typeof value === 'undefined') {
-            return this.$tableau.width()
-        }
-        adjust.call(this, E_AdjustWhat.Width, value)
-        return this
-    }
-
-    Api.fn.center = function center() {
-        scrollToCenter.call(this)
-        return this
-    }
-
-    Api.fn.autoWidth = function autoWidth(value) {
-        if (typeof value === 'undefined') {
-            return Boolean(this._isAutoWidth)
-        }
-        setAutoWidth.call(this, value)
-        return this
-    }
-
-    Api.fn.autoScroll = function autoScroll(value) {
-        if (typeof value === 'undefined') {
-            return Boolean(this._isAutoScroll)
-        }
-        setAutoScroll.call(this, value)
-        return this
-    }
-
     /**
      * Set autoWidth api option, and run auto-width if enabled. Mark/unmark the
      * controls element with active class.
@@ -495,7 +504,7 @@
      */
     function setAutoWidth(value) {
         this._isAutoWidth = Boolean(value)
-        $(Dcls.AutoWidth, this.$controls).toggleClass(Cls.MarkActive, this._isAutoWidth)
+        $(Dcls.WidthAuto, this.$controls).toggleClass(Cls.MarkActive, this._isAutoWidth)
         if (this._isAutoWidth) {
             stretchWidth.call(this)
         }
@@ -510,34 +519,26 @@
      */
     function setAutoScroll(value) {
         this._isAutoScroll = Boolean(value)
-        $(Dcls.AutoScroll, this.$controls).toggleClass(Cls.MarkActive, this._isAutoScroll)
+        $(Dcls.ScrollAuto, this.$controls).toggleClass(Cls.MarkActive, this._isAutoScroll)
         if (this._isAutoScroll) {
             scrollToCenter.call(this)
         }
     }
 
     function onTableauClick(e) {
-        const api = Api.getInstance(this)
-        Api.activeInstance = api
-        handleTableauClick.call(api, $(e.target))
+        handleTableauClick.call(Api.getInstance(this, true), $(e.target))
     }
 
     function onControlsClick(e) {
-        const api = Api.getInstance(this)
-        Api.activeInstance = api
-        handleControlsClick.call(api, $(e.target))
+        handleControlsClick.call(Api.getInstance(this, true), $(e.target))
     }
 
     function onControlsChange(e) {
-        const api = Api.getInstance(this)
-        Api.activeInstance = api
-        handleControlsChange.call(api, $(e.target))
+        handleControlsChange.call(Api.getInstance(this, true), $(e.target))
     }
 
     function onModelsClick(e) {
-        const api = Api.getInstance(this)
-        Api.activeInstance = api
-        handleModelsClick.call(api, $(e.target))
+        handleModelsClick.call(Api.getInstance(this, true), $(e.target))
     }
 
     // cursor state
@@ -560,7 +561,7 @@
     function onMouseMove(m){
         if (CurState.down) {
             const api = Api.getInstance(this)
-            if (api.opts.dragScroll) {
+            if (api && api.opts.dragScroll) {
                 window.scrollBy(CurState.xpos - m.pageX, CurState.ypos - m.pageY)
             }
         }
@@ -604,17 +605,20 @@
 
     function onKeypress(e) {
         const api = Api.activeInstance
+        if (!api) {
+            return
+        }
         const key = String.fromCharCode(e.which)
-        if (!api || !api.actionKeysHash[key]) {
+        const action = api.actionKeysHash[key]
+        if (!action) {
             return
         }
         const $target = $(e.target)
-        const isInput = $target.is(':input')
-        const shouldProcess = !isInput
+        const shouldProcess = !$target.is(':input')
         if (!shouldProcess) {
             return
         }
-        handleActionKey.call(api, key)
+        NamedActions[action].call(api)
     }
 
     function initCaches() {
@@ -737,7 +741,7 @@
      * Move the proof state to the given step.
      *
      * @private
-     * @param {integer} n The step number.
+     * @param {number} n The step number.
      * @param {function} next The next function.
      * @return {void}
      */
@@ -808,8 +812,8 @@
             $shows: $(shows),
             className: Cls.StepFiltered,
             adjust: n > prevStep
-                ? E_AdjustWhen.Before
-                : E_AdjustWhen.After,
+                ? AdjustWhen.Before
+                : AdjustWhen.After,
         }
         doFilter.call(this, fopts, () => {
             // show nodes, vertical lines
@@ -899,22 +903,22 @@
         if (!cache[type]) {
             let rmClasses
             switch (type) {
-                case E_FilterType.All:
+                case FilterType.All:
                     rmClasses = [
-                        [Cls.MarkFiltered, E_FilterType.Open].join('-'),
-                        [Cls.MarkFiltered, E_FilterType.Closed].join('-'),
+                        [Cls.MarkFiltered, FilterType.Open].join('-'),
+                        [Cls.MarkFiltered, FilterType.Closed].join('-'),
                     ]
                     break
-                case E_FilterType.Open:
+                case FilterType.Open:
                     rmClasses = [
-                        [Cls.MarkFiltered, E_FilterType.All].join('-'),
-                        [Cls.MarkFiltered, E_FilterType.Closed].join('-'),
+                        [Cls.MarkFiltered, FilterType.All].join('-'),
+                        [Cls.MarkFiltered, FilterType.Closed].join('-'),
                     ]
                     break
-                case E_FilterType.Closed:
+                case FilterType.Closed:
                     rmClasses = [
-                        [Cls.MarkFiltered, E_FilterType.All].join('-'),
-                        [Cls.MarkFiltered, E_FilterType.Open].join('-'),
+                        [Cls.MarkFiltered, FilterType.All].join('-'),
+                        [Cls.MarkFiltered, FilterType.Open].join('-'),
                     ]
                     break
             }
@@ -923,13 +927,13 @@
             $.each(this.sts, (i, st) => {
                 let shown
                 switch (type) {
-                    case E_FilterType.All:
+                    case FilterType.All:
                         shown = true
                         break
-                    case E_FilterType.Open:
+                    case FilterType.Open:
                         shown = st.hasOpen
                         break
-                    case E_FilterType.Closed:
+                    case FilterType.Closed:
                         shown = st.hasClosed
                         break
                     default:
@@ -951,7 +955,7 @@
         const fopts = {
             $hides: $hides,
             $shows: $shows,
-            className : Cls.BranchFiltered
+            className: Cls.BranchFiltered,
         }
         setTimeout(() => doFilter.call(this, fopts, next))
         $tableau.removeClass(removeClasses).addClass(markClass)
@@ -1010,7 +1014,7 @@
         this._lastShows = $shows
         let finish
         // adjust the widths (or do this 'after' below)
-        if (opts.adjust == E_AdjustWhen.Before) {
+        if (opts.adjust === AdjustWhen.Before) {
             finish = () => {
                 adjustWidths.call(this, $(leaves), () => {
                     $(shows).show()
@@ -1073,7 +1077,7 @@
             // The total width that the parent should consume.
             const width = sum(childWidths)
             // Modify the widths of the visible children.
-            $cwsUnfiltered.each(function(ci, cw) {
+            $cwsUnfiltered.each((ci, cw) => {
                 const $cw = $(cw)
                 // calculate the new percentage
                 const newWidthPct = ((childWidths[ci] * 100) / width) + '%'
@@ -1191,8 +1195,7 @@
      * @return {void}
      */
     function highlightStepOff() {
-        const $tableau = this.$tableau
-        const $controls = this.$controls
+        const {$controls, $tableau} = this
         $(Dcls.Highlight, $tableau).removeClass(Cls.Highlight)
         $(Dcls.HighlightTicked, $tableau).removeClass(Cls.HighlightTicked)
         $(Dcls.HighlightClosed, $tableau).removeClass(Cls.HighlightClosed)
@@ -1210,18 +1213,18 @@
     function adjust(what, howMuch) {
         const $tableau = this.$tableau
         switch (what) {
-            case E_AdjustWhat.Font  :
-                if (howMuch === E_HowMuch.Reset) {
+            case AdjustWhat.Font  :
+                if (howMuch === HowMuch.Reset) {
                     $tableau.css({fontSize: 'inherit'})
                 } else {
                     $tableau.css({fontSize: parseInt($tableau.css('fontSize')) + (parseFloat(howMuch) || 0)})
                 }
                 break
-            case E_AdjustWhat.Width :
+            case AdjustWhat.Width :
                 let p
-                if (howMuch === E_HowMuch.Reset) {
+                if (howMuch === HowMuch.Reset) {
                     p = 100
-                } else if (howMuch === E_HowMuch.Stretch) {
+                } else if (howMuch === HowMuch.Stretch) {
                     stretchWidth.call(this)
                     break
                 } else {
@@ -1233,12 +1236,12 @@
                 $tableau.attr(Attrib.CurWidthPct, p)
                 $tableau.css({width: p + '%'})
                 break
-            case E_AdjustWhat.Step:
+            case AdjustWhat.Step:
                 const maxSteps = this.numSteps
                 let n
-                if (howMuch === E_HowMuch.Beginning || howMuch === E_HowMuch.Start) {
+                if (howMuch === HowMuch.Beginning || howMuch === HowMuch.Start) {
                     n = 0
-                } else if (howMuch === E_HowMuch.Reset || howMuch === E_HowMuch.End) {
+                } else if (howMuch === HowMuch.Reset || howMuch === HowMuch.End) {
                     n = maxSteps
                 } else {
                     n = +$tableau.attr(Attrib.Step) + (parseInt(howMuch) || 0)
@@ -1416,14 +1419,14 @@
         const $structure = $target.closest(Dcls.Structure)
         if ($structure.length) {
             const behavior = ModKey.ctrlalt
-                ? E_Behave.Zoom
-                : E_Behave.Inspect
+                ? Behave.Zoom
+                : Behave.Inspect
             switch (behavior) {
-                case E_Behave.Zoom:
+                case Behave.Zoom:
                     zoom.call(this, $structure)
                     setInspectedBranch.call(this, $structure)
                     break
-                case E_Behave.Inspect:
+                case Behave.Inspect:
                     setInspectedBranch.call(this, $structure)
                     break
                 default :
@@ -1431,7 +1434,6 @@
             }
         }
     }
-
     /**
      * Handle a click event on a controls panel element.
      *
@@ -1448,37 +1450,15 @@
         for (let i = 0; i < classes.length; ++i) {
             classMap[classes[i]] = true
         }
-        if (classMap[Cls.StepStart]) {
-            adjust.call(this, E_AdjustWhat.Step, E_HowMuch.Start)
-        } else if (classMap[Cls.StepNext]) {
-            adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepInc)
-        } else if (classMap[Cls.StepPrev]) {
-            adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepDec)
-        } else if (classMap[Cls.StepEnd]) {
-            adjust.call(this, E_AdjustWhat.Step, E_HowMuch.End)
-        } else if (classMap[Cls.FontPlus]) {
-            adjust.call(this, E_AdjustWhat.Font, E_HowMuch.FontInc)
-        } else if (classMap[Cls.FontMinus]) {
-            adjust.call(this, E_AdjustWhat.Font, E_HowMuch.FontDec)
-        } else if (classMap[Cls.FontReset]) {
-            adjust.call(this, E_AdjustWhat.Font, E_HowMuch.Reset)
-        } else if (classMap[Cls.WidthPlus]) {
-            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthUpMed)
-        } else if (classMap[Cls.WidthPlusPlus]) {
-            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthUpLarge)
-        } else if (classMap[Cls.WidthMinus]) {
-            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownMed)
-        } else if (classMap[Cls.WidthMinusMinus]) {
-            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
-        } else if (classMap[Cls.WidthReset]) {
-            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Reset)
-        } else if (classMap[Cls.WidthStretch]) {
-            stretchWidth.call(this)
-        } else if (classMap[Cls.ScrollCenter]) {
-            scrollToCenter.call(this)
-        } else if (classMap[Cls.StepRuleTarget]) {
-            var markClass = Cls.MarkActive
-            var off = Boolean(classMap[markClass])
+        for (const action in NamedActions) {
+            if (classMap[Cls[action]]) {
+                NamedActions[action].call(this)
+                return
+            }
+        }
+        if (classMap[Cls.StepRuleTarget]) {
+            const markClass = Cls.MarkActive
+            const off = Boolean(classMap[markClass])
             if (off) {
                 highlightStepOff.call(this)
                 $target.removeClass(markClass)
@@ -1497,16 +1477,12 @@
                 $target.addClass(markClass)
             }
         } else if (classMap[Cls.BranchFilter]) {
-            for (const filterType of Object.values(E_FilterType)) {
+            for (const filterType of Object.values(FilterType)) {
                 if (classMap[filterType]) {
                     filterBranches.call(this, filterType)
                     break
                 }
             }
-        } else if (classMap[Cls.AutoWidth]) {
-            setAutoWidth.call(this, !this._isAutoWidth)
-        } else if (classMap[Cls.AutoScroll]) {
-            setAutoScroll.call(this, !this._isAutoScroll)
         }
     }
 
@@ -1549,140 +1525,109 @@
     }
 
     /**
-     * Handle an action key on the proof.
-     *
-     * @private
-     * @param {string} key The action key character.
-     * @return {void}
+     * Highlight shortcut key function builder.
      */
-    function handleActionKey(key) {
-        const {$tableau, $controls} = this
-        switch (key) {
-            case '>':
-                adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepInc)
-                break
-            case '<':
-                adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepDec)
-                break
-            case 'B':
-                adjust.call(this, E_AdjustWhat.Step, E_HowMuch.Start)
-                break
-            case 'E':
-                adjust.call(this, E_AdjustWhat.Step, E_HowMuch.End)
-                break
-            case '+':
-                adjust.call(this, E_AdjustWhat.Font, E_HowMuch.FontInc)
-                break
-            case '-':
-                adjust.call(this, E_AdjustWhat.Font, E_HowMuch.FontDec)
-                break
-            case '=':
-                adjust.call(this, E_AdjustWhat.Font, E_HowMuch.Reset)
-                break
-            case ']':
-                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthUpMed)
-                break
-            case '}':
-                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthUpLarge)
-                break
-            case '[':
-                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownMed)
-                break
-            case '{':
-                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
-                break
-            case '|':
-                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Reset)
-                break
-            case '@':
-                stretchWidth.call(this)
-                break
-            case '$':
-                scrollToCenter.call(this)
-                break
-            case 'W':
-                setAutoWidth.call(this, !this._isAutoWidth)
-                break
-            case 'S':
-                setAutoScroll.call(this, !this._isAutoScroll)
-                break
-            case 'O':
-                if ($tableau.children(Sel.CanBranchFilter).length) {
-                    filterBranches.call(this, E_FilterType.Open)
-                }
-                break
-            case 'C':
-                if ($tableau.children(Sel.CanBranchFilter).length) {
-                    filterBranches.call(this, E_FilterType.Closed)
-                }
-                break
-            case 'A':
-                if ($tableau.children(Sel.CanBranchFilter).length) {
-                    filterBranches.call(this, E_FilterType.All)
-                }
-                break
-            case 'r':
-            case 'R':
-            case 't':
-            case 'T':
-                var stay = key == 'R' || key == 'T'
-                var isResult = key == 'r' || key == 'R'
-                var step = $tableau.attr(Attrib.Step)
-                var dcls = isResult ? Dcls.StepRuleName : Dcls.StepRuleTarget
-                var $target = $(dcls + getAttrSelector(Attrib.Step, step), $controls)
-                var markClass = Cls.MarkActive
-                if ($target.hasClass(markClass)) {
-                    highlightStepOff.call(this)
-                    $target.removeClass(markClass)
+    function makeHighlightAction(stay, isResult) {
+        return function actionHighlightCommon() {
+            const step = this.$tableau.attr(Attrib.Step)
+            const dcls = isResult
+                ? Dcls.StepRuleName
+                : Dcls.StepRuleTarget
+            const $target = $(dcls + getAttrSelector(Attrib.Step, step), this.$controls)
+            const markClass = Cls.MarkActive
+            if ($target.hasClass(markClass)) {
+                highlightStepOff.call(this)
+                $target.removeClass(markClass)
+            } else {
+                $target.addClass(markClass)
+                if (isResult) {
+                    highlightStepResult.call(this)
                 } else {
-                    $target.addClass(markClass)
-                    if (isResult) {
-                        highlightStepResult.call(this)
-                    } else {
-                        highlightStepTarget.call(this)
-                    }
-                    if (!stay) {
-                        var that = this
-                        setTimeout(function() {
-                            highlightStepOff.call(that)
-                            $target.removeClass(markClass)
-                        }, Anim.Slow)
-                    }
+                    highlightStepTarget.call(this)
                 }
-                break
-            case 'Z':
-                // unzoom
-                zoom.call(this, $tableau.children(Dcls.Structure))
-                break
-            default:
-                break
+                if (!stay) {
+                    setTimeout(() => {
+                        highlightStepOff.call(this)
+                        $target.removeClass(markClass)
+                    }, Anim.Slow)
+                }
+            }
         }
     }
+
+    /**
+     * Adjust shortcut key function builder.
+     */
+    function makeAdjustAction(what, howMuch) {
+        return function() {
+            adjust.call(this, what, howMuch)
+        }
+    }
+    /**
+     * Filter shortcut key function builder.
+     */
+    function makeFilterAction(filterType) {
+        return function() {
+            if (this.$tableau.children(Sel.CanBranchFilter).length) {
+                filterBranches.call(this, filterType)
+            }
+        }
+    }
+
+    /**
+     * Shortcut action functions.
+     */
+    const NamedActions = Object.assign(Object.create(null), {
+        StepNext: makeAdjustAction(AdjustWhat.Step, HowMuch.StepInc),
+        StepPrev: makeAdjustAction(AdjustWhat.Step, -HowMuch.StepInc),
+        StepStart: makeAdjustAction(AdjustWhat.Step, HowMuch.Start),
+        StepEnd: makeAdjustAction(AdjustWhat.Step, HowMuch.End),
+        FontPlus: makeAdjustAction(AdjustWhat.Font, HowMuch.FontInc),
+        FontMinus: makeAdjustAction(AdjustWhat.Font, -HowMuch.FontInc),
+        FontReset: makeAdjustAction(AdjustWhat.Font, HowMuch.Reset),
+        WidthPlus: makeAdjustAction(AdjustWhat.Width, HowMuch.WidthMedium),
+        WidthMinus: makeAdjustAction(AdjustWhat.Width, -HowMuch.WidthMedium),
+        WidthPlusPlus: makeAdjustAction(AdjustWhat.Width, HowMuch.WidthLarge),
+        WidthMinusMinus: makeAdjustAction(AdjustWhat.Width, -HowMuch.WidthLarge),
+        WidthReset: makeAdjustAction(AdjustWhat.Width, HowMuch.Reset),
+        WidthStretch: stretchWidth,
+        WidthAuto: function() { setAutoWidth.call(this, !this._isAutoWidth) },
+        ScrollCenter: scrollToCenter,
+        ScrollAuto: function() { setAutoScroll.call(this, !this._isAutoScroll) },
+        FilterOpen: makeFilterAction(FilterType.Open),
+        FilterClosed: makeFilterAction(FilterType.Closed),
+        FilterAll: makeFilterAction(FilterType.All),
+        HighlightRule: makeHighlightAction(false, true),
+        HighlightRuleStay: makeHighlightAction(true, true),
+        HighlightTarget: makeHighlightAction(false, false),
+        HighlightTargetStay: makeHighlightAction(true, false),
+        ZoomCancel: function() { zoom.call(this, this.$tableau.children(Dcls.Structure)) },
+    })
 
     /**
      * Get the left/right values of the given structure, as well a reference
      * to the structure's jQuery element.
      *
      * @param {object} $structure The singleton jQuery .structure element.
-     * @return A plain object with left/right/$structure keys.
+     * @return {object} A plain object with left/right/$structure keys.
      */
      function getPos($structure) {
         return {
-            left  : +$structure.attr(Attrib.Left),
-            right : +$structure.attr(Attrib.Right),
-            $structure : $structure,
+            left: +$structure.attr(Attrib.Left),
+            right: +$structure.attr(Attrib.Right),
+            $structure: $structure,
         }
     }
 
     /**
      * Get the relation of one position object to the other (see getPos() above).
      *
-     * @param from The related position object.
-     * @param to The position object to compare to.
-     * @return A string, either 'self', 'ancestor', 'descendant', or 'other'.
+     * @param {object} from The related position object.
+     * @param {object} to The position object to compare to.
+     * @return {string} Either 'self', 'ancestor', 'descendant', or 'other'.
      */
      function getRelation(from, to) {
-        if (from.left == to.left) {
+        if (from.left === to.left) {
             return Rel.Self
         }
         if (from.left < to.left && from.right > to.right) {
@@ -1779,7 +1724,12 @@
      * @return {number} The right offset value.
      */
     function getRightOffset($el) {
-        return $(document).width() - $el.offset().left - $el.width() - parseFloat($el.css('marginRight') || 0)
+        return (
+            $(document).width() -
+            $el.offset().left -
+            $el.width() -
+            parseFloat($el.css('marginRight') || 0)
+        )
     }
 
     /**
@@ -1790,7 +1740,7 @@
      * @return {number} The right offset value.
      */
     function computeRightZeroOffset($el) {
-        var n = parseFloat($el.css('marginRight') || 0)
+        let n = parseFloat($el.css('marginRight') || 0)
         $el = $el.parent()
         while ($el.length && $el.get(0) != document) {
             n += parseFloat($el.css('marginRight') || 0)
