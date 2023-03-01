@@ -40,87 +40,73 @@
     const Rel = {
         Self       : 'self',
         Ancestor   : 'ancestor',
-        Descendant : 'descendant' ,
+        Descendant : 'descendant',
         Outside    : 'outside',
     }
 
-    /*
-        html-writer classes:
-
-       misc : clear
-    
-       wrapper : tableau-wrapper
-          tableau : tableau
-            structure : structure [, has-open, has-closed, leaf, only-branch, closed, open]
-              node-segment : node-sement
-                 vertical-line : vertical-line
-                horizontal-line : horizontal-line
-                    node : node [, ticked]
-                       node-props : node-props [, ticked]
-                            inline : [sentence, world, designation, designated, undesignated, world1,
-                                       world2, access, ellipsis, flag, <flag>]
-    */
-    // class names
+    /**
+     * Class names. For tableau writer classes, see writers.py
+     */
     const Cls = {
         // page components
-        UiControls      : 'tableau-controls'     ,
-        ModelsArea      : 'tableau-models'       ,
+        UiControls      : 'tableau-controls',
+        ModelsArea      : 'tableau-models',
         // tableau classes
-        Root            : 'root'                 ,
-        Structure       : 'structure'            ,
-        HasOpen         : 'has-open'             ,
-        HasClosed       : 'has-closed'           ,
-        Child           : 'child-wrapper'        ,
-        Leaf            : 'leaf'                 ,
-        HL              : 'horizontal-line'      ,
-        VL              : 'vertical-line'        ,
-        NodeSegment     : 'node-segment'         ,
-        NodeProps       : 'node-props'           ,
-        PropSentence    : 'sentence'             ,
-        PropAccess      : 'access'               ,
-        Node            : 'node'                 ,
-        Ticked          : 'ticked'               ,
-        Closed          : 'closed'               ,
+        Root            : 'root',
+        Structure       : 'structure',
+        HasOpen         : 'has-open',
+        HasClosed       : 'has-closed',
+        Child           : 'child-wrapper',
+        Leaf            : 'leaf',
+        HL              : 'horizontal-line',
+        VL              : 'vertical-line',
+        NodeSegment     : 'node-segment',
+        NodeProps       : 'node-props',
+        PropSentence    : 'sentence',
+        PropAccess      : 'access',
+        Node            : 'node',
+        Ticked          : 'ticked',
+        Closed          : 'closed',
         // controls classes
-        StepStart       : 'step-start'           ,
-        StepPrev        : 'step-prev'            ,
-        StepNext        : 'step-next'            ,
-        StepEnd         : 'step-end'             ,
-        StepInput       : 'step-input'           ,
-        StepRuleDatum   : 'step-rule-datum'      ,
-        StepRuleName    : 'step-rule-name'       ,
-        StepRuleTarget  : 'step-rule-target'     ,
-        FontPlus        : 'font-plus'            ,
-        FontMinus       : 'font-minus'           ,
-        FontReset       : 'font-reset'           ,
-        WidthPlus       : 'width-plus'           ,
-        WidthPlusPlus   : 'width-plus-plus'      ,
-        WidthMinus      : 'width-minus'          ,
-        WidthMinusMinus : 'width-minus-minus'    ,
-        WidthReset      : 'width-reset'          ,
-        WidthStretch    : 'width-stretch'        ,
-        ScrollCenter    : 'scroll-center'        ,
-        BranchFilter    : 'branch-filter'        ,
-        ColorOpen       : 'color-open'           ,
-        WidthAuto       : 'auto-width'           ,
-        ScrollAuto      : 'auto-scroll'          ,
-        DragScroll      : 'drag-scroll'          ,
+        StepStart       : 'step-start',
+        StepPrev        : 'step-prev',
+        StepNext        : 'step-next',
+        StepEnd         : 'step-end',
+        StepInput       : 'step-input',
+        StepRuleDatum   : 'step-rule-datum',
+        StepRuleName    : 'step-rule-name',
+        StepRuleTarget  : 'step-rule-target',
+        FontPlus        : 'font-plus',
+        FontMinus       : 'font-minus',
+        FontReset       : 'font-reset',
+        WidthPlus       : 'width-plus',
+        WidthPlusPlus   : 'width-plus-plus',
+        WidthMinus      : 'width-minus',
+        WidthMinusMinus : 'width-minus-minus',
+        WidthReset      : 'width-reset',
+        WidthStretch    : 'width-stretch',
+        ScrollCenter    : 'scroll-center',
+        BranchFilter    : 'branch-filter',
+        ColorOpen       : 'color-open',
+        WidthAuto       : 'auto-width',
+        ScrollAuto      : 'auto-scroll',
+        DragScroll      : 'drag-scroll',
         // stateful classes
-        Hidden          : 'hidden'               ,
-        Zoomed          : 'zoomed'               ,
-        Inspected       : 'inspected'            ,
-        Collapsed       : 'collapsed'            ,
-        Uncollapsed     : 'uncollapsed'          ,
-        BranchFiltered  : 'branch-filtered'      ,
-        StepFiltered    : 'step-filtered'        ,
-        ZoomFiltered    : 'zoom-filtered'        ,
-        Highlight       : 'highlight'            ,
-        HighlightTicked : 'highlight-ticked'     ,
-        HighlightClosed : 'highlight-closed'     ,
-        Model           : 'model'                ,
-        MarkActive      : 'active'               ,
-        MarkDisabled    : 'disabled'             ,
-        MarkFiltered    : 'filtered'             ,
+        Hidden          : 'hidden',
+        Zoomed          : 'zoomed',
+        Inspected       : 'inspected',
+        Collapsed       : 'collapsed',
+        Uncollapsed     : 'uncollapsed',
+        BranchFiltered  : 'branch-filtered',
+        StepFiltered    : 'step-filtered',
+        ZoomFiltered    : 'zoom-filtered',
+        Highlight       : 'highlight',
+        HighlightTicked : 'highlight-ticked',
+        HighlightClosed : 'highlight-closed',
+        Model           : 'model',
+        MarkActive      : 'active',
+        MarkDisabled    : 'disabled',
+        MarkFiltered    : 'filtered',
     }
 
     // The id of node elements.
@@ -135,25 +121,25 @@
     // Attributes
     const Attrib = {
         // Global attributes
-        TableauId      : 'data-tableau-id'        ,
+        TableauId      : 'data-tableau-id',
         // Tableau attributes
-        NumSteps       : 'data-num-steps'         ,
-        Step           : 'data-step'              ,
-        CurWidthPct    : 'data-current-width-pct' ,
-        Depth          : 'data-depth'             ,
-        Width          : 'data-width'             ,
-        Left           : 'data-left'              ,
-        Right          : 'data-right'             ,
-        CloseStep      : 'data-closed-step'       ,
-        BranchId       : 'data-branch-id'         ,
-        ModelId        : 'data-model-id'          ,
-        NodeId         : 'data-node-id'           ,
-        TickStep       : 'data-ticked-step'       ,
+        NumSteps       : 'data-num-steps',
+        Step           : 'data-step',
+        CurWidthPct    : 'data-current-width-pct',
+        Depth          : 'data-depth',
+        Width          : 'data-width',
+        Left           : 'data-left',
+        Right          : 'data-right',
+        CloseStep      : 'data-closed-step',
+        BranchId       : 'data-branch-id',
+        ModelId        : 'data-model-id',
+        NodeId         : 'data-node-id',
+        TickStep       : 'data-ticked-step',
         // Controls attributes (rules)
-        NodeIds        : 'data-node-ids'          ,
-        BranchNodeId   : 'data-branch-node-id'    ,
+        NodeIds        : 'data-node-ids',
+        BranchNodeId   : 'data-branch-node-id',
         // Stateful attributes
-        FilteredWidth  : 'data-filtered-width'    ,
+        FilteredWidth  : 'data-filtered-width',
     }
 
     // Selectors
@@ -204,9 +190,9 @@
     }
 
     const AdjustWhat = {
-        Font  : 'font'  ,
-        Width : 'width' ,
-        Step  : 'step'  ,
+        Font  : 'font',
+        Width : 'width',
+        Step  : 'step',
     }
 
     const AdjustWhen = {
@@ -227,14 +213,14 @@
     }
 
     const FilterType = {
-        Open   : 'open'   ,
-        Closed : 'closed' ,
-        All    : 'all'    ,
+        Open   : 'open',
+        Closed : 'closed',
+        All    : 'all',
     }
 
     const Behave = {
         Inspect : 'inspect',
-        Zoom    : 'zoom'   ,
+        Zoom    : 'zoom',
     }
 
     // default option sets
@@ -246,14 +232,21 @@
             adjust     : AdjustWhen.After,
         },
         Highlight : {
-            stay       : true  ,
-            off        : false ,
-            ruleStep   : null  ,
-            ruleTarget : null  ,
+            stay       : true,
+            off        : false,
+            ruleStep   : null,
+            ruleTarget : null,
         },
         ScrollTo : {
             animate: false,
         },
+    }
+
+    // cursor state
+    const CurState = {
+        down : false,
+        xpos : 0,
+        ypos : 0,
     }
 
     class Api {
@@ -353,18 +346,19 @@
         }
     
         destroy() {
+            const {instances} = this.constructor
             if (this.$controls) {
                 this.$controls
                     .off('click', onControlsClick)
                     .off('change', onControlsChange)
                 this.$controls.each(function() {
-                    delete App.instances[$(this).attr('id')]
+                    delete instances[$(this).attr('id')]
                 })
             }
             if (this.$models) {
                 this.$models.off('click', onModelsClick)
                 this.$models.each(function() {
-                    delete App.instances[$(this).attr('id')]
+                    delete instances[$(this).attr('id')]
                 })
             }
             this.$tableau
@@ -372,11 +366,11 @@
                 .off('mousedown', onMouseDown)
                 .off('mouseup', onMouseUp)
                 .off('mousemove', onMouseMove)
-            delete Api.instances[this.id]
-            if (Api.activeInstance === this) {
-                Api.activeInstance = null
+            delete instances[this.id]
+            if (this.constructor.activeInstance === this) {
+                this.constructor.activeInstance = null
             }
-            if (!Object.keys(Api.instances).length) {
+            if (!Object.keys(instances).length) {
                 unloadKeypressHandlers()
             }
             return this
@@ -441,7 +435,9 @@
         controls: function() {
             const $controls = $(Dcls.UiControls)
             if ($controls.length > 1) {
-                const $specific = $controls.filter(getAttrSelector(Attrib.TableauId, this.id))
+                const $specific = $controls.filter(
+                    getAttrSelector(Attrib.TableauId, this.id)
+                )
                 if ($specific.length) {
                     return $specific
                 }
@@ -451,7 +447,9 @@
         models: function() {
             const $models = $(Dcls.ModelsArea)
             if ($models.length > 1) {
-                const $specific = $models.filter(getAttrSelector(Attrib.TableauId, this.id))
+                const $specific = $models.filter(
+                    getAttrSelector(Attrib.TableauId, this.id)
+                )
                 if ($specific.length) {
                     return $specific
                 }
@@ -509,6 +507,7 @@
             stretchWidth.call(this)
         }
     }
+
     /**
      * Set autoScroll api option, and run auto-scrool if enabled. Mark/unmark the
      * controls element with active class.
@@ -539,13 +538,6 @@
 
     function onModelsClick(e) {
         handleModelsClick.call(Api.getInstance(this, true), $(e.target))
-    }
-
-    // cursor state
-    const CurState = {
-        down : false,
-        xpos : 0,
-        ypos : 0,
     }
 
     function onMouseDown(m) {
@@ -1213,14 +1205,19 @@
     function adjust(what, howMuch) {
         const $tableau = this.$tableau
         switch (what) {
-            case AdjustWhat.Font  :
+            case AdjustWhat.Font:
                 if (howMuch === HowMuch.Reset) {
                     $tableau.css({fontSize: 'inherit'})
                 } else {
-                    $tableau.css({fontSize: parseInt($tableau.css('fontSize')) + (parseFloat(howMuch) || 0)})
+                    $tableau.css({
+                        fontSize: (
+                            parseInt($tableau.css('fontSize')) +
+                            (parseFloat(howMuch) || 0)
+                        )
+                    })
                 }
                 break
-            case AdjustWhat.Width :
+            case AdjustWhat.Width:
                 let p
                 if (howMuch === HowMuch.Reset) {
                     p = 100
@@ -1321,7 +1318,7 @@
      */
     function stretchWidth($leaves) {
         returnScroll.call(this, () => {
-            const $tableau = this.$tableau
+            const {$tableau} = this
             $tableau.css({width: '100%'}).attr(Attrib.CurWidthPct, '100')
             const currWidth = +$tableau.attr(Attrib.CurWidthPct)
             const guess = guessNoWrapWidth.call(this, $leaves)
@@ -1429,7 +1426,7 @@
                 case Behave.Inspect:
                     setInspectedBranch.call(this, $structure)
                     break
-                default :
+                default:
                     break
             }
         }
@@ -1505,11 +1502,7 @@
         } else if ($target.hasClass(Cls.BranchFilter)) {
             filterBranches.call(this, $target.val())
         } else if ($target.hasClass(Cls.ColorOpen)) {
-            if ($target.is(':checked')) {
-                $tableau.addClass(Cls.ColorOpen)
-            } else {
-                $tableau.removeClass(Cls.ColorOpen)
-            }
+            $tableau.toggleClass(Cls.ColorOpen, $target.is(':checked'))
         }
     }
 

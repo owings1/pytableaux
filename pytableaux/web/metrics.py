@@ -14,25 +14,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.web._util
-^^^^^^^^^^^^^^^^^^^^
+pytableaux.web.metrics
+^^^^^^^^^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
 
 import functools
 from collections import deque
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Mapping, TypeVar
 
 import prometheus_client.metrics as pm
 import prometheus_client.metrics_core as pmc
-import simplejson as json
 from prometheus_client.registry import CollectorRegistry
 
-from .. import __docformat__, package
-from ..errors import Emsg
-from ..lang.lex import Lexical
-from ..tools import MapCover, abcs
+from pytableaux import __docformat__, package
+from pytableaux.tools import MapCover, abcs
 
 if TYPE_CHECKING:
     class HasRegistry:
@@ -41,11 +38,7 @@ if TYPE_CHECKING:
 else:
     MetricType = HasRegistry = object
 
-__all__ = (
-    'tojson',
-    'AppMetrics',
-    'fix_uri_req_data',
-)
+__all__ = ('AppMetrics',)
 
 _F = TypeVar('_F', bound = Callable)
 _MetrT = TypeVar('_MetrT', bound = MetricType)
@@ -127,38 +120,3 @@ class AppMetrics(MapCover[str, MetricType], abcs.Abc):
             for mkey, m in mapping.items()}
         super().__init__(inst, mapping)
         return inst
-
-
-# ------------------------------------------------------------------
-
-def json_default(obj: Any):
-    if isinstance(obj, Lexical):
-        return obj.ident
-    if isinstance(obj, Mapping):
-        if callable(asdict := getattr(obj, '_asdict', None)):
-            return asdict()
-        return dict(obj)
-    if isinstance(obj, Sequence):
-        return list(obj)
-    raise Emsg.CantJsonify(obj)
-
-tojson_defaults = dict(
-    cls = json.JSONEncoderForHTML,
-    namedtuple_as_object = False,
-    for_json = True,
-    default = json_default)
-
-def tojson(*args, **kw):
-    "Wrapper for ``json.dumps`` with html safe encoder and other defaults."
-    return json.dumps(*args, **(tojson_defaults | kw))
-
-# ------------------------------------------------------------------
-
-def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]:
-    "Transform param names ending in ``'[]'`` to lists."
-    form_data = dict(form_data)
-    for param in form_data:
-        if param.endswith('[]'):
-            if isinstance(form_data[param], str):
-                form_data[param] = [form_data[param]]
-    return form_data

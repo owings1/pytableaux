@@ -8,7 +8,7 @@ from pytableaux.lang import Argument, LexWriter, Notation, Predicates
 from pytableaux.proof import Tableau
 from pytableaux.tools.events import EventEmitter
 from pytableaux.web.mail import Mailroom
-from pytableaux.web.util import AppMetrics
+from pytableaux.web.metrics import AppMetrics
 
 from pytableaux.tools.hybrids import qsetf
 

@@ -22,10 +22,14 @@ from __future__ import annotations
 
 import logging
 from enum import Enum, auto
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
-from .. import __docformat__, package, tools
-from ..tools.abcs import ItemMapEnum
+import simplejson as json
+
+from pytableaux import __docformat__, package, tools
+from pytableaux.errors import Emsg
+from pytableaux.lang import Lexical
+from pytableaux.tools.abcs import ItemMapEnum
 
 __all__ = ()
 
@@ -193,3 +197,38 @@ class EnvConfig(ItemMapEnum):
             env = os.environ
         logger = get_logger(__name__)
         return {defn.name: defn.resolve(env, logger = logger) for defn in cls}
+
+
+
+
+
+def json_default(obj: Any):
+    if isinstance(obj, Lexical):
+        return obj.ident
+    if isinstance(obj, Mapping):
+        if callable(asdict := getattr(obj, '_asdict', None)):
+            return asdict()
+        return dict(obj)
+    if isinstance(obj, Sequence):
+        return list(obj)
+    raise Emsg.CantJsonify(obj)
+
+tojson_defaults = dict(
+    cls = json.JSONEncoderForHTML,
+    namedtuple_as_object = False,
+    for_json = True,
+    default = json_default)
+
+def tojson(*args, **kw):
+    "Wrapper for ``json.dumps`` with html safe encoder and other defaults."
+    return json.dumps(*args, **(tojson_defaults | kw))
+
+
+def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]:
+    "Transform param names ending in ``'[]'`` to lists."
+    form_data = dict(form_data)
+    for param in form_data:
+        if param.endswith('[]'):
+            if isinstance(form_data[param], str):
+                form_data[param] = [form_data[param]]
+    return form_data

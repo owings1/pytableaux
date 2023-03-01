@@ -39,17 +39,18 @@ import simplejson as json
 from cherrypy import HTTPError, NotFound, expose
 from cherrypy._cprequest import Request, Response
 
-from .. import examples, logics, package, proof, web
-from ..errors import ProofTimeoutError, RequestDataError
-from ..lang import (Argument, LexType, LexWriter, Notation, Operator,
-                    ParseTable, Predicate, Predicates, Quantifier, TriCoords)
-from ..proof import Tableau, writers
-from ..tools import EMPTY_MAP, qsetf
-from ..tools.events import EventEmitter
-from ..tools.timing import StopWatch
-from . import Wevent
-from .mail import Mailroom, validate_feedback_form
-from .util import AppMetrics, fix_uri_req_data, tojson
+from pytableaux import examples, logics, package, proof, web
+from pytableaux.errors import ProofTimeoutError, RequestDataError
+from pytableaux.lang import (Argument, LexType, LexWriter, Notation, Operator,
+                             ParseTable, Predicate, Predicates, Quantifier,
+                             TriCoords)
+from pytableaux.proof import Tableau, writers
+from pytableaux.tools import EMPTY_MAP, qsetf
+from pytableaux.tools.events import EventEmitter
+from pytableaux.tools.timing import StopWatch
+from pytableaux.web import Wevent, fix_uri_req_data, tojson
+from pytableaux.web.mail import Mailroom, validate_feedback_form
+from pytableaux.web.metrics import AppMetrics
 
 EMPTY = ()
 
@@ -179,7 +180,8 @@ class WebApp(EventEmitter):
     def __init__(self, opts = None, **kw):
         super().__init__(*Wevent)
         self.setup_class_data()
-        config = self.config = dict(self.config_defaults)
+        self.config = dict(self.config_defaults)
+        config = self.config
         if opts is not None:
             config.update(opts)
         config.update(kw)
