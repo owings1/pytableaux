@@ -297,7 +297,7 @@
             this.constructor.instances[this.id] = this
             opts = this.opts = $.extend(true, Plugin.defaults, this.opts, opts)
             for (const opt of ['controls', 'models', 'scrollContainer']) {
-                initSmartOpt.call(this, opts, opts[opt])
+                initSmartOpt.call(this, opt, opts[opt])
             }
             this.$tableau
                 .on('click', onTableauClick)
