@@ -49,8 +49,8 @@
 |:---------------------------|------------------------|---------------------|
 | [font-awesome font](#e4bb) | [ 4.7.0    ][e4bb-tre] | [OFL 1.1][e4bb-lic] |
 | [charmonman font  ](#7aa0) | [ 8590fc4a ][7aa0-tre] | [OFL 1.1][7aa0-lic] |
-| [jquery      ](#8fb8)      | [ 3.6.0    ][8fb8-tre] | [MIT    ][8fb8-lic] |
-| [jquery-ui   ](#4e0f)      | [ 1.12.1   ][4e0f-tre] | [MIT    ][4e0f-lic] |
+| [jquery      ](#8fb8)      | [ 3.6.4    ][8fb8-tre] | [MIT    ][8fb8-lic] |
+| [jquery-ui   ](#4e0f)      | [ 1.13.2   ][4e0f-tre] | [MIT    ][4e0f-lic] |
 | [json-viewer ](#2cdb)      | [ 2cdbde04 ][2cdb-tre] | [MIT    ][2cdb-lic] |
 <!--
 | [ ](#)  | [  ][-tre] | [MIT][-lic]  |
@@ -326,7 +326,7 @@
 
 <a name="8fb8"></a>
 
-### jquery 3.6.0 (MIT)
+### jquery 3.6.4 (MIT)
 
   <details><summary>Details</summary>
 
@@ -335,19 +335,20 @@
   - **Project**   - [jQuery JavaScript Library   ][8fb8-git]
   - **Author**    - [OpenJS Foundation and others][8fb8-who]
   - **License**   - [MIT License                 ][8fb8-lic]
-  - **Version**   - [v3.6.0                      ][8fb8-tre]
-  - **Published** - 2021-03-02
+  - **Version**   - [v3.6.4                      ][8fb8-tre]
+  - **Published** - 2023-03-08
   - **Language**  - `JavaScript`
 
   #### Usage
 
   - **Added**   - 2021-09-25
+  - **Updated** - 2022-03-11
   - **Purpose** - Library
   - **Linkage** - Repackaged (partial, minified)
 
   #### Paths
 
-  - [/pytableaux/web/static/js/jquery-3.6.0.min.js](/pytableaux/web/static/js/jquery-3.6.0.min.js)
+  - [/pytableaux/web/static/js/jquery-3.6.4.min.js](/pytableaux/web/static/js/jquery-3.6.4.min.js)
 
   </details>
 
@@ -379,14 +380,14 @@
 
 [8fb8-git]: https://github.com/jquery/jquery
 [8fb8-who]: https://openjsf.org/
-[8fb8-tre]: https://github.com/jquery/jquery/tree/3.6.0
-[8fb8-lic]: https://github.com/jquery/jquery/raw/3.6.0/LICENSE.txt
+[8fb8-tre]: https://github.com/jquery/jquery/tree/3.6.4
+[8fb8-lic]: https://github.com/jquery/jquery/raw/3.6.4/LICENSE.txt
 
 -------------------------------------------------------------------------------
 
 <a name="4e0f"></a>
 
-### jquery-ui 1.12.1 (MIT)
+### jquery-ui 1.13.2 (MIT)
 
   <details><summary>Details</summary>
 
@@ -395,13 +396,14 @@
   - **Project**   - [jQuery UI                   ][4e0f-git]
   - **Author**    - [jQuery Foundation and others][4e0f-who]
   - **License**   - [MIT License                 ][4e0f-lic]
-  - **Version**   - [v1.12.1                     ][4e0f-tre]
+  - **Version**   - [v1.13.2                     ][4e0f-tre]
   - **Published** - 2016-09-14
   - **Language**  - `JavaScript` `CSS`
 
   #### Usage
 
   - **Added**   - 2020-05-13
+  - **Updated** - 2023-02-28
   - **Purpose** - Library
   - **Linkage** - Repackaged (partial, minified)
 
@@ -441,8 +443,8 @@
 
 [4e0f-git]: https://github.com/jquery/jquery-ui
 [4e0f-who]: https://jquery.org/
-[4e0f-tre]: https://github.com/jquery/jquery-ui/tree/1.12.1
-[4e0f-lic]: https://github.com/jquery/jquery-ui/raw/1.12.1/LICENSE.txt
+[4e0f-tre]: https://github.com/jquery/jquery-ui/tree/1.13.2
+[4e0f-lic]: https://github.com/jquery/jquery-ui/raw/1.13.2/LICENSE.txt
 
 -------------------------------------------------------------------------------
 
