@@ -18,6 +18,6 @@ COPY --chown=appuser:appgroup . .
 # Generate documentation
 RUN cd doc && make clean html
 
-HEALTHCHECK CMD ["curl", "--fail", "-I", "http://localhost:8080"]
+HEALTHCHECK CMD ["curl", "--fail", "-I", "http://localhost:8080/health"]
 
 CMD ["scripts/start.sh"]

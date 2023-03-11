@@ -374,6 +374,11 @@ class WebApp(EventEmitter):
         return self.render(view, view_data)
 
     @expose
+    @cherrypy.tools.json_out()
+    def health(self):
+        return dict(status=200)
+
+    @expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def api(self, action = None):
