@@ -10,7 +10,8 @@ from pytableaux import tools as tools
 from pytableaux.tools.abcs import ItemMapEnum
 
 class Wevent(Enum):
-    before_dispatch: Incomplete
+    before_dispatch: object
+    after_dispatch: object
 
 def get_logger(name: str|Any, conf: Mapping[str, Any] = ...) -> logging.Logger: ...
 def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]): ...
