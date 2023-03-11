@@ -108,7 +108,8 @@ class WebApp(EventEmitter):
                     'text/html',
                     'text/plain',
                     'text/css',
-                    'application/javascript'}},
+                    'application/javascript',
+                    'application/xml'}},
             '/static': {
                 'tools.staticdir.on': True,
                 'tools.staticdir.dir': static_dir,

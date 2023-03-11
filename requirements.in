@@ -6,5 +6,6 @@ pytest
 simplejson
 Sphinx
 sphinx-rtd-theme
+sphinx-sitemap
 sphinx-toolbox
 tabulate

@@ -50,6 +50,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
+    'sphinx_sitemap',
     # 'sphinx_toolbox.more_autodoc.overloads',
     'pytableaux.tools.doc']
 
@@ -267,6 +268,14 @@ html_static_path = [
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'pytableauxdoc'
 
+# -------------------
+# -  Sitemap
+# -------------------
+# 
+# https://sphinx-sitemap.readthedocs.io/en/latest/getting-started.html
+# 
+html_baseurl = os.getenv('DOC_BASEURL', 'https://logic.dougowings.net/doc/')
+sitemap_url_scheme = "{link}"
 # =================================================================================
 # =================================================================================
 
