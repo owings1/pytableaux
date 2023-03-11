@@ -28,7 +28,7 @@ from dataclasses import dataclass
 __docformat__ = 'google'
 __all__ = ('package',)
 
-__version__ = 2, 1, 6, 'final'
+__version__ = 2, 1, 7, 'dev'
 'Version tuple (major, minor, patch, release).'
 
 __year__ = 2023
