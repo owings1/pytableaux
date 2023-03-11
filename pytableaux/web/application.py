@@ -205,8 +205,6 @@ class WebApp(EventEmitter):
         m = self.metrics
         self.on(Wevent.before_dispatch,
             lambda path: m.app_requests_count(path).inc())
-        self.on(Wevent.after_dispatch,
-            lambda path: self.logger.info(self.get_remote_ip(cherrypy.request)))
 
     def start(self):
         """Start the web server."""
