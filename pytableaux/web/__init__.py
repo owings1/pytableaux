@@ -35,6 +35,7 @@ __all__ = ()
 
 class Wevent(Enum):
     before_dispatch = auto()
+    after_dispatch = auto()
 
 def get_logger(name: str|Any, conf: Mapping[str, Any] = None) -> logging.Logger:
     "Get a logger and configure it for web format."

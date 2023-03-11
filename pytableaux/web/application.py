@@ -56,7 +56,6 @@ EMPTY = ()
 
 class WebApp(EventEmitter):
 
-
     config: dict[str, Any]
     "Instance config."
 
@@ -206,6 +205,8 @@ class WebApp(EventEmitter):
         m = self.metrics
         self.on(Wevent.before_dispatch,
             lambda path: m.app_requests_count(path).inc())
+        self.on(Wevent.after_dispatch,
+            lambda path: self.logger.info(self.get_remote_ip(cherrypy.request)))
 
     def start(self):
         """Start the web server."""
@@ -336,8 +337,8 @@ class WebApp(EventEmitter):
             else:
                 date = datetime.now()
                 view_data.update(
-                    date    = str(date),
-                    ip      = self.get_remote_ip(req),
+                    date = str(date),
+                    ip = self.get_remote_ip(req),
                     headers = req.headers)
                 from_addr = config['feedback_from_address']
                 from_name = form_data['name']
@@ -359,7 +360,7 @@ class WebApp(EventEmitter):
                     'The most recent email was unsuccessful. '
                     'You might want to send an email instead.')
         page_data = dict(
-            is_debug     = is_debug,
+            is_debug = is_debug,
             is_submitted = is_submitted)
         if is_debug:
             debugs.extend(dict(
@@ -651,8 +652,7 @@ class WebApp(EventEmitter):
 
     @staticmethod
     def get_remote_ip(req: Request):
-        # TODO: use proxy forward header
-        return req.remote.ip
+        return req.headers.get('X-Forwarded-For', req.remote.ip)
 
     @staticmethod
     def _parse_preds(pspecs):
@@ -693,7 +693,10 @@ class AppDispatcher(cherrypy._cpdispatch.Dispatcher):
 
     def __call__(self, path_info: str):
         self.before_dispatch(path_info)
-        return super().__call__(path_info.split('?')[0])
+        try:
+            return super().__call__(path_info.split('?')[0])
+        finally:
+            self.after_dispatch(path_info)
 
     def webapp(self) -> WebApp:
         "Get the WebApp instance from cherrypy env."
@@ -702,6 +705,10 @@ class AppDispatcher(cherrypy._cpdispatch.Dispatcher):
     def before_dispatch(self, *args):
         "Forward event to webapp"
         self.webapp().emit(Wevent.before_dispatch, *args)
+
+    def after_dispatch(self, *args):
+        "Forward event to webapp"
+        self.webapp().emit(Wevent.after_dispatch, *args)
 
 def errstr(err: Exception) -> str:
     return f'{type(err).__name__}: {err}'
