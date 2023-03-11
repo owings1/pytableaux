@@ -692,6 +692,8 @@ class WebApp(EventEmitter):
 class AppDispatcher(cherrypy._cpdispatch.Dispatcher):
 
     def __call__(self, path_info: str):
+        req: Request = cherrypy.request
+        req.remote.ip = req.headers.get('X-Forwarded-For', req.remote.ip)
         self.before_dispatch(path_info)
         try:
             return super().__call__(path_info.split('?')[0])
