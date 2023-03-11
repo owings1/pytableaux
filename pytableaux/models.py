@@ -25,6 +25,7 @@ from abc import abstractmethod as abstract
 from dataclasses import dataclass
 from itertools import product, repeat
 from typing import Any, ClassVar, Generic, Mapping, TypeVar
+from types import MappingProxyType as MapProxy
 
 from .errors import check
 from .lang import (Argument, Atomic, LexType, Operated, Operator, Predicated,
@@ -209,14 +210,15 @@ class BaseModel(Generic[MvalT_co], Abc):
         inputs = tuple(product(*repeat(self.Value, oper.arity)))
         if reverse:
             inputs = tuple(reversed(inputs))
-        trfunc = self.truth_function
+        outputs = tuple(
+            self.truth_function(oper, *values)
+            for values in inputs)
         return TruthTable(
             inputs = inputs,
-            outputs = tuple(
-                trfunc(oper, *values)
-                for values in inputs),
+            outputs = outputs,
             operator = oper,
-            Value = self.Value)
+            Value = self.Value,
+            mapping = MapProxy(dict(zip(inputs, outputs))))
 
     def finish(self):
         pass
@@ -295,10 +297,18 @@ class BaseModel(Generic[MvalT_co], Abc):
 
 
 @dataclass(kw_only = True)
-class TruthTable(Generic[MvalT]):
+class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):
     'Truth table data class.'
 
-    inputs: tuple[tuple[MvalT], ...]
+    inputs: tuple[tuple[MvalT, ...], ...]
     outputs: tuple[MvalT, ...]
     operator: Operator
     Value: type[MvalT]
+    mapping: Mapping[tuple[MvalT, ...], MvalT]
+
+    def __getitem__(self, key):
+        return self.mapping[key]
+    def __iter__(self):
+        return iter(self.mapping)
+    def __len__(self):
+        return len(self.mapping)
