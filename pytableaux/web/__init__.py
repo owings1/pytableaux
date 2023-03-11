@@ -218,7 +218,6 @@ class StaticResource:
         self.modtime = datetime.strptime(modstr, "%a, %d %b %Y %H:%M:%S %Z")
         self.headers = MapProxy({
             'Content-Type': mimetypes.guess_type(path)[0],
-            'Content-Length': len(content),
             'Last-Modified': modstr})
 
     def is_modified_since(self, modstr: str|None) -> bool:

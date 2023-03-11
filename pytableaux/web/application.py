@@ -102,20 +102,30 @@ class WebApp(EventEmitter):
         doc_dir = os.path.abspath(f'{package.root}/../doc/_build/html')
         cls.routes_defaults = MapProxy({
             '/': {
-                'request.dispatch': AppDispatcher()},
+                'request.dispatch': AppDispatcher(),
+                'tools.gzip.on': True,
+                'tools.gzip.mime_types': {
+                    'text/html',
+                    'text/plain',
+                    'text/css',
+                    'application/javascript'}},
             '/static': {
-                'tools.staticdir.on'  : True,
-                'tools.staticdir.dir' : static_dir},
+                'tools.staticdir.on': True,
+                'tools.staticdir.dir': static_dir,
+                'tools.etags.on': True,
+                'tools.etags.autotags': True},
             '/doc': {
-                'tools.staticdir.on'    : True,
-                'tools.staticdir.dir'   : doc_dir,
-                'tools.staticdir.index' : 'index.html'},
+                'tools.staticdir.on': True,
+                'tools.staticdir.dir': doc_dir,
+                'tools.staticdir.index': 'index.html',
+                'tools.etags.on': True,
+                'tools.etags.autotags': True},
             '/favicon.ico': {
-                'tools.staticfile.on'       : True,
-                'tools.staticfile.filename' : f'{static_dir}/img/favicon-60x60.png'},
+                'tools.staticfile.on': True,
+                'tools.staticfile.filename': f'{static_dir}/img/favicon-60x60.png'},
             '/robots.txt': {
-                'tools.staticfile.on'       : True,
-                'tools.staticfile.filename' : f'{static_dir}/robots.txt'}})
+                'tools.staticfile.on': True,
+                'tools.staticfile.filename': f'{static_dir}/robots.txt'}})
         cls.config_defaults = MapProxy(dict(web.EnvConfig.env_config(),
             copyright = package.copyright,
             issues_href = package.issues.url,
@@ -218,6 +228,7 @@ class WebApp(EventEmitter):
         self.mailroom.start()
         cherrypy.config.update({
             'global': {
+                'server.max_request_body_size': 1024 * 1000,
                 'server.socket_host'   : config['host'],
                 'server.socket_port'   : config['port'],
                 'engine.autoreload.on' : config['is_debug']}})
