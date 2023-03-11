@@ -21,7 +21,10 @@ pytableaux.web
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from enum import Enum, auto
+import mimetypes
+from types import MappingProxyType as MapProxy
 from typing import Any, Mapping, Sequence
 
 import simplejson as json
@@ -199,8 +202,29 @@ class EnvConfig(ItemMapEnum):
         logger = get_logger(__name__)
         return {defn.name: defn.resolve(env, logger = logger) for defn in cls}
 
+class StaticResource:
 
+    path: str
+    content: bytes
+    headers: Mapping
+    modtime: datetime
 
+    def __init__(self, path: str, content: str|bytes):
+        self.path = path
+        if isinstance(content, str):
+            content = content.encode('utf-8')
+        self.content = content
+        modstr = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+        self.modtime = datetime.strptime(modstr, "%a, %d %b %Y %H:%M:%S %Z")
+        self.headers = MapProxy({
+            'Content-Type': mimetypes.guess_type(path)[0],
+            'Content-Length': len(content),
+            'Last-Modified': modstr})
+
+    def is_modified_since(self, modstr: str|None) -> bool:
+        if modstr is None:
+            return True
+        return self.modtime > datetime.strptime(modstr, "%a, %d %b %Y %H:%M:%S %Z")
 
 
 def json_default(obj: Any):

@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 from enum import Enum
 from typing import Any, Mapping
@@ -44,6 +45,13 @@ class EnvConfig(ItemMapEnum):
     @classmethod
     def env_config(cls, env: Mapping[str, Any] = ...) -> dict[str, Any]: ...
 
+class StaticResource:
+    path: str
+    content: bytes
+    headers: Mapping
+    modtime: datetime
+    def __init__(self, path: str, content: str|bytes) -> None: ...
+    def is_modified_since(self, modstr: str|None) -> bool: ...
 
 def tojson(*args, **kw) -> str: ...
 def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]: ...

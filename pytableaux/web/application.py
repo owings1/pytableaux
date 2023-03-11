@@ -23,7 +23,6 @@ from __future__ import annotations
 __all__ = ('WebApp',)
 
 import logging
-import mimetypes
 import os.path
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
@@ -48,7 +47,7 @@ from pytableaux.proof import Tableau, writers
 from pytableaux.tools import EMPTY_MAP, qsetf
 from pytableaux.tools.events import EventEmitter
 from pytableaux.tools.timing import StopWatch
-from pytableaux.web import Wevent, fix_uri_req_data, tojson
+from pytableaux.web import StaticResource, Wevent, fix_uri_req_data, tojson
 from pytableaux.web.mail import Mailroom, validate_feedback_form
 from pytableaux.web.metrics import AppMetrics
 
@@ -59,8 +58,8 @@ class WebApp(EventEmitter):
     config: dict[str, Any]
     "Instance config."
 
-    static_res: dict[str, bytes]
-    "Compiled in-memory static resources."
+    static_res: dict[str, StaticResource]
+    "In-memory static resources."
 
     metrics: AppMetrics
     "Prometheus metrics helper."
@@ -90,6 +89,10 @@ class WebApp(EventEmitter):
     view_data_defaults: ClassVar[Mapping]
     view_version_default = 'v2'
     view_versions: ClassVar[qsetf[str]] = qsetf({'v2'})
+
+    @property
+    def json_indent(self) -> int|None:
+        return 2 if self.config['is_debug'] else None
 
     @classmethod
     def setup_class_data(cls):
@@ -153,7 +156,7 @@ class WebApp(EventEmitter):
                         for arg in examples.arguments()})
         cls.jsapp_data = MapProxy(dict(
             example_args = example_args,
-            example_preds = examples.preds.specs(),#tuple(p.spec for p in examples.preds),
+            example_preds = examples.preds.specs(),
             nups = MapProxy({
                 notn.name: ParseTable.fetch(notn).chars[LexType.Predicate]
                 for notn in Notation})))
@@ -192,19 +195,20 @@ class WebApp(EventEmitter):
         self.template_cache = {}
         self.jenv = jinja2.Environment(
             loader = jinja2.FileSystemLoader(config['view_path']))
-        app_json = tojson(self.jsapp_data, indent = 2 * config['is_debug'])
+        app_json = tojson(self.jsapp_data, indent = self.json_indent)
         self.static_res = {
-            'js/appdata.json': app_json.encode('utf-8'),
-            'js/appdata.js': f';window.AppData = {app_json};'.encode('utf-8')}
+            resource.path: resource
+            for resource in (
+                StaticResource('js/appdata.json', app_json),
+                StaticResource('js/appdata.js', f';window.AppData={app_json};'))}
         self.base_view_data = dict(self.view_data_defaults)
         self.mailroom = Mailroom(config)
         self.init_events()
 
     def init_events(self):
         EventEmitter.__init__(self, *Wevent)
-        m = self.metrics
         self.on(Wevent.before_dispatch,
-            lambda path: m.app_requests_count(path).inc())
+            lambda path: self.metrics.app_requests_count(path).inc())
 
     def start(self):
         """Start the web server."""
@@ -222,18 +226,20 @@ class WebApp(EventEmitter):
         cherrypy.quickstart(self, '/', self.routes)
 
     @expose
-    def static(self, *respath, **req_data):
+    def static(self, *args, **kw):
         req: Request = cherrypy.request
         res: Response = cherrypy.response
-        resource = '/'.join(respath)
+        path = '/'.join(args)
         try:
-            content = self.static_res[resource]
+            resource = self.static_res[path]
         except KeyError:
             raise NotFound()
-        if req.method != 'GET':
+        if req.method != 'GET' and req.method != 'HEAD':
             raise HTTPError(405)
-        res.headers['Content-Type'] = mimetypes.guess_type(resource)[0]
-        return content
+        res.headers.update(resource.headers)
+        if resource.is_modified_since(req.headers.get('If-Modified-Since')):
+            return resource.content
+        res.status = 304
 
     @expose
     def index(self, **req_data):
@@ -300,7 +306,7 @@ class WebApp(EventEmitter):
                 page_data = page_data).items())
             view_data['debugs'] = debugs
         view_data.update(page_data,
-            page_json = tojson(page_data, indent = 2 * is_debug),
+            page_json = tojson(page_data, indent = self.json_indent),
             config       = self.config,
             view_version = view_version,
             form_data    = form_data,
@@ -341,10 +347,9 @@ class WebApp(EventEmitter):
                 from_addr = config['feedback_from_address']
                 from_name = form_data['name']
                 to_addr = config['feedback_to_address']
-                app_name = config['app_name']
                 msg = MIMEMultipart('alternative')
                 msg['To'] = to_addr
-                msg['From'] = f'{app_name} Feedback <{from_addr}>'
+                msg['From'] = f"{config['app_name']} Feedback <{from_addr}>"
                 msg['Subject'] = f'Feedback from {from_name}'
                 msg_txt = self.render('feedback-email.txt', view_data)
                 msg_html = self.render('feedback-email', view_data)
@@ -365,7 +370,7 @@ class WebApp(EventEmitter):
                 form_data = form_data).items())
             view_data['debugs'] = debugs
         view_data.update(page_data,
-            page_json = tojson(page_data, indent = 2 * is_debug),
+            page_json = tojson(page_data, indent = self.json_indent),
             config = config,
             errors = errors,
             warns = warns)
