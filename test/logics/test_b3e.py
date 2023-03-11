@@ -4,7 +4,7 @@ class Base(BaseCase):
     logic = 'B3E'
 
 class TestArguments(Base):
-        
+
     def test_valid_cond_contraction(self):
         self.valid_tab('Conditional Contraction')
 
@@ -36,9 +36,7 @@ class TestTruthTables(Base):
 
     def test_truth_table_assertion(self):
         tbl = self.m().truth_table('Assertion')
-        self.assertEqual(tbl.outputs[0], 'F')
-        self.assertEqual(tbl.outputs[1], 'F')
-        self.assertEqual(tbl.outputs[2], 'T')
+        self.assertEqual(tbl.outputs, ('F', 'F', 'T'))
 
     def test_truth_table_conditional(self):
         tbl = self.m().truth_table('Conditional')
