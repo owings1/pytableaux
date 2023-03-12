@@ -50,7 +50,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
-    'sphinx_sitemap',
+    # 'sphinx_sitemap',
     # 'sphinx_toolbox.more_autodoc.overloads',
     'pytableaux.tools.doc']
 
