@@ -182,9 +182,10 @@ overloads_location = [
 copy_file_tree = [
     (
         f'{package.root}/web/static/css/fonts/charmonman',
-        '_static/fonts/charmonman',
-    ),
-]
+        '_static/fonts/charmonman')]
+
+delete_file_tree = [
+    '_modules']
 
 # sphinx.ext.intersphinx
 # ----------------------
@@ -268,6 +269,9 @@ html_static_path = [
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'pytableauxdoc'
 
+# If false, no module index is generated.
+html_domain_indices = False
+
 # -------------------
 # -  Sitemap
 # -------------------
@@ -276,6 +280,7 @@ htmlhelp_basename = 'pytableauxdoc'
 # 
 html_baseurl = os.getenv('DOC_BASEURL', 'https://logic.dougowings.net/doc/')
 sitemap_url_scheme = "{link}"
+
 # =================================================================================
 # =================================================================================
 
@@ -397,9 +402,6 @@ if False:
     # The name for this set of Sphinx documents.  If None, it defaults to
     # "<project> v<release> documentation".
     #html_title = None
-
-    # If false, no module index is generated.
-    #html_domain_indices = True
 
     # If false, no index is generated.
     #html_use_index = True

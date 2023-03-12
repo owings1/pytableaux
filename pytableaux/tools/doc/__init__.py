@@ -113,6 +113,9 @@ class ConfKey(str, Enum):
     copy_file_tree = 'copy_file_tree'
     "The config key for file tree copy actions."
 
+    delete_file_tree = 'delete_file_tree'
+    "The config key for file tree delete actions."
+
     auto_skip_enum_value = 'autodoc_skip_enum_value'
 
     wnotn   = 'write_notation'

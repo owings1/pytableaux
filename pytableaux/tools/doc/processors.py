@@ -21,6 +21,7 @@ pytableaux.tools.doc.processors
 from __future__ import annotations
 
 import os
+import os.path
 import re
 import shutil
 from typing import Optional
@@ -182,6 +183,29 @@ class CopyFileTree(Processor):
                     eopts['ignore'] = shutil.ignore_patterns(*ignore)
             shutil.copytree(src, dest, **eopts)
 
+class DeleteFileTree(Processor):
+
+    def __init__(self, app: Sphinx, config: Config):
+        self.app = app
+        self.validate()
+        app.connect('build-finished', self)
+
+    def __call__(self, app: Sphinx, e: Exception|None):
+        if e is None:
+            self.app = app
+            self.run()
+    
+    def validate(self):
+        for entry in self.config[ConfKey.delete_file_tree]:
+            check.inst(entry, str)
+
+    def run(self):
+        app = self.app
+        for path in app.config[ConfKey.delete_file_tree]:
+            path = os.path.join(app.outdir, path)
+            if os.path.exists(path):
+                shutil.rmtree(path)
+
 # ------------------------------------------------
 
 
@@ -206,8 +230,10 @@ def setup(app: Sphinx):
         app.connect('autodoc-process-docstring', inst)
     
     app.add_config_value(ConfKey.copy_file_tree, [], 'env',
-        [list[tuple[str, str, Optional[dict]]]]
-    )
+        [list[tuple[str, str, Optional[dict]]]])
+    app.add_config_value(ConfKey.delete_file_tree, [], 'env',
+        [list[str]])
+    app.connect('config-inited', DeleteFileTree)
     app.connect('config-inited', CopyFileTree)
 
 
