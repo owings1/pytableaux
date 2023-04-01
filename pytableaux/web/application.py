@@ -99,7 +99,14 @@ class WebApp(EventEmitter):
         if cls.is_class_setup:
             return
         static_dir = f'{package.root}/web/static'
-        doc_dir = os.path.abspath(f'{package.root}/../doc/_build/html')
+        cls.config_defaults = MapProxy(dict(web.EnvConfig.env_config(),
+            copyright = package.copyright,
+            issues_href = package.issues.url,
+            source_href = package.repository.url,
+            version = package.version.display,
+            view_path = f'{package.root}/web/views',
+            view_version = cls.view_version_default))
+        # doc_dir = os.path.abspath(f'{package.root}/../doc/_build/html')
         cls.routes_defaults = MapProxy({
             '/': {
                 'request.dispatch': AppDispatcher(),
@@ -117,7 +124,7 @@ class WebApp(EventEmitter):
                 'tools.etags.autotags': True},
             '/doc': {
                 'tools.staticdir.on': True,
-                'tools.staticdir.dir': doc_dir,
+                'tools.staticdir.dir': cls.config_defaults['doc_dir'],
                 'tools.staticdir.index': 'index.html',
                 'tools.etags.on': True,
                 'tools.etags.autotags': True},
@@ -127,13 +134,6 @@ class WebApp(EventEmitter):
             '/robots.txt': {
                 'tools.staticfile.on': True,
                 'tools.staticfile.filename': f'{static_dir}/robots.txt'}})
-        cls.config_defaults = MapProxy(dict(web.EnvConfig.env_config(),
-            copyright = package.copyright,
-            issues_href = package.issues.url,
-            source_href = package.repository.url,
-            version = package.version.display,
-            view_path = f'{package.root}/web/views',
-            view_version = cls.view_version_default))
         cls.api_defaults = MapProxy(dict(
             input_notation = Notation.polish.name,
             output_notation = Notation.polish.name,

@@ -21,9 +21,10 @@ pytableaux.web
 from __future__ import annotations
 
 import logging
+import mimetypes
+import os.path
 from datetime import datetime
 from enum import Enum, auto
-import mimetypes
 from types import MappingProxyType as MapProxy
 from typing import Any, Mapping, Sequence
 
@@ -101,6 +102,10 @@ class EnvConfig(ItemMapEnum):
         default = 30000,
         envvar  = 'PT_MAXTIMEOUT',
         type    = int)
+    doc_dir = dict(
+        default = os.path.abspath(f'{package.root}/../doc/_build/html'),
+        envvar  = 'PT_DOC_DIR',
+        type    = str)
     google_analytics_id = dict(
         default = None,
         envvar  = 'PT_GOOGLE_ANALYTICS_ID',
