@@ -59,7 +59,7 @@ Python **3.11** or later is required.
 To install requirements:
 
 ```bash
-pip3 install -r requirements.txt
+pipenv install
 ```
 
 For system-level dependencies, refer to the [Dockerfile][dockerfile].
@@ -69,7 +69,7 @@ For system-level dependencies, refer to the [Dockerfile][dockerfile].
 Run tests:
 
 ```bash
-python3 -m pytest test
+python3 -m pytest
 ```
 
 <!-- optional: python-Levenshtein -->
@@ -83,7 +83,7 @@ cd doc && make clean html
 Build docker image
 
 ```bash
-docker build  .
+docker build .
 ```
 
 ## Contributing
@@ -99,7 +99,7 @@ Copyright (C) 2014-2023 Doug Owings. Released under the [GNU Affero General Publ
 [site]: http://logic.dougowings.net
 [doc]: http://logic.dougowings.net/doc/
 [dockerhub]: https://hub.docker.com/r/owings1/pytableaux/
-[dockerfile]: res/python3.dockerfile
+[dockerfile]: Dockerfile
 
 <!-- [refs-begin] -->
 [license]: https://www.gnu.org/licenses/agpl-3.0.en.html

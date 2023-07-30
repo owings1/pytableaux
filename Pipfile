@@ -1,0 +1,22 @@
+[[source]]
+url = 'https://pypi.python.org/simple'
+verify_ssl = true
+name = 'pypi'
+
+[requires]
+python_version = '3.11'
+
+[packages]
+CherryPy = "*"
+Jinja2 = "*"
+prometheus-client = "*"
+simplejson = "*"
+tabulate = "*"
+
+[dev-packages]
+coverage = "*"
+pytest = "*"
+Sphinx = "*"
+sphinx-rtd-theme = "*"
+sphinx-toolbox = "*"
+# sphinx-sitemap = "*"

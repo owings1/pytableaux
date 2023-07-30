@@ -24,17 +24,17 @@ To run the Docker image from Docker Hub:
 Git
 ---
 
-To install from git source, follow these steps. Note that Python 3.10.1
+To install from git source, follow these steps. Note that Python 3.11
 or later is required.
 
     1. Download the source, for example::
 
         git clone https://github.com/owings1/pytableaux
         cd pytableaux
-    
+
     2. Install dependencies::
 
-        python3 -m pip install --upgrade future jinja2 cherrypy prometheus_client simplejson
+        pipenv install
 
     3. Launch the web interface, for example::
 

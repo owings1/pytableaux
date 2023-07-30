@@ -23,7 +23,6 @@ from __future__ import annotations
 __all__ = ('WebApp',)
 
 import logging
-import os.path
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -199,7 +198,7 @@ class WebApp(EventEmitter):
             config.update(opts)
         config.update(kw)
         self.logger = web.get_logger(self, config)
-        self.metrics = AppMetrics(config)
+        self.metrics = AppMetrics(config, prom.REGISTRY)
         self.routes = dict({
             key: dict(value)
             for key, value in self.routes_defaults.items()})
@@ -225,7 +224,6 @@ class WebApp(EventEmitter):
         """Start the web server."""
         config = self.config
         logger = self.logger
-        metrics_port = config['metrics_port']
         self.mailroom.start()
         cherrypy.config.update({
             'global': {
@@ -233,8 +231,11 @@ class WebApp(EventEmitter):
                 'server.socket_host'   : config['host'],
                 'server.socket_port'   : config['port'],
                 'engine.autoreload.on' : config['is_debug']}})
-        logger.info(f'Starting metrics on port {metrics_port}')
-        prom.start_http_server(metrics_port)
+        if config['metrics_enabled']:
+            metrics_host = config['metrics_host']
+            metrics_port = config['metrics_port']
+            logger.info(f'Starting metrics on port {metrics_host}:{metrics_port}')
+            prom.start_http_server(metrics_port, metrics_host, self.metrics.registry)
         cherrypy.quickstart(self, '/', self.routes)
 
     @expose

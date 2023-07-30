@@ -86,6 +86,14 @@ class EnvConfig(ItemMapEnum):
         default = 8080,
         envvar  = 'PT_PORT',
         type    = int)
+    metrics_enabled = dict(
+        default = False,
+        envvar  = 'PT_METRICS_ENABLED',
+        type    = tools.sbool)
+    metrics_host = dict(
+        default = '127.0.0.1',
+        envvar  = 'PT_METRICS_HOST',
+        type    = str)
     metrics_port = dict(
         default = 8181,
         envvar  = 'PT_METRICS_PORT',
@@ -174,29 +182,24 @@ class EnvConfig(ItemMapEnum):
             m['envvar'] = m['envvar'],
         super().__init__(m)
 
-    @tools.closure
-    def resolve():
-
-        def resolve(self: EnvConfig, env: Mapping[str, Any], /, *, logger = None):
-            "Resolve a config value against ``env``."
-            if logger is None:
-                logger = get_logger(__class__.__qualname__)
-            for varname in self['envvar']:
-                if varname in env:
-                    v = env[varname]
-                    break
-            else:
-                return self['default']
-            v = self['type'](v)
-            if 'min' in self and v < self['min']:
-                v = self['min']
-                logger.warning(f'Using min value of {v} for option {self.name}')
-            if 'max' in self and v > self['max']:
-                v = self['max']
-                logger.warning(f'Using max value of {v} for option {self.name}')
-            return v
-
-        return resolve
+    def resolve(self: EnvConfig, env: Mapping[str, Any], /, *, logger = None):
+        "Resolve a config value against ``env``."
+        if logger is None:
+            logger = get_logger(__class__.__qualname__)
+        for varname in self['envvar']:
+            if varname in env:
+                v = env[varname]
+                break
+        else:
+            return self['default']
+        v = self['type'](v)
+        if 'min' in self and v < self['min']:
+            v = self['min']
+            logger.warning(f'Using min value of {v} for option {self.name}')
+        if 'max' in self and v > self['max']:
+            v = self['max']
+            logger.warning(f'Using max value of {v} for option {self.name}')
+        return v
 
     @classmethod
     def env_config(cls, env: Mapping[str, Any] = None) -> dict[str, Any]:
