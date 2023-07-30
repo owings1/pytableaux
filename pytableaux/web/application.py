@@ -103,7 +103,7 @@ class WebApp(EventEmitter):
             issues_href = package.issues.url,
             source_href = package.repository.url,
             version = package.version.display,
-            view_path = f'{package.root}/web/views',
+            templates_path = f'{package.root}/web/templates',
             view_version = cls.view_version_default))
         # doc_dir = os.path.abspath(f'{package.root}/../doc/_build/html')
         cls.routes_defaults = MapProxy({
@@ -204,7 +204,7 @@ class WebApp(EventEmitter):
             for key, value in self.routes_defaults.items()})
         self.template_cache = {}
         self.jenv = jinja2.Environment(
-            loader = jinja2.FileSystemLoader(config['view_path']))
+            loader = jinja2.FileSystemLoader(config['templates_path']))
         app_json = tojson(self.jsapp_data, indent = self.json_indent)
         self.static_res = {
             resource.path: resource
