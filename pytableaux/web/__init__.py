@@ -102,6 +102,10 @@ class EnvConfig(ItemMapEnum):
         default = False,
         envvar  = ('PT_DEBUG', 'DEBUG'),
         type    = tools.sbool)
+    static_dir = dict(
+        default = f'{package.root}/web/static',
+        envvar  = 'PT_STATIC_DIR',
+        type    = str)
     loglevel = dict(
         default = 'info',
         envvar  = ('PT_LOGLEVEL', 'LOGLEVEL'),

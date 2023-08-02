@@ -4,6 +4,7 @@ from typing import Any, ClassVar, Collection, Mapping, Sequence
 import cherrypy as chpy
 import jinja2
 from cherrypy._cprequest import Request
+from pytableaux.logics import LogicType
 from pytableaux.lang import Argument, LexWriter, Notation, Predicates
 from pytableaux.proof import Tableau
 from pytableaux.tools.events import EventEmitter
@@ -14,27 +15,24 @@ from pytableaux.tools.hybrids import qsetf
 
 
 class WebApp(EventEmitter):
-    api_defaults: ClassVar[Mapping[str, Any]]
-    form_defaults: ClassVar[Mapping[str, Any]]
+    api_defaults: Mapping[str, Any]
+    form_defaults: Mapping[str, Any]
     is_class_setup: ClassVar[bool]
-    config_defaults: ClassVar[Mapping[str, Any]]
-    jsapp_data: ClassVar[Mapping[str, Any]]
-    lw_cache: ClassVar[Mapping[Notation, Mapping[str, LexWriter]]]
-    routes_defaults: ClassVar[Mapping[str, Mapping[str, Any]]]
-    view_data_defaults: ClassVar[Mapping[str, Any]]
-    view_versions: ClassVar[qsetf[str]]
-    view_version_default: ClassVar[str]
+    jsapp_data: Mapping[str, Any]
 
-    base_view_data: Mapping[str, Any]
     config: dict[str, Any]
+    default_context: dict[str, Any]
+    logics_map: Mapping[str, LogicType]
+    example_args: Mapping[str, Mapping[str, Mapping[str, Any]]]
+    lexwriters: Mapping[Notation, Mapping[str, LexWriter]]
     jenv: jinja2.Environment
     logger: logging.Logger
     mailroom: Mailroom
     metrics: AppMetrics
-    routes: dict[str, dict[str, Any]]
     static_res: dict[str, bytes]
     template_cache: dict[str, jinja2.Template]
     def __init__(self, opts: Mapping[str, Any] = ..., **kw) -> None: ...
+    def routes(self) -> dict[str, dict[str, Any]]: ...
     def init_events(self): ...
     def start(self) -> None: ...
     def static(self, *respath, **req_data): ...

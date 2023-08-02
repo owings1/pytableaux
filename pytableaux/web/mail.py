@@ -292,7 +292,7 @@ def process_mail(*, queue: deque, failqueue: deque, logger: logging.Logger, conn
             queue.clear()
             raise
         else:
-            while len(queue):
+            while queue:
                 job = queue.popleft()
                 tried += 1
                 total = len(queue) + tried
@@ -320,7 +320,7 @@ def process_mail(*, queue: deque, failqueue: deque, logger: logging.Logger, conn
                 logger.warn(
                     f'Failed to quit SMTP connection: {err}',
                     exc_info = err, stack_info = True)
-    if len(requeue):
+    if requeue:
         logger.info(f'Requeuing {len(requeue)} failed messages')
         failqueue.extend(requeue)
     return sent, tried
