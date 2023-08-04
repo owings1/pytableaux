@@ -50,8 +50,7 @@ def mwrap(fn: _F) -> _F:
     key = fn.__name__
     @functools.wraps(fn)
     def f(self: AppMetrics, *labels):
-        app_name = self.config.get('app_name', package.name)
-        return self[key].labels(app_name, *labels)
+        return self[key].labels(package.name, *labels)
     metcls, desc, labels = fn()
     labels = ['app_name', *labels]
     f.spec = key, desc, labels

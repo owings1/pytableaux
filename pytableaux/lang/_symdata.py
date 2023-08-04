@@ -137,6 +137,7 @@ def rendersets():
 
     from . import (LexType, Marking, Notation, Operator,
                                  Predicate, Quantifier)
+    from ..tools import dmerged
 
     def dunesc(d: dict, inplace = False) -> None:
         return dtransform(html_unescape, d, typeinfo = str, inplace = inplace)
@@ -350,38 +351,7 @@ def rendersets():
     return data
 
 
-@closure
-def dmerged():
 
-
-    # TODO: memoize ...
-
-    def merger(a: dict, b: dict, /) -> dict:
-        'Basic dict merge copy, recursive for dict value.'
-        c = {}
-        for key, value in b.items():
-            if isinstance(value, Mapping):
-                avalue = a.get(key)
-                if isinstance(avalue, Mapping):
-                    c[key] = merger(a[key], value)
-                else:
-                    c[key] = dcopy(value)
-            else:
-                c[key] = value
-        for key in a:
-            if key not in c:
-                c[key] = a[key]
-        return c
-
-    def dcopy(a: Mapping, /) -> dict:
-        'Basic dict copy of a mapping, recursive for mapping values.'
-        return {
-            key: dcopy(value)
-                if isinstance(value, Mapping)
-                else value
-            for key, value in a.items()}
-
-    return merger
 
 @closure
 def dtransform():

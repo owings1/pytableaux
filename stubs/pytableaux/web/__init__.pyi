@@ -18,12 +18,13 @@ def get_logger(name: str|Any, conf: Mapping[str, Any] = ...) -> logging.Logger: 
 def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]): ...
 
 class EnvConfig(ItemMapEnum):
-    app_name: Incomplete
     host: Incomplete
     port: Incomplete
     metrics_port: Incomplete
     is_debug: Incomplete
     loglevel: Incomplete
+    static_dir: Incomplete
+    templates_path: Incomplete
     maxtimeout: Incomplete
     google_analytics_id: Incomplete
     feedback_enabled: Incomplete
@@ -54,4 +55,3 @@ class StaticResource:
     def is_modified_since(self, modstr: str|None) -> bool: ...
 
 def tojson(*args, **kw) -> str: ...
-def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]: ...

@@ -1,28 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>{{ config.app_name|e }}</title>
-    {# IE Polyfill #}
-    <!--[if IE]>
-    <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
-    <![endif]-->
-    {# Responsiveness #}
+    <title>{{ title|default(package.name)|e }}</title>
+    {#- Responsiveness #}
     <meta name="viewport" content="width=device-width"/>
-    {# jQuery Libraries #}
+    {#- jQuery Libraries #}
     <script src="/static/js/jquery-3.6.4.min.js"></script>
     <script src="/static/js/jquery-ui.min.js"></script>
-    {# Core App script and styles  #}
+    {#- Core App script and styles  #}
     <script src="/static/js/appdata.js"></script>
     <script src="/static/js/app.v2.js"></script>
     <link rel="stylesheet" type="text/css" href="/static/css/app.v2.css"/>
     <link rel="stylesheet" type="text/css" href="/static/ui-base/jquery-ui.min.css"/>
     {%- if is_debug %}
-        {# Debug scripts and styles #}
+        {#- Debug scripts and styles #}
         <script src="/static/json-viewer/jquery.json-viewer.js"></script>
         <link rel="stylesheet" type="text/css" href="/static/json-viewer/jquery.json-viewer.css"/>
     {%- endif %}
     {%- if is_proof %}
-        {# Proof output script and styles #}
+        {#- Proof output script and styles #}
         <script src="/static/js/proof.v2.js"></script>
         <link rel="stylesheet" type="text/css" href="/static/css/proof.v2.css"/>
         {# UI Controls styles #}
@@ -35,9 +31,9 @@
         </style>
     {%- endif %}
     {# Google Analytics #}
-    {% if config.google_analytics_id -%}
-        {% include 'analytics.jinja2' %}
-    {% endif -%}
+    {%- if config.google_analytics_id %}
+        {%- include 'analytics.jinja2' %}
+    {%- endif %}
 </head>
 <body class="pt-app {{- ' has-proof' if is_proof else ' no-proof' }}">
     <div class="header-wrapper">
@@ -50,9 +46,8 @@
         {%- endif %}
     </div>
     <div class="footer-wrapper">
-        <div class="footer">Copyright &copy; {{ config.copyright|e }}.</div>
+        <div class="footer">Copyright &copy; {{ package.copyright|e }}.</div>
     </div>
-    {# <script type="text/json" id="pt_app_data" class="app">{{ browser_json }}</script> #}
     <script type="text/json" id="pt_page_data">{{ page_json }}</script>
 </body>
 </html>

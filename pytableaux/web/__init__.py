@@ -74,10 +74,6 @@ def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]):
 
 class EnvConfig(ItemMapEnum):
 
-    app_name = dict(
-        default = package.name,
-        envvar  = 'PT_APPNAME',
-        type    = str)
     host = dict(
         default = '127.0.0.1',
         envvar  = 'PT_HOST',
@@ -105,6 +101,10 @@ class EnvConfig(ItemMapEnum):
     static_dir = dict(
         default = f'{package.root}/web/static',
         envvar  = 'PT_STATIC_DIR',
+        type    = str)
+    templates_path = dict(
+        default = f'{package.root}/web/templates',
+        envvar  = 'PT_TEMPLATES_PATH',
         type    = str)
     loglevel = dict(
         default = 'info',
@@ -186,7 +186,7 @@ class EnvConfig(ItemMapEnum):
             m['envvar'] = m['envvar'],
         super().__init__(m)
 
-    def resolve(self: EnvConfig, env: Mapping[str, Any], /, *, logger = None):
+    def resolve(self, env: Mapping[str, Any], /, *, logger = None):
         "Resolve a config value against ``env``."
         if logger is None:
             logger = get_logger(__class__.__qualname__)
@@ -260,11 +260,4 @@ def tojson(*args, **kw):
     return json.dumps(*args, **(tojson_defaults | kw))
 
 
-def fix_uri_req_data(form_data: dict[str, Any]) -> dict[str, Any]:
-    "Transform param names ending in ``'[]'`` to lists."
-    form_data = dict(form_data)
-    for param in form_data:
-        if param.endswith('[]'):
-            if isinstance(form_data[param], str):
-                form_data[param] = [form_data[param]]
-    return form_data
+

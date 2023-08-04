@@ -27,17 +27,15 @@ import simplejson as json
 from cherrypy.test import helper
 
 from pytableaux.errors import *
-from pytableaux.web import fix_uri_req_data
 from pytableaux.web.application import WebApp
+from pytableaux.web.util import fix_uri_req_data
 
-
-def test_instantiate():
-    app = WebApp()
 
 # see https://docs.cherrypy.org/en/latest/tutorials.html#tutorial-12-using-pytest-and-code-coverage
 class AppTest(helper.CPWebCase):
 
     def post_json(self, page, data):
+        self.app
         body = json.dumps(data)
         headers = [
             ('Content-type', 'application/json'),
@@ -57,9 +55,10 @@ class AppTest(helper.CPWebCase):
         res_list = list(res_raw)
         return str(res_list[2])
 
-    @staticmethod
-    def setup_server():
-        cherrypy.tree.mount(WebApp(), '/', {})
+    @classmethod
+    def setup_server(cls):
+        cls.app = WebApp()
+        cherrypy.tree.mount(cls.app, '/', cls.app._routes())
 
     def test_index_get(self):
         self.getPage('/')
@@ -97,7 +96,6 @@ class AppTest(helper.CPWebCase):
         self.assertIn('correct the following errors', res)
 
     def test_api_parse_1(self):
-        app = WebApp()
         body = {
             'notation': 'polish',
             'input'   : 'Fm',
@@ -110,48 +108,42 @@ class AppTest(helper.CPWebCase):
                }
             ]
         }
-        res = app.api_parse(body)
-        self.assertIn(res['type'], ('Predicated',))
+        res = self.post_json('/api/parse', body)
+        self.assertIn(res['result']['type'], ('Predicated',))
 
     def test_api_parse_2(self):
-        app = WebApp()
         body = {
             'input': 'a'
         }
-        res = app.api_parse(body)
-        self.assertIn(res['type'], ('Atomic',))
+        res = self.post_json('/api/parse', body)
+        self.assertIn(res['result']['type'], ('Atomic',))
 
     def test_api_parse_invalid_notation(self):
-        app = WebApp()
         body = {
             'notation': 'nonexistent',
             'input': 'a'
         }
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_parse(body)
-            self.assertIn('Notation', exc_info.value.errors)
+        res = self.post_json('/api/parse', body)
+        self.assertStatus(400)
+        self.assertIn('Notation', res['errors'])
 
     def test_api_parse_missing_input(self):
-        app = WebApp()
-        body = {}
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_parse(body)
-            self.assertIn('Sentence', exc_info.value.errors)
+        res = self.post_json('/api/parse', {})
+        self.assertStatus(400)
+        self.assertIn('Input', res['errors'])
 
     def test_api_parse_bad_predicate_data(self):
-        app = WebApp()
         body = {
             'input': 'a',
             'predicates': [
                 {'arity': 'asdf'}
             ]
         }
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_parse(body)
-            self.assertIn('Predicate 1', exc_info.value.errors)
+        res = self.post_json('/api/parse', body)
+        self.assertStatus(400)
+        self.assertIn('Predicate 1', res['errors'])
 
     def test_api_prove_cpl_addition(self):
-        app = WebApp()
         body = {
             'argument': {
                 'premises': ['a'],
@@ -159,38 +151,39 @@ class AppTest(helper.CPWebCase):
             },
             'logic': 'cpl'
         }
-        res = app.api_prove(body)
-        self.assertTrue(res[0]['tableau']['valid'])
+        res = self.post_json('/api/prove', body)
+        self.assertStatus(200)
+        self.assertTrue(res['result']['tableau']['valid'])
 
     def test_api_errors_various(self):
-        app = WebApp()
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'logic': 'bunky'})
-            self.assertIn('Logic', exc_info.value.errors)
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'output': {'charset': 'bunky'}})
-            self.assertIn('Symbol Set', exc_info.value.errors)
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'output': {'notation': 'bunky'}})
-            self.assertIn('Output notation', exc_info.value.errors)
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'output': {'format': 'bunky'}})
-            self.assertIn('Output format', exc_info.value.errors)
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'max_steps': 'bunky'})
-            self.assertIn('Max steps', exc_info.value.errors)
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'argument': {'notation': 'bunky'}})
-            self.assertIn('Notation', exc_info.value.errors)
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'argument': {'predicates': [{'arity': 'bunky'}]}})
-            self.assertIn('Predicate 1', exc_info.value.errors)
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'argument': {'premises': ['bunky']}})
-            self.assertIn('Premise 1', exc_info.value.errors)
-        with pytest.raises(RequestDataError) as exc_info:
-            app.api_prove({'argument': {'conclusion': 'bunky'}})
-            self.assertIn('Conclusion', exc_info.value.errors)
+        res = self.post_json('/api/prove', {'logic': 'bunky'})
+        self.assertStatus(400)
+        self.assertIn('Logic', res['errors'])
+        res = self.post_json('/api/prove', {'output': {'charset': 'bunky'}})
+        self.assertStatus(400)
+        self.assertIn('Output Charset', res['errors'])
+        res = self.post_json('/api/prove', {'output': {'notation': 'bunky'}})
+        self.assertStatus(400)
+        self.assertIn('Output Notation', res['errors'])
+        res = self.post_json('/api/prove', {'output': {'format': 'bunky'}})
+        self.assertStatus(400)
+        self.assertIn('Output Format', res['errors'])
+        res = self.post_json('/api/prove', {'max_steps': 'bunky'})
+        self.assertStatus(400)
+        self.assertIn('Max steps', res['errors'])
+        res = self.post_json('/api/prove', {'argument': {'notation': 'bunky'}})
+        self.assertStatus(400)
+        self.assertIn('Notation', res['errors'])
+        res = self.post_json('/api/prove', {'argument': {'predicates': [{'arity': 'bunky'}]}})
+        self.assertStatus(400)
+        self.assertIn('Predicate 1', res['errors'])
+        res = self.post_json('/api/prove', {'argument': {'premises': ['bunky']}})
+        self.assertStatus(400)
+        self.assertIn('Premise 1', res['errors'])
+        res = self.post_json('/api/prove', {'argument': {'conclusion': 'bunky'}})
+        self.assertStatus(400)
+        self.assertIn('Conclusion', res['errors'])
+
 
     def test_post_api_prove_1(self):
         body = {
@@ -230,4 +223,4 @@ class AppTest(helper.CPWebCase):
             'test[]': 'a'
         }
         res = fix_uri_req_data(form_data)
-        self.assertIsInstance(res['test[]'], list)
+        self.assertEqual(res['test[]'], ['a'])

@@ -32,10 +32,10 @@
                 <td>IP</td>
                 <td>{{ ip|e }}</td>
             </tr>
-            {% for header in headers.keys() %}
+            {% for name, value in headers|items %}
                 <tr>
-                    <td>{{ header|e }}</td>
-                    <td>{{ headers[header]|e }}</td>
+                    <td>{{ name|e }}</td>
+                    <td>{{ value|e }}</td>
                 </tr>
             {% endfor %}
         <tbody>
@@ -47,16 +47,16 @@
         <tbody>
             <tr>
                 <td>Name</td>
-                <td>{{ form_data['name']|e }}</td>
+                <td>{{ form_data.name|e }}</td>
             </tr>
             <tr>
                 <td>Email</td>
-                <td>{{ form_data['email']|e }}</td>
+                <td>{{ form_data.email|e }}</td>
             </tr>
         </tbody>
     </table>
     <h3>Message</h3>
-    <div class="feedback_message">{{ form_data['message']|e }}</div>
+    <div class="feedback_message">{{ form_data.message|e }}</div>
 </div>
 </body>
 </html>

@@ -16,8 +16,6 @@ from pytableaux.tools.hybrids import qsetf
 
 class WebApp(EventEmitter):
     api_defaults: Mapping[str, Any]
-    form_defaults: Mapping[str, Any]
-    is_class_setup: ClassVar[bool]
     jsapp_data: Mapping[str, Any]
 
     config: dict[str, Any]

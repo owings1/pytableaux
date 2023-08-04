@@ -1,4 +1,4 @@
-{{ app_name }} Web Feedback
+{{ package.name }} Web Feedback
 ============================
 
 Details
@@ -6,17 +6,17 @@ Details
 
 Date: {{ date }}
 IP: {{ ip }}
-{% for header in headers.keys() -%}
-{{ header|e }}: {{ headers[header]|e }}
+{% for name, value in headers|items -%}
+{{ name|e }}: {{ value|e }}
 {% endfor %}
 
 Form Data
 ----------
 
-Name: {{ form_data['name'] }}
-Email: {{ form_data['email'] }}
+Name: {{ form_data.name }}
+Email: {{ form_data.email }}
 
 Message
 --------
 
-{{ form_data['message'] }}
+{{ form_data.message }}
