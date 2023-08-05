@@ -25,7 +25,7 @@ from abc import abstractmethod as abstract
 from collections import deque
 from enum import Enum
 from types import MappingProxyType as MapProxy
-from typing import ClassVar, Iterable, Mapping
+from typing import Callable, ClassVar, Iterable, Mapping
 
 from .. import __docformat__
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
@@ -144,7 +144,7 @@ class Parser(metaclass = ParserMeta):
         """
         raise NotImplementedError
 
-    __call__ = parse
+    __call__: Callable[..., Sentence] = parse
 
     def argument(self, conclusion: str, premises: Iterable[str] = None, /, title: str = None) -> Argument:
         """Parse the input strings and create an argument.
@@ -431,9 +431,14 @@ class BaseParser(Parser):
         returned.
         """
         digits = deque()
-        while (cur := context.current()) is not None and context.type(cur) is Marking.digit:
-            digits.append(cur)
-            context.advance()
+        try:
+            while (cur := context.current()) is not None and context.type(cur) is Marking.digit:
+                digits.append(cur)
+                context.advance()
+        except KeyError:
+            # TODO: p('A % B,') raises key error
+            # raise ParseError(context._unexp_msg())
+            raise
         if not len(digits):
             return 0
         return int(''.join(digits))

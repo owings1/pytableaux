@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import abstractmethod as abstract
 from collections.abc import MutableSequence, MutableSet, Sequence, Set
 from itertools import chain, filterfalse
-from typing import Iterable, SupportsIndex
+from typing import Iterable, SupportsIndex, TypeVar
 
 from ..errors import DuplicateValueError, Emsg, check
 from . import EMPTY_SEQ, EMPTY_SET, abcs, slicerange
@@ -37,7 +37,9 @@ __all__ = (
     'QsetView',
     'SequenceSet')
 
-class SequenceSet(Sequence, Set, metaclass = abcs.AbcMeta):
+_T = TypeVar('_T')
+
+class SequenceSet(Sequence[_T], Set[_T], metaclass = abcs.AbcMeta):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
 
     __slots__ = EMPTY_SET
@@ -74,7 +76,7 @@ class SequenceSet(Sequence, Set, metaclass = abcs.AbcMeta):
             return type(other)(chain(other, self))
         return NotImplemented
 
-class qsetf(SequenceSet, abcs.Copyable, immutcopy = True):
+class qsetf(SequenceSet[_T], abcs.Copyable, immutcopy = True):
     'Immutable sequence set implementation with frozenset and tuple bases.'
 
     _set_: frozenset
@@ -138,7 +140,7 @@ class QsetView(SequenceSet, abcs.Copyable, immutcopy = True):
             return cls(it)
         return cls(qsetf(it))
 
-class MutableSequenceSet(SequenceSet, MutableSequence, MutableSet):
+class MutableSequenceSet(SequenceSet[_T], MutableSequence[_T], MutableSet[_T]):
     """Mutable sequence set (ordered set) interface.
 
     Sequence methods such as :attr:`append` raise :class:`DuplicateValueError`.
@@ -169,7 +171,7 @@ class MutableSequenceSet(SequenceSet, MutableSequence, MutableSet):
         # Must re-implement MutableSequence method.
         raise NotImplementedError
 
-class qset(MutableSequenceSet, abcs.Copyable):
+class qset(MutableSequenceSet[_T], abcs.Copyable):
     'Mutable sequence set implementation backed by built-in set and list.'
 
     _set_type_ = set

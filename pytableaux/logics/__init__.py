@@ -124,7 +124,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         for logic in set(self.values()):
             self.remove(logic)
 
-    def __call__(self, key: str|ModuleType, /):
+    def __call__(self, key: str|ModuleType, /) -> LogicType:
         """Get a logic from the registry, importing if needed.
 
         Args:

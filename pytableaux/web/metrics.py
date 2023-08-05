@@ -28,8 +28,8 @@ import prometheus_client.metrics as pm
 import prometheus_client.metrics_core as pmc
 from prometheus_client.registry import CollectorRegistry
 
-from pytableaux import __docformat__, package
-from pytableaux.tools import MapCover, abcs
+from .. import __docformat__, package
+from ..tools import MapCover, abcs
 
 if TYPE_CHECKING:
     class HasRegistry:
@@ -40,13 +40,14 @@ else:
 
 __all__ = ('AppMetrics',)
 
+_T = TypeVar('_T')
 _F = TypeVar('_F', bound = Callable)
 _MetrT = TypeVar('_MetrT', bound = MetricType)
 
 metric_defs: deque[tuple[str, tuple[type[MetricType], str, list[str]]]] = deque()
 
 # Decorator for AppMetrics
-def mwrap(fn: _F) -> _F:
+def mwrap(fn: Callable[..., _T]) -> Callable[..., _T]:
     key = fn.__name__
     @functools.wraps(fn)
     def f(self: AppMetrics, *labels):

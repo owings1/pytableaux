@@ -201,7 +201,7 @@ def argument():
 
     parsearg = Parser('polish', preds.copy()).argument
 
-    def argument(key):
+    def argument(key) -> Argument:
         if isinstance(key, Argument):
             return key
         key = check.inst(key, str)

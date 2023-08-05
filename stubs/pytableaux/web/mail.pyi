@@ -3,7 +3,6 @@ import ssl
 from collections import deque
 from typing import Any, Mapping, Sequence
 
-def validate_feedback_form(form_data: dict[str, str]) -> None:...
 def is_valid_email(value: str) -> bool:...
 
 class Mailroom:

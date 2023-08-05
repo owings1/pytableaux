@@ -26,13 +26,9 @@ import os.path
 from datetime import datetime
 from enum import Enum, auto
 from types import MappingProxyType as MapProxy
-from typing import Any, Mapping, Sequence
-
-import simplejson as json
+from typing import Any, Mapping
 
 from pytableaux import __docformat__, package, tools
-from pytableaux.errors import Emsg
-from pytableaux.lang import Lexical
 from pytableaux.tools.abcs import ItemMapEnum
 
 __all__ = ()
@@ -236,28 +232,5 @@ class StaticResource:
         if modstr is None:
             return True
         return self.modtime > datetime.strptime(modstr, "%a, %d %b %Y %H:%M:%S %Z")
-
-
-def json_default(obj: Any):
-    if isinstance(obj, Lexical):
-        return obj.ident
-    if isinstance(obj, Mapping):
-        if callable(asdict := getattr(obj, '_asdict', None)):
-            return asdict()
-        return dict(obj)
-    if isinstance(obj, Sequence):
-        return list(obj)
-    raise Emsg.CantJsonify(obj)
-
-tojson_defaults = dict(
-    cls = json.JSONEncoderForHTML,
-    namedtuple_as_object = False,
-    for_json = True,
-    default = json_default)
-
-def tojson(*args, **kw):
-    "Wrapper for ``json.dumps`` with html safe encoder and other defaults."
-    return json.dumps(*args, **(tojson_defaults | kw))
-
 
 

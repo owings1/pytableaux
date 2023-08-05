@@ -125,12 +125,12 @@ class AppTest(helper.CPWebCase):
         }
         res = self.post_json('/api/parse', body)
         self.assertStatus(400)
-        self.assertIn('Notation', res['errors'])
+        self.assertIn('notation', res['errors'])
 
     def test_api_parse_missing_input(self):
         res = self.post_json('/api/parse', {})
         self.assertStatus(400)
-        self.assertIn('Input', res['errors'])
+        self.assertIn('input', res['errors'])
 
     def test_api_parse_bad_predicate_data(self):
         body = {
@@ -141,7 +141,7 @@ class AppTest(helper.CPWebCase):
         }
         res = self.post_json('/api/parse', body)
         self.assertStatus(400)
-        self.assertIn('Predicate 1', res['errors'])
+        self.assertIn('predicates:0', res['errors'])
 
     def test_api_prove_cpl_addition(self):
         body = {
@@ -158,31 +158,31 @@ class AppTest(helper.CPWebCase):
     def test_api_errors_various(self):
         res = self.post_json('/api/prove', {'logic': 'bunky'})
         self.assertStatus(400)
-        self.assertIn('Logic', res['errors'])
+        self.assertIn('logic', res['errors'])
         res = self.post_json('/api/prove', {'output': {'charset': 'bunky'}})
         self.assertStatus(400)
-        self.assertIn('Output Charset', res['errors'])
+        self.assertIn('output:charset', res['errors'])
         res = self.post_json('/api/prove', {'output': {'notation': 'bunky'}})
         self.assertStatus(400)
-        self.assertIn('Output Notation', res['errors'])
+        self.assertIn('output:notation', res['errors'])
         res = self.post_json('/api/prove', {'output': {'format': 'bunky'}})
         self.assertStatus(400)
-        self.assertIn('Output Format', res['errors'])
+        self.assertIn('output:format', res['errors'])
         res = self.post_json('/api/prove', {'max_steps': 'bunky'})
         self.assertStatus(400)
-        self.assertIn('Max steps', res['errors'])
+        self.assertIn('max_steps', res['errors'])
         res = self.post_json('/api/prove', {'argument': {'notation': 'bunky'}})
         self.assertStatus(400)
-        self.assertIn('Notation', res['errors'])
+        self.assertIn('argument:notation', res['errors'])
         res = self.post_json('/api/prove', {'argument': {'predicates': [{'arity': 'bunky'}]}})
         self.assertStatus(400)
-        self.assertIn('Predicate 1', res['errors'])
+        self.assertIn('argument:predicates:0', res['errors'])
         res = self.post_json('/api/prove', {'argument': {'premises': ['bunky']}})
         self.assertStatus(400)
-        self.assertIn('Premise 1', res['errors'])
+        self.assertIn('argument:premises:0', res['errors'])
         res = self.post_json('/api/prove', {'argument': {'conclusion': 'bunky'}})
         self.assertStatus(400)
-        self.assertIn('Conclusion', res['errors'])
+        self.assertIn('argument:conclusion', res['errors'])
 
 
     def test_post_api_prove_1(self):

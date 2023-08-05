@@ -33,6 +33,7 @@ from enum import Enum
 from operator import gt, lt, truth
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
+from typing import TypeVar, Callable, TYPE_CHECKING
 
 __all__ = (
     'absindex',
@@ -75,8 +76,14 @@ EMPTY_SEQ = ()
 EMPTY_SET = frozenset()
 NOARG = object()
 WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
+_F = TypeVar('_F', bound=Callable)
+_Self = TypeVar('_Self')
+_T = TypeVar('_T')
 
-def closure(func):
+if TYPE_CHECKING:
+    from pytableaux.typing import property # type: ignore
+
+def closure(func: Callable[..., _T]) -> _T:
     """Closure decorator calls the argument and returns its return value.
     If the return value is a function, updates its wrapper.
     """
@@ -267,9 +274,12 @@ def dmerged():
                     c[key] = dcopy(value)
             else:
                 c[key] = value
-        for key in a:
+        for key, value in a.items():
             if key not in c:
-                c[key] = a[key]
+                if isinstance(value, Mapping):
+                    c[key] = dcopy(value)
+                else:
+                    c[key] = value
         return c
 
     def dcopy(a: Mapping, /) -> dict:
@@ -477,10 +487,13 @@ class lazy:
         __slots__ = EMPTY_SET
 
         @property
-        def propclass(self):
+        def propclass(self) -> type[property]:
             return property
 
-        def __call__(self, method):
+        if TYPE_CHECKING:
+            def __new__(cls, func: Callable[[_Self], _T]) -> property[_Self, _T]: ...
+
+        def __call__(self, method: Callable[[_Self], _T]) -> property[_Self, _T]:
             fget = super().__call__(method)
             return self.propclass(fget, doc = method.__doc__)
 
@@ -718,6 +731,34 @@ class dictns(dictattr):
     @classmethod
     def _keyattr_ok(cls, name):
         return len(name) and name[0] != '_'
+
+class PathedDict(dict):
+
+    separator: str = ':'
+
+    __slots__ = EMPTY_SET
+
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            if not isinstance(key, str):
+                raise
+        key, *keys = key.split(self.separator)
+        obj = super().__getitem__(key)
+        for key in keys:
+            obj = obj[key]
+        return obj
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, str) or self.separator not in key:
+            return super().__setitem__(key, value)
+        keys = key.split(self.separator)
+        last = keys.pop()
+        obj = self
+        for key in keys:
+            obj = obj.setdefault(key, {})
+        obj[last] = value
 
 from .hybrids import EMPTY_QSET as EMPTY_QSET
 from .hybrids import qset as qset

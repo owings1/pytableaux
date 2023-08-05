@@ -29,11 +29,10 @@ from types import FunctionType
 from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar, Iterator, Mapping, Self, Sequence, Set
 
-from pytableaux import _ENV, __docformat__, errors
-from pytableaux.errors import Emsg, check
-from pytableaux.tools import (EMPTY_SEQ, EMPTY_SET, abcs, closure, dund, lazy,
-                              membr, qsetf, wraps)
-
+from .. import _ENV, __docformat__, errors
+from ..errors import Emsg, check
+from ..tools import (EMPTY_SEQ, EMPTY_SET, abcs, closure, dund, lazy, membr,
+                     qsetf, wraps)
 from . import (BiCoords, LangCommonEnum, LangCommonMeta, LexicalAbcMeta,
                SysPredEnumMeta, TriCoords, nosetattr)
 
@@ -487,6 +486,8 @@ class Parameter(CoordsItem):
 
     __slots__ = EMPTY_SET
 
+    spec: BiCoords
+
     is_constant: bool
     "Whether the parameter is a :class:`Constant`."
 
@@ -844,6 +845,7 @@ class Predicate(CoordsItem):
         'value')
 
     Coords = TriCoords
+    spec: TriCoords
 
     bicoords: BiCoords
     "The symbol coordinates `(index, subscript)`."

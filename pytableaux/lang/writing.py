@@ -124,7 +124,7 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #******  Instance Init
 
-    def __init__(self, charset = None, renderset = None, **opts):
+    def __init__(self, charset: str|None = None, renderset: RenderSet|None = None, **opts):
         if renderset is None:
             notn = self.notation
             if charset is None:

@@ -44,18 +44,6 @@ def is_valid_email(value: str) -> bool:
     "Whether a string is a valid email address."
     return re_email.fullmatch(value) is not None
 
-def validate_feedback_form(form_data: dict[str, str]) -> None:
-    "Validate `name`, `email`, and `message` keys."
-    errs = {}
-    if not is_valid_email(form_data['email']):
-        errs['Email'] = 'Invalid email address'
-    if not len(form_data['name']):
-        errs['Name'] = 'Please enter your name'
-    if not len(form_data['message']):
-        errs['Message'] = 'Please enter a message'
-    if errs:
-        raise errors.RequestDataError(errs)
-
 class Mailroom:
 
     config: Mapping[str, Any]

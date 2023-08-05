@@ -26,11 +26,11 @@ import enum as _enum
 import functools
 import itertools
 import operator as opr
-from enum import Enum, Flag
 from collections.abc import Mapping, Set
+from enum import Enum, Flag
 from enum import auto as eauto
 from types import MappingProxyType as MapProxy
-from typing import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Sequence, TypeVar
 
 from .. import __docformat__, tools
 from ..errors import Emsg, check
@@ -51,6 +51,8 @@ __all__ = (
 EMPTY = ()
 NOARG = object()
 
+_T = TypeVar('_T')
+_EnumT = TypeVar('_EnumT', bound=Enum)
 
 def is_enumcls(obj):
     return isinstance(obj, type) and issubclass(obj, Enum)
@@ -332,7 +334,7 @@ class EbcMeta(_enum.EnumMeta):
         # Cleanup.
         return _em_clean_methods(Class)
 
-    def __call__(cls, value, names = None, **kw):
+    def __call__(cls: type[_EnumT], value, names = None, **kw) -> _EnumT:
         if names is not None:
             return super().__call__(value, names, **kw)
         try:
@@ -345,7 +347,7 @@ class EbcMeta(_enum.EnumMeta):
             # Will raise ValueError for bad value.
             cls.__new__(cls, value))
 
-    def get(cls, key, default = NOARG, /):
+    def get(cls: type[_EnumT], key, default = NOARG, /) -> _EnumT:
         """Get a member by an indexed reference key.
 
         Args:
@@ -365,16 +367,16 @@ class EbcMeta(_enum.EnumMeta):
                 raise
             return default
 
-    def __getitem__(cls, key, /):
+    def __getitem__(cls: type[_EnumT], key, /) -> _EnumT:
         return cls._lookup[key]
 
     def __contains__(cls, key, /):
         return key in cls._lookup
 
-    def __iter__(cls):
+    def __iter__(cls: type[_EnumT]) -> Iterator[_EnumT]:
         return iter(cls._seq)
 
-    def __reversed__(cls):
+    def __reversed__(cls: type[_EnumT]) -> Iterator[_EnumT]:
         return reversed(cls._seq)
 
     def __getattr__(cls, name, /):
@@ -489,7 +491,7 @@ def nsinit(ns: dict, bases, /, skipflags = False):
     if isinstance(slots, Iterable) and not isinstance(slots, Set):
         ns['__slots__'] = frozenset(slots)
 
-def clsafter(Class: type, ns: dict|None = None, /, skipflags = False, deleter = type.__delattr__):
+def clsafter(Class: type[_T], ns: dict|None = None, /, skipflags = False, deleter = type.__delattr__) -> type[_T]:
     'After class init routine. Usable as standalone class decorator.'
     if ns is None:
         ns = Class.__dict__.copy()
@@ -634,6 +636,10 @@ def hookable(*hooks: str, attr = Astr.hookinfo):
 class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
 
+
+    if TYPE_CHECKING:
+        def __call__(cls: type[_T], *args, **kw) -> _T: ...
+
     def __new__(cls, clsname, bases, ns, /, *,
         hooks = None, skiphooks = False, skipflags = False, hookinfo = None, **kw):
         nsinit(ns, bases, skipflags = skipflags)
@@ -693,6 +699,7 @@ class Copyable(metaclass = AbcMeta, skiphooks = True):
         subcls.__copy__ = subcls.copy
 
 from .hooks import hookutil
+
 
 class ItemMapEnum(Enum):
     """Fixed mapping enum based on item tuples.

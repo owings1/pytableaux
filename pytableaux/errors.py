@@ -43,10 +43,6 @@ class RepeatValueWarning(UserWarning):
 class IllegalStateError(Exception):
     pass
 
-class RequestDataError(Exception):
-    def __init__(self, errors: dict):
-        self.errors = errors
-
 class ProofTimeoutError(Exception):
     pass
 

@@ -25,7 +25,7 @@ from __future__ import annotations
 import operator as opr
 from collections.abc import Sequence
 from itertools import repeat
-from typing import Any, Iterable
+from typing import Any, Iterable, TypeVar, Self
 
 from .. import __docformat__, tools
 from ..errors import Emsg, check
@@ -39,6 +39,7 @@ __all__ = (
 
 NOARG = object()
 EMPTY_IT = iter(())
+_T = TypeVar('_T')
 
 class ArgumentMeta(LangCommonMeta):
     'Argument Metaclass.'
@@ -205,12 +206,6 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dic
             if default is NOARG:
                 raise
             return default
-
-    def specs(self):
-        """
-        Return a tuple of all the predicate spec attributes.
-        """
-        return tuple(p.spec for p in self)
 
     @abcs.abcf.temp
     @qset.hook('done')

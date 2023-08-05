@@ -25,7 +25,7 @@ import os
 from abc import abstractmethod as abstract
 from collections import deque
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Mapping
+from typing import TYPE_CHECKING, Mapping, Self
 
 import jinja2
 
@@ -36,6 +36,7 @@ from ..tools import EMPTY_MAP, abcs, closure, qset
 
 if TYPE_CHECKING:
     from . import Tableau, TreeStruct
+    from pytableaux.typing import _T # type: ignore
 
 __all__ = (
     'HtmlTabWriter',
@@ -45,7 +46,7 @@ __all__ = (
     'registry',
     'register')
 
-registry: Mapping
+registry: Mapping[str, type[TabWriter]]
 """The tableau writer class registry.
 
 :meta hide-value:
@@ -84,7 +85,7 @@ class TabWriterMeta(abcs.AbcMeta):
 
     DefaultFormat = 'text'
 
-    def __call__(cls, *args, **kw):
+    def __call__(cls: type[_T]|Self, *args, **kw) -> _T:
         if cls is TabWriter:
             if args:
                 fmt, *args = args

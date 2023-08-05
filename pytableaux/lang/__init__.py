@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from types import MappingProxyType as MapProxy
-from typing import ClassVar, NamedTuple
+from typing import ClassVar, Iterable, NamedTuple
 
 from ..errors import Emsg
 from ..tools import EMPTY_MAP, EMPTY_SET, NoSetAttr, abcs, closure, dxopy
@@ -245,6 +245,12 @@ class BiCoords(NamedTuple):
     def __repr__(self):
         return repr(tuple(self))
 
+    @classmethod
+    def make(cls, it: Iterable):
+        if isinstance(it, Mapping):
+            it = map(it.__getitem__, cls._fields)
+        return cls._make(it)
+
     @staticmethod
     def min_unused(used, maxi):
         # finds the mimimum available by searching for gaps.
@@ -291,8 +297,14 @@ class TriCoords(NamedTuple):
     def __repr__(self):
         return repr(tuple(self))
 
-BiCoords.first = BiCoords._make(BiCoords.first)
-TriCoords.first = TriCoords._make(TriCoords.first)
+    @classmethod
+    def make(cls, it: Iterable):
+        if isinstance(it, Mapping):
+            it = map(it.__getitem__, cls._fields)
+        return cls._make(it)
+
+BiCoords.first = BiCoords.make(BiCoords.first)
+TriCoords.first = TriCoords.make(TriCoords.first)
 
 
 class TableStore(metaclass = LangCommonMeta):
