@@ -95,7 +95,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     rules: RulesRoot
     stats: dict[str, Any]
     timers: TabTimers
-    tree: TreeStruct
+    tree: Tableau.Tree
     flag: TabFlag
     def __init__(self, logic: Optional[_LogicLookupKey] = ..., argument: Optional[Argument] = ..., **opts) -> None: ...
     @property
@@ -135,29 +135,29 @@ class Tableau(Sequence[Branch], EventEmitter):
     @overload
     def __getitem__(self, i: SupportsIndex) -> Branch: ...
 
-class TreeStruct(dictns):
-    root: bool
-    nodes: list[Node]
-    ticksteps: list[int|None]
-    children: list[TreeStruct]
-    leaf: bool
-    closed: bool
-    open: bool
-    left: int
-    right: int
-    descendant_node_count: int
-    structure_node_count: int
-    depth: int
-    has_open: bool
-    has_closed: bool
-    closed_step: Optional[int]
-    step: int
-    width: int
-    balanced_line_width: float
-    balanced_line_margin: float
-    branch_id: Optional[int]
-    model_id: Optional[int]
-    is_only_branch: bool
-    branch_step: int
-    id: int
-    def __init__(self) -> None: ...
+    class Tree(dictns):
+        root: bool
+        nodes: list[Node]
+        ticksteps: list[int|None]
+        children: list[Tableau.Tree]
+        leaf: bool
+        closed: bool
+        open: bool
+        left: int
+        right: int
+        descendant_node_count: int
+        structure_node_count: int
+        depth: int
+        has_open: bool
+        has_closed: bool
+        closed_step: Optional[int]
+        step: int
+        width: int
+        balanced_line_width: float
+        balanced_line_margin: float
+        branch_id: Optional[int]
+        model_id: Optional[int]
+        is_only_branch: bool
+        branch_step: int
+        id: int
+        def __init__(self) -> None: ...

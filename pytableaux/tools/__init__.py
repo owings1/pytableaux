@@ -34,7 +34,7 @@ from enum import Enum
 from operator import gt, lt, truth
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Generic, MutableMapping, TypeVar, Mapping
 
 __all__ = (
     'absindex',
@@ -764,6 +764,17 @@ class dictns(dictattr):
     @classmethod
     def _keyattr_ok(cls, name):
         return len(name) and name[0] != '_'
+
+class TransMmap(MutableMapping[_KT, _VT], MapCover[_KT, _VT]):
+
+    __slots__ = ('__setitem__', '__delitem__')
+
+    def __init__(self, *, kget=thru, kset=thru, vget=thru, vset=thru):
+        self._cov_mapping = MapProxy(mapping := {})
+        self.__getitem__ = lambda key: vget(mapping.__getitem__(kget(key)))
+        self.__setitem__ = lambda key, value: mapping.__setitem__(kset(key), vset(value))
+        self.__delitem__ = lambda key: mapping.__delitem__(kset(key))
+
 
 class PathedDict(dict):
 

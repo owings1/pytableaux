@@ -161,5 +161,4 @@ from pytableaux.proof.common import Target as Target
 from pytableaux.proof.rules import ClosingRule as ClosingRule
 from pytableaux.proof.tableaux import Rule as Rule
 from pytableaux.proof.tableaux import Tableau as Tableau
-from pytableaux.proof.tableaux import TreeStruct as TreeStruct
 from pytableaux.proof.writers import TabWriter as TabWriter

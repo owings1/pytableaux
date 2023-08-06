@@ -48,8 +48,7 @@ __all__ = (
     'RuleGroup',
     'RuleGroups',
     'Tableau',
-    'RulesRoot',
-    'TreeStruct')
+    'RulesRoot')
 
 NOARG = object()
 NOGET = object()
@@ -624,7 +623,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     history: Sequence[StepEntry]
     "The history of rule applications."
 
-    tree: TreeStruct
+    tree: Tableau.Tree
     """A tree structure of the tableau. This is generated after the tableau
     is finished. If the `build_timeout` was exceeded, the tree is `not`
     built."""
@@ -1199,9 +1198,9 @@ class Tableau(Sequence[Branch], EventEmitter):
             branch.model = model
             yield model
 
-    def _build_tree(self, branches: Sequence[Branch], node_depth = 0, track = None,/) -> TreeStruct:
+    def _build_tree(self, branches: Sequence[Branch], node_depth = 0, track = None,/) -> Tableau.Tree:
 
-        s = TreeStruct()
+        s = self.Tree()
 
         if track is None:
             track = dict(pos = 1, depth = 0, distinct_nodes = 0, root = s)
@@ -1264,7 +1263,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
         return s
 
-    def _build_tree_leaf(self, s: TreeStruct, branch: Branch, track: dict, /):
+    def _build_tree_leaf(self, s: Tableau.Tree, branch: Branch, track: dict, /):
         'Finalize attributes for leaf structure.'
         stat = self._stat[branch]
         s.closed = TabFlag.CLOSED in stat[TabStatKey.FLAGS]
@@ -1284,7 +1283,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         if track['depth'] == 0:
             s.is_only_branch = True
 
-    def _build_tree_branches(self, s: TreeStruct, branches: Sequence[Branch], depth_nodes: Set[Node], node_depth: int, track: dict, /):
+    def _build_tree_branches(self, s: Tableau.Tree, branches: Sequence[Branch], depth_nodes: Set[Node], node_depth: int, track: dict, /):
         'Build child structures for each distinct node.'
         w_first = w_last = w_mid = 0
 
@@ -1319,92 +1318,93 @@ class Tableau(Sequence[Branch], EventEmitter):
             s.balanced_line_width = s.balanced_line_margin = 0
 
 
-class TreeStruct(dictns):
-    'Recursive tree structure representation of a tableau.'
+    class Tree(dictns):
+        'Recursive tree structure representation of a tableau.'
 
-    root: bool = False
-    
-    nodes: list[Node]
-    "The nodes on this structure."
+        root: bool = False
+        
+        nodes: list[Node]
+        "The nodes on this structure."
 
-    ticksteps: list[int|None]
-    "The ticked steps list."
+        ticksteps: list[int|None]
+        "The ticked steps list."
 
-    children: list[TreeStruct]
-    "The child structures."
+        children: list[Tableau.Tree]
+        "The child structures."
 
-    leaf: bool = False
-    "Whether this is a terminal (childless) structure."
+        leaf: bool = False
+        "Whether this is a terminal (childless) structure."
 
-    closed: bool = False
-    "Whether this is a terminal structure that is closed."
+        closed: bool = False
+        "Whether this is a terminal structure that is closed."
 
-    open: bool = False
-    "Whether this is a terminal structure that is open."
+        open: bool = False
+        "Whether this is a terminal structure that is open."
 
-    left: int = None
-    "The pre-ordered tree left value."
+        left: int = None
+        "The pre-ordered tree left value."
 
-    right: int = None
-    "The pre-ordered tree right value."
+        right: int = None
+        "The pre-ordered tree right value."
 
-    descendant_node_count: int = 0
-    "The total node count of all descendants."
+        descendant_node_count: int = 0
+        "The total node count of all descendants."
 
-    structure_node_count: int = 0
-    "The node count plus descendant node count."
+        structure_node_count: int = 0
+        "The node count plus descendant node count."
 
-    depth: int = 0
-    "The depth of this structure (ancestor structure count)."
+        depth: int = 0
+        "The depth of this structure (ancestor structure count)."
 
-    has_open: bool = False
-    "Whether this structure or a descendant is open."
+        has_open: bool = False
+        "Whether this structure or a descendant is open."
 
-    has_closed: bool = False
-    "Whether this structure or a descendant is closed."
+        has_closed: bool = False
+        "Whether this structure or a descendant is closed."
 
-    closed_step: Optional[int] = None
-    "If closed, the step number at which it closed."
+        closed_step: Optional[int] = None
+        "If closed, the step number at which it closed."
 
-    step: int = None
-    "The step number at which this structure first appears."
+        step: int = None
+        "The step number at which this structure first appears."
 
-    width: int = 0
-    "The number of descendant terminal structures, or 1."
+        width: int = 0
+        "The number of descendant terminal structures, or 1."
 
-    balanced_line_width: float = 0.0
-    """0.5x the width of the first child structure, plus 0.5x the
-    width of the last child structure (if distinct from the first),
-    plus the sum of the widths of the other (distinct) children.
-    """
+        balanced_line_width: float = 0.0
+        """0.5x the width of the first child structure, plus 0.5x the
+        width of the last child structure (if distinct from the first),
+        plus the sum of the widths of the other (distinct) children.
+        """
 
-    balanced_line_margin: float = 0.0
-    """0.5x the width of the first child structure divided by the
-    width of this structure.
-    """
+        balanced_line_margin: float = 0.0
+        """0.5x the width of the first child structure divided by the
+        width of this structure.
+        """
 
-    branch_id: Optional[int] = None
-    "The branch id, only set for leaves"
+        branch_id: Optional[int] = None
+        "The branch id, only set for leaves"
 
-    model_id: Optional[int] = None
-    "The model id, if exists, only set for leaves"
+        model_id: Optional[int] = None
+        "The model id, if exists, only set for leaves"
 
-    is_only_branch: bool = False
-    "Whether this is the one and only branch"
+        is_only_branch: bool = False
+        "Whether this is the one and only branch"
 
-    branch_step: int = None
-    "The step at which the branch was added"
+        branch_step: int = None
+        "The step at which the branch was added"
 
-    def __init__(self):
-        self.nodes = []
-        self.ticksteps = []
-        self.children = []
-        self.id = id(self)
+        def __init__(self):
+            self.nodes = []
+            self.ticksteps = []
+            self.children = []
+            self.id = id(self)
 
-    @classmethod
-    def _from_iterable(cls, it):
-        inst = cls()
-        inst.update(it)
-        return inst
+        @classmethod
+        def _from_iterable(cls, it):
+            inst = cls()
+            inst.update(it)
+            return inst
 
-    _from_mapping = _from_iterable
+        _from_mapping = _from_iterable
+

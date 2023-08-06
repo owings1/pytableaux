@@ -46,8 +46,8 @@ classes
 
     .. automethod:: finish
 
-.. autoclass:: TreeStruct
-    :members:
+    .. autoclass:: Tree
+        :members:
 
 .. autoclass:: RulesRoot
     :members:

@@ -58,7 +58,6 @@ __all__ = (
     'Tableau',
     'TableauxSystem',
     'TabWriter',
-    'TreeStruct',
     'Target')
 
 NOARG = object()
@@ -506,5 +505,4 @@ from .rules import ClosingRule as ClosingRule
 
 pass
 from . import filters, helpers
-from .tableaux import TreeStruct as TreeStruct
 from .writers import TabWriter
