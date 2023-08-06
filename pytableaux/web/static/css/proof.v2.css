@@ -53,10 +53,10 @@
 }
 .tableau-controls .invalid,
 .tableau-models .model .is-countermodel.no,
-.tableau.color-open .structure.has-open > .node-segment {
+.tableau.color-open .structure.has_open > .node-segment {
     color: red;
 }
-.tableau.color-open .structure.has-open.has-closed > .node-segment {
+.tableau.color-open .structure.has_open.has_closed > .node-segment {
     color: #e808ff;
 }
 /* Selected branch indicator, at the leaf. Only show if controls or models options are enabled */

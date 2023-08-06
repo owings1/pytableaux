@@ -4,10 +4,10 @@
 {%- macro sw(s, is_child = False) -%}
     <div id="structure_{{ s.id }}" class="structure
         {{- ' root' if not is_child -}}
-        {{- ' has-open' if s.has_open -}}
-        {{- ' has-closed' if s.has_closed -}}
+        {{- ' has_open' if s.has_open -}}
+        {{- ' has_closed' if s.has_closed -}}
         {{- ' leaf' if s.leaf -}}
-        {{- ' only-branch' if s.is_only_branch -}}
+        {{- ' is_only_branch' if s.is_only_branch -}}
         {{- ' closed' if s.closed -}}
         {{- ' open' if s.open -}}"{#
         #} data-depth="{{ s.depth }}"{#

@@ -215,26 +215,22 @@ def setup(app: Sphinx):
     app.add_config_value(ConfKey.auto_skip_enum_value, True, 'env', [bool])
     app.add_autodocumenter(AttributeDocumenter, True)
 
-    ev = 'autodoc-process-docstring'
-    # app.connect(ev, EnumMemberValue(), -1)
-    app.connect(ev, RuledocInherit())
-    app.connect(ev, RuledocExample())
-    app.connect(ev, BuildtrunkExample())
+    # app.connect('autodoc-process-docstring', EnumMemberValue(), -1)
+    for cls in (RuledocInherit, RuledocExample, BuildtrunkExample):
+        app.connect('autodoc-process-docstring', cls())
 
-    replacers = (
-        RolewrapReplace(),)
-
-    for inst in replacers:
-        app.connect(SphinxEvent.IncludeRead, inst)
-        app.connect('source-read', inst)
-        app.connect('autodoc-process-docstring', inst)
+    for cls in (RolewrapReplace,):
+        inst = cls()
+        for event in (SphinxEvent.IncludeRead, 'source-read', 'autodoc-process-docstring'):
+            app.connect(event, inst)
     
     app.add_config_value(ConfKey.copy_file_tree, [], 'env',
         [list[tuple[str, str, Optional[dict]]]])
     app.add_config_value(ConfKey.delete_file_tree, [], 'env',
         [list[str]])
-    app.connect('config-inited', DeleteFileTree)
-    app.connect('config-inited', CopyFileTree)
+
+    for cls in (DeleteFileTree, CopyFileTree):
+        app.connect('config-inited', cls)
 
 
 

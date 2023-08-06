@@ -5,7 +5,7 @@
     classes:
        wrapper : tableau-wrapper
        tableau : tableau
-       structure : structure [, root, has-open, has-closed, leaf, only-branch, closed, open]
+       structure : structure [, root, has_open, has_closed, leaf, is_only_branch, closed, open]
        node segment : node-sement
        vertical line : vertical-line
        horizontal line : horizontal-line
@@ -18,7 +18,7 @@
 {%- from 'macros.jinja2' import sw with context -%}
 {%- if opts.inline_css %}
 <style>
-    {% include 'tableau.css' %}
+    {% include css_template_name %}
 </style>
 {%- endif %}
 {%- if opts.wrapper -%}

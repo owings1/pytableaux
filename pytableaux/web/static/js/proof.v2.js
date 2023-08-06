@@ -54,8 +54,8 @@
         // tableau classes
         Root            : 'root',
         Structure       : 'structure',
-        HasOpen         : 'has-open',
-        HasClosed       : 'has-closed',
+        HasOpen         : 'has_open',
+        HasClosed       : 'has_closed',
         Child           : 'child-wrapper',
         Leaf            : 'leaf',
         HL              : 'horizontal-line',

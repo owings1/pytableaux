@@ -22,21 +22,23 @@ pytableaux.proof.writers
 from __future__ import annotations
 
 import os
-from abc import abstractmethod as abstract
+from abc import abstractmethod
 from collections import deque
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Mapping, Self, TypeVar
+from typing import TYPE_CHECKING, Callable, MutableMapping, Self, Sequence, TypeVar
 
 from .. import __docformat__
 from ..errors import Emsg, check
 from ..lang import LexWriter, Notation
-from ..tools import EMPTY_MAP, abcs, closure, qset
+from ..tools import EMPTY_MAP, EMPTY_SET, abcs, qset, MapCover
 
+NOARG = object()
 _T = TypeVar('_T')
 _TWT = TypeVar('_TWT', bound='TabWriter')
 
 if TYPE_CHECKING:
-    from . import Tableau, TreeStruct
+    from typing import overload
+    from . import Node, Tableau, TreeStruct
     import jinja2
 
 __all__ = (
@@ -49,41 +51,6 @@ __all__ = (
 
 _templates_base_dir = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'templates')
-
-registry: Mapping[str, type[TabWriter]]
-"""The tableau writer class registry.
-
-:meta hide-value:
-"""
-
-@closure
-def register():
-
-    global registry
-
-    regtable = {}
-    registry = MapProxy(regtable)
-
-    def register(cls: type[_TWT], /, *, force: bool = False) -> type[_TWT]:
-        """Register a ``TabWriter`` class. Returns the argument, so it can be
-        used as a decorator.
-
-        Args:
-            wcls: The writer class.
-        
-        Returns:
-            The writer class.
-        """
-        cls = check.subcls(cls, TabWriter)
-        if abcs.isabstract(cls):
-            raise TypeError(f'Cannot register abstract class: {cls}')
-        fmt = cls.format
-        if not force and fmt in registry:
-            raise KeyError(f"Format {fmt} already registered")
-        regtable[fmt] = cls
-        return cls
-
-    return register
 
 class TabWriterMeta(abcs.AbcMeta):
 
@@ -131,6 +98,8 @@ class TabWriter(metaclass = TabWriterMeta):
     opts: dict
     "The writer's options."
 
+    __slots__ = ('lw', 'opts')
+
     def __init__(self, notn = None, charset = None, *, lw: LexWriter = None, **opts):
         if lw is None:
             if notn is None:
@@ -153,27 +122,80 @@ class TabWriter(metaclass = TabWriterMeta):
     def attachments(self, /):
         return EMPTY_MAP
 
-    @abstract
-    def write(self, tab: Tableau, **kw) -> str:
+    @abstractmethod
+    def __call__(self, tab: Tableau, **kw) -> str:
         raise NotImplementedError
 
-    __call__ = write
 
-    def __init_subclass__(cls, **kw):
-        super().__init_subclass__(**kw)
-        cls.__call__ = cls.write
+class Registry(MapCover[str, type[TabWriter]], MutableMapping[str, type[TabWriter]]):
+    "A tableau writer class registry."
+
+    __slots__ = ('register', '__delitem__')
+
+    def __init__(self):
+        super().__init__(mapping := {})
+        def register(cls=NOARG, /, *, key=None, force=False):
+            if cls is NOARG:
+                return lambda cls: register(cls, key=key, force=force)
+            cls = check.subcls(cls, TabWriter)
+            if abcs.isabstract(cls):
+                raise TypeError(f'Cannot register abstract class: {cls}')
+            if key is None:
+                key = cls.format
+            if not force and key in self:
+                raise KeyError(f"Format/key {key} already registered")
+            mapping[check.inst(key, str)] = cls
+            return cls
+        def delitem(key):
+            del mapping[key]
+        self.register = register
+        self.__delitem__ = delitem
+
+    def __setitem__(self, key, value):
+        self.register(value, key=key, force=True)
+
+    if TYPE_CHECKING:
+        @overload
+        def register(self, cls: type[_TWT], /, *, key: str = ..., force: bool = ...) -> type[_TWT]:
+            """Register a ``TabWriter`` class. Returns the argument, so it can be
+            used as a decorator.
+
+            Args:
+                cls: The writer class.
+
+            Kwargs:
+                force: Replace format/key if exists, default False.
+                key: An alternate key to store, default is the writer's format.
+            
+            Returns:
+                The writer class.
+            """
+        @overload
+        def register(self, /, *, key: str = ..., force: bool = ...) -> Callable[[type[_TWT]], type[_TWT]]:
+            """Decorator factory for registering with options.
+
+            Kwargs:
+                force: Replace format/key if exists.
+                key: An alternate key to store, default is the writer's format.
+            
+            Returns:
+                Class decorator factory.
+            """
+
+registry = Registry()
+"The default tableau writer class registry."
 
 class JinjaTabWriter(TabWriter):
 
-    template_searchpath: str
+    template_searchpath: str|Sequence[str]
     template_name: str
 
+    jinja_env: jinja2.Environment
     jinja_opts = MapProxy(dict(
         trim_blocks   = True,
         lstrip_blocks = True))
-    jinja_env: jinja2.Environment
 
-    def write(self, tab: Tableau, **kw):
+    def __call__(self, tab: Tableau, **kw):
         return self.render(self.template_name, tab=tab, **kw)
     
     def render(self, template: str, *args, **kw) -> str:
@@ -195,7 +217,7 @@ class JinjaTabWriter(TabWriter):
         if not abcs.isabstract(cls):
             cls.jinja_init()
 
-@register
+@registry.register
 class HtmlTabWriter(JinjaTabWriter):
     """HTML tableau writer.
     """
@@ -213,22 +235,23 @@ class HtmlTabWriter(JinjaTabWriter):
         wrap_classes = (),
         inline_css   = False))
 
-    def write(self, tab: Tableau, *, classes = None) -> str:
+    def __call__(self, tab: Tableau, *, classes = None, wrap_classes = None) -> str:
         """"
         Args:
             tab: The tableaux instance.
             classes: Additional classes for the main tableau element. Merged
                 with `classes` option.
         """
-        wrap_classes = qset(self.opts['wrap_classes'])
-        wrap_classes.add('tableau-wrapper')
-        tab_classes = qset(self.opts['classes'])
+        tab_classes = qset(classes or EMPTY_SET)
+        tab_classes.update(self.opts['classes'])
         tab_classes.add('tableau')
-        if classes is not None:
-            tab_classes.extend(classes)
-        return super().write(tab,
+        wrap_classes = qset(wrap_classes or EMPTY_SET)
+        wrap_classes.update(self.opts['wrap_classes'])
+        wrap_classes.add('tableau-wrapper')
+        return super().__call__(tab,
             wrap_classes = wrap_classes,
-            tab_classes = tab_classes)
+            tab_classes = tab_classes,
+            css_template_name = self.css_template_name)
 
     def attachments(self, /) -> dict[str, str]:
         """
@@ -239,7 +262,7 @@ class HtmlTabWriter(JinjaTabWriter):
         return dict(css=self.render(self.css_template_name))
 
 
-@register
+@registry.register
 class TextTabWriter(JinjaTabWriter):
     """Plain text tableau writer."""
 
@@ -247,7 +270,7 @@ class TextTabWriter(JinjaTabWriter):
     template_searchpath = f'{_templates_base_dir}/text'
     template_name = 'nodes.jinja2'
 
-    def write(self, tab: Tableau) -> str:
+    def __call__(self, tab: Tableau) -> str:
         template = self.get_template(self.template_name)
         return self._write_structure(tab.tree, template)
 
@@ -263,3 +286,127 @@ class TextTabWriter(JinjaTabWriter):
             if not is_last:
                 lines.append(next_pfx)
         return '\n'.join(lines)
+
+class DocBuilder:
+
+    from ..tools.doc import nodez
+    from docutils import nodes
+    struct_flag_classnames = (
+        'has_open',
+        'has_closed',
+        'leaf',
+        'open',
+        'closed',
+        'is_only_branch')
+    struct_data_classnames = (
+        'depth',
+        'width',
+        'left',
+        'right',
+        'step')
+
+    def __init__(self, tab: Tableau, /):
+        self.tab = tab
+        self.doc = self.nodes.document(None, None)
+
+    def build(self):
+        self.doc += self.build_struct_node(self.tab.tree)
+
+    def build_struct_node(self, s: TreeStruct, /):
+        is_child = not s.root
+        attrs = dict(
+            id=f'structure_{s.id}',
+            classes=qset(self.get_struct_classes(s)))
+        attrs.update(
+            (f'data-{a}', s[a])
+            for a in self.struct_data_classnames)
+        if s.closed:
+            attrs['data-closed-step'] = s.closed_step
+        if s.branch_id:
+            attrs['data-branch-id'] = s.branch_id
+        if s.model_id:
+            attrs['data-model-id'] = s.model_id
+        node = self.nodez.block(**attrs)
+        node += self.build_node_segment(s)
+        if s.children:
+            node += self.nodez.block(**dict(
+                {'data-step': s.branch_step},
+                classes=['vertical-line']))
+            width = 100 * s.balanced_line_width
+            margin = 100 * s.balanced_line_margin
+            node += self.nodez.block(**dict(
+                {'data-step': s.branch_step},
+                classes=['horizontal-line'],
+                style=f'width: {width}%; margin-left: {margin}%;'))
+            for child in s.children:
+                node += self.build_struct_child(s, child)
+        if not is_child:
+            node += self.nodez.block(classes=['clear'])
+        return node
+
+    def build_struct_child(self, s: TreeStruct, child: TreeStruct, /):
+        width = (100 / s.width) * child.width
+        node = self.nodez.block(**dict({
+            'data-step': child.step,
+            'data-current-width-pct': f'{width}%'},
+            classes=['child-wrapper'],
+            style=f'width: {width}%;'))
+        node += self.build_struct_node(child)
+        return node
+
+    def build_node_segment(self, s: TreeStruct,/):
+        is_child = not s.root
+        node = self.nodez.block(classes=['node-segment'])
+        if is_child:
+            attrs = dict({'data-step': s.step}, classes=['vertical-line'])
+            node += self.nodez.block(**attrs)
+        for n, step in zip(s.nodes, s.ticksteps):
+            node += self.build_node_node(n, step)
+        return node
+
+    def build_node_node(self, n: Node, tickstep: int, /):
+        is_ticked = getattr(n, 'ticked', False)
+        classes = qset({'node'})
+        if is_ticked:
+            classes.add('ticked')
+        attrs = dict(id=f'node_{n.id}', classes=classes)
+        attrs.update({'data-node-id': n.id, 'data-step': n.step})
+        if is_ticked:
+            attrs['data-ticked-step'] = tickstep
+        node = self.nodez.block(**attrs)
+        ...
+        return node
+
+    def build_props_node(self, n: Node, tickstep: int, /):
+        is_ticked = getattr(n, 'ticked', False)
+        classes = qset(('node-props'))
+        if is_ticked:
+            classes.add('ticked')
+        node = self.nodes.inline(
+            classes=classes)
+        if n.has('sentence'):
+            ...
+            if n.has('world'):
+                ...
+        if n.has('designated'):
+            classes = qset(('designated'))
+            if n['designated']:
+                classes.add('designated')
+            else:
+                classes.add('undesignated')
+            node == self.nodes.inline(classes=classes)
+        if n.is_access:
+            ...
+        if n.has('ellipsis'):
+            node += self.nodes.inline(classes=['ellipsis'])
+        if n.has('is_flag'):
+            node += self.nodes.inline(
+                classes=['flag', n['flag']],
+                title=n['info'])
+        return node
+
+    def get_struct_classes(self, s: TreeStruct, /):
+        yield 'structure'
+        if s.root:
+            yield 'root'
+        yield from (c for c in self.struct_flag_classnames if s.get(c))

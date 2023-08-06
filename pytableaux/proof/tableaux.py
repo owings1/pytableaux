@@ -1205,6 +1205,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
         if track is None:
             track = dict(pos = 1, depth = 0, distinct_nodes = 0, root = s)
+            s.root = True
         else:
             track['pos'] += 1
 
@@ -1321,7 +1322,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 class TreeStruct(dictns):
     'Recursive tree structure representation of a tableau.'
 
-    root: bool
+    root: bool = False
     
     nodes: list[Node]
     "The nodes on this structure."

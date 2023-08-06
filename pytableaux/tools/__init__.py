@@ -77,6 +77,7 @@ EMPTY_SEQ = ()
 EMPTY_SET = frozenset()
 NOARG = object()
 WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
+_KT = TypeVar('_KT')
 _Self = TypeVar('_Self')
 _T = TypeVar('_T')
 _VT = TypeVar('_VT')
@@ -712,7 +713,7 @@ class KeySetAttr:
         return not hasattr(cls, name)
 
 # class MapCover(Mapping, abcs.Copyable, immutcopy = True):
-class MapCover(Mapping):
+class MapCover(Mapping[_KT, _VT]):
     'Mapping reference.'
 
     __slots__ = ('__getitem__', '_cov_mapping')
@@ -767,6 +768,7 @@ class dictns(dictattr):
 class PathedDict(dict):
 
     separator: str = ':'
+    default = dict
 
     __slots__ = EMPTY_SET
 
@@ -774,7 +776,7 @@ class PathedDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError:
-            if not isinstance(key, str):
+            if not isinstance(key, str) or self.separator not in key:
                 raise
         key, *keys = key.split(self.separator)
         obj = super().__getitem__(key)
@@ -785,11 +787,14 @@ class PathedDict(dict):
     def __setitem__(self, key, value):
         if not isinstance(key, str) or self.separator not in key:
             return super().__setitem__(key, value)
-        keys = key.split(self.separator)
-        last = keys.pop()
+        path = key.split(self.separator)
+        last = path.pop()
         obj = self
-        for key in keys:
-            obj = obj.setdefault(key, {})
+        for key in path:
+            try:
+                obj = obj[key]
+            except KeyError:
+                obj = self.setdefault(key, self.default())
         obj[last] = value
 
 from .hybrids import EMPTY_QSET as EMPTY_QSET

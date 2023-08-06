@@ -26,6 +26,9 @@ import html
 import itertools
 from typing import TYPE_CHECKING, NamedTuple
 
+import docutils.writers._html_base
+import sphinx.addnodes
+import sphinx.writers.html5
 from docutils import nodes
 from docutils.nodes import Element
 from sphinx.application import Sphinx
@@ -37,8 +40,9 @@ from . import ConfKey
 
 if TYPE_CHECKING:
 
-    from pytableaux.tools.doc.nodez import BaseTranslator
-
+    class BaseTranslator(sphinx.writers.html5.HTML5Translator, docutils.writers._html_base.HTMLTranslator, nodes.NodeVisitor):
+        # body: list[str]
+        document: sphinx.addnodes.document
 
 __all__ = (
     'sentence',
@@ -130,7 +134,8 @@ def setup(app: Sphinx):
 
     app.set_translator('html', HTML5Translator, True)
 
-    formats = {'text', 'latex', 'man', 'texinfo'}.union(translators)
+    formats = {'text', 'latex', 'man', 'texinfo'}
+    formats.update(translators)
     formats.discard('html')
     noops =   dict(zip(formats, itertools.repeat((_noop, _noop))))
     inlines = dict(zip(formats, itertools.repeat((__visit_inline, __depart_inline))))

@@ -8,4 +8,4 @@ classes
 -------
 
 .. autoclass:: LexWriter
-    :members: write
+    :members: __call__

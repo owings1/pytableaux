@@ -91,7 +91,7 @@ class TestStandard(BaseCase):
     # def test_write_parameter_not_impl_base_param(self):
     #     param = Parameter(0, 0)
     #     with pytest.raises(TypeError):
-    #         std.write(param)
+    #         std(param)
 
     def test_write_subscript_html(self):
 
@@ -107,7 +107,7 @@ class TestStandard(BaseCase):
     #     operators['Schmoogation'] = 3
     #     with pytest.raises(NotImplementedError):
     #         try:
-    #             std.write(Operated('Schmoogation', [parse('a'), parse('a'), parse('a')]))
+    #             std(Operated('Schmoogation', [parse('a'), parse('a'), parse('a')]))
     #         except:
     #             del operators['Schmoogation']
     #             raise
@@ -135,7 +135,7 @@ class TestHtml(BaseCase):
     def test_write_no_arg(self):
         tab = Tableau('FDE')
         tab.build()
-        res = htm.write(tab)
+        res = htm(tab)
 
     def test_write_std_fde_1(self):
         arg = examples.argument('Addition')
