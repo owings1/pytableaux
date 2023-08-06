@@ -29,10 +29,13 @@ from dataclasses import dataclass
 from itertools import filterfalse, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import Callable
+from typing import TYPE_CHECKING, Callable, Collection, Literal, TypeVar
 
 from ..errors import Emsg, check
 from . import abcs, closure, dund
+
+if TYPE_CHECKING:
+    from typing import overload
 
 # Allowed local imports: errors, tools, tools.abcs
 
@@ -40,6 +43,8 @@ __all__ = (
     'HookConn',
     'HookProvider',
     'hookutil')
+
+_T = TypeVar('_T')
 
 class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
     'Mapping view and query API for hook provider.'
@@ -188,6 +193,22 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
     @staticmethod
     def provider_info(provider):
         return HookProvider(provider)
+
+    if TYPE_CHECKING:
+        _UserInfo = Mapping[type, Mapping[str, Callable]]
+        _ProviderInfo = Mapping[str, Collection[str]]|Literal[abcs.abcf.inherit]
+        @staticmethod
+        @overload
+        def init_provider(provider: type[_T]) -> type[_T]: ...
+        @staticmethod
+        @overload
+        def init_provider(provider: type[_T], initial: _ProviderInfo) -> type[_T]: ...
+        @staticmethod
+        @overload
+        def init_user(user: type[_T]) -> type[_T]: ...
+        @overload
+        @staticmethod
+        def init_user(user: type[_T], initial: _UserInfo) -> type[_T]: ...
 
     @abcs.abcf.before
     def prepare(ns: dict, bases): # type: ignore

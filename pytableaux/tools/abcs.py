@@ -26,6 +26,7 @@ import enum as _enum
 import functools
 import itertools
 import operator as opr
+from collections import deque
 from collections.abc import Mapping, Set
 from enum import Enum, Flag
 from enum import auto as eauto
@@ -73,7 +74,7 @@ class Eset(frozenset, Enum):
 
     clean_methods = hook_methods.copy()
 
-def _em_fix_name_value(Class):
+def _em_fix_name_value(Class: type[_T]) -> type[_T]:
     # cache attribute for flag enum.
     if callable(getattr(Class, '__invert__', None)):
         Class._invert_ = None # type: ignore
@@ -87,7 +88,7 @@ def _em_fix_name_value(Class):
     # Compatible as decorator.
     return Class
 
-def _em_clean_methods(Class, /, *, deleter = type.__delattr__):
+def _em_clean_methods(Class: type[_T], /, *, deleter = type.__delattr__) -> type[_T]:
     for hname in filter(Class.__dict__.__contains__, Eset.clean_methods):
         deleter(Class, hname)
     return Class
@@ -495,7 +496,7 @@ def clsafter(Class: type[_T], ns: dict|None = None, /, skipflags = False, delete
     'After class init routine. Usable as standalone class decorator.'
     if ns is None:
         ns = Class.__dict__.copy()
-    todelete = set()
+    todelete = deque(maxlen=len(ns))
     if not skipflags:
         for name, member in ns.items():
             # Finish calling the 'after' hooks before anything else, since
@@ -504,7 +505,7 @@ def clsafter(Class: type[_T], ns: dict|None = None, /, skipflags = False, delete
             if mf is not mf.blank and mf in mf._cleanable:
                 if mf.after in mf:
                     member(Class)
-                todelete.add(name)
+                todelete.append(name)
     for name in todelete:
         deleter(Class, name)
     return Class
@@ -710,8 +711,15 @@ class ItemMapEnum(Enum):
     Implementations should always call ``super().__init__()`` if it is overridden.
     """
 
-    __slots__ = ('__iter__', '__getitem__', '__len__', '__reversed__',
-                 'name', 'value', '_name_', '_value_')
+    __slots__ = (
+        '__iter__',
+        '__getitem__',
+        '__len__',
+        '__reversed__',
+        'name',
+        'value',
+        '_name_',
+        '_value_')
 
     def __init__(self, *args):
         if len(args) == 1 and isinstance(args[0], Mapping):

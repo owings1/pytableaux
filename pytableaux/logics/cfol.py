@@ -16,8 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from pytableaux.lang import Quantified
-
+from ..lang import Quantified
 from . import cpl as CPL
 from . import k as K
 

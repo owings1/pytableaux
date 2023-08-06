@@ -25,7 +25,7 @@ import os
 from abc import abstractmethod as abstract
 from collections import deque
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Mapping, Self
+from typing import TYPE_CHECKING, Mapping, Self, TypeVar
 
 import jinja2
 
@@ -34,9 +34,10 @@ from ..errors import Emsg, check
 from ..lang import LexWriter, Notation
 from ..tools import EMPTY_MAP, abcs, closure, qset
 
+_T = TypeVar('_T')
+
 if TYPE_CHECKING:
     from . import Tableau, TreeStruct
-    from pytableaux.typing import _T # type: ignore
 
 __all__ = (
     'HtmlTabWriter',

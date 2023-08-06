@@ -26,8 +26,8 @@ from abc import abstractmethod as abstract
 from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Mapping,
-                    Optional, Sequence, final)
+from typing import (Callable, ClassVar, Iterable, Mapping, Optional, Sequence,
+                    TypeVar, final)
 
 from .. import __docformat__
 from ..errors import Emsg, check
@@ -43,10 +43,6 @@ from . import (BranchEvent, BranchStat, RuleEvent, RuleMeta, RuleState,
                StepEntry, TabEvent, TabFlag, TabStatKey, TabTimers)
 from .common import Branch, Node, Target
 
-if TYPE_CHECKING:
-    from pytableaux.typing import _F  # type: ignore
-
-
 __all__ = (
     'Rule',
     'RuleGroup',
@@ -57,6 +53,7 @@ __all__ = (
 
 NOARG = object()
 NOGET = object()
+_F = TypeVar('_F', bound=Callable)
 
 # ----------------------------------------------
 

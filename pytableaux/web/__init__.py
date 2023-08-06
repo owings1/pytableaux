@@ -28,8 +28,8 @@ from enum import Enum, auto
 from types import MappingProxyType as MapProxy
 from typing import Any, Mapping
 
-from pytableaux import __docformat__, package, tools
-from pytableaux.tools.abcs import ItemMapEnum
+from .. import __docformat__, package, tools
+from ..tools.abcs import ItemMapEnum
 
 __all__ = ()
 

@@ -24,10 +24,9 @@ from __future__ import annotations
 from abc import abstractmethod as abstract
 from typing import Generator, Iterable, final
 
-from pytableaux.lang import Constant, Sentence
-from pytableaux.proof import (Branch, Node, NodeAttr, Rule, Target, adds,
-                              filters, group)
-from pytableaux.tools import EMPTY_SET
+from ..lang import Constant, Sentence
+from ..tools import EMPTY_SET
+from . import Branch, Node, NodeAttr, Rule, Target, adds, filters, group
 
 __all__ = (
     'BaseClosureRule',
@@ -59,9 +58,8 @@ class ClosingRule(Rule):
         """
         raise NotImplementedError
 
-from pytableaux.proof.helpers import (AdzHelper, BranchTarget, FilterHelper,
-                                      MaxConsts, NodeConsts, NodeCount,
-                                      PredNodes, QuitFlag)
+from .helpers import (AdzHelper, BranchTarget, FilterHelper, MaxConsts,
+                      NodeConsts, NodeCount, PredNodes, QuitFlag)
 
 
 class NoopRule(Rule):

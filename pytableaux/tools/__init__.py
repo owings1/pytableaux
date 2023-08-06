@@ -21,6 +21,7 @@ pytableaux.tools
 """
 from __future__ import annotations
 
+import builtins
 import functools
 import itertools
 import keyword
@@ -33,7 +34,7 @@ from enum import Enum
 from operator import gt, lt, truth
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
-from typing import TypeVar, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 __all__ = (
     'absindex',
@@ -76,12 +77,29 @@ EMPTY_SEQ = ()
 EMPTY_SET = frozenset()
 NOARG = object()
 WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
-_F = TypeVar('_F', bound=Callable)
 _Self = TypeVar('_Self')
 _T = TypeVar('_T')
 
 if TYPE_CHECKING:
-    from pytableaux.typing import property # type: ignore
+    from typing import overload
+    class property(builtins.property, Generic[_Self, _T]):
+        fget: Callable[[_Self], Any] | None
+        fset: Callable[[_Self, Any], None] | None
+        fdel: Callable[[_Self], None] | None
+        @overload
+        def __init__(
+            self,
+            fget: Callable[[_Self], _T] | None = ...,
+            fset: Callable[[_Self, Any], None] | None = ...,
+            fdel: Callable[[_Self], None] | None = ...,
+            doc: str | None = ...,
+        ) -> None: ...
+        def getter(self, __fget: Callable[[_Self], _T]) -> property[_Self, _T]: ...
+        def setter(self, __fset: Callable[[_Self, Any], None]) -> property[_Self, _T]: ...
+        def deleter(self, __fdel: Callable[[_Self], None]) -> property[_Self, _T]: ...
+        def __get__(self, __obj: _Self, __type: type | None = ...) -> _T: ...
+        def __set__(self, __obj: _Self, __value: Any) -> None: ...
+        def __delete__(self, __obj: _Self) -> None: ...
 
 def closure(func: Callable[..., _T]) -> _T:
     """Closure decorator calls the argument and returns its return value.
@@ -319,13 +337,13 @@ class BaseMember:
             pass
 
     @property
-    def name(self):
+    def name(self) -> str:
         try:
             return self.__name__
         except AttributeError:
             return type(self).__name__
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if not hasattr(self, '__qualname__') or not callable(self):
             return object.__repr__(self)
         return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))

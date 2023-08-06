@@ -33,9 +33,9 @@ from collections import deque
 from types import MappingProxyType as MapProxy
 from typing import Any, Callable, Mapping, Sequence
 
-from pytableaux import errors
-from pytableaux.errors import Emsg, check
-from pytableaux.web import get_logger
+from .. import errors
+from ..errors import Emsg, check
+from . import get_logger
 
 re_email = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
 'Email regex.'

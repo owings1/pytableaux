@@ -19,15 +19,14 @@ from __future__ import annotations
 from types import MappingProxyType as MapProxy
 from typing import Any, Optional
 
-from pytableaux.errors import Emsg
-from pytableaux.lang import (Argument, Atomic, Constant, Operated, Operator,
-                             Predicate, Predicated, Quantified, Quantifier,
-                             Sentence)
-from pytableaux.logics import LogicType
-from pytableaux.models import BaseModel, ValueFDE
-from pytableaux.proof import (Branch, Node, Tableau, TableauxSystem, Target,
-                              adds, filters, group, rules, sdnode)
-from pytableaux.tools import closure, qsetf
+from ..errors import Emsg
+from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
+                    Predicated, Quantified, Quantifier, Sentence)
+from ..models import BaseModel, ValueFDE
+from ..proof import (Branch, Node, Tableau, TableauxSystem, Target, adds,
+                     filters, group, rules, sdnode)
+from ..tools import closure, qsetf
+from . import LogicType
 
 name = 'FDE'
 

@@ -41,8 +41,7 @@ if TYPE_CHECKING:
 __all__ = (
     'Branch',
     'Node',
-    'Target',
-)
+    'Target')
 
 _FIRST_CONST = Constant.first()
 

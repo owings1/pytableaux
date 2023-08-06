@@ -16,10 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from pytableaux.lang import Constant, Operator, Quantified, Quantifier
-from pytableaux.proof import Branch, Node, adds, group, sdnode
-from pytableaux.tools import maxceil
-
+from ..lang import Constant, Operator, Quantified, Quantifier
+from ..proof import Branch, Node, adds, group, sdnode
+from ..tools import maxceil
 from . import fde as FDE
 from . import k3 as K3
 

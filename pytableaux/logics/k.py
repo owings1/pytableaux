@@ -19,17 +19,17 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Callable, Optional, cast
 
-from pytableaux.errors import DenotationError, ModelValueError, check
-from pytableaux.lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
+from ..errors import DenotationError, ModelValueError, check
+from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
-from pytableaux.models import BaseModel, ValueCPL
-from pytableaux.proof import (Access, Branch, Node, Tableau, TableauxSystem, Target,
+from ..models import BaseModel, ValueCPL
+from ..proof import (Access, Branch, Node, Tableau, TableauxSystem, Target,
                      adds, anode, filters, group, rules, swnode)
-from pytableaux.proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
+from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
                              WorldIndex)
-from pytableaux.tools import EMPTY_SET, closure, substitute
-from pytableaux.logics import LogicType
+from ..tools import EMPTY_SET, closure, substitute
+from . import LogicType
 from . import fde as FDE
 
 name = 'K'

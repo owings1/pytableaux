@@ -16,9 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from pytableaux.lang import Operator as Operator
-from pytableaux.proof import Branch, Node, adds, group, sdnode
-
+from ..lang import Operator as Operator
+from ..proof import Branch, Node, adds, group, sdnode
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W

@@ -24,8 +24,8 @@ from typing import Any, Mapping, Sequence
 
 import simplejson as json
 
-from pytableaux.errors import Emsg
-from pytableaux.lang import Lexical
+from ..errors import Emsg
+from ..lang import Lexical
 
 
 def json_default(obj: Any):

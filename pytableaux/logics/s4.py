@@ -18,9 +18,8 @@ from __future__ import annotations
 
 from typing import Generator
 
-from pytableaux.proof import Access, Branch, Node, Target, adds, anode, group
-from pytableaux.proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-
+from ..proof import Access, Branch, Node, Target, adds, anode, group
+from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from . import k as K
 from . import t as T
 
