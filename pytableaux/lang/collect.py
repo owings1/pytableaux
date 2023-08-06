@@ -25,7 +25,7 @@ from __future__ import annotations
 import operator as opr
 from collections.abc import Sequence
 from itertools import repeat
-from typing import Any, Iterable, TypeVar, Self
+from typing import Any, Iterable
 
 from .. import __docformat__, tools
 from ..errors import Emsg, check
@@ -39,7 +39,6 @@ __all__ = (
 
 NOARG = object()
 EMPTY_IT = iter(())
-_T = TypeVar('_T')
 
 class ArgumentMeta(LangCommonMeta):
     'Argument Metaclass.'

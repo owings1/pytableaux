@@ -517,16 +517,23 @@ class ProveView(FormView):
         self.is_models = False
         self.is_color = False
         self.selected_tab = 'input'
-        api_payload = None
+        self.api_payload = None
+
+    def validate_form(self, form_data):
         try:
-            api_payload = json.loads(self.kw['api-json'])
+            self.api_payload = json.loads(form_data['api-json'])
         except Exception as err:
-            self.errors['api-json'] = err
-        self.api.setup(api_payload)
+            return {'api-json': err}
+        return True
+
+    def GET(self):
+        self.api.setup(None)
+        return super().GET()
 
     def POST(self):
         if not self.validate():
             return
+        self.api.setup(self.api_payload)
         try:
             self.resp_data = self.api.POST()
         except Exception as err:

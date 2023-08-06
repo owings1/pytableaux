@@ -130,7 +130,8 @@ class Emsg(Enum):
     BadLogicModule = ValueError, "{0} not a value logic module", 1
 
     MissingAttribute = MissingAttributeError, '{}', 1
-    AttributeConflict = AttributeConflictError,
+    AttributeConflict = (AttributeConflictError,
+        "Attribute conflict for '{0}': '{1}' conflicts with existing '{2}'", 3)
 
     MissingKey = MissingKeyError,
     DuplicateKey = DuplicateKeyError,

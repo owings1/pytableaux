@@ -341,7 +341,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         "The set of constants on the branch."
         return SetView(self.__constants)
 
-    def has(self, mapping, /) -> bool:
+    def has(self, mapping: Mapping, /) -> bool:
         """Whether there is a node on the branch that matches the given properties.
         
         Args:
@@ -354,7 +354,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
             return True
         return False
 
-    def any(self, mappings, /) -> bool:
+    def any(self, mappings: Iterable[Mapping], /) -> bool:
         """Check a list of property mappings against the :attr:`has` method.
         
         Args:
@@ -368,7 +368,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
                 return True
         return False
 
-    def all(self, mappings, /) -> bool:
+    def all(self, mappings: Iterable[Mapping], /) -> bool:
         """Check a list of property mappings against the :attr:`has` method.
         
         Args:
@@ -384,7 +384,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
                 return False
         return True
 
-    def find(self, mapping, /):
+    def find(self, mapping: Mapping, /) -> Node|None:
         """Find the first node on the branch that matches the given properties.
 
         Args:
@@ -396,7 +396,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         for node in self.search(mapping, limit = 1):
             return node
 
-    def search(self, mapping, /, limit = None):
+    def search(self, mapping: Mapping, /, limit: int|None = None):
         """
         Search the nodes on the branch that match the given properties, up to the
         limit, if given.
@@ -416,7 +416,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
                 n += 1
                 yield node
 
-    def append(self, node, /):
+    def append(self, node: Node|Mapping, /):
         """Append a node.
 
         Args:
@@ -450,7 +450,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         self.emit(BranchEvent.AFTER_ADD, node, self)
         return self
 
-    def extend(self, nodes, /):
+    def extend(self, nodes: Iterable[Node|Mapping], /):
         """Add multiple nodes.
 
         Args:
@@ -465,7 +465,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         for _ in map(self.append, nodes): pass
         return self
 
-    def tick(self, node: Node):
+    def tick(self, node: Node) -> None:
         """Tick a node for the branch.
         
         Args:
@@ -489,7 +489,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
             self.emit(BranchEvent.AFTER_CLOSE, self)
         return self
 
-    def is_ticked(self, node, /):
+    def is_ticked(self, node: Node, /) -> bool:
         """Whether the node is ticked relative to the branch.
 
         Args:
@@ -500,7 +500,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         """
         return node in self.__ticked
 
-    def new_constant(self):
+    def new_constant(self) -> Constant:
         """Return a new constant that does not appear on the branch.
 
         Returns:
@@ -508,7 +508,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         """
         return self.__nextconst
 
-    def new_world(self):
+    def new_world(self) -> int:
         """Return a new world that does not appear on the branch.
 
         Returns:

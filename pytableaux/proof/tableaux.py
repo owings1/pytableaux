@@ -26,8 +26,8 @@ from abc import abstractmethod as abstract
 from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (Callable, ClassVar, Iterable, Mapping, Optional, Sequence,
-                    TypeVar, final)
+from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Mapping,
+                    Optional, Sequence, TypeVar, final)
 
 from .. import __docformat__
 from ..errors import Emsg, check
@@ -39,8 +39,8 @@ from ..tools import (EMPTY_SET, SeqCover, absindex, closure, dictns,
 from ..tools.events import EventEmitter
 from ..tools.linked import linqset
 from ..tools.timing import Counter, StopWatch
-from . import (BranchEvent, BranchStat, RuleEvent, RuleMeta, RuleState,
-               StepEntry, TabEvent, TabFlag, TabStatKey, TabTimers)
+from . import (BranchEvent, BranchStat, RuleEvent, RuleHelper, RuleMeta,
+               RuleState, StepEntry, TabEvent, TabFlag, TabStatKey, TabTimers)
 from .common import Branch, Node, Target
 
 __all__ = (
@@ -54,7 +54,12 @@ __all__ = (
 NOARG = object()
 NOGET = object()
 _F = TypeVar('_F', bound=Callable)
+_T = TypeVar('_T')
+_RHT = TypeVar('_RHT', bound=RuleHelper)
 
+if TYPE_CHECKING:
+    from typing import overload
+    from ..tools import TypeInstMap
 # ----------------------------------------------
 
 class Rule(EventEmitter, metaclass = RuleMeta):
@@ -91,7 +96,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     opts: Mapping
     "The options."
 
-    helpers: Mapping
+    helpers: TypeInstMap[RuleHelper]
     "Helper instances mapped by class."
 
     timers: Mapping[str, StopWatch]
@@ -107,6 +112,10 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         'state', '__getitem__')
 
     __iter__ = None
+
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, key: type[_RHT]) -> _RHT: ...
 
     def __new__(cls, *args, **kw):
         inst = super().__new__(cls)

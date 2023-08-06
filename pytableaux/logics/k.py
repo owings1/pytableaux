@@ -575,7 +575,6 @@ class TabRules(LogicType.TabRules):
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
         """
-        modal = True
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):
             nnode = self._find_closing_node(node, branch)
@@ -605,7 +604,6 @@ class TabRules(LogicType.TabRules):
         A branch closes when a sentence of the form :s:`~a = a` appears on the
         branch *at any world*.
         """
-        modal = True
         negated = True
         predicate = Predicate.System.Identity
 
@@ -617,10 +615,9 @@ class TabRules(LogicType.TabRules):
                 self[FilterHelper].release(node, branch)
 
         def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
-            if self[FilterHelper](node, branch):
-                if len(self.sentence(node).paramset) == 1:
-                    return True
-                return False
+            return (
+                self[FilterHelper](node, branch) and
+                len(self.sentence(node).paramset) == 1)
 
         @classmethod
         def example_nodes(cls) -> tuple[dict]:
@@ -633,7 +630,6 @@ class TabRules(LogicType.TabRules):
         A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.
         """
-        modal = True
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):
             if self.node_will_close_branch(node, branch):

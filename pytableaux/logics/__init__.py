@@ -388,7 +388,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
             super().update(upd)
 
 
-def key_category_order(logic) -> int:
+def key_category_order(logic: LogicType) -> int:
     "Returns the category order from the logic, e.g. for sorting."
     return logic.Meta.category_order
 

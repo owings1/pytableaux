@@ -226,11 +226,11 @@ class TabRules(B3E.TabRules):
         branching   = 1
 
         def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
+            lhs, rhs = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(~s.lhs, not d), sdnode( s.rhs, not d)),
-                group(sdnode( s.lhs, not d), sdnode(~s.rhs, not d)))
+                group(sdnode(~lhs, not d), sdnode( rhs, not d)),
+                group(sdnode( lhs, not d), sdnode(~rhs, not d)))
 
     class MaterialBiconditionalUndesignated(ConjunctionUndesignated):
         """

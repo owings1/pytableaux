@@ -34,7 +34,7 @@ from enum import Enum
 from operator import gt, lt, truth
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Mapping
 
 __all__ = (
     'absindex',
@@ -79,6 +79,7 @@ NOARG = object()
 WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
 _Self = TypeVar('_Self')
 _T = TypeVar('_T')
+_VT = TypeVar('_VT')
 
 if TYPE_CHECKING:
     from typing import overload
@@ -100,6 +101,19 @@ if TYPE_CHECKING:
         def __get__(self, __obj: _Self, __type: type | None = ...) -> _T: ...
         def __set__(self, __obj: _Self, __value: Any) -> None: ...
         def __delete__(self, __obj: _Self) -> None: ...
+    class TypeInstMap(Mapping[type[_VT], _VT]):
+        @overload
+        def __getitem__(self, key: type[_T]) -> _T: ...
+        @overload
+        def get(self, key: type[_T]) -> _T: ...
+        @overload
+        def get(self, key: Any, default: type[_T]) -> _T: ...
+        @overload
+        def copy(self:_T) -> _T: ...
+        @overload
+        def setdefault(self, key: type[_T], value: Any) -> _T: ...
+        @overload
+        def pop(self, key: type[_T]) -> _T: ...
 
 def closure(func: Callable[..., _T]) -> _T:
     """Closure decorator calls the argument and returns its return value.

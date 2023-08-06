@@ -21,13 +21,13 @@ pytableaux.proof
 """
 from __future__ import annotations
 
-from abc import abstractmethod as abstract
+from abc import abstractmethod
 from enum import Enum, Flag, auto
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, NamedTuple, Sequence, TypeVar
 
 from .. import __docformat__
-from ..lang import Operator, Predicate, Quantifier
+from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
 from ..tools import EMPTY_MAP, EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from ..tools.timing import Counter, StopWatch
@@ -72,7 +72,6 @@ class HelperAttr(str, Enum):
 
 class RuleAttr(str, Enum):
     'Special ``Rule`` class attribute names.'
-
     Helpers = 'Helpers'
     "Rule helper classes."
     Timers = 'Timers'
@@ -90,13 +89,21 @@ class RuleAttr(str, Enum):
     Legend = 'legend'
     "Rule legend"
 
+class RuleLegendAttr(str, Enum):
+    negated = 'negated'
+    operator = 'operator'
+    quantifier = 'quantifier'
+    predicate = 'predicate'
+    designation = 'designation'
+    closure = 'closure'
+
+
 class ProofAttr(str, Enum):
 
     def __str__(self):
         return self.value
 
 class NodeAttr(ProofAttr):
-
     sentence = 'sentence'
     designation = 'designated'
     designated = designation
@@ -290,10 +297,11 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
     'Tableaux system base class.'
 
     Rules: LogicType.TabRules
+    modal: bool|None = None
 
     @classmethod
-    @abstract
-    def build_trunk(cls, tableau, argument, /) -> None:
+    @abstractmethod
+    def build_trunk(cls, tableau: Tableau, argument: Argument, /) -> None:
         """Build the trunk for an argument on the tableau.
         
         Args:
@@ -303,7 +311,7 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         raise NotImplementedError
 
     @classmethod
-    def branching_complexity(cls, node, /) -> int:
+    def branching_complexity(cls, node: Node, /) -> int:
         """Compute how many new branches would be added if a rule were to be
         applied to the node.
 
@@ -328,9 +336,10 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         for classes in Rules.rule_groups:
             rules.groups.create().extend(classes)
 
-
     @classmethod
     def initialize(cls, RulesClass=None, /, *, modal=None):
+        if modal is None:
+            modal = cls.modal
         def dec(RulesClass:type[LogicType.TabRules]|_TT) -> _TT:
             RulesClass.all_rules = RulesClass.closure_rules + tuple(
                 r for g in RulesClass.rule_groups for r in g)
@@ -338,7 +347,8 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
             for rulecls in RulesClass.all_rules:
                 if modal is not None:
                     setattr(rulecls, RuleAttr.Modal, modal)
-                    _disable_filter(rulecls, filters.ModalNode)
+                    if not modal:
+                        _disable_filter(rulecls, filters.ModalNode)
             return RulesClass
         if RulesClass:
             return dec(RulesClass)
@@ -410,7 +420,7 @@ class RuleMeta(abcs.AbcMeta):
                 configs[helpercls] = setup(Class, ...)
         if modal is False:
             _disable_filter(Class, filters.ModalNode)
-        setattr(Class, RuleAttr.Legend, _build_legend(Class))
+        setattr(Class, RuleAttr.Legend, tuple(_build_legend(Class)))
         return Class
 
 def _disable_filter(rulecls, filtercls):
@@ -428,29 +438,24 @@ def _disable_filter(rulecls, filtercls):
 
 def _build_legend(rulecls):
     """Build rule class legend."""
-
-    legend = {}
-
-    if getattr(rulecls, 'negated', None):
-        legend['negated'] = Operator.Negation
-
-    if (oper := getattr(rulecls, 'operator', None)):
-        legend['operator'] = Operator[oper]
-    elif (quan := getattr(rulecls, 'quantifier', None)):
-        legend['quantifier'] = Quantifier[quan]
-    elif (pred := getattr(rulecls, 'predicate', None)):
-        legend['predicate'] = Predicate(pred)
-
-    if (des := getattr(rulecls, 'designation', None)) is not None:
-        legend['designation'] = des
-
-    try:
-        if issubclass(rulecls, ClosingRule):
-            legend['closure'] = True
-    except NameError:
-        pass
-
-    return tuple(legend.items())
+    getters = {
+        RuleLegendAttr.operator: Operator,
+        RuleLegendAttr.quantifier: Quantifier,
+        RuleLegendAttr.predicate: Predicate}
+    for attr in RuleLegendAttr:
+        value = getattr(rulecls, attr, None)
+        if attr is RuleLegendAttr.negated:
+            if value:
+                yield attr, Operator.Negation
+        elif attr is RuleLegendAttr.designation:
+            if value is not None:
+                yield attr, value
+        elif attr is RuleLegendAttr.closure:
+            if value:
+                yield attr, True
+        elif attr in getters:
+            if value:
+                yield attr, getters[attr](value)
 
 def group(*items):
     """Tuple builder.

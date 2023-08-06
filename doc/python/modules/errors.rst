@@ -7,8 +7,6 @@
 
     .. autoclass::  IllegalStateError
 
-    .. autoclass::  RequestDataError
-
     .. autoclass::  ProofTimeoutError
 
     .. autoclass::  ParseError

@@ -32,8 +32,10 @@ from ..lang import Constant, Operator, Predicated, Sentence
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, closure, minfloor, wraps
 from . import (Access, Branch, Node, NodeAttr, PropMap, Rule, RuleAttr,
                RuleEvent, RuleHelper, TabEvent, Tableau, Target, filters)
+from .filters import NodeCompare
 
 if TYPE_CHECKING:
+    from ..tools import TypeInstMap
     from .rules import ClosingRule
 
 _KT = TypeVar('_KT')
@@ -520,7 +522,7 @@ class FilterHelper(FilterNodeCache):
     """
     __slots__ = ('filters', 'pred')
 
-    filters: Mapping
+    filters: TypeInstMap[NodeCompare]
     "Mapping from ``NodeCompare`` class to instance."
 
     pred: Callable

@@ -22,9 +22,9 @@ pytableaux.proof.rules
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
-from typing import Generator, Iterable, final
+from typing import Generator, Generic, Iterable, TypeVar, final
 
-from ..lang import Constant, Sentence
+from ..lang import Constant, Operated, Predicated, Quantified, Sentence
 from ..tools import EMPTY_SET
 from . import Branch, Node, NodeAttr, Rule, Target, adds, filters, group
 
@@ -40,11 +40,13 @@ __all__ = (
     'QuantifiedSentenceRule',
     'Rule')
 
+_ST = TypeVar('_ST', bound=Sentence)
 FIRST_CONST_SET = frozenset({Constant.first()})
 
 class ClosingRule(Rule):
     'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
-    
+
+    closure = True
     _defaults = dict(is_rank_optim = False)
 
     @final
@@ -80,7 +82,7 @@ class NoopRule(Rule):
 
 class BaseClosureRule(ClosingRule):
 
-    Helpers = BranchTarget,
+    Helpers = group(BranchTarget)
 
     def _get_targets(self, branch: Branch, /) -> tuple[Target]:
         """Return the cached target from ``BranchTarget`` helper as a
@@ -88,7 +90,7 @@ class BaseClosureRule(ClosingRule):
         """
         target = self[BranchTarget][branch]
         if target is not None:
-            return target,
+            return group(target)
 
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
         """For calculating a target's closure score. This default
@@ -119,7 +121,7 @@ class BaseClosureRule(ClosingRule):
 
 class BaseSimpleRule(Rule):
 
-    Helpers = AdzHelper,
+    Helpers = group(AdzHelper)
     ticking = True
 
     def _apply(self, target: Target, /) -> None:
@@ -132,35 +134,35 @@ class BaseSimpleRule(Rule):
 
 class BaseNodeRule(BaseSimpleRule):
 
-    Helpers = FilterHelper,
+    Helpers = group(FilterHelper)
     #: (FilterHelper) Whether to ignore all ticked nodes.
     ignore_ticked = True
 
     def example_nodes(self) -> tuple[dict]:
         'Delegates to ``(FilterHelper.example_node(),)``'
-        return self[FilterHelper].example_node(),
+        return group(self[FilterHelper].example_node())
 
-class BaseSentenceRule(BaseNodeRule):
+class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
 
-    NodeFilters = filters.SentenceNode,
+    NodeFilters = group(filters.SentenceNode)
 
     negated    = None
     operator   = None
     quantifier = None
     predicate  = None
 
-    def sentence(self, node: Node, /) -> Sentence:
+    def sentence(self, node: Node, /) -> _ST:
         'Delegates to ``filters.SentenceNode`` of ``FilterHelper``.'
         return self[FilterHelper].filters[filters.SentenceNode].sentence(node)
 
-class PredicatedSentenceRule(BaseSentenceRule):
+class PredicatedSentenceRule(BaseSentenceRule[Predicated]):
 
-    Helpers = PredNodes,
+    Helpers = group(PredNodes)
 
-class QuantifiedSentenceRule(BaseSentenceRule):
+class QuantifiedSentenceRule(BaseSentenceRule[Quantified]):
     pass
 
-class OperatedSentenceRule(BaseSentenceRule):
+class OperatedSentenceRule(BaseSentenceRule[Operated]):
     pass
 
 class NarrowQuantifierRule(QuantifiedSentenceRule):
@@ -192,17 +194,13 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
 
     def _get_node_targets(self, node: Node, branch: Branch) -> Generator[dict, None, None]:
         unapplied = self[NodeConsts][branch][node]
-        unapplied_count = len(unapplied)
-        if len(branch.constants) and not unapplied_count:
+        if branch.constants and not unapplied:
             # Do not release the node from filters, since new constants can appear.
             return
-        if unapplied_count:
-            constants = unapplied
-        else:
-            constants = FIRST_CONST_SET
+        constants = unapplied or FIRST_CONST_SET
         for c in constants:
             nodes = self._get_constant_nodes(node, c, branch)
-            if unapplied_count or not branch.all(nodes):
+            if unapplied or not branch.all(nodes):
                 yield dict(adds = group(nodes), constant = c)
 
     @abstract

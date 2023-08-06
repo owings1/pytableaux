@@ -22,7 +22,7 @@ pytableaux.lang.writing
 from __future__ import annotations
 
 import itertools
-from abc import abstractmethod as abstract
+from abc import abstractmethod
 from types import DynamicClassAttribute as dynca
 from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar
@@ -195,7 +195,7 @@ class BaseLexWriter(LexWriter):
         LexType.Quantified : '_write_quantified',
         LexType.Operated   : '_write_operated'}
 
-    @abstract
+    @abstractmethod
     def _write_operated(self, item: Operated) -> str: ...
 
     def _strfor(self, *args, **kw) -> str:

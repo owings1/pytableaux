@@ -1,6 +1,20 @@
-{#
- #  Tableau main template.
- #}
+{#-
+   Tableau main template.
+
+
+    classes:
+       wrapper : tableau-wrapper
+       tableau : tableau
+       structure : structure [, root, has-open, has-closed, leaf, only-branch, closed, open]
+       node segment : node-sement
+       vertical line : vertical-line
+       horizontal line : horizontal-line
+       node : node [, ticked]
+       node props : node-props [, ticked]
+       inline : [sentence, world, designation, designated, undesignated,
+                 world1, world2, access, ellipsis, flag, <flag>]
+       misc : clear
+ -#}
 {%- from 'macros.jinja2' import sw with context -%}
 {%- if opts.inline_css %}
 <style>
