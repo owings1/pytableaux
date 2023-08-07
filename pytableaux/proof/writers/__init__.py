@@ -131,8 +131,7 @@ class TabWriterRegistry(MapCover[str, type[TabWriter]], MutableMapping[str, type
         def register(cls=NOARG, /, *, key=None, force=False):
             if cls is NOARG:
                 return lambda cls: register(cls, key=key, force=force)
-            cls = check.subcls(cls, TabWriter)
-            if abcs.isabstract(cls):
+            if abcs.isabstract(cls := check.subcls(cls, TabWriter)):
                 raise TypeError(f'Cannot register abstract class: {cls}')
             if key is None:
                 key = cls.format
@@ -177,31 +176,22 @@ class TabWriterRegistry(MapCover[str, type[TabWriter]], MutableMapping[str, type
 registry = TabWriterRegistry()
 "The default tableau writer class registry."
 
-
-class DocBuilder:
-
-    def __init__(self, tab: Tableau, /):
-        self.tab = tab
-        self.doc = nodes.document()
-
-    def build(self):
-        node = self.build_tree(self.tab.tree)
-        node += nodes.clear()
-        self.doc += node
-
-    def build_tree(self, tree: Tableau.Tree, /):
-        node = nodes.tree.for_object(tree)
-        node += nodes.node_segment.for_object(tree)
-        if tree.children:
-            node += nodes.vertical_line.for_object(tree.branch_step)
-            node += nodes.horizontal_line.for_object(tree)
-            for child in tree.children:
-                wrap = nodes.child_wrapper.for_objects(tree, child)
-                wrap += self.build_tree(child)
-                node += wrap
-        return node
-
-
 from . import jinja, nodes
 
 registry.update(jinja.registry)
+
+class DocBuilder:
+
+    node_types = MapProxy(dict(
+        document=nodes.document,
+        tree=nodes.tree,
+        clear=nodes.clear))
+
+    def __init__(self, tab: Tableau, /):
+        self.tab = tab
+        self.doc = self.node_types['document']()
+
+    def build(self):
+        node = self.node_types['tree'].for_object(self.tab.tree)
+        node += nodes.clear()
+        self.doc += node

@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, closure, minfloor, wraps
-from . import (Access, Branch, Node, NodeAttr, PropMap, Rule, RuleAttr,
+from . import (Access, Branch, Node, NodeKey, PropMap, Rule, RuleAttr,
                RuleEvent, RuleHelper, TabEvent, Tableau, Target, filters)
 from .filters import NodeCompare
 
@@ -176,7 +176,7 @@ class QuitFlag(BranchCache[bool]):
 
     def __after_apply(self, target: Target, /):
         # Event: RuleEvent.AFTER_APPLY
-        self[target.branch] = bool(target.get(NodeAttr.flag))
+        self[target.branch] = bool(target.get(NodeKey.flag))
 
 class BranchValueHook(BranchCache[_VT]):
     """Check each node as it is added, until a (truthy) value is returned,
@@ -242,7 +242,7 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
 
     def __after_apply(self, target: Target):
         # Event: RuleEvent.AFTER_APPLY
-        if target.get(NodeAttr.flag):
+        if target.get(NodeKey.flag):
             return
         counts = self[target.branch]
         sentence = target.sentence
@@ -289,7 +289,7 @@ class NodeCount(BranchCache[dict[Node, int]]):
 
     def __after_apply(self, target: Target, /):
         # Event: RuleEvent.AFTER_APPLY
-        if target.get(NodeAttr.flag):
+        if target.get(NodeKey.flag):
             return
         counts = self[target.branch]
         node = target.node
@@ -314,7 +314,7 @@ class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
 
     def __after_apply(self, target: Target, /):
         # Event: RuleEvent.AFTER_APPLY
-        if target.get(NodeAttr.flag):
+        if target.get(NodeKey.flag):
             return
         self[target.branch].add((target.node, target.world))
 
@@ -335,7 +335,7 @@ class UnserialWorlds(BranchCache[set[int]]):
     def __after_node_add(self, node: Node, branch: Branch, /):
         # Event: TabEvent.AFTER_NODE_ADD
         for w in node.worlds:
-            if node.get(NodeAttr.w1) == w or branch.has({NodeAttr.w1: w}):
+            if node.get(NodeKey.w1) == w or branch.has({NodeKey.w1: w}):
                 self[branch].discard(w)
             else:
                 self[branch].add(w)
@@ -514,7 +514,7 @@ class PredNodes(FilterNodeCache):
     __slots__ = EMPTY_SET
 
     def __call__(self, node: Node, _):
-        return type(node.get(NodeAttr.sentence)) is Predicated
+        return type(node.get(NodeKey.sentence)) is Predicated
 
 class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``
@@ -645,7 +645,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
 
     def __after_apply(self, target: Target, /):
         # Event: RuleEvent.AFTER_APPLY
-        if target.get(NodeAttr.flag):
+        if target.get(NodeKey.flag):
             return
         self[target.branch][target.node].discard(target.constant)
 
@@ -655,7 +655,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
             if node not in self[branch]:
                 # By tracking per node, we are tracking per world, a fortiori.
                 self[branch][node] = self.consts[branch].copy()
-        s = node.get(NodeAttr.sentence)
+        s = node.get(NodeKey.sentence)
         if s is None:
             return
         consts = s.constants - self.consts[branch]
@@ -681,10 +681,10 @@ class WorldConsts(BranchDictCache[int, set[Constant]]):
 
     def __after_node_add(self, node: Node, branch: Branch, /):
         # Event: TabEvent.AFTER_NODE_ADD
-        s = node.get(NodeAttr.sentence)
+        s = node.get(NodeKey.sentence)
         if s is None:
             return
-        world = node.get(NodeAttr.world)
+        world = node.get(NodeKey.world)
         if world is None:
             world = 0
         if world not in self[branch]:
@@ -753,7 +753,7 @@ class MaxConsts(dict[Branch, int], RuleHelper):
                     ``rule.name``, and ``n`` is the computed max allowed
                     constants for the branch.
         """
-        return PropMap.QuitFlag | {NodeAttr.info: (
+        return PropMap.QuitFlag | {NodeKey.info: (
             f'{self.rule.name}:{type(self).__name__}'
             f'({self.get(branch.origin, 1)})')}
 
@@ -781,7 +781,7 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         return max(1, len(branch.constants)) * max(1, needed) + 1
 
     def _compute_node(self, node: Node,/) -> int:
-        s = node.get(NodeAttr.sentence)
+        s = node.get(NodeKey.sentence)
         return len(s.quantifiers) if s else 0
 
 class MaxWorlds(dict[Branch, int], RuleHelper):
@@ -855,7 +855,7 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
                     ``rule.name``, and ``n`` is the computed max allowed
                     worlds for the branch.
         """
-        return PropMap.QuitFlag | {NodeAttr.info: (
+        return PropMap.QuitFlag | {NodeKey.info: (
             f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin)})')}
 
     def __after_trunk_build(self, tableau: Tableau, /):
@@ -873,9 +873,9 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
         # operators + 1.
         return 1 + len(branch.worlds) + sum(
             map(self.modals.__getitem__, (
-                node[NodeAttr.sentence]
+                node[NodeKey.sentence]
                 for node in filterfalse(branch.is_ticked, branch)
-                    if NodeAttr.sentence in node)))
+                    if NodeKey.sentence in node)))
 
     @classmethod
     def configure_rule(cls, rulecls, config, **kw):

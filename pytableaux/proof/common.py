@@ -31,7 +31,7 @@ from ..lang import Constant, Sentence
 from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs, dictattr,
                      isattrstr, isint, itemsiter, lazy, qset)
 from ..tools.events import EventEmitter
-from . import Access, BranchEvent, NodeAttr, PropMap
+from . import Access, BranchEvent, NodeKey, PropMap
 
 if TYPE_CHECKING:
 
@@ -77,25 +77,25 @@ class Node(MapCover, abcs.Copyable):
     @property
     def is_closure(self) -> bool:
         "Whether this is a closure node."
-        return self.get(NodeAttr.flag) == PropMap.ClosureNode[NodeAttr.flag]
+        return self.get(NodeKey.flag) == PropMap.ClosureNode[NodeKey.flag]
 
     @lazy.prop
-    def is_modal(self, /, *, names = (NodeAttr.world, NodeAttr.w1, NodeAttr.w2)) -> bool:
+    def is_modal(self, /, *, names = (NodeKey.world, NodeKey.w1, NodeKey.w2)) -> bool:
         "Whether this is a modal node."
         return self.any(*names)
 
     @lazy.prop
     def is_access(self) -> bool:
         "Whether this is a modal access node."
-        return self.has(NodeAttr.w1, NodeAttr.w2)
+        return self.has(NodeKey.w1, NodeKey.w2)
 
     @property
     def is_flag(self) -> bool:
         "Whether this is a flag node."
-        return self.has(NodeAttr.is_flag)
+        return self.has(NodeKey.is_flag)
 
     @lazy.prop
-    def worlds(self, /, *, names = (NodeAttr.world, NodeAttr.w1, NodeAttr.w2)):
+    def worlds(self, /, *, names = (NodeKey.world, NodeKey.w1, NodeKey.w2)):
         """
         The set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, and `world2`.
@@ -187,7 +187,7 @@ class NodeIndex(dict[str, dict[Any, set]], abcs.Copyable):
             value = None
             found = False
             if prop == self._ACCESSKEY:
-                if NodeAttr.w1 in props and NodeAttr.w2 in props:
+                if NodeKey.w1 in props and NodeKey.w2 in props:
                     value = Access.fornode(props)
                     found = True
             elif prop in props:
@@ -432,7 +432,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
             node = Node(node)
         self.__nodes.append(node)
 
-        s: Sentence = node.get(NodeAttr.sentence)
+        s: Sentence = node.get(NodeKey.sentence)
         if s is not None:
             if len(cons := s.constants):
                 if self.__nextconst in cons:

@@ -712,14 +712,13 @@ class KeySetAttr:
         'Return whether it is ok to set the attribute name.'
         return not hasattr(cls, name)
 
-# class MapCover(Mapping, abcs.Copyable, immutcopy = True):
 class MapCover(Mapping[_KT, _VT]):
     'Mapping reference.'
 
     __slots__ = ('__getitem__', '_cov_mapping')
     _cov_mapping: Mapping
 
-    def __init__(self, mapping, /):
+    def __init__(self, mapping: Mapping, /):
         if type(mapping) is not MapProxy:
             mapping = MapProxy(mapping)
         self._cov_mapping = mapping

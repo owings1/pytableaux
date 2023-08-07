@@ -31,7 +31,8 @@ from sphinx.ext.autodoc.importer import import_object
 
 from ...lang import LexType
 from ...logics import LogicType, registry
-from ...proof import Branch, ClosingRule, Node, Rule, RuleEvent, TabEvent
+from ...proof import (Branch, ClosingRule, Node, PropMap, Rule, RuleEvent,
+                      TabEvent)
 from ...proof import TableauxSystem as TabSys
 from ...proof import Target
 from ...proof.filters import SentenceCompare
@@ -252,11 +253,11 @@ def _methmro(meth: Any) -> list[str]:
 
 class EllipsisExampleHelper:
 
-    mynode = dict(ellipsis = True)
     closenodes: list[Node]
     applied: set[Branch]
     isclosure: bool
     istrunk: bool
+    mynode = PropMap.EllipsisNode
 
     def __init__(self, rule: Rule,/):
         self.rule = rule

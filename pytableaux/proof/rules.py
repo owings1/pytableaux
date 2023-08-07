@@ -26,7 +26,7 @@ from typing import Generator, Generic, Iterable, TypeVar, final
 
 from ..lang import Constant, Operated, Predicated, Quantified, Sentence
 from ..tools import EMPTY_SET
-from . import Branch, Node, NodeAttr, Rule, Target, adds, filters, group
+from . import Branch, Node, NodeKey, Rule, Target, adds, filters, group
 
 __all__ = (
     'BaseClosureRule',
@@ -171,12 +171,12 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch, /):
-        if self[MaxConsts].is_exceeded(branch, node.get(NodeAttr.world)):
+        if self[MaxConsts].is_exceeded(branch, node.get(NodeKey.world)):
             self[FilterHelper].release(node, branch)
             if self[QuitFlag].get(branch):
                 return
             fnode = self[MaxConsts].quit_flag(branch)
-            return adds(group(fnode), flag = fnode[NodeAttr.flag])
+            return adds(group(fnode), flag = fnode[NodeKey.flag])
         return self._get_node_targets(node, branch)
 
     @abstract
@@ -208,7 +208,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
         raise NotImplementedError
 
     def score_candidate(self, target: Target) -> float:
-        if target.get(NodeAttr.flag):
+        if target.get(NodeKey.flag):
             return 1.0
         if self[AdzHelper].closure_score(target) == 1:
             return 1.0

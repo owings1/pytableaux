@@ -69,7 +69,7 @@ class RuleAttr(str, _enum.Enum):
 class ProofAttr(str, _enum.Enum):
     pass
 
-class NodeAttr(ProofAttr):
+class NodeKey(ProofAttr):
     designation: str
     designated: str
     closure: str

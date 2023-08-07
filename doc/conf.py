@@ -263,7 +263,7 @@ html_show_sphinx = False
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = [
     '_static',
-    f'{package.root}/proof/templates/html/static',
+    f'{package.root}/proof/writers/templates/html/static',
 ]
 
 # Output file base name for HTML help builder.

@@ -21,12 +21,12 @@ pytableaux.proof.writers.elements
 
 """
 from __future__ import annotations
-
-from typing import Any, Callable, Iterable, SupportsIndex
+from typing import Any, Callable, Generic, Iterable, Self, SupportsIndex, TypeVar
 
 from ...errors import check
 from ...tools import EMPTY_MAP, EMPTY_QSET, EMPTY_SET, TransMmap, qset, qsetf
 
+_T = TypeVar('_T')
 
 class Attributes(TransMmap[str, Any]):
 
@@ -88,12 +88,38 @@ class Node:
         for child in self.children[:]:
             yield from child.iterate()
 
+class ObjectBuilder(Node, Generic[_T]):
+
+    __slots__ = EMPTY_SET
+
+    @classmethod
+    def for_object(cls, obj: _T, /) -> Self:
+        return cls(
+            *cls.get_obj_args(obj),
+            classes=cls.get_obj_classes(obj),
+            **dict(cls.get_obj_attributes(obj)))
+
+    @classmethod
+    def get_obj_args(cls, obj: _T, /) -> Iterable[Any]:
+        yield from cls.get_obj_children(obj)
+
+    @classmethod
+    def get_obj_children(cls, obj: _T, /) -> Iterable[Node]:
+        yield from EMPTY_SET
+
+    @classmethod
+    def get_obj_classes(cls, obj: _T, /) -> Iterable[str]:
+        yield from EMPTY_SET
+
+    @classmethod
+    def get_obj_attributes(cls, obj: _T, /) -> Iterable[tuple[str, Any]]:
+        yield from EMPTY_SET
+
 class Element(Node):
 
     default_classes = EMPTY_SET
     default_attributes = EMPTY_MAP
     sequence_attributes = frozenset(('ids', 'names', 'classes'))
-
 
     def __init__(self, *children, **attributes):
         self.children = qset()
@@ -182,3 +208,6 @@ class NodeVisitor:
 
     def dispatch_departure(self, node: Node):
         raise NotImplementedError
+
+class DefaultNodeVisitor(NodeVisitor):
+    ...

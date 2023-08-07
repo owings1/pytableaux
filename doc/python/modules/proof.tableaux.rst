@@ -46,8 +46,8 @@ classes
 
     .. automethod:: finish
 
-    .. autoclass:: Tree
-        :members:
+.. autoclass:: pytableaux.proof.tableaux::Tableau.Tree
+    :members:
 
 .. autoclass:: RulesRoot
     :members:

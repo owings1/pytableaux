@@ -96,40 +96,44 @@ class RuleLegendAttr(str, Enum):
     designation = 'designation'
     closure = 'closure'
 
-
 class ProofAttr(str, Enum):
 
     def __str__(self):
         return self.value
 
-class NodeAttr(ProofAttr):
+class NodeKey(ProofAttr):
     sentence = 'sentence'
-    designation = 'designated'
-    designated = designation
+    designation = designated = 'designated'
     world   = 'world'
-    w1 = 'world1'
-    world1 = w1
-    w2 = 'world2'
-    world2 = w2
+    world1 = w1 = 'world1'
+    world2 = w2 = 'world2'
     is_flag = 'is_flag'
     flag    = 'flag'
     closure = 'closure'
     info    = 'info'
+    ellipsis = 'ellipsis'
+
+class NodeAttr(ProofAttr):
+    is_access = 'is_access'
+    ticked = 'ticked'
 
 class PropMap(abcs.ItemMapEnum):
 
     NodeDefaults = {
-        NodeAttr.designation: None,
-        NodeAttr.world: None}
+        NodeKey.designation: None,
+        NodeKey.world: None}
 
     ClosureNode = {
-        NodeAttr.closure: True,
-        NodeAttr.flag: 'closure',
-        NodeAttr.is_flag: True}
+        NodeKey.closure: True,
+        NodeKey.flag: 'closure',
+        NodeKey.is_flag: True}
 
     QuitFlag = {
-        NodeAttr.is_flag: True,
-        NodeAttr.flag: 'quit'}
+        NodeKey.is_flag: True,
+        NodeKey.flag: 'quit'}
+
+    EllipsisNode = {
+        NodeKey.ellipsis: True}
 
 #******  Branch Enum
 

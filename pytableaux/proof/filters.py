@@ -30,7 +30,7 @@ from .. import __docformat__
 from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
                     Sentence)
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, thru
-from . import Access, Node, NodeAttr
+from . import Access, Node, NodeKey
 
 __all__ = (
     'AttrCompare',
@@ -251,13 +251,13 @@ class SentenceNode(SentenceCompare, NodeCompare):
 
     @staticmethod
     def rget(node: Node, /):
-        return node.get(NodeAttr.sentence)
+        return node.get(NodeKey.sentence)
 
     def example_node(self):
         n = {}
         s = self.example()
         if s is not None:
-            n[NodeAttr.sentence] = s
+            n[NodeKey.sentence] = s
         return n
 
 class DesignationNode(AttrCompare, NodeCompare):
@@ -265,7 +265,7 @@ class DesignationNode(AttrCompare, NodeCompare):
 
     __slots__ = EMPTY_SET
 
-    attrmap = MapProxy(dict(designation = NodeAttr.designated))
+    attrmap = MapProxy(dict(designation = NodeKey.designated))
 
     @staticmethod
     def rget(node: Node, key: str, /):
@@ -289,5 +289,5 @@ class ModalNode(AttrCompare, NodeCompare):
         if attrs.get('is_access'):
             n.update(Access(0, 1)._asdict())
         elif attrs.get('is_modal'):
-            n[NodeAttr.world] = 0
+            n[NodeKey.world] = 0
         return n

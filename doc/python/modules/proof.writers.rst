@@ -11,10 +11,11 @@ classes
 .. autoclass:: TabWriter()
     :members:
 
+.. autoclass:: TabWriterRegistry()
+    :members:
+
 registry
 ---------
-
-.. autofunction:: register
 
 .. autoattribute:: pytableaux.proof.writers::registry
     :no-value:
