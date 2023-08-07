@@ -28,23 +28,22 @@ from typing import TYPE_CHECKING, Callable, MutableMapping, Self, TypeVar
 from ... import __docformat__
 from ...errors import Emsg, check
 from ...lang import LexWriter, Notation
-from ...tools import EMPTY_MAP, MapCover, abcs
+from ...tools import EMPTY_MAP,  MapCover, abcs
 from ..tableaux import Tableau
+from .nodes import Node
 
 NOARG = object()
 _T = TypeVar('_T')
 _TWT = TypeVar('_TWT', bound='TabWriter')
+_NT = TypeVar('_NT', bound='Node')
 
 if TYPE_CHECKING:
     from typing import overload
 
-
 __all__ = (
-    'DocBuilder',
     'registry',
     'TabWriter',
     'TabWriterRegistry')
-
 
 class TabWriterMeta(abcs.AbcMeta):
 
@@ -176,22 +175,7 @@ class TabWriterRegistry(MapCover[str, type[TabWriter]], MutableMapping[str, type
 registry = TabWriterRegistry()
 "The default tableau writer class registry."
 
-from . import jinja, nodes
+from . import doctree, jinja
 
 registry.update(jinja.registry)
 
-class DocBuilder:
-
-    node_types = MapProxy(dict(
-        document=nodes.document,
-        tree=nodes.tree,
-        clear=nodes.clear))
-
-    def __init__(self, tab: Tableau, /):
-        self.tab = tab
-        self.doc = self.node_types['document']()
-
-    def build(self):
-        node = self.node_types['tree'].for_object(self.tab.tree)
-        node += nodes.clear()
-        self.doc += node

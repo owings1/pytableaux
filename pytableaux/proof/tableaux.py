@@ -53,7 +53,6 @@ __all__ = (
 NOARG = object()
 NOGET = object()
 _F = TypeVar('_F', bound=Callable)
-_T = TypeVar('_T')
 _RHT = TypeVar('_RHT', bound=RuleHelper)
 
 if TYPE_CHECKING:

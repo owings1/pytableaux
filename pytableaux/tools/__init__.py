@@ -173,6 +173,7 @@ def isstr(obj) -> bool:
 re_boolyes = re.compile(r'^(true|yes|1)$', re.I)
 'Regex for string boolean `yes`.'
 
+
 def sbool(arg: str, /) -> bool:
     "Cast string to boolean, leans toward ``False``."
     return bool(re_boolyes.match(arg))

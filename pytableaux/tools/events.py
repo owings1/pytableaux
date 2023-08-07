@@ -35,7 +35,10 @@ __all__ = (
     'Listener',
     'Listeners')
 
-class EventEmitter(abcs.Copyable):
+class EventEmitter(abcs.Abc):
+    """
+    Event emitter class for subclassing.
+    """
 
     __slots__ = 'events',
 
@@ -54,18 +57,21 @@ class EventEmitter(abcs.Copyable):
     def emit(self, event, *args, **kw) -> int:
         return self.events.emit(event, *args, **kw)
 
-    def copy(self, *, listeners = False):
-        """Copy event emitter.
+    # def copy(self, *, listeners = False):
+    #     """Copy event emitter.
         
-        Args:
-            listeners (bool): Copy listeners.
-        """
-        cls = type(self)
-        inst = cls.__new__(cls)
-        inst.events = inst.events.copy(listeners = listeners)
-        return inst
+    #     Args:
+    #         listeners (bool): Copy listeners.
+    #     """
+    #     cls = type(self)
+    #     inst = cls.__new__(cls)
+    #     inst.events = inst.events.copy(listeners = listeners)
+    #     return inst
 
 class Listener(Callable, abcs.Abc):
+    """
+    A single listener for an event.
+    """
 
     cb        : Callable
     once      : bool
@@ -98,6 +104,9 @@ class Listener(Callable, abcs.Abc):
     __delattr__ = Emsg.ReadOnly.razr
 
 class Listeners(linqset[Listener]):
+    """
+    A group of listeners for an event.
+    """
 
     emitcount: int
     callcount: int
@@ -132,6 +141,9 @@ class Listeners(linqset[Listener]):
             f'emitcount:{self.emitcount} callcount:{self.callcount}>')
 
 class EventsListeners(dict[Any, Listeners]):
+    """
+    Mapping of events to listeners.
+    """
 
     emitcount: int
     callcount: int
