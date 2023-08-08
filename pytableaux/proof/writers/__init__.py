@@ -178,4 +178,5 @@ registry = TabWriterRegistry()
 from . import doctree, jinja
 
 registry.update(jinja.registry)
+registry.update(doctree.registry)
 

@@ -26,6 +26,7 @@ import enum as _enum
 import functools
 import itertools
 import operator as opr
+from abc import abstractmethod
 from collections import deque
 from collections.abc import Mapping, Set
 from enum import Enum, Flag
@@ -34,6 +35,7 @@ from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Sequence, TypeVar
 
 from .. import __docformat__, tools
+from ..tools import EMPTY_SET, thru
 from ..errors import Emsg, check
 
 __all__ = (
@@ -55,24 +57,24 @@ NOARG = object()
 _T = TypeVar('_T')
 _EnumT = TypeVar('_EnumT', bound=Enum)
 
+class Eset(frozenset, Enum):
+    'Enum meta enumeration.'
+    member_key_methods = {'_member_keys'}
+    reserve_names = {'_seq', '_lookup', 'get',}
+    hook_methods  = {'_member_keys', '_on_init', '_after_init'}
+    clean_methods = hook_methods.copy()
+
+class Astr(str, Enum):
+    "Attribute names for abc functionality."
+    flag     = '_abc_flag'
+    hookuser = '_abc_hook_user'
+    hookinfo = '_abc_hook_info'
+
 def is_enumcls(obj):
     return isinstance(obj, type) and issubclass(obj, Enum)
 
 def em_mixins(Class):
     return *itertools.filterfalse(is_enumcls, Class.__bases__),
-
-class Eset(frozenset, Enum):
-    'Enum meta enumeration.'
-
-    Empty = frozenset()
-
-    member_key_methods = {'_member_keys'}
-
-    reserve_names = {'_seq', '_lookup', 'get',}
-
-    hook_methods  = {'_member_keys', '_on_init', '_after_init'}
-
-    clean_methods = hook_methods.copy()
 
 def _em_fix_name_value(Class: type[_T]) -> type[_T]:
     # cache attribute for flag enum.
@@ -286,52 +288,39 @@ class EbcMeta(_enum.EnumMeta):
         if not skipabcm:
             # Run generic Abc init hooks.
             nsinit(ns, bases, skipflags = skipflags)
-
         forbid = Eset.reserve_names.intersection(ns)
         if forbid:
             raise TypeError(f'Restricted names: {forbid}')
-
         # Create class.
         Class = super().__new__(cls, clsname, bases, ns, **kw)
-
         # Store mixin bases
         Class._mixin_bases_ = em_mixins(Class)
-
         if not skipabcm:
             # Run generic Abc after hooks.
             clsafter(Class, ns, skipflags = skipflags)
-
         # Freeze Enum class attributes.
         Class._member_map_ = MapProxy(Class._member_map_)
         Class.__members__ = Class._member_map_
         Class._member_names_ = tuple(Class._member_names_)
-
         # Create lookup index.
         Class._lookup = EnumLookup(Class)
-
         if not len(Class):
             # No members to process.
             Class._seq = EMPTY
             Class._after_init()
             return Class
-
         # Store the fixed member sequence. Necessary for iterating.
         Class._seq = tuple(
             map(Class._member_map_.__getitem__, Class._member_names_))
-
         # Performance tweaks.
         _em_fix_name_value(Class)
-
         # Init hook to process members before index is created.
         Class._on_init(Class)
-
         # Build index, if applicable.
         if idxbuild:
             Class._lookup.build()
-
         # After init hook.
         Class._after_init()
-
         # Cleanup.
         return _em_clean_methods(Class)
 
@@ -388,7 +377,7 @@ class EbcMeta(_enum.EnumMeta):
 
     def _member_keys(cls, member, /):
         'Init hook to get the index lookup keys for a member.'
-        return Eset.Empty
+        return EMPTY_SET
 
     def _on_init(cls, subcls, /):
         '''Init hook after all members have been initialized, before index
@@ -402,7 +391,7 @@ class EbcMeta(_enum.EnumMeta):
 
 class Ebc(Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
 
-    __slots__ = Eset.Empty
+    __slots__ = EMPTY_SET
 
     name  : str
     value : object
@@ -440,13 +429,6 @@ class Ebc(Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
             return f'<{s}>'
         except AttributeError:
             return f'<{clsname}.?ERR?>'
-
-class Astr(str, Enum):
-    "Attribute names for abc functionality."
-
-    flag     = '_abc_flag'
-    hookuser = '_abc_hook_user'
-    hookinfo = '_abc_hook_info'
 
 class abcf(Flag):
     'Enum flag for AbcMeta functionality.'
@@ -513,7 +495,7 @@ def clsafter(Class: type[_T], ns: dict|None = None, /, skipflags = False, delete
 def isabstract(obj) -> bool:
     "Whether a class or method is abstract."
     if isinstance(obj, type):
-        return bool(len(getattr(obj, '__abstractmethods__', Eset.Empty)))
+        return bool(len(getattr(obj, '__abstractmethods__', EMPTY_SET)))
     return bool(getattr(obj, '__isabstractmethod__', False))
 
 def check_mrodict(mro, *names):
@@ -550,7 +532,7 @@ def merge_attr(obj, name, it = None, /, *, setter = setattr, **kw):
     return value
 
 def merged_attr(name: str, it: Iterable = None, /, *,
-    oper = opr.or_, initial = NOARG, default = NOARG, transform = tools.thru,
+    oper = opr.or_, initial = NOARG, default = NOARG, transform = thru,
     getitem: bool = False, **iteropts):
     """Get merged attribute value, either from objects, or an mro.
 
@@ -637,7 +619,6 @@ def hookable(*hooks: str, attr = Astr.hookinfo):
 class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
 
-
     if TYPE_CHECKING:
         def __call__(cls: type[_T], *args, **kw) -> _T: ...
 
@@ -670,13 +651,13 @@ class AbcMeta(_abc.ABCMeta):
 class Abc(metaclass = AbcMeta, skiphooks = True):
     'Convenience for using AbcMeta as metaclass.'
 
-    __slots__ = Eset.Empty
+    __slots__ = EMPTY_SET
 
 class Copyable(metaclass = AbcMeta, skiphooks = True):
 
-    __slots__ = Eset.Empty
+    __slots__ = EMPTY_SET
 
-    @tools.abstract
+    @abstractmethod
     def copy(self):
         cls = type(self)
         return cls.__new__(cls)

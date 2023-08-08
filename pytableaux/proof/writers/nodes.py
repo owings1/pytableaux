@@ -23,15 +23,15 @@ from __future__ import annotations
 
 import enum
 from abc import abstractmethod
-from enum import Enum
+from collections import ChainMap
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Generic, Iterable,
-                    Mapping, Self, Sequence, SupportsIndex, TypeVar)
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
+                    Sequence, Set, SupportsIndex, TypeVar)
 
 from ... import proof
 from ...errors import check
-from ...tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, TransMmap, abcs, qset,
-                      qsetf)
+from ...tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, ForObjectBuilder,
+                      TransMmap, abcs, closure, qset, qsetf)
 from ...tools.events import EventEmitter
 from .. import Access, NodeAttr, NodeKey, Tableau
 
@@ -53,61 +53,80 @@ __all__ = (
     'world')
 
 if TYPE_CHECKING:
-    from .nodes import NodeVisitor
     from .doctree import Translator
 
 _T = TypeVar('_T')
 _NT = TypeVar('_NT', bound='Node')
 
+def _uscore(s: str):
+    return s.replace('-', '_')
+
+def _endash(s: str):
+    return s.replace('_', '-')
+
 class TreePruningException(Exception): pass
 class SkipDeparture(TreePruningException): pass
 
 class Attributes(TransMmap[str, Any]):
+    __slots__ = EMPTY_SET
+    kget = kset = staticmethod(str.lower)
 
-    def __init__(self, *args, **kw):
-        super().__init__(kget=str.lower, kset=str.lower)
-        self.update(*args, **kw)
+class NodeTypes(TransMmap[type[_NT], type[_NT]]):
+    __slots__ = EMPTY_SET
+
+    @staticmethod
+    def kget(key):
+        if isinstance(key, type):
+            return key.__name__
+        return check.inst(key, str)
+
+    kset = kget
+
+if TYPE_CHECKING:
+    from ...tools import TypeTypeMap
+    class NodeTypes(TypeTypeMap[_NT]): ...
 
 class TranslatorAware:
     "Class to flag for doc modifications before translating"
 
     @abstractmethod
-    def before_translate(self, trans: Translator, doc: document, /) -> None:
+    def before_translate(self, trans: Translator, /) -> None:
         pass
 
-class ObjectBuilder(Generic[_T]):
+class BuilderMixin(ForObjectBuilder[_T]):
 
     @classmethod
-    def for_object(cls, obj: _T, /) -> Self:
-        return cls(
-            *cls.get_obj_args(obj),
-            classes=cls.get_obj_classes(obj),
-            **dict(cls.get_obj_attributes(obj)))
-
-    @classmethod
-    def get_obj_args(cls, obj: _T, /) -> Iterable[Any]:
+    def get_obj_args(cls, obj, /):
         yield from cls.get_obj_children(obj)
 
     @classmethod
+    def get_obj_kwargs(cls, obj, /):
+        yield 'classes', cls.get_obj_classes(obj)
+        yield from cls.get_obj_attributes(obj)
+
+    @classmethod
+    @abstractmethod
     def get_obj_children(cls, obj: _T, /) -> Iterable[Node]:
         yield from EMPTY_SET
 
     @classmethod
+    @abstractmethod
     def get_obj_classes(cls, obj: _T, /) -> Iterable[str]:
         yield from EMPTY_SET
 
     @classmethod
+    @abstractmethod
     def get_obj_attributes(cls, obj: _T, /) -> Iterable[tuple[str, Any]]:
         yield from EMPTY_SET
 
-class Node(abcs.Abc):
+class Node:
 
     tagnames: ClassVar[Mapping[str, str]] = EMPTY_MAP
     tagname: ClassVar[str|None] = None
+    types: ClassVar[NodeTypes] = EMPTY_MAP
 
     parent: Node|None
-    children: qset[Node]
-    attributes: TransMmap[str, Any]
+    children: Sequence[Node]
 
     @property
     def document(self) -> document|None:
@@ -153,25 +172,48 @@ class Node(abcs.Abc):
         yield self
         for child in self.children[:]:
             yield from child.iterate()
+    
+    @closure
+    def __init_subclass__():
+        proxy = MapProxy(types := NodeTypes())
+        def settypes(cls: type):
+            types.setdefault(cls, cls)
+            if (value := cls.__dict__.get(name := 'types')) is None:
+                value = proxy
+            else:
+                value = ChainMap(value, proxy)
+            setattr(cls, name, value)
+        def init(cls: type, **kw):
+            super().__init_subclass__(**kw)
+            if cls.__name__.lower() != cls.__name__:
+                return
+            settypes(cls)
+        return init
 
 class Text(Node, str):
     tagname = '#text'
-    children = EMPTY_QSET
+    children = ()
 
 class Element(Node):
 
-    default_classes: ClassVar[Sequence[str]] = EMPTY_QSET
+    default_classes: ClassVar[Set[str]] = EMPTY_QSET
     default_attributes: ClassVar[Mapping[str, Any]] = EMPTY_MAP
     sequence_attributes: ClassVar[Sequence[str]] = frozenset({'classes'})
+
+    children: qset[Node]
+    attributes: Attributes
 
     def __init__(self, *children, **attributes):
         self.children = qset()
         self.attributes = Attributes(
-            (name, qset(attributes.pop(name, EMPTY_SET)))
-            for name in self.sequence_attributes)
-        self |= self.default_attributes
-        self |= attributes
+            (name, qset()) for name in self.sequence_attributes)
         self['classes'] |= self.default_classes
+        for mapping in (self.default_attributes, attributes):
+            for name, value in mapping.items():
+                if name in self.sequence_attributes:
+                    self.attributes[name].update(value)
+                else:
+                    self.attributes[name] = value
         self += children
 
     def append(self, child: Node):
@@ -197,7 +239,6 @@ class Element(Node):
             self.children[key] = self.setup_child(value)
         else:
             raise TypeError(f'slice not yet supported')
-            # self.children[check.inst(key, slice)] = list(map(self.setup_child, value))
 
     def __delitem__(self, key):
         if isinstance(key, str):
@@ -236,7 +277,7 @@ class Element(Node):
             if classes is False:
                 classes = EMPTY_QSET
             else:
-                classes = [name.replace('_', '-')]
+                classes = [_endash(name)]
         if not isinstance(classes, qsetf):
             classes = qsetf(classes)
         cls.default_classes = classes
@@ -253,22 +294,18 @@ class rawtext(Text): pass
 class subscript(Element):
     tagnames = MapProxy(dict(html='sub'))
     default_classes = False
-class style(Element):
-    default_classes = False
-
+class style(Element): default_classes = False
 class clear(BlockElement): pass
-class ellipsis(InlineElement, ObjectBuilder[proof.Node]): pass
+class ellipsis(InlineElement, BuilderMixin[proof.Node]): pass
+class wrapper(BlockElement): default_classes = False
 
-class wrapper(BlockElement):
-    default_classes = False
-
-class vertical_line(BlockElement, ObjectBuilder[int]):
+class vertical_line(BlockElement, BuilderMixin[int]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
         yield 'data-step', obj
 
-class horizontal_line(BlockElement, ObjectBuilder[Tableau.Tree]):
+class horizontal_line(BlockElement, BuilderMixin[Tableau.Tree]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
@@ -279,7 +316,7 @@ class horizontal_line(BlockElement, ObjectBuilder[Tableau.Tree]):
             width=_pctstr(width),
             margin_left=_pctstr(margin_left))
 
-class child_wrapper(BlockElement, ObjectBuilder[tuple[Tableau.Tree, Tableau.Tree]]):
+class child_wrapper(BlockElement, BuilderMixin[tuple[Tableau.Tree, Tableau.Tree]]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
@@ -289,50 +326,54 @@ class child_wrapper(BlockElement, ObjectBuilder[tuple[Tableau.Tree, Tableau.Tree
         yield 'data-current-width-pct', _pctstr(width)
         yield 'style', _styleattr(width=_pctstr(width))
 
-class sentence(InlineElement, ObjectBuilder[proof.Node]):
-
-    @classmethod
-    def get_obj_attributes(cls, obj, /):
-        yield NodeKey.sentence, obj[NodeKey.sentence]
-
-class world(InlineElement, ObjectBuilder[proof.Node], TranslatorAware):
-
-    node_types = MapProxy(dict(
-        subscript=subscript,
-        textnode=textnode))
+class world(InlineElement, BuilderMixin[proof.Node], TranslatorAware):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
         yield NodeKey.world, obj[NodeKey.world]
 
-    def before_translate(self, trans, doc, /):
+    def before_translate(self, trans, /):
         if trans.format != 'html':
             return
-        types = self.node_types
-        textnode = types['textnode']
-        self += textnode(', w')
-        self += types['subscript'](textnode(self['world']))
+        types = self.types
+        self += types[textnode](', w')
+        self += types[subscript](types[textnode](self[NodeKey.world]))
 
-class designation(InlineElement, ObjectBuilder[proof.Node]):
+class sentence(InlineElement, BuilderMixin[proof.Node]):
+
+    @classmethod
+    def get_obj_attributes(cls, obj, /):
+        yield NodeKey.sentence, obj[NodeKey.sentence]
+        if obj.has(NodeKey.world):
+            yield NodeKey.world, obj[NodeKey.world]
+
+class designation(InlineElement, BuilderMixin[proof.Node]):
+
+    designation_classnames = (
+        'undesignated',
+        'designated')
 
     @classmethod
     def get_obj_classes(cls, obj, /):
-        if obj.get(NodeKey.designation):
-            yield 'designated'
-        else:
-            yield 'undesignated'
+        yield cls.designation_classnames[
+            bool(obj.get(NodeKey.designation))]
 
-class access(InlineElement, ObjectBuilder[proof.Node], TranslatorAware):
+class access(InlineElement, BuilderMixin[proof.Node], TranslatorAware):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
         yield from Access.fornode(obj).tonode().items()
 
-    def before_translate(self, trans, doc, /):
+    def before_translate(self, trans, /):
         if trans.format != 'html':
             return
+        types = self.types
+        self += types[textnode]('w')
+        self += types[subscript](types[textnode](self[NodeKey.w1]))
+        self += types[textnode]('Rw')
+        self += types[subscript](types[textnode](self[NodeKey.w2]))
         
-class flag(InlineElement, ObjectBuilder[proof.Node]):
+class flag(InlineElement, BuilderMixin[proof.Node]):
 
     @classmethod
     def get_obj_classes(cls, obj, /):
@@ -342,15 +383,7 @@ class flag(InlineElement, ObjectBuilder[proof.Node]):
     def get_obj_attributes(cls, obj, /):
         yield NodeKey.info, obj.get(NodeKey.info, '')
 
-class node_props(InlineElement, ObjectBuilder[proof.Node]):
-
-    node_types = MapProxy({
-        NodeKey.sentence: sentence,
-        NodeKey.world: world,
-        NodeKey.designation: designation,
-        NodeAttr.is_access: access,
-        NodeKey.ellipsis: ellipsis,
-        NodeKey.is_flag: flag})
+class node_props(InlineElement, BuilderMixin[proof.Node]):
 
     @classmethod
     def get_obj_classes(cls, obj, /):
@@ -359,23 +392,21 @@ class node_props(InlineElement, ObjectBuilder[proof.Node]):
 
     @classmethod
     def get_obj_children(cls, obj, /):
-        types = cls.node_types
+        types = cls.types
         if obj.has(NodeKey.sentence):
-            yield types[NodeKey.sentence].for_object(obj)
+            yield types[sentence].for_object(obj)
             if obj.has(NodeKey.world):
-                yield types[NodeKey.world].for_object(obj)
+                yield types[world].for_object(obj)
         if obj.has(NodeKey.designation):
-            yield types[NodeKey.designation].for_object(obj)
+            yield types[designation].for_object(obj)
         if getattr(obj, NodeAttr.is_access):
-            yield types[NodeAttr.is_access].for_object(obj)
+            yield types[access].for_object(obj)
         if obj.has(NodeKey.ellipsis):
-            yield types[NodeKey.ellipsis].for_object(obj)
+            yield types[ellipsis].for_object(obj)
         if obj.has(NodeKey.is_flag):
-            yield types[NodeKey.is_flag].for_object(obj)
+            yield types[flag].for_object(obj)
 
-class node(BlockElement, ObjectBuilder[tuple[proof.Node, int]]):
-
-    node_types = MapProxy(dict(node_props=node_props))
+class node(BlockElement, BuilderMixin[tuple[proof.Node, int]]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
@@ -393,24 +424,20 @@ class node(BlockElement, ObjectBuilder[tuple[proof.Node, int]]):
 
     @classmethod
     def get_obj_children(cls, obj, /):
-        yield cls.node_types['node_props'].for_object(obj[0])
+        yield cls.types[node_props].for_object(obj[0])
 
-class node_segment(BlockElement, ObjectBuilder[Tableau.Tree]):
-
-    node_types = MapProxy(dict(
-        node=node,
-        vertical_line=vertical_line))
+class node_segment(BlockElement, BuilderMixin[Tableau.Tree]):
 
     @classmethod
     def get_obj_children(cls, obj, /):
-        types = cls.node_types
+        types = cls.types
         if not obj.root:
-            yield types['vertical_line'].for_object(obj.step)
+            yield types[vertical_line].for_object(obj.step)
         yield from map(
-            types['node'].for_object,
+            types[node].for_object,
             zip(obj.nodes, obj.ticksteps))
 
-class tree(BlockElement, ObjectBuilder[Tableau.Tree]):
+class tree(BlockElement, BuilderMixin[Tableau.Tree]):
 
     default_classes = ['structure']
 
@@ -428,13 +455,6 @@ class tree(BlockElement, ObjectBuilder[Tableau.Tree]):
         'open',
         'closed',
         'is_only_branch')
-
-    node_types = MapProxy(dict(
-        (cls.__name__, cls) for cls in (
-            node_segment,
-            vertical_line,
-            horizontal_line,
-            child_wrapper)))
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
@@ -456,20 +476,18 @@ class tree(BlockElement, ObjectBuilder[Tableau.Tree]):
 
     @classmethod
     def get_obj_children(cls, obj, /):
-        types = cls.node_types
-        node = types['node_segment'].for_object(obj)
+        types = cls.types
+        node = types[node_segment].for_object(obj)
         if obj.children:
-            node += types['vertical_line'].for_object(obj.branch_step)
-            node += types['horizontal_line'].for_object(obj)
+            node += types[vertical_line].for_object(obj.branch_step)
+            node += types[horizontal_line].for_object(obj)
             for child in obj.children:
-                wrap = types['child_wrapper'].for_object((obj, child))
+                wrap = types[child_wrapper].for_object((obj, child))
                 wrap += cls.for_object(child)
                 node += wrap
         yield node
 
-class tableau(BlockElement, ObjectBuilder[Tableau]):
-
-    node_types = MapProxy(dict(tree=tree))
+class tableau(BlockElement, BuilderMixin[Tableau]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
@@ -481,7 +499,7 @@ class tableau(BlockElement, ObjectBuilder[Tableau]):
 
     @classmethod
     def get_obj_children(cls, obj, /):
-        yield cls.node_types['tree'].for_object(obj.tree)
+        yield cls.types[tree].for_object(obj.tree)
 
 class document(Element, EventEmitter):
 
@@ -498,17 +516,13 @@ class document(Element, EventEmitter):
         super().__init__(*args, **kw)
         self.on(self.Event.BeforeTranslate, self.__before_translate)
 
-    # Avoid EventEmitter copy implementation.
-    copy = NotImplemented
-
     def __before_translate(self, trans: Translator, /):
         for node in self.iterate():
             if isinstance(node, TranslatorAware):
-                node.before_translate(trans, self)
+                node.before_translate(trans)
         for node in self.iterate():
             if node is not self:
                 node.document = self
-
 
 class NodeVisitor(abcs.Abc):
 
@@ -558,12 +572,6 @@ def _styleattr(*args, **kw):
     return ' '.join(
         f"{str(key).replace('_', '-')}: {value};"
         for key, value in dict(*args, **kw).items())
-
-def _uscore(s: str):
-    return s.replace('-', '_')
-
-def _endash(s: str):
-    return s.replace('_', '-')
 
 def _pctstr(n):
     return f'{n}%'

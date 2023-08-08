@@ -34,7 +34,7 @@ from ...proof import NodeKey
 from ...tools import EMPTY_SET
 from ..tableaux import Tableau
 from . import TabWriter, TabWriterRegistry, nodes
-from .nodes import DefaultNodeVisitor, Node, document
+from .nodes import DefaultNodeVisitor, Element, Node, document
 
 NOARG = object()
 
@@ -98,14 +98,14 @@ class HtmlTranslator(Translator):
         self.body.append(node)
         raise nodes.SkipDeparture
 
-    def visit_sentence(self, node: Node, /):
-        self.default_visitor(node)
-        rendered = self.lw(node[NodeKey.sentence])
+    def visit_sentence(self, node: Element, /):
+        rendered = self.lw(node.attributes.pop(NodeKey.sentence))
         if self.lw.charset != self.format:
             rendered = self.escape(rendered)
+        self.default_visitor(node)
         self.body.append(rendered)
 
-    def get_attrs_map(self, node: Node, /) -> dict[str, str]:
+    def get_attrs_map(self, node: Element, /) -> dict[str, str]:
         attrs = {}
         todo = dict(node.attributes)
         if todo.get('id'):
@@ -172,7 +172,7 @@ class HtmlDocTabWriter(TabWriter):
         types = self.node_types
         doc = types['document']()
         if self.opts['wrapper']:
-            wrap = types['wrapper'](classes=['tableau_wrapper'])
+            wrap = types['wrapper'](classes=['tableau-wrapper'])
             wrap['classes'] |= wrap_classes or EMPTY_SET
             wrap['classes'] |= self.opts['wrap_classes']
             doc += wrap

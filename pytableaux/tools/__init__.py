@@ -28,13 +28,14 @@ import keyword
 import re
 import sys
 from abc import abstractmethod as abstract
+from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Mapping, Sequence, Set
 from enum import Enum
 from operator import gt, lt, truth
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Generic, MutableMapping, TypeVar, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable, MutableMapping, Self, TypeVar, Mapping
 
 __all__ = (
     'absindex',
@@ -68,6 +69,7 @@ __all__ = (
     'slicerange',
     'substitute',
     'thru',
+    'TransMmap',
     'true',
     'undund',
     'wraps')
@@ -115,6 +117,19 @@ if TYPE_CHECKING:
         def setdefault(self, key: type[_T], value: Any) -> _T: ...
         @overload
         def pop(self, key: type[_T]) -> _T: ...
+    class TypeTypeMap(Mapping[type[_VT], type[_VT]]):
+        @overload
+        def __getitem__(self, key: type[_T]) -> type[_T]: ...
+        @overload
+        def get(self, key: type[_T]) -> type[_T]: ...
+        @overload
+        def get(self, key: Any, default: type[_T]) -> type[_T]: ...
+        @overload
+        def copy(self:_T) -> _T: ...
+        @overload
+        def setdefault(self, key: type[_T], value: Any) -> type[_T]: ...
+        @overload
+        def pop(self, key: type[_T]) -> type[_T]: ...
 
 def closure(func: Callable[..., _T]) -> _T:
     """Closure decorator calls the argument and returns its return value.
@@ -241,6 +256,13 @@ def slicerange(seqlen: int, slice_: slice, values, /, strict = True):
             raise Emsg.MismatchExtSliceSize(values, range_)
     return range_
 
+def _prevmodule(thisname = __name__, /):
+    f = sys._getframe()
+    while (f := f.f_back) is not None:
+        val = f.f_globals.get('__name__', '__main__')
+        if val != thisname:
+            return val
+
 @closure
 def itemsiter():
 
@@ -301,8 +323,7 @@ def dmerged():
         c = {}
         for key, value in b.items():
             if isinstance(value, Mapping):
-                avalue = a.get(key)
-                if isinstance(avalue, Mapping):
+                if isinstance(a.get(key), Mapping):
                     c[key] = merger(a[key], value)
                 else:
                     c[key] = dcopy(value)
@@ -366,20 +387,22 @@ class BaseMember:
 
 class membr(BaseMember):
 
-    __slots__ = ('cbak',)
+    __slots__ = ('callable', 'args', 'kwargs')
 
-    owner: object
-    cbak: tuple
+    callable: Callable
+    args: tuple
+    kwargs: dict
 
-    def __init__(self, cb, *args, **kw):
-        self.cbak = cb, args, kw
+    def __init__(self, callable, *args, **kw):
+        self.callable = callable
+        self.args = args
+        self.kwargs = kw
 
     def sethook(self, owner, name):
         setattr(owner, name, self())
 
     def __call__(self):
-        cb, args, kw = self.cbak
-        return cb(self, *args, **kw)
+        return self.callable(self, *self.args, **self.kwargs)
 
     @classmethod
     def defer(cls, fdefer):
@@ -388,13 +411,6 @@ class membr(BaseMember):
         def f(*args, **kw):
             return cls(fd, *args, **kw)
         return f
-
-def _prevmodule(thisname = __name__, /):
-    f = sys._getframe()
-    while (f := f.f_back) is not None:
-        val = f.f_globals.get('__name__', '__main__')
-        if val != thisname:
-            return val
 
 class wraps(dict):
 
@@ -568,7 +584,7 @@ class NoSetAttr(BaseMember):
 
     def __init__(self, /, *, enabled = True, **defaults):
         self.enabled = bool(enabled)
-        self.defaults = self._defaults | defaults
+        self.defaults = dict(self._defaults, **defaults)
         self.cache = defaultdict(dict)
 
     def __call__(self, base: type, **opts):
@@ -647,26 +663,31 @@ class SetView(Set, abcs.Copyable, immutcopy = True):
             return f'{prefix}{set(self)}'
         return f'{prefix}''{}'
 
-class SeqCoverAttr(frozenset, Enum):
-    REQUIRED = {'__len__', '__getitem__', '__contains__', '__iter__',
-                'count', 'index',}
-    OPTIONAL = {'__reversed__'}
-    ALL = REQUIRED | OPTIONAL
-
-# class SeqCover(Sequence, abcs.Copyable, immutcopy = True):
 class SeqCover(Sequence):
+    'Sequence cover.'
 
-    __slots__ = SeqCoverAttr.ALL
+    class CoverAttr(frozenset, Enum):
+        REQUIRED = {
+            '__len__',
+            '__getitem__',
+            '__contains__',
+            '__iter__',
+            'count',
+            'index'}
+        OPTIONAL = {'__reversed__'}
+        ALL = REQUIRED | OPTIONAL
+
+    __slots__ = CoverAttr.ALL
 
     def __new__(cls, seq: Sequence, /):
         self = object.__new__(cls)
-        sa = object.__setattr__
-        for name in SeqCoverAttr.REQUIRED:
-            sa(self, name, getattr(seq, name))
-        for name in SeqCoverAttr.OPTIONAL:
+        for name in cls.CoverAttr.ALL:
             value = getattr(seq, name, NOARG)
-            if value is not NOARG:
-                sa(self, name, value)
+            if value is NOARG:
+                if name in cls.CoverAttr.REQUIRED:
+                    raise AttributeError(name)
+                continue
+            setattr(self, name, value)
         return self
 
     def __repr__(self):
@@ -766,14 +787,17 @@ class dictns(dictattr):
         return len(name) and name[0] != '_'
 
 class TransMmap(MutableMapping[_KT, _VT], MapCover[_KT, _VT]):
+    'Mutable mapping that with key/value translators'
 
     __slots__ = ('__setitem__', '__delitem__')
 
-    def __init__(self, *, kget=thru, kset=thru, vget=thru, vset=thru):
-        self._cov_mapping = MapProxy(mapping := {})
-        self.__getitem__ = lambda key: vget(mapping.__getitem__(kget(key)))
-        self.__setitem__ = lambda key, value: mapping.__setitem__(kset(key), vset(value))
-        self.__delitem__ = lambda key: mapping.__delitem__(kset(key))
+    kget = kset = vget = vset = staticmethod(thru)
+
+    def __init__(self, *args, **kw):
+        self._cov_mapping = MapProxy(mapping := dict(*args, **kw))
+        self.__getitem__ = lambda key: self.vget(mapping.__getitem__(self.kget(key)))
+        self.__setitem__ = lambda key, value: mapping.__setitem__(self.kset(key), self.vset(value))
+        self.__delitem__ = lambda key: mapping.__delitem__(self.kset(key))
 
 
 class PathedDict(dict):
@@ -807,6 +831,26 @@ class PathedDict(dict):
             except KeyError:
                 obj = self.setdefault(key, self.default())
         obj[last] = value
+
+class ForObjectBuilder(Generic[_T]):
+
+    __slots__ = EMPTY_SET
+
+    @classmethod
+    def for_object(cls, obj: _T, /) -> Self:
+        return cls(
+            *cls.get_obj_args(obj),
+            **dict(cls.get_obj_kwargs(obj)))
+
+    @classmethod
+    @abstractmethod
+    def get_obj_args(cls, obj: _T, /) -> Iterable[Any]:
+        yield from EMPTY_SET
+
+    @classmethod
+    @abstractmethod
+    def get_obj_kwargs(cls, obj: _T, /) -> Iterable[tuple[str, Any]]:
+        yield from EMPTY_SET
 
 from .hybrids import EMPTY_QSET as EMPTY_QSET
 from .hybrids import qset as qset

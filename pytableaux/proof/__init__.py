@@ -104,13 +104,13 @@ class ProofAttr(str, Enum):
 class NodeKey(ProofAttr):
     sentence = 'sentence'
     designation = designated = 'designated'
-    world   = 'world'
+    world = 'world'
     world1 = w1 = 'world1'
     world2 = w2 = 'world2'
     is_flag = 'is_flag'
-    flag    = 'flag'
+    flag = 'flag'
     closure = 'closure'
-    info    = 'info'
+    info = 'info'
     ellipsis = 'ellipsis'
 
 class NodeAttr(ProofAttr):
@@ -147,15 +147,11 @@ class BranchEvent(Enum):
 
 class RuleEvent(Enum):
     'Rule events.'
-
     BEFORE_APPLY = auto()
     AFTER_APPLY  = auto()
 
 class RuleState(Flag):
     'Rule state bit flags.'
-
-    # __slots__ = ('value', '_value_')
-
     NONE   = 0
     INIT   = 1
     LOCKED = 2
@@ -164,7 +160,6 @@ class RuleState(Flag):
 
 class TabEvent(Enum):
     'Tableau events.'
-
     AFTER_BRANCH_ADD    = auto()
     AFTER_BRANCH_CLOSE  = auto()
     AFTER_NODE_ADD      = auto()
@@ -175,7 +170,6 @@ class TabEvent(Enum):
 
 class TabStatKey(Enum):
     'Tableau ``stat()`` keys.'
-
     FLAGS       = auto()
     STEP_ADDED  = auto()
     STEP_TICKED = auto()
@@ -186,9 +180,6 @@ class TabStatKey(Enum):
 
 class TabFlag(Flag):
     'Tableau state bit flags.'
-
-    # __slots__ = ('value', '_value_')
-
     NONE   = 0
     TICKED = 1
     CLOSED = 2
