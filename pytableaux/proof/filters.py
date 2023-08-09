@@ -24,13 +24,14 @@ from __future__ import annotations
 import operator as opr
 from abc import abstractmethod as abstract
 from types import MappingProxyType as MapProxy
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, Mapping, NamedTuple
 
 from .. import __docformat__
 from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
                     Sentence)
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, thru
-from . import Access, Node, NodeKey
+from . import Access, Node, NodeAttr, NodeKey
+from .common import AccessNode, SentenceWorldNode, Modal
 
 __all__ = (
     'AttrCompare',
@@ -101,7 +102,7 @@ class Comparer(abcs.Abc):
 
     @classmethod
     @abstract
-    def _build(cls, lhs, lget):
+    def _build(cls, *args, **kw):
         raise NotImplementedError
 
 class NodeCompare(Comparer):
@@ -112,6 +113,27 @@ class NodeCompare(Comparer):
     @abstract
     def example_node(self) -> dict:
         raise NotImplementedError
+
+class IsInstanceCompare(Comparer):
+    __slots__ = EMPTY_SET
+    compitem: tuple[tuple[type, ...], tuple[type, ...]]
+    attrtypemap: Mapping[str, type] = EMPTY_MAP
+
+    @classmethod
+    def _build(cls, lhs) -> tuple[type, ...]:
+        cmpitem = (set(), set())
+        for name, ctype in cls.attrtypemap.items():
+            if (value := getattr(lhs, name, None)) is not None:
+                cmpitem[bool(value)].add(ctype)
+        return tuple(map(tuple, cmpitem))
+
+    def __call__(self, rhs, /) -> bool:
+        falses, trues = self.compitem
+        if falses and isinstance(rhs, falses):
+            return False
+        if trues and not isinstance(rhs, trues):
+            return False
+        return True
 
 class AttrCompare(Comparer):
     "Attribute filter/comparer."
@@ -274,20 +296,46 @@ class DesignationNode(AttrCompare, NodeCompare):
     def example_node(self):
         return dict(self.example())
 
+# class ModalNode(IsInstanceCompare, NodeCompare):
+#     "Modal node filter."
+
+#     __slots__ = EMPTY_SET
+
+#     attrtypemap = MapProxy(dict(
+#         modal = Modal,
+#         access = AccessNode))
+
+#     def example(self):
+#         return dict(self.example_node())
+#     def example_node(self):
+#         falses, trues = self.compitem
+#         if AccessNode in trues:
+#             # return Node.for_mapping(Access(0, 1)._asdict())
+#             return Access(0, 1).tonode()
+#         if Modal in trues:
+#             return SentenceWorldNode({
+#                 # NodeKey.sentence: Sentence.first(),
+#                 NodeKey.world: 0})
+#         return Node.for_mapping({})
+
+
 class ModalNode(AttrCompare, NodeCompare):
     "Modal node filter."
 
     __slots__ = EMPTY_SET
 
     attrmap = MapProxy(dict(
-        modal = 'is_modal',
-        access = 'is_access'))
+        modal = NodeAttr.is_modal,
+        access = NodeAttr.is_access))
 
     def example_node(self):
         n = {}
         attrs = self.example()
         if attrs.get('is_access'):
-            n.update(Access(0, 1)._asdict())
+            return Access(0, 1).tonode()
         elif attrs.get('is_modal'):
-            n[NodeKey.world] = 0
+            return SentenceWorldNode({
+                # NodeKey.sentence: Sentence.first(),
+                NodeKey.world: 0})
+            # n[NodeKey.world] = 0
         return n

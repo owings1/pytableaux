@@ -152,12 +152,6 @@ class TestBranch(BaseCase):
         branch = proof.branch().add({'world1': 4, 'world2': 1})
         self.assertTrue(branch.has({'world1': 4}))
 
-    # def test_append_existing_node_fails(self):
-    #     b, n = Branch(), Node()
-    #     b.append(n)
-    #     self.assertEqual(len(b), 1 and n in b)
-    #     with raises(ValueError):
-    #         b.append(n)
 
     def test_regression_branch_has_works_with_newly_added_node_on_after_node_add(self):
 
@@ -303,7 +297,7 @@ class TestBranch(BaseCase):
 class TestNode(BaseCase):
 
     def test_worlds_contains_worlds(self):
-        node = Node({'world1': 0, 'world2': 1})
+        node = Node.for_mapping({'world1': 0, 'world2': 1})
         res = node.worlds
         self.assertIn(0, res)
         self.assertIn(1, res)
@@ -360,7 +354,7 @@ class TestFilters(BaseCase):
         class AttrFilt(filters.AttrCompare):
             attrmap = {'testname': 'is_modal'}
         f = AttrFilt(Lhs())
-        assert f(Node({'world1': 0}))
+        assert f(Node.for_mapping({'world1': 0, 'world2': 0}))
         assert not f(Node({'foo': 'bar'}))
 
     def test_AttrFilter_key_node_designated(self):
@@ -370,7 +364,7 @@ class TestFilters(BaseCase):
             attrmap = {'testname': 'designated'}
         f = AttrFilt(Lhs())
         f.rget = getkey#gets.key()
-        assert f(Node({'designated': True}))
+        assert f(Node.for_mapping({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
 
 
@@ -410,7 +404,7 @@ class Test_K_DefaultNodeFilterRule(BaseCase):
                 n = {'world1':w1, 'world2':w2}
             else:
                 n = {sen:s, 'world':wn}
-            yield Node(n)
+            yield Node.for_mapping(n)
         sgen.close()
 
     def case1(self, n = 10, **kw):
@@ -452,7 +446,7 @@ class TestMaxConstantsTracker(BaseCase):
     @skip(None)
     def xtest_compute_for_node_one_q_returns_1(self):
         n = {sen: self.p('VxFx'), 'world': 0}
-        node = Node(n)
+        node = Node.for_mapping(n)
         proof = Tableau()
         rule = Rule(proof)
         branch = proof.branch()

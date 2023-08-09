@@ -35,6 +35,7 @@ from ...proof import (Branch, ClosingRule, Node, PropMap, Rule, RuleEvent,
                       TabEvent)
 from ...proof import TableauxSystem as TabSys
 from ...proof import Target
+from ...proof.common import ClosureNode
 from ...proof.filters import SentenceCompare
 from ..abcs import isabstract
 
@@ -291,7 +292,7 @@ class EllipsisExampleHelper:
     def after_node_add(self, node: Node, branch: Branch):
         if self.applied:
             return
-        if node.meets(self.mynode) or node.is_closure:
+        if node.meets(self.mynode) or isinstance(node, ClosureNode):
             return
         if self.istrunk:
             self.add_node(branch)

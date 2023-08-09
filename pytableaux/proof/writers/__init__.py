@@ -39,6 +39,7 @@ _T = TypeVar('_T')
 _TWT = TypeVar('_TWT', bound='TabWriter')
 
 __all__ = (
+    'registries',
     'registry',
     'TabWriter',
     'TabWriterRegistry')

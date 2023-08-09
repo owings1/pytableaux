@@ -52,7 +52,7 @@ class TestModels(Base):
     def test_model_read_node_opaque(self):
         m = self.m()
         s1 = self.p('La')
-        m._read_node(Node({'sentence': s1}))
+        m._read_node(Node.for_mapping({'sentence': s1}))
         self.assertEqual(m.value_of(s1), 'T')
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):

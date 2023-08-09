@@ -115,6 +115,7 @@ class NodeKey(ProofAttr):
 
 class NodeAttr(ProofAttr):
     is_access = 'is_access'
+    is_modal = 'is_modal'
     ticked = 'ticked'
 
 class PropMap(abcs.ItemMapEnum):
@@ -226,7 +227,9 @@ class Access(NamedTuple):
 
     def tonode(self):
         """Create node from this instance."""
-        return anode(*self)
+        return AccessNode({
+            NodeKey.w1: self.world1,
+            NodeKey.w2: self.world2})
 
     def reversed(self):
         """Create reversed instance."""
@@ -476,23 +479,30 @@ def adds(*groups, **kw):
 
 def snode(s):
     'Make a sentence node.'
-    return Node(dict(sentence = s))
+    return SentenceNode({NodeKey.sentence: s})
 
 def sdnode(s, d):
     'Make a sentence/designated node.'
-    return Node(dict(sentence = s, designated = d))
+    return SentenceDesignationNode({
+        NodeKey.sentence: s,
+        NodeKey.designation: d})
 
 def swnode(s, w):
     'Make a sentence/world node. Excludes world if None.'
     if w is None:
-        return snode(s)
-    return Node(dict(sentence = s, world = w))
+        return SentenceNode({NodeKey.sentence: s})
+    return SentenceWorldNode({
+        NodeKey.sentence: s,
+        NodeKey.world: w})
 
 def anode(w1, w2):
     'Make an Access node.'
-    return Node(dict(world1 = w1, world2 = w2))
+    return AccessNode({
+        NodeKey.w1: w1,
+        NodeKey.w2: w2})
 
-from .common import Branch, Node, Target
+from .common import (AccessNode, Branch, Node, SentenceDesignationNode,
+                     SentenceNode, SentenceWorldNode, Target)
 from .tableaux import Rule, RulesRoot, Tableau
 
 pass

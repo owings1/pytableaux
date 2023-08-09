@@ -50,7 +50,7 @@ NOARG = object()
 class Node(MapCover, abcs.Copyable):
     'A tableau node.'
 
-    __slots__ = ('_is_access', '_is_modal', '_worlds', 'step', 'ticked')
+    __slots__ = ('_worlds', 'step', 'ticked')
 
     def __init__(self, mapping = EMPTY_MAP, /):
         if mapping is self:
@@ -75,24 +75,19 @@ class Node(MapCover, abcs.Copyable):
         return id(self)
 
     @property
-    def is_closure(self) -> bool:
-        "Whether this is a closure node."
-        return self.get(NodeKey.flag) == PropMap.ClosureNode[NodeKey.flag]
-
-    @lazy.prop
-    def is_modal(self, /, *, names = (NodeKey.world, NodeKey.w1, NodeKey.w2)) -> bool:
+    def is_modal(self) -> bool:
         "Whether this is a modal node."
-        return self.any(*names)
+        return isinstance(self, Modal)
 
-    @lazy.prop
+    @property
     def is_access(self) -> bool:
         "Whether this is a modal access node."
-        return self.has(NodeKey.w1, NodeKey.w2)
+        return isinstance(self, AccessNode)
 
     @property
     def is_flag(self) -> bool:
         "Whether this is a flag node."
-        return self.has(NodeKey.is_flag)
+        return isinstance(self, FlagNode)
 
     @lazy.prop
     def worlds(self, /, *, names = (NodeKey.world, NodeKey.w1, NodeKey.w2)):
@@ -102,14 +97,14 @@ class Node(MapCover, abcs.Copyable):
         """
         return frozenset(filter(isint, map(self.get, names)))
 
-    def has(self, *names):
+    def has(self, *names) -> bool:
         'Whether the node has a non-``None`` property of all the given names.'
         for value in map(self.get, names):
             if value is None:
                 return False
         return True
 
-    def any(self, *names):
+    def any(self, *names) -> bool:
         """
         Whether the node has a non-``None`` property of any of the given names.
         """
@@ -118,7 +113,7 @@ class Node(MapCover, abcs.Copyable):
                 return True
         return False
 
-    def meets(self, mapping, /):
+    def meets(self, mapping: Mapping, /) -> bool:
         'Whether the node properties match all those given in `mapping`.'
         for prop in mapping:
             if prop not in self or mapping[prop] != self[prop]:
@@ -144,6 +139,32 @@ class Node(MapCover, abcs.Copyable):
 
     def __repr__(self):
         return f'<{type(self).__name__} id:{self.id} props:{dict(self)}>'
+
+    @staticmethod
+    def for_mapping(mapping: Mapping, /):
+        if (value := mapping.get(NodeKey.flag)) is not None:
+            if value == PropMap.ClosureNode[NodeKey.flag]:
+                return ClosureNode(mapping)
+            return FlagNode(mapping)
+        if mapping.get(NodeKey.w1) is not None and mapping.get(NodeKey.w2) is not None:
+            return AccessNode(mapping)
+        if mapping.get(NodeKey.sentence) is not None:
+            if mapping.get(NodeKey.world) is not None:
+                return SentenceWorldNode(mapping)
+            if mapping.get(NodeKey.designation) is not None:
+                return SentenceDesignationNode(mapping)
+            return SentenceNode(mapping)
+        return UnknownNode(mapping)
+
+class Modal: __slots__ = EMPTY_SET
+class Designation: __slots__ = EMPTY_SET
+class UnknownNode(Node): __slots__ = EMPTY_SET
+class FlagNode(Node): __slots__ = EMPTY_SET
+class ClosureNode(FlagNode): __slots__ = EMPTY_SET
+class SentenceNode(Node): __slots__ = EMPTY_SET
+class SentenceWorldNode(SentenceNode, Modal): __slots__ = EMPTY_SET
+class SentenceDesignationNode(SentenceNode, Designation): __slots__ = EMPTY_SET
+class AccessNode(Node, Modal): __slots__ = EMPTY_SET
 
 class NodeIndex(dict[str, dict[Any, set]], abcs.Copyable):
     "Branch node index."
@@ -363,8 +384,8 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         Returns:
             bool: True when the first match is found, else False.
         """
-        for props in mappings:
-            for _ in self.search(props, limit = 1):
+        for mapping in mappings:
+            for _ in self.search(mapping, limit = 1):
                 return True
         return False
 
@@ -429,11 +450,12 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
             DuplicateValueError: if the node is already on the branch.
         """
         if not isinstance(node, Node):
-            node = Node(node)
+            # node = Node(node)
+            node = Node.for_mapping(node)
         self.__nodes.append(node)
 
-        s: Sentence = node.get(NodeKey.sentence)
-        if s is not None:
+        if isinstance(node, SentenceNode):
+            s: Sentence = node[NodeKey.sentence]
             if len(cons := s.constants):
                 if self.__nextconst in cons:
                     self.__nextconst = max(cons).next()
