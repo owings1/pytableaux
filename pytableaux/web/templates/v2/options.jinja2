@@ -14,7 +14,7 @@
 <div class="input select">
     <label for="output_format">Output Format</label>
     <select id="output_format" name="output_format">
-        {% for format in output_formats -%}
+        {% for format in writers.registry -%}
             <option value="{{ format|e }}" {{- 
                 helper.select_opt(form_data, 'output_format', format) 
             }}>
@@ -68,6 +68,18 @@
         value="{{ form_data.max_steps|e }}"/>
 </div>
 {% if is_debug -%}
+<div class="input select">
+    <label for="writer_registry">Writer Registry</label>
+    <select id="writer_registry" name="writer_registry">
+        {% for format in writers.registries -%}
+            <option value="{{ format|e }}" {{- 
+                helper.select_opt(form_data, 'writer_registry', format) 
+            }}>
+                {{- format|e -}}
+            </option>
+        {% endfor %}
+    </select>
+</div>
 <div class="input">
     <label for="options_rank_optimizations">Rank Optimizations</label>
     <input type="checkbox" id="options_rank_optimizations" name="rank_optimizations"
@@ -78,11 +90,5 @@
     <input type="checkbox" id="options_group_optimizations" name="group_optimizations"
         value="1" {{- helper.checkbox_default(form_data, 'group_optimizations') }}/>
 </div>
-<div class="input">
-    <label for="options_debug_off">Disable Debug</label>
-    <input type="checkbox" id="options_debug_off" name="debug" value="0"/>
-</div>
-{% else -%}
-<input type="hidden" name="debug" value="0"/>
 {% endif -%}
 </div>

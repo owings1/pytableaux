@@ -69,7 +69,7 @@
             {%- if node.has('designated') -%}
                 <span class="designation {{ 'designated' if node.designated else 'undesignated' }}"></span>
             {%- endif -%}
-            {%- if node.is_access -%}
+            {%- if node.has('world1', 'world2') -%}
                 <span class="access">w<sub>{{ node.world1 }}</sub>Rw<sub>{{ node.world2 }}</sub></span>
             {%- endif -%}
             {%- if node.has('ellipsis') -%}

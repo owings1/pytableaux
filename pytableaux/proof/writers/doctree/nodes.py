@@ -32,11 +32,9 @@ from .... import proof
 from ....errors import check
 from ....tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, ForObjectBuilder,
                       TransMmap, abcs, closure, qset, qsetf)
-from ....tools.events import EventEmitter
-from ... import Access, NodeAttr, NodeKey, Tableau
+from ... import NodeAttr, NodeKey, Tableau
 
 if TYPE_CHECKING:
-    from . import Translator
     from ....tools import TypeTypeMap
 
 __all__ = (
@@ -85,13 +83,6 @@ class NodeTypes(TransMmap[type[_NT], type[_NT]]):
 
 if TYPE_CHECKING:
     class NodeTypes(TypeTypeMap[_NT]): ...
-
-# class TranslatorAware:
-#     "Class to flag for doc modifications before translating"
-
-#     @abstractmethod
-#     def before_translate(self, trans: Translator, /) -> None:
-#         pass
 
 class BuilderMixin(ForObjectBuilder[_T]):
 
@@ -504,28 +495,11 @@ class tableau(BlockElement, BuilderMixin[Tableau]):
     def get_obj_children(cls, obj, /):
         yield cls.types[tree].for_object(obj.tree)
 
-class document(Element, EventEmitter):
-
-    # class Event(enum.Enum):
-    #     BeforeTranslate = enum.auto()
-    #     AfterTranslate = enum.auto()
+class document(Element):
 
     @property
     def document(self):
         return self
-
-    # def __init__(self, *args, **kw):
-    #     EventEmitter.__init__(self, *self.Event)
-    #     super().__init__(*args, **kw)
-    #     self.on(self.Event.BeforeTranslate, self.__before_translate)
-
-    # def __before_translate(self, trans: Translator, /):
-    #     for node in self.iterate():
-    #         if isinstance(node, TranslatorAware):
-    #             node.before_translate(trans)
-    #     for node in self.iterate():
-    #         if node is not self:
-    #             node.document = self
 
 class NodeVisitor(abcs.Abc):
 

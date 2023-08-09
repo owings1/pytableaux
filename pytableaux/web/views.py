@@ -260,6 +260,7 @@ class ApiProveView(ApiView):
         max_steps=None,
         rank_optimizations=True,
         group_optimizations=True,
+        writer_registry='default',
         output=MapProxy(dict(
             notation=Notation.polish.name,
             format='html',
@@ -407,7 +408,12 @@ class ApiProveView(ApiView):
         errors = self.errors
         payload = self.payload
         try:
-            WriterClass = writers.registry[payload['output:format']]
+            reg = writers.registries[payload['writer_registry']]
+        except KeyError as err:
+            errors['writer_registry'] = f'Invalid registry: {err}'
+            return
+        try:
+            WriterClass = reg[payload['output:format']]
         except KeyError as err:
             errors['output:format'] = f"Invalid writer: {err}"
             return
@@ -482,6 +488,7 @@ class ProveView(FormView):
         show_controls = True,
         build_models = True,
         color_open = True,
+        writer_registry = 'default',
         rank_optimizations = True,
         group_optimizations = True))
 

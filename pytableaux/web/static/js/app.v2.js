@@ -99,6 +99,7 @@
         fieldOutputCharset : '#output_charset',
         fieldOutputFmt     : '#output_format',
         fieldOutputNotn    : '#output_notation',
+        fieldWriterRegistry: '#writer_registry',
 
         fieldsArity       : ['input', Cls.arity].join('.'),
         fieldsPredSymbol  : ['input', Cls.predSymbol].join('.'),
@@ -620,6 +621,7 @@
                 // debug/advanced options.
                 rank_optimizations  : true,
                 group_optimizations : true,
+                writer_registry     : $(Sel.fieldWriterRegistry).val(),
             }
 
             for (var key in CheckSels) {

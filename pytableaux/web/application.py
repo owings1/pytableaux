@@ -96,7 +96,8 @@ class WebApp(EventEmitter):
         Operator = Operator,
         Quantifier = Quantifier,
         Predicate = Predicate,
-        ParseTable = ParseTable))
+        ParseTable = ParseTable,
+        writers = writers))
     "Default template context."
 
     example_args: Mapping[str, Mapping[str, Mapping[str, Any]]]
@@ -153,7 +154,7 @@ class WebApp(EventEmitter):
             is_debug = self.is_debug,
             logics = self.logics_map,
             example_args = self.example_args,
-            output_formats = writers.registry.keys(),
+            # output_formats = writers.registry.keys(),
             output_charsets = Notation.get_common_charsets(),
             logic_categories = logics.registry.grouped(self.logics_map),
             lwh = Notation.standard.DefaultWriter('html'),

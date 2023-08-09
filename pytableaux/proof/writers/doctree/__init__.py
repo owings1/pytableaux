@@ -71,11 +71,6 @@ class Translator(nodes.DefaultNodeVisitor):
         self.foot: deque[str] = deque()
         self.lw = lw
 
-    # def run(self) -> None:
-    #     self.doc.emit(self.doc.Event.BeforeTranslate, self)
-    #     self.translate()
-    #     self.doc.emit(self.doc.Event.AfterTranslate, self)
-
     def translate(self) -> None:
         self.doc.walkabout(self)
 
@@ -130,7 +125,7 @@ class HtmlTranslator(Translator):
                 attrs[key] = str(value)
             else:
                 self.logger.warning(
-                    f'Not writing {key} attribute of type {type(value)}')
+                    f'Skipping {key} attribute of type {type(value)}')
         return attrs
 
     def get_attrs_str(self, attrs: Mapping[str, Any]) -> str:
@@ -168,7 +163,6 @@ class HtmlTabWriter(DoctreeTabWriter):
         classes      = (),
         wrap_classes = (),
         inline_css   = False))
-    _CSS_CACHE = None
 
     def __call__(self, tab: Tableau, *, classes=None, wrap_classes=None):
         types = self.doc_nodetype.types
@@ -193,9 +187,3 @@ class HtmlTabWriter(DoctreeTabWriter):
     def attachments(self, /):
         css = self.jinja.get_template(self.css_template_name).render()
         return dict(css=css)
-        # cls = type(self)
-        # cssfile = f'{_staticdir}/{self.css_template_name}'
-        # if not cls._CSS_CACHE or cls._CSS_CACHE[0] != cssfile:
-        #     with open(cssfile) as f:
-        #         cls._CSS_CACHE = cssfile, f.read().replace('<', '&lt;')
-        # return dict(css=cls._CSS_CACHE[1])
