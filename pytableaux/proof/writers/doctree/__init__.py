@@ -33,6 +33,7 @@ from ....lang import LexWriter, Notation
 from ....proof import NodeKey
 from ....tools import EMPTY_SET
 from ...tableaux import Tableau
+from ..jinja import TEMPLATES_BASE_DIR, jinja
 from .. import TabWriter, TabWriterRegistry
 from . import nodes
 
@@ -43,14 +44,6 @@ __all__ = (
     'HtmlTranslator',
     'registry',
     'Translator')
-
-_staticdir = os.path.abspath(
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        '..',
-        'templates',
-        'html',
-        'static'))
 
 registry = TabWriterRegistry(name='doctree')
 
@@ -64,7 +57,7 @@ class DoctreeTabWriter(TabWriter):
 
     def render(self, doc: nodes.document, /) -> str:
         translator = self.translator_type(doc, self.lw)
-        translator.run()
+        translator.translate()
         return ''.join(translator.body)
 
 class Translator(nodes.DefaultNodeVisitor):
@@ -78,10 +71,13 @@ class Translator(nodes.DefaultNodeVisitor):
         self.foot: deque[str] = deque()
         self.lw = lw
 
-    def run(self) -> None:
-        self.doc.emit(self.doc.Event.BeforeTranslate, self)
+    # def run(self) -> None:
+    #     self.doc.emit(self.doc.Event.BeforeTranslate, self)
+    #     self.translate()
+    #     self.doc.emit(self.doc.Event.AfterTranslate, self)
+
+    def translate(self) -> None:
         self.doc.walkabout(self)
-        self.doc.emit(self.doc.Event.AfterTranslate, self)
 
     def get_tagname(self, node: nodes.Node, /) -> str:
         try:
@@ -96,7 +92,6 @@ class HtmlTranslator(Translator):
 
     format = 'html'
     logger = logging.getLogger(__name__)
-
     escape = staticmethod(html.escape)
 
     def visit_document(self, node: nodes.document, /):
@@ -124,10 +119,11 @@ class HtmlTranslator(Translator):
             attrs['id'] = str(todo.pop('id'))
         if todo.get('class'):
             todo['classes'].add(str(todo.pop('class')))
-        if todo['classes']:
+        classes = todo.pop('classes')
+        if classes:
             attrs['class'] = ' '.join(
-                re.sub(r'[\r]+', ' ', c).strip()
-                for c in todo.pop('classes'))
+                re.sub(r'[\s]+', ' ', c).strip()
+                for c in classes)
         for key in sorted(todo):
             value = todo.pop(key)
             if isinstance(value, (str, int, float, bool)):
@@ -163,6 +159,7 @@ class HtmlTabWriter(DoctreeTabWriter):
 
     format = 'html'
     translator_type = HtmlTranslator
+    jinja = jinja(f'{TEMPLATES_BASE_DIR}/html/static')
     css_template_name = 'tableau.css'
     default_charsets = MapProxy({
         notn: 'html' for notn in Notation})
@@ -189,13 +186,16 @@ class HtmlTabWriter(DoctreeTabWriter):
         node = types[nodes.tableau].for_object(tab)
         node['classes'] |= classes or EMPTY_SET
         node['classes'] |= self.opts['classes']
-        wrap += node, types[nodes.clear]()
+        wrap += node
+        wrap += types[nodes.clear]()
         return self.render(doc)
 
     def attachments(self, /):
-        cls = type(self)
-        cssfile = f'{_staticdir}/{self.css_template_name}'
-        if not cls._CSS_CACHE or cls._CSS_CACHE[0] != cssfile:
-            with open(cssfile) as f:
-                cls._CSS_CACHE = cssfile, f.read().replace('<', '&lt;')
-        return dict(css=cls._CSS_CACHE[1])
+        css = self.jinja.get_template(self.css_template_name).render()
+        return dict(css=css)
+        # cls = type(self)
+        # cssfile = f'{_staticdir}/{self.css_template_name}'
+        # if not cls._CSS_CACHE or cls._CSS_CACHE[0] != cssfile:
+        #     with open(cssfile) as f:
+        #         cls._CSS_CACHE = cssfile, f.read().replace('<', '&lt;')
+        # return dict(css=cls._CSS_CACHE[1])

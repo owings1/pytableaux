@@ -64,7 +64,7 @@ class TableauxSystem(K.TableauxSystem):
         b.append(snode(~arg.conclusion))
 
 
-@TableauxSystem.initialize(modal = False)
+@TableauxSystem.initialize
 class TabRules:
 
     class ContradictionClosure(K.TabRules.ContradictionClosure):

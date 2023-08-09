@@ -44,18 +44,22 @@ NOARG = object()
 
 registry = TabWriterRegistry(name='jinja')
 
-_templates_base_dir = os.path.join(
+TEMPLATES_BASE_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'templates')
+
+def jinja(searchpath, *, trim_blocks=True, lstrip_blocks=True, **opts):
+    return jinja2.Environment(
+        trim_blocks=trim_blocks,
+        lstrip_blocks=lstrip_blocks,
+        loader=jinja2.FileSystemLoader(searchpath),
+        **opts)
 
 class JinjaTabWriter(TabWriter):
 
     engine = 'jinja'
     template_searchpath: str|Sequence[str]
     template_name: str
-    jinja_env: jinja2.Environment
-    jinja_opts = MapProxy(dict(
-        trim_blocks   = True,
-        lstrip_blocks = True))
+    jinja: jinja2.Environment
 
     def __call__(self, tab: Tableau, **kw):
         return self.render(self.template_name, tab=tab, **kw)
@@ -66,17 +70,7 @@ class JinjaTabWriter(TabWriter):
     def get_template(self, name: str, *args, **kw):
         context = dict(lw=self.lw, opts=self.opts)
         context.update(*args, **kw)
-        return self.jinja_env.get_template(name, None, context)
-
-    @classmethod
-    def jinja_init(cls):
-        cls.jinja_env = jinja2.Environment(**dict(cls.jinja_opts,
-            loader=jinja2.FileSystemLoader(cls.template_searchpath)))
-
-    def __init_subclass__(cls, **kw):
-        super().__init_subclass__(**kw)
-        if not abcs.isabstract(cls):
-            cls.jinja_init()
+        return self.jinja.get_template(name, None, context)
 
 @registry.register
 class HtmlTabWriter(JinjaTabWriter):
@@ -84,10 +78,10 @@ class HtmlTabWriter(JinjaTabWriter):
     """
 
     format = 'html'
-    template_searchpath = f'{_templates_base_dir}/html'
     template_name = 'tableau.jinja2'
     css_template_name = 'static/tableau.css'
     default_charsets = {notn: 'html' for notn in Notation}
+    jinja = jinja(f'{TEMPLATES_BASE_DIR}/{format}')
     defaults = MapProxy(dict(
         wrapper      = True,
         classes      = (),
@@ -125,8 +119,8 @@ class TextTabWriter(JinjaTabWriter):
     """Plain text tableau writer."""
 
     format = 'text'
-    template_searchpath = f'{_templates_base_dir}/text'
     template_name = 'nodes.jinja2'
+    jinja = jinja(f'{TEMPLATES_BASE_DIR}/{format}')
 
     def __call__(self, tab: Tableau) -> str:
         template = self.get_template(self.template_name)

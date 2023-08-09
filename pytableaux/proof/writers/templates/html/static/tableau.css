@@ -2,8 +2,11 @@
     clear: both;
 }
 .tableau .node {
-    text-align: center;
     margin: 0.2em 0;
+}
+.tableau .access .world1::after {
+    font-style: normal;
+    content: 'R';
 }
 .tableau .node-props {
     padding: 0.26em;
@@ -15,6 +18,9 @@
     border-color: #aaaaaa;
     border-style: solid;
     border-width: 1px;
+}
+.tableau .node-props .sentence .world::before {
+    content: ', ';
 }
 /* Designation markers */
 .tableau .node-props .designation.designated::after {
@@ -61,6 +67,7 @@
 .tableau .world {
     font-style: italic;
 }
+.tableau .node,
 .tableau .structure > .node-segment {
     text-align: center;
 }

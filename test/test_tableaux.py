@@ -185,12 +185,14 @@ class TestBranch(BaseCase):
         self.assertEqual(list(idx), list(branch))
 
     def test_select_index_access(self):
-        b = Branch().extend((
+        b = Branch()
+        bindex = b._Branch__index
+        b.extend((
             {'world1': 0, 'world2': 1},
-            {'foo': 'bar'},
+            *({'foo': 'bar'} for _ in range(len(bindex))),
         ))
-        idx = b._Branch__index.select({'world1': 0, 'world2': 1}, b)
-        self.assertEqual(set(idx), {b[0]})
+        base = bindex.select({'world1': 0, 'world2': 1}, b)
+        self.assertEqual(set(base), {b[0]})
 
     def test_close_adds_flag_node(self):
         branch = Branch()

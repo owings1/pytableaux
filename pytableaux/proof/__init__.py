@@ -110,6 +110,7 @@ class NodeKey(ProofAttr):
     is_flag = 'is_flag'
     flag = 'flag'
     closure = 'closure'
+    quit = 'quit'
     info = 'info'
     ellipsis = 'ellipsis'
 
@@ -126,12 +127,13 @@ class PropMap(abcs.ItemMapEnum):
 
     ClosureNode = {
         NodeKey.closure: True,
-        NodeKey.flag: 'closure',
+        NodeKey.flag: NodeKey.closure,
         NodeKey.is_flag: True}
 
     QuitFlag = {
+        NodeKey.quit: True,
         NodeKey.is_flag: True,
-        NodeKey.flag: 'quit'}
+        NodeKey.flag: NodeKey.quit}
 
     EllipsisNode = {
         NodeKey.ellipsis: True}
@@ -501,8 +503,14 @@ def anode(w1, w2):
         NodeKey.w1: w1,
         NodeKey.w2: w2})
 
-from .common import (AccessNode, Branch, Node, SentenceDesignationNode,
-                     SentenceNode, SentenceWorldNode, Target)
+from .common import AccessNode, Branch
+from .common import ClosureNode as ClosureNode
+from .common import Designation as Designation
+from .common import EllipsisNode as EllipsisNode
+from .common import FlagNode as FlagNode
+from .common import QuitFlagNode as QuitFlagNode
+from .common import (Node, SentenceDesignationNode, SentenceNode,
+                     SentenceWorldNode, Target)
 from .tableaux import Rule, RulesRoot, Tableau
 
 pass

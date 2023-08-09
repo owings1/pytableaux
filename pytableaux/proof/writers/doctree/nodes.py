@@ -86,12 +86,12 @@ class NodeTypes(TransMmap[type[_NT], type[_NT]]):
 if TYPE_CHECKING:
     class NodeTypes(TypeTypeMap[_NT]): ...
 
-class TranslatorAware:
-    "Class to flag for doc modifications before translating"
+# class TranslatorAware:
+#     "Class to flag for doc modifications before translating"
 
-    @abstractmethod
-    def before_translate(self, trans: Translator, /) -> None:
-        pass
+#     @abstractmethod
+#     def before_translate(self, trans: Translator, /) -> None:
+#         pass
 
 class BuilderMixin(ForObjectBuilder[_T]):
 
@@ -326,28 +326,37 @@ class child_wrapper(BlockElement, BuilderMixin[tuple[Tableau.Tree, Tableau.Tree]
         yield 'data-current-width-pct', _pctstr(width)
         yield 'style', _styleattr(width=_pctstr(width))
 
-class world(InlineElement, BuilderMixin[proof.Node], TranslatorAware):
+class world(InlineElement, BuilderMixin[int]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
-        yield NodeKey.world, obj[NodeKey.world]
+        yield f'data-world', obj
 
-    def before_translate(self, trans, /):
-        if trans.format != 'html':
-            return
-        types = self.types
-        self += types[textnode](', w')
-        self += types[subscript](types[textnode](self[NodeKey.world]))
+    @classmethod
+    def get_obj_children(cls, obj, /):
+        types = cls.types
+        yield types[textnode]('w')
+        yield types[subscript](types[textnode](obj))
 
-class sentence(InlineElement, BuilderMixin[proof.Node]):
+class sentence(InlineElement, BuilderMixin[proof.SentenceNode]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
         yield NodeKey.sentence, obj[NodeKey.sentence]
-        if obj.has(NodeKey.world):
-            yield NodeKey.world, obj[NodeKey.world]
+        if isinstance(obj, proof.SentenceWorldNode):
+            yield f'data-world', obj[NodeKey.world]
+        if isinstance(obj, proof.SentenceDesignationNode):
+            yield f'data-designated', obj[NodeKey.designation]
 
-class designation(InlineElement, BuilderMixin[proof.Node]):
+    @classmethod
+    def get_obj_children(cls, obj, /):
+        types = cls.types
+        if isinstance(obj, proof.SentenceWorldNode):
+            yield types[world].for_object(obj[NodeKey.world])
+        elif isinstance(obj, proof.SentenceDesignationNode):
+            yield types[designation].for_object(obj[NodeKey.designation])
+
+class designation(InlineElement, BuilderMixin[bool]):
 
     designation_classnames = (
         'undesignated',
@@ -355,23 +364,22 @@ class designation(InlineElement, BuilderMixin[proof.Node]):
 
     @classmethod
     def get_obj_classes(cls, obj, /):
-        yield cls.designation_classnames[
-            bool(obj.get(NodeKey.designation))]
+        yield cls.designation_classnames[bool(obj)]
 
-class access(InlineElement, BuilderMixin[proof.Node], TranslatorAware):
+class access(InlineElement, BuilderMixin[proof.AccessNode]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
-        yield from Access.fornode(obj).tonode().items()
+        yield f'data-world1', obj[NodeKey.world1]
+        yield f'data-world2', obj[NodeKey.world2]
 
-    def before_translate(self, trans, /):
-        if trans.format != 'html':
-            return
-        types = self.types
-        self += types[textnode]('w')
-        self += types[subscript](types[textnode](self[NodeKey.w1]))
-        self += types[textnode]('Rw')
-        self += types[subscript](types[textnode](self[NodeKey.w2]))
+    @classmethod
+    def get_obj_children(cls, obj, /):
+        types = cls.types
+        for key in (NodeKey.world1, NodeKey.world2):
+            n = types[world].for_object(obj[key])
+            n['classes'].add(key)
+            yield n
         
 class flag(InlineElement, BuilderMixin[proof.Node]):
 
@@ -381,7 +389,7 @@ class flag(InlineElement, BuilderMixin[proof.Node]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
-        yield NodeKey.info, obj.get(NodeKey.info, '')
+        yield 'data-info', obj.get(NodeKey.info, '')
 
 class node_props(InlineElement, BuilderMixin[proof.Node]):
 
@@ -393,17 +401,13 @@ class node_props(InlineElement, BuilderMixin[proof.Node]):
     @classmethod
     def get_obj_children(cls, obj, /):
         types = cls.types
-        if obj.has(NodeKey.sentence):
+        if isinstance(obj, proof.SentenceNode):
             yield types[sentence].for_object(obj)
-            if obj.has(NodeKey.world):
-                yield types[world].for_object(obj)
-        if obj.has(NodeKey.designation):
-            yield types[designation].for_object(obj)
-        if getattr(obj, NodeAttr.is_access):
+        elif isinstance(obj, proof.AccessNode):
             yield types[access].for_object(obj)
-        if obj.has(NodeKey.ellipsis):
+        elif isinstance(obj, proof.EllipsisNode):
             yield types[ellipsis].for_object(obj)
-        if obj.has(NodeKey.is_flag):
+        elif isinstance(obj, proof.FlagNode):
             yield types[flag].for_object(obj)
 
 class node(BlockElement, BuilderMixin[tuple[proof.Node, int]]):
@@ -467,7 +471,7 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
             yield 'data-branch-id', obj.branch_id
         if obj.model_id:
             yield 'data-model-id', obj.model_id
-        
+
     @classmethod
     def get_obj_classes(cls, obj, /):
         if obj.root:
@@ -477,15 +481,14 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
     @classmethod
     def get_obj_children(cls, obj, /):
         types = cls.types
-        node = types[node_segment].for_object(obj)
+        yield types[node_segment].for_object(obj)
         if obj.children:
-            node += types[vertical_line].for_object(obj.branch_step)
-            node += types[horizontal_line].for_object(obj)
+            yield types[vertical_line].for_object(obj.branch_step)
+            yield types[horizontal_line].for_object(obj)
             for child in obj.children:
                 wrap = types[child_wrapper].for_object((obj, child))
                 wrap += cls.for_object(child)
-                node += wrap
-        yield node
+                yield wrap
 
 class tableau(BlockElement, BuilderMixin[Tableau]):
 
@@ -503,26 +506,26 @@ class tableau(BlockElement, BuilderMixin[Tableau]):
 
 class document(Element, EventEmitter):
 
-    class Event(enum.Enum):
-        BeforeTranslate = enum.auto()
-        AfterTranslate = enum.auto()
+    # class Event(enum.Enum):
+    #     BeforeTranslate = enum.auto()
+    #     AfterTranslate = enum.auto()
 
     @property
     def document(self):
         return self
 
-    def __init__(self, *args, **kw):
-        EventEmitter.__init__(self, *self.Event)
-        super().__init__(*args, **kw)
-        self.on(self.Event.BeforeTranslate, self.__before_translate)
+    # def __init__(self, *args, **kw):
+    #     EventEmitter.__init__(self, *self.Event)
+    #     super().__init__(*args, **kw)
+    #     self.on(self.Event.BeforeTranslate, self.__before_translate)
 
-    def __before_translate(self, trans: Translator, /):
-        for node in self.iterate():
-            if isinstance(node, TranslatorAware):
-                node.before_translate(trans)
-        for node in self.iterate():
-            if node is not self:
-                node.document = self
+    # def __before_translate(self, trans: Translator, /):
+    #     for node in self.iterate():
+    #         if isinstance(node, TranslatorAware):
+    #             node.before_translate(trans)
+    #     for node in self.iterate():
+    #         if node is not self:
+    #             node.document = self
 
 class NodeVisitor(abcs.Abc):
 

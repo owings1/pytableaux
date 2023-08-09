@@ -784,7 +784,7 @@ class MaxConsts(dict[Branch, int], RuleHelper):
         s = node.get(NodeKey.sentence)
         return len(s.quantifiers) if s else 0
 
-class MaxWorlds(dict[Branch, int], RuleHelper):
+class MaxWorlds(BranchDictCache[Branch, int], RuleHelper):
     """Project the maximum number of worlds required for each branch by examining
     the branches after the trunk is built.
     """
@@ -806,7 +806,8 @@ class MaxWorlds(dict[Branch, int], RuleHelper):
             return self.setdefault(s, sum(map(self.filter, s.operators)))
 
     def __init__(self, rule: Rule,/):
-        RuleHelper.__init__(self, rule)
+        # RuleHelper.__init__(self, rule)
+        super().__init__(rule)
         self.modals = self.Modals(getattr(self.rule, RuleAttr.ModalOperators))
 
     def listen_on(self):
