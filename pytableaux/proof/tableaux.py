@@ -43,6 +43,13 @@ from . import (BranchEvent, BranchStat, RuleEvent, RuleHelper, RuleMeta,
                RuleState, StepEntry, TabEvent, TabFlag, TabStatKey, TabTimers)
 from .common import Branch, Node, Target
 
+if TYPE_CHECKING:
+    from typing import overload
+    from ..tools import TypeInstMap
+
+_F = TypeVar('_F', bound=Callable)
+_RHT = TypeVar('_RHT', bound=RuleHelper)
+
 __all__ = (
     'Rule',
     'RuleGroup',
@@ -52,12 +59,6 @@ __all__ = (
 
 NOARG = object()
 NOGET = object()
-_F = TypeVar('_F', bound=Callable)
-_RHT = TypeVar('_RHT', bound=RuleHelper)
-
-if TYPE_CHECKING:
-    from typing import overload
-    from ..tools import TypeInstMap
 # ----------------------------------------------
 
 class Rule(EventEmitter, metaclass = RuleMeta):

@@ -21,6 +21,7 @@ pytableaux.proof.writers.doctree
 """
 from __future__ import annotations
 
+import html
 import logging
 import os
 import re
@@ -28,41 +29,61 @@ from collections import deque
 from types import MappingProxyType as MapProxy
 from typing import Any, Mapping
 
-from ... import __docformat__
-from ...lang import LexWriter, Notation
-from ...proof import NodeKey
-from ...tools import EMPTY_SET
-from ..tableaux import Tableau
-from . import TabWriter, TabWriterRegistry, nodes
-from .nodes import DefaultNodeVisitor, Element, Node, document
+from ....lang import LexWriter, Notation
+from ....proof import NodeKey
+from ....tools import EMPTY_SET
+from ...tableaux import Tableau
+from .. import TabWriter, TabWriterRegistry
+from . import nodes
 
 NOARG = object()
 
 __all__ = (
-    'HtmlDocTabWriter',
+    'HtmlTabWriter',
     'HtmlTranslator',
     'registry',
     'Translator')
 
-_staticdir = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'templates',
-    'html',
-    'static')
+_staticdir = os.path.abspath(
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '..',
+        'templates',
+        'html',
+        'static'))
 
+registry = TabWriterRegistry(name='doctree')
 
-registry = TabWriterRegistry()
+class DoctreeTabWriter(TabWriter):
 
-class Translator(DefaultNodeVisitor):
+    __slots__ = EMPTY_SET
+
+    engine = 'doctree'
+    doc_nodetype: type[nodes.document] = nodes.document
+    translator_type: type[Translator]
+
+    def render(self, doc: nodes.document, /) -> str:
+        translator = self.translator_type(doc, self.lw)
+        translator.run()
+        return ''.join(translator.body)
+
+class Translator(nodes.DefaultNodeVisitor):
 
     format = 'unknown'
+
+    def __init__(self, doc: nodes.document, lw: LexWriter, /):
+        super().__init__(doc)
+        self.head: deque[str] = deque()
+        self.body: deque[str] = deque()
+        self.foot: deque[str] = deque()
+        self.lw = lw
 
     def run(self) -> None:
         self.doc.emit(self.doc.Event.BeforeTranslate, self)
         self.doc.walkabout(self)
         self.doc.emit(self.doc.Event.AfterTranslate, self)
 
-    def get_tagname(self, node: Node, /) -> str:
+    def get_tagname(self, node: nodes.Node, /) -> str:
         try:
             tagname = node.tagnames[self.format]
         except KeyError:
@@ -76,36 +97,27 @@ class HtmlTranslator(Translator):
     format = 'html'
     logger = logging.getLogger(__name__)
 
+    escape = staticmethod(html.escape)
 
-    from html import escape
-    escape = staticmethod(escape)
-
-    def __init__(self, doc: document, lw: LexWriter, /):
-        super().__init__(doc)
-        self.head: deque[str] = deque()
-        self.body: deque[str] = deque()
-        self.foot: deque[str] = deque()
-        self.lw = lw
-
-    def visit_document(self, node: Node, /):
+    def visit_document(self, node: nodes.document, /):
         raise nodes.SkipDeparture
 
-    def visit_textnode(self, node: Node, /):
+    def visit_textnode(self, node: nodes.textnode, /):
         self.body.append(self.escape(node))
         raise nodes.SkipDeparture
 
-    def visit_rawtext(self, node: Node, /):
+    def visit_rawtext(self, node: nodes.rawtext, /):
         self.body.append(node)
         raise nodes.SkipDeparture
 
-    def visit_sentence(self, node: Element, /):
+    def visit_sentence(self, node: nodes.sentence, /):
         rendered = self.lw(node.attributes.pop(NodeKey.sentence))
         if self.lw.charset != self.format:
             rendered = self.escape(rendered)
         self.default_visitor(node)
         self.body.append(rendered)
 
-    def get_attrs_map(self, node: Element, /) -> dict[str, str]:
+    def get_attrs_map(self, node: nodes.Element, /) -> dict[str, str]:
         attrs = {}
         todo = dict(node.attributes)
         if todo.get('id'):
@@ -138,19 +150,19 @@ class HtmlTranslator(Translator):
     def write_closetag(self, tagname: str) -> None:
         self.body.append(f'</{self.escape(tagname)}>')
 
-    def default_visitor(self, node: Node, /):
+    def default_visitor(self, node: nodes.Node, /):
         self.write_opentag(self.get_tagname(node), self.get_attrs_map(node))
 
-    def default_departer(self, node: Node, /):
+    def default_departer(self, node: nodes.Node, /):
         self.write_closetag(self.get_tagname(node))
 
-
 @registry.register
-class HtmlDocTabWriter(TabWriter):
+class HtmlTabWriter(DoctreeTabWriter):
 
     __slots__ = EMPTY_SET
 
     format = 'html'
+    translator_type = HtmlTranslator
     css_template_name = 'tableau.css'
     default_charsets = MapProxy({
         notn: 'html' for notn in Notation})
@@ -159,20 +171,13 @@ class HtmlDocTabWriter(TabWriter):
         classes      = (),
         wrap_classes = (),
         inline_css   = False))
-    node_types = MapProxy(dict(
-        document = nodes.document,
-        style    = nodes.style,
-        rawtext  = nodes.rawtext,
-        tableau  = nodes.tableau,
-        wrapper  = nodes.wrapper,
-        clear    = nodes.clear))
     _CSS_CACHE = None
 
     def __call__(self, tab: Tableau, *, classes=None, wrap_classes=None):
-        types = self.node_types
-        doc = types['document']()
+        types = self.doc_nodetype.types
+        doc = types[nodes.document]()
         if self.opts['wrapper']:
-            wrap = types['wrapper'](classes=['tableau-wrapper'])
+            wrap = types[nodes.wrapper](classes=['tableau-wrapper'])
             wrap['classes'] |= wrap_classes or EMPTY_SET
             wrap['classes'] |= self.opts['wrap_classes']
             doc += wrap
@@ -180,15 +185,12 @@ class HtmlDocTabWriter(TabWriter):
             wrap = doc
         if self.opts['inline_css']:
             css = '\n' + self.attachments()['css'] + '\n'
-            wrap += types['style'](types['rawtext'](css))
-        node = types['tableau'].for_object(tab)
+            wrap += types[nodes.style](types[nodes.rawtext](css))
+        node = types[nodes.tableau].for_object(tab)
         node['classes'] |= classes or EMPTY_SET
         node['classes'] |= self.opts['classes']
-        wrap += node, types['clear']()
-        translator = HtmlTranslator(doc, self.lw)
-        translator.run()
-            
-        return ''.join(translator.body)
+        wrap += node, types[nodes.clear]()
+        return self.render(doc)
 
     def attachments(self, /):
         cls = type(self)

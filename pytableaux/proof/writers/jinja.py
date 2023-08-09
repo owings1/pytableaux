@@ -42,13 +42,14 @@ __all__ = (
 
 NOARG = object()
 
-registry = TabWriterRegistry()
+registry = TabWriterRegistry(name='jinja')
 
 _templates_base_dir = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'templates')
 
 class JinjaTabWriter(TabWriter):
 
+    engine = 'jinja'
     template_searchpath: str|Sequence[str]
     template_name: str
     jinja_env: jinja2.Environment
@@ -119,7 +120,7 @@ class HtmlTabWriter(JinjaTabWriter):
         """
         return dict(css=self.render(self.css_template_name))
 
-@registry.register
+@registry.register(default=True)
 class TextTabWriter(JinjaTabWriter):
     """Plain text tableau writer."""
 

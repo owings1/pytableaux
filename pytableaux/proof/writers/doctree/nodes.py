@@ -28,12 +28,16 @@ from types import MappingProxyType as MapProxy
 from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
                     Sequence, Set, SupportsIndex, TypeVar)
 
-from ... import proof
-from ...errors import check
-from ...tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, ForObjectBuilder,
+from .... import proof
+from ....errors import check
+from ....tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, ForObjectBuilder,
                       TransMmap, abcs, closure, qset, qsetf)
-from ...tools.events import EventEmitter
-from .. import Access, NodeAttr, NodeKey, Tableau
+from ....tools.events import EventEmitter
+from ... import Access, NodeAttr, NodeKey, Tableau
+
+if TYPE_CHECKING:
+    from . import Translator
+    from ....tools import TypeTypeMap
 
 __all__ = (
     'access',
@@ -51,9 +55,6 @@ __all__ = (
     'tree',
     'vertical_line',
     'world')
-
-if TYPE_CHECKING:
-    from .doctree import Translator
 
 _T = TypeVar('_T')
 _NT = TypeVar('_NT', bound='Node')
@@ -83,7 +84,6 @@ class NodeTypes(TransMmap[type[_NT], type[_NT]]):
     kset = kget
 
 if TYPE_CHECKING:
-    from ...tools import TypeTypeMap
     class NodeTypes(TypeTypeMap[_NT]): ...
 
 class TranslatorAware:
@@ -460,7 +460,7 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
     def get_obj_attributes(cls, obj, /):
         yield 'id', f'structure_{obj.id}'
         for name in cls.data_attrnames:
-            yield f'data-{name}', obj[name]
+            yield f'data-{_endash(name)}', getattr(obj, _uscore(name))
         if obj.closed:
             yield 'data-closed-step', obj.closed_step
         if obj.branch_id:
