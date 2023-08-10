@@ -12,7 +12,6 @@ from pytableaux.proof.filters import getkey
 from pytableaux.proof.helpers import *
 from pytableaux.proof.rules import ClosingRule, NoopRule, Rule
 from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof import TabEvent, TabFlag, TabStatKey
 from types import MappingProxyType as MapProxy
 from pytest import raises
 from unittest import skip
@@ -88,7 +87,7 @@ class TestTableau(BaseCase):
             __slots__ = '__dict__',
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
-                self.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
+                self.tableau.on(Tableau.Events.AFTER_BRANCH_ADD, self.__after_branch_add)
 
             def __after_branch_add(self, branch: Branch):
                 self._checkbranch = branch
@@ -109,8 +108,8 @@ class TestTableau(BaseCase):
             {sen: s} for s in self.pp('NNa', 'Kab', 'Aab')
         ])
         step = tab.step()
-        stat = tab.stat(b, step.target.node, TabStatKey.FLAGS)
-        self.assertIn(TabFlag.TICKED, stat)
+        stat = tab.stat(b, step.target.node, Tableau.StatKey.FLAGS)
+        self.assertIn(Tableau.Flag.TICKED, stat)
 
 class TestBranch(BaseCase):
 
@@ -163,7 +162,7 @@ class TestBranch(BaseCase):
                 self.should_be = False
                 self.shouldnt_be = True
                 super().__init__(*args, **opts)
-                self.tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
+                self.tableau.on(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
 
             def __after_node_add(self, node: Node, branch: Branch):
                 self.should_be = branch.has({'world1': 7})

@@ -31,7 +31,7 @@ from ..lang import Constant, Sentence
 from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs, dictattr,
                      isattrstr, isint, itemsiter, lazy, qset)
 from ..tools.events import EventEmitter
-from . import BranchEvent, NodeKey, PropMap
+from . import NodeKey, PropMap, BranchMeta
 
 if TYPE_CHECKING:
 
@@ -221,7 +221,7 @@ class NodeIndex(dict[tuple[str, ...], dict[tuple[Any, ...], set[Node]]], abcs.Co
                 best = base
         return best
 
-class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
+class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
     'A tableau branch.'
 
     __constants: set[Constant]
@@ -257,7 +257,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         Args:
             parent (Optional[Branch]): The parent branch, if any.
         """
-        EventEmitter.__init__(self, *BranchEvent)
+        EventEmitter.__init__(self, *Branch.Events)
         self.parent = parent
         # Make sure properties are copied if needed in copy()
         self.__nodes = qset()
@@ -476,9 +476,9 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
 
         # Add to index *before* after_node_add event
         self.__index.add(node)
-        self.emit(BranchEvent.AFTER_ADD, node, self)
+        self.emit(Branch.Events.AFTER_ADD, node, self)
         if isinstance(node, ClosureNode):
-            self.emit(BranchEvent.AFTER_CLOSE, self)
+            self.emit(Branch.Events.AFTER_CLOSE, self)
         return self
 
     add = append
@@ -507,7 +507,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable):
         if node not in self.__ticked:
             self.__ticked.add(node)
             node.ticked = True
-            self.emit(BranchEvent.AFTER_TICK, node, self)
+            self.emit(Branch.Events.AFTER_TICK, node, self)
 
     def close(self):
         """Close the branch. Adds a flag node and emits the `AFTER_BRANCH_CLOSE

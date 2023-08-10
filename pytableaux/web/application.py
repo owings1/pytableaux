@@ -154,7 +154,6 @@ class WebApp(EventEmitter):
             is_debug = self.is_debug,
             logics = self.logics_map,
             example_args = self.example_args,
-            # output_formats = writers.registry.keys(),
             output_charsets = Notation.get_common_charsets(),
             logic_categories = logics.registry.grouped(self.logics_map),
             lwh = Notation.standard.DefaultWriter('html'),

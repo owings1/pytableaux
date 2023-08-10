@@ -24,12 +24,11 @@ from __future__ import annotations
 from abc import abstractmethod
 from enum import Enum, Flag, auto
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, NamedTuple, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, NamedTuple, Self, Sequence, TypeVar
 
-from .. import __docformat__
 from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
-from ..tools import EMPTY_MAP, EMPTY_QSET, EMPTY_SET, abcs, qsetf
+from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from ..tools.timing import Counter, StopWatch
 
 if TYPE_CHECKING:
@@ -41,60 +40,19 @@ __all__ = (
     'adds',
     'anode',
     'Branch',
-    'BranchEvent',
     'ClosingRule',
     'group',
-    'HelperAttr',
     'Node',
     'Rule',
-    'RuleAttr',
-    'RuleEvent',
-    'RuleHelper',
-    'RuleMeta',
     'sdnode',
     'snode',
     'swnode',
-    'TabEvent',
     'Tableau',
     'TableauxSystem',
     'TabWriter',
     'Target')
 
 NOARG = object()
-
-class HelperAttr(str, Enum):
-    'Special ``RuleHelper`` class attribute names.'
-
-    InitRuleCls = 'configure_rule'
-
-#******  Rule Enum
-
-class RuleAttr(str, Enum):
-    'Special ``Rule`` class attribute names.'
-    Helpers = 'Helpers'
-    "Rule helper classes."
-    Timers = 'Timers'
-    "Rule timer names."
-    DefaultOpts = '_defaults'
-    "Rule default options."
-    NodeFilters = 'NodeFilters'
-    "For `FilterHelper`."
-    IgnoreTicked = 'ignore_ticked'
-    "For `FilterHelper`."
-    ModalOperators = 'modal_operators'
-    "For `MaxWorlds` helper."
-    Modal = 'modal'
-    "Modal flag."
-    Legend = 'legend'
-    "Rule legend"
-
-class RuleLegendAttr(str, Enum):
-    negated = 'negated'
-    operator = 'operator'
-    quantifier = 'quantifier'
-    predicate = 'predicate'
-    designation = 'designation'
-    closure = 'closure'
 
 class ProofAttr(str, Enum):
 
@@ -138,60 +96,6 @@ class PropMap(abcs.ItemMapEnum):
     EllipsisNode = {
         NodeKey.ellipsis: True}
 
-#******  Branch Enum
-
-class BranchEvent(Enum):
-    'Branch events.'
-    AFTER_CLOSE = auto()
-    AFTER_ADD   = auto()
-    AFTER_TICK  = auto()
-
-#******  Helper Enum
-
-class RuleEvent(Enum):
-    'Rule events.'
-    BEFORE_APPLY = auto()
-    AFTER_APPLY  = auto()
-
-class RuleState(Flag):
-    'Rule state bit flags.'
-    NONE   = 0
-    INIT   = 1
-    LOCKED = 2
-
-#******  Tableau Enum
-
-class TabEvent(Enum):
-    'Tableau events.'
-    AFTER_BRANCH_ADD    = auto()
-    AFTER_BRANCH_CLOSE  = auto()
-    AFTER_NODE_ADD      = auto()
-    AFTER_NODE_TICK     = auto()
-    AFTER_TRUNK_BUILD   = auto()
-    BEFORE_TRUNK_BUILD  = auto()
-    AFTER_FINISH        = auto()
-
-class TabStatKey(Enum):
-    'Tableau ``stat()`` keys.'
-    FLAGS       = auto()
-    STEP_ADDED  = auto()
-    STEP_TICKED = auto()
-    STEP_CLOSED = auto()
-    INDEX       = auto()
-    PARENT      = auto()
-    NODES       = auto()
-
-class TabFlag(Flag):
-    'Tableau state bit flags.'
-    NONE   = 0
-    TICKED = 1
-    CLOSED = 2
-    PREMATURE   = 4
-    FINISHED    = 8
-    TIMED_OUT   = 16
-    TRUNK_BUILT = 32
-    TIMING_INACCURATE = 64
-
 #******  Auxilliary Classes
 class StepEntry(NamedTuple):
     rule: Rule
@@ -230,67 +134,65 @@ class Access(NamedTuple):
     def tonode(self):
         """Create node from this instance."""
         return AccessNode({
-            NodeKey.w1: self.world1,
-            NodeKey.w2: self.world2})
+            NodeKey.world1: self.world1,
+            NodeKey.world2: self.world2})
 
     def reversed(self):
         """Create reversed instance."""
         return self._make(reversed(self))
 
-class NodeStat(dict):
+class BranchMeta(abcs.AbcMeta):
+    """Branch meta class."""
+    class Events(Enum):
+        'Branch events.'
+        AFTER_CLOSE = auto()
+        AFTER_ADD   = auto()
+        AFTER_TICK  = auto()
 
-    __slots__ = EMPTY_SET
+class TableauMeta(abcs.AbcMeta):
+    """Tableau meta class."""
 
-    _defaults = MapProxy({
-        TabStatKey.FLAGS       : TabFlag.NONE,
-        TabStatKey.STEP_ADDED  : TabFlag.NONE,
-        TabStatKey.STEP_TICKED : None})
+    class Events(Enum):
+        'Tableau events.'
+        AFTER_BRANCH_ADD    = auto()
+        AFTER_BRANCH_CLOSE  = auto()
+        AFTER_NODE_ADD      = auto()
+        AFTER_NODE_TICK     = auto()
+        AFTER_TRUNK_BUILD   = auto()
+        BEFORE_TRUNK_BUILD  = auto()
+        AFTER_FINISH        = auto()
 
-    def __init__(self):
-        super().__init__(self._defaults)
+    class Timers(NamedTuple):
+        'Tableau timers data class.'
+        build  : StopWatch
+        trunk  : StopWatch
+        tree   : StopWatch
+        models : StopWatch
 
-class BranchStat(dict):
+        @classmethod
+        def create(cls, it = (False,) * 4):
+            return cls._make(map(StopWatch, it))
 
-    __slots__ = EMPTY_SET
+    class Flag(Flag):
+        'Tableau state bit flags.'
+        # NONE   = 0
+        TICKED = 1
+        CLOSED = 2
+        PREMATURE = 4
+        FINISHED = 8
+        TIMED_OUT = 16
+        TRUNK_BUILT = 32
+        TIMING_INACCURATE = 64
 
-    _defaults = MapProxy({
-        TabStatKey.FLAGS       : TabFlag.NONE,
-        TabStatKey.STEP_ADDED  : TabFlag.NONE,
-        TabStatKey.STEP_CLOSED : TabFlag.NONE,
-        TabStatKey.INDEX       : None,
-        TabStatKey.PARENT      : None})
-
-    def __init__(self, mapping = None, /, **kw):
-        super().__init__(self._defaults)
-        self[TabStatKey.NODES] = {}
-        if mapping is not None:
-            self.update(mapping)
-        if len(kw):
-            self.update(kw)
-
-    def node(self, node, /):
-        'Get the stat info for the node, and create if missing.'
-        # Avoid using defaultdict, since it may hide problems.
-        try:
-            return self[TabStatKey.NODES][node]
-        except KeyError:
-            return self[TabStatKey.NODES].setdefault(node, NodeStat())
-
-    def view(self):
-        return {k: self[k] for k in self._defaults}
-
-class TabTimers(NamedTuple):
-    'Tableau timers data class.'
-
-    build  : StopWatch
-    trunk  : StopWatch
-    tree   : StopWatch
-    models : StopWatch
-
-    @staticmethod
-    def create(it = (False,) * 4):
-        return TabTimers._make(map(StopWatch, it))
-
+    class StatKey(Enum):
+        'Tableau ``stat()`` keys.'
+        FLAGS       = auto()
+        STEP_ADDED  = auto()
+        STEP_TICKED = auto()
+        STEP_CLOSED = auto()
+        INDEX       = auto()
+        PARENT      = auto()
+        NODES       = auto()
 
 class TableauxSystem(metaclass = abcs.AbcMeta):
     'Tableaux system base class.'
@@ -345,127 +247,127 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
             cls.Rules = RulesClass
             for rulecls in RulesClass.all_rules:
                 if modal is not None:
-                    setattr(rulecls, RuleAttr.Modal, modal)
+                    rulecls.modal = modal
                     if not modal:
-                        _disable_filter(rulecls, filters.ModalNode)
+                        rulecls.disable_filter(filters.ModalNode)
             return RulesClass
         if RulesClass:
             return dec(RulesClass)
         return dec
 
-class RuleHelper(metaclass = abcs.AbcMeta):
-    'Rule helper interface.'
-
-    __slots__ = EMPTY_SET
-
-    rule: Rule
-    config: Any
-
-    def __init__(self, rule: Rule, /):
-        self.rule = rule
-        self.config = rule.Helpers.get(type(self))
-        self.listen_on()
-
-    def listen_on(self):
-        pass
-
-    def listen_off(self):
-        pass
-
-    @classmethod
-    def configure_rule(cls, rulecls, config: Any, /):
-        """``RuleHelper`` hook for initializing & verifiying a ``Rule`` class.
-        
-        Args:
-            rulecls: The rule class using the helper class.
-            config: Config from the rule class, if any.
-        """
-        pass
-
 class RuleMeta(abcs.AbcMeta):
     """Rule meta class."""
 
+    class State(Flag):
+        'Rule state bit flags.'
+        INIT   = 1
+        LOCKED = 2
+
+    class Events(Enum):
+        'Rule events.'
+        BEFORE_APPLY = auto()
+        AFTER_APPLY  = auto()
+
+    class Legend(str, Enum):
+        negated = 'negated'
+        operator = 'operator'
+        quantifier = 'quantifier'
+        predicate = 'predicate'
+        designation = 'designation'
+        closure = 'closure'
+
+        @classmethod
+        def make(cls, obj):
+            """Build rule class legend."""
+            getters = {
+                cls.operator: Operator,
+                cls.quantifier: Quantifier,
+                cls.predicate: Predicate}
+            for attr in cls:
+                value = getattr(obj, attr, None)
+                if attr is cls.negated:
+                    if value:
+                        yield attr, Operator.Negation
+                elif attr is cls.designation:
+                    if value is not None:
+                        yield attr, value
+                elif attr is cls.closure:
+                    if value:
+                        yield attr, True
+                elif attr in getters:
+                    if value:
+                        yield attr, getters[attr](value)
     @classmethod
     def __prepare__(cls, clsname, bases, **kw):
         return dict(__slots__ = EMPTY_SET, name = clsname)
 
     def __new__(cls, clsname, bases, ns, /, modal = NOARG, **kw):
-
-        Class: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
-
+        rulecls: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
         if modal is not NOARG:
-            setattr(Class, RuleAttr.Modal, modal)
-
-        abcs.merge_attr(Class, RuleAttr.DefaultOpts, mcls = cls,
+            rulecls.modal = modal
+        abcs.merge_attr(rulecls, '_defaults', mcls = cls,
             default = {}, transform = MapProxy)
-
-        abcs.merge_attr(Class, RuleAttr.Timers, mcls = cls,
+        abcs.merge_attr(rulecls, 'timer_names', mcls = cls,
             default = EMPTY_QSET, transform = qsetf)
-
-        configs = {}
-
-        for parent in abcs.mroiter(Class, mcls = cls):
-            v = getattr(parent, RuleAttr.Helpers, EMPTY_MAP)
+        configs: dict[type[Rule.Helper], Any] = {}
+        for parent in abcs.mroiter(rulecls, mcls = cls):
+            v = parent.Helpers
             if isinstance(v, Sequence):
                 for helpercls in v:
                     configs.setdefault(helpercls, None)
             else:
                 configs.update(v)
-
-        setattr(Class, RuleAttr.Helpers, MapProxy(configs))
+        rulecls.Helpers = MapProxy(configs)
         for helpercls, _ in configs.items():
-            setup = getattr(helpercls, HelperAttr.InitRuleCls, None)
-            if setup:
-                configs[helpercls] = setup(Class, ...)
+            configs[helpercls] = helpercls.configure_rule(rulecls, ...)
         if modal is False:
-            _disable_filter(Class, filters.ModalNode)
-        setattr(Class, RuleAttr.Legend, tuple(_build_legend(Class)))
-        return Class
+            rulecls.disable_filter(filters.ModalNode)
+        rulecls.legend = tuple(cls.Legend.make(rulecls))
+        return rulecls
 
-def _disable_filter(rulecls, filtercls):
-    if filtercls not in (filts := getattr(rulecls, RuleAttr.NodeFilters, EMPTY_SET)):
-        return
-    filts[filtercls] = NotImplemented
-    helpercls = helpers.FilterHelper
-    if not (setup := getattr(helpercls, HelperAttr.InitRuleCls, None)):
-        return
-    if helpercls not in (configs := getattr(rulecls, RuleAttr.Helpers)):
-        return
-    configs = dict(configs)
-    configs[helpercls] = setup(rulecls, ...)
-    setattr(rulecls, RuleAttr.Helpers, MapProxy(configs))
+    def disable_filter(self: Self|type[Rule], filtercls):
+        try:
+            filts = self.NodeFilters
+        except AttributeError:
+            return
+        if filtercls not in filts:
+            return
+        filts[filtercls] = NotImplemented
+        helpercls = helpers.FilterHelper
+        if helpercls not in self.Helpers:
+            return
+        configs = dict(self.Helpers)
+        configs[helpercls] = helpercls.configure_rule(self, ...)
+        self.Helpers = MapProxy(configs)
 
-def _build_legend(rulecls):
-    """Build rule class legend."""
-    getters = {
-        RuleLegendAttr.operator: Operator,
-        RuleLegendAttr.quantifier: Quantifier,
-        RuleLegendAttr.predicate: Predicate}
-    for attr in RuleLegendAttr:
-        value = getattr(rulecls, attr, None)
-        if attr is RuleLegendAttr.negated:
-            if value:
-                yield attr, Operator.Negation
-        elif attr is RuleLegendAttr.designation:
-            if value is not None:
-                yield attr, value
-        elif attr is RuleLegendAttr.closure:
-            if value:
-                yield attr, True
-        elif attr in getters:
-            if value:
-                yield attr, getters[attr](value)
+    class Helper(metaclass = abcs.AbcMeta):
+        'Rule helper interface.'
 
-def group(*items):
-    """Tuple builder.
-    
-    Args:
-        *items: members.
+        __slots__ = EMPTY_SET
 
-    Returns:
-        The tuple of arguments.
-    """
-    return items
+        rule: Rule
+        config: Any
+
+        def __init__(self, rule: Rule, /):
+            self.rule = rule
+            self.config = rule.Helpers.get(type(self))
+            self.listen_on()
+
+        def listen_on(self):
+            pass
+
+        def listen_off(self):
+            pass
+
+        @classmethod
+        def configure_rule(cls, rulecls: type[Rule], config: Any, /):
+            """Hook for initializing & verifiying a ``Rule`` class.
+            
+            Args:
+                rulecls: The rule class using the helper class.
+                config: Config from the rule class, if any.
+            """
+            pass
 
 def adds(*groups, **kw):
     """Target dict builder for `AdzHelper`.
@@ -500,17 +402,19 @@ def swnode(s, w):
 def anode(w1, w2):
     'Make an Access node.'
     return AccessNode({
-        NodeKey.w1: w1,
-        NodeKey.w2: w2})
+        NodeKey.world1: w1,
+        NodeKey.world2: w2})
 
+from ..tools import group as group
 from .common import AccessNode, Branch
 from .common import ClosureNode as ClosureNode
 from .common import Designation as Designation
 from .common import EllipsisNode as EllipsisNode
 from .common import FlagNode as FlagNode
+from .common import Node
 from .common import QuitFlagNode as QuitFlagNode
-from .common import (Node, SentenceDesignationNode, SentenceNode,
-                     SentenceWorldNode, Target)
+from .common import (SentenceDesignationNode, SentenceNode, SentenceWorldNode,
+                     Target)
 from .tableaux import Rule, RulesRoot, Tableau
 
 pass

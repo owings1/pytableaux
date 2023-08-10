@@ -27,19 +27,19 @@ import itertools
 import keyword
 import re
 import sys
-from abc import abstractmethod as abstract
 from abc import abstractmethod
+from abc import abstractmethod as abstract
 from collections import defaultdict
 from collections.abc import Mapping, Sequence, Set
 from enum import Enum
 from operator import gt, lt, truth
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable, MutableMapping, Self, TypeVar, Mapping
+from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Mapping,
+                    MutableMapping, Self, TypeVar)
 
 __all__ = (
     'absindex',
-    'abstract',
     'closure',
     'dictattr',
     'dictns',
@@ -50,6 +50,7 @@ __all__ = (
     'EMPTY_SET',
     'for_defaults',
     'getitem',
+    'group',
     'isattrstr',
     'isdund',
     'isint',
@@ -147,6 +148,17 @@ def thru(obj):
 def true(_):
     'Always returns ``True``.'
     return True
+
+def group(*items):
+    """Tuple builder.
+    
+    Args:
+        *items: members.
+
+    Returns:
+        The tuple of arguments.
+    """
+    return items
 
 def key0(obj):
     'Get key/subscript ``0``.'

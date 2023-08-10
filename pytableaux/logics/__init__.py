@@ -36,6 +36,9 @@ from ..errors import Emsg, check
 from ..tools import EMPTY_SET, abcs, closure, qset
 from ..tools.hybrids import QsetView
 
+if TYPE_CHECKING:
+    from ..proof import Rule, ClosingRule, TableauxSystem
+
 __all__ = (
     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
     'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't')
@@ -51,12 +54,12 @@ class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None)
         category_order: int
         tags: tuple
         native_operators: tuple
-    TableauxSystem: type
+    TableauxSystem: type[TableauxSystem]
     Model: type
     class TabRules:
-        closure_rules: tuple
-        rule_groups: tuple
-        all_rules: tuple
+        closure_rules: tuple[type[ClosingRule], ...]
+        rule_groups: tuple[tuple[type[Rule], ...], ...]
+        all_rules: tuple[type[Rule], ...]
 
 
 class Registry(Mapping[Any, LogicType], abcs.Copyable):

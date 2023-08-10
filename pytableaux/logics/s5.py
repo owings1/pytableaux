@@ -28,8 +28,7 @@ class Meta(K.Meta):
     title       = 'S5 Normal Modal Logic'
     description = (
         'Normal modal logic with a reflexive, symmetric, and transitive '
-        'access relation'
-    )
+        'access relation')
     category_order = 5
 
 
@@ -78,11 +77,11 @@ class TabRules(S4.TabRules):
                 return
             access = Access.fornode(node).reversed()
             if not self[WorldIndex].has(branch, access):
-                return adds(group(a := anode(*access)), **a)
+                return adds(group(a := access.tonode()), **a)
 
         @staticmethod
         def example_nodes():
-            return anode(0, 1),
+            return group(anode(0, 1))
 
     rule_groups = (
         (

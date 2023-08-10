@@ -31,8 +31,7 @@ from sphinx.ext.autodoc.importer import import_object
 
 from ...lang import LexType
 from ...logics import LogicType, registry
-from ...proof import (Branch, ClosingRule, Node, PropMap, Rule, RuleEvent,
-                      TabEvent)
+from ...proof import (Branch, ClosingRule, Node, PropMap, Rule, Tableau)
 from ...proof import TableauxSystem as TabSys
 from ...proof import Target
 from ...proof.common import ClosureNode
@@ -271,11 +270,11 @@ class EllipsisExampleHelper:
                 for n in reversed(rule.example_nodes()))
         self.istrunk = False
         rule.tableau.on({
-            TabEvent.BEFORE_TRUNK_BUILD : self.before_trunk_build,
-            TabEvent.AFTER_TRUNK_BUILD  : self.after_trunk_build,
-            TabEvent.AFTER_BRANCH_ADD   : self.after_branch_add,
-            TabEvent.AFTER_NODE_ADD     : self.after_node_add})
-        rule.on(RuleEvent.BEFORE_APPLY, self.before_apply)
+            Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
+            Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
+            Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
+            Tableau.Events.AFTER_NODE_ADD     : self.after_node_add})
+        rule.on(Rule.Events.BEFORE_APPLY, self.before_apply)
 
     def before_trunk_build(self, *_):
         self.istrunk = True

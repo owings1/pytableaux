@@ -69,11 +69,10 @@ class TabRules(K.TabRules):
                 access = Access(w, w)
                 if not self[WorldIndex].has(branch, access):
                     return adds(group(anode(*access)), world = w)
-                    # return adds(group(access._asdict()), world = w)
 
         @staticmethod
         def example_nodes():
-            return swnode(Atomic.first(), 0),
+            return group(swnode(Atomic.first(), 0))
 
     rule_groups = (
         (
