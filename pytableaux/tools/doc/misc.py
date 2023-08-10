@@ -31,7 +31,7 @@ from sphinx.ext.autodoc.importer import import_object
 
 from ...lang import LexType
 from ...logics import LogicType, registry
-from ...proof import (Branch, ClosingRule, Node, PropMap, Rule, Tableau)
+from ...proof import (Branch, ClosingRule, Node, Rule, Tableau)
 from ...proof import TableauxSystem as TabSys
 from ...proof import Target
 from ...proof.common import ClosureNode
@@ -251,30 +251,48 @@ def _methmro(meth: Any) -> list[str]:
         return []
     return list(filter(None, it))
 
-class EllipsisExampleHelper:
+class EllipsisExampleHelper(Rule.Helper):
 
     closenodes: list[Node]
     applied: set[Branch]
     isclosure: bool
     istrunk: bool
-    mynode = PropMap.EllipsisNode
+    mynode = Node.PropMap.Ellipsis
 
     def __init__(self, rule: Rule,/):
-        self.rule = rule
+        super().__init__(rule)
         self.applied = set()
-        self.closenodes = []
         self.isclosure = isinstance(rule, ClosingRule)
         if self.isclosure:
             self.closenodes = list(
                 dict(n)
                 for n in reversed(rule.example_nodes()))
+        else:
+            self.closenodes = []
         self.istrunk = False
-        rule.tableau.on({
+        # rule.tableau.on({
+        #     Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
+        #     Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
+        #     Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
+        #     Tableau.Events.AFTER_NODE_ADD     : self.after_node_add})
+        # rule.on(Rule.Events.BEFORE_APPLY, self.before_apply)
+
+    def listen_on(self):
+        super().listen_on()
+        self.rule.tableau.on({
             Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
             Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
             Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
             Tableau.Events.AFTER_NODE_ADD     : self.after_node_add})
-        rule.on(Rule.Events.BEFORE_APPLY, self.before_apply)
+        self.rule.on(Rule.Events.BEFORE_APPLY, self.before_apply)
+    def listen_off(self):
+        self.rule.off(Rule.Events.BEFORE_APPLY, self.before_apply)
+        self.rule.tableau.off({
+            Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
+            Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
+            Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
+            Tableau.Events.AFTER_NODE_ADD     : self.after_node_add})
+        super().listen_off()
 
     def before_trunk_build(self, *_):
         self.istrunk = True

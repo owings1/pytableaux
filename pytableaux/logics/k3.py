@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..models import BaseModel, ValueK3
-from ..proof import Branch, Node, NodeKey, Target, sdnode
+from ..proof import Branch, Node, Target, sdnode
 from ..proof.rules import BaseClosureRule
 from . import fde as FDE
 
@@ -64,7 +64,7 @@ class TabRules(FDE.TabRules):
             return bool(self._find_closing_node(node, branch))
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
-            if node.get(NodeKey.designated):
+            if node.get(Node.Key.designated):
                 s = self.sentence(node)
                 if s is not None:
                     return branch.find(sdnode(s.negative(), True))
@@ -75,6 +75,4 @@ class TabRules(FDE.TabRules):
             a = Atomic.first()
             return sdnode(a, True), sdnode(~a, True)
 
-    closure_rules = (
-        FDE.TabRules.DesignationClosure,
-        GlutClosure)
+    closure_rules = FDE.TabRules.closure_rules + (GlutClosure,)

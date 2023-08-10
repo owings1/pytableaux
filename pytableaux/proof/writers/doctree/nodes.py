@@ -31,8 +31,8 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
 from .... import proof
 from ....errors import check
 from ....tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, ForObjectBuilder,
-                      TransMmap, abcs, closure, qset, qsetf)
-from ... import NodeAttr, NodeKey, Tableau
+                       TransMmap, abcs, closure, qset, qsetf)
+from ... import Tableau
 
 if TYPE_CHECKING:
     from ....tools import TypeTypeMap
@@ -333,19 +333,19 @@ class sentence(InlineElement, BuilderMixin[proof.SentenceNode]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
-        yield NodeKey.sentence, obj[NodeKey.sentence]
+        yield proof.Node.Key.sentence, obj[proof.Node.Key.sentence]
         if isinstance(obj, proof.SentenceWorldNode):
-            yield f'data-world', obj[NodeKey.world]
+            yield f'data-world', obj[proof.Node.Key.world]
         if isinstance(obj, proof.SentenceDesignationNode):
-            yield f'data-designated', obj[NodeKey.designation]
+            yield f'data-designated', obj[proof.Node.Key.designation]
 
     @classmethod
     def get_obj_children(cls, obj, /):
         types = cls.types
         if isinstance(obj, proof.SentenceWorldNode):
-            yield types[world].for_object(obj[NodeKey.world])
+            yield types[world].for_object(obj[proof.Node.Key.world])
         elif isinstance(obj, proof.SentenceDesignationNode):
-            yield types[designation].for_object(obj[NodeKey.designation])
+            yield types[designation].for_object(obj[proof.Node.Key.designation])
 
 class designation(InlineElement, BuilderMixin[bool]):
 
@@ -361,13 +361,13 @@ class access(InlineElement, BuilderMixin[proof.AccessNode]):
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
-        yield f'data-world1', obj[NodeKey.world1]
-        yield f'data-world2', obj[NodeKey.world2]
+        yield f'data-world1', obj[proof.Node.Key.world1]
+        yield f'data-world2', obj[proof.Node.Key.world2]
 
     @classmethod
     def get_obj_children(cls, obj, /):
         types = cls.types
-        for key in (NodeKey.world1, NodeKey.world2):
+        for key in (proof.Node.Key.world1, proof.Node.Key.world2):
             n = types[world].for_object(obj[key])
             n['classes'].add(key)
             yield n
@@ -376,17 +376,17 @@ class flag(InlineElement, BuilderMixin[proof.Node]):
 
     @classmethod
     def get_obj_classes(cls, obj, /):
-        yield obj[NodeKey.flag]
+        yield obj[proof.Node.Key.flag]
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
-        yield 'data-info', obj.get(NodeKey.info, '')
+        yield 'data-info', obj.get(proof.Node.Key.info, '')
 
 class node_props(InlineElement, BuilderMixin[proof.Node]):
 
     @classmethod
     def get_obj_classes(cls, obj, /):
-        if getattr(obj, NodeAttr.ticked, False):
+        if getattr(obj, 'ticked', None):
             yield 'ticked'
 
     @classmethod
@@ -409,12 +409,12 @@ class node(BlockElement, BuilderMixin[tuple[proof.Node, int]]):
         yield 'id', f'node_{node.id}'
         yield 'data-node-id', node.id
         yield 'data-step', node.step
-        if getattr(node, NodeAttr.ticked, None):
+        if getattr(node, 'ticked', None):
             yield 'data-ticked-step', tickstep
 
     @classmethod
     def get_obj_classes(cls, obj, /):
-        if getattr(obj[0], NodeAttr.ticked, None):
+        if getattr(obj[0], 'ticked', None):
             yield 'ticked'
 
     @classmethod

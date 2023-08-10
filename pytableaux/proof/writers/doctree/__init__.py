@@ -23,18 +23,17 @@ from __future__ import annotations
 
 import html
 import logging
-import os
 import re
 from collections import deque
 from types import MappingProxyType as MapProxy
 from typing import Any, Mapping
 
+from .... import proof
 from ....lang import LexWriter, Notation
-from ....proof import NodeKey
 from ....tools import EMPTY_SET
 from ...tableaux import Tableau
-from ..jinja import TEMPLATES_BASE_DIR, jinja
 from .. import TabWriter, TabWriterRegistry
+from ..jinja import TEMPLATES_BASE_DIR, jinja
 from . import nodes
 
 NOARG = object()
@@ -66,9 +65,7 @@ class Translator(nodes.DefaultNodeVisitor):
 
     def __init__(self, doc: nodes.document, lw: LexWriter, /):
         super().__init__(doc)
-        self.head: deque[str] = deque()
         self.body: deque[str] = deque()
-        self.foot: deque[str] = deque()
         self.lw = lw
 
     def translate(self) -> None:
@@ -101,7 +98,7 @@ class HtmlTranslator(Translator):
         raise nodes.SkipDeparture
 
     def visit_sentence(self, node: nodes.sentence, /):
-        rendered = self.lw(node.attributes.pop(NodeKey.sentence))
+        rendered = self.lw(node.attributes.pop(proof.Node.Key.sentence))
         if self.lw.charset != self.format:
             rendered = self.escape(rendered)
         self.default_visitor(node)

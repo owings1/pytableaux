@@ -31,12 +31,12 @@ from ..lang import Constant, Sentence
 from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs, dictattr,
                      isattrstr, isint, itemsiter, lazy, qset)
 from ..tools.events import EventEmitter
-from . import NodeKey, PropMap, BranchMeta
+from . import BranchMeta, NodeMeta
 
 if TYPE_CHECKING:
 
     from ..models import BaseModel
-    from . import Rule, StepEntry
+    from . import Rule, Tableau
 
 __all__ = (
     'Branch',
@@ -47,7 +47,7 @@ _FIRST_CONST = Constant.first()
 
 NOARG = object()
 
-class Node(MapCover, abcs.Copyable):
+class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
     'A tableau node.'
 
     __slots__ = ('_worlds', 'step', 'ticked')
@@ -90,7 +90,7 @@ class Node(MapCover, abcs.Copyable):
         return isinstance(self, FlagNode)
 
     @lazy.prop
-    def worlds(self, /, *, names = (NodeKey.world, NodeKey.w1, NodeKey.w2)):
+    def worlds(self, /, *, names = (NodeMeta.Key.world, NodeMeta.Key.w1, NodeMeta.Key.w2)):
         """
         The set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, and `world2`.
@@ -140,28 +140,28 @@ class Node(MapCover, abcs.Copyable):
         try:
             return self._cov_mapping[key]
         except KeyError:
-            return PropMap.NodeDefaults[key]
+            return Node.PropMap.Defaults[key]
 
     def __repr__(self):
         return f'<{type(self).__name__} id:{self.id} props:{dict(self)}>'
 
     @staticmethod
     def for_mapping(mapping: Mapping, /):
-        if (value := mapping.get(NodeKey.flag)) is not None:
-            if value == PropMap.ClosureNode[NodeKey.flag]:
+        if (value := mapping.get(Node.Key.flag)) is not None:
+            if value == Node.PropMap.Closure[Node.Key.flag]:
                 return ClosureNode(mapping)
-            if value == PropMap.QuitFlag[NodeKey.flag]:
+            if value == Node.PropMap.QuitFlag[Node.Key.flag]:
                 return QuitFlagNode(mapping)
             return FlagNode(mapping)
-        if mapping.get(NodeKey.w1) is not None and mapping.get(NodeKey.w2) is not None:
+        if mapping.get(Node.Key.w1) is not None and mapping.get(Node.Key.w2) is not None:
             return AccessNode(mapping)
-        if mapping.get(NodeKey.sentence) is not None:
-            if mapping.get(NodeKey.world) is not None:
+        if mapping.get(Node.Key.sentence) is not None:
+            if mapping.get(Node.Key.world) is not None:
                 return SentenceWorldNode(mapping)
-            if mapping.get(NodeKey.designation) is not None:
+            if mapping.get(Node.Key.designation) is not None:
                 return SentenceDesignationNode(mapping)
             return SentenceNode(mapping)
-        if mapping.get(NodeKey.ellipsis):
+        if mapping.get(Node.Key.ellipsis):
             return EllipsisNode(mapping)
         return UnknownNode(mapping)
 
@@ -183,12 +183,12 @@ class NodeIndex(dict[tuple[str, ...], dict[tuple[Any, ...], set[Node]]], abcs.Co
     __slots__ = EMPTY_SET
 
     INDEXES = (
-        (NodeKey.sentence,),
-        (NodeKey.designation,),
-        (NodeKey.world,),
-        (NodeKey.world1, NodeKey.world2),
-        (NodeKey.world1,),
-        (NodeKey.world2,))
+        (Node.Key.sentence,),
+        (Node.Key.designation,),
+        (Node.Key.world,),
+        (Node.Key.world1, Node.Key.world2),
+        (Node.Key.world1,),
+        (Node.Key.world2,))
 
     def __init__(self):
         self.update((key, defaultdict(set)) for key in self.INDEXES)
@@ -461,7 +461,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         self.__nodes.append(node)
 
         if isinstance(node, SentenceNode):
-            s: Sentence = node[NodeKey.sentence]
+            s: Sentence = node[Node.Key.sentence]
             if len(cons := s.constants):
                 if self.__nextconst in cons:
                     self.__nextconst = max(cons).next()
@@ -516,7 +516,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns:
             Branch: self.
         """
-        return self.append(ClosureNode(PropMap.ClosureNode))
+        return self.append(ClosureNode(Node.PropMap.Closure))
 
     def is_ticked(self, node: Node, /) -> bool:
         """Whether the node is ticked relative to the branch.
@@ -584,7 +584,7 @@ class Target(dictattr):
     world  : int
     world1 : int
     world2 : int
-    _entry : StepEntry
+    _entry : Tableau.StepEntry
 
     __slots__ = ('rule', 'branch', 'constant', 'designated', 'flag', 'node',
         'nodes', 'sentence', 'world', 'world1', 'world2')

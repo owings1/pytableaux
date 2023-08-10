@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, closure, minfloor, wraps
-from . import (Access, Branch, Node, NodeKey, PropMap, Rule, Tableau, Target,
+from . import (WorldPair, Branch, Node, Rule, Tableau, Target,
                filters)
 from .common import QuitFlagNode
 from .filters import NodeCompare
@@ -71,18 +71,17 @@ class AdzHelper(Rule.Helper):
             'closure', EMPTY_SET)
 
     def _apply(self, target: Target):
-        branch = target.branch
         adds = target['adds']
         for i, nodes in enumerate(adds):
             if i == 0:
                 continue
-            b = self.rule.branch(branch)
-            b.extend(nodes)
+            branch = self.rule.branch(target.branch)
+            branch.extend(nodes)
             if self.rule.ticking:
-                b.tick(target.node)
-        branch.extend(adds[0])
+                branch.tick(target.node)
+        target.branch.extend(adds[0])
         if self.rule.ticking:
-            branch.tick(target.node)
+            target.branch.tick(target.node)
 
     def closure_score(self, target: Target):
         rules = self.closure_rules
@@ -178,7 +177,7 @@ class QuitFlag(BranchCache[bool]):
 
     def __after_apply(self, target: Target, /):
         # Event: Rule.Events.AFTER_APPLY
-        self[target.branch] = bool(target.get(NodeKey.flag))
+        self[target.branch] = bool(target.get(Node.Key.flag))
 
 class BranchValueHook(BranchCache[_VT]):
     """Check each node as it is added, until a (truthy) value is returned,
@@ -244,7 +243,7 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
 
     def __after_apply(self, target: Target):
         # Event: Rule.Events.AFTER_APPLY
-        if target.get(NodeKey.flag):
+        if target.get(Node.Key.flag):
             return
         counts = self[target.branch]
         sentence = target.sentence
@@ -291,7 +290,7 @@ class NodeCount(BranchCache[dict[Node, int]]):
 
     def __after_apply(self, target: Target, /):
         # Event: Rule.Events.AFTER_APPLY
-        if target.get(NodeKey.flag):
+        if target.get(Node.Key.flag):
             return
         counts = self[target.branch]
         node = target.node
@@ -316,7 +315,7 @@ class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
 
     def __after_apply(self, target: Target, /):
         # Event: Rule.Events.AFTER_APPLY
-        if target.get(NodeKey.flag):
+        if target.get(Node.Key.flag):
             return
         self[target.branch].add((target.node, target.world))
 
@@ -337,7 +336,7 @@ class UnserialWorlds(BranchCache[set[int]]):
     def __after_node_add(self, node: Node, branch: Branch, /):
         # Event: Tableau.Events.AFTER_NODE_ADD
         for w in node.worlds:
-            if node.get(NodeKey.w1) == w or branch.has({NodeKey.w1: w}):
+            if node.get(Node.Key.w1) == w or branch.has({Node.Key.w1: w}):
                 self[branch].discard(w)
             else:
                 self[branch].add(w)
@@ -347,12 +346,12 @@ class WorldIndex(BranchDictCache[int, set[int]]):
 
     __slots__ = ('nodes',)
 
-    class Nodes(BranchCache[dict[Access, Node]]):
+    class Nodes(BranchCache[dict[WorldPair, Node]]):
         __slots__ = EMPTY_SET
         _valuetype = dict
 
         def add(self, node: Node, branch: Branch):
-            self[branch][Access.fornode(node)] = node
+            self[branch][WorldPair.fornode(node)] = node
 
     def __init__(self, rule, /):
         super().__init__(rule)
@@ -389,7 +388,7 @@ class WorldIndex(BranchDictCache[int, set[int]]):
     def __after_node_add(self, node: Node, branch: Branch):
         # Event: Tableau.Events.AFTER_NODE_ADD
         if node.is_access:
-            w1, w2 = Access.fornode(node)
+            w1, w2 = WorldPair.fornode(node)
             if w1 not in self[branch]:
                 self[branch][w1] = set()
             self[branch][w1].add(w2)
@@ -518,7 +517,7 @@ class PredNodes(FilterNodeCache):
     __slots__ = EMPTY_SET
 
     def __call__(self, node: Node, _):
-        return type(node.get(NodeKey.sentence)) is Predicated
+        return type(node.get(Node.Key.sentence)) is Predicated
 
 class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``
@@ -649,7 +648,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
 
     def __after_apply(self, target: Target, /):
         # Event: Rule.Events.AFTER_APPLY
-        if target.get(NodeKey.flag):
+        if target.get(Node.Key.flag):
             return
         self[target.branch][target.node].discard(target.constant)
 
@@ -659,7 +658,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
             if node not in self[branch]:
                 # By tracking per node, we are tracking per world, a fortiori.
                 self[branch][node] = self.consts[branch].copy()
-        s = node.get(NodeKey.sentence)
+        s = node.get(Node.Key.sentence)
         if s is None:
             return
         consts = s.constants - self.consts[branch]
@@ -685,10 +684,10 @@ class WorldConsts(BranchDictCache[int, set[Constant]]):
 
     def __after_node_add(self, node: Node, branch: Branch, /):
         # Event: Tableau.Events.AFTER_NODE_ADD
-        s = node.get(NodeKey.sentence)
+        s = node.get(Node.Key.sentence)
         if s is None:
             return
-        world = node.get(NodeKey.world)
+        world = node.get(Node.Key.world)
         if world is None:
             world = 0
         if world not in self[branch]:
@@ -757,7 +756,7 @@ class MaxConsts(dict[Branch, int], Rule.Helper):
                     ``rule.name``, and ``n`` is the computed max allowed
                     constants for the branch.
         """
-        return QuitFlagNode(PropMap.QuitFlag | {NodeKey.info: (
+        return QuitFlagNode(Node.PropMap.QuitFlag | {Node.Key.info: (
             f'{self.rule.name}:{type(self).__name__}'
             f'({self.get(branch.origin, 1)})')})
 
@@ -785,7 +784,7 @@ class MaxConsts(dict[Branch, int], Rule.Helper):
         return max(1, len(branch.constants)) * max(1, needed) + 1
 
     def _compute_node(self, node: Node,/) -> int:
-        s = node.get(NodeKey.sentence)
+        s = node.get(Node.Key.sentence)
         return len(s.quantifiers) if s else 0
 
 class MaxWorlds(BranchDictCache[Branch, int], Rule.Helper):
@@ -860,7 +859,7 @@ class MaxWorlds(BranchDictCache[Branch, int], Rule.Helper):
                     ``rule.name``, and ``n`` is the computed max allowed
                     worlds for the branch.
         """
-        return QuitFlagNode(PropMap.QuitFlag | {NodeKey.info: (
+        return QuitFlagNode(Node.PropMap.QuitFlag | {Node.Key.info: (
             f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin)})')})
 
     def __after_trunk_build(self, tableau: Tableau, /):
@@ -878,9 +877,9 @@ class MaxWorlds(BranchDictCache[Branch, int], Rule.Helper):
         # operators + 1.
         return 1 + len(branch.worlds) + sum(
             map(self.modals.__getitem__, (
-                node[NodeKey.sentence]
+                node[Node.Key.sentence]
                 for node in filterfalse(branch.is_ticked, branch)
-                    if NodeKey.sentence in node)))
+                    if Node.Key.sentence in node)))
 
     @classmethod
     def configure_rule(cls, rulecls, config, **kw):

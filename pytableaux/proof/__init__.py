@@ -54,61 +54,7 @@ __all__ = (
 
 NOARG = object()
 
-class ProofAttr(str, Enum):
-
-    def __str__(self):
-        return self.value
-
-class NodeKey(ProofAttr):
-    sentence = 'sentence'
-    designation = designated = 'designated'
-    world = 'world'
-    world1 = w1 = 'world1'
-    world2 = w2 = 'world2'
-    is_flag = 'is_flag'
-    flag = 'flag'
-    closure = 'closure'
-    quit = 'quit'
-    info = 'info'
-    ellipsis = 'ellipsis'
-
-class NodeAttr(ProofAttr):
-    is_access = 'is_access'
-    is_modal = 'is_modal'
-    ticked = 'ticked'
-
-class PropMap(abcs.ItemMapEnum):
-
-    NodeDefaults = {
-        NodeKey.designation: None,
-        NodeKey.world: None}
-
-    ClosureNode = {
-        NodeKey.closure: True,
-        NodeKey.flag: NodeKey.closure,
-        NodeKey.is_flag: True}
-
-    QuitFlag = {
-        NodeKey.quit: True,
-        NodeKey.is_flag: True,
-        NodeKey.flag: NodeKey.quit}
-
-    EllipsisNode = {
-        NodeKey.ellipsis: True}
-
-#******  Auxilliary Classes
-class StepEntry(NamedTuple):
-    rule: Rule
-    "The rule instance."
-    target: Target
-    "The target produced by the rule."
-    duration: Counter
-    "The duration counter."
-
-    def __repr__(self):
-        return f'<StepEntry:{id(self)}:{self.rule.name}:{self.target.type}>'
-
-class Access(NamedTuple):
+class WorldPair(NamedTuple):
     "An `access` int tuple (world1, world2)."
 
     world1: int
@@ -134,34 +80,70 @@ class Access(NamedTuple):
     def tonode(self):
         """Create node from this instance."""
         return AccessNode({
-            NodeKey.world1: self.world1,
-            NodeKey.world2: self.world2})
+            Node.Key.world1: self.world1,
+            Node.Key.world2: self.world2})
 
     def reversed(self):
         """Create reversed instance."""
         return self._make(reversed(self))
 
+class NodeMeta(abcs.AbcMeta):
+    """Node meta class."""
+
+    class Key(str, Enum):
+        "Node keys."
+        sentence = 'sentence'
+        designation = designated = 'designated'
+        world = 'world'
+        world1 = w1 = 'world1'
+        world2 = w2 = 'world2'
+        is_flag = 'is_flag'
+        flag = 'flag'
+        closure = 'closure'
+        quit = 'quit'
+        info = 'info'
+        ellipsis = 'ellipsis'
+
+        def __str__(self):
+            return self.value
+
+    class PropMap(abcs.ItemMapEnum):
+        Defaults = dict(
+            designated = None,
+            world = None)
+        Closure = dict(
+            closure = True,
+            flag = 'closure',
+            is_flag = True)
+        QuitFlag = dict(
+            quit = True,
+            flag = 'quit',
+            is_flag = True)
+        Ellipsis = dict(
+            ellipsis = True)
+
 class BranchMeta(abcs.AbcMeta):
     """Branch meta class."""
-    class Events(Enum):
+
+    class Events(str, Enum):
         'Branch events.'
-        AFTER_CLOSE = auto()
-        AFTER_ADD   = auto()
-        AFTER_TICK  = auto()
+        AFTER_CLOSE = 'AFTER_CLOSE'
+        AFTER_ADD   = 'AFTER_ADD'
+        AFTER_TICK  = 'AFTER_TICK'
 
 class TableauMeta(abcs.AbcMeta):
     """Tableau meta class."""
 
-    class Events(Enum):
+    class Events(str, Enum):
         'Tableau events.'
-        AFTER_BRANCH_ADD    = auto()
-        AFTER_BRANCH_CLOSE  = auto()
-        AFTER_NODE_ADD      = auto()
-        AFTER_NODE_TICK     = auto()
-        AFTER_TRUNK_BUILD   = auto()
-        BEFORE_TRUNK_BUILD  = auto()
-        AFTER_RULE_APPLY    = auto()
-        AFTER_FINISH        = auto()
+        AFTER_BRANCH_ADD    = 'AFTER_BRANCH_ADD'
+        AFTER_BRANCH_CLOSE  = 'AFTER_BRANCH_CLOSE'
+        AFTER_NODE_ADD      = 'AFTER_NODE_ADD'
+        AFTER_NODE_TICK     = 'AFTER_NODE_TICK'
+        AFTER_TRUNK_BUILD   = 'AFTER_TRUNK_BUILD'
+        BEFORE_TRUNK_BUILD  = 'BEFORE_TRUNK_BUILD'
+        AFTER_RULE_APPLY    = 'AFTER_RULE_APPLY'
+        AFTER_FINISH        = 'AFTER_FINISH'
 
     class Timers(NamedTuple):
         'Tableau timers data class.'
@@ -197,6 +179,17 @@ class TableauMeta(abcs.AbcMeta):
         INDEX       = 'INDEX'
         PARENT      = 'PARENT'
         NODES       = 'NODES'
+
+    class StepEntry(NamedTuple):
+        rule: Rule
+        "The rule instance."
+        target: Target
+        "The target produced by the rule."
+        duration: Counter
+        "The duration counter."
+
+        def __repr__(self):
+            return f'<StepEntry:{id(self)}:{self.rule.name}:{self.target.type}>'
 
 class TableauxSystem(metaclass = abcs.AbcMeta):
     'Tableaux system base class.'
@@ -387,27 +380,27 @@ def adds(*groups, **kw):
 
 def snode(s):
     'Make a sentence node.'
-    return SentenceNode({NodeKey.sentence: s})
+    return SentenceNode({Node.Key.sentence: s})
 
 def sdnode(s, d):
     'Make a sentence/designated node.'
     return SentenceDesignationNode({
-        NodeKey.sentence: s,
-        NodeKey.designation: d})
+        Node.Key.sentence: s,
+        Node.Key.designation: d})
 
 def swnode(s, w):
     'Make a sentence/world node. Excludes world if None.'
     if w is None:
-        return SentenceNode({NodeKey.sentence: s})
+        return SentenceNode({Node.Key.sentence: s})
     return SentenceWorldNode({
-        NodeKey.sentence: s,
-        NodeKey.world: w})
+        Node.Key.sentence: s,
+        Node.Key.world: w})
 
 def anode(w1, w2):
     'Make an Access node.'
     return AccessNode({
-        NodeKey.world1: w1,
-        NodeKey.world2: w2})
+        Node.Key.world1: w1,
+        Node.Key.world2: w2})
 
 from ..tools import group as group
 from .common import AccessNode, Branch

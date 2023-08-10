@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Atomic
-from ..proof import Access, Branch, Node, adds, anode, group, swnode
+from ..proof import WorldPair, Branch, Node, adds, anode, group, swnode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from . import k as K
 
@@ -66,7 +66,7 @@ class TabRules(K.TabRules):
                 return
 
             for w in node.worlds:
-                access = Access(w, w)
+                access = WorldPair(w, w)
                 if not self[WorldIndex].has(branch, access):
                     return adds(group(anode(*access)), world = w)
 

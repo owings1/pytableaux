@@ -23,7 +23,7 @@ from ..errors import DenotationError, ModelValueError, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, ValueCPL
-from ..proof import (Access, Branch, Node, Tableau, TableauxSystem, Target,
+from ..proof import (WorldPair, Branch, Node, Tableau, TableauxSystem, Target,
                      adds, anode, filters, group, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
@@ -223,7 +223,7 @@ class Model(BaseModel[ValueCPL]):
                 self.set_literal_value(s, self.Value.T, world = w)
             self.predicates.update(s.predicates)
         elif node.is_access:
-            self.R.add(Access.fornode(node))
+            self.R.add(WorldPair.fornode(node))
 
     def finish(self):
         # track all atomics and opaques
@@ -1056,7 +1056,7 @@ class TabRules(LogicType.TabRules):
         @classmethod
         def example_nodes(cls):
             s = Operated.first(cls.operator)
-            a = Access(0, 1)
+            a = WorldPair(0, 1)
             return swnode(s, a.w1), anode(*a)
 
     class NecessityNegated(PossibilityNegated):

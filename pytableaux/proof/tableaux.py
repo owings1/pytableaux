@@ -39,7 +39,7 @@ from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults, qset, 
 from ..tools.events import EventEmitter
 from ..tools.linked import linqset
 from ..tools.timing import Counter, StopWatch
-from . import RuleMeta, StepEntry, TableauMeta
+from . import RuleMeta, TableauMeta
 from .common import Branch, Node, Target
 
 if TYPE_CHECKING:
@@ -601,7 +601,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     open: Sequence[Branch]
     "Ordered view of the open branches."
 
-    history: Sequence[StepEntry]
+    history: Sequence[Tableau.StepEntry]
     "The history of rule applications."
 
     tree: Tableau.Tree
@@ -777,7 +777,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         self.finish()
         return self
 
-    def next(self) -> Optional[StepEntry]:
+    def next(self) -> Optional[Tableau.StepEntry]:
         """Choose the next rule step to perform. Returns the StepEntry or ``None``
         if no rule can be applied.
 
@@ -988,13 +988,13 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             try:
                 history.append(target._entry)
             except AttributeError:
-                history.append(StepEntry(target.rule, target, Counter()))
+                history.append(Tableau.StepEntry(target.rule, target, Counter()))
                 self.flag |= self.flag.TIMING_INACCURATE
             self.flag |= self.flag.STARTED
         return {
             Tableau.Events.AFTER_RULE_APPLY: after_rule_apply}
 
-    def _get_group_application(self, branch, group: Sequence[Rule], /) -> StepEntry:
+    def _get_group_application(self, branch, group: Sequence[Rule], /) -> Tableau.StepEntry:
         """Find and return the next available rule application for the given open
         branch and rule group. 
         
@@ -1021,7 +1021,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         for rule in group:
             target = rule.target(branch)
             if target is not None:
-                entry = StepEntry(rule, target, Counter())
+                entry = Tableau.StepEntry(rule, target, Counter())
                 target._entry = entry
                 if not is_group_optim:
                     target.update(
@@ -1034,7 +1034,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         if results:
             return self._select_optim_group_application(results)
 
-    def _select_optim_group_application(self, results: Sequence[StepEntry], /) -> StepEntry:
+    def _select_optim_group_application(self, results: Sequence[Tableau.StepEntry], /) -> Tableau.StepEntry:
         """Choose the highest scoring element from given results. The ``results``
         parameter is assumed to be a non-empty list/tuple of (rule, target) pairs.
 

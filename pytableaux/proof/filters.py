@@ -30,7 +30,7 @@ from .. import __docformat__
 from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
                     Sentence)
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, thru
-from . import Access, Node, NodeAttr, NodeKey
+from . import WorldPair, Node
 from .common import AccessNode, SentenceWorldNode, Modal
 
 __all__ = (
@@ -273,13 +273,13 @@ class SentenceNode(SentenceCompare, NodeCompare):
 
     @staticmethod
     def rget(node: Node, /):
-        return node.get(NodeKey.sentence)
+        return node.get(Node.Key.sentence)
 
     def example_node(self):
         n = {}
         s = self.example()
         if s is not None:
-            n[NodeKey.sentence] = s
+            n[Node.Key.sentence] = s
         return n
 
 class DesignationNode(AttrCompare, NodeCompare):
@@ -287,7 +287,7 @@ class DesignationNode(AttrCompare, NodeCompare):
 
     __slots__ = EMPTY_SET
 
-    attrmap = MapProxy(dict(designation = NodeKey.designated))
+    attrmap = MapProxy(dict(designation = Node.Key.designated))
 
     @staticmethod
     def rget(node: Node, key: str, /):
@@ -314,8 +314,8 @@ class DesignationNode(AttrCompare, NodeCompare):
 #             return Access(0, 1).tonode()
 #         if Modal in trues:
 #             return SentenceWorldNode({
-#                 # NodeKey.sentence: Sentence.first(),
-#                 NodeKey.world: 0})
+#                 # Node.Key.sentence: Sentence.first(),
+#                 Node.Key.world: 0})
 #         return Node.for_mapping({})
 
 
@@ -325,17 +325,17 @@ class ModalNode(AttrCompare, NodeCompare):
     __slots__ = EMPTY_SET
 
     attrmap = MapProxy(dict(
-        modal = NodeAttr.is_modal,
-        access = NodeAttr.is_access))
+        modal = 'is_modal',
+        access = 'is_access'))
 
     def example_node(self):
         n = {}
         attrs = self.example()
         if attrs.get('is_access'):
-            return Access(0, 1).tonode()
+            return WorldPair(0, 1).tonode()
         elif attrs.get('is_modal'):
             return SentenceWorldNode({
-                # NodeKey.sentence: Sentence.first(),
-                NodeKey.world: 0})
-            # n[NodeKey.world] = 0
+                # Node.Key.sentence: Sentence.first(),
+                Node.Key.world: 0})
+            # n[Node.Key.world] = 0
         return n

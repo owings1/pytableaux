@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Generator
 
-from ..proof import Access, Branch, Node, Target, adds, anode, group
+from ..proof import WorldPair, Branch, Node, Target, adds, anode, group
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from . import k as K
 from . import t as T
@@ -72,7 +72,7 @@ class TabRules(T.TabRules):
                 self[FilterHelper].release(node, branch)
                 return
 
-            w1, w2 = Access.fornode(node)
+            w1, w2 = WorldPair.fornode(node)
 
             return (
                 adds(
