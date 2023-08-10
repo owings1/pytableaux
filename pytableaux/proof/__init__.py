@@ -194,7 +194,7 @@ class TableauMeta(abcs.AbcMeta):
 class TableauxSystem(metaclass = abcs.AbcMeta):
     'Tableaux system base class.'
 
-    Rules: LogicType.TabRules
+    Rules: type[LogicType.TabRules]
     modal: bool|None = None
 
     @classmethod

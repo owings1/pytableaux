@@ -21,7 +21,7 @@ pytableaux.proof.rules
 """
 from __future__ import annotations
 
-from abc import abstractmethod as abstract
+from abc import abstractmethod
 from typing import Generator, Generic, Iterable, TypeVar, final
 
 from ..lang import Constant, Operated, Predicated, Quantified, Sentence
@@ -54,7 +54,7 @@ class ClosingRule(Rule):
         "Closes the branch."
         target.branch.close()
 
-    @abstract
+    @abstractmethod
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
         """For calculating a target's closure score.
         """
@@ -101,11 +101,11 @@ class BaseClosureRule(ClosingRule):
                 return True
         return False
 
-    @abstract
+    @abstractmethod
     def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def _branch_target_hook(self, node: Node, branch: Branch, /):
         'Method for ``BranchTarget`` helper.'
         raise NotImplementedError
@@ -179,7 +179,7 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
             return adds(group(fnode), flag = fnode[Node.Key.flag])
         return self._get_node_targets(node, branch)
 
-    @abstract
+    @abstractmethod
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError
 
@@ -203,7 +203,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
             if unapplied or not branch.all(nodes):
                 yield dict(adds = group(nodes), constant = c)
 
-    @abstract
+    @abstractmethod
     def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /):
         raise NotImplementedError
 
@@ -225,7 +225,7 @@ class GetNodeTargetsRule(BaseNodeRule):
         """
         return self._get_node_targets(node, branch)
 
-    @abstract
+    @abstractmethod
     def _get_node_targets(self, node: Node, branch: Branch, /):
         raise NotImplementedError
 

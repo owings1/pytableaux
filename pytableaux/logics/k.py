@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Callable, Optional, cast
 
@@ -565,7 +566,12 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
 
 class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
     'Convenience mixin class for most common rules.'
-    pass
+
+    def _get_node_targets(self, node: Node, branch: Branch, /):
+        return self._get_sw_targets(self.sentence(node), node.get('world'))
+
+    def _get_sw_targets(self, s: Operated, w: int|None, /):
+        raise NotImplementedError
 
 @TableauxSystem.initialize
 class TabRules(LogicType.TabRules):
@@ -581,8 +587,7 @@ class TabRules(LogicType.TabRules):
             if nnode is not None:
                 return Target(
                     nodes = (node, nnode),
-                    branch = branch,
-                )
+                    branch = branch,)
 
         def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
             return bool(self._find_closing_node(node, branch))
@@ -590,7 +595,7 @@ class TabRules(LogicType.TabRules):
         def example_nodes(self):
             s = Atomic.first()
             w = 0 if self.modal else None
-            return swnode(s, w), swnode(~s, w)
+            return (swnode(s, w), swnode(~s, w))
 
         # private util
 
@@ -620,10 +625,10 @@ class TabRules(LogicType.TabRules):
                 len(self.sentence(node).paramset) == 1)
 
         @classmethod
-        def example_nodes(cls) -> tuple[dict]:
+        def example_nodes(cls):
             w = 0 if cls.modal else None
             c = Constant.first()
-            return swnode(~cls.predicate((c, c)), w),
+            return group(swnode(~cls.predicate((c, c)), w))
 
     class NonExistenceClosure(rules.BaseClosureRule):
         """
@@ -644,10 +649,10 @@ class TabRules(LogicType.TabRules):
                 s.lhs.predicate is Predicate.System.Existence)
 
         @classmethod
-        def example_nodes(cls) -> tuple[dict]:
+        def example_nodes(cls):
             s = ~Predicated.first(Predicate.System.Existence)
             w = 0 if cls.modal else None
-            return swnode(s, w),
+            return group(swnode(s, w))
 
     class DoubleNegation(OperatorNodeRule):
         """
@@ -657,9 +662,8 @@ class TabRules(LogicType.TabRules):
         negated  = True
         operator = Operator.Negation
 
-        def _get_node_targets(self, node: Node, _, /):
-            return adds(
-                group(swnode(self.sentence(node).lhs, node.get('world'))))
+        def _get_sw_targets(self, s, w, /):
+            return adds(group(swnode(s.lhs, w)))
 
     class Assertion(OperatorNodeRule):
         """
@@ -668,9 +672,8 @@ class TabRules(LogicType.TabRules):
         """
         operator = Operator.Assertion
 
-        def _get_node_targets(self, node: Node, _, /):
-            return adds(
-                group(swnode(self.sentence(node).lhs, node.get('world'))))
+        def _get_sw_targets(self, s, w, /):
+            return adds(group(swnode(s.lhs, w)))
 
     class AssertionNegated(OperatorNodeRule):
         """
@@ -681,9 +684,8 @@ class TabRules(LogicType.TabRules):
         negated  = True
         operator = Operator.Assertion
 
-        def _get_node_targets(self, node: Node, _, /):
-            return adds(
-                group(swnode(~self.sentence(node).lhs, node.get('world'))))
+        def _get_sw_targets(self, s, w, /):
+            return adds(group(swnode(~s.lhs, w)))
 
     class Conjunction(OperatorNodeRule):
         """
@@ -693,11 +695,8 @@ class TabRules(LogicType.TabRules):
         """
         operator = Operator.Conjunction
 
-        def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
-            w = node.get('world')
-            return adds(
-                group(swnode(s.lhs, w), swnode(s.rhs, w)))
+        def _get_sw_targets(self, s, w, /):
+            return adds(group(swnode(s.lhs, w), swnode(s.rhs, w)))
 
     class ConjunctionNegated(OperatorNodeRule):
         """
@@ -709,9 +708,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.Conjunction
         branching = 1
 
-        def _get_node_targets(self, node: Node, _, /):
-            s = self.sentence(node)
-            w = node.get('world')
+        def _get_sw_targets(self, s, w, /):
             return adds(
                 group(swnode(~s.lhs, w)),
                 group(swnode(~s.rhs, w)))
@@ -725,9 +722,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.Disjunction
         branching = 1
 
-        def _get_node_targets(self, node: Node, _, /):
-            s = self.sentence(node)
-            w = node.get('world')
+        def _get_sw_targets(self, s, w, /):
             return adds(
                 group(swnode(s.lhs, w)),
                 group(swnode(s.rhs, w)))
@@ -740,11 +735,8 @@ class TabRules(LogicType.TabRules):
         negated  = True
         operator = Operator.Disjunction
 
-        def _get_node_targets(self, node: Node, _, /):
-            s = self.sentence(node)
-            w = node.get('world')
-            return adds(
-                group(swnode(~s.lhs, w), swnode(~s.rhs, w)))
+        def _get_sw_targets(self, s, w, /):
+            return adds(group(swnode(~s.lhs, w), swnode(~s.rhs, w)))
 
     class MaterialConditional(OperatorNodeRule):
         """
@@ -756,9 +748,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.MaterialConditional
         branching = 1
 
-        def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
-            w = node.get('world')
+        def _get_sw_targets(self, s, w, /):
             return adds(
                 group(swnode(~s.lhs, w)),
                 group(swnode( s.rhs, w)))
@@ -772,11 +762,8 @@ class TabRules(LogicType.TabRules):
         negated  = True
         operator = Operator.MaterialConditional
 
-        def _get_node_targets(self, node: Node, _, /):
-            s = self.sentence(node)
-            w = node.get('world')
-            return adds(
-                group(swnode(s.lhs, w), swnode(~s.rhs, w)))
+        def _get_sw_targets(self, s, w, /):
+            return adds(group(swnode(s.lhs, w), swnode(~s.rhs, w)))
 
     class MaterialBiconditional(OperatorNodeRule):
         """
@@ -789,9 +776,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.MaterialBiconditional
         branching = 1
 
-        def _get_node_targets(self, node: Node, _, /):
-            s = self.sentence(node)
-            w = node.get('world')
+        def _get_sw_targets(self, s, w, /):
             lhs, rhs = s
             return adds(
                 group(swnode(~lhs, w), swnode(~rhs, w)),
@@ -809,9 +794,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.MaterialBiconditional
         branching = 1
 
-        def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
-            w = node.get('world')
+        def _get_sw_targets(self, s, w, /):
             lhs, rhs = s
             return adds(
                 group(swnode( lhs, w), swnode(~rhs, w)),
@@ -979,10 +962,8 @@ class TabRules(LogicType.TabRules):
         operator = Operator.Possibility
         convert  = Operator.Necessity
 
-        def _get_node_targets(self, node: Node, _, /):
-            s = self.sentence(node)
-            return adds(
-                group(swnode(self.convert(~s.lhs), node['world'])))
+        def _get_sw_targets(self, s, w, /):
+            return adds(group(swnode(self.convert(~s.lhs), w)))
 
     class Necessity(rules.OperatedSentenceRule, DefaultNodeRule):
         """
