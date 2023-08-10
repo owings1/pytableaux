@@ -34,7 +34,7 @@ from ..errors import Emsg, check
 from ..lang.collect import Argument
 from ..lang.lex import Sentence
 from ..logics import registry
-from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults, qset,
+from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults, qset, EMPTY_MAP,
                      qsetf, wraps)
 from ..tools.events import EventEmitter
 from ..tools.linked import linqset
@@ -43,7 +43,9 @@ from . import RuleMeta, StepEntry, TableauMeta
 from .common import Branch, Node, Target
 
 if TYPE_CHECKING:
+    from typing import overload
     from ..tools import TypeInstMap
+    from ..models import BaseModel
 
 _F = TypeVar('_F', bound=Callable)
 _RHT = TypeVar('_RHT', bound='Rule.Helper')
@@ -174,6 +176,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             self.emit(Rule.Events.BEFORE_APPLY, target)
             self._apply(target)
             self.emit(Rule.Events.AFTER_APPLY, target)
+            self.tableau.emit(Tableau.Events.AFTER_RULE_APPLY, target)
 
     def branch(self, parent: Branch|None = None, /):
         """Create a new branch on the tableau. Convenience for
@@ -347,7 +350,7 @@ class RuleGroup(Sequence[Rule]):
         self._seq.append(rule)
         self._map[name] = rule
         root._map[name] = rule
-        rule.on(Rule.Events.AFTER_APPLY, tab._after_rule_apply)
+        # rule.on(Rule.Events.AFTER_APPLY, tab._after_rule_apply)
 
     def extend(self, classes, /):
         """Append multiple rules.
@@ -609,7 +612,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     stats: dict
     "The stats, built after finished."
 
-    models: frozenset
+    models: frozenset[BaseModel]
     """The models, built after finished if the tableau is `invalid` and the
     `is_build_models` option is enabled."""
 
@@ -624,13 +627,8 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         is_build_models = False,
         build_timeout   = None,
         max_steps       = None))
-    _history: list[StepEntry]
-    _branches: list[Branch]
-    _open: linqset[Branch]
-    _stat: dict[Branch, Tableau.BranchStat]
-    _complexities: dict[Node, int]
 
-    def __init__(self, logic = None, argument = None, /, **opts):
+    def __init__(self, logic=None, argument=None, /, **opts):
         """
         Args:
             logic: The logic name or module.
@@ -639,25 +637,31 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         """
         # Events init
         EventEmitter.__init__(self, *Tableau.Events)
-        self.__branch_listeners = MapProxy({
-            Branch.Events.AFTER_CLOSE : self.__after_branch_close,
-            Branch.Events.AFTER_ADD   : self.__after_node_add,
-            Branch.Events.AFTER_TICK  : self.__after_node_tick})
         # Protected attributes
-        self._history = []
-        self._branches = []
-        self._open = linqset()
-        self._stat = {}
-        # Private
-        self._complexities = {}
+        self._branches: list[Branch] = []
+        self._open: linqset[Branch] = linqset()
+        self._stat = self.Stat()
         # Exposed attributes
-        self.flag    = Tableau.Flag.PREMATURE
-        self.history = SeqCover(self._history)
-        self.opts    = self._defaults | opts
-        self.timers  = Tableau.Timers.create()
-        self.rules   = RulesRoot(self)
-        self.open    = SeqCover(self._open)
+        self.flag = Tableau.Flag.PREMATURE
+        self.history = SeqCover(history := [])
+        self.opts = self._defaults | opts
+        self.timers = Tableau.Timers.create()
+        self.rules = RulesRoot(self)
+        self.open = SeqCover(self._open)
+        # Private
+        self._complexities: dict[Node, int] = {}
+        self._branch_listeners = MapProxy(
+            self._make_branch_listeners(self._stat, self._open))
+        self._tab_listeners = MapProxy(self._make_tab_listeners(history))
         # Init
+        self.stat = self._stat.query
+        self.on(self._tab_listeners)
+        maxsteps = self.opts['max_steps']
+        if maxsteps is not None and maxsteps > 0:
+            self.flag |= self.flag.HAS_STEP_LIMIT
+        timeout = self.opts['build_timeout']
+        if timeout is not None and timeout > 0:
+            self.flag |= self.flag.HAS_TIME_LIMIT
         if logic is not None:
             self.logic = logic
         if argument is not None:
@@ -678,8 +682,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         try:
             return self.__argument
         except AttributeError:
-            self.__argument = None
-            return self.__argument
+            pass
 
     @property
     def logic(self):
@@ -687,8 +690,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         try:
             return self.__logic
         except AttributeError:
-            self.__logic = None
-            return self.__logic
+            pass
 
     @property
     def System(self):
@@ -696,7 +698,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         try:
             return self.logic.TableauxSystem
         except AttributeError:
-            return None
+            pass
 
     @argument.setter
     def argument(self, value):
@@ -744,9 +746,8 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         argument is `valid` iff it is :attr:`completed` and it has no open branches.
         If the tableau is not completed, or it has no argument, the value will
         be None."""
-        if not self.completed or self.argument is None:
-            return None
-        return len(self.open) == 0
+        if self.completed and self.argument is not None:
+            return len(self.open) == 0
 
     @property
     def invalid(self):
@@ -754,15 +755,18 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         an argument is `invalid` iff it is :attr:`completed` and it has at least one
         open branch. If the tableau is not completed, or it has no argument,
         the value will be None."""
-        if not self.completed or self.argument is None:
-            return None
-        return len(self.open) > 0
+        if self.completed and self.argument is not None:
+            return len(self.open) > 0
 
     @property
     def current_step(self):
         """The current step number. This is the number of rule applications, plus 1
         if the argument trunk is built."""
         return len(self.history) + (self.flag.TRUNK_BUILT in self.flag)
+
+    if TYPE_CHECKING:
+        @overload
+        def stat(self, branch: Branch, /, *keys): ...
 
     def build(self):
         'Build the tableau. Returns self.'
@@ -817,6 +821,13 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 self.finish()
         return entry
 
+    def stepiter(self):
+        while True:
+            step = self.step()
+            if not step:
+                break
+            yield step
+
     def branch(self, /, parent: Branch = None):
         """Create a new branch on the tableau, as a copy of ``parent``, if given.
 
@@ -853,16 +864,15 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             Tableau.StatKey.STEP_ADDED : self.current_step,
             Tableau.StatKey.INDEX      : index,
             Tableau.StatKey.PARENT     : branch.parent})
-        # self.__after_branch_add(branch)
         # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
         # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
         nodes = tuple(branch) if branch.parent is None else EMPTY_SET
         # This means we need to start listening before we emit. There
         # could be the possibility of recursion.
-        branch.on(self.__branch_listeners)
+        branch.on(self._branch_listeners)
         self.emit(Tableau.Events.AFTER_BRANCH_ADD, branch)
         if len(nodes):
-            afteradd = self.__after_node_add
+            afteradd = self._branch_listeners[Branch.Events.AFTER_ADD]
             for node in nodes:
                 afteradd(node, branch)
         return self
@@ -895,7 +905,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         self.emit(Tableau.Events.AFTER_FINISH, self)
         return self
 
-    def branching_complexity(self, node, /):
+    def branching_complexity(self, node: Node, /):
         """Caching method for the logic's ``TableauxSystem.branching_complexity()``
         method. If the tableau has no logic, then ``0`` is returned.
 
@@ -916,46 +926,6 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             cache[node] = system.branching_complexity(node)
         return cache[node]
 
-    def stat(self, branch, /, *keys):
-        # Lookup options:
-        # - branch
-        # - branch, key
-        # - branch, node
-        # - branch, node, key
-        stat = self._stat[branch]
-        if len(keys) == 0:
-            # branch
-            return stat.view()
-        kit = iter(keys)
-        key = next(kit)
-        if isinstance(key, Node):
-            # branch, node
-            stat = stat[Tableau.StatKey.NODES][key]
-            try:
-                key = Tableau.StatKey(next(kit))
-            except StopIteration:
-                return MapProxy(stat)
-            else:
-                # branch, node, key
-                stat = stat[key]
-                try:
-                    next(kit)
-                except StopIteration:
-                    # literal value
-                    return stat
-                raise ValueError('Too many keys to lookup')
-        key = Tableau.StatKey(key)
-        try:
-            # branch, key
-            stat = stat[key]
-            next(kit)
-        except StopIteration:
-            if key is Tableau.StatKey.NODES:
-                raise NotImplementedError('Full nodes view not supported')
-            # literal value
-            return stat
-        raise ValueError('Too many keys to lookup')
-
     def __getitem__(self, index):
         return self._branches[index]
 
@@ -964,12 +934,6 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
 
     def __bool__(self):
         return True
-
-    def __iter__(self):
-        return iter(self._branches)
-
-    def __reversed__(self):
-        return reversed(self._branches)
 
     def __contains__(self, branch):
         return branch in self._stat
@@ -994,33 +958,41 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         istr = ' '.join(f'{k}:{v}' for k, v in info.items())
         return f'<{type(self).__name__} {istr}>'
 
-    # *** Events
+    def _make_branch_listeners(self, stat: Tableau.Stat, opens: linqset[Branch]):
 
-    def __after_branch_close(self, branch):
-        stat = self._stat[branch]
-        stat[Tableau.StatKey.STEP_CLOSED] = self.current_step
-        stat[Tableau.StatKey.FLAGS] |= self.flag.CLOSED
-        self._open.remove(branch)
-        self.emit(Tableau.Events.AFTER_BRANCH_CLOSE, branch)
+        def after_close(branch: Branch):
+            bstat = stat[branch]
+            bstat[Tableau.StatKey.STEP_CLOSED] = self.current_step
+            bstat[Tableau.StatKey.FLAGS] |= self.flag.CLOSED
+            opens.remove(branch)
+            self.emit(Tableau.Events.AFTER_BRANCH_CLOSE, branch)
 
-    def __after_node_add(self, node, branch):
-        stat = self._stat[branch].node(node)
-        stat[Tableau.StatKey.STEP_ADDED] = node.step = self.current_step
-        self.emit(Tableau.Events.AFTER_NODE_ADD, node, branch)
+        def after_add(node: Node, branch: Branch):
+            bstat = stat[branch].node(node)
+            bstat[Tableau.StatKey.STEP_ADDED] = node.step = self.current_step
+            self.emit(Tableau.Events.AFTER_NODE_ADD, node, branch)
 
-    def __after_node_tick(self, node, branch):
-        stat = self._stat[branch].node(node)
-        stat[Tableau.StatKey.STEP_TICKED] = self.current_step
-        stat[Tableau.StatKey.FLAGS] |= self.flag.TICKED
-        self.emit(Tableau.Events.AFTER_NODE_TICK, node, branch)
+        def after_tick(node: Node, branch: Branch):
+            bstat = stat[branch].node(node)
+            bstat[Tableau.StatKey.STEP_TICKED] = self.current_step
+            bstat[Tableau.StatKey.FLAGS] |= self.flag.TICKED
+            self.emit(Tableau.Events.AFTER_NODE_TICK, node, branch)
 
-    def _after_rule_apply(self, target: Target):
-        try:
-            self._history.append(target._entry)
-        except AttributeError:
-            self._history.append(StepEntry(target.rule, target, Counter()))
-            self.flag |= self.flag.TIMING_INACCURATE
-    # *** Util
+        return {
+            Branch.Events.AFTER_CLOSE : after_close,
+            Branch.Events.AFTER_ADD   : after_add,
+            Branch.Events.AFTER_TICK  : after_tick}
+
+    def _make_tab_listeners(self, history: list):
+        def after_rule_apply(target: Target):
+            try:
+                history.append(target._entry)
+            except AttributeError:
+                history.append(StepEntry(target.rule, target, Counter()))
+                self.flag |= self.flag.TIMING_INACCURATE
+            self.flag |= self.flag.STARTED
+        return {
+            Tableau.Events.AFTER_RULE_APPLY: after_rule_apply}
 
     def _get_group_application(self, branch, group: Sequence[Rule], /) -> StepEntry:
         """Find and return the next available rule application for the given open
@@ -1108,7 +1080,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         with self.timers.trunk:
             self.emit(Tableau.Events.BEFORE_TRUNK_BUILD, self)
             self.System.build_trunk(self, self.argument)
-            self.flag |= self.flag.TRUNK_BUILT
+            self.flag |= self.flag.TRUNK_BUILT | self.flag.STARTED
             self.emit(Tableau.Events.AFTER_TRUNK_BUILD, self)
 
     def _compute_stats(self):
@@ -1119,7 +1091,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             distinct_nodes = None
         timers = self.timers
         return dict(
-            result          = self.__result_word(),
+            result          = self._result_word(),
             branches        = len(self),
             open_branches   = len(self.open),
             closed_branches = len(self) - len(self.open),
@@ -1138,26 +1110,25 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                     for name in ('search', 'apply')))
 
     def _check_timeout(self):
-        timeout = self.opts['build_timeout']
-        if timeout is None or timeout < 0:
+        if self.flag.HAS_TIME_LIMIT not in self.flag:
             return
-        if self.timers.build.elapsed_ms() > timeout:
+        if self.timers.build.elapsed_ms() > self.opts['build_timeout']:
             self.timers.build.stop()
             self.flag |= self.flag.TIMED_OUT
             self.finish()
-            raise Emsg.Timeout(timeout)
+            raise Emsg.Timeout(self.opts['build_timeout'])
 
     def _is_max_steps_exceeded(self) -> bool:
-        max_steps = self.opts['max_steps']
-        return (max_steps is not None and
-            max_steps >= 0 and
-            len(self.history) >= max_steps)
+        return (
+            self.flag.HAS_STEP_LIMIT in self.flag and
+            len(self.history) >= self.opts['max_steps'])
 
     def _check_not_started(self):
-        if self.flag.TRUNK_BUILT in self.flag or len(self.history) > 0:
+        # if self.flag.TRUNK_BUILT in self.flag or len(self.history) > 0:
+        if self.flag.STARTED in self.flag:
             raise Emsg.IllegalState("Tableau already started.")
 
-    def __result_word(self) -> str:
+    def _result_word(self) -> str:
         if self.valid:
             return 'Valid'
         if self.invalid:
@@ -1176,152 +1147,131 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             branch.model = model
             yield model
 
-    def _build_tree(self, branches: Sequence[Branch], node_depth = 0, track = None,/) -> Tableau.Tree:
-
-        s = self.Tree()
-
-        if track is None:
-            track = dict(pos = 1, depth = 0, distinct_nodes = 0, root = s)
-            s.root = True
+    def _build_tree(self, branches: Sequence[Branch], depth=0, memo=None,/) -> Tableau.Tree:
+        tree = self.Tree()
+        if memo is None:
+            memo = dict(pos=1, depth=0, distinct_nodes=0, root=tree)
+            tree.root = True
         else:
-            track['pos'] += 1
-
-        s.update(
-            depth = track['depth'],
-            left  = track['pos'])
-
-        branchstat = self._stat
-
+            memo['pos'] += 1
+        tree.update(
+            depth = memo['depth'],
+            left  = memo['pos'])
         while True:
-            # Branches with a node at node_depth.
-            relbranches = tuple(b for b in branches if len(b) > node_depth)
-            # Each branch's node at node_depth.
-            depth_nodes = qset()
-
-            for b in relbranches:
-                depth_nodes.add(b[node_depth])
-                if self.flag.CLOSED in branchstat[b][Tableau.StatKey.FLAGS]:
-                    s.has_closed = True
+            # Each branch's node at depth.
+            nodes = set()
+            specimen = None
+            for branch in branches:
+                if len(branch) <= depth:
+                    # Consider only branches with a node at depth.
+                    continue
+                if specimen is None:
+                    specimen = branch
+                nodes.add(branch[depth])
+                if self.flag.CLOSED in self.stat(branch, Tableau.StatKey.FLAGS):
+                    tree.has_closed = True
                 else:
-                    s.has_open = True
-
-            if len(depth_nodes) != 1:
-                # There is *not* a singular node shared by all branches at node_depth.
+                    tree.has_open = True
+            if len(nodes) != 1:
+                # There is *not* a singular node shared by all branches at depth.
                 break
-    
-            # There is one node shared by all branches at node_depth, thus the
+            # There is one node shared by all branches at depth, thus the
             # branches are equivalent up to this depth.
-            node = depth_nodes[0]
-            s.nodes.append(node)
-            nodestat = branchstat[relbranches[0]][Tableau.StatKey.NODES][node]
-            s.ticksteps.append(nodestat[Tableau.StatKey.STEP_TICKED])
-            step_added = nodestat[Tableau.StatKey.STEP_ADDED]
-            if s.step is None or step_added < s.step:
-                s.step = step_added
-            node_depth += 1
-
-        track['distinct_nodes'] += len(s.nodes)
-
+            branch = specimen
+            node, = nodes
+            tree.nodes.append(node)
+            tree.ticksteps.append(self.stat(branch, node, Tableau.StatKey.STEP_TICKED))
+            step_added = self.stat(branch, node, Tableau.StatKey.STEP_ADDED)
+            if tree.step is None or step_added < tree.step:
+                tree.step = step_added
+            depth += 1
+        memo['distinct_nodes'] += len(tree.nodes)
         if len(branches) == 1:
             # Finalize leaf attributes.
-            self._build_tree_leaf(s, branches[0], track)
+            self._build_tree_leaf(tree, branches[0], memo)
         else:
             # Build child structures for each distinct node at node_depth.
-            track['depth'] += 1
-            self._build_tree_branches(s, branches, depth_nodes, node_depth, track)
-            track['depth'] -= 1
+            memo['depth'] += 1
+            self._build_tree_branches(tree, branches, nodes, depth, memo)
+            memo['depth'] -= 1
+        tree.structure_node_count = tree.descendant_node_count + len(tree.nodes)
+        memo['pos'] += 1
+        tree.right = memo['pos']
+        if memo['root'] is tree:
+            tree.distinct_nodes = memo['distinct_nodes']
+        return tree
 
-        s.structure_node_count = s.descendant_node_count + len(s.nodes)
-
-        track['pos'] += 1
-        s.right = track['pos']
-
-        if track['root'] is s:
-            s.distinct_nodes = track['distinct_nodes']
-
-        return s
-
-    def _build_tree_leaf(self, s: Tableau.Tree, branch: Branch, track: dict, /):
+    def _build_tree_leaf(self, tree: Tableau.Tree, branch: Branch, memo: dict, /):
         'Finalize attributes for leaf structure.'
-        stat = self._stat[branch]
-        s.closed = self.flag.CLOSED in stat[Tableau.StatKey.FLAGS]
-        # s.open = not branch.closed
-        # assert s.closed == branch.closed
-        s.open = not s.closed
-        if s.closed:
-            s.closed_step = stat[Tableau.StatKey.STEP_CLOSED]
-            s.has_closed = True
+        tree.closed = self.flag.CLOSED in self.stat(branch, Tableau.StatKey.FLAGS)
+        tree.open = not tree.closed
+        if tree.closed:
+            tree.closed_step = self.stat(branch, Tableau.StatKey.STEP_CLOSED)
+            tree.has_closed = True
         else:
-            s.has_open = True
-        s.width = 1
-        s.leaf = True
-        s.branch_id = branch.id
+            tree.has_open = True
+        tree.width = 1
+        tree.leaf = True
+        tree.branch_id = branch.id
         if branch.model is not None:
-            s.model_id = branch.model.id
-        if track['depth'] == 0:
-            s.is_only_branch = True
+            tree.model_id = branch.model.id
+        if memo['depth'] == 0:
+            tree.is_only_branch = True
 
-    def _build_tree_branches(self, s: Tableau.Tree, branches: Sequence[Branch], depth_nodes: Set[Node], node_depth: int, track: dict, /):
+    def _build_tree_branches(self, tree: Tableau.Tree, branches: Sequence[Branch], nodes: Set[Node], depth: int, memo: dict, /):
         'Build child structures for each distinct node.'
-        w_first = w_last = w_mid = 0
 
-        for i, node in enumerate(depth_nodes):
-
+        # Widths of first, middle, last
+        widths = [0] * 3
+        for i, node in enumerate(nodes):
             # recurse
-            child = self._build_tree(tuple(
-                b for b in branches if b[node_depth] == node
-            ), node_depth, track)
-
-            s.descendant_node_count = len(child.nodes) + child.descendant_node_count
-            s.width += child.width
-
-            s.children.append(child)
-
+            next_branches = tuple(b for b in branches if b[depth] == node)
+            child = self._build_tree(next_branches, depth, memo)
+            tree.descendant_node_count = len(child.nodes) + child.descendant_node_count
+            tree.width += child.width
+            tree.children.append(child)
             if i == 0:
                 # first node
-                s.branch_step = child.step
-                w_first = child.width / 2
-            elif i == len(depth_nodes) - 1:
+                tree.branch_step = child.step
+                widths[0] = child.width / 2
+            elif i == len(nodes) - 1:
                 # last node
-                w_last = child.width / 2
+                widths[2] = child.width / 2
             else:
-                w_mid += child.width
-
-            s.branch_step = min(s.branch_step, child.step)
-
-        if s.width > 0:
-            s.balanced_line_width = (w_first + w_last + w_mid) / s.width
-            s.balanced_line_margin = w_first / s.width
+                widths[1] += child.width
+            tree.branch_step = min(tree.branch_step, child.step)
+        if tree.width > 0:
+            tree.balanced_line_width = sum(widths) / tree.width
+            tree.balanced_line_margin = widths[0] / tree.width
         else:
-            s.balanced_line_width = s.balanced_line_margin = 0
-
+            tree.balanced_line_width = tree.balanced_line_margin = 0
 
     class NodeStat(dict):
-
         __slots__ = EMPTY_SET
-
+        Flag = TableauMeta.Flag
+        Key = TableauMeta.StatKey
         _defaults = MapProxy({
-            TableauMeta.StatKey.FLAGS       : TableauMeta.Flag(0),
-            TableauMeta.StatKey.STEP_ADDED  : TableauMeta.Flag(0),
-            TableauMeta.StatKey.STEP_TICKED : None})
+            Key.FLAGS       : Flag(0),
+            Key.STEP_ADDED  : Flag(0),
+            Key.STEP_TICKED : None})
 
         def __init__(self):
             super().__init__(self._defaults)
 
     class BranchStat(dict):
-
         __slots__ = EMPTY_SET
-
+        Flag = TableauMeta.Flag
+        Key = TableauMeta.StatKey
         _defaults = MapProxy({
-            TableauMeta.StatKey.FLAGS       : TableauMeta.Flag(0),
-            TableauMeta.StatKey.STEP_ADDED  : TableauMeta.Flag(0),
-            TableauMeta.StatKey.STEP_CLOSED : TableauMeta.Flag(0),
-            TableauMeta.StatKey.INDEX       : None,
-            TableauMeta.StatKey.PARENT      : None})
+            Key.FLAGS       : Flag(0),
+            Key.STEP_ADDED  : Flag(0),
+            Key.STEP_CLOSED : Flag(0),
+            Key.INDEX       : None,
+            Key.PARENT      : None})
 
         def __init__(self, mapping = None, /, **kw):
             super().__init__(self._defaults)
-            self[Tableau.StatKey.NODES] = {}
+            self[self.Key.NODES] = {}
             if mapping is not None:
                 self.update(mapping)
             if len(kw):
@@ -1331,12 +1281,60 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             'Get the stat info for the node, and create if missing.'
             # Avoid using defaultdict, since it may hide problems.
             try:
-                return self[Tableau.StatKey.NODES][node]
+                return self[self.Key.NODES][node]
             except KeyError:
-                return self[Tableau.StatKey.NODES].setdefault(node, Tableau.NodeStat())
+                return self[self.Key.NODES].setdefault(node, Tableau.NodeStat())
 
         def view(self):
             return {k: self[k] for k in self._defaults}
+
+
+    class Stat(dict[Branch, BranchStat]):
+
+        __slots__ = EMPTY_SET
+        Key = TableauMeta.StatKey
+
+        def query(self, branch: Branch, /, *keys):
+            # Lookup options:
+            # - branch
+            # - branch, key
+            # - branch, node
+            # - branch, node, key
+            stat = self[branch]
+            kit = iter(keys)
+            try:
+                key = next(kit)
+            except StopIteration:
+                # branch
+                return stat.view()
+            if isinstance(key, Node):
+                # branch, node
+                stat = stat[self.Key.NODES][key]
+                try:
+                    key = self.Key(next(kit))
+                except StopIteration:
+                    return MapProxy(stat)
+                else:
+                    # branch, node, key
+                    stat = stat[key]
+                    try:
+                        next(kit)
+                    except StopIteration:
+                        # literal value
+                        return stat
+                    raise ValueError('Too many keys to lookup')
+            key = self.Key(key)
+            try:
+                # branch, key
+                stat = stat[key]
+                next(kit)
+            except StopIteration:
+                if key is self.Key.NODES:
+                    raise NotImplementedError('Full nodes view not supported')
+                # literal value
+                return stat
+            raise ValueError('Too many keys to lookup')
+
 
     class Tree(dictns):
         'Recursive tree structure representation of a tableau.'
@@ -1427,4 +1425,3 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             return inst
 
         _from_mapping = _from_iterable
-

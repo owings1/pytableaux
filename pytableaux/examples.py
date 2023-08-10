@@ -219,13 +219,17 @@ def arguments(*keys):
     return tuple(map(argument, keys))
 
 
-def tabiter(*logics, build = True, grouparg = False, registry = logics.registry, **opts):
+def tabiter(*logics, build = True, grouparg = False, registry = logics.registry, shuffle=False, **opts):
     if not len(logics):
         logics = tuple(registry.all())
     if grouparg:
         it = ((logic, title) for title in titles for logic in logics)
     else:
         it = ((logic, title) for logic in logics for title in titles)
+    if shuffle:
+        import random
+        it = list(it)
+        random.shuffle(it)
     for logic, title in it:
         tab = Tableau(logic, argument(title), **opts)
         if build:

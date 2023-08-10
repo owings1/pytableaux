@@ -37,6 +37,7 @@ from ..tools import EMPTY_SET, abcs, closure, qset
 from ..tools.hybrids import QsetView
 
 if TYPE_CHECKING:
+    from ..models import BaseModel
     from ..proof import Rule, ClosingRule, TableauxSystem
 
 __all__ = (
@@ -55,7 +56,7 @@ class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None)
         tags: tuple
         native_operators: tuple
     TableauxSystem: type[TableauxSystem]
-    Model: type
+    Model: type[BaseModel]
     class TabRules:
         closure_rules: tuple[type[ClosingRule], ...]
         rule_groups: tuple[tuple[type[Rule], ...], ...]

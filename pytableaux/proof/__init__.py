@@ -160,6 +160,7 @@ class TableauMeta(abcs.AbcMeta):
         AFTER_NODE_TICK     = auto()
         AFTER_TRUNK_BUILD   = auto()
         BEFORE_TRUNK_BUILD  = auto()
+        AFTER_RULE_APPLY    = auto()
         AFTER_FINISH        = auto()
 
     class Timers(NamedTuple):
@@ -183,16 +184,19 @@ class TableauMeta(abcs.AbcMeta):
         TIMED_OUT = 16
         TRUNK_BUILT = 32
         TIMING_INACCURATE = 64
+        HAS_STEP_LIMIT = 128
+        HAS_TIME_LIMIT = 256
+        STARTED = 512
 
-    class StatKey(Enum):
+    class StatKey(str, Enum):
         'Tableau ``stat()`` keys.'
-        FLAGS       = auto()
-        STEP_ADDED  = auto()
-        STEP_TICKED = auto()
-        STEP_CLOSED = auto()
-        INDEX       = auto()
-        PARENT      = auto()
-        NODES       = auto()
+        FLAGS       = 'FLAGS'
+        STEP_ADDED  = 'STEP_ADDED'
+        STEP_TICKED = 'STEP_TICKED'
+        STEP_CLOSED = 'STEP_CLOSED'
+        INDEX       = 'INDEX'
+        PARENT      = 'PARENT'
+        NODES       = 'NODES'
 
 class TableauxSystem(metaclass = abcs.AbcMeta):
     'Tableaux system base class.'
