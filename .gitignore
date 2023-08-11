@@ -9,3 +9,4 @@
 /test/scratch.py
 node_modules
 .DS_Store
+/log

@@ -18,3 +18,4 @@ doc/_build
 /Dockerfile
 **/node_modules
 .mypy_cache
+log

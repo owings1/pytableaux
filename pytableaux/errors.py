@@ -99,6 +99,9 @@ class DenotationError(ModelValueError):
 class SkipDeparture(TreePruningException):
     pass
 
+class SkipNode(TreePruningException):
+    pass
+
 def _thru(o): return o
 def _len(o): return o if isinstance(o, int) else len(o)
 

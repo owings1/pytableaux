@@ -28,11 +28,12 @@ from collections import deque
 from types import MappingProxyType as MapProxy
 from typing import Any, Mapping, Sequence
 
+from ....errors import SkipDeparture
 from ....lang import Notation
-from ....tools import EMPTY_SET
+from ....tools import EMPTY_SET, inflect
 from ...tableaux import Tableau
 from ..jinja import TEMPLATES_BASE_DIR, jinja
-from . import DoctreeTabWriter, Translator, nodes, DefaultNodeVisitor
+from . import DefaultNodeVisitor, DoctreeTabWriter, Translator, nodes
 
 __all__ = (
     'HtmlTabWriter',
@@ -44,9 +45,7 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
     logger = logging.getLogger(__name__)
     escape = staticmethod(html.escape)
 
-    __slots__ = EMPTY_SET
-
-    def default_visitor(self, node: nodes.Node, /):
+    def default_visitor(self, node):
         if isinstance(node, nodes.BlockElement):
             self.body.append('\n')
         self.body.append(
@@ -54,33 +53,33 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
                 self.get_tagname(node),
                 self.get_attrs_map(node)))
 
-    def default_departer(self, node: nodes.Node, /):
+    def default_departer(self, node):
         self.body.append(
             self.get_closetag(self.get_tagname(node)))
 
-    def visit_document(self, node: nodes.document, /):
+    def visit_document(self, node):
         self.head.append('\n'.join((
             '<!DOCTYPE html>',
             self.get_opentag('html', dict(lang='en')),
             self.get_opentag('body', None))))
         self.head.append('\n')
 
-    def depart_document(self, node: nodes.document, /):
+    def depart_document(self, node):
         if self.body:
             self.foot.append('\n')
         self.foot.append('\n'.join((
             self.get_closetag('body'),
             self.get_closetag('html'))))
 
-    def visit_textnode(self, node: nodes.textnode, /):
+    def visit_textnode(self, node):
         self.body.append(self.escape(node))
-        raise nodes.SkipDeparture
+        raise SkipDeparture
 
-    def visit_rawtext(self, node: nodes.rawtext, /):
+    def visit_rawtext(self, node):
         self.body.append(node)
-        raise nodes.SkipDeparture
+        raise SkipDeparture
 
-    def visit_sentence(self, node: nodes.sentence, /):
+    def visit_sentence(self, node: nodes.Element):
         rendered = self.lw(node.attributes.pop('data-sentence'))
         if self.lw.charset != self.format:
             rendered = self.escape(rendered)
@@ -114,7 +113,7 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
             '='.join((self.escape(k), f'"{self.escape(v)}"'))
             for k, v in attrs.items())
 
-    def get_attrs_map(self, node: nodes.Element, /) -> dict[str, str]:
+    def get_attrs_map(self, node: nodes.Element) -> dict[str, str]:
         attrs = {}
         todo = dict(node.attributes)
         if todo.get('id'):
@@ -145,7 +144,7 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
             if isinstance(value, Mapping):
                 if name == 'style':
                     attrs[name] = ' '.join(
-                        f"{str(key).replace('_', '-')}: {value};"
+                        f"{inflect.dashcase(key)}: {value};"
                         for key, value in value.items())
                     continue
             self.logger.warning(

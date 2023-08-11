@@ -28,7 +28,7 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
                     Sequence, Set, SupportsIndex, TypeVar)
 
 from .... import proof
-from ....errors import check, SkipDeparture
+from ....errors import check, SkipDeparture, SkipNode
 from ....tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, ForObjectBuilder,
                        TransMmap, closure, inflect, qset, qsetf)
 from ... import Tableau
@@ -57,6 +57,14 @@ __all__ = (
 _T = TypeVar('_T')
 _NT = TypeVar('_NT', bound='Node')
 
+def data_attrname(name: str):
+    return 'data-' + inflect.dashcase(name)
+
+def data_attrs(attrs: Mapping[str, Any]|Iterable[tuple[str, Any]]):
+    if isinstance(attrs, Mapping):
+        attrs = attrs.items()
+    for name, value in attrs:
+        yield data_attrname(name), value
 
 class Attributes(TransMmap[str, Any]):
 
@@ -91,8 +99,7 @@ class BuilderMixin(ForObjectBuilder[_T]):
     def get_obj_kwargs(cls, obj, /):
         yield 'classes', cls.get_obj_classes(obj)
         yield from cls.get_obj_attributes(obj)
-        for name, value in cls.get_obj_data_attributes(obj):
-            yield 'data-' + name.replace('_', '-'), value
+        yield from data_attrs(cls.get_obj_data_attributes(obj))
 
     @classmethod
     @abstractmethod
@@ -152,14 +159,16 @@ class Node:
         return True
 
     def walk(self, visit: Callable[[Node], None], depart: Callable[[Node], None]|None = None):
-        is_depart = True
+        is_depart = bool(depart)
         try:
             visit(self)
         except SkipDeparture:
             is_depart = False
+        except SkipNode:
+            return
         for child in self.children[:]:
             child.walk(visit, depart)
-        if is_depart and depart:
+        if is_depart:
             depart(self)
 
     def walkabout(self, visitor: NodeVisitor, /):
@@ -225,12 +234,12 @@ class Element(Node):
     def update(self, *args, **kw):
         self.attributes.update(*args, **kw)
 
+    get = Mapping.get
+
     def __getitem__(self, key):
         if isinstance(key, str):
             return self.attributes[key]
         return self.children[check.inst(key, (SupportsIndex, slice))]
-
-    get = Mapping.get
 
     def __setitem__(self, key, value):
         if isinstance(key, str):
@@ -315,6 +324,9 @@ class wrapper(BlockElement):
     default_classes = False
     __slots__ = EMPTY_SET
 
+class separator(InlineElement):
+    __slots__ = EMPTY_SET
+
 class vertical_line(BlockElement, BuilderMixin[int]):
 
     __slots__ = EMPTY_SET
@@ -336,8 +348,8 @@ class horizontal_line(BlockElement, BuilderMixin[Tableau.Tree]):
         width = 100 * obj.balanced_line_width
         margin_left = 100 * obj.balanced_line_margin
         yield 'style', dict(
-            width = width + '%',
-            margin_left= margin_left + '%')
+            width = f'{width}%',
+            margin_left= f'{margin_left}%')
 
 class child_wrapper(BlockElement, BuilderMixin[tuple[Tableau.Tree, Tableau.Tree]]):
 
@@ -348,8 +360,8 @@ class child_wrapper(BlockElement, BuilderMixin[tuple[Tableau.Tree, Tableau.Tree]
         tree, child = obj
         width = (100 / tree.width) * child.width
         yield 'data-step', child.step
-        yield 'data-current-width-pct', width + '%'
-        yield 'style', dict(width = width + '%')
+        yield 'data-current-width-pct', f'{width}%'
+        yield 'style', dict(width = f'{width}%')
 
 class world(InlineElement, BuilderMixin[int]):
 
@@ -362,7 +374,6 @@ class world(InlineElement, BuilderMixin[int]):
     @classmethod
     def get_obj_children(cls, obj, /):
         types = cls.types
-        yield types[textnode]('w')
         yield types[subscript](types[textnode](obj))
 
 class sentence(InlineElement, BuilderMixin[proof.SentenceNode]):
@@ -377,8 +388,10 @@ class sentence(InlineElement, BuilderMixin[proof.SentenceNode]):
     def get_obj_children(cls, obj, /):
         types = cls.types
         if isinstance(obj, proof.SentenceWorldNode):
+            yield types[separator](classes=['sentence-world'])
             yield types[world].for_object(obj[proof.Node.Key.world])
         elif isinstance(obj, proof.SentenceDesignationNode):
+            yield types[separator](classes=['sentence-designation'])
             yield types[designation].for_object(obj[proof.Node.Key.designation])
 
 class designation(InlineElement, BuilderMixin[bool]):
@@ -390,24 +403,29 @@ class designation(InlineElement, BuilderMixin[bool]):
     __slots__ = EMPTY_SET
 
     @classmethod
+    def get_obj_data_attributes(cls, obj, /):
+        yield 'designated', obj
+
+    @classmethod
     def get_obj_classes(cls, obj, /):
         yield cls.designation_classnames[bool(obj)]
 
-class access(InlineElement, BuilderMixin[proof.AccessNode]):
+class access(InlineElement):
+# class access(InlineElement, BuilderMixin[proof.AccessNode]):
 
     __slots__ = EMPTY_SET
 
-    @classmethod
-    def get_obj_data_attributes(cls, obj, /):
-        yield from obj.items()
+    # @classmethod
+    # def get_obj_data_attributes(cls, obj, /):
+    #     yield from obj.items()
 
-    @classmethod
-    def get_obj_children(cls, obj, /):
-        types = cls.types
-        for key in (proof.Node.Key.world1, proof.Node.Key.world2):
-            n = types[world].for_object(obj[key])
-            n['classes'].add(key)
-            yield n
+    # @classmethod
+    # def get_obj_children(cls, obj, /):
+    #     types = cls.types
+    #     for key in (proof.Node.Key.world1, proof.Node.Key.world2):
+    #         n = types[world].for_object(obj[key])
+    #         n['classes'].add(key)
+    #         yield n
         
 class flag(InlineElement, BuilderMixin[proof.Node]):
 
@@ -437,7 +455,9 @@ class node_props(InlineElement, BuilderMixin[proof.Node]):
         if isinstance(obj, proof.SentenceNode):
             yield types[sentence].for_object(obj)
         elif isinstance(obj, proof.AccessNode):
-            yield types[access].for_object(obj)
+            yield types[world].for_object(obj['world1'])
+            yield types[access]()
+            yield types[world].for_object(obj['world2'])
         elif isinstance(obj, proof.EllipsisNode):
             yield types[ellipsis].for_object(obj)
         elif isinstance(obj, proof.FlagNode):
@@ -476,13 +496,18 @@ class node_segment(BlockElement, BuilderMixin[Tableau.Tree]):
     __slots__ = EMPTY_SET
 
     @classmethod
+    def get_obj_data_attributes(cls, obj, /):
+        yield 'closed', obj.closed
+
+    @classmethod
     def get_obj_children(cls, obj, /):
         types = cls.types
         if not obj.root:
             yield types[vertical_line].for_object(obj.step)
-        yield from map(
-            types[node].for_object,
-            zip(obj.nodes, obj.ticksteps))
+        for i, item in enumerate(zip(obj.nodes, obj.ticksteps)):
+            child = types[node].for_object(item)
+            child['data-segment-index'] = i
+            yield child
 
 class tree(BlockElement, BuilderMixin[Tableau.Tree]):
 

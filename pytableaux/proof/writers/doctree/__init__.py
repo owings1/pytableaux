@@ -27,7 +27,7 @@ from collections import deque
 from types import MappingProxyType as MapProxy
 from typing import TypeVar, Callable
 
-from ....lang import LexWriter
+from ....lang import LexWriter, Marking, RenderSet
 from ...tableaux import Tableau
 from ....tools import EMPTY_SET, abcs
 from .. import TabWriter, TabWriterRegistry
@@ -96,14 +96,24 @@ class Translator(abcs.Abc):
 
     format = 'unknown'
 
-    __slots__ = ('doc', 'lw', 'body', 'head', 'foot')
-
     def __init__(self, doc: nodes.document, lw: LexWriter, /):
         self.doc = doc
         self.head: deque[str] = deque()
         self.body: deque[str] = deque()
         self.foot: deque[str] = deque()
         self.lw = lw
+        if self.lw.charset == self.format:
+            rset = self.lw.renderset
+        else:
+            rset = RenderSet.fetch(self.lw.notation, self.format)
+        self.designation_markers = [
+            rset.string(Marking.tableau, ('designation', False)),
+            rset.string(Marking.tableau, ('designation', True))]
+        self.close_marker = rset.string(Marking.tableau, ('closure', True))
+        self.setup()
+
+    def setup(self):
+        pass
 
     def translate(self) -> None:
         self.doc.walkabout(self)
@@ -145,3 +155,4 @@ from .html import HtmlTabWriter as HtmlTabWriter
 from .latex import LatexTabWriter as LatexTabWriter
 
 registry.register(HtmlTabWriter)
+registry.register(LatexTabWriter)
