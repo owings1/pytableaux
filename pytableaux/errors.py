@@ -22,28 +22,32 @@ pytableaux.errors
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, TypeVar
+
+if  TYPE_CHECKING:
+    from typing import overload
+
+_ExT = TypeVar('_ExT', bound = Exception)
+_T = TypeVar('_T')
 
 # No local imports!
 
 # __all__ defined at the bottom.
 
-
-if  TYPE_CHECKING:
-    from typing import TypeVar, overload
-    _ExT = TypeVar('_ExT', bound = Exception)
-    _T = TypeVar('_T')
-
 # warnings
 
 class RepeatValueWarning(UserWarning):
     pass
+
 # Base Errors
 
 class IllegalStateError(Exception):
     pass
 
 class ProofTimeoutError(Exception):
+    pass
+
+class TreePruningException(Exception):
     pass
 
 # ParseErrors
@@ -90,7 +94,10 @@ class ModelValueError(ValueError):
 class DenotationError(ModelValueError):
     pass
 
+# Tree pruning
 
+class SkipDeparture(TreePruningException):
+    pass
 
 def _thru(o): return o
 def _len(o): return o if isinstance(o, int) else len(o)

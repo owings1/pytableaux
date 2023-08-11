@@ -26,7 +26,7 @@ from itertools import filterfalse
 from typing import Any, Callable, Mapping
 
 from ..errors import Emsg
-from . import abcs, wraps
+from . import wraps
 from .linked import linqset
 
 __all__ = (
@@ -35,7 +35,7 @@ __all__ = (
     'Listener',
     'Listeners')
 
-class EventEmitter(abcs.Abc):
+class EventEmitter:
     """
     Event emitter class for subclassing.
     """
@@ -57,18 +57,7 @@ class EventEmitter(abcs.Abc):
     def emit(self, event, *args, **kw) -> int:
         return self.events.emit(event, *args, **kw)
 
-    # def copy(self, *, listeners = False):
-    #     """Copy event emitter.
-        
-    #     Args:
-    #         listeners (bool): Copy listeners.
-    #     """
-    #     cls = type(self)
-    #     inst = cls.__new__(cls)
-    #     inst.events = inst.events.copy(listeners = listeners)
-    #     return inst
-
-class Listener(Callable, abcs.Abc):
+class Listener:
     """
     A single listener for an event.
     """
@@ -173,7 +162,6 @@ class EventsListeners(dict[Any, Listeners]):
         """
         del(self[event])
 
-    @abcs.abcf.temp
     def normargs(method):
         '''
         Possible ways to call on/once/off ...
@@ -268,3 +256,5 @@ class EventsListeners(dict[Any, Listeners]):
         inst.update(it)
         return inst
 
+
+    del(normargs)

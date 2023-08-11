@@ -57,7 +57,7 @@
         #} id="node_{{ node.id }}"{#
         #} data-node-id="{{ node.id }}"{#
         #} data-step="{{ node.step }}"{#
-        #}{{- ' data-ticked-step="' ~ tickstep ~ '"' if node.ticked }}>
+        #}{{- ' data-tickstep="' ~ tickstep ~ '"' if node.ticked }}>
         <span class="node-props {{- ' ticked' if node.ticked}}">
             {%- if node.has('sentence') -%}
                 {% set sentence_raw = lw(node.sentence) -%}

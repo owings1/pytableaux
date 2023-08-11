@@ -728,20 +728,20 @@ class Sentence(LexicalAbc):
     @abcs.abcf.temp
     @membr.defer
     def libopers_1(member: membr):
-        oper = Operator.lib_opmap[member.name]
-        def f(self: Sentence) -> Operated:
+        @wraps(oper := Operator.lib_opmap[member.name])
+        def wrapper(self: Sentence) -> Operated:
             return Operated(oper, self)
-        return wraps(oper)(f)
+        return wrapper
 
     @abcs.abcf.temp
     @membr.defer
     def libopers_2(member: membr):
-        oper = Operator.lib_opmap[member.name]
-        def f(self: Sentence, other: Sentence, /) -> Operated:
+        @wraps(oper := Operator.lib_opmap[member.name])
+        def wrapper(self: Sentence, other: Sentence, /) -> Operated:
             if not isinstance(other, Sentence):
                 return NotImplemented
             return Operated(oper, (self, other))
-        return wraps(oper)(f)
+        return wrapper
 
     __invert__ = libopers_1()
     __and__ = __or__ = libopers_2()

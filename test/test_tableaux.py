@@ -18,8 +18,6 @@ from unittest import skip
 from . import BaseCase
 
 
-def mock_sleep_5ms():
-    time.sleep(0.005)
 
 exarg = examples.argument
 sen = 'sentence'
@@ -52,7 +50,8 @@ class TestTableau(BaseCase):
 
     def test_timeout_1ms(self):
         proof = Tableau('cpl', exarg('Addition'), build_timeout=1)
-        proof.step = mock_sleep_5ms
+        with proof.timers.build:
+            time.sleep(0.005)
         with raises(ProofTimeoutError):
             proof.build()
 

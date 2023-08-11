@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator as Operator
-from ..proof import Branch, Node, adds, group, sdnode
+from ..proof import adds, group, sdnode
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
@@ -28,7 +28,7 @@ class Meta(K3.Meta):
     title       = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 50
-    native_operators = FDE.Meta.native_operators + (Operator.Assertion,)
+    native_operators = FDE.Meta.native_operators + group(Operator.Assertion)
 
 def gap(v):
     return min(v, 1 - v)
@@ -78,8 +78,7 @@ class TabRules(K3W.TabRules):
         negated     = True
         operator    = Operator.Assertion
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             # Keep designation fixed to False for inheritance below
             return adds(group(sdnode(s.lhs, False)))
 
@@ -91,17 +90,17 @@ class TabRules(K3W.TabRules):
         designation = False
         negated     = False
 
-    class AssertionNegatedUndesignated(AssertionNegatedDesignated):
+    class AssertionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
         a designated node to *b* with the assertion of *n*, then tick *n*.
         """
         designation = False
         negated     = True
+        operator    = Operator.Assertion
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
-            s = self.sentence(node)
-            return adds(group(sdnode(s.lhs, not self.designation)))
+        def _get_sd_targets(self, s, d, /):
+            return adds(group(sdnode(s.lhs, not d)))
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -113,14 +112,13 @@ class TabRules(K3W.TabRules):
         designation = True
         operator    = Operator.Conditional
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             sn = ~s.lhs.asserted() | s.rhs.asserted()
             # keep negated neutral for inheritance below
             if self.negated:
                 sn = ~sn
             # keep designation neutral for inheritance below
-            return adds(group(sdnode(sn, self.designation)))
+            return adds(group(sdnode(sn, d)))
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -132,8 +130,7 @@ class TabRules(K3W.TabRules):
         negated     = True
         operator    = Operator.Conditional
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.
             return adds(
                 group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
@@ -168,8 +165,7 @@ class TabRules(K3W.TabRules):
         operator    = Operator.Biconditional
         branching   = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             lhsa = s.lhs.asserted()
             rhsa = s.rhs.asserted()
             sn1 = ~lhsa | rhsa
@@ -179,7 +175,6 @@ class TabRules(K3W.TabRules):
                 sn1 = ~sn1
                 sn2 = ~sn2
             # Keep designation neutral for inheritance below.
-            d = self.designation
             return adds(
                 group(sdnode(sn1, d), sdnode(sn2, d)))
 

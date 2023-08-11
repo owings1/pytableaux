@@ -472,7 +472,7 @@ class TableauxSystem(TableauxSystem):
                 result += cls.branchables[oper][lastneg][node['designated']]
                 lastneg = False
         return result
-    
+
 
 class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default FDE node rule with:

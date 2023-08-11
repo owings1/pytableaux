@@ -21,7 +21,6 @@ pytableaux.proof.writers.nodes
 """
 from __future__ import annotations
 
-import enum
 from abc import abstractmethod
 from collections import ChainMap
 from types import MappingProxyType as MapProxy
@@ -29,13 +28,14 @@ from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Mapping,
                     Sequence, Set, SupportsIndex, TypeVar)
 
 from .... import proof
-from ....errors import check
+from ....errors import check, SkipDeparture
 from ....tools import (EMPTY_MAP, EMPTY_QSET, EMPTY_SET, ForObjectBuilder,
-                       TransMmap, abcs, closure, qset, qsetf)
+                       TransMmap, closure, inflect, qset, qsetf)
 from ... import Tableau
 
 if TYPE_CHECKING:
     from ....tools import TypeTypeMap
+    from . import NodeVisitor
 
 __all__ = (
     'access',
@@ -57,20 +57,15 @@ __all__ = (
 _T = TypeVar('_T')
 _NT = TypeVar('_NT', bound='Node')
 
-def _uscore(s: str):
-    return s.replace('-', '_')
-
-def _endash(s: str):
-    return s.replace('_', '-')
-
-class TreePruningException(Exception): pass
-class SkipDeparture(TreePruningException): pass
 
 class Attributes(TransMmap[str, Any]):
-    __slots__ = EMPTY_SET
+
     kget = kset = staticmethod(str.lower)
 
+    __slots__ = EMPTY_SET
+
 class NodeTypes(TransMmap[type[_NT], type[_NT]]):
+
     __slots__ = EMPTY_SET
 
     @staticmethod
@@ -86,6 +81,8 @@ if TYPE_CHECKING:
 
 class BuilderMixin(ForObjectBuilder[_T]):
 
+    __slots__ = EMPTY_SET
+
     @classmethod
     def get_obj_args(cls, obj, /):
         yield from cls.get_obj_children(obj)
@@ -94,6 +91,8 @@ class BuilderMixin(ForObjectBuilder[_T]):
     def get_obj_kwargs(cls, obj, /):
         yield 'classes', cls.get_obj_classes(obj)
         yield from cls.get_obj_attributes(obj)
+        for name, value in cls.get_obj_data_attributes(obj):
+            yield 'data-' + name.replace('_', '-'), value
 
     @classmethod
     @abstractmethod
@@ -110,6 +109,11 @@ class BuilderMixin(ForObjectBuilder[_T]):
     def get_obj_attributes(cls, obj: _T, /) -> Iterable[tuple[str, Any]]:
         yield from EMPTY_SET
 
+    @classmethod
+    @abstractmethod
+    def get_obj_data_attributes(cls, obj: _T, /) -> Iterable[tuple[str, Any]]:
+        yield from EMPTY_SET
+
 class Node:
 
     tagnames: ClassVar[Mapping[str, str]] = EMPTY_MAP
@@ -118,6 +122,8 @@ class Node:
 
     parent: Node|None
     children: Sequence[Node]
+
+    __slots__ = EMPTY_SET
 
     @property
     def document(self) -> document|None:
@@ -167,23 +173,24 @@ class Node:
     @closure
     def __init_subclass__():
         proxy = MapProxy(types := NodeTypes())
-        def settypes(cls: type):
-            types.setdefault(cls, cls)
-            if (value := cls.__dict__.get(name := 'types')) is None:
-                value = proxy
-            else:
-                value = ChainMap(value, proxy)
-            setattr(cls, name, value)
-        def init(cls: type, **kw):
+        def init(cls: type[Node], **kw):
             super().__init_subclass__(**kw)
             if cls.__name__.lower() != cls.__name__:
                 return
-            settypes(cls)
+            types.setdefault(cls, cls)
+            value = cls.__dict__.get('types')
+            if value is None:
+                value = proxy
+            else:
+                value = ChainMap(value, proxy)
+            cls.types = value
         return init
 
 class Text(Node, str):
     tagname = '#text'
     children = ()
+
+    __slots__ = ('_document', 'parent')
 
 class Element(Node):
 
@@ -193,6 +200,8 @@ class Element(Node):
 
     children: qset[Node]
     attributes: Attributes
+
+    __slots__ = ('_document', 'parent', 'children', 'attributes')
 
     def __init__(self, *children, **attributes):
         self.children = qset()
@@ -229,7 +238,7 @@ class Element(Node):
         elif isinstance(key, SupportsIndex):
             self.children[key] = self.setup_child(value)
         else:
-            raise TypeError(f'slice not yet supported')
+            raise NotImplementedError(f'slice not yet supported')
 
     def __delitem__(self, key):
         if isinstance(key, str):
@@ -268,60 +277,87 @@ class Element(Node):
             if classes is False:
                 classes = EMPTY_QSET
             else:
-                classes = [_endash(name)]
+                classes = [name.replace('_', '-')]
         if not isinstance(classes, qsetf):
             classes = qsetf(classes)
         cls.default_classes = classes
 
 class InlineElement(Element):
     tagnames = MapProxy(dict(html='span'))
+    __slots__ = EMPTY_SET
 
 class BlockElement(Element):
     tagnames = MapProxy(dict(html='div'))
+    __slots__ = EMPTY_SET
 
+class textnode(Text):
+    __slots__ = EMPTY_SET
 
-class textnode(Text): pass
-class rawtext(Text): pass
+class rawtext(Text):
+    __slots__ = EMPTY_SET
+
 class subscript(Element):
     tagnames = MapProxy(dict(html='sub'))
     default_classes = False
-class style(Element): default_classes = False
-class clear(BlockElement): pass
-class ellipsis(InlineElement, BuilderMixin[proof.Node]): pass
-class wrapper(BlockElement): default_classes = False
+    __slots__ = EMPTY_SET
+
+class style(Element):
+    default_classes = False
+    __slots__ = EMPTY_SET
+
+class clear(BlockElement):
+    __slots__ = EMPTY_SET
+
+class ellipsis(InlineElement, BuilderMixin[proof.Node]):
+    __slots__ = EMPTY_SET
+
+class wrapper(BlockElement):
+    default_classes = False
+    __slots__ = EMPTY_SET
 
 class vertical_line(BlockElement, BuilderMixin[int]):
 
+    __slots__ = EMPTY_SET
+
     @classmethod
-    def get_obj_attributes(cls, obj, /):
-        yield 'data-step', obj
+    def get_obj_data_attributes(cls, obj, /):
+        yield 'step', obj
 
 class horizontal_line(BlockElement, BuilderMixin[Tableau.Tree]):
 
+    __slots__ = EMPTY_SET
+
+    @classmethod
+    def get_obj_data_attributes(cls, obj, /):
+        yield 'step', obj.branch_step
+
     @classmethod
     def get_obj_attributes(cls, obj, /):
-        yield 'data-step', obj.branch_step
         width = 100 * obj.balanced_line_width
         margin_left = 100 * obj.balanced_line_margin
-        yield 'style', _styleattr(
-            width=_pctstr(width),
-            margin_left=_pctstr(margin_left))
+        yield 'style', dict(
+            width = width + '%',
+            margin_left= margin_left + '%')
 
 class child_wrapper(BlockElement, BuilderMixin[tuple[Tableau.Tree, Tableau.Tree]]):
+
+    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
         tree, child = obj
         width = (100 / tree.width) * child.width
         yield 'data-step', child.step
-        yield 'data-current-width-pct', _pctstr(width)
-        yield 'style', _styleattr(width=_pctstr(width))
+        yield 'data-current-width-pct', width + '%'
+        yield 'style', dict(width = width + '%')
 
 class world(InlineElement, BuilderMixin[int]):
 
+    __slots__ = EMPTY_SET
+
     @classmethod
-    def get_obj_attributes(cls, obj, /):
-        yield f'data-world', obj
+    def get_obj_data_attributes(cls, obj, /):
+        yield f'world', obj
 
     @classmethod
     def get_obj_children(cls, obj, /):
@@ -331,13 +367,11 @@ class world(InlineElement, BuilderMixin[int]):
 
 class sentence(InlineElement, BuilderMixin[proof.SentenceNode]):
 
+    __slots__ = EMPTY_SET
+
     @classmethod
-    def get_obj_attributes(cls, obj, /):
-        yield proof.Node.Key.sentence, obj[proof.Node.Key.sentence]
-        if isinstance(obj, proof.SentenceWorldNode):
-            yield f'data-world', obj[proof.Node.Key.world]
-        if isinstance(obj, proof.SentenceDesignationNode):
-            yield f'data-designated', obj[proof.Node.Key.designation]
+    def get_obj_data_attributes(cls, obj, /):
+        yield from obj.items()
 
     @classmethod
     def get_obj_children(cls, obj, /):
@@ -353,16 +387,19 @@ class designation(InlineElement, BuilderMixin[bool]):
         'undesignated',
         'designated')
 
+    __slots__ = EMPTY_SET
+
     @classmethod
     def get_obj_classes(cls, obj, /):
         yield cls.designation_classnames[bool(obj)]
 
 class access(InlineElement, BuilderMixin[proof.AccessNode]):
 
+    __slots__ = EMPTY_SET
+
     @classmethod
-    def get_obj_attributes(cls, obj, /):
-        yield f'data-world1', obj[proof.Node.Key.world1]
-        yield f'data-world2', obj[proof.Node.Key.world2]
+    def get_obj_data_attributes(cls, obj, /):
+        yield from obj.items()
 
     @classmethod
     def get_obj_children(cls, obj, /):
@@ -374,15 +411,20 @@ class access(InlineElement, BuilderMixin[proof.AccessNode]):
         
 class flag(InlineElement, BuilderMixin[proof.Node]):
 
+    __slots__ = EMPTY_SET
+
     @classmethod
     def get_obj_classes(cls, obj, /):
         yield obj[proof.Node.Key.flag]
 
     @classmethod
-    def get_obj_attributes(cls, obj, /):
-        yield 'data-info', obj.get(proof.Node.Key.info, '')
+    def get_obj_data_attributes(cls, obj, /):
+        # yield 'info', obj.get(proof.Node.Key.info, '')
+        yield from obj.items()
 
 class node_props(InlineElement, BuilderMixin[proof.Node]):
+
+    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_classes(cls, obj, /):
@@ -403,18 +445,26 @@ class node_props(InlineElement, BuilderMixin[proof.Node]):
 
 class node(BlockElement, BuilderMixin[tuple[proof.Node, int]]):
 
+    __slots__ = EMPTY_SET
+
     @classmethod
     def get_obj_attributes(cls, obj, /):
+        yield 'id', f'node_{obj[0].id}'
+
+    @classmethod
+    def get_obj_data_attributes(cls, obj, /):
         node, tickstep = obj
-        yield 'id', f'node_{node.id}'
-        yield 'data-node-id', node.id
-        yield 'data-step', node.step
+        yield 'node-type', type(node).__name__
+        yield 'node-id', node.id
+        yield 'step', node.step
         if getattr(node, 'ticked', None):
-            yield 'data-ticked-step', tickstep
+            yield 'tickstep', tickstep
 
     @classmethod
     def get_obj_classes(cls, obj, /):
-        if getattr(obj[0], 'ticked', None):
+        node, _ = obj
+        yield inflect.dashcase(type(node).__name__)
+        if getattr(node, 'ticked', None):
             yield 'ticked'
 
     @classmethod
@@ -422,6 +472,8 @@ class node(BlockElement, BuilderMixin[tuple[proof.Node, int]]):
         yield cls.types[node_props].for_object(obj[0])
 
 class node_segment(BlockElement, BuilderMixin[Tableau.Tree]):
+
+    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_children(cls, obj, /):
@@ -443,6 +495,10 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
         'right',
         'step')
 
+    data_attrnames_nonempty = (
+        'branch_id',
+        'model_id')
+
     flag_classnames = (
         'has_open',
         'has_closed',
@@ -451,17 +507,22 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
         'closed',
         'is_only_branch')
 
+    __slots__ = EMPTY_SET
+
     @classmethod
     def get_obj_attributes(cls, obj, /):
         yield 'id', f'structure_{obj.id}'
+
+    @classmethod
+    def get_obj_data_attributes(cls, obj, /):
         for name in cls.data_attrnames:
-            yield f'data-{_endash(name)}', getattr(obj, _uscore(name))
+            yield name, getattr(obj, name)
+        for name in cls.data_attrnames_nonempty:
+            value = getattr(obj, name, None)
+            if value:
+                yield name, value
         if obj.closed:
-            yield 'data-closed-step', obj.closed_step
-        if obj.branch_id:
-            yield 'data-branch-id', obj.branch_id
-        if obj.model_id:
-            yield 'data-model-id', obj.model_id
+            yield 'closed-step', obj.closed_step
 
     @classmethod
     def get_obj_classes(cls, obj, /):
@@ -483,6 +544,8 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
 
 class tableau(BlockElement, BuilderMixin[Tableau]):
 
+    __slots__ = EMPTY_SET
+
     @classmethod
     def get_obj_attributes(cls, obj, /):
         yield from {
@@ -497,58 +560,8 @@ class tableau(BlockElement, BuilderMixin[Tableau]):
 
 class document(Element):
 
+    __slots__ = EMPTY_SET
+
     @property
     def document(self):
         return self
-
-class NodeVisitor(abcs.Abc):
-
-    @abstractmethod
-    def dispatch_visit(self, node: Node):
-        raise NotImplementedError
-
-    @abstractmethod
-    def dispatch_departure(self, node: Node):
-        raise NotImplementedError
-
-class DefaultNodeVisitor(NodeVisitor):
-
-    def __init__(self, doc: document, /):
-        self.doc = doc
-
-    def dispatch_visit(self, node):
-        cls = type(node)
-        self.find_visitor(cls.__name__, cls, node)(node)
-
-    def dispatch_departure(self, node):
-        cls = type(node)
-        self.find_departer(cls.__name__, cls, node)(node)
-
-    def find_visitor(self, clsname: str, cls: type[_NT], node: _NT, /) -> Callable[[_NT], None]:
-        try:
-            return getattr(self, f'visit_{clsname}')
-        except AttributeError:
-            return self.default_visitor
-
-    def find_departer(self, clsname: str, cls: type[_NT], node: _NT, /) -> Callable[[_NT], None]:
-        try:
-            return getattr(self, f'depart_{clsname}')
-        except AttributeError:
-            return self.default_departer
-
-    @abstractmethod
-    def default_visitor(self, node: Node, /):
-        raise NotImplementedError
-
-    @abstractmethod
-    def default_departer(self, node: Node, /):
-        raise NotImplementedError
-
-
-def _styleattr(*args, **kw):
-    return ' '.join(
-        f"{str(key).replace('_', '-')}: {value};"
-        for key, value in dict(*args, **kw).items())
-
-def _pctstr(n):
-    return f'{n}%'

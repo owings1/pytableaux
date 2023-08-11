@@ -134,7 +134,7 @@
         BranchId       : 'data-branch-id',
         ModelId        : 'data-model-id',
         NodeId         : 'data-node-id',
-        TickStep       : 'data-ticked-step',
+        TickStep       : 'data-tickstep',
         // Controls attributes (rules)
         NodeIds        : 'data-node-ids',
         BranchNodeId   : 'data-branch-node-id',

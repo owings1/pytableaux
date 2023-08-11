@@ -21,166 +21,127 @@ pytableaux.proof.writers.doctree
 """
 from __future__ import annotations
 
-import html
-import logging
-import re
+import itertools
+from abc import abstractmethod
 from collections import deque
 from types import MappingProxyType as MapProxy
-from typing import Any, Mapping
+from typing import TypeVar, Callable
 
-from .... import proof
-from ....lang import LexWriter, Notation
-from ....tools import EMPTY_SET
+from ....lang import LexWriter
 from ...tableaux import Tableau
+from ....tools import EMPTY_SET, abcs
 from .. import TabWriter, TabWriterRegistry
-from ..jinja import TEMPLATES_BASE_DIR, jinja
 from . import nodes
 
-NOARG = object()
+_NT = TypeVar('_NT', bound='nodes.Node')
 
 __all__ = (
-    'HtmlTabWriter',
-    'HtmlTranslator',
+    'DefaultNodeVisitor',
+    'DoctreeTabWriter',
+    'NodeVisitor',
     'registry',
     'Translator')
 
-registry = TabWriterRegistry(name='doctree')
+NOARG = object()
+
+class NodeVisitor(abcs.Abc):
+
+    __slots__ = EMPTY_SET
+
+    def dispatch_visit(self, node: nodes.Node):
+        try:
+            func = self.find_visitor(node)
+        except AttributeError:
+            raise NotImplementedError
+        func(node)
+
+    def dispatch_departure(self, node: nodes.Node):
+        try:
+            func = self.find_departer(node)
+        except AttributeError:
+            raise NotImplementedError
+        func(node)
+
+    def find_visitor(self, node: _NT, /) -> Callable[[_NT], None]:
+        return getattr(self, f'visit_{type(node).__name__}')
+
+    def find_departer(self, node: _NT, /) -> Callable[[_NT], None]:
+        return getattr(self, f'depart_{type(node).__name__}')
+
+class DefaultNodeVisitor(NodeVisitor):
+
+    __slots__ = EMPTY_SET
+
+    def find_visitor(self, node, /):
+        try:
+            return super().find_visitor(node)
+        except AttributeError:
+            return self.default_visitor
+
+    def find_departer(self, node, /):
+        try:
+            return super().find_departer(node)
+        except AttributeError:
+            return self.default_departer
+
+    @abstractmethod
+    def default_visitor(self, node: nodes.Node, /):
+        raise NotImplementedError
+
+    @abstractmethod
+    def default_departer(self, node: nodes.Node, /):
+        raise NotImplementedError
+
+class Translator(abcs.Abc):
+
+    format = 'unknown'
+
+    __slots__ = ('doc', 'lw', 'body', 'head', 'foot')
+
+    def __init__(self, doc: nodes.document, lw: LexWriter, /):
+        self.doc = doc
+        self.head: deque[str] = deque()
+        self.body: deque[str] = deque()
+        self.foot: deque[str] = deque()
+        self.lw = lw
+
+    def translate(self) -> None:
+        self.doc.walkabout(self)
 
 class DoctreeTabWriter(TabWriter):
 
     __slots__ = EMPTY_SET
 
     engine = 'doctree'
-    doc_nodetype: type[nodes.document] = nodes.document
+    docnode_type: type[nodes.document] = nodes.document
     translator_type: type[Translator]
+    defaults = MapProxy(dict(
+        fulldoc = False))
 
-    def render(self, doc: nodes.document, /) -> str:
+    def __call__(self, tab: Tableau, *, fulldoc=None, **kw):
+        doc = self.build_doc(tab, **kw)
+        return self.render(doc, fulldoc=fulldoc)
+
+    @abstractmethod
+    def build_doc(self, tab: Tableau) -> nodes.document:
+        raise NotImplementedError
+
+    def render(self, doc: nodes.document, /, *, fulldoc=None) -> str:
+        if fulldoc is None:
+            fulldoc = self.opts['fulldoc']
         translator = self.translator_type(doc, self.lw)
         translator.translate()
-        return ''.join(translator.body)
+        parts = deque()
+        if fulldoc:
+            parts.append(translator.head)
+        parts.append(translator.body)
+        if fulldoc:
+            parts.append(translator.foot)
+        return ''.join(itertools.chain.from_iterable(parts))
 
-class Translator(nodes.DefaultNodeVisitor):
+registry = TabWriterRegistry(name=DoctreeTabWriter.engine)
 
-    format = 'unknown'
+from .html import HtmlTabWriter as HtmlTabWriter
+from .latex import LatexTabWriter as LatexTabWriter
 
-    def __init__(self, doc: nodes.document, lw: LexWriter, /):
-        super().__init__(doc)
-        self.body: deque[str] = deque()
-        self.lw = lw
-
-    def translate(self) -> None:
-        self.doc.walkabout(self)
-
-    def get_tagname(self, node: nodes.Node, /) -> str:
-        try:
-            tagname = node.tagnames[self.format]
-        except KeyError:
-            tagname = node.tagname
-        if tagname:
-            return tagname
-        raise ValueError(f'tagname: {tagname}')
-
-class HtmlTranslator(Translator):
-
-    format = 'html'
-    logger = logging.getLogger(__name__)
-    escape = staticmethod(html.escape)
-
-    def visit_document(self, node: nodes.document, /):
-        raise nodes.SkipDeparture
-
-    def visit_textnode(self, node: nodes.textnode, /):
-        self.body.append(self.escape(node))
-        raise nodes.SkipDeparture
-
-    def visit_rawtext(self, node: nodes.rawtext, /):
-        self.body.append(node)
-        raise nodes.SkipDeparture
-
-    def visit_sentence(self, node: nodes.sentence, /):
-        rendered = self.lw(node.attributes.pop(proof.Node.Key.sentence))
-        if self.lw.charset != self.format:
-            rendered = self.escape(rendered)
-        self.default_visitor(node)
-        self.body.append(rendered)
-
-    def get_attrs_map(self, node: nodes.Element, /) -> dict[str, str]:
-        attrs = {}
-        todo = dict(node.attributes)
-        if todo.get('id'):
-            attrs['id'] = str(todo.pop('id'))
-        if todo.get('class'):
-            todo['classes'].add(str(todo.pop('class')))
-        classes = todo.pop('classes')
-        if classes:
-            attrs['class'] = ' '.join(
-                re.sub(r'[\s]+', ' ', c).strip()
-                for c in classes)
-        for key in sorted(todo):
-            value = todo.pop(key)
-            if isinstance(value, (str, int, float, bool)):
-                attrs[key] = str(value)
-            else:
-                self.logger.warning(
-                    f'Skipping {key} attribute of type {type(value)}')
-        return attrs
-
-    def get_attrs_str(self, attrs: Mapping[str, Any]) -> str:
-        return ' '.join(
-            f'{self.escape(k)}="{self.escape(v)}"'
-            for k, v in attrs.items())
-
-    def write_opentag(self, tagname: str, attrs: Mapping[str, Any]) -> None:
-        self.body.append(' '.join(filter(None, (
-            f'<{self.escape(tagname)}',
-            self.get_attrs_str(attrs)))) + '>')
-
-    def write_closetag(self, tagname: str) -> None:
-        self.body.append(f'</{self.escape(tagname)}>')
-
-    def default_visitor(self, node: nodes.Node, /):
-        self.write_opentag(self.get_tagname(node), self.get_attrs_map(node))
-
-    def default_departer(self, node: nodes.Node, /):
-        self.write_closetag(self.get_tagname(node))
-
-@registry.register
-class HtmlTabWriter(DoctreeTabWriter):
-
-    __slots__ = EMPTY_SET
-
-    format = 'html'
-    translator_type = HtmlTranslator
-    jinja = jinja(f'{TEMPLATES_BASE_DIR}/html/static')
-    css_template_name = 'tableau.css'
-    default_charsets = MapProxy({
-        notn: 'html' for notn in Notation})
-    defaults = MapProxy(dict(
-        wrapper      = True,
-        classes      = (),
-        wrap_classes = (),
-        inline_css   = False))
-
-    def __call__(self, tab: Tableau, *, classes=None, wrap_classes=None):
-        types = self.doc_nodetype.types
-        doc = types[nodes.document]()
-        if self.opts['wrapper']:
-            wrap = types[nodes.wrapper](classes=['tableau-wrapper'])
-            wrap['classes'] |= wrap_classes or EMPTY_SET
-            wrap['classes'] |= self.opts['wrap_classes']
-            doc += wrap
-        else:
-            wrap = doc
-        if self.opts['inline_css']:
-            css = '\n' + self.attachments()['css'] + '\n'
-            wrap += types[nodes.style](types[nodes.rawtext](css))
-        node = types[nodes.tableau].for_object(tab)
-        node['classes'] |= classes or EMPTY_SET
-        node['classes'] |= self.opts['classes']
-        wrap += node
-        wrap += types[nodes.clear]()
-        return self.render(doc)
-
-    def attachments(self, /):
-        css = self.jinja.get_template(self.css_template_name).render()
-        return dict(css=css)
+registry.register(HtmlTabWriter)

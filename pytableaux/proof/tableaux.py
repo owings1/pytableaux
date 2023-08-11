@@ -27,7 +27,7 @@ from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
 from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Mapping,
-                    Optional, Sequence, TypeVar, final)
+                    Optional, Sequence, SupportsIndex, TypeVar, final)
 
 from .. import __docformat__
 from ..errors import Emsg, check
@@ -628,6 +628,24 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         build_timeout   = None,
         max_steps       = None))
 
+    __slots__ = (
+        '_argument',
+        '_complexities',
+        '_logic',
+        'flag',
+        'history',
+        'models',
+        'open',
+        'opts',
+        'rules',
+        'stat',
+        'stats',
+        'timers',
+        'tree',
+        '__contains__',
+        '__getitem__',
+        '__len__')
+
     def __init__(self, logic=None, argument=None, /, **opts):
         """
         Args:
@@ -635,27 +653,23 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             argument: The argument for the tableau.
             **opts: The build options.
         """
-        # Events init
-        EventEmitter.__init__(self, *Tableau.Events)
-        # Protected attributes
-        self._branches: list[Branch] = []
-        self._open: linqset[Branch] = linqset()
-        self._stat = self.Stat()
-        # Exposed attributes
+        EventEmitter.__init__(self)
         self.flag = Tableau.Flag.PREMATURE
-        self.history = SeqCover(history := [])
+        self.__listen_on(
+            history := [],
+            stat := self.Stat(),
+            opens := linqset(),
+            branches := [])
+        self.__len__ = branches.__len__
+        self.__getitem__ = branches.__getitem__
+        self.__contains__ = stat.__contains__
+        self.stat = stat.query
+        self.history = SeqCover(history)
         self.opts = self._defaults | opts
         self.timers = Tableau.Timers.create()
         self.rules = RulesRoot(self)
-        self.open = SeqCover(self._open)
-        # Private
+        self.open = SeqCover(opens)
         self._complexities: dict[Node, int] = {}
-        self._branch_listeners = MapProxy(
-            self._make_branch_listeners(self._stat, self._open))
-        self._tab_listeners = MapProxy(self._make_tab_listeners(history))
-        # Init
-        self.stat = self._stat.query
-        self.on(self._tab_listeners)
         maxsteps = self.opts['max_steps']
         if maxsteps is not None and maxsteps > 0:
             self.flag |= self.flag.HAS_STEP_LIMIT
@@ -680,7 +694,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         trunk is automatically built.
         """
         try:
-            return self.__argument
+            return self._argument
         except AttributeError:
             pass
 
@@ -688,7 +702,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     def logic(self):
         "The logic of the tableau."
         try:
-            return self.__logic
+            return self._logic
         except AttributeError:
             pass
 
@@ -703,14 +717,14 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     @argument.setter
     def argument(self, value):
         self._check_not_started()
-        self.__argument = Argument(value)
+        self._argument = Argument(value)
         if self.logic is not None:
             self._build_trunk()
 
     @logic.setter
     def logic(self, value):
         self._check_not_started()
-        self.__logic = registry(value)
+        self._logic = registry(value)
         self.rules.clear()
         self.System.add_rules(self.logic, self.rules)
         if self.argument is not None:
@@ -853,28 +867,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         Returns:
             self
         """
-        index = len(self)
-        if not branch.closed:
-            # Append to linqset will raise duplicate value error.
-            self._open.append(branch)
-        elif branch in self:
-            raise Emsg.DuplicateValue(branch.id)
-        self._branches.append(branch)
-        self._stat[branch] = self.BranchStat({
-            Tableau.StatKey.STEP_ADDED : self.current_step,
-            Tableau.StatKey.INDEX      : index,
-            Tableau.StatKey.PARENT     : branch.parent})
-        # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
-        # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
-        nodes = tuple(branch) if branch.parent is None else EMPTY_SET
-        # This means we need to start listening before we emit. There
-        # could be the possibility of recursion.
-        branch.on(self._branch_listeners)
-        self.emit(Tableau.Events.AFTER_BRANCH_ADD, branch)
-        if len(nodes):
-            afteradd = self._branch_listeners[Branch.Events.AFTER_ADD]
-            for node in nodes:
-                afteradd(node, branch)
+        self.emit(next(iter(self.events)), branch)
         return self
 
     def finish(self):
@@ -926,17 +919,8 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             cache[node] = system.branching_complexity(node)
         return cache[node]
 
-    def __getitem__(self, index):
-        return self._branches[index]
-
-    def __len__(self):
-        return len(self._branches)
-
     def __bool__(self):
         return True
-
-    def __contains__(self, branch):
-        return branch in self._stat
 
     def __repr__(self):
         info = dict(
@@ -958,7 +942,13 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         istr = ' '.join(f'{k}:{v}' for k, v in info.items())
         return f'<{type(self).__name__} {istr}>'
 
-    def _make_branch_listeners(self, stat: Tableau.Stat, opens: linqset[Branch]):
+    def __listen_on(self, history: list, stat: Tableau.Stat, opens: linqset[Branch], branches: list[Branch]):
+
+        if len(self.events):
+            raise Emsg.IllegalState('Listeners already initialized')
+
+        add_event = object()
+        self.events.create(add_event, *Tableau.Events)
 
         def after_close(branch: Branch):
             bstat = stat[branch]
@@ -967,7 +957,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             opens.remove(branch)
             self.emit(Tableau.Events.AFTER_BRANCH_CLOSE, branch)
 
-        def after_add(node: Node, branch: Branch):
+        def after_node_add(node: Node, branch: Branch):
             bstat = stat[branch].node(node)
             bstat[Tableau.StatKey.STEP_ADDED] = node.step = self.current_step
             self.emit(Tableau.Events.AFTER_NODE_ADD, node, branch)
@@ -978,12 +968,35 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             bstat[Tableau.StatKey.FLAGS] |= self.flag.TICKED
             self.emit(Tableau.Events.AFTER_NODE_TICK, node, branch)
 
-        return {
+        branch_listeners = {
             Branch.Events.AFTER_CLOSE : after_close,
-            Branch.Events.AFTER_ADD   : after_add,
+            Branch.Events.AFTER_ADD   : after_node_add,
             Branch.Events.AFTER_TICK  : after_tick}
 
-    def _make_tab_listeners(self, history: list):
+        def add_branch(branch: Branch):
+            if branch in self:
+                raise Emsg.DuplicateValue(branch.id)
+            if not branch.closed:
+                # Append to linqset will raise duplicate value error.
+                opens.append(branch)
+            branches.append(branch)
+            stat[branch] = self.BranchStat({
+                Tableau.StatKey.STEP_ADDED : self.current_step,
+                Tableau.StatKey.INDEX      : len(branches) - 1,
+                Tableau.StatKey.PARENT     : branch.parent})
+            # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
+            # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
+            nodes = tuple(branch) if branch.parent is None else EMPTY_SET
+            # This means we need to start listening before we emit. There
+            # could be the possibility of recursion.
+            branch.on(branch_listeners)
+            self.emit(Tableau.Events.AFTER_BRANCH_ADD, branch)
+            if len(nodes):
+                for node in nodes:
+                    after_node_add(node, branch)
+
+        self.on({add_event: add_branch})
+
         def after_rule_apply(target: Target):
             try:
                 history.append(target._entry)
@@ -991,8 +1004,11 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 history.append(Tableau.StepEntry(target.rule, target, Counter()))
                 self.flag |= self.flag.TIMING_INACCURATE
             self.flag |= self.flag.STARTED
-        return {
+
+        tab_listeners = {
             Tableau.Events.AFTER_RULE_APPLY: after_rule_apply}
+
+        self.on(tab_listeners)
 
     def _get_group_application(self, branch, group: Sequence[Rule], /) -> Tableau.StepEntry:
         """Find and return the next available rule application for the given open

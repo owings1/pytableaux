@@ -20,10 +20,10 @@ pytableaux.tools.linked
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
-from collections.abc import MutableSequence, Sequence
 from enum import IntEnum
 from itertools import filterfalse
-from typing import Any, Collection, Optional, SupportsIndex
+from typing import (Any, Collection, Iterator, MutableSequence,
+                    Optional, Sequence, SupportsIndex, TypeVar)
 
 from .. import __docformat__
 from ..errors import Emsg
@@ -43,6 +43,8 @@ __all__ = (
     'linkseq',
     'LinkSequence',
     'linqset')
+
+_T = TypeVar('_T')
 
 class LinkRel(IntEnum):
     'Link directional/subscript enum.'
@@ -187,7 +189,7 @@ def iter_link_values_sliced(seq: LinkSequence, slice_, /):
 #  Sequence Classes
 #====================================
 
-class LinkSequence(Sequence, abcs.Copyable):
+class LinkSequence(Sequence[_T], abcs.Copyable):
     'Linked sequence read interface.'
 
     __link_first__ : Optional[Link]
@@ -205,10 +207,10 @@ class LinkSequence(Sequence, abcs.Copyable):
         inst.__link_last__ = None
         return inst
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[_T]:
         return iter_link_values(self.__link_first__, 1)
 
-    def __reversed__(self):
+    def __reversed__(self) -> Iterator[_T]:
         return iter_link_values(self.__link_last__, -1)
 
     def __getitem__(self, i):
@@ -266,7 +268,7 @@ class LinkSequence(Sequence, abcs.Copyable):
     def _from_iterable(cls, it, /):
         return cls(it)
 
-class linkseq(LinkSequence, MutableSequence):
+class linkseq(LinkSequence[_T], MutableSequence[_T]):
     'Linked sequence mutable base implementation.'
 
     _link_type_ = Link
@@ -475,7 +477,7 @@ class linkseq(LinkSequence, MutableSequence):
             link.next.prev = link.prev
         self.__len -= 1
 
-class linqset(linkseq, MutableSequenceSet, hookinfo = HookProvider(linkseq) - {'check'}):
+class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo = HookProvider(linkseq) - {'check'}):
     """Mutable ``linqseq`` implementation for hashable values, based on
     a dict index. Inserting and removing is fast (O(1)) no matter where
     in the list, *so long as positions are referenced by value*. Accessing
