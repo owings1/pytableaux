@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.tools.doc.roles
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytabdoc.roles
+^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
@@ -24,24 +24,21 @@ from __future__ import annotations
 import functools
 import re
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import Callable, TypeVar
 
 from docutils import nodes
+from sphinx.application import Sphinx
 from sphinx.errors import NoUri
 from sphinx.util import logging
 from sphinx.util.docutils import ReferenceRole
 
-from ... import logics
-from ...lang import LexType, Notation, Predicate
-from ...tools import qset, qsetf
-from . import (BaseRole, ParserOptionMixin, classopt,
-                                  nodeopt, nodez, predsopt)
+from pytableaux import logics
+from pytableaux.lang import LexType, Notation, Predicate
+from pytableaux.tools import qset, qsetf
 
-from sphinx.application import Sphinx
-if TYPE_CHECKING:
+from . import BaseRole, ParserOptionMixin, classopt, nodeopt, nodez, predsopt
 
-    from pytableaux.typing import _F  # type: ignore
-
+_F = TypeVar('_F', bound=Callable)
 __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
 
 logger = logging.getLogger(__name__)

@@ -143,12 +143,11 @@ Parsing
 =======
 
 There are two parsers available: Polish notation, and Standard notation.
-More to come...
 
 Proof output
 ============
 
-Currently the output formats are plain text, and HTML. More to come...
+The available output formats are plain text, HTML, and LaTeX.
 
 History
 =======

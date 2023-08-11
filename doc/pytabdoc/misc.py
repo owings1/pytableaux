@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.tools.doc.misc
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytabdoc.misc
+^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
@@ -29,14 +29,14 @@ from typing import Any, Collection
 
 from sphinx.ext.autodoc.importer import import_object
 
-from ...lang import LexType
-from ...logics import LogicType, registry
-from ...proof import (Branch, ClosingRule, Node, Rule, Tableau)
-from ...proof import TableauxSystem as TabSys
-from ...proof import Target
-from ...proof.common import ClosureNode
-from ...proof.filters import SentenceCompare
-from ..abcs import isabstract
+from pytableaux.lang import LexType
+from pytableaux.logics import LogicType, registry
+from pytableaux.proof import (Branch, ClosingRule, ClosureNode, Node, Rule,
+                              Tableau)
+from pytableaux.proof import TableauxSystem as TabSys
+from pytableaux.proof import Target
+from pytableaux.proof.filters import SentenceCompare
+from pytableaux.tools.abcs import isabstract
 
 __all__ = (
     'EllipsisExampleHelper',

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.tools.doc.directives
+pytabdoc.directives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
@@ -35,11 +35,12 @@ from sphinx.application import Sphinx
 from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
 
-from ... import examples, logics, models, tools
-from ...lang import (Argument, Atomic, Lexical, LexWriter, Marking, Notation,
-                     Predicates, RenderSet)
-from ...proof import Rule, Tableau, TabWriter, writers
-from .. import EMPTY_SET, qset
+from pytableaux import examples, logics, models, tools
+from pytableaux.lang import (Argument, Atomic, Lexical, LexWriter, Marking,
+                             Notation, Predicates, RenderSet)
+from pytableaux.proof import Rule, Tableau, TabWriter, writers
+from pytableaux.tools import EMPTY_SET, qset
+
 from . import (BaseDirective, ConfKey, DirectiveHelper, ParserOptionMixin,
                RenderMixin, SphinxEvent, Tabler, attrsopt, boolopt,
                choice_or_flag, choiceopt, classopt, flagopt, nodez, opersopt,

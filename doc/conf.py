@@ -18,11 +18,13 @@ os.environ['DOC_MODE'] = 'True'
 # =================================================================================
 # =================================================================================
 
-addpath = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..'))
+_dir = os.path.abspath(os.path.dirname(__file__))
+if _dir not in sys.path:
+    sys.path.insert(1, _dir)
+
+addpath = os.path.abspath(os.path.join(_dir, '..'))
 if addpath not in sys.path:
     sys.path.insert(1, addpath)
-
 # General information about the project.
 
 from pytableaux import package
@@ -52,7 +54,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     # 'sphinx_sitemap',
     # 'sphinx_toolbox.more_autodoc.overloads',
-    'pytableaux.tools.doc']
+    'pytabdoc']
 
 # =================================================================================
 # =================================================================================

@@ -38,8 +38,8 @@
 # Creating  Directives:
 #    https://docutils.sourceforge.io/docs/howto/rst-directives.html
 """
-pytableaux.tools.doc
-^^^^^^^^^^^^^^^^^^^^
+pytabdoc package (pytableaux doc tools)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
 
@@ -69,9 +69,9 @@ from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
 
-from ... import errors, logics
-from ...lang import Operator, Parser, Predicates
-from .. import EMPTY_MAP, EMPTY_SET, abcs, dictns, qset
+from pytableaux import errors, logics
+from pytableaux.lang import Operator, Parser, Predicates
+from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, qset
 
 __all__ = (
     'AutodocProcessor',

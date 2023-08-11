@@ -19,3 +19,4 @@ doc/_build
 **/node_modules
 .mypy_cache
 log
+.stubs

@@ -43,6 +43,6 @@
     font-style: italic;
 }
 .tableau .node,
-.tableau .structure > .node-segment {
+.tableau .node-segment {
     text-align: center;
 }

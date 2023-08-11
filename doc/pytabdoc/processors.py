@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.tools.doc.processors
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytabdoc.processors
+^^^^^^^^^^^^^^^^^^^
 """
 from __future__ import annotations
 
@@ -31,9 +31,10 @@ from sphinx.config import Config
 from sphinx.ext import autodoc
 from sphinx.util import logging
 
-from ...errors import check
-from ...logics import registry
-from ...proof.tableaux import Rule
+from pytableaux.errors import check
+from pytableaux.logics import registry
+from pytableaux.proof import Rule
+
 from . import (AutodocProcessor, ConfKey, Processor, ReplaceProcessor,
                SphinxEvent, misc, role_name, roles)
 

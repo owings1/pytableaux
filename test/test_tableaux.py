@@ -372,14 +372,18 @@ class TestEllispsisHelper(BaseCase):
 
     logic = 'FDE'
 
-    from pytableaux.tools.doc.misc import EllipsisExampleHelper
-    Rcls = EllipsisExampleHelper
-
     def test_closing_rule_ellipsis(self):
+        import os.path
+        import sys
+        addpath = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '../doc'))
+        sys.path.append(addpath)
+        from pytabdoc.misc import EllipsisExampleHelper as Rcls # type: ignore
+        sys.path.pop()
         tab = self.tab()
         rule = tab.rules.get('DesignationClosure')
-        helper = self.Rcls(rule)
-        rule.helpers[self.Rcls] = helper
+        helper = Rcls(rule)
+        rule.helpers[Rcls] = helper
         b = tab.branch().extend(rule.example_nodes())
         tab.build()
         node = b.find(helper.mynode)

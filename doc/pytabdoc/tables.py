@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.tools.doc.docparts
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytabdoc.tables
+^^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
@@ -29,8 +29,9 @@ from typing import Any, Callable, Sequence
 
 from sphinx.application import Sphinx
 
-from ...lang import LexType, LexWriter, Operator, ParseTable, RenderSet
-from .. import abcs, closure, qset
+from pytableaux.lang import LexType, LexWriter, Operator, ParseTable, RenderSet
+from pytableaux.tools import abcs, closure, qset
+
 from . import ConfKey, Tabler, directives
 from .directives import TableGenerator
 
@@ -328,7 +329,7 @@ def main():
     import tabulate as Tb
     from tabulate import tabulate as tb
 
-    from ...lang import LexType, Operator
+    from pytableaux.lang import LexType, Operator
 
     theformats = qset(Tb.tabulate_formats)
     theformats -= {f for f in theformats if

@@ -17,8 +17,8 @@
 #
 # ------------------
 """
-pytableaux.tools.doc.nodez
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytabdoc.nodez
+^^^^^^^^^^^^^^
 """
 from __future__ import annotations
 
@@ -35,7 +35,8 @@ from sphinx.application import Sphinx
 from sphinx.util import logging
 from sphinx.writers.html5 import HTML5Translator as BaseTranslator
 
-from ...lang import LexWriter, Notation
+from pytableaux.lang import LexWriter, Notation
+
 from . import ConfKey
 
 if TYPE_CHECKING:
