@@ -4,10 +4,6 @@
 .tableau .node {
     margin: 0.2em 0;
 }
-.tableau .access::after {
-    font-style: normal;
-    content: 'R';
-}
 .tableau .node-props {
     padding: 0.26em;
     display: inline-block;
@@ -19,32 +15,8 @@
     border-style: solid;
     border-width: 1px;
 }
-.tableau .world::before {
-    content: 'w';
-}
-.tableau .separator.sentence-world::after {
-    content: ', ';
-}
-/* Designation markers */
-.tableau .node-props .designation.designated::after {
-    content: '\2295';
-}
-.tableau .node-props .designation.undesignated::after {
-    content: '\2296';
-}
-/* Close marker */
-.tableau .node-props .flag.closure::after {
-    content: '\2297';
+.tableau .node-props .flag {
     font-size: 1.4em;
-}
-/*  Quit flag marker, e.g. K Necessity, or max constants rules (see QuitFlagHelper).  */
-.tableau .node-props .flag.quit::after {
-    content: '\2690';
-    font-size: 1.4em;
-}
-/* Ellipsis, used in rule example docs */
-.tableau .node-props .ellipsis::after {
-    content: '\22EE';
 }
 .tableau .child-wrapper {
     float: left;
@@ -74,4 +46,3 @@
 .tableau .structure > .node-segment {
     text-align: center;
 }
-

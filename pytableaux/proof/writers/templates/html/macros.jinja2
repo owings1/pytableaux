@@ -63,20 +63,24 @@
                 {% set sentence_raw = lw(node.sentence) -%}
                 <span class="sentence">{{ sentence_raw if lw.charset == 'html' else sentence_raw|e }}</span>
                 {%- if node.has('world') -%}
-                    <span class="world">, w<sub>{{ node.world }}</sub></span>
+                    <span class="separator sentence-world">, </span><span class="world">w<sub>{{ node.world }}</sub></span>
                 {%- endif -%}
             {%- endif -%}
             {%- if node.has('designated') -%}
-                <span class="designation {{ 'designated' if node.designated else 'undesignated' }}"></span>
+                <span class="designation {{ 'designated' if node.designated else 'undesignated' }}">
+                    {{- designation_markers[node.designated] -}}
+                </span>
             {%- endif -%}
             {%- if node.has('world1', 'world2') -%}
-                <span class="access">w<sub>{{ node.world1 }}</sub>Rw<sub>{{ node.world2 }}</sub></span>
+                <span class="access">w<sub>{{ node.world1 }}</sub>{{ access_marker }}w<sub>{{ node.world2 }}</sub></span>
             {%- endif -%}
             {%- if node.has('ellipsis') -%}
-                <span class="ellipsis"></span>
+                <span class="ellipsis">&vellip;</span>
             {%- endif -%}
             {%- if node.has('is_flag') -%}
-                <span class="flag {{ node.flag|e }}" title="{{ node.info|e }}"></span>
+                <span class="flag {{ node.flag|e }}" title="{{ node.info|e }}">
+                    {{- flag_markers.get(node.flag, '') -}}
+                </span>
             {%- endif -%}
         </span>
     </div>

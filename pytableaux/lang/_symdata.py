@@ -201,19 +201,30 @@ def rendersets():
             ellipsis  = '\\ldots'))))
     
     # tab symbols
-    tabsym = MapProxy(dict(
-        ascii = MapProxy({
+    tabsym = dict(
+        ascii = {
             ('designation', True) :  '[+]',
             ('designation', False):  '[-]',
-            ('closure', True) : '(x)'}),
-        html = MapProxy({
+            ('flag', 'closure') : '(x)',
+            ('flag', 'quit') : '(q)',
+            'access': 'R'},
+        html = {
             ('designation', True) : '&oplus;',  # '\2295'
             ('designation', False): '&ominus;', # '\2296'
-            ('closure', True) : '&otimes;'}), # '\2297'
-        latex =  MapProxy({
-            ('designation', True) : '{\\varoplus}',
-            ('designation', False) : '{\\varominus}',
-            ('closure', True) : '{\\varotimes}'})))
+            ('flag', 'closure') : '&otimes;', # '\2297'
+            ('flag', 'quit'): '&#9872;', # '⚐', '\U+2690'
+            'access': 'R'},
+        latex = {
+            ('designation', True) : '\\varoplus{}',
+            ('designation', False) : '\\varominus{}',
+            ('flag', 'closure') : '\\varotimes{}',
+            ('flag', 'quit') : '\\bowtie{}',
+            'access': '\\mathcal{R}'})
+
+    for key in tabsym:
+        # (flag, closure) is for generic tab node writing
+        # (closure, True) is for rule legend writing
+        tabsym[key]['closure', True] = tabsym[key]['flag', 'closure']
 
     data = {notn: {} for notn in Notation}
 
@@ -368,23 +379,23 @@ def rendersets():
         renders  = {Marking.subscript: subfunc['latex']},
         strings = {
             LexType.Operator : {
-                Operator.Assertion              :  '{\\circ}',
-                Operator.Negation               :  '{\\neg}',
-                Operator.Conjunction            :  '{\\wedge}',
-                Operator.Disjunction            :  '{\\vee}',
-                Operator.MaterialConditional    :  '{\\supset}',
-                Operator.MaterialBiconditional  :  '{\\equiv}',
-                Operator.Conditional            :  '{\\rightarrow}',
-                Operator.Biconditional          :  '{\\leftrightarrow}',
-                Operator.Possibility            :  '{\\Diamond}',
-                Operator.Necessity              :  '{\\Box}',
+                Operator.Assertion              :  '\\circ{}',
+                Operator.Negation               :  '\\neg{}',
+                Operator.Conjunction            :  '\\wedge{}',
+                Operator.Disjunction            :  '\\vee{}',
+                Operator.MaterialConditional    :  '\\supset{}',
+                Operator.MaterialBiconditional  :  '\\equiv{}',
+                Operator.Conditional            :  '\\rightarrow{}',
+                Operator.Biconditional          :  '\\leftrightarrow{}',
+                Operator.Possibility            :  '\\Diamond{}',
+                Operator.Necessity              :  '\\Box{}',
             },
             LexType.Quantifier : {
-                Quantifier.Universal   : '{\\forall}',
-                Quantifier.Existential : '{\\exists}',
+                Quantifier.Universal   : '\\forall{}',
+                Quantifier.Existential : '\\exists{}',
             },
             (LexType.Predicate, True) : {
-                (Operator.Negation, Predicate.System.Identity): '{\\neq}',
+                (Operator.Negation, Predicate.System.Identity): '\\neq{}',
             },
             Marking.meta: metachar['latex'],
             Marking.tableau: tabsym['latex'],

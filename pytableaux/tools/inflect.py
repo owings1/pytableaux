@@ -21,7 +21,10 @@ from __future__ import annotations
 
 import re
 
-pat_dashcase = re.compile(r'([A-Z]+)')
+pat_dashcase1 = re.compile(r'([A-Z]+)')
+pat_dashcase2 = re.compile(r'_+')
 
-def dashcase(input: str):
-    return pat_dashcase.sub(r'-\1', input).lower().lstrip('-')
+def dashcase(s: str):
+    s = pat_dashcase1.sub(r'-\1', s)
+    s = pat_dashcase2.sub(r'-', s)
+    return s.lower().strip('-')

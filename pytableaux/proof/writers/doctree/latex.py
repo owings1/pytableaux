@@ -51,7 +51,7 @@ class LatexTranslator(Translator, NodeVisitor):
     def visit_tableau(self, node):
         self.body.append('\Tree')
         raise SkipDeparture
-    
+
     def visit_tree(self, node):
         self.body.append(' [.')
 
@@ -96,7 +96,7 @@ class LatexTranslator(Translator, NodeVisitor):
         raise SkipDeparture
 
     def visit_access(self, node):
-        self.body.append('\\mathcal{R}')
+        self.body.append(self.access_marker)
         raise SkipDeparture
 
     def visit_textnode(self, node):
@@ -115,14 +115,14 @@ class LatexTranslator(Translator, NodeVisitor):
         raise SkipDeparture
 
     def visit_ellipsis(self, node):
-        self.body.append('\\vdots ')
+        self.body.append('\\vdots{}')
         raise SkipDeparture
 
     def visit_flag(self, node):
         flag = node['data-flag']
-        if flag == 'closure':
-            marker = self.close_marker
-        else:
+        try:
+            marker = self.flag_markers[flag]
+        except KeyError:
             marker = self.escape(flag)
         self.body.append(marker)
         raise SkipDeparture

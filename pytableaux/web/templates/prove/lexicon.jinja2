@@ -9,7 +9,7 @@
                     {%- for oper in Operator -%}
                         <tr>
                             <td><span class="operator-symbol">{{ table.char(LexType.Operator, oper)|e }}</span></td>
-                            <td class="html-ref-symbol">{{ lwh(oper) }}</td>
+                            <td class="html-ref-symbol">{{ lw_html_ref(oper) }}</td>
                             <td>{{ oper.label|e }}</td>
                         </tr>
                     {%- endfor %}
@@ -49,7 +49,7 @@
                                     {{- table.char(LexType.Quantifier, quantifier)|e -}}
                                 </span>
                             </td>
-                            <td class="html-ref-symbol">{{ lwh(quantifier) }}</td>
+                            <td class="html-ref-symbol">{{ lw_html_ref(quantifier) }}</td>
                             <td>{{ quantifier.name|e }}</td>
                         </tr>
                     {%- endfor %}
@@ -73,7 +73,7 @@
                             </span>
                         {% endfor %}
                     </td>
-                    <td class="html-ref-symbol">{{ lwh(pred) }}</td>
+                    <td class="html-ref-symbol">{{ lw_html_ref(pred) }}</td>
                     <td>{{ pred.name|e }}</td>
                 </tr>
             {%- endfor -%}

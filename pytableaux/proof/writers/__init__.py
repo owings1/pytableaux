@@ -83,6 +83,9 @@ class TabWriter(metaclass = TabWriterMeta):
         writer = TabWriter('html', 'standard', 'ascii')
     """
 
+    engine: str = 'unknown'
+    "The writer engine (jinja, doctree, etc.)"
+
     format: str
     "The format registry identifier."
 

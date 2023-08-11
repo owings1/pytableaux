@@ -38,6 +38,7 @@
 <div class="input select">
     <label for="output_charset">Output Charset</label>
     <select id="output_charset" name="output_charset">
+        <option value="" {{- helper.select_opt(form_data, 'output_charset', '') }}>auto</option>
         {% for charset in output_charsets -%}
             <option value="{{ charset|e }}" {{- 
                 helper.select_opt(form_data, 'output_charset', charset) 
@@ -91,4 +92,7 @@
         value="1" {{- helper.checkbox_default(form_data, 'group_optimizations') }}/>
 </div>
 {% endif -%}
+<div class="input submit">
+    <input type="submit" value="Go"/>
+</div>
 </div>

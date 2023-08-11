@@ -1129,7 +1129,7 @@
      * @return {void}
      */
     function highlightStepResult(step) {
-        const $tableau = this.$tableau
+        const {$tableau} = this
         if (step == null) {
             step = +$tableau.attr(Attrib.Step)
         }
@@ -1150,8 +1150,7 @@
      * @return {void}
      */
     function highlightStepTarget(step) {
-        const $tableau = this.$tableau
-        const $controls = this.$controls
+        const {$controls, $tableau} = this
         if (step == null) {
             step = +$tableau.attr(Attrib.Step)
         }
@@ -1443,7 +1442,11 @@
             return
         }
         const classMap = Object.create(null)
-        const classes = $target.attr('class').split(' ')
+        const classStr = $target.attr('class')
+        if (!classStr) {
+            return
+        }
+        const classes = classStr.split(' ')
         for (let i = 0; i < classes.length; ++i) {
             classMap[classes[i]] = true
         }

@@ -29,8 +29,8 @@ from typing import Sequence
 import jinja2
 
 from ... import __docformat__
-from ...lang import Notation
-from ...tools import EMPTY_SET, abcs, qset
+from ...lang import Marking, Notation, RenderSet
+from ...tools import EMPTY_SET, qset
 from ..tableaux import Tableau
 from . import TabWriter, TabWriterRegistry
 
@@ -41,8 +41,6 @@ __all__ = (
     'TextTabWriter')
 
 NOARG = object()
-
-registry = TabWriterRegistry(name='jinja')
 
 TEMPLATES_BASE_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -61,16 +59,36 @@ class JinjaTabWriter(TabWriter):
     template_name: str
     jinja: jinja2.Environment
 
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        if self.lw.charset == self.format:
+            self.markerset = self.lw.renderset
+        else:
+            self.markerset = RenderSet.fetch(self.lw.notation, self.format)
+        self.designation_markers = [
+            self.markerset.string(Marking.tableau, ('designation', False)),
+            self.markerset.string(Marking.tableau, ('designation', True))]
+        self.flag_markers = dict(
+            (flag, self.markerset.string(Marking.tableau, ('flag', 'closure')))
+            for flag in ('closure', 'quit'))
+        self.access_marker = self.markerset.string(Marking.tableau, 'access')
+
     def __call__(self, tab: Tableau, **kw):
         return self.render(self.template_name, tab=tab, **kw)
     
     def render(self, template: str, *args, **kw) -> str:
+        kw |= dict(
+            flag_markers=self.flag_markers,
+            designation_markers=self.designation_markers,
+            access_marker=self.access_marker)
         return self.get_template(template).render(*args, **kw)
 
     def get_template(self, name: str, *args, **kw):
         context = dict(lw=self.lw, opts=self.opts)
         context.update(*args, **kw)
         return self.jinja.get_template(name, None, context)
+
+registry = TabWriterRegistry(name=JinjaTabWriter.engine)
 
 @registry.register
 class HtmlTabWriter(JinjaTabWriter):

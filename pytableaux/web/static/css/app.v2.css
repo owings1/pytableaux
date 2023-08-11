@@ -675,7 +675,9 @@ body.pt-app,
 .pt-app .feedback_view {
   max-width: 800px;
 }
-
+.pt-app #argument_form input[type="submit"] {
+  max-width: 420px;
+}
 /* ---- height ---- */
 .pt-app #input_feedback_content {
   height: 120px;

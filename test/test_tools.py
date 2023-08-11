@@ -1,4 +1,5 @@
 from pytableaux.tools import *
+from pytableaux.tools import inflect
 
 from . import BaseCase
 
@@ -13,3 +14,8 @@ class TestMaxCeil(BaseCase):
     def test_simple(self):
         self.assertEqual(maxceil(3, [1,2,3,4]), 3)
         self.assertEqual(maxceil(5, [1,2,3,4]), 4)
+
+class TestInflect(BaseCase):
+    def test_dashcase(self):
+        self.assertEqual(inflect.dashcase('SentenceNode'), 'sentence-node')
+        self.assertEqual(inflect.dashcase('margin_left'), 'margin-left')

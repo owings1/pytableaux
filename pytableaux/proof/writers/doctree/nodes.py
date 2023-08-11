@@ -149,12 +149,6 @@ class Node:
     def document(self, value: document):
         self._document = value
 
-    def setup_child(self, child: Node):
-        child.parent = self
-        if self.document:
-            child.document = self.document
-        return child
-
     def __bool__(self):
         return True
 
@@ -235,6 +229,12 @@ class Element(Node):
         self.attributes.update(*args, **kw)
 
     get = Mapping.get
+
+    def setup_child(self, child: Node):
+        child.parent = self
+        if self.document:
+            child.document = self.document
+        return child
 
     def __getitem__(self, key):
         if isinstance(key, str):
@@ -317,7 +317,7 @@ class style(Element):
 class clear(BlockElement):
     __slots__ = EMPTY_SET
 
-class ellipsis(InlineElement, BuilderMixin[proof.Node]):
+class ellipsis(InlineElement):
     __slots__ = EMPTY_SET
 
 class wrapper(BlockElement):
@@ -325,6 +325,9 @@ class wrapper(BlockElement):
     __slots__ = EMPTY_SET
 
 class separator(InlineElement):
+    __slots__ = EMPTY_SET
+
+class access(InlineElement):
     __slots__ = EMPTY_SET
 
 class vertical_line(BlockElement, BuilderMixin[int]):
@@ -410,23 +413,6 @@ class designation(InlineElement, BuilderMixin[bool]):
     def get_obj_classes(cls, obj, /):
         yield cls.designation_classnames[bool(obj)]
 
-class access(InlineElement):
-# class access(InlineElement, BuilderMixin[proof.AccessNode]):
-
-    __slots__ = EMPTY_SET
-
-    # @classmethod
-    # def get_obj_data_attributes(cls, obj, /):
-    #     yield from obj.items()
-
-    # @classmethod
-    # def get_obj_children(cls, obj, /):
-    #     types = cls.types
-    #     for key in (proof.Node.Key.world1, proof.Node.Key.world2):
-    #         n = types[world].for_object(obj[key])
-    #         n['classes'].add(key)
-    #         yield n
-        
 class flag(InlineElement, BuilderMixin[proof.Node]):
 
     __slots__ = EMPTY_SET
@@ -437,7 +423,6 @@ class flag(InlineElement, BuilderMixin[proof.Node]):
 
     @classmethod
     def get_obj_data_attributes(cls, obj, /):
-        # yield 'info', obj.get(proof.Node.Key.info, '')
         yield from obj.items()
 
 class node_props(InlineElement, BuilderMixin[proof.Node]):
@@ -459,7 +444,7 @@ class node_props(InlineElement, BuilderMixin[proof.Node]):
             yield types[access]()
             yield types[world].for_object(obj['world2'])
         elif isinstance(obj, proof.EllipsisNode):
-            yield types[ellipsis].for_object(obj)
+            yield types[ellipsis]()
         elif isinstance(obj, proof.FlagNode):
             yield types[flag].for_object(obj)
 
@@ -522,6 +507,7 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
 
     data_attrnames_nonempty = (
         'branch_id',
+        'closed_step',
         'model_id')
 
     flag_classnames = (
@@ -546,8 +532,6 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
             value = getattr(obj, name, None)
             if value:
                 yield name, value
-        if obj.closed:
-            yield 'closed-step', obj.closed_step
 
     @classmethod
     def get_obj_classes(cls, obj, /):

@@ -1,5 +1,5 @@
 {%- extends 'layout.jinja2' -%}
-{%- import 'v2/helper.jinja2' as helper -%}
+{%- import 'prove/helper.jinja2' as helper -%}
 {%- block inline_css -%}
     {% if is_proof and resp_data %}
         {{ resp_data.attachments.get('css') }}
@@ -41,32 +41,32 @@
                 <input id="api_json" type="hidden" name="api-json"/>
                 <div id="uitab_input" class="{{- ' hidden' if is_proof and selected_tab != 'input'}}">
                     <div class="col1">
-                        {% include 'v2/argument-input.jinja2' %}
+                        {% include 'prove/argument-input.jinja2' %}
                     </div>
                     <div class="col2">
-                        {% include 'v2/lexicon.jinja2' %}
+                        {% include 'prove/lexicon.jinja2' %}
                     </div>
                     <div class="clear"></div>
                 </div>  
                 <div id="uitab_options" class="hidden">
-                    {% include 'v2/options.jinja2' %}
+                    {% include 'prove/options.jinja2' %}
                 </div>
             </form>
             {% if is_proof -%}
                 <div id="uitab_stats" class="{{ 'hidden' if selected_tab != 'stats' }}">
-                    {% include 'v2/stats.jinja2' %}
+                    {% include 'prove/stats.jinja2' %}
                 </div>
                 {% if is_controls -%}
                     <div id="uitab_view" class="{{ 'hidden' if selected_tab != 'view' }}">
-                        {% include 'v2/view.jinja2' %}
+                        {% include 'prove/view.jinja2' %}
                     </div>
                     <div id="uitab_step" class="{{ 'hidden' if selected_tab != 'step' }}">
-                        {% include 'v2/step.jinja2' %}
+                        {% include 'prove/step.jinja2' %}
                     </div>
                 {% endif %}
                 {% if is_models -%}
                     <div id="uitab_models" class="{{ 'hidden' if selected_tab != 'models' }}">
-                        {% include 'v2/models.jinja2' %}
+                        {% include 'prove/models.jinja2' %}
                     </div>
                 {% endif %}
             {% endif %}

@@ -86,6 +86,37 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
         self.default_visitor(node)
         self.body.append(rendered)
 
+    def visit_world(self, node):
+        self.default_visitor(node)
+        self.body.append('w')
+
+    def visit_access(self, node):
+        self.default_visitor(node)
+        self.body.append(self.access_marker)
+
+    def visit_designation(self, node):
+        self.default_visitor(node)
+        marker = self.designation_markers[node['data-designated']]
+        self.body.append(marker)
+
+    def visit_flag(self, node):
+        self.default_visitor(node)
+        flag = node['data-flag']
+        if flag in self.flag_markers:
+            self.body.append(self.flag_markers[flag])
+
+    def visit_ellipsis(self, node):
+        self.default_visitor(node)
+        self.body.append('&vellip;')
+
+    def visit_separator(self, node):
+        self.default_visitor(node)
+        if 'sentence-world' in node['classes']:
+            sep = ', '
+        else:
+            sep = ' '
+        self.body.append(sep)
+
     def get_opentag(self, tagname: str, attrs: Mapping[str, Any]|None) -> str:
         parts = deque()
         parts.append('<')

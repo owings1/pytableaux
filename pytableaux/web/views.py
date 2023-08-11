@@ -36,7 +36,7 @@ from cherrypy._cprequest import Request, Response
 
 from .. import logics, package
 from ..errors import ProofTimeoutError
-from ..lang import Argument, Notation, Predicates, TriCoords
+from ..lang import Argument, LexWriter, Notation, Predicates, TriCoords
 from ..proof import Tableau, writers
 from ..tools import EMPTY_MAP, PathedDict, dmerged
 from ..tools.timing import StopWatch
@@ -341,7 +341,9 @@ class ApiProveView(ApiView):
                 result = self.tableau.stats['result']),
             attachments = self.pw.attachments(),
             writer = dict(
+                engine  = self.pw.engine,
                 format  = self.pw.format,
+                notation = self.pw.lw.notation.name,
                 charset = self.pw.lw.charset,
                 options = self.pw.opts))
 
@@ -407,8 +409,9 @@ class ApiProveView(ApiView):
     def get_pw(self):
         errors = self.errors
         payload = self.payload
+        regkey = payload['writer_registry'] or self.payload_defaults['writer_registry']
         try:
-            reg = writers.registries[payload['writer_registry']]
+            reg = writers.registries[regkey]
         except KeyError as err:
             errors['writer_registry'] = f'Invalid registry: {err}'
             return
@@ -484,7 +487,7 @@ class ProveView(FormView):
         input_notation = Notation.standard.name,
         output_format = 'html',
         output_notation = Notation.standard.name,
-        output_charset = 'html',
+        output_charset = '',
         show_controls = True,
         build_models = True,
         color_open = True,
@@ -515,16 +518,21 @@ class ProveView(FormView):
     @property
     def pw(self):
         return self.api.pw
+    
+    @property
+    def lw(self):
+        return self.pw and self.pw.lw
 
     def setup(self):
         super().setup()
-        self.template = f'v2/main'
+        self.template = f'prove/main'
         self.resp_data = None
         self.is_controls = False
         self.is_models = False
         self.is_color = False
         self.selected_tab = 'input'
         self.api_payload = None
+        self.lw_for_argument = None
 
     def validate_form(self, form_data):
         try:
@@ -555,11 +563,17 @@ class ProveView(FormView):
             self.is_color = bool(self.kw.get('color_open'))
             self.selected_tab = 'view'
         else:
-            self.selected_tab = 'stats'
+            self.selected_tab = False # 'stats'
+        if self.lw.charset in ('html', 'ascii', 'unicode'):
+            self.lw_for_argument = self.lw
+        else:
+            # For the argument display, so we don't end up writing latex sequences.
+            self.lw_for_argument = LexWriter(self.lw.notation, 'html', **self.lw.opts)
 
     def finish_context(self):
         super().finish_context()
         page_data = dict(
+            is_debug     = self.is_debug,
             is_proof     = self.is_proof,
             is_controls  = self.is_controls,
             is_models    = self.is_models,
@@ -569,11 +583,13 @@ class ProveView(FormView):
             self.debugs.extend(dict(
                 req_data  = self.kw,
                 form_data = self.form_data,
+                api_payload = self.api_payload,
                 resp_data = self.trim_resp_debug(self.resp_data),
                 page_data = page_data).items())
         self.context.update(page_data,
             tableau = self.tableau,
-            lw = self.pw and self.pw.lw,
+            lw = self.lw,
+            lw_for_argument = self.lw_for_argument,
             page_json = self.app.tojson(page_data),
             form_data = self.form_data,
             resp_data = self.resp_data)
@@ -639,8 +655,8 @@ class FeedbackView(FormView):
         msg['To'] = to_addr
         msg['From'] = f"{package.name} Feedback <{from_addr}>"
         msg['Subject'] = f'Feedback from {from_name}'
-        msg_txt = self.app.render('feedback-email.txt', context)
-        msg_html = self.app.render('feedback-email', context)
+        msg_txt = self.app.render('email/feedback.txt', context)
+        msg_html = self.app.render('email/feedback.jinja2', context)
         msg.attach(MIMEText(msg_txt, 'plain'))
         msg.attach(MIMEText(msg_html, 'html'))
         self.mailroom.enqueue(from_addr, (to_addr,), msg.as_string())
@@ -657,6 +673,3 @@ class FeedbackView(FormView):
         self.context.update(page_data,
             form_data = self.form_data,
             page_json = tojson(page_data, indent = self.app.json_indent))
-       
-
-

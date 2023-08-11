@@ -103,13 +103,16 @@ class Translator(abcs.Abc):
         self.foot: deque[str] = deque()
         self.lw = lw
         if self.lw.charset == self.format:
-            rset = self.lw.renderset
+            self.markerset = self.lw.renderset
         else:
-            rset = RenderSet.fetch(self.lw.notation, self.format)
+            self.markerset = RenderSet.fetch(self.lw.notation, self.format)
         self.designation_markers = [
-            rset.string(Marking.tableau, ('designation', False)),
-            rset.string(Marking.tableau, ('designation', True))]
-        self.close_marker = rset.string(Marking.tableau, ('closure', True))
+            self.markerset.string(Marking.tableau, ('designation', False)),
+            self.markerset.string(Marking.tableau, ('designation', True))]
+        self.flag_markers = dict(
+            (flag, self.markerset.string(Marking.tableau, ('flag', 'closure')))
+            for flag in ('closure', 'quit'))
+        self.access_marker = self.markerset.string(Marking.tableau, 'access')
         self.setup()
 
     def setup(self):

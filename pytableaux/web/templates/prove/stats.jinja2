@@ -8,18 +8,18 @@
                     {% set arg = tableau.argument %}
                     {% for premise in arg.premises -%}
                         <div class="premise">
-                        {% if lw.charset == 'html' -%}
-                            {{ lw(premise) }}
+                        {% if lw_for_argument.charset == 'html' -%}
+                            {{ lw_for_argument(premise) }}
                         {% else -%}
-                            {{ lw(premise)|e }}
+                            {{ lw_for_argument(premise)|e }}
                         {% endif -%}
                         </div>
                     {% endfor -%}
                     &there4;
-                    {% if lw.charset == 'html' -%}
-                        {{ lw(arg.conclusion) }}
+                    {% if lw_for_argument.charset == 'html' -%}
+                        {{ lw_for_argument(arg.conclusion) }}
                     {% else -%}
-                        {{ lw(arg.conclusion)|e }}
+                        {{ lw_for_argument(arg.conclusion)|e }}
                     {% endif -%}
                 {% endif %}
             </div>

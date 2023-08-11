@@ -133,6 +133,11 @@
         rank_optimizations  : Sel.checkRankOptim,
         group_optimizations : Sel.checkGroupOptim,
     }
+    const CheckSelsHtmlOnly = {
+        show_controls: true,
+        color_open: true,
+        build_models: true,
+    }
     const OptClasses = {
         build_models  : Cls.withModels,
         show_controls : Cls.withControls,
@@ -190,7 +195,7 @@
                 refreshNotation()
                 refreshLogic()
                 if (IS_PROOF) {
-                    var $tabins = $('<div/>').addClass(Cls.uitabInsert).html(
+                    const $tabins = $('<div/>').addClass(Cls.uitabInsert).html(
                         $(Sel.resultAdmon, $AppBody).get(0).outerHTML
                     )
                     $tabins.insertBefore($(Sel.uitabStatsLink).parent())
@@ -275,13 +280,11 @@
             })
 
             // UI Tabs
-            var tabIndex = TabIndexes[PageData.selected_tab]
-            if (!Number.isInteger(tabIndex)) {
-                tabIndex = 0
-            }
             const tabOpts = {
-                active      : tabIndex,
-                collapsible : IS_PROOF,
+                collapsible: IS_PROOF,
+                active: PageData.selected_tab === false
+                    ? false
+                    : TabIndexes[PageData.selected_tab] || 0
             }
             $(Sel.appUiTabs).tabs(tabOpts)
 
@@ -298,7 +301,7 @@
                 const $me = $(this)
                 const classNames = [Cls.tooltip, Cls.controls]
                 const shortkey = $me.attr(Atr.dataShortKey)
-                var html = '<span class="' + classNames.join(' ') + '">' + $me.attr('title')
+                let html = '<span class="' + classNames.join(' ') + '">' + $me.attr('title')
                 if (shortkey) {
                     html += '<hr>Shorcut key: <code class="' + Cls.shortkey + '">' + shortkey + '</code>'
                 }
@@ -365,7 +368,7 @@
          */
         function addPredicate(index, subscript, arity) {
             const notation = $(Sel.fieldInputNotn).val()
-            var html = ''
+            let html = ''
             $.each(AppData.nups, function(notn, symbols) {
                 const classes = [
                     Cls.predSymbol,
@@ -398,10 +401,10 @@
         function getNextPredCoords() {
             const $symbols   = $(Sel.fieldsPredSymbol, $AppForm)
             const numSymbols = $symbols.length
-            var index      = 0
-            var subscript  = 0
+            let index      = 0
+            let subscript  = 0
             if (numSymbols > 0) {
-                var last = $symbols.last().val().split('.')
+                const last = $symbols.last().val().split('.')
                 index = +last[0] + 1
                 subscript = +last[1]
                 if (index === PRED_SYMCOUNT) {
@@ -429,7 +432,7 @@
                 _removePrem($(this))
             })
             $(Sel.fieldConclusion).val('')
-            for (var key in ParseCache) {
+            for (const key in ParseCache) {
                 delete ParseCache[key]
             }
         }
@@ -525,7 +528,7 @@
         function refreshStatuses(isForce) {
 
             const notation = $(Sel.fieldInputNotn).val()
-            var preds // lazy fetch
+            let preds // lazy fetch
 
             $(Sel.fieldsSentence, $AppForm).each(function() {
 
@@ -578,14 +581,14 @@
                     },
                     error: function(xhr, textStatus, errorThrown) {
                         $status.removeClass(Cls.good).addClass(Cls.bad)
-                        var title
+                        let title
                         if (xhr.status === 400) {
                             const res = xhr.responseJSON
                             if (res.errors) {
                                 if (res.errors.Sentence) {
                                     title = res.errors.Sentence
                                 } else {
-                                    var errKey = Object.keys(res.errors)[0]
+                                    const errKey = Object.keys(res.errors)[0]
                                     title = [errKey, res.errors[errKey]].join(': ')
                                 }
                             } else {
@@ -607,11 +610,13 @@
          * @return {object}
          */
          function getApiData() {
+            const outputFormat = $(Sel.fieldOutputFmt).val()
+            const isHtml = outputFormat === 'html'
             const data = {
                 logic    : $(Sel.fieldLogic).val(),
                 argument : getArgData(),
                 output: {
-                    format   : $(Sel.fieldOutputFmt).val(),
+                    format   : outputFormat,
                     notation : $(Sel.fieldOutputNotn).val(),
                     charset  : $(Sel.fieldOutputCharset).val(),
                     options  : {
@@ -624,18 +629,23 @@
                 writer_registry     : $(Sel.fieldWriterRegistry).val(),
             }
 
-            for (var key in CheckSels) {
-                var $check = $(CheckSels[key], $AppForm)
+            for (const key in CheckSels) {
+                if (!isHtml && CheckSelsHtmlOnly[key]) {
+                    continue
+                }
+                const $check = $(CheckSels[key], $AppForm)
                 if ($check.length) {
                     data[key] = $check.is(':checked')
                 }
             }
 
             // TabWriter classes option.
-            const clsarr = data.output.options.classes
-            for (var key in OptClasses) {
-                if (data[key]) {
-                    clsarr.push(OptClasses[key])
+            if (isHtml) {
+                const clsarr = data.output.options.classes
+                for (const key in OptClasses) {
+                    if (data[key]) {
+                        clsarr.push(OptClasses[key])
+                    }
                 }
             }
 
@@ -653,6 +663,24 @@
                 data.max_steps = undefined
             }
 
+            if (!data.writer_registry) {
+                delete data.writer_registry
+            }
+            if (!data.output.charset) {
+                delete data.output.charset
+            }
+            if (!data.output.options.classes.length) {
+                delete data.output.options.classes
+            }
+            if (!Object.keys(data.output.options).length) {
+                delete data.output.options
+            }
+            if (!data.argument.predicates.length) {
+                delete data.argument.predicates
+            }
+            if (!data.argument.premises.length) {
+                delete data.argument.premises
+            }
 
             return data
         }
@@ -700,7 +728,7 @@
                 }
                 const arityNumVal = +arity
                 // Let invalid arity value propagate.
-                var arityVal
+                let arityVal
                 if (isNaN(arityNumVal)) {
                     arityVal = arity
                 } else {
@@ -710,7 +738,7 @@
                 preds.push({
                     index     : +spec[0],
                     subscript : +spec[1],
-                    arity     : arityVal
+                    arity     : arityVal,
                 })
             })
             return preds
@@ -773,7 +801,7 @@
                 }
 
                 // Single debug content - toggle and lazy-init jsonViewer.
-                var $content
+                let $content
                 if ($target.hasClass(Cls.debugHead)) {
                     // For header click, toggle debug content.
                     $content = $target.next('.' + Cls.debugContent)

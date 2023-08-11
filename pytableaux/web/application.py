@@ -86,7 +86,7 @@ class WebApp(EventEmitter):
     template_cache: dict[str, jinja2.Template]
     "Instance jinja2 template cache."
 
-    jenv: jinja2.Environment
+    jinja: jinja2.Environment
     "Instance jinja2 template environment."
 
     default_context: Mapping[str, Any] = MapProxy(dict(
@@ -143,7 +143,7 @@ class WebApp(EventEmitter):
         self.mailroom = Mailroom(self.config)
         self.metrics = AppMetrics(self.config, prom.CollectorRegistry())
         self.template_cache = {}
-        self.jenv = jinja2.Environment(
+        self.jinja = jinja2.Environment(
             loader = jinja2.FileSystemLoader(self.config['templates_path']))
         self.example_args = self._build_example_args()
         self.logics_map = MapProxy({key: logics.registry(key) for key in logics.__all__})
@@ -156,7 +156,7 @@ class WebApp(EventEmitter):
             example_args = self.example_args,
             output_charsets = Notation.get_common_charsets(),
             logic_categories = logics.registry.grouped(self.logics_map),
-            lwh = Notation.standard.DefaultWriter('html'),
+            lw_html_ref = Notation.standard.DefaultWriter('html'),
             toJson = self.tojson))
         self.on(Wevent.before_dispatch, self.before_dispatch)
 
@@ -217,7 +217,7 @@ class WebApp(EventEmitter):
         if '.' not in name:
             name = f'{name}.jinja2'
         if self.is_debug or name not in cache:
-            cache[name] = self.jenv.get_template(name)
+            cache[name] = self.jinja.get_template(name)
         return cache[name]
 
     def render(self, template: str, *args, **kw):
