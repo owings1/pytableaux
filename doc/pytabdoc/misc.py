@@ -43,6 +43,7 @@ __all__ = (
     'get_logic_names',
     'is_concrete_build_trunk',
     'is_concrete_rule',
+    'is_rule_class',
     'is_transparent_rule')
 
 
@@ -260,6 +261,11 @@ class EllipsisExampleHelper(Rule.Helper):
     mynode = Node.PropMap.Ellipsis
 
     def __init__(self, rule: Rule,/):
+        self._tab_listeners = {
+            Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
+            Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
+            Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
+            Tableau.Events.AFTER_NODE_ADD     : self.after_node_add}
         super().__init__(rule)
         self.applied = set()
         self.isclosure = isinstance(rule, ClosingRule)
@@ -270,28 +276,15 @@ class EllipsisExampleHelper(Rule.Helper):
         else:
             self.closenodes = []
         self.istrunk = False
-        # rule.tableau.on({
-        #     Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
-        #     Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
-        #     Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
-        #     Tableau.Events.AFTER_NODE_ADD     : self.after_node_add})
-        # rule.on(Rule.Events.BEFORE_APPLY, self.before_apply)
 
     def listen_on(self):
         super().listen_on()
-        self.rule.tableau.on({
-            Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
-            Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
-            Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
-            Tableau.Events.AFTER_NODE_ADD     : self.after_node_add})
+        self.rule.tableau.on(self._tab_listeners)
         self.rule.on(Rule.Events.BEFORE_APPLY, self.before_apply)
+
     def listen_off(self):
         self.rule.off(Rule.Events.BEFORE_APPLY, self.before_apply)
-        self.rule.tableau.off({
-            Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
-            Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
-            Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
-            Tableau.Events.AFTER_NODE_ADD     : self.after_node_add})
+        self.rule.tableau.off(self._tab_listeners)
         super().listen_off()
 
     def before_trunk_build(self, *_):

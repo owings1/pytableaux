@@ -177,6 +177,10 @@ Closure
 Rules
 --------
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::

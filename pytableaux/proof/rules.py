@@ -69,7 +69,7 @@ class NoopRule(Rule):
 
     def _get_targets(self, branch: Branch, /) -> None:
         "Returns ``None``."
-        return None
+        pass
 
     def _apply(self, target: Target, /):
         "Noop apply."
@@ -167,7 +167,7 @@ class OperatedSentenceRule(BaseSentenceRule[Operated]):
 
 class NarrowQuantifierRule(QuantifiedSentenceRule):
 
-    Helpers = QuitFlag, MaxConsts
+    Helpers = (QuitFlag, MaxConsts)
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch, /):
@@ -190,7 +190,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
 
     ticking = False
 
-    Helpers = NodeConsts, NodeCount
+    Helpers = (NodeConsts, NodeCount)
 
     def _get_node_targets(self, node: Node, branch: Branch) -> Generator[dict, None, None]:
         unapplied = self[NodeConsts][branch][node]

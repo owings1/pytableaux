@@ -26,21 +26,22 @@ from abc import abstractmethod
 from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Mapping,
-                    Optional, Sequence, TypeVar, final)
+from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator,
+                    Mapping, Optional, Self, Sequence, SupportsIndex, TypeVar,
+                    final)
 
 from .. import __docformat__
 from ..errors import Emsg, ProofTimeoutError, check
 from ..lang.collect import Argument
 from ..lang.lex import Sentence
-from ..logics import registry
-from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults,
-                     qsetf, wraps, qset)
+from ..logics import LogicType, registry
+from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults, qset,
+                     qsetf, wraps)
 from ..tools.events import EventEmitter
 from ..tools.hybrids import SequenceSet
 from ..tools.linked import linqset
 from ..tools.timing import Counter, StopWatch
-from . import RuleMeta, TableauMeta
+from . import RuleMeta, TableauMeta, TableauxSystem
 from .common import Branch, Node, Target
 
 if TYPE_CHECKING:
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
     from ..tools import TypeInstMap
 
 _F = TypeVar('_F', bound=Callable)
+_RT = TypeVar('_RT', bound='Rule')
 _RHT = TypeVar('_RHT', bound='Rule.Helper')
 
 __all__ = (
@@ -353,7 +355,7 @@ class RuleGroup(Sequence[Rule]):
         self._map[name] = rule
         root._map[name] = rule
 
-    def extend(self, classes, /):
+    def extend(self, classes: Iterable[type[Rule]], /):
         """Append multiple rules.
 
         Args:
@@ -376,7 +378,7 @@ class RuleGroup(Sequence[Rule]):
         self._seq.clear()
         self._map.clear()
 
-    def get(self, ref, default = NOARG, /) -> Rule:
+    def get(self, ref: type[_RT]|str, default = NOARG, /) -> _RT:
         """Get rule instance by name or type.
 
         Args:
@@ -408,7 +410,7 @@ class RuleGroup(Sequence[Rule]):
         self._seq = SeqCover(self._seq)
         self._map = MapProxy(self._map)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: SupportsIndex|slice):
         return self._seq[index]
 
     def __len__(self):
@@ -443,7 +445,7 @@ class RuleGroups(Sequence[RuleGroup]):
         self._map = {}
 
     @locking
-    def create(self, name = None):
+    def create(self, name: str|None = None):
         'Create and return a new emtpy rule group.'
         if name is not None:
             self.root._checkname(name)
@@ -453,13 +455,13 @@ class RuleGroups(Sequence[RuleGroup]):
             self._map[name] = group
         return group
 
-    def append(self, classes, /, name = NOARG):
+    def append(self, classes: Iterable[type[Rule]], /, name: str|None = NOARG):
         'Create a new group with the given rules. Raise IllegalStateError if locked.'
         if name is NOARG:
             name = None
         self.create(name).extend(classes)
 
-    def extend(self, groups):
+    def extend(self, groups: Iterable[Iterable[type[Rule]]]):
         'Add multiple groups. Raise IllegalStateError if locked.'
         for _ in map(self.append, groups): pass
 
@@ -470,7 +472,7 @@ class RuleGroups(Sequence[RuleGroup]):
         self._seq.clear()
         self._map.clear()
 
-    def get(self, name, default = NOARG, /) -> RuleGroup:
+    def get(self, name: str, default = NOARG, /) -> RuleGroup:
         'Get a group by name.'
         try:
             return self._map[name]
@@ -491,6 +493,12 @@ class RuleGroups(Sequence[RuleGroup]):
         if isinstance(item, str): # group name
             return item in self._map
         return item in self._seq # group instance
+
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, index: SupportsIndex) -> RuleGroup: ...
+        @overload
+        def __getitem__(self, index: slice) -> list[RuleGroup]: ...
 
     __len__ = RuleGroup.__len__
     __getitem__ = RuleGroup.__getitem__
@@ -523,11 +531,11 @@ class RulesRoot(Sequence[Rule]):
         self.groups = RuleGroups(self)
         tableau.once(Tableau.Events.AFTER_BRANCH_ADD, self.lock)
 
-    def append(self, rulecls, /, name = None):
+    def append(self, rulecls: type[Rule], /, name: str|None = None):
         'Add a single Rule to a new group.'
         self.groups.create(name).append(rulecls)
 
-    def extend(self, classes, /, name = None):
+    def extend(self, classes: Iterable[type[Rule]], /, name: str|None = None):
         'Create a new group from a collection of Rule classes.'
         self.groups.create(name).extend(classes)
 
@@ -551,15 +559,15 @@ class RulesRoot(Sequence[Rule]):
 
     __contains__ = RuleGroup.__contains__
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Rule]:
         for group in self.groups:
             yield from group
 
-    def __reversed__(self):
+    def __reversed__(self) -> Iterator[Rule]:
         for group in reversed(self.groups):
             yield from reversed(group)
 
-    def __getitem__(self, index, /):
+    def __getitem__(self, index: SupportsIndex) -> Rule:
         length = len(self)
         index = absindex(length, index)
         if 2 * index > length:
@@ -684,12 +692,12 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             self.argument = argument
 
     @property
-    def id(self):
+    def id(self) -> int:
         "The unique object ID of the tableau."
         return id(self)
 
     @property
-    def argument(self):
+    def argument(self) -> Argument|None:
         """The argument of the tableau.
 
         When setting this value, if the tableau has a logic set, then the
@@ -701,7 +709,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             pass
 
     @property
-    def logic(self):
+    def logic(self) -> LogicType|None:
         "The logic of the tableau."
         try:
             return self._logic
@@ -709,7 +717,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             pass
 
     @property
-    def System(self):
+    def System(self) -> type[TableauxSystem]|None:
         "Alias for :attr:`logic.TableauxSystem`"
         try:
             return self.logic.TableauxSystem
@@ -735,7 +743,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             self.build_trunk()
 
     @property
-    def finished(self):
+    def finished(self) -> bool:
         """Whether the tableau is finished. A tableau is `finished` iff `any` of the
         following conditions apply:
         
@@ -747,19 +755,19 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         return self.flag.FINISHED in self.flag
 
     @property
-    def completed(self):
+    def completed(self) -> bool:
         """Whether the tableau is completed. A tableau is `completed` iff all rules
         that can be applied have been applied."""
         return self.flag.FINISHED in self.flag and self.flag.PREMATURE not in self.flag
 
     @property
-    def premature(self):
+    def premature(self) -> bool:
         """Whether the tableau is finished prematurely. A tableau is `premature` iff
         it is `finished` but not `completed`."""
         return self.flag.FINISHED in self.flag and self.flag.PREMATURE in self.flag
 
     @property
-    def valid(self):
+    def valid(self) -> bool|None:
         """Whether the tableau's argument is valid (proved). A tableau with an
         argument is `valid` iff it is :attr:`completed` and it has no open branches.
         If the tableau is not completed, or it has no argument, the value will
@@ -768,7 +776,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             return len(self.open) == 0
 
     @property
-    def invalid(self):
+    def invalid(self) -> bool|None:
         """Whether the tableau's argument is invalid (disproved). A tableau with
         an argument is `invalid` iff it is :attr:`completed` and it has at least one
         open branch. If the tableau is not completed, or it has no argument,
@@ -777,7 +785,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             return len(self.open) > 0
 
     @property
-    def current_step(self):
+    def current_step(self) -> int:
         """The current step number. This is the number of rule applications, plus 1
         if the argument trunk is built."""
         return len(self.history) + (self.flag.TRUNK_BUILT in self.flag)
@@ -844,7 +852,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 break
             yield step
 
-    def branch(self, /, parent: Branch = None):
+    def branch(self, /, parent: Branch = None) -> Branch:
         """Create a new branch on the tableau, as a copy of ``parent``, if given.
 
         Args:
@@ -860,7 +868,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         self.add(branch)
         return branch
 
-    def add(self, /, branch: Branch):
+    def add(self, /, branch: Branch) -> Self:
         """Add a new branch to the tableau. Returns self.
 
         Args:
@@ -872,7 +880,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         self.emit(next(iter(self.events)), branch)
         return self
 
-    def finish(self):
+    def finish(self) -> Self:
         """Mark the tableau as finished, and perform post-build tasks, including
         populating the ``tree``, ``stats``, and ``models`` properties.
         
@@ -907,7 +915,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             raise timeouterr
         return self
 
-    def build_trunk(self):
+    def build_trunk(self) -> Self:
         """Build the trunk of the tableau. Delegates to the ``build_trunk()``
         method of ``TableauxSystem``. This is called automatically when the
         tableau has non-empty ``argument`` and ``logic`` properties and the
@@ -931,6 +939,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             self.System.build_trunk(self, self.argument)
             self.flag |= self.flag.TRUNK_BUILT | self.flag.STARTED
             self.emit(Tableau.Events.AFTER_TRUNK_BUILD, self)
+        return self
 
     def branching_complexity(self, node: Node, /):
         """Caching method for the logic's ``TableauxSystem.branching_complexity()``

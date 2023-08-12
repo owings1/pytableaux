@@ -56,6 +56,10 @@ L{S5} tableaux are constructed just like {@K system} tableaux.
 Rules
 -----
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 L{S5} contains all the {@K rules}, the {@T} Reflexive rule, the
 {@S4} Transitive rule, plus an additional Symmetric rule.
 

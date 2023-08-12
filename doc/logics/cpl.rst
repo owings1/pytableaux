@@ -123,6 +123,10 @@ Closure
 Rules
 --------
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 .. include:: include/cpl/rules_blurb.rst
 
 .. tableau-rules::
@@ -135,4 +139,3 @@ Rules
   :title: Compatibility Rules
   :group: operator
   :include: Assertion, Conditional, Biconditional
-

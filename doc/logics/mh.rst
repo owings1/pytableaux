@@ -132,6 +132,10 @@ Closure
 Rules
 --------
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 .. include:: include/fde/rules_blurb.rst
 
 There are no rules that apply to quantified sentences.

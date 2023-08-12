@@ -40,6 +40,10 @@ L{T} tableaux are constructed just like {@K system} tableaux.
 Rules
 -----
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 L{T} contains all the {@K rules} plus an additional Reflexive rule.
 
 The Reflexive rule applies to an open branch *b* when there is a node *n*

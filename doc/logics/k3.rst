@@ -164,6 +164,10 @@ when a sentence and its negation both appear as designated nodes on the branch.
 Rules
 --------
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
@@ -180,6 +184,7 @@ Rules
   :title: Compatibility Rules
   :group: operator
   :include: Assertion, Conditional, Biconditional
+
 
 Notes
 =====

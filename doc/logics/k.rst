@@ -151,6 +151,10 @@ Closure
 Rules
 --------
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 .. include:: include/cpl/rules_blurb.rst
 
 Additional rules are given for the quantifiers.

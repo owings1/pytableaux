@@ -28,14 +28,13 @@ import keyword
 import re
 import sys
 from abc import abstractmethod
-from abc import abstractmethod as abstract
 from collections import defaultdict
 from collections.abc import Mapping, Sequence, Set
 from enum import Enum
 from operator import gt, lt, truth
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Mapping,
+from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Literal, Mapping,
                     MutableMapping, Self, TypeVar)
 
 __all__ = (
@@ -141,11 +140,11 @@ def closure(func: Callable[..., _T]) -> _T:
         functools.update_wrapper(ret, func)
     return ret
 
-def thru(obj):
+def thru(obj: _T) -> _T:
     'Return the argument.'
     return obj
 
-def true(_):
+def true(_) -> Literal[True]:
     'Always returns ``True``.'
     return True
 
@@ -164,7 +163,7 @@ def key0(obj):
     'Get key/subscript ``0``.'
     return obj[0]
 
-def dund(name:str) -> str:
+def dund(name: str) -> str:
     "Convert name to dunder format."
     return name if isdund(name) else f'__{name}__'
 
@@ -242,15 +241,15 @@ def _limit_best(better, limit, it, default, _name, /):
             best = val
     return best
 
-def substitute(coll, old_value, new_value):
+def substitute(coll: _T, old_value, new_value) -> _T:
     return type(coll)(new_value if x == old_value else x for x in coll)
 
-def for_defaults(defaults: Mapping, override: Mapping, /) -> dict:
+def for_defaults(defaults: Mapping[_KT, _VT], override: Mapping, /) -> dict[_KT, _VT]:
     if not override:
         return dict(defaults)
     return {key: override.get(key, defval) for key, defval in defaults.items()}
 
-def absindex(seqlen: int, index: int, /, strict = True):
+def absindex(seqlen: int, index: int, /, strict = True) -> int:
     'Normalize to positive/absolute index.'
     if index < 0:
         index = seqlen + index
@@ -258,7 +257,7 @@ def absindex(seqlen: int, index: int, /, strict = True):
         raise Emsg.IndexOutOfRange(index)
     return index
 
-def slicerange(seqlen: int, slice_: slice, values, /, strict = True):
+def slicerange(seqlen: int, slice_: slice, values, /, strict = True) -> range:
     'Get a range of indexes from a slice and new values, and perform checks.'
     range_ = range(*slice_.indices(seqlen))
     if len(range_) != len(values):

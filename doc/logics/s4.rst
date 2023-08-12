@@ -47,6 +47,10 @@ L{S4} tableaux are constructed just like {@K system} tableaux.
 Rules
 -----
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 L{S4} contains all the {@K rules}, the {@T} Reflexive rule, plus an
 additional Transitive rule.
 

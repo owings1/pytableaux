@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import csv
 import sys
+from abc import abstractmethod
 from typing import Any, Literal
 
 import sphinx.config
@@ -35,7 +36,7 @@ from sphinx.application import Sphinx
 from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
 
-from pytableaux import examples, logics, models, tools
+from pytableaux import examples, logics, models
 from pytableaux.lang import (Argument, Atomic, Lexical, LexWriter, Marking,
                              Notation, Predicates, RenderSet)
 from pytableaux.proof import Rule, Tableau, TabWriter, writers
@@ -61,7 +62,7 @@ logger = logging.getLogger(__name__)
 class TableGenerator(DirectiveHelper):
     'Table generator directive helper.'
 
-    @tools.abstract
+    @abstractmethod
     def gentable(self) -> Tabler: ...
 
     def run(self):
@@ -371,15 +372,28 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
 
         sigtext = inflect.snakespace(rulecls.name)
 
-        signame = addnodes.desc_name(classes = ['pre', 'ruledoc', 'rule-sig'])
-        signame += (nodes.inline(rulecls.name, sigtext, classes = ['ruledoc', 'rule-sig']),
-            viewcode_anchor(refdomain = domain, reftype = objtype, 
-                refdoc = self.env.docname, refid = refid,
-                reftarget = self.viewcode_target(rulecls), classes=['ruledoc']))
+        signame = addnodes.desc_name(
+            classes=['pre', 'ruledoc', 'rule-sig'])
+        signame += nodes.inline(
+            rulecls.name,
+            sigtext,
+            classes=['ruledoc', 'rule-sig'])
+        signame += viewcode_anchor(
+            refdomain=domain,
+            reftype=objtype, 
+            refdoc=self.env.docname,
+            refid=refid,
+            reftarget=self.viewcode_target(rulecls),
+            classes=['ruledoc'])
 
-        wrapper = addnodes.desc(domain = domain, objtype = objtype,
-                    classes = [domain, objtype, 'ruledoc'])
-        sig = addnodes.desc_signature(ids = [fullid], classes = ['ruledoc'])
+        wrapper = addnodes.desc(
+            domain=domain,
+            objtype=objtype,
+            classes=[domain, objtype, 'ruledoc'])
+
+        sig = addnodes.desc_signature(
+            ids=[fullid],
+            classes=['ruledoc'])
 
         wrapper += sig
         sig += inserts
@@ -452,8 +466,9 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
                 break
         else:
             if 'argument' in opts:
-                if (badopts := ({'conclusion', 'premises'} & set(opts))):
-                    raise self.error(f"Option not allowed with 'argument': {badopts}")
+                badopts = {'conclusion', 'premises'} & set(opts)
+                if badopts:
+                    raise self.error(f"Option(s) not allowed with 'argument': {badopts}")
             elif 'conclusion' not in opts:
                 raise self.error(f'Missing required option: conclusion')
             return 'argument'
@@ -781,8 +796,6 @@ def setup(app: Sphinx):
     app.add_directive('tableau-rules', RuleGroupDirective)
     app.add_directive('truth-tables', TruthTables)
     app.add_directive('sentence', SentenceBlock)
-
-
 
 # docwrapper = nodes.definition_list(classes = ['py', 'class'])
 # docwrapper += (litem := nodes.definition_list_item())

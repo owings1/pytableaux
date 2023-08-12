@@ -2,4 +2,9 @@
 set -e
 dir_="$(dirname "$0")"
 cd "$dir_/../doc"
-make clean doctest html
+if [ "$#" -eq 0 ]; then
+    targets="doctest html"
+else
+    targets="$@"
+fi
+make clean $targets

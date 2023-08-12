@@ -45,6 +45,14 @@ from __future__ import annotations
 
 import os
 import sys
+
+_dir = os.path.abspath(f'{os.path.dirname(__file__)}/../..')
+if _dir not in sys.path:
+    print(f'{_dir=}')
+    sys.path.append(_dir)
+del(_dir)
+
+from pytableaux.logics import *
 import warnings
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -66,10 +74,7 @@ from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
 
 
-_dir = os.path.abspath(f'{os.path.dirname(__file__)}/../..')
-if _dir not in sys.path:
-    sys.path.append(_dir)
-del(_dir)
+
 
 from pytableaux import errors, logics
 from pytableaux.lang import Parser, Predicates
@@ -135,6 +140,7 @@ def setup(app: Sphinx):
     APPSTATE[app] = {}
     app.connect('config-inited', init_app)
     app.connect('build-finished', lambda *_: APPSTATE.pop(app))
+    # app.connect('viewcode-find-source', test_handler)
 
     nodez.setup(app)
     directives.setup(app)
@@ -153,6 +159,8 @@ def init_app(app: Sphinx, config: Config):
     if not sys.warnoptions:
         warnings.simplefilter('ignore', category=errors.RepeatValueWarning)
 
+def test_handler(app, modname):
+    print('\n' * 3, app, modname, '\n' * 3)
 # ------------------------------------------------
 
 def viewcode_target(obj):

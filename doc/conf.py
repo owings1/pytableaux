@@ -11,6 +11,16 @@ from __future__ import annotations
 import os
 import sys
 
+_dir = os.path.abspath(os.path.dirname(__file__))
+if _dir not in sys.path:
+    sys.path.insert(1, _dir)
+
+addpath = os.path.abspath(os.path.join(_dir, '..'))
+if addpath not in sys.path:
+    print(f'{addpath=}')
+    sys.path.insert(0, addpath)
+
+
 from sphinx.application import Sphinx
 
 os.environ['DOC_MODE'] = 'True'
@@ -18,13 +28,7 @@ os.environ['DOC_MODE'] = 'True'
 # =================================================================================
 # =================================================================================
 
-_dir = os.path.abspath(os.path.dirname(__file__))
-if _dir not in sys.path:
-    sys.path.insert(1, _dir)
 
-addpath = os.path.abspath(os.path.join(_dir, '..'))
-if addpath not in sys.path:
-    sys.path.insert(1, addpath)
 # General information about the project.
 
 from pytableaux import package
@@ -49,8 +53,8 @@ copyright = package.copyright
 extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.doctest',
-    'sphinx.ext.viewcode',
     'sphinx.ext.autodoc',
+    'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     # 'sphinx_sitemap',
     # 'sphinx_toolbox.more_autodoc.overloads',
@@ -178,8 +182,8 @@ overloads_location = [
     'bottom'][ 2 ]
 
 
-# pytableaux.tools.doc
-# --------------------
+# pytabdoc
+# --------
 
 copy_file_tree = [
     (
@@ -187,7 +191,8 @@ copy_file_tree = [
         '_static/fonts/charmonman')]
 
 delete_file_tree = [
-    '_modules']
+    # '_modules'
+    ]
 
 # sphinx.ext.intersphinx
 # ----------------------

@@ -156,6 +156,10 @@ when a sentence and its negation both appear as undesignated nodes on the branch
 Rules
 --------
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::

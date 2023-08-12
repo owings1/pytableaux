@@ -42,6 +42,10 @@ L{D} tableaux are constructed just like {@K system} tableaux.
 Rules
 -----
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 L{D} contains all the {@K rules} plus an additional Serial rule.
 
 The Serial rule applies to a an open branch *b* when there is a world *w*

@@ -48,8 +48,6 @@ classes
 
     .. automethod:: finish
 
-    .. automethod:: stat
-
     .. automethod:: build_trunk
 
     .. automethod:: branching_complexity

@@ -142,6 +142,10 @@ on an open branch (or both as *undesignated*).
 Rules
 --------
 
+.. cssclass:: hidden
+
+  .. class:: TabRules()
+
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
@@ -158,6 +162,7 @@ Rules
   :title: Compatibility Rules
   :group: operator
   :include: Assertion, Conditional, Biconditional
+
 
 Notes
 =====
