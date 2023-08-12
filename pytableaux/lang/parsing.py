@@ -66,7 +66,7 @@ class Parser(metaclass = ParserMeta):
 
     To create a parser for a notation::
 
-        from pytableaux.lang import *
+        from pytableaux.lang import Parser
 
         Parser('standard') # or 'polish'
     
@@ -81,7 +81,7 @@ class Parser(metaclass = ParserMeta):
 
         preds = Predicates(((0, 0, 1), (1, 0, 2)))
         parser = Parser('standard', preds)
-        parser('Fa & Gab') # or parser.parse(...)
+        parser('Fa & Gab')
     
     """
 
@@ -123,7 +123,7 @@ class Parser(metaclass = ParserMeta):
         self.opts = for_defaults(self._defaults, opts)
 
     @abstract
-    def parse(self, input_: str, /) -> Sentence:
+    def __call__(self, input_: str, /) -> Sentence:
         """Parse a sentence from an input string.
 
         Args:
@@ -137,14 +137,11 @@ class Parser(metaclass = ParserMeta):
         
         Examples::
 
-            parser.parse('A V B')
-
             parser('A V B')
 
         """
         raise NotImplementedError
 
-    __call__: Callable[..., Sentence] = parse
 
     def argument(self, conclusion: str, premises: Iterable[str] = None, /, title: str = None) -> Argument:
         """Parse the input strings and create an argument.
@@ -176,7 +173,6 @@ class Parser(metaclass = ParserMeta):
         'Merge ``_defaults``, sync ``__call__()``, set primary.'
         super().__init_subclass__(**kw)
         abcs.merge_attr(subcls, '_defaults', supcls = __class__)
-        subcls.__call__ = subcls.parse
         if primary:
             subcls.notation.Parser = subcls
 
@@ -308,12 +304,12 @@ class Ctype(frozenset, Enum):
 
     param = {LexType.Constant, LexType.Variable}
 
-class BaseParser(Parser):
-    "Parser base implementation."
+class DefaultParser(Parser):
+    "Parser default implementation."
 
     __slots__ = EMPTY_SET
 
-    def parse(self, input_: str, /) -> Sentence:
+    def __call__(self, input_: str, /) -> Sentence:
         if isinstance(input_, Sentence):
             return input_
         with ParseContext(input_, self.table, self.preds) as context:
@@ -456,7 +452,7 @@ class BaseParser(Parser):
 
     __delattr__ = Emsg.ReadOnly.razr
 
-class PolishParser(BaseParser, primary = True):
+class PolishParser(DefaultParser, primary = True):
     "Polish notation parser."
 
     __slots__ = EMPTY_SET
@@ -470,7 +466,7 @@ class PolishParser(BaseParser, primary = True):
             oper,
             tuple(self._read(context) for _ in range(oper.arity)))
 
-class StandardParser(BaseParser, primary = True):
+class StandardParser(DefaultParser, primary = True):
     "Standard notation parser."
 
     __slots__ = '_parens_rev_lazy',
@@ -478,14 +474,14 @@ class StandardParser(BaseParser, primary = True):
     notation = Notation.standard
     _defaults = dict(drop_parens = True)
 
-    def parse(self, input_: str, /) -> Sentence:
+    def __call__(self, input_: str, /) -> Sentence:
         try:
-            return super().parse(input_)
+            return super().__call__(input_)
         except ParseError:
             if self.opts['drop_parens']:
                 popen, pclose = self._parens_rev
                 try:
-                    return super().parse(f'{popen}{input_}{pclose}')
+                    return super().__call__(f'{popen}{input_}{pclose}')
                 except ParseError:
                     pass
             raise

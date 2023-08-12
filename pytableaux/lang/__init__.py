@@ -469,19 +469,36 @@ class RenderSet(TableStore, Mapping):
 
 from .lex import Atomic, Constant
 from .lex import CoordsItem as CoordsItem
-from .lex import Lexical, LexType, Operated, Operator
+from .lex import Lexical as Lexical
+from .lex import LexType as LexType
+from .lex import Operated as Operated
+from .lex import Operator as Operator
 from .lex import Parameter as Parameter
+from .lex import LexicalEnum as LexicalEnum
 
 pass
 
-from .lex import (Predicate, Predicated, Quantified, Quantifier, Sentence,
-                  Variable)
+from .lex import Predicate as Predicate
+from .lex import Predicated as Predicated
+from .lex import Quantified as Quantified
+from .lex import Quantifier as Quantifier
+from .lex import Sentence as Sentence
+from .lex import Variable as Variable
 
 pass
-from .parsing import Parser, ParseTable
+from .parsing import Parser as Parser
+from .parsing import DefaultParser as DefaultParser
+from .parsing import ParseTable as ParseTable
+from .parsing import PolishParser as PolishParser
+from .parsing import StandardParser as StandardParser
 
 pass
-from .collect import Argument, Predicates
+from .collect import Argument as Argument
+from .collect import Predicates as Predicates
 
 pass
-from .writing import LexWriter
+from .writing import LexWriter as LexWriter
+from .writing import DefaultLexWriter as DefaultLexWriter
+from .writing import PolishLexWriter as PolishLexWriter
+from .writing import StandardLexWriter as StandardLexWriter
+

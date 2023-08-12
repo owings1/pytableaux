@@ -179,7 +179,7 @@ class LexWriter(metaclass = LexWriterMeta):
             subcls, '_methodmap', supcls = __class__, transform = MapProxy)
         subcls.__call__ = subcls.write
 
-class BaseLexWriter(LexWriter):
+class DefaultLexWriter(LexWriter):
     "Common lexical writer abstract class."
 
     __slots__ = EMPTY_SET
@@ -225,7 +225,7 @@ class BaseLexWriter(LexWriter):
         return self._strfor(Marking.subscript, s)
 
 @LexWriter.register
-class PolishLexWriter(BaseLexWriter):
+class PolishLexWriter(DefaultLexWriter):
     "Polish notation lexical writer implementation."
 
     __slots__ = EMPTY_SET
@@ -237,7 +237,7 @@ class PolishLexWriter(BaseLexWriter):
         return ''.join(map(self._write, (item.operator, *item)))
 
 @LexWriter.register
-class StandardLexWriter(BaseLexWriter):
+class StandardLexWriter(DefaultLexWriter):
     "Standard notation lexical writer implementation."
 
     __slots__ = EMPTY_SET

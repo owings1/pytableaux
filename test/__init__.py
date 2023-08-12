@@ -90,7 +90,7 @@ class BaseCase(TestCase):
         return Parser(kw['notn'], kw['preds'])
 
     def p(self, s, *args, **kw):
-        return self.crparser(*args, **kw).parse(s)
+        return self.crparser(*args, **kw)(s)
 
     def pp(self, *sargs, **kw):
         args = []

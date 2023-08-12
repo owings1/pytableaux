@@ -51,13 +51,16 @@ The following is an example for building a proof in {@CPL} for Modus Ponens::
     from pytableaux.proof import Tableau, TabWriter
 
     # Create an argument
-    argument = Parser().argument('b', ('Uab', 'a'))
+    parser = Parser()
+    argument = parser.argument('b', ('Uab', 'a'))
 
     # Build a tableau for the logic CPL
-    tableau = Tableau('CPL', argument).build()
+    tableau = Tableau('CPL', argument)
+    tableau.build()
 
     # Output the proof
-    text = TabWriter('text').write(tableau)
+    writer = TabWriter()
+    text = writer(tableau)
     print(text)
 
 The full API docs are available :doc:`here <index>`.
