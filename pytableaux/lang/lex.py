@@ -904,6 +904,7 @@ class Predicate(CoordsItem):
         Identity  = (-1, 0, 2, 'Identity')
         "The Identity predicate :sc:`=`"
 
+
 class Constant(Parameter):
     """
     A constant is specified by an integer 2-tuple of ``(index, subscript)``.

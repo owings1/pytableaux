@@ -474,6 +474,7 @@ from .lex import LexType as LexType
 from .lex import Operated as Operated
 from .lex import Operator as Operator
 from .lex import Parameter as Parameter
+from .lex import LexicalAbc as LexicalAbc
 from .lex import LexicalEnum as LexicalEnum
 
 pass
@@ -502,3 +503,54 @@ from .writing import DefaultLexWriter as DefaultLexWriter
 from .writing import PolishLexWriter as PolishLexWriter
 from .writing import StandardLexWriter as StandardLexWriter
 
+
+@closure
+def init():
+
+    from . import _symdata
+
+    RenderSet._initcache(Notation, _symdata.rendersets())
+    ParseTable._initcache(Notation, _symdata.parsetables())
+    LexWriter._sys = LexWriter('standard', 'unicode')
+
+    def tostr_item(item: LexicalAbc):
+        return LexWriter._sys(item)
+
+    def tostr_enum(enum: LexicalEnum):
+        return enum.name
+
+    def tostr_pred(pred: Predicate):
+        try:
+            if pred.is_system:
+                return pred.name
+        except AttributeError:
+            pass
+        return tostr_item(pred)
+
+    LexicalEnum.__str__ = tostr_enum
+    LexicalAbc.__str__ = tostr_item
+    Predicate.__str__ = tostr_pred
+
+    def repr_lex(obj: Lexical):
+        try:
+            return f'<{obj.TYPE.role.__name__}: {obj}>'
+        except AttributeError:
+            return object.__repr__(obj)
+
+    Lexical.__repr__ = repr_lex
+
+    from . import lex
+    from ..errors import Emsg
+
+    for cls in (LangCommonEnumMeta, LangCommonEnum):
+        cls.__delattr__ = Emsg.ReadOnly.razr
+
+    for cls in (LangCommonEnum, LexicalAbc, Predicates, Argument, Lexical):
+        cls._readonly = True
+
+    lex.nosetattr.enabled = True
+    lex.nosetattr.cache.clear()
+
+    del(lex.nosetattr)
+
+del(init)
