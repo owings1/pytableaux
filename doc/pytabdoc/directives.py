@@ -39,12 +39,10 @@ from pytableaux import examples, logics, models, tools
 from pytableaux.lang import (Argument, Atomic, Lexical, LexWriter, Marking,
                              Notation, Predicates, RenderSet)
 from pytableaux.proof import Rule, Tableau, TabWriter, writers
-from pytableaux.tools import EMPTY_SET, qset
+from pytableaux.tools import EMPTY_SET, inflect, qset
 
 from . import (BaseDirective, ConfKey, DirectiveHelper, ParserOptionMixin,
-               RenderMixin, SphinxEvent, Tabler, attrsopt, boolopt,
-               choice_or_flag, choiceopt, classopt, flagopt, nodez, opersopt,
-               predsopt, re_comma, snakespace, stropt)
+               RenderMixin, SphinxEvent, Tabler, nodez, optspecs)
 from .misc import EllipsisExampleHelper, rules_sorted
 from .nodez import block
 
@@ -96,12 +94,12 @@ class SentenceBlock(BaseDirective, ParserOptionMixin):
 
     has_content = True
     option_spec = dict(
-        defn = flagopt,
+        defn = optspecs.flag,
         wnotn = Notation,
-        classes = classopt,
+        classes = optspecs.classes,
         pnotn = Notation,
-        preds = predsopt,
-        caption = stropt)
+        preds = optspecs.preds,
+        caption = optspecs.string)
 
     def run(self):
 
@@ -196,22 +194,22 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
     option_spec = dict(
         # Common
         logic   = logics.registry,
-        format  = choiceopt(writers.registry),
+        format  = optspecs.choice(writers.registry),
         wnotn   = Notation,
-        classes = classopt,
+        classes = optspecs.classes,
         # argument mode
         argument = examples.argument,
-        conclusion = stropt,
-        premises = re_comma.split,
+        conclusion = optspecs.string,
+        premises = optspecs.strings,
         pnotn = Notation,
-        preds = predsopt,
+        preds = optspecs.preds,
         # rule mode
-        rule = stropt,
-        legend = flagopt,
-        doc = flagopt,
+        rule = optspecs.string,
+        legend = optspecs.flag,
+        doc = optspecs.flag,
         # build-trunk mode
-        **{'build-trunk': flagopt,},
-        prolog = flagopt)
+        **{'build-trunk': optspecs.flag,},
+        prolog = optspecs.flag)
 
     modes = {
         'rule'        : {'rule', 'legend', 'doc'},
@@ -371,7 +369,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         domain = 'py'
         objtype = 'object'
 
-        sigtext = snakespace(rulecls.name)
+        sigtext = inflect.snakespace(rulecls.name)
 
         signame = addnodes.desc_name(classes = ['pre', 'ruledoc', 'rule-sig'])
         signame += (nodes.inline(rulecls.name, sigtext, classes = ['ruledoc', 'rule-sig']),
@@ -470,32 +468,34 @@ class RuleGroupDirective(TableauDirective):
     Example::
 
         .. tableau-rules::
-            :group: quantifier
+            :group: operator
             :legend:
-            :title: Quantifier Rules
+            :title: Operator Rules
             :titles:
+            :exclude: MaterialConditional, Conditional
     """
     optional_arguments = sys.maxsize
+    group_choices = {'closure', 'operator', 'quantifier', 'predicate', 'ungrouped'}
     option_spec = dict(
         # Common
         logic   = logics.registry,
-        format  = choiceopt(writers.registry),
+        format  = optspecs.choice(writers.registry),
         wnotn   = Notation,
-        classes = classopt,
+        classes = optspecs.classes,
 
-        docflags = flagopt,
+        docflags = optspecs.flag,
 
-        title  = stropt,
-        titles = choice_or_flag({'symbols', 'names', 'labels'}, default = 'symbols'),
-        flat   = flagopt,
+        title  = optspecs.string,
+        titles = optspecs.choice({'symbols', 'names', 'labels'}, default = 'symbols'),
+        flat   = optspecs.flag,
 
-        group    = choiceopt({'closure', 'operator', 'quantifier', 'predicate', 'ungrouped'}),
-        exclude  = attrsopt,
-        include  = attrsopt,
-        subgroup = stropt,
-        legend   = flagopt,
-        captions = flagopt,
-        docs     = flagopt)
+        group    = optspecs.choice(group_choices),
+        exclude  = optspecs.idnames,
+        include  = optspecs.idnames,
+        subgroup = optspecs.string,
+        legend   = optspecs.flag,
+        captions = optspecs.flag,
+        docs     = optspecs.flag)
 
     default_docflags = ('title', 'titles', 'legend', 'doc')
 
@@ -593,7 +593,7 @@ class RuleGroupDirective(TableauDirective):
                         continue
                     opts['rule'] = rule.name
                     if 'captions' in opts:
-                        opts['caption'] = snakespace(rule.name)
+                        opts['caption'] = inflect.snakespace(rule.name)
                     else:
                         opts.pop('caption', None)
                     cont += super().run()
@@ -613,7 +613,7 @@ class RuleGroupDirective(TableauDirective):
                     continue
                 opts['rule'] = rule.name
                 if 'captions' in opts:
-                    opts['caption'] = snakespace(rule.name)
+                    opts['caption'] = inflect.snakespace(rule.name)
                 else:
                     opts.pop('caption', None)
                 nlist.extend(super().run())
@@ -642,12 +642,12 @@ class TruthTables(BaseDirective, RenderMixin):
 
     option_spec = dict(
         logic = logics.registry,
-        operators = opersopt,
+        operators = optspecs.opers,
         wnotn = Notation,
-        template = stropt,
-        reverse = boolopt,
-        clear = boolopt,
-        classes = classopt)
+        template = optspecs.string,
+        reverse = optspecs.bool_true,
+        clear = optspecs.bool_true,
+        classes = optspecs.classes)
 
     def run(self):
         classes = self.set_classes()
@@ -691,8 +691,8 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     generator: TableGenerator|None
     option_spec = dict(sphinx.directives.patches.CSVTable.option_spec) | {
         'generator'      : table_generators.__getitem__,
-        'generator-args' : stropt,
-        'classes'        : classopt}
+        'generator-args' : optspecs.string,
+        'classes'        : optspecs.classes}
 
     option_spec.pop('class', None)
 

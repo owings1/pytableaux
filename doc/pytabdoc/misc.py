@@ -47,7 +47,7 @@ __all__ = (
 
 
 def is_concrete_rule(obj: Any, /) -> bool:
-    return _is_rulecls(obj) and obj not in (Rule, ClosingRule)
+    return is_rule_class(obj) and obj and not isabstract(obj)
 
 def is_concrete_build_trunk(obj: Any, /,):
     return TabSys.build_trunk in _methmro(obj) and not isabstract(obj)
@@ -61,7 +61,7 @@ def is_transparent_rule(obj: Any) -> bool:
         - there is no docblock
     """
     return (
-        _is_rulecls(obj) and
+        is_rule_class(obj) and
         _is_nodoc(obj) and
         _is_nocode(obj) and
         _rule_is_self_grouped(obj) and
@@ -178,7 +178,7 @@ def is_enum_member(modname: str, objpath = None):
             return True
 
 
-def _is_rulecls(obj: Any) -> bool:
+def is_rule_class(obj: Any) -> bool:
     'Wether obj is a rule class.'
     return isinstance(obj, type) and issubclass(obj, Rule)
 
@@ -217,7 +217,7 @@ def _is_nocode(obj: Any) -> bool:
 
 def _rule_is_grouped(rule: type[Rule], logic) -> bool:
     'Whether the rule class is grouped in the TabRules of the given logic.'
-    if not _is_rulecls(rule):
+    if not is_rule_class(rule):
         return False
     try:
         logic = registry.locate(logic)

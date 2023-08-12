@@ -39,12 +39,20 @@ classes
     .. automethod:: build
 
     .. automethod:: step
+    
+    .. automethod:: stepiter
 
     .. automethod:: branch
 
     .. automethod:: add
 
     .. automethod:: finish
+
+    .. automethod:: stat
+
+    .. automethod:: build_trunk
+
+    .. automethod:: branching_complexity
 
 .. autoclass:: pytableaux.proof.tableaux::Tableau.Tree
     :members:

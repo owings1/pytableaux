@@ -44,10 +44,9 @@ pytabdoc package (pytableaux doc tools)
 from __future__ import annotations
 
 import os
-import re
 import sys
 import warnings
-from abc import abstractmethod as abstract
+from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
@@ -57,9 +56,6 @@ from typing import Any, NamedTuple
 import jinja2
 import sphinx.directives
 import sphinx.directives.code
-from docutils import nodes
-from docutils.parsers.rst.directives import class_option
-from docutils.parsers.rst.directives import flag as flagopt
 from docutils.parsers.rst.roles import _roles
 from sphinx.application import Sphinx
 from sphinx.config import Config
@@ -69,25 +65,23 @@ from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.docutils import SphinxRole
 
+
+_dir = os.path.abspath(f'{os.path.dirname(__file__)}/../..')
+if _dir not in sys.path:
+    sys.path.append(_dir)
+del(_dir)
+
 from pytableaux import errors, logics
-from pytableaux.lang import Operator, Parser, Predicates
+from pytableaux.lang import Parser, Predicates
 from pytableaux.tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, qset
 
 __all__ = (
     'AutodocProcessor',
     'BaseDirective',
     'BaseRole',
-    'classopt',
-    'cleanws',
     'ConfKey',
     'DirectiveHelper',
-    'flagopt',
-    'nodeopt',
-    'opersopt',
-    'predsopt',
     'Processor',
-    're_comma',
-    're_space',
     'ReplaceProcessor',
     'role_entry',
     'role_instance',
@@ -136,7 +130,7 @@ APPSTATE: dict[Sphinx, dict] = {}
 
 def setup(app: Sphinx):
 
-    from . import directives, processors, roles, tables
+    from . import directives, nodez, processors, roles, tables
 
     APPSTATE[app] = {}
     app.connect('config-inited', init_app)
@@ -222,7 +216,7 @@ class RoleDirectiveMixin(AppEnvMixin):
         optspec = self.option_spec
         todo = dict(rawopts)
         builder = {}
-        if optspec.get('classes', None) is classopt:
+        if optspec.get('classes') is optspecs.classes:
             if 'classes' in set_classes(todo):
                 builder['classes'] = todo.pop('classes')
         builder.update({
@@ -230,7 +224,7 @@ class RoleDirectiveMixin(AppEnvMixin):
             for key, value in todo.items()})
         return builder
 
-    @abstract
+    @abstractmethod
     def run(self): ...
 
 class ParserOptionMixin(RoleDirectiveMixin):
@@ -238,7 +232,7 @@ class ParserOptionMixin(RoleDirectiveMixin):
 
     def parser_option(self) -> Parser:
         opts, conf = self.options, self.config
-        return Parser(opts.get(ConfKey.preds, opts.get('pnotn', conf[ConfKey.pnotn])),
+        return Parser(opts.get(ConfKey.pnotn, opts.get('pnotn', conf[ConfKey.pnotn])),
             Predicates(opts.get(ConfKey.preds, opts.get('preds', conf[ConfKey.preds]))))
 
 # ------------------------------------------------
@@ -345,7 +339,7 @@ class Processor(AppEnvMixin):
     def config(self) -> Config:
         return self.app.config
 
-    @abstract
+    @abstractmethod
     def run(self) -> None:
         raise NotImplementedError
 
@@ -382,10 +376,10 @@ class AutodocProcessor(Processor):
         self.lines.extend(self.prepstr(other))
         return self
 
-    def prepstr(self, s: str|list[str], ignore: int = None, tabsize: int = 8) -> list[str]:
+    def prepstr(self, s: str|list[str], **kw) -> list[str]:
         if not isinstance(s, str):
             s = '\n'.join(s)
-        return prepare_docstring(s, ignore, tabsize)
+        return prepare_docstring(s, **kw)
 
 # ------------------------------------------------
 
@@ -447,75 +441,10 @@ class Tabler(list, abcs.Abc):
 # ------------------------------------------------
 
 
-re_space = re.compile(r'\s')
-
-re_comma = re.compile(r',')
-
-re_nonslug_plus = re.compile(r'[^a-zA-Z0-9_-]+')
-"One or more non alpha, num, _ or - chars"
-
-classopt = class_option
-del(class_option)
-
-def boolopt(arg: str, /):
-    if arg:
-        arg = arg.strip()
-    else:
-        arg = 'on'
-    arg = arg.lower()
-    if arg in ('true', 'yes', 'on'):
-        return True
-    if arg in ('false', 'no', 'off'):
-        return False
-    raise ValueError(f"Invalid boolean value: '{arg}'")
-
-def stropt(arg: str, /) -> str:
-    if arg is None:
-        arg = ''
-    return arg
-
-def cleanws(arg: str, /) -> str:
-    "Option spec to remove all whitespace."
-    return re_space.sub('', arg)
-
-def opersopt(arg: str, /):
-    """Operators list, from comma-separated input."""
-    return tuple(map(Operator, (s.strip() for s in re_comma.split(arg))))
-
-def nodeopt(arg: str, /):
-    """A docutils node from a name, e.g. 'inline'."""
-    try:
-        return getattr(nodez, arg)
-    except AttributeError:
-        return getattr(nodes, arg)
-
-def attrsopt(arg: str, /) -> list[str]:
-    "list of attr-like names"
-    return re_nonslug_plus.sub(' ', arg).split(' ')
-
-def choiceopt(choices, /, trans = str):
-    'Option spec builder for choices.'
-    def opt(arg: str, /):
-        arg = trans(arg)
-        if arg not in choices:
-            raise ValueError(arg)
-        return arg
-    return opt
-
-def choice_or_flag(*args, default = None, **kw):
-    chopt = choiceopt(*args, **kw)
-    def opt(str):
-        if str is None:
-            return default
-        return chopt(str)
-    return opt
 
 
 # ------------------------------------------------
 
-
-def snakespace(name):
-    return re.sub(r'([A-Z])', r' \1', name)[1:]
 
 def set_classes(opts:dict):
     if 'class' in opts:
@@ -561,14 +490,4 @@ def role_name(roleish):
     'Get loaded role name, by name, instance or type.'
     return role_entry(roleish).name
 
-def predsopt(arg):
-    """Option spec for list of predicate specs.
-    
-    Example::
-    
-        0,0,1 : 1,0,2
-    """
-    return Predicates(map(int, spec.split(':'))
-        for spec in re_comma.split(cleanws(arg)))
-
-from . import nodez
+from . import optspecs

@@ -67,10 +67,10 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
     """Logic module registry.
     """
 
-    packages: qset
+    packages: qset[str]
     "Packages containing logic modules to load from."
 
-    modules: QsetView
+    modules: QsetView[str]
     "The set of loaded module names."
 
     index: Mapping
@@ -129,25 +129,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
             self.remove(logic)
 
     def __call__(self, key: str|ModuleType, /) -> LogicType:
-        """Get a logic from the registry, importing if needed.
-
-        Args:
-            key: One of the following:
-
-                - Full ``module.__name__``
-                - local ID (lowercase last part of ``module.__name__``)
-                - The module's ``.name`` attribute
-                - Module object
-
-            default: A default value to suppress error.
-        
-        Returns:
-            The logic module
-        
-        Raises:
-            ModuleNotFoundError: if not found.
-            TypeError: on bad key argument.
-        """
+        """Get a logic from the registry, importing if needed. See ``.get()``"""
         try:
             modname = self.index[key]
         except KeyError:
@@ -190,6 +172,25 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         return module
 
     def get(self, ref, default = NOARG, /):
+        """Get a logic from the registry, importing if needed.
+
+        Args:
+            key: One of the following:
+
+                - Full ``module.__name__``
+                - local ID (lowercase last part of ``module.__name__``)
+                - The module's ``.name`` attribute
+                - Module object
+
+            default: A default value to suppress error.
+        
+        Returns:
+            The logic module
+        
+        Raises:
+            ModuleNotFoundError: if not found.
+            TypeError: on bad key argument.
+        """
         try:
             return self(ref)
         except ModuleNotFoundError:
@@ -227,7 +228,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         for package in self.packages:
             yield from self._package_all(self._check_package(package))
 
-    def package_all(self, package, /):
+    def package_all(self, package: str|ModuleType, /):
         """List the package's declared logic modules from its ``__all__``
         attribute.
         """
@@ -244,7 +245,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
             added.update(self.sync_package(pkgname))
         return added
 
-    def sync_package(self, package, /):
+    def sync_package(self, package: str|ModuleType, /):
         """Attempt to find and add any logics that are already loaded (imported)
         but not in the registry. Tries the package's ``__all__`` and ``__dict__``
         attributes.
@@ -272,7 +273,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         for pkgname in self.packages:
             self.import_package(pkgname)
 
-    def import_package(self, package, /):
+    def import_package(self, package: str|ModuleType, /):
         """Import all logic modules for a package. Uses the ``__all__`` attribute
         to list the logic names.
 
@@ -369,7 +370,6 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         return f'{type(self).__name__}@{ident}{repr(list(names))}'
 
     class Index(dict):
-        """Registry index."""
 
         __slots__ = EMPTY_SET
 
@@ -437,7 +437,7 @@ def instancecheck():
     return instancecheck
 
 
-registry = Registry()
+registry: Registry = Registry()
 "The default built-in registry"
 
 registry.packages.add(__package__)

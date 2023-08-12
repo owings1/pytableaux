@@ -36,7 +36,7 @@ from pytableaux import logics
 from pytableaux.lang import LexType, Notation, Predicate
 from pytableaux.tools import qset, qsetf
 
-from . import BaseRole, ParserOptionMixin, classopt, nodeopt, nodez, predsopt
+from . import BaseRole, ParserOptionMixin, nodez, optspecs
 
 _F = TypeVar('_F', bound=Callable)
 __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
@@ -168,11 +168,11 @@ _re_nosent = re.compile(r'^(.)([0-9]*)$')
 class lexdress(BaseRole, ParserOptionMixin):
 
     option_spec =dict({'class': None},
-        node = nodeopt,
+        node = optspecs.nodetype,
         wnotn = Notation,
         pnotn = Notation,
-        preds = predsopt,
-        classes = classopt)
+        preds = optspecs.preds,
+        classes = optspecs.classes)
 
     opt_defaults = dict({'class': None},
         node = nodes.inline,
@@ -385,6 +385,7 @@ def setup(app: Sphinx):
     #        :class: code
     #
 
+    from . import APPSTATE
     logics.registry.import_all()
 
     app.add_role('s', role_s := lexdress())
@@ -396,4 +397,3 @@ def setup(app: Sphinx):
     app.add_role('refp', refplus())
     APPSTATE[app][refplus] = {}
 
-from . import APPSTATE

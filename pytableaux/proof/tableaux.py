@@ -37,6 +37,7 @@ from ..logics import registry
 from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults,
                      qsetf, wraps, qset)
 from ..tools.events import EventEmitter
+from ..tools.hybrids import SequenceSet
 from ..tools.linked import linqset
 from ..tools.timing import Counter, StopWatch
 from . import RuleMeta, TableauMeta
@@ -598,7 +599,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     opts: Mapping
     "The build options."
 
-    open: Sequence[Branch]
+    open: SequenceSet[Branch]
     "Ordered view of the open branches."
 
     history: Sequence[Tableau.StepEntry]
