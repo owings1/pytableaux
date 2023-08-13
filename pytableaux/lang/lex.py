@@ -1028,7 +1028,6 @@ class Predicated(Sentence, Sequence[Parameter]):
         if len(params) != pred.arity:
             raise TypeError(self.predicate, len(params), pred.arity)
         self.predicates = frozenset((pred,))
-        self.paramset = frozenset(params)
         self.operators = EMPTY_SEQ
         self.quantifiers = EMPTY_SEQ
         self.atomics = EMPTY_SET
@@ -1046,7 +1045,6 @@ class Predicated(Sentence, Sequence[Parameter]):
         'atomics',
         'operators',
         'params',
-        'paramset',
         'predicate',
         'predicates',
         'quantifiers',
@@ -1059,22 +1057,19 @@ class Predicated(Sentence, Sequence[Parameter]):
     params: tuple
     "The parameters."
 
-    paramset: frozenset[Parameter]
-    "A set view of parameters."
-
     @lazy.prop
     def constants(self):
-        return frozenset(p for p in self.paramset if p.is_constant)
+        return frozenset(p for p in self if type(p) is Constant)
 
     @lazy.prop
     def variables(self):
-        return frozenset(p for p in self.paramset if p.is_variable)
+        return frozenset(p for p in self if type(p) is Variable)
 
-    def substitute(self, pnew, pold, /):
-        if pnew == pold or pold not in self.paramset:
+    def substitute(self, pnew: Parameter, pold: Parameter, /):
+        if pnew == pold or pold not in self:
             return self
         return Predicated(self.predicate, tuple(
-            (pnew if p == pold else p for p in self.params)))
+            (pnew if p == pold else p for p in self)))
 
     @classmethod
     def first(cls, pred = None, /):
@@ -1094,7 +1089,7 @@ class Predicated(Sentence, Sequence[Parameter]):
         return len(self.params)
 
     def __contains__(self, p):
-        return p in self.paramset
+        return p in self.params
 
     def __getitem__(self, index):
         return self.params[index]

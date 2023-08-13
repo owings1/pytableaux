@@ -517,7 +517,8 @@ class PredNodes(FilterNodeCache):
     __slots__ = EMPTY_SET
 
     def __call__(self, node: Node, _):
-        return type(node.get(Node.Key.sentence)) is Predicated
+        return type(self.rule.sentence(node)) is Predicated
+        # return type(node.get(Node.Key.sentence)) is Predicated
 
 class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``

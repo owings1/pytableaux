@@ -27,7 +27,7 @@ from ..models import BaseModel, ValueCPL
 from ..proof import (WorldPair, Branch, Node, Tableau, TableauxSystem, Target,
                      adds, anode, filters, group, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
-                             NodeCount, NodesWorlds, PredNodes, QuitFlag,
+                             NodeCount, NodesWorlds, PredNodes, QuitFlag, PredNodes,
                              WorldIndex)
 from ..tools import EMPTY_SET, closure, substitute
 from . import LogicType
@@ -324,7 +324,7 @@ class Model(BaseModel[ValueCPL]):
         pred = s.predicate
         params = s.params
         self.predicates.add(pred)
-        for param in s.paramset:
+        for param in s:
             if param.is_constant:
                 self.constants.add(param)
         extension = self.get_extension(pred, **kw)
@@ -613,16 +613,15 @@ class TabRules(LogicType.TabRules):
         predicate = Predicate.System.Identity
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):
-            res = self.node_will_close_branch(node, branch)
-            if res:
+            if self.node_will_close_branch(node, branch):
                 return Target(node = node, branch = branch)
-            if res is False:
-                self[FilterHelper].release(node, branch)
+            self[FilterHelper].release(node, branch)
+            self[PredNodes].release(node, branch)
 
         def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
             return (
                 self[FilterHelper](node, branch) and
-                len(self.sentence(node).paramset) == 1)
+                len(set(self.sentence(node))) == 1)
 
         @classmethod
         def example_nodes(cls):
@@ -630,23 +629,22 @@ class TabRules(LogicType.TabRules):
             c = Constant.first()
             return group(swnode(~cls.predicate((c, c)), w))
 
-    class NonExistenceClosure(rules.BaseClosureRule):
+    class NonExistenceClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
         """
         A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.
         """
+        negated = True
+        predicate = Predicate.System.Existence
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):
             if self.node_will_close_branch(node, branch):
                 return Target(node = node, branch = branch)
+            self[FilterHelper].release(node, branch)
+            self[PredNodes].release(node, branch)
 
-        def node_will_close_branch(self, node: Node, _, /):
-            s = node.get('sentence')
-            return (
-                type(s) is Operated and
-                s.operator is Operator.Negation and
-                type(s.lhs) is Predicated and
-                s.lhs.predicate is Predicate.System.Existence)
+        def node_will_close_branch(self, node: Node, branch: Branch, /):
+            return self[FilterHelper](node, branch)
 
         @classmethod
         def example_nodes(cls):
