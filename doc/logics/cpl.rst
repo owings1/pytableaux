@@ -63,7 +63,7 @@ L{CPL} does not have separate `Assertion` or `Conditional` operators,
 but we include tables and rules for them, for cross-compatibility.
 
 .. truth-tables::
-  :operators: Assertion, Conditional, Biconditional
+  :include: non_native
 
 .. _cpl-predication:
 
@@ -108,15 +108,11 @@ Trunk
 Closure
 -------
 
-.. tableau::
-  :rule: ContradictionClosure
+.. tableau-rules::
+  :group: closure
+  :titles:
   :legend:
-  :doc:
-
-.. tableau::
-  :rule: SelfIdentityClosure
-  :legend:
-  :doc:
+  :docs:
 
 .. _cpl-rules:
 
@@ -132,10 +128,10 @@ Rules
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: Assertion, Conditional, Biconditional
+  :exclude: non_native_operators
 
 .. tableau-rules::
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: Assertion, Conditional, Biconditional
+  :include: non_native_operators

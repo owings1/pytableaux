@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import __docformat__
 from ..errors import Emsg, check
+from ..lang import Operator
 from ..tools import EMPTY_SET, abcs, closure, qset
 from ..tools.hybrids import QsetView
 
@@ -54,7 +55,7 @@ class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None)
         description: str
         category_order: int
         tags: tuple
-        native_operators: tuple
+        native_operators: tuple[Operator, ...]
     TableauxSystem: type[TableauxSystem]
     Model: type[BaseModel]
     class TabRules:

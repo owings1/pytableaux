@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import html
 import logging
+import os.path
 import re
 from collections import deque
 from types import MappingProxyType as MapProxy
@@ -32,7 +33,6 @@ from ....errors import SkipDeparture
 from ....lang import Notation
 from ....tools import EMPTY_SET, inflect
 from ...tableaux import Tableau
-from ..jinja import TEMPLATES_BASE_DIR, jinja
 from . import DefaultNodeVisitor, DoctreeTabWriter, Translator, nodes
 
 __all__ = (
@@ -182,21 +182,23 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
                 f'Skipping {key} attribute of type {type(value)}')
         return attrs
 
+STATIC_BASE_DIR = os.path.abspath(
+    f'{os.path.dirname(__file__)}/../templates/html/static')
+
 class HtmlTabWriter(DoctreeTabWriter):
 
     __slots__ = EMPTY_SET
 
     format = 'html'
     translator_type = HtmlTranslator
-    jinja = jinja(f'{TEMPLATES_BASE_DIR}/html/static')
-    css_template_name = 'tableau.css'
-    default_charsets = MapProxy({
-        notn: 'html' for notn in Notation})
+    cssfile = f'{STATIC_BASE_DIR}/tableau.css'
+    default_charsets = MapProxy({notn: 'html' for notn in Notation})
     defaults = MapProxy(dict(DoctreeTabWriter.defaults,
         wrapper      = True,
         classes      = (),
         wrap_classes = (),
         inline_css   = False))
+    cache = {}
 
     def build_doc(self, tab: Tableau, *, classes=None, wrap_classes=None):
         types = self.docnode_type.types
@@ -217,7 +219,12 @@ class HtmlTabWriter(DoctreeTabWriter):
         wrap += node
         wrap += types[nodes.clear]()
         return doc
-    
-    def attachments(self):
-        css = self.jinja.get_template(self.css_template_name).render()
+
+    @classmethod
+    def attachments(cls):
+        try:
+            css = cls.cache['css']
+        except KeyError:
+            with open(cls.cssfile) as f:
+                css = cls.cache.setdefault('css', f.read())
         return dict(css=css)

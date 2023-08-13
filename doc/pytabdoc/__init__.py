@@ -48,7 +48,6 @@ import sys
 
 _dir = os.path.abspath(f'{os.path.dirname(__file__)}/../..')
 if _dir not in sys.path:
-    print(f'{_dir=}')
     sys.path.append(_dir)
 del(_dir)
 
@@ -234,6 +233,14 @@ class RoleDirectiveMixin(AppEnvMixin):
 
     @abstractmethod
     def run(self): ...
+
+class LogicOptionMixin(RoleDirectiveMixin):
+    @property
+    def logic(self) -> logics.LogicType:
+        return self.options.get('logic', self.current_logic)
+    @logic.setter
+    def logic(self, value):
+        self.options['logic'] = logics.registry(value)
 
 class ParserOptionMixin(RoleDirectiveMixin):
 

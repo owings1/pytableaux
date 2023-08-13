@@ -27,7 +27,7 @@ from abc import abstractmethod
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar, Iterator, Mapping, Self, Sequence, Set
+from typing import Any, ClassVar, Iterator, Literal, Mapping, Self, Sequence, Set
 
 from .. import _ENV, __docformat__, errors
 from ..errors import Emsg, check
@@ -904,6 +904,8 @@ class Predicate(CoordsItem):
         Identity  = (-1, 0, 2, 'Identity')
         "The Identity predicate :sc:`=`"
 
+    Existence: Predicate.System|Predicate
+    Identity: Predicate.System|Predicate
 
 class Constant(Parameter):
     """
@@ -1525,6 +1527,8 @@ def metacall():
                 # System Predicate string
                 return Predicate.System(arg)
 
+            
+
         # Invoked class name.
         clsname = cls.__name__
         
@@ -1543,8 +1547,8 @@ def metacall():
 
             if (
                 # If a concrete LexType raised the error, or the class is
-                # abstract, propagate.
-                cls in LexType or abcs.isabstract(cls) or
+                # not abstract, propagate.
+                cls in LexType or not abcs.isabstract(cls) or
 
                 # Creating from spec supports only length 1.
                 len(spec) != 1

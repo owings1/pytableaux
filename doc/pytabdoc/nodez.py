@@ -92,7 +92,7 @@ class HTML5Translator(BaseTranslator):
     def depart_sentence(self, node):
         self.body.append('</span>')
         for stack in self.optstacks:
-            if stack and stack[-1] is node:
+            if stack and stack[-1][0] is node:
                 stack.pop()
 
     def get_lwargs(self, node: Element):

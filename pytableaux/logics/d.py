@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from collections import deque
+
 from ..lang import Atomic
 from ..proof import Branch, Target, adds, anode, group, swnode
 from ..proof.helpers import MaxWorlds, UnserialWorlds
@@ -71,20 +73,18 @@ class TabRules(K.TabRules):
         ignore_ticked = False
         ticking = False
 
-        def _get_targets(self, branch: Branch,/) -> tuple[Target, ...]:
+        def _get_targets(self, branch: Branch,/) -> deque[Target]|None:
             unserials = self[UnserialWorlds][branch]
             if not unserials:
                 return
             if not self._should_apply(branch):
                 return
-            return tuple(
+            return deque(
                 Target(adds(
                     group(anode(w, branch.new_world())),
                     world = w,
-                    branch = branch,
-                ))
-                for w in unserials
-            )
+                    branch = branch))
+                for w in unserials)
 
         @staticmethod
         def example_nodes():

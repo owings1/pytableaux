@@ -503,3 +503,24 @@ class TestClasses(BaseCase):
                 s = pickle.dumps(item)
                 item2 = pickle.loads(s)
                 self.assertEqual(item, item2)
+
+class TestIdentCreate(BaseCase):
+
+    def test_atomic_sentence_from_ident(self):
+        self.assertEqual(Sentence(('Atomic', (0, 0))), Atomic(0,0))
+
+    def test_operated_sentence_from_ident(self):
+        s1 = Sentence(('Operated', ('Assertion', (('Atomic', (0, 0)),))))
+        s2 = Atomic(0,0).asserted()
+        self.assertEqual(s1, s2)
+
+    def test_predicated_sentence_from_ident(self):
+        s1 = Sentence(('Predicated', ((0, 0, 1), (('Constant', (0, 0)),))))
+        s2 = Predicate((0, 0, 1))(Constant(0,0))
+        self.assertEqual(s1, s2)
+
+    def test_predicate_parameter_from_ident(self):
+        self.assertEqual(Parameter(('Constant', (0, 0))), Constant(0,0))
+
+    def test_operator_lexicalabc_from_ident(self):
+        self.assertIs(LexicalAbc(('Operator', ('Conjunction',))), Operator.Conjunction)

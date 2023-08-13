@@ -91,7 +91,7 @@ Consequence
 **Logical Consequence** is defined in terms of the set of *designated* values
 { V{T}, V{B} }:
 
-  .. include:: include/fde/m.consequence.rst
+.. include:: include/fde/m.consequence.rst
 
 .. _nh-system:
 
@@ -117,15 +117,11 @@ Trunk
 Closure
 -------
 
-.. tableau::
-  :rule: DesignationClosure
+.. tableau-rules::
+  :group: closure
+  :titles:
   :legend:
-  :doc:
-
-.. tableau::
-  :rule: GapClosure
-  :legend:
-  :doc:
+  :docs:
 
 .. _nh-rules:
 
@@ -137,8 +133,6 @@ Rules
   .. class:: TabRules()
 
 .. include:: include/fde/rules_blurb.rst
-
-There are no rules that apply to quantified sentences.
 
 .. tableau-rules::
   :docflags:

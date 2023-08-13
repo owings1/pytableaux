@@ -824,9 +824,8 @@ class PathedDict(dict):
         except KeyError:
             if not isinstance(key, str) or self.separator not in key:
                 raise
-        key, *keys = key.split(self.separator)
-        obj = super().__getitem__(key)
-        for key in keys:
+        obj = self
+        for key in key.split(self.separator):
             obj = obj[key]
         return obj
 
@@ -840,8 +839,12 @@ class PathedDict(dict):
             try:
                 obj = obj[key]
             except KeyError:
-                obj = self.setdefault(key, self.default())
+                obj = obj.setdefault(key, self.default())
         obj[last] = value
+
+    get = MutableMapping.get
+    pop = MutableMapping.pop
+    setdefault = MutableMapping.setdefault
 
 class ForObjectBuilder(Generic[_T]):
 

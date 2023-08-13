@@ -536,7 +536,7 @@ class ProveView(FormView):
 
     def validate_form(self, form_data):
         try:
-            self.api_payload = json.loads(form_data['api-json'])
+            self.api_payload = self.api.Payload(json.loads(form_data['api-json']))
         except Exception as err:
             return {'api-json': err}
         return True
@@ -548,6 +548,8 @@ class ProveView(FormView):
     def POST(self):
         if not self.validate():
             return
+        if self.api_payload.get('output:format') == 'latex':
+            self.api_payload.setdefault('output:options:fulldoc', True)
         self.api.setup(self.api_payload)
         try:
             self.resp_data = self.api.POST()

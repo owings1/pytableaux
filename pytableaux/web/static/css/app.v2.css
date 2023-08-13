@@ -186,6 +186,15 @@ body.pt-app {
 .pt-app .json-dump {
   white-space: pre;
 }
+.pt-app textarea.tableau-src {
+  margin: 0 auto;
+  /* min-width: 80%; */
+  /* max-width: 90%; */
+  height: 120px;
+  display: block;
+  width: 90%;
+  max-width: 90%;
+}
 
 /* ---- display ---- */
 .hidden,

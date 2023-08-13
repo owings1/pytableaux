@@ -118,15 +118,11 @@ Trunk
 Closure
 -------
 
-.. tableau::
-  :rule: ContradictionClosure
+.. tableau-rules::
+  :group: closure
+  :titles:
   :legend:
-  :doc:
-
-.. tableau::
-  :rule: SelfIdentityClosure
-  :legend:
-  :doc:
+  :docs:
 
 .. _cfol-rules:
 

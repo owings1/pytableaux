@@ -23,7 +23,7 @@ from __future__ import annotations
 import csv
 import sys
 from abc import abstractmethod
-from typing import Any, Literal
+from typing import Any, Iterable, Iterator, Literal, TypeVar
 
 import sphinx.config
 import sphinx.directives.code
@@ -36,14 +36,15 @@ from sphinx.application import Sphinx
 from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
 
-from pytableaux import examples, logics, models
-from pytableaux.lang import (Argument, Atomic, Lexical, LexWriter, Marking,
-                             Notation, Predicates, RenderSet)
+from pytableaux import examples, logics
+from pytableaux.lang import (Argument, Atomic, Lexical, LexWriter, Marking, Predicate, Quantifier,
+                             Notation, Operator, Predicates, RenderSet)
 from pytableaux.proof import Rule, Tableau, TabWriter, writers
 from pytableaux.tools import EMPTY_SET, inflect, qset
 
-from . import (BaseDirective, ConfKey, DirectiveHelper, ParserOptionMixin,
-               RenderMixin, SphinxEvent, Tabler, nodez, optspecs)
+from . import (BaseDirective, ConfKey, DirectiveHelper, LogicOptionMixin,
+               ParserOptionMixin, RenderMixin, SphinxEvent, Tabler, nodez,
+               optspecs)
 from .misc import EllipsisExampleHelper, rules_sorted
 from .nodez import block
 
@@ -55,6 +56,8 @@ __all__ = (
     'TableGenerator',
     'TruthTables',
     'table_generators')
+
+_T = TypeVar('_T')
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +162,7 @@ class SentenceBlock(BaseDirective, ParserOptionMixin):
         caption.line = node.line
         return caption
 
-class TableauDirective(BaseDirective, ParserOptionMixin):
+class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
     """Tableau directive.
     
 
@@ -194,9 +197,9 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
 
     option_spec = dict(
         # Common
-        logic   = logics.registry,
-        format  = optspecs.choice(writers.registry),
-        wnotn   = Notation,
+        logic = logics.registry,
+        format = optspecs.choice(writers.registry),
+        wnotn = Notation,
         classes = optspecs.classes,
         # argument mode
         argument = examples.argument,
@@ -237,9 +240,6 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         conf = self.config
         opts['classes'] = self.set_classes()
         classes = opts['classes']
-
-        if 'logic' not in opts:
-            opts['logic'] = self.current_logic
 
         wformat = opts.setdefault('format', 'html')
         opts['wnotn'] = Notation[opts.get('wnotn', conf[ConfKey.wnotn])]
@@ -327,15 +327,12 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         return [tabwrapper]
 
     def gettab_rule(self):
-        opts = self.options
-        logic: logics.LogicType = opts['logic']
-        tab = Tableau(logic)
-        rulecls = type(tab.rules.get(opts['rule']))
+        tab = Tableau(self.logic)
+        rulecls = type(tab.rules.get(self.options['rule']))
         tab.rules.clear()
         tab.rules.append(rulecls)
         rule = tab.rules[0]
-        helper = EllipsisExampleHelper(rule)
-        rule.helpers[type(helper)] = helper
+        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
         tab.branch().extend(rule.example_nodes())
         return tab
 
@@ -349,10 +346,9 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         return Tableau(opts['logic'], arg)
 
     def gettab_trunk(self):
-        tab = Tableau(self.options['logic'])
+        tab = Tableau(self.logic)
         rule = tab.rules.groups[1][0]
-        helper = EllipsisExampleHelper(rule)
-        rule.helpers[type(helper)] = helper
+        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
         tab.argument = self._trunk_argument
         return tab
 
@@ -364,42 +360,30 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
             wrapper += container
             container += ...
         """
-        modname = rulecls.__module__
         refid = rulecls.__qualname__
-        fullid = f'{modname}.{refid}'
         domain = 'py'
         objtype = 'object'
-
-        sigtext = inflect.snakespace(rulecls.name)
-
-        signame = addnodes.desc_name(
-            classes=['pre', 'ruledoc', 'rule-sig'])
-        signame += nodes.inline(
-            rulecls.name,
-            sigtext,
-            classes=['ruledoc', 'rule-sig'])
-        signame += viewcode_anchor(
-            refdomain=domain,
-            reftype=objtype, 
-            refdoc=self.env.docname,
-            refid=refid,
-            reftarget=self.viewcode_target(rulecls),
-            classes=['ruledoc'])
-
-        wrapper = addnodes.desc(
+        return addnodes.desc('',
+            addnodes.desc_signature('', '',
+                *inserts,
+                addnodes.desc_name('', '',
+                    nodes.inline(
+                        rulecls.name,
+                        inflect.snakespace(rulecls.name),
+                        classes=['ruledoc', 'rule-sig']),
+                    viewcode_anchor(
+                        refdomain=domain,
+                        reftype=objtype, 
+                        refdoc=self.env.docname,
+                        refid=refid,
+                        reftarget=self.viewcode_target(rulecls),
+                        classes=['ruledoc']),
+                        classes=['pre', 'ruledoc', 'rule-sig']),
+                ids=[f'{rulecls.__module__}.{refid}'],
+                classes=['ruledoc']),
             domain=domain,
             objtype=objtype,
             classes=[domain, objtype, 'ruledoc'])
-
-        sig = addnodes.desc_signature(
-            ids=[fullid],
-            classes=['ruledoc'])
-
-        wrapper += sig
-        sig += inserts
-        sig += signame
-
-        return wrapper
 
     def getnodes_ruledoc_pair(self, rulecls: type[Rule], *inserts) -> tuple[addnodes.desc, addnodes.desc_content]:
         wrapper = self.getnode_ruledoc_wrapper(rulecls, *inserts)
@@ -408,11 +392,9 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
         return wrapper, container
 
     def getnodes_rule_legend(self, rule: Rule|type[Rule]):
-        nn = []
-        legend = rule.legend
         lw = self.lwuni
         renderset = lw.renderset
-        for name, value in legend:
+        for name, value in rule.legend:
             if lw.canwrite(value):
                 text = lw(value)
             else:
@@ -421,8 +403,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin):
                 except KeyError:
                     raise self.error(
                         f'Unwriteable legend item: {(name, value)} for {rule}')
-            nn.append(nodes.inline(text, text, classes = ['legend-item', name],))
-        return nn
+            yield nodes.inline(text, text, classes=['legend-item', name])
 
     def getnodes_trunk_prolog(self):
         # Plain docutils nodes, not raw html.
@@ -490,7 +471,16 @@ class RuleGroupDirective(TableauDirective):
             :exclude: MaterialConditional, Conditional
     """
     optional_arguments = sys.maxsize
+
+    # Top-level group. Can be subgrouped by individual operator, quantifier, or predicate
     group_choices = {'closure', 'operator', 'quantifier', 'predicate', 'ungrouped'}
+    # can be used in 'include' and 'exclude' options
+    special_names = {
+        'native_operators',
+        'non_native_operators',
+        'modal_operators',
+        'non_modal_operators'}
+
     option_spec = dict(
         # Common
         logic   = logics.registry,
@@ -498,153 +488,142 @@ class RuleGroupDirective(TableauDirective):
         wnotn   = Notation,
         classes = optspecs.classes,
 
-        docflags = optspecs.flag,
+        group = optspecs.choice(group_choices),
 
         title  = optspecs.string,
         titles = optspecs.choice({'symbols', 'names', 'labels'}, default = 'symbols'),
         flat   = optspecs.flag,
 
-        group    = optspecs.choice(group_choices),
         exclude  = optspecs.idnames,
         include  = optspecs.idnames,
-        subgroup = optspecs.string,
         legend   = optspecs.flag,
         captions = optspecs.flag,
+        docflags = optspecs.flag,
         docs     = optspecs.flag)
+
+    groupmode: Literal['group', 'subgroups']
+    # Either group or subgroups will be set, but not both.
+    group: list[type[Rule]]
+    subgroups: dict[Operator|Predicate|Quantifier, list[type[Rule]]]
 
     default_docflags = ('title', 'titles', 'legend', 'doc')
 
-    groupmode: str
-
-    ruleinfo: dict[str, Any]
     title: str|None
-    group: list[type[Rule]]|None
-    subgroups: dict[Lexical, list[type[Rule]]]|None
     exclude: set[str]
-    include: set[str]|None
+    include: set[str]
     groupid: str
-    subgroup: list[type[Rule]]|None
-    subgroup_type: type[Lexical]|None
 
     def setup(self):
-
+        """
+        only options relevant for super are rule, title, doc
+        """
+        if self._setup:
+            return
         super().setup()
-
         opts = self.options
         if 'docflags' in opts:
             for name in self.default_docflags:
-                if name not in opts:
-                    opts[name] = None
-        if 'subgroup' in opts:
-            label = f"{opts['subgroup']} Rules"
-        else:
-            label = f"{opts['group'].capitalize()} Rules"
-        self.groupid = label.lower().replace(' ', '-')
-        if opts.get('title'):
-            self.title = opts['title']
-        elif 'title' in opts:
-            self.title = label
+                opts.setdefault(name, None)
+        label = f"{opts['group'].capitalize()} Rules"
+        if 'title' in opts:
+            self.title = opts['title'] or label
         else:
             self.title = None
-        
+        self.groupid = inflect.dashcase(self.title or label)
+        if 'docs' in opts:
+            opts['doc'] = opts['docs']
         self.exclude = set(opts.get('exclude', EMPTY_SET))
-        self.include = opts.get('include')
-        if self.include is not None:
-            self.include = set(self.include)
-
-        self.ruleinfo = rules_sorted(opts['logic'])
-        info = self.ruleinfo
-        group: list[type[Rule]] = info['legend_groups'][opts['group']]
-
-        subgroups = info['legend_subgroups'].get(opts['group'])
-
-        if 'subgroup' in opts:
-            if opts['subgroup'] not in info['subgroup_types']:
-                raise self.error('Unknown subgroup: %s' % opts['subgroup'])
-            self.groupmode = 'subgroup'
-            self.subgroup_type = info['subgroup_types'][opts['subgroup']]
-            self.subgroup = self.subgroup_type(opts['subgroup'])
-
-        elif not subgroups or 'flat' in opts or opts['group'] == 'ungrouped':
+        self.include = set(opts.get('include', EMPTY_SET))
+        self.resolve_special_names()
+        ruleinfo = rules_sorted(self.logic)
+        group: list[type[Rule]] = ruleinfo['legend_groups'][opts['group']]
+        subgroups = ruleinfo['legend_subgroups'].get(opts['group'])
+        if not subgroups or 'flat' in opts or opts['group'] == 'ungrouped':
             self.groupmode = 'group'
             self.group = group
-
         else:
             self.groupmode = 'subgroups'
             self.subgroups = subgroups
 
-        if 'docs' in opts:
-            opts['doc'] = opts['docs']
-
     def run(self):
-
         self.setup()
-
-        opts = self.options
-        classes: qset[str] = opts['classes']
-        exclude = self.exclude
-
-        nlist = []
-
-        if self.groupmode == 'subgroups':
-            for obj, subgroup in self.subgroups.items():
-                if obj.name in exclude:
-                    continue
-                if self.include and obj.name not in self.include:
-                    continue
-                cont = nodes.section(
-                    classes = ['tableau-rule-subgroup'],
-                    ids = [f'{obj.name.lower()}-rules'])
-                if 'titles' in opts:
-                    if (o := opts['titles']) == 'labels':
-                        prefix = getattr(obj, 'label', obj.name)
-                    elif o == 'names':
-                        prefix = obj.name
-                    else:
-                        prefix = self.lwuni(obj)
-                    cont += nodes.title(text = f'{prefix} Rules')
-                for rule in subgroup:
-                    if rule.name in exclude:
-                        continue
-                    opts['rule'] = rule.name
-                    if 'captions' in opts:
-                        opts['caption'] = inflect.snakespace(rule.name)
-                    else:
-                        opts.pop('caption', None)
-                    cont += super().run()
-                nlist.append(cont)
-        else:
-            if self.groupmode == 'subgroup':
-                rules = self.subgroup
-                classes.add('tableau-rule-subgroup')
-            else:
-                assert self.groupmode == 'group'
-                rules = self.group
-                classes.add('tableau-rule-group')
-            for rule in rules:
-                if rule.name in exclude:
-                    continue
-                if self.include and rule.name not in self.include:
-                    continue
-                opts['rule'] = rule.name
-                if 'captions' in opts:
-                    opts['caption'] = inflect.snakespace(rule.name)
-                else:
-                    opts.pop('caption', None)
-                nlist.extend(super().run())
-
+        assert self.groupmode in ('subgroups', 'group')
         if self.title:
             nodecls = nodes.section
         else:
             nodecls = nodes.container
         cont = nodecls(
-            classes = classes,
-            ids = [self.groupid])
+            classes=self.options['classes'],
+            ids=[self.groupid])
         if self.title:
-            cont += nodes.title(text = self.title)
-
-        cont += nlist
+            cont += nodes.title(text=self.title)
+        if self.groupmode == 'subgroups':
+            cont += self.get_nodes_subgroups_mode()
+        else:
+            cont += self.get_nodes_group_mode()
         return [cont]
+
+    def get_nodes_group_mode(self):
+        opts = self.options
+        opts['classes'].add('tableau-rule-group')
+        for rule in self.filter_by_name(self.group):
+            opts['rule'] = rule.name
+            if 'captions' in opts:
+                opts['caption'] = inflect.snakespace(rule.name)
+            else:
+                opts.pop('caption', None)
+            yield from super().run()
+
+    def get_nodes_subgroups_mode(self):
+        opts = self.options
+        for obj in self.filter_by_name(self.subgroups):
+            subgroup = self.subgroups[obj]
+            node = nodes.section(
+                classes = ['tableau-rule-subgroup'],
+                ids = [f'{obj.name.lower()}-rules'])
+            if 'titles' in opts:
+                titles = opts['titles']
+                if titles == 'labels':
+                    prefix = getattr(obj, 'label', obj.name)
+                elif titles == 'names':
+                    prefix = obj.name
+                else:
+                    prefix = self.lwuni(obj)
+                node += nodes.title(text = f'{prefix} Rules')
+            for rule in self.exclude_by_name(subgroup):
+                opts['rule'] = rule.name
+                if 'captions' in opts:
+                    opts['caption'] = inflect.snakespace(rule.name)
+                else:
+                    opts.pop('caption', None)
+                node += super().run()
+            yield node
+
+    def filter_by_name(self, it: Iterable[_T]) -> Iterator[_T]:
+        it = self.exclude_by_name(it)
+        if not self.include:
+            return it
+        return (obj for obj in it if obj.name in self.include)
+
+    def exclude_by_name(self, it: Iterable[_T]) -> Iterator[_T]:
+        return (obj for obj in it if obj.name not in self.exclude)
+
+    def resolve_special_names(self):
+        for optset in (self.include, self.exclude):
+            for name in optset & self.special_names:
+                optset.remove(name)
+                optset.update(self.get_special_name_values(name))
+
+    def get_special_name_values(self, name: str) -> Iterator[str]:
+        if name in ('native_operators', 'non_native_operators'):
+            base = self.logic.Meta.native_operators
+        elif name in ('modal_operators', 'non_modal_operators'):
+            base = self.logic.Model.modal_operators
+        else:
+            return
+        if name.startswith('non_'):
+            base = set(Operator).difference(base)
+        return (obj.name for obj in base)
 
     def _check_options_mode(self) -> Literal['rule']:
         if 'group' not in self.options:
@@ -652,30 +631,36 @@ class RuleGroupDirective(TableauDirective):
         return 'rule'
 
 
-class TruthTables(BaseDirective, RenderMixin):
+class TruthTables(BaseDirective, RenderMixin, LogicOptionMixin):
     'Truth tables (raw html).'
 
     option_spec = dict(
         logic = logics.registry,
         operators = optspecs.opers,
+        exclude = optspecs.idnames,
+        include = optspecs.idnames,
         wnotn = Notation,
         template = optspecs.string,
         reverse = optspecs.bool_true,
         clear = optspecs.bool_true,
         classes = optspecs.classes)
 
+    special_names = {'native', 'non_native'}
+
     def run(self):
         classes = self.set_classes()
         opts = self.options
         conf = self.config
 
-        if 'logic' not in opts:
-            opts['logic'] = self.current_logic
+        self.exclude = set(opts.get('exclude', EMPTY_SET))
+        self.include = set(opts.get('include', EMPTY_SET))
+        self.resolve_special_names()
 
-        model: models.BaseModel = opts['logic'].Model()
+        model = self.logic.Model()
         opers = opts.get('operators')
         if opers is None:
             opers = sorted(model.truth_functional_operators)
+        opers = self.filter_by_name(opers)
 
         wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
         lw = LexWriter(wnotn, 'html')
@@ -693,11 +678,34 @@ class TruthTables(BaseDirective, RenderMixin):
             for table in tables)
         content = '\n'.join(renders)
 
-        nlist = [nodes.raw(format = 'html', text = content)]
+        nlist = [nodes.raw(format='html', text=content)]
         if clear:
-            nlist.append(block(classes = ['clear']))
+            nlist.append(block(classes=['clear']))
 
         return nlist
+
+    def filter_by_name(self, it: Iterable[_T]) -> Iterator[_T]:
+        it = self.exclude_by_name(it)
+        if not self.include:
+            return it
+        return (obj for obj in it if obj.name in self.include)
+
+    def exclude_by_name(self, it: Iterable[_T]) -> Iterator[_T]:
+        return (obj for obj in it if obj.name not in self.exclude)
+
+    def resolve_special_names(self):
+        for optset in (self.include, self.exclude):
+            for name in optset & self.special_names:
+                optset.remove(name)
+                optset.update(self.get_special_name_values(name))
+
+    def get_special_name_values(self, name: str) -> Iterator[str]:
+        if name not in ('native', 'non_native'):
+            return
+        base = self.logic.Meta.native_operators
+        if name.startswith('non_'):
+            base = set(Operator).difference(base)
+        return (obj.name for obj in base)
 
 
 class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
@@ -796,20 +804,3 @@ def setup(app: Sphinx):
     app.add_directive('tableau-rules', RuleGroupDirective)
     app.add_directive('truth-tables', TruthTables)
     app.add_directive('sentence', SentenceBlock)
-
-# docwrapper = nodes.definition_list(classes = ['py', 'class'])
-# docwrapper += (litem := nodes.definition_list_item())
-# litem  += (fields := nodes.field_list())
-# fields += (field := nodes.field())
-# field  += (dt := nodes.field_name(
-#     classes = ['sig','sig-object','py']
-# ))
-# field  += (dd := nodes.field_body())
-# dt += nodes.inline('', '',
-#     nodes.inline(text = rule.name, classes = ['pre']),
-#     classes = ['sig-name', 'descname'],
-# )
-# dd += tabwrapper
-# return [
-#     docwrapper
-# ]

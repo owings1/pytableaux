@@ -28,7 +28,7 @@ from ....errors import SkipDeparture
 from ....lang import Notation
 from ....tools import EMPTY_SET, closure
 from ...tableaux import Tableau
-from . import DoctreeTabWriter, NodeVisitor, Translator, nodes
+from . import DoctreeTabWriter, NodeVisitor, Translator
 
 
 class LatexTranslator(Translator, NodeVisitor):
@@ -41,7 +41,7 @@ class LatexTranslator(Translator, NodeVisitor):
     
     def visit_document(self, node):
         self.head.extend((
-            '\\documentclass[11pt]{article}\n',
+            '\\documentclass[11pt]{minimal}\n',
             '\\usepackage{latexsym, qtree, stmaryrd}\n',
             '\\begin{document}\n\n'))
 
@@ -185,9 +185,7 @@ class LatexTabWriter(DoctreeTabWriter):
 
     format = 'latex'
     translator_type = LatexTranslator
-    default_charsets = MapProxy({
-        notn: 'latex' for notn in Notation})
+    default_charsets = MapProxy({notn: 'latex' for notn in Notation})
 
     def build_doc(self, tab: Tableau, /):
-        types = self.docnode_type.types
-        return types[nodes.document](types[nodes.tableau].for_object(tab))
+        return super().build_doc(tab)

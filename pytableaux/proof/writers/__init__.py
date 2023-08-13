@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Callable, MutableMapping, Self, TypeVar
 from ... import __docformat__
 from ...errors import Emsg, check
 from ...lang import LexWriter, Notation
-from ...tools import EMPTY_MAP,  MapCover, abcs
+from ...tools import EMPTY_MAP, MapCover, abcs
 from ..tableaux import Tableau
 
 if TYPE_CHECKING:
@@ -195,13 +195,22 @@ class TabWriterRegistry(MapCover[str, type[TabWriter]], MutableMapping[str, type
 registry = TabWriterRegistry(name='default')
 "The default tableau writer class registry."
 
-from . import doctree, jinja
+registries = {registry.name: registry}
 
-registries = {
-    mod.registry.name: mod.registry
-    for mod in (jinja, doctree)}
+try:
+    from . import jinja as jinja
+except ImportError:
+    import traceback
+    import warnings
+    traceback.print_exc()
+    warnings.warn('Failed to import jinja')
+else:
+    registries[jinja.registry.name] = jinja.registry
+    registry.update(jinja.registry)
 
-registry.update(registries['jinja'])
-registry.update(registries['doctree'])
+from . import doctree
 
-registries[registry.name] = registry
+registries[doctree.registry.name] = doctree.registry
+registry.update(doctree.registry)
+registry.default = doctree.registry.default
+

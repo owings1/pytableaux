@@ -266,12 +266,12 @@ class RuleMeta(abcs.AbcMeta):
         AFTER_APPLY  = auto()
 
     class Legend(str, Enum):
+        closure = 'closure'
         negated = 'negated'
         operator = 'operator'
         quantifier = 'quantifier'
         predicate = 'predicate'
         designation = 'designation'
-        closure = 'closure'
 
         @classmethod
         def make(cls, obj):

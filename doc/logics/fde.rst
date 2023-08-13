@@ -67,7 +67,7 @@ L{FDE} does not have separate `Assertion` or `Conditional` operators,
 but we include tables and rules for them, for cross-compatibility.
 
 .. truth-tables::
-  :operators: Assertion, Conditional, Biconditional
+  :include: non_native
 
 .. _fde-predication:
 
@@ -102,7 +102,7 @@ Consequence
 **Logical Consequence** is defined in terms of the set of *designated* values
 V{T, B}:
 
-  .. include:: include/fde/m.consequence.rst
+.. include:: include/fde/m.consequence.rst
 
 .. _fde-system:
 
@@ -129,10 +129,11 @@ Closure
 A branch is **closed** iff the same sentence appears on both a designated node,
 and undesignated node.
 
-.. tableau::
-  :rule: DesignationClosure
+.. tableau-rules::
+  :group: closure
+  :titles:
   :legend:
-  :doc:
+  :docs:
 
 This allows for both a sentence and its negation to appear as *designated*
 on an open branch (or both as *undesignated*).
@@ -151,7 +152,7 @@ Rules
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: Assertion, Conditional, Biconditional
+  :exclude: non_native_operators
 
 .. tableau-rules::
   :docflags:
@@ -161,7 +162,7 @@ Rules
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: Assertion, Conditional, Biconditional
+  :include: non_native_operators
 
 
 Notes

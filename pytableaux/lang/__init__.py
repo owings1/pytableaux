@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from types import MappingProxyType as MapProxy
-from typing import ClassVar, Iterable, NamedTuple
+from typing import Any, ClassVar, Iterable, NamedTuple, Self
 
 from ..errors import Emsg
 from ..tools import EMPTY_MAP, EMPTY_SET, NoSetAttr, abcs, closure, dxopy
@@ -311,7 +311,7 @@ class TableStore(metaclass = LangCommonMeta):
 
     default_fetch_key: ClassVar[str]
 
-    _instances: ClassVar[dict]
+    _instances: ClassVar[dict[Notation, dict[Any, Self]]]
 
     __slots__ = EMPTY_SET
 

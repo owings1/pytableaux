@@ -14,12 +14,8 @@
             {symbol_html}
         {% endcall %}
     </script>
-    {%- if errors %}
-        {% include 'errors.jinja2' %}
-    {%- endif %}
-    {%- if warns %}
-        {% include 'warns.jinja2' %}
-    {%- endif %}
+    {% include 'errors.jinja2' %}
+    {% include 'warns.jinja2' %}
     <div id="uitabs_main_wrapper">
         <div id="uitabs_main" class="">
             {# NB: Changes to tab order must be updated in app js #}
@@ -74,12 +70,18 @@
         <div class="clear"></div>
     </div>
     {% if is_proof -%}
-        {% if resp_data.writer.format == 'html' %}
+        {%- if resp_data.writer.format == 'html' %}
             {{ resp_data.tableau.body }}
+        {%- elif resp_data.writer.format == 'latex' %}
+            <div class="tableau-wrapper latex">
+                <textarea name="tableau_src" class="tableau-src" readonly>
+                    {{- resp_data.tableau.body|e -}}
+                </textarea>
+            </div>
         {% else %}
             <div class="tableau-wrapper plaintext">
                 <pre>{{ resp_data.tableau.body|e }}</pre>
             </div>
-        {% endif %}
-    {% endif %}
+        {%- endif %}
+    {%- endif %}
 {%- endblock -%}

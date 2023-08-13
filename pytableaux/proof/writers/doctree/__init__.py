@@ -137,7 +137,8 @@ class DoctreeTabWriter(TabWriter):
 
     @abstractmethod
     def build_doc(self, tab: Tableau) -> nodes.document:
-        raise NotImplementedError
+        types = self.docnode_type.types
+        return types[nodes.document](types[nodes.tableau].for_object(tab))
 
     def render(self, doc: nodes.document, /, *, fulldoc=None) -> str:
         if fulldoc is None:

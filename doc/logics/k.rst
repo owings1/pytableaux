@@ -69,7 +69,7 @@ L{K} does not have separate `Assertion` or `Conditional` operators,
 but we include tables and rules for them, for cross-compatibility.
 
 .. truth-tables::
-  :operators: Assertion, Conditional, Biconditional
+  :include: non_native
 
 .. _k-predication:
 
@@ -136,15 +136,11 @@ Trunk
 Closure
 -------
 
-.. tableau::
-  :rule: ContradictionClosure
+.. tableau-rules::
+  :group: closure
+  :titles:
   :legend:
-  :doc:
-
-.. tableau::
-  :rule: SelfIdentityClosure
-  :legend:
-  :doc:
+  :docs:
 
 .. _k-rules:
 
@@ -162,7 +158,18 @@ Additional rules are given for the quantifiers.
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: Assertion, Conditional, Biconditional
+  :exclude: non_native_operators modal_operators
+
+.. tableau-rules::
+  :docflags:
+  :title: Modal Operator Rules
+  :group: operator
+  :include: modal_operators
+  :exclude: non_native_operators
+
+.. tableau-rules::
+  :docflags:
+  :group: predicate
 
 .. tableau-rules::
   :docflags:
@@ -172,7 +179,7 @@ Additional rules are given for the quantifiers.
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: Assertion, Conditional, Biconditional
+  :include: non_native_operators
 
 
 Notes

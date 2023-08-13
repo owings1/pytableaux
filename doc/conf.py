@@ -17,7 +17,6 @@ if _dir not in sys.path:
 
 addpath = os.path.abspath(os.path.join(_dir, '..'))
 if addpath not in sys.path:
-    print(f'{addpath=}')
     sys.path.insert(0, addpath)
 
 

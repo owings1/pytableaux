@@ -103,7 +103,7 @@ Consequence
 **Logical Consequence** is defined in terms of the set of *designated* values
 { V{T} }:
 
-  .. include:: include/fde/m.consequence.rst
+.. include:: include/fde/m.consequence.rst
 
 .. _k3w-system:
 
@@ -129,15 +129,11 @@ Trunk
 Closure
 -------
 
-.. tableau::
-  :rule: DesignationClosure
+.. tableau-rules::
+  :group: closure
+  :titles:
   :legend:
-  :doc:
-
-.. tableau::
-  :rule: GlutClosure
-  :legend:
-  :doc:
+  :docs:
 
 .. _k3w-rules:
 
@@ -153,7 +149,7 @@ Rules
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: Assertion, Conditional, Biconditional
+  :exclude: non_native_operators
 
 .. tableau-rules::
   :docflags:
@@ -163,7 +159,7 @@ Rules
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: Assertion, Conditional, Biconditional
+  :include: non_native_operators
 
 
 Notes
