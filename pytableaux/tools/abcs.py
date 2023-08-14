@@ -30,7 +30,6 @@ from abc import abstractmethod
 from collections import deque
 from collections.abc import Iterable, Mapping, Set
 from enum import Enum, Flag
-from enum import auto as eauto
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Callable, Iterator, Sequence, TypeVar
 
@@ -44,7 +43,6 @@ __all__ = (
     'AbcMeta',
     'Astr',
     'Copyable',
-    'eauto',
     'Ebc',
     'EbcMeta',
     'EnumLookup',
@@ -435,12 +433,11 @@ class abcf(Flag):
 
     __slots__ = 'name', 'value', '_value_', '_invert_'
 
-    blank  = 0
-    before = 2
-    temp   = 8
-    after  = 16
-    static = 32
-    inherit = 64
+    before = 1 << 0
+    temp   = 1 << 1
+    after  = 1 << 2
+    static = 1 << 3
+    inherit = 1 << 4
 
     _cleanable = before | temp | after
 
@@ -484,7 +481,7 @@ def clsafter(Class: type[_T], ns: dict|None = None, /, skipflags = False, delete
             # Finish calling the 'after' hooks before anything else, since
             # they might modify other meta config.
             mf = abcf.read(member)
-            if mf is not mf.blank and mf in mf._cleanable:
+            if mf._value_ > 0 and mf in mf._cleanable:
                 if mf.after in mf:
                     member(Class)
                 todelete.append(name)

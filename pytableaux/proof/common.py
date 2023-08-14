@@ -331,7 +331,6 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
     def closed(self) -> bool:
         "Whether the branch is closed."
         return bool(len(self) and isinstance(self[-1], ClosureNode))
-        # return self.__closed
 
     @property
     def leaf(self) -> Optional[Node]:

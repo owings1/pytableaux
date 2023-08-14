@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections import deque
-from typing import Generator, Generic, Iterable, TypeVar, final
+from typing import Generic, Iterable, TypeVar, final
 
 from ..lang import Constant, Operated, Predicated, Quantified, Sentence
 from ..tools import group, EMPTY_SET
@@ -68,9 +68,9 @@ from .helpers import (AdzHelper, BranchTarget, FilterHelper, MaxConsts,
 class NoopRule(Rule):
     "Rule stub that does not apply."
 
-    def _get_targets(self, branch: Branch, /) -> None:
-        "Returns ``None``."
-        pass
+    def _get_targets(self, branch: Branch, /):
+        "Yields from empty set."
+        yield from EMPTY_SET
 
     def _apply(self, target: Target, /):
         "Noop apply."
@@ -78,8 +78,8 @@ class NoopRule(Rule):
 
     @staticmethod
     def example_nodes():
-        "Returns empty set."
-        return EMPTY_SET
+        "Yields from empty set."
+        yield from EMPTY_SET
 
 class BaseClosureRule(ClosingRule):
 
@@ -177,7 +177,10 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
             self[FilterHelper].release(node, branch)
             if not self[QuitFlag].get(branch):
                 fnode = self[MaxConsts].quit_flag(branch)
-                yield adds(group(fnode), flag = fnode[Node.Key.flag])
+                yield Target(adds(group(fnode),
+                    flag=fnode[Node.Key.flag],
+                    branch=branch,
+                    rule=self))
             return
         yield from self._get_node_targets(node, branch)
 
@@ -194,7 +197,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
 
     Helpers = (NodeConsts, NodeCount)
 
-    def _get_node_targets(self, node: Node, branch: Branch) -> Generator[dict, None, None]:
+    def _get_node_targets(self, node: Node, branch: Branch):
         unapplied = self[NodeConsts][branch][node]
         if branch.constants and not unapplied:
             # Do not release the node from filters, since new constants can appear.
@@ -203,8 +206,10 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
         for c in constants:
             nodes = deque(self._get_constant_nodes(node, c, branch))
             if unapplied or not branch.all(nodes):
-                yield adds(nodes, constant=c)
-                # yield dict(adds = group(nodes), constant = c)
+                yield Target(adds(nodes,
+                    constant=c,
+                    branch=branch,
+                    rule=self))
 
     @abstractmethod
     def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /):
