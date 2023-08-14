@@ -70,7 +70,6 @@ class TabRules(L3.TabRules):
         the negation of the antecedent, and one designated node with the negation
         of the consequent. Then tick `n`.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -90,7 +89,6 @@ class TabRules(L3.TabRules):
         node with the negation of the antecedent. On `b''` add an undesignated
         node with the negation of the consequent. Then tick `n`.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(

@@ -42,7 +42,7 @@ class Model(CPL.Model):
 class TableauxSystem(CPL.TableauxSystem):
     pass
 
-@TableauxSystem.initialize(modal = False)
+@TableauxSystem.initialize
 class TabRules(CPL.TabRules):
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,

@@ -61,7 +61,6 @@ class TabRules(K3.TabRules):
         a node with the consequent, and a node with the negation of the consequent.
         Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -71,9 +70,7 @@ class TabRules(K3.TabRules):
                     sdnode( lhs, False),
                     sdnode(~lhs, False),
                     sdnode( rhs, False),
-                    sdnode(~rhs, False),
-                )
-            )
+                    sdnode(~rhs, False)))
 
     class ConditionalUndesignated(FDE.OperatorNodeRule):
         """
@@ -83,21 +80,17 @@ class TabRules(K3.TabRules):
         add undesignated nodes for the antecedent and its negation, and a designated
         with the negation of the consequent. Then tick *n*.   
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
                 group(
                     sdnode(lhs, True),
-                    sdnode(rhs, False),
-                ),
+                    sdnode(rhs, False)),
                 group(
                     sdnode( lhs, False),
                     sdnode(~lhs, False),
-                    sdnode(~rhs, True),
-                ),
-            )
+                    sdnode(~rhs, True)))
 
     class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -107,7 +100,6 @@ class TabRules(K3.TabRules):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -117,9 +109,7 @@ class TabRules(K3.TabRules):
                     sdnode( lhs, False),
                     sdnode(~lhs, False),
                     sdnode( rhs, False),
-                    sdnode(~rhs, False),
-                )
-            )
+                    sdnode(~rhs, False)))
 
     class BiconditionalUndesignated(FDE.OperatorNodeRule):
         """
@@ -128,14 +118,12 @@ class TabRules(K3.TabRules):
         node with the same operands. On *b''* add an undesignated conditional node
         with the reversed operands. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
                 group(sdnode(Operator.Conditional(lhs, rhs), False)),
-                group(sdnode(Operator.Conditional(rhs, lhs), False)),
-            )
+                group(sdnode(Operator.Conditional(rhs, lhs), False)))
 
     class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -145,7 +133,6 @@ class TabRules(K3.TabRules):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -155,9 +142,7 @@ class TabRules(K3.TabRules):
                     sdnode( lhs, False),
                     sdnode(~lhs, False),
                     sdnode( rhs, False),
-                    sdnode(~rhs, False),
-                )
-            )
+                    sdnode(~rhs, False)))
 
     rule_groups = (
         (

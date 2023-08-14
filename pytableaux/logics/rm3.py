@@ -59,7 +59,6 @@ class TabRules(LP.TabRules):
         the antecedent, its negation, the consequent, and its negation,
         respectively. Then tick *n*.
         """
-        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -80,7 +79,6 @@ class TabRules(LP.TabRules):
         On *b''*, add an undesignated node with the negation of the antecedent,
         and a designated node with the negation of the consequent. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -100,7 +98,6 @@ class TabRules(LP.TabRules):
         the negation of each operand. On *b'''*, add four designated nodes, one
         with each operand, and one for the negation of each operand. Then tick *n*.
         """
-        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -124,7 +121,6 @@ class TabRules(LP.TabRules):
         with the same operands as *n*, and the second conjunct being a conditional
         with the reversed operands of *n*, then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -140,7 +136,6 @@ class TabRules(LP.TabRules):
         for each operand. On *b''* add an undesignated nodes for the negation of
         each operand. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s

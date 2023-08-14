@@ -176,7 +176,7 @@ class EnvConfig(ItemMapEnum):
 
     @classmethod
     def env_config(cls, env: Mapping[str, Any] = None) -> dict[str, Any]:
-        "Return a config dict resolve against ``env``."
+        "Return a config dict resolved against ``env``."
         if env is None:
             import os
             env = os.environ

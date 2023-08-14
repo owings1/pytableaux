@@ -102,7 +102,6 @@ class TabRules(K3.TabRules):
         node with the negatum, and on `b'` add a designated node with the
         double-negatum. Then tick `n`.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             si = s.lhs
@@ -135,7 +134,6 @@ class TabRules(K3.TabRules):
         conjunct, and an undesignated node with the negation of the frist conjunct.
         Then tick `n`.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -152,7 +150,6 @@ class TabRules(K3.TabRules):
         node with the negation of the second conjunct. On `b''''`, add a designated
         node with the second conjunct. Then tick `n`.
         """
-        branching = 3
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -171,7 +168,6 @@ class TabRules(K3.TabRules):
         the first conjunct. On `b'''`, add a designated node with the negation
         of the second conjunct. Then tick `n`.
         """
-        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -356,7 +352,6 @@ class TabRules(K3.TabRules):
         new to `b` for the variable. On `b''` add a designated node with the
         negatum of `n`. Then tick `n`.
         """
-        branching = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)

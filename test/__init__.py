@@ -79,7 +79,8 @@ class BaseCase(TestCase):
                 name = f'test_{rulecls.name}'
                 old = getattr(subcls, name, None)
                 def test(self: BaseCase):
-                    self.rule_eg(rulecls, bare=bare)
+                    rt = self.rule_eg(rulecls, bare=bare)
+                    self.assertEqual(rt.rule.branching, len(rt.tab) - 1)
                     if callable(old):
                         old(self)
                 setattr(subcls, name, test)

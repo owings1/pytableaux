@@ -154,16 +154,16 @@ class TableauMeta(abcs.AbcMeta):
 
     class Flag(Flag):
         'Tableau state bit flags.'
-        TICKED = 1
-        CLOSED = 2
-        PREMATURE = 4
-        FINISHED = 8
-        TIMED_OUT = 16
-        TRUNK_BUILT = 32
-        TIMING_INACCURATE = 64
-        HAS_STEP_LIMIT = 128
-        HAS_TIME_LIMIT = 256
-        STARTED = 512
+        TICKED = 1 << 0
+        CLOSED = 1 << 1
+        PREMATURE = 1 << 2
+        FINISHED = 1 << 3
+        TIMED_OUT = 1 << 4
+        TRUNK_BUILT = 1 << 5
+        TIMING_INACCURATE = 1 << 6
+        HAS_STEP_LIMIT = 1 << 7
+        HAS_TIME_LIMIT = 1 << 8
+        STARTED = 1 << 9
 
     class StatKey(str, Enum):
         'Tableau ``stat()`` keys.'
@@ -234,22 +234,17 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
             rules.groups.create().extend(classes)
 
     @classmethod
-    def initialize(cls, RulesClass=None, /, *, modal=None):
-        if modal is None:
-            modal = cls.modal
-        def dec(RulesClass:type[LogicType.TabRules]|_TT) -> _TT:
-            RulesClass.all_rules = RulesClass.closure_rules + tuple(
-                r for g in RulesClass.rule_groups for r in g)
-            cls.Rules = RulesClass
-            for rulecls in RulesClass.all_rules:
-                if modal is not None:
-                    rulecls.modal = modal
-                    if not modal:
-                        rulecls.disable_filter(filters.ModalNode)
-            return RulesClass
-        if RulesClass:
-            return dec(RulesClass)
-        return dec
+    def initialize(cls, RulesClass: type[LogicType.TabRules]|_TT) -> _TT:
+        RulesClass.all_rules = RulesClass.closure_rules + tuple(
+            r for g in RulesClass.rule_groups for r in g)
+        cls.Rules = RulesClass
+        for rulecls in RulesClass.all_rules:
+            rulecls.modal = cls.modal
+            if not rulecls.modal:
+                rulecls.disable_filter(filters.ModalNode)
+            if 'branching' not in rulecls.__dict__:
+                rulecls.branching = rulecls.induce_branching()
+        return RulesClass
 
 class RuleMeta(abcs.AbcMeta):
     """Rule meta class."""
@@ -258,13 +253,13 @@ class RuleMeta(abcs.AbcMeta):
 
     class State(Flag):
         'Rule state bit flags.'
-        INIT   = 1
-        LOCKED = 2
+        INIT = 1 << 0
+        LOCKED = 1 << 1
 
     class Events(str, Enum):
         'Rule events.'
         BEFORE_APPLY = 'BEFORE_APPLY'
-        AFTER_APPLY  = 'AFTER_APPLY'
+        AFTER_APPLY = 'AFTER_APPLY'
 
     class Legend(str, Enum):
         closure = 'closure'
@@ -308,8 +303,6 @@ class RuleMeta(abcs.AbcMeta):
         autoattrs = getattr(rulecls, 'autoattrs', None)
         if autoattrs:
             attrs = rulecls.induce_attrs()
-            # if not attrs:
-            #     raise TypeError(f'Cannot induce autoattrs from {rulecls}')
             if attrs:
                 for name, value in attrs.items():
                     setattr(rulecls, name, value)
@@ -329,13 +322,6 @@ class RuleMeta(abcs.AbcMeta):
         if rulecls.modal is False:
             rulecls.disable_filter(filters.ModalNode)
         rulecls.legend = tuple(cls.Legend.make(rulecls))
-        # if autoattrs:
-        #     # rulecls._autoattrs = MapProxy(autoattrs)
-        #     for name, value in autoattrs.items():
-        #         old = getattr(rulecls, name)
-        #         if old != value:
-        #             pass
-        #             # print(f'{rulecls=} {name=} {old=} {value=}')
         return rulecls
 
     def disable_filter(self: Self|type[Rule], filtercls):
@@ -410,7 +396,11 @@ class RuleMeta(abcs.AbcMeta):
         if not len(todo):
             return attrs
 
-        # if self.
+    def induce_branching(self):
+        rule: Rule = self(Tableau())
+        rule.apply(rule.target(rule.branch().extend(rule.example_nodes())))
+        return len(rule.tableau) - 1
+
     class Helper(metaclass = abcs.AbcMeta):
         'Rule helper interface.'
 

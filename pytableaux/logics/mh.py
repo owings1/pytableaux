@@ -81,7 +81,6 @@ class TabRules(LogicType.TabRules):
         nodes, one for each disjunct and its negation. On *b''* add two designated
         nodes, one for the negation of each disjunct. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -116,7 +115,6 @@ class TabRules(LogicType.TabRules):
 
         Then tick *n*.
         """
-        branching = 3
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -184,7 +182,6 @@ class TabRules(LogicType.TabRules):
         with the antecedent, and on *b''* add a designated node with the consequent.
         Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.

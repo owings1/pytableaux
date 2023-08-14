@@ -119,8 +119,7 @@ class TabRules(K3W.TabRules):
 
         def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.
-            yield adds(
-                group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
+            yield adds(group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):
         """
@@ -144,7 +143,6 @@ class TabRules(K3W.TabRules):
         the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhsa = s.lhs.asserted()

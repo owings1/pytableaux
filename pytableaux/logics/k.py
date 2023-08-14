@@ -32,6 +32,7 @@ from ..tools import EMPTY_SET, closure, group, substitute
 from . import LogicType
 from . import fde as FDE
 
+
 class Meta(LogicType.Meta):
     name = 'K'
     title = 'Kripke Normal Modal Logic'
@@ -47,6 +48,8 @@ class Meta(LogicType.Meta):
         Operator.Necessity)
 
 class AccessGraph(defaultdict[int, set[int]]):
+
+    __slots__ = EMPTY_SET
 
     def __init__(self, *args, **kw):
         super().__init__(set, *args, **kw)
@@ -522,10 +525,9 @@ class TableauxSystem(TableauxSystem):
         with world :m:`w0`.
         """
         w = 0 if cls.modal else None
-        add = tab.branch().append
-        for premise in arg.premises:
-            add(swnode(premise, w))
-        add(swnode(~arg.conclusion, w))
+        b = tab.branch()
+        b.extend(swnode(s, w) for s in arg.premises)
+        b.append(swnode(~arg.conclusion, w))
 
     @classmethod
     def branching_complexity(cls, node: Node) -> int:
@@ -568,14 +570,14 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     access: Optional[bool] = None
     autoattrs = True
 
-class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
-    'Convenience mixin class for most common rules.'
-
     def _get_node_targets(self, node: Node, branch: Branch, /):
         return self._get_sw_targets(self.sentence(node), node.get('world'))
 
     def _get_sw_targets(self, s: Operated, w: int|None, /):
         raise NotImplementedError
+
+class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
+    'Convenience mixin class for most common rules.'
 
 @TableauxSystem.initialize
 class TabRules(LogicType.TabRules):
@@ -701,7 +703,6 @@ class TabRules(LogicType.TabRules):
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
         the conjunct to *b*, then tick *n*.
         """
-        branching = 1
 
         def _get_sw_targets(self, s, w, /):
             yield adds(
@@ -714,7 +715,6 @@ class TabRules(LogicType.TabRules):
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
         then tick *n*.
         """
-        branching = 1
 
         def _get_sw_targets(self, s, w, /):
             yield adds(
@@ -737,7 +737,6 @@ class TabRules(LogicType.TabRules):
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-        branching = 1
 
         def _get_sw_targets(self, s, w, /):
             yield adds(
@@ -762,7 +761,6 @@ class TabRules(LogicType.TabRules):
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-        branching = 1
 
         def _get_sw_targets(self, s, w, /):
             yield adds(
@@ -777,7 +775,6 @@ class TabRules(LogicType.TabRules):
         *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-        branching = 1
 
         def _get_sw_targets(self, s, w, /):
             yield adds(
@@ -845,11 +842,10 @@ class TabRules(LogicType.TabRules):
         """
         convert = Quantifier.Universal
 
-        def _get_node_targets(self, node: Node, _):
-            v, si = self.sentence(node)[1:]
+        def _get_sw_targets(self, s, w, /):
+            v, si = s[1:]
             # Keep conversion neutral for inheritance below.
-            yield adds(
-                group(swnode(self.convert(v, ~si), node.get('world'))))
+            yield adds(group(swnode(self.convert(v, ~si), w)))
 
     class Universal(rules.ExtendedQuantifierRule, DefaultNodeRule):
         """

@@ -112,9 +112,7 @@ class TabRules(K3W.TabRules):
             yield adds(
                 group(
                     sdnode(self.convert(v, si | ~si), d),
-                    sdnode(branch.new_constant() >> s, d),
-                )
-            )
+                    sdnode(branch.new_constant() >> s, d)))
 
     class ExistentialUndesignated(FDE.QuantifierSkinnyRule):
         """
@@ -126,7 +124,6 @@ class TabRules(K3W.TabRules):
         Then tick `n`.
         """
         convert = Quantifier.Universal
-        branching = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -178,7 +175,6 @@ class TabRules(K3W.TabRules):
         of `n`, and the other with the negation of that sentence. On `b''`, add
         a designated node with the negatum of `n`. Then tick `n`.
         """
-        branching = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)

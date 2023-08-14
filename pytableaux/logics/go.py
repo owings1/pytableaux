@@ -118,7 +118,6 @@ class TabRules(B3E.TabRules):
         *b'* with one conjunct, and an undesignated node to *b''* with the other
         conjunct, then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -132,8 +131,7 @@ class TabRules(B3E.TabRules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            yield adds(
-                group(sdnode(~s, not d)))
+            yield adds(group(sdnode(~s, not d)))
 
     class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -142,8 +140,7 @@ class TabRules(B3E.TabRules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            yield adds(
-                group(sdnode(s, not self.designation)))
+            yield adds(group(sdnode(s, not d)))
         
     class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -152,8 +149,7 @@ class TabRules(B3E.TabRules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            yield adds(
-                group(sdnode(s.lhs, not d), sdnode(s.rhs, not d)))
+            yield adds(group(sdnode(s.lhs, not d), sdnode(s.rhs, not d)))
 
     class DisjunctionUndesignated(ConjunctionUndesignated):
         """
@@ -175,8 +171,7 @@ class TabRules(B3E.TabRules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            yield adds(
-                group(sdnode(~s.lhs, not d), sdnode(s.rhs, not d)))
+            yield adds(group(sdnode(~s.lhs, not d), sdnode(s.rhs, not d)))
 
     class MaterialConditionalUndesignated(ConjunctionUndesignated):
         """
@@ -197,7 +192,6 @@ class TabRules(B3E.TabRules):
         the negation of the antecent, and for the consequent. On *b''* add undesignated
         nodes for the antecedent, and for the negation of the consequent. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -223,7 +217,6 @@ class TabRules(B3E.TabRules):
         negated antecedent and the consequent. On *b''* add undesignated nodes for the
         antecedent, consequent, and their negations. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -244,7 +237,6 @@ class TabRules(B3E.TabRules):
         undesignated node with the negation of the antencedent, and a designated node
         with the negation of the consequent. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -284,7 +276,6 @@ class TabRules(B3E.TabRules):
         node with the operands of the biconditional. On *b''* add a designated negated
         conditional node with the reversed operands of the biconditional. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -345,7 +336,6 @@ class TabRules(B3E.TabRules):
         negation, then tick *n*.
         """
         convert = Quantifier.Existential
-        branching = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)

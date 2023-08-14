@@ -64,7 +64,6 @@ class TabRules(K3.TabRules):
         conjunct, and a designated node with the second conjunct. On *b'''* add
         designated nodes with the negation of each conjunct. Then tick *n*.
         """
-        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -81,7 +80,6 @@ class TabRules(K3.TabRules):
         second conjunct and its negation. On *b'''* add a designated node for each conjunct.
         Then tick *n*. 
         """
-        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -99,7 +97,6 @@ class TabRules(K3.TabRules):
         disjunct, and a designated node with the second disjunct. On *b'''* add a
         designated node with each disjunct. Then tick *n*.
         """
-        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -116,7 +113,6 @@ class TabRules(K3.TabRules):
         second disjunct and its negation. On *b'''* add designated nodes for the negation
         of each disjunct. Then tick *n*.
         """
-        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -135,7 +131,6 @@ class TabRules(K3.TabRules):
         negation, respectively. On *b'''* add undesignated nodes with the second
         disjunct and its negation, respectively. Then tick *n*.
         """
-        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             yield adds(

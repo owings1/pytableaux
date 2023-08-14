@@ -94,7 +94,6 @@ class TabRules(LogicType.TabRules):
 
         Then, tick *n*.
         """
-        branching = 3
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -117,7 +116,6 @@ class TabRules(LogicType.TabRules):
         one for the negation of each conjunct. On *b''*, add four designated nodes, one
         for each of the conjuncts and its negation. Then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s

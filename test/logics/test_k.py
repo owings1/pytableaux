@@ -455,3 +455,38 @@ class TestModelErrors(Base):
         model.set_predicated_value(s2, 'T')
         with self.assertRaises(ModelValueError):
             model.set_predicated_value(s2, 'F')
+
+class TestBranchables(Base):
+
+    exp = dict(
+        Assertion=0,
+        AssertionNegated=0,
+        Biconditional=1,
+        BiconditionalNegated=1,
+        Conditional=1,
+        ConditionalNegated=0,
+        Conjunction=0,
+        ConjunctionNegated=1,
+        ContradictionClosure=0,
+        Disjunction=1,
+        DisjunctionNegated=0,
+        DoubleNegation=0,
+        Existential=0,
+        ExistentialNegated=0,
+        IdentityIndiscernability=0,
+        MaterialBiconditional=1,
+        MaterialBiconditionalNegated=1,
+        MaterialConditional=1,
+        MaterialConditionalNegated=0,
+        Necessity=0,
+        NecessityNegated=0,
+        NonExistenceClosure=0,
+        Possibility=0,
+        PossibilityNegated=0,
+        SelfIdentityClosure=0,
+        Universal=0,
+        UniversalNegated=0)
+
+    def test_known_branchable_values(self):
+        for rulecls in self.logic.TabRules.all_rules:
+            self.assertEqual(rulecls.branching, self.exp[rulecls.name])

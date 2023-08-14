@@ -609,7 +609,6 @@ class TabRules(LogicType.TabRules):
         for each conjunct *c*, make a new branch *b'* from *b* and add a designated
         node with the negation of *c* to *b'*, then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -622,7 +621,6 @@ class TabRules(LogicType.TabRules):
         for each conjunct *c*, make a new branch *b'* from *b* and add an
         undesignated node with *c* to *b'*, then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -673,7 +671,6 @@ class TabRules(LogicType.TabRules):
         of the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -707,7 +704,6 @@ class TabRules(LogicType.TabRules):
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -722,7 +718,6 @@ class TabRules(LogicType.TabRules):
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -737,7 +732,6 @@ class TabRules(LogicType.TabRules):
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(

@@ -288,3 +288,50 @@ class TestModels(Base):
         self.assertEqual(model.value_of(s3), 'T')
         self.assertIn(s3, model.opaques)
         self.assertIn(model.value_of(s5), model.designated_values)
+
+class TestBranchables(Base):
+    exp = dict(
+        AssertionDesignated=0,
+        AssertionNegatedDesignated=0,
+        AssertionNegatedUndesignated=0,
+        AssertionUndesignated=0,
+        BiconditionalDesignated=1,
+        BiconditionalNegatedDesignated=1,
+        BiconditionalNegatedUndesignated=1,
+        BiconditionalUndesignated=1,
+        ConditionalDesignated=1,
+        ConditionalNegatedDesignated=0,
+        ConditionalNegatedUndesignated=1,
+        ConditionalUndesignated=0,
+        ConjunctionDesignated=0,
+        ConjunctionNegatedDesignated=1,
+        ConjunctionNegatedUndesignated=0,
+        ConjunctionUndesignated=1,
+        DesignationClosure=0,
+        DisjunctionDesignated=1,
+        DisjunctionNegatedDesignated=0,
+        DisjunctionNegatedUndesignated=1,
+        DisjunctionUndesignated=0,
+        DoubleNegationDesignated=0,
+        DoubleNegationUndesignated=0,
+        ExistentialDesignated=0,
+        ExistentialNegatedDesignated=0,
+        ExistentialNegatedUndesignated=0,
+        ExistentialUndesignated=0,
+        MaterialBiconditionalDesignated=1,
+        MaterialBiconditionalNegatedDesignated=1,
+        MaterialBiconditionalNegatedUndesignated=1,
+        MaterialBiconditionalUndesignated=1,
+        MaterialConditionalDesignated=1,
+        MaterialConditionalNegatedDesignated=0,
+        MaterialConditionalNegatedUndesignated=1,
+        MaterialConditionalUndesignated=0,
+        UniversalDesignated=0,
+        UniversalNegatedDesignated=0,
+        UniversalNegatedUndesignated=0,
+        UniversalUndesignated=0)
+
+
+    def test_known_branchable_values(self):
+        for rulecls in self.logic.TabRules.all_rules:
+            self.assertEqual(rulecls.branching, self.exp[rulecls.name])

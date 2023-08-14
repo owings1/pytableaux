@@ -5,7 +5,7 @@ class Base(BaseCase):
 
 class TestTabRules(Base, autorules=True): pass
 
-class TestNH(Base):
+class TestArguments(Base):
 
     def test_valid_hnh_ax1(self):
         self.valid_tab('UaUba')
@@ -63,3 +63,44 @@ class TestNH(Base):
 
     def test_invalid_dem(self):
         self.invalid_tab('NAab', 'ANaNb')
+
+
+class TestBranchables(Base):
+    exp = dict(
+        AssertionDesignated=0,
+        AssertionNegatedDesignated=0,
+        AssertionNegatedUndesignated=0,
+        AssertionUndesignated=0,
+        BiconditionalDesignated=0,
+        BiconditionalNegatedDesignated=0,
+        BiconditionalNegatedUndesignated=0,
+        BiconditionalUndesignated=0,
+        ConditionalDesignated=1,
+        ConditionalNegatedDesignated=0,
+        ConditionalNegatedUndesignated=1,
+        ConditionalUndesignated=0,
+        ConjunctionDesignated=0,
+        ConjunctionNegatedDesignated=3,
+        ConjunctionNegatedUndesignated=1,
+        ConjunctionUndesignated=1,
+        DesignationClosure=0,
+        DisjunctionDesignated=1,
+        DisjunctionNegatedDesignated=0,
+        DisjunctionNegatedUndesignated=1,
+        DisjunctionUndesignated=0,
+        DoubleNegationDesignated=0,
+        DoubleNegationUndesignated=0,
+        GapClosure=0,
+        MaterialBiconditionalDesignated=0,
+        MaterialBiconditionalNegatedDesignated=0,
+        MaterialBiconditionalNegatedUndesignated=0,
+        MaterialBiconditionalUndesignated=0,
+        MaterialConditionalDesignated=0,
+        MaterialConditionalNegatedDesignated=0,
+        MaterialConditionalNegatedUndesignated=0,
+        MaterialConditionalUndesignated=0)
+
+
+    def test_known_branchable_values(self):
+        for rulecls in self.logic.TabRules.all_rules:
+            self.assertEqual(rulecls.branching, self.exp[rulecls.name])

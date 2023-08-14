@@ -1130,7 +1130,6 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                     is_group_optim      = True)
                 return entry
 
-
     def _compute_stats(self):
         'Compute the stats property after the tableau is finished.'
         try:
