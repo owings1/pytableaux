@@ -900,11 +900,10 @@ class TabRules(LogicType.TabRules):
             if target.get('flag'):
                 return 1.0
             # override
-            branch = target.branch
             s = self.sentence(target.node)
             si = s.lhs
             # Don't bother checking for closure since we will always have a new world
-            track_count = self[AplSentCount][branch].get(si, 0)
+            track_count = self[AplSentCount][target.branch].get(si, 0)
             if track_count == 0:
                 return 1.0
             return -1.0 * self[MaxWorlds].modals[s] * track_count

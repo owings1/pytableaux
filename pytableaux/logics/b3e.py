@@ -154,8 +154,7 @@ class TabRules(K3W.TabRules):
                 sn1 = ~sn1
                 sn2 = ~sn2
             # Keep designation neutral for inheritance below.
-            yield adds(
-                group(sdnode(sn1, d), sdnode(sn2, d)))
+            yield adds(group(sdnode(sn1, d), sdnode(sn2, d)))
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated):
         """

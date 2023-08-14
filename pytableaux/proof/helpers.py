@@ -570,9 +570,8 @@ class FilterHelper(FilterNodeCache):
         for fcls in configs:
             check.subcls(check.inst(fcls, type), filters.NodeCompare)
         if not abcs.isabstract(rulecls):
-            if configs:
-                setattr(rulecls, attr, configs)
-            else:
+            setattr(rulecls, attr, configs)
+            if not configs:
                 import warnings
                 warnings.warn(f"EMPTY '{attr}' attribute for {rulecls}. "
                     "All nodes will be cached.")

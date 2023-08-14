@@ -458,10 +458,9 @@ class TableauxSystem(TableauxSystem):
 
     @classmethod
     def branching_complexity(cls, node: Node, /) -> int:
-        s = node['sentence']
         lastneg = False
         result = 0
-        for oper in s.operators:
+        for oper in node['sentence'].operators:
             if not lastneg and oper is Operator.Negation:
                 lastneg = True
                 continue
@@ -859,10 +858,9 @@ class TabRules(LogicType.TabRules):
         """
         convert = Quantifier.Universal
 
-        def _get_node_targets(self, node: Node, _, /):
-            v, si = self.sentence(node)[1:]
-            yield adds(
-                group(sdnode(self.convert(v, ~si), self.designation)))
+        def _get_sd_targets(self, s, d, /):
+            v, si = s[1:]
+            yield adds(group(sdnode(self.convert(v, ~si), d)))
 
     class ExistentialUndesignated(QuantifierFatRule):
         """

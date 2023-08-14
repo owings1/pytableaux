@@ -61,10 +61,8 @@ class TabRules(FDE.TabRules):
             return bool(self._find_closing_node(node, branch))
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
-            if node.get('designated') is False:
-                s = self.sentence(node)
-                if s is not None:
-                    return branch.find(sdnode(s.negative(), False))
+            if node['designated'] is False:
+                return branch.find(sdnode(self.sentence(node).negative(), False))
 
         @staticmethod
         def example_nodes():

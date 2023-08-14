@@ -92,7 +92,6 @@ class BaseClosureRule(ClosingRule):
         target = self[BranchTarget][branch]
         if target is not None:
             yield target
-            # return group(target)
 
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
         """For calculating a target's closure score. This default
@@ -137,8 +136,9 @@ class BaseSimpleRule(Rule):
 class BaseNodeRule(BaseSimpleRule):
 
     Helpers = group(FilterHelper)
-    #: (FilterHelper) Whether to ignore all ticked nodes.
+    NodeFilters = ()
     ignore_ticked = True
+    '(FilterHelper) Whether to ignore all ticked nodes.'
 
     def example_nodes(self) -> tuple[dict]:
         'Delegates to ``(FilterHelper.example_node(),)``'
