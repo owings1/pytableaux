@@ -23,9 +23,8 @@ from . import k as K
 from . import s4 as S4
 from . import t as T
 
-name = 'S5'
-
 class Meta(K.Meta):
+    name = 'S5'
     title = 'S5 Normal Modal Logic'
     description = (
         'Normal modal logic with a reflexive, symmetric, and transitive '
@@ -67,7 +66,7 @@ class TabRules(S4.TabRules):
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add
         *w'Rw* to *b*.
         """
-        Helpers = MaxWorlds, WorldIndex,
+        Helpers = (MaxWorlds, WorldIndex)
         access = True
         _defaults = dict(is_rank_optim = False)
         modal_operators = Model.modal_operators

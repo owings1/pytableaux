@@ -65,7 +65,7 @@ class RuledocInherit(AutodocProcessor):
         base: type[Rule] = obj.mro()[1]
         logic = registry.locate(base)
         self += (
-            f'*This rule is the same as* :class:`{logic.name} {base.name} '
+            f'*This rule is the same as* :class:`{logic.Meta.name} {base.name} '
             f'<{base.__module__}.{base.__qualname__}>`')
         self += base.__doc__
 
@@ -82,7 +82,7 @@ class RuledocExample(AutodocProcessor):
         self.lines.clear()
         self += f"""
         .. tableau::
-            :logic: {logic.name}
+            :logic: {logic.Meta.name}
             :rule: {rule.name}
             :legend:
         """
@@ -100,7 +100,7 @@ class BuildtrunkExample(AutodocProcessor):
         logic = registry.locate(self.record.obj)
         self += f"""
         .. tableau::
-            :logic: {logic.name}
+            :logic: {logic.Meta.name}
             :build-trunk:
             :prolog:
         """

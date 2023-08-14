@@ -23,9 +23,8 @@ from ..proof.rules import BaseClosureRule
 from ..tools import qsetf, group
 from . import fde as FDE
 
-name = 'LP'
-
 class Meta(FDE.Meta):
+    name = 'LP'
     title = 'Logic of Paradox'
     description = 'Three-valued logic (T, F, B)'
     category_order = 100

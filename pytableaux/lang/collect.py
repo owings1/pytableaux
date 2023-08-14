@@ -27,7 +27,7 @@ from collections.abc import Sequence
 from itertools import repeat
 from typing import Any, Iterable
 
-from .. import __docformat__, tools
+from .. import tools
 from ..errors import Emsg, check
 from ..tools import abcs, lazy, membr, qset, wraps
 from . import LangCommonMeta, Predicate, Sentence

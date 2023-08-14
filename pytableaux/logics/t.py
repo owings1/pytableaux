@@ -17,14 +17,13 @@
 from __future__ import annotations
 
 from ..lang import Atomic
-from ..proof import WorldPair, Branch, Node, adds, anode, swnode
+from ..proof import WorldPair, Branch, Node, adds, swnode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
 
-name = 'T'
-
 class Meta(K.Meta):
+    name = 'T'
     title = 'Reflexive Normal Modal Logic'
     description = 'Normal modal logic with a reflexive access relation'
     category_order = 3
@@ -68,7 +67,7 @@ class TabRules(K.TabRules):
             for w in node.worlds:
                 access = WorldPair(w, w)
                 if not self[WorldIndex].has(branch, access):
-                    yield adds(group(anode(*access)), world = w)
+                    yield adds(group(access.tonode()), world = w)
                     return
 
         @staticmethod

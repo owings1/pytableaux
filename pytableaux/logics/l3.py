@@ -23,10 +23,9 @@ from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 
-name = 'L3'
-
 class Meta(K3.Meta):
-    title       = u'Łukasiewicz 3-valued Logic'
+    name = 'L3'
+    title = u'Łukasiewicz 3-valued Logic'
     description = (
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator')
@@ -62,8 +61,8 @@ class TabRules(K3.TabRules):
         a node with the consequent, and a node with the negation of the consequent.
         Then tick *n*.
         """
-        operator    = Operator.Conditional
-        designation = True
+        # operator    = Operator.Conditional
+        # designation = True
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
@@ -86,8 +85,8 @@ class TabRules(K3.TabRules):
         add undesignated nodes for the antecedent and its negation, and a designated
         with the negation of the consequent. Then tick *n*.   
         """
-        operator    = Operator.Conditional
-        designation = False
+        # operator    = Operator.Conditional
+        # designation = False
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
@@ -112,8 +111,8 @@ class TabRules(K3.TabRules):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-        operator    = Operator.Biconditional
-        designation = True
+        # operator    = Operator.Biconditional
+        # designation = True
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
@@ -135,8 +134,8 @@ class TabRules(K3.TabRules):
         node with the same operands. On *b''* add an undesignated conditional node
         with the reversed operands. Then tick *n*.
         """
-        operator    = Operator.Biconditional
-        designation = False
+        # operator    = Operator.Biconditional
+        # designation = False
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
@@ -154,9 +153,9 @@ class TabRules(K3.TabRules):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-        negated     = True
-        operator    = Operator.Biconditional
-        designation = False
+        # negated     = True
+        # operator    = Operator.Biconditional
+        # designation = False
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):

@@ -331,7 +331,7 @@ class ApiProveView(ApiView):
         self.tableau = self.build()
         return dict(
             tableau = dict(
-                logic = self.logic.name,
+                logic = self.logic.Meta.name,
                 argument = dict(
                     premises   = tuple(map(self.pw.lw, self.argument.premises)),
                     conclusion = self.pw.lw(self.argument.conclusion)),
@@ -352,16 +352,16 @@ class ApiProveView(ApiView):
         logic = self.logic
         with StopWatch() as timer:
             if metrics:
-                metrics.proofs_inprogress_count(logic.name).inc()
+                metrics.proofs_inprogress_count(logic.Meta.name).inc()
             tab = Tableau(logic, self.argument, **self.tabopts)
             try:
                 tab.build()
                 if metrics:
-                    metrics.proofs_completed_count(logic.name, tab.stats['result']).inc()
+                    metrics.proofs_completed_count(logic.Meta.name, tab.stats['result']).inc()
             finally:
                 if metrics:
-                    metrics.proofs_inprogress_count(logic.name).dec()
-                    metrics.proofs_execution_time(logic.name).observe(timer.elapsed_secs())
+                    metrics.proofs_inprogress_count(logic.Meta.name).dec()
+                    metrics.proofs_execution_time(logic.Meta.name).observe(timer.elapsed_secs())
         return tab
 
     def get_logic(self):

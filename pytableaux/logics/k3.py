@@ -22,10 +22,9 @@ from ..proof import Branch, Node, Target, sdnode
 from ..proof.rules import BaseClosureRule
 from . import fde as FDE
 
-name = 'K3'
-
 class Meta(FDE.Meta):
-    title       = 'Strong Kleene Logic'
+    name = 'K3'
+    title = 'Strong Kleene Logic'
     description = 'Three-valued logic (T, F, N)'
     category_order = 20
     tags = (

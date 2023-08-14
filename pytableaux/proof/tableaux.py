@@ -30,7 +30,6 @@ from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator,
                     Mapping, Optional, Self, Sequence, SupportsIndex, TypeVar,
                     final)
 
-from .. import __docformat__
 from ..errors import Emsg, ProofTimeoutError, check
 from ..lang.collect import Argument
 from ..lang.lex import Sentence
@@ -511,7 +510,7 @@ class RuleGroups(Sequence[RuleGroup]):
 
     def __repr__(self):
         logic = self.root.tableau.logic
-        lname = logic.name if logic else None
+        lname = logic.Meta.name if logic else None
         return (f'<{type(self).__name__} logic:{lname} groups:{len(self)} '
             f'names:{list(self.names())} rules:{sum(map(len, self))}>')
 
@@ -587,7 +586,7 @@ class RulesRoot(Sequence[Rule]):
 
     def __repr__(self):
         logic = self.tableau.logic
-        lname = logic.name if logic else None
+        lname = logic.Meta.name if logic else None
         return (f'<{type(self).__name__} logic:{lname} '
             f'groups:{len(self.groups)} rules:{len(self)}>')
 
@@ -973,7 +972,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     def __repr__(self):
         info = dict(
             id    = self.id,
-            logic = (self.logic and self.logic.name),
+            logic = (self.logic and self.logic.Meta.name),
             len   = len(self),
             open  = len(self.open),
             step  = self.current_step,

@@ -33,7 +33,7 @@ class TestArguments(Base):
 class TestOperatorRules(Base):
 
     def test_Negation(self):
-        self.assertEqual(self.logic.name, 'P3')
+        self.assertEqual(self.logic.Meta.name, 'P3')
         rtd = self.rule_eg('DoubleNegationDesignated')
 
         rule, tab = rtd

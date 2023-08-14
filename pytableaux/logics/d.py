@@ -25,9 +25,8 @@ from ..proof.rules import BaseSimpleRule
 from ..tools import group
 from . import k as K
 
-name = 'D'
-
 class Meta(K.Meta):
+    name = 'D'
     title = 'Deontic Normal Modal Logic'
     description = 'Normal modal logic with a serial access relation'
     category_order = 2
@@ -69,7 +68,7 @@ class TabRules(K.TabRules):
         node to *b* with *w* as world1, and *w1* as world2, where *w1* does not
         yet appear on *b*.
         """
-        Helpers =  MaxWorlds, UnserialWorlds,
+        Helpers = (MaxWorlds, UnserialWorlds)
         modal_operators = Model.modal_operators
         ignore_ticked = False
         ticking = False

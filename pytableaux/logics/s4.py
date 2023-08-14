@@ -24,9 +24,8 @@ from ..tools import group
 from . import k as K
 from . import t as T
 
-name = 'S4'
-
 class Meta(K.Meta):
+    name = 'S4'
     title = 'S4 Normal Modal Logic'
     description = 'Normal modal logic with a reflexive and transitive access relation'
     category_order = 4

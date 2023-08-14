@@ -26,7 +26,6 @@ from abc import abstractmethod as abstract
 from types import MappingProxyType as MapProxy
 from typing import Any, Callable, Mapping, NamedTuple
 
-from .. import __docformat__
 from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
                     Sentence)
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, thru

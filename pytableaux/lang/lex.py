@@ -27,9 +27,9 @@ from abc import abstractmethod
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar, Iterator, Literal, Mapping, Self, Sequence, Set
+from typing import Any, ClassVar, Iterator, Mapping, Self, Sequence, Set
 
-from .. import _ENV, __docformat__, errors
+from .. import _ENV, errors
 from ..errors import Emsg, check
 from ..tools import (EMPTY_SEQ, EMPTY_SET, abcs, closure, dund, lazy, membr,
                      qsetf, wraps)

@@ -22,17 +22,14 @@ pytableaux.proof
 from __future__ import annotations
 
 from abc import abstractmethod
-from enum import Enum, Flag, auto
+from enum import Enum, Flag
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, NamedTuple, Self, Sequence, TypeVar
+from typing import Any, NamedTuple, Self, Sequence, TypeVar
 
 from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
 from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from ..tools.timing import Counter, StopWatch
-
-if TYPE_CHECKING:
-    from ..proof import Rule
 
 _TT = TypeVar('_TT', bound=type)
 
@@ -41,7 +38,6 @@ __all__ = (
     'anode',
     'Branch',
     'ClosingRule',
-    'group',
     'Node',
     'Rule',
     'sdnode',
@@ -158,7 +154,6 @@ class TableauMeta(abcs.AbcMeta):
 
     class Flag(Flag):
         'Tableau state bit flags.'
-        # NONE   = 0
         TICKED = 1
         CLOSED = 2
         PREMATURE = 4
@@ -215,7 +210,7 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
 
         Args:
             node (Node): The node instance.
-        
+
         Returns:
             int: The number of new branches.
         """
@@ -304,14 +299,20 @@ class RuleMeta(abcs.AbcMeta):
     def __prepare__(cls, clsname, bases, **kw):
         return dict(__slots__ = EMPTY_SET, name = clsname)
 
-    def __new__(cls, clsname, bases, ns, /, modal = NOARG, **kw):
+    def __new__(cls, clsname, bases, ns, **kw):
         rulecls: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
-        if modal is not NOARG:
-            rulecls.modal = modal
         abcs.merge_attr(rulecls, '_defaults', mcls = cls,
             default = {}, transform = MapProxy)
         abcs.merge_attr(rulecls, 'timer_names', mcls = cls,
             default = EMPTY_QSET, transform = qsetf)
+        autoattrs = getattr(rulecls, 'autoattrs', None)
+        if autoattrs:
+            attrs = rulecls.induce_attrs()
+            # if not attrs:
+            #     raise TypeError(f'Cannot induce autoattrs from {rulecls}')
+            if attrs:
+                for name, value in attrs.items():
+                    setattr(rulecls, name, value)
         configs: dict[type[Rule.Helper], Any] = {}
         for parent in abcs.mroiter(rulecls, mcls = cls):
             v = parent.Helpers
@@ -325,16 +326,16 @@ class RuleMeta(abcs.AbcMeta):
         rulecls.Helpers = MapProxy(configs)
         for helpercls, _ in configs.items():
             configs[helpercls] = helpercls.configure_rule(rulecls, ...)
-        if modal is False:
+        if rulecls.modal is False:
             rulecls.disable_filter(filters.ModalNode)
         rulecls.legend = tuple(cls.Legend.make(rulecls))
-        autoattrs = rulecls.induce_attrs()
-        if autoattrs:
-            # rulecls._autoattrs = MapProxy(autoattrs)
-            for name, value in autoattrs.items():
-                old = getattr(rulecls, name)
-                if old != value:
-                    print(f'{rulecls=} {name=} {old=} {value=}')
+        # if autoattrs:
+        #     # rulecls._autoattrs = MapProxy(autoattrs)
+        #     for name, value in autoattrs.items():
+        #         old = getattr(rulecls, name)
+        #         if old != value:
+        #             pass
+        #             # print(f'{rulecls=} {name=} {old=} {value=}')
         return rulecls
 
     def disable_filter(self: Self|type[Rule], filtercls):
@@ -475,16 +476,17 @@ def anode(w1, w2):
         Node.Key.world1: w1,
         Node.Key.world2: w2})
 
-from ..tools import group as group
 from .common import AccessNode, Branch
 from .common import ClosureNode as ClosureNode
 from .common import Designation as Designation
 from .common import EllipsisNode as EllipsisNode
 from .common import FlagNode as FlagNode
-from .common import Node
+from .common import Node as Node
 from .common import QuitFlagNode as QuitFlagNode
-from .common import (SentenceDesignationNode, SentenceNode, SentenceWorldNode,
-                     Target)
+from .common import SentenceDesignationNode as SentenceDesignationNode
+from .common import SentenceNode as SentenceNode
+from .common import SentenceWorldNode as SentenceWorldNode
+from .common import Target as Target
 from .tableaux import Rule as Rule
 from .tableaux import RulesRoot as RulesRoot
 from .tableaux import RuleGroup as RuleGroup
@@ -496,5 +498,6 @@ pass
 from .rules import ClosingRule as ClosingRule
 
 pass
-from . import filters, helpers
-from .writers import TabWriter
+from . import filters as filters
+from . import helpers as helpers
+from .writers import TabWriter as TabWriter

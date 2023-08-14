@@ -34,7 +34,7 @@ from enum import auto as eauto
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Callable, Iterator, Sequence, TypeVar
 
-from .. import __docformat__, tools
+from .. import tools
 from ..tools import EMPTY_SET, thru
 from ..errors import Emsg, check
 

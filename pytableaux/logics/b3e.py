@@ -23,10 +23,9 @@ from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
 
-name = 'B3E'
-
 class Meta(K3.Meta):
-    title       = 'Bochvar 3 External Logic'
+    name = 'B3E'
+    title = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 50
     native_operators = FDE.Meta.native_operators + group(Operator.Assertion)
@@ -75,9 +74,9 @@ class TabRules(K3W.TabRules):
         From an unticked, designated, negated assertion node *n* on a branch *b*,
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
         """
-        designation = True
-        negated     = True
-        operator    = Operator.Assertion
+        # designation = True
+        # negated     = True
+        # operator    = Operator.Assertion
 
         def _get_sd_targets(self, s, d, /):
             # Keep designation fixed to False for inheritance below
@@ -88,17 +87,17 @@ class TabRules(K3W.TabRules):
         From an unticked, undesignated assertion node *n* on a branch *b*, add
         an undesignated node to *b* with the assertion of *n*, then tick *n*.
         """
-        designation = False
-        negated     = None
+        # designation = False
+        # negated     = None
 
     class AssertionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
         a designated node to *b* with the assertion of *n*, then tick *n*.
         """
-        designation = False
-        negated     = True
-        operator    = Operator.Assertion
+        # designation = False
+        # negated     = True
+        # operator    = Operator.Assertion
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, not d)))
@@ -110,8 +109,8 @@ class TabRules(K3W.TabRules):
         first disjunction is the negation of the assertion of the antecedent,
         and the second disjunct is the assertion of the consequent. Then tick *n*.
         """
-        designation = True
-        operator    = Operator.Conditional
+        # designation = True
+        # operator    = Operator.Conditional
 
         def _get_sd_targets(self, s, d, /):
             sn = ~s.lhs.asserted() | s.rhs.asserted()
@@ -127,9 +126,9 @@ class TabRules(K3W.TabRules):
         add a designated node with the antecedent, and an undesigntated node
         with the consequent to *b*. Then tick *n*.
         """
-        designation = True
-        negated     = True
-        operator    = Operator.Conditional
+        # designation = True
+        # negated     = True
+        # operator    = Operator.Conditional
 
         def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.
@@ -142,8 +141,8 @@ class TabRules(K3W.TabRules):
         add a designated node with the antecedent, and an undesigntated node
         with the consequent to *b*. Then tick *n*.
         """
-        designation = False
-        negated     = None
+        # designation = False
+        # negated     = None
 
     class ConditionalNegatedUndesignated(ConditionalDesignated):
         """
@@ -151,8 +150,8 @@ class TabRules(K3W.TabRules):
         add an undesignated node to *b* with a negated material conditional, where the
         operands are preceded by the Assertion operator, then tick *n*.
         """
-        designation = False
-        negated     = True
+        # designation = False
+        # negated     = True
 
     class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -162,8 +161,8 @@ class TabRules(K3W.TabRules):
         the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-        designation = True
-        operator    = Operator.Biconditional
+        # designation = True
+        # operator    = Operator.Biconditional
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
@@ -187,8 +186,8 @@ class TabRules(K3W.TabRules):
         is the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-        designation = True
-        negated     = True
+        # designation = True
+        # negated     = True
 
     class BiconditionalUndesignated(BiconditionalDesignated):
         """
@@ -198,8 +197,8 @@ class TabRules(K3W.TabRules):
         is the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-        designation = False
-        negated     = None
+        # designation = False
+        # negated     = None
 
     class BiconditionalNegatedUndesignated(BiconditionalUndesignated):
         """
@@ -209,8 +208,8 @@ class TabRules(K3W.TabRules):
         is the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-        designation = False
-        negated     = True
+        # designation = False
+        # negated     = True
 
     rule_groups = (
         (

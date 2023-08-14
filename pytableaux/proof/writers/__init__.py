@@ -25,7 +25,6 @@ from abc import abstractmethod
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Callable, MutableMapping, Self, TypeVar
 
-from ... import __docformat__
 from ...errors import Emsg, check
 from ...lang import LexWriter, Notation
 from ...tools import EMPTY_MAP, MapCover, abcs

@@ -19,13 +19,12 @@ pytableaux.tools.linked
 """
 from __future__ import annotations
 
-from abc import abstractmethod as abstract
+from abc import abstractmethod
 from enum import IntEnum
 from itertools import filterfalse
 from typing import (Any, Collection, Iterator, MutableSequence,
                     Optional, Sequence, SupportsIndex, TypeVar)
 
-from .. import __docformat__
 from ..errors import Emsg
 from ..errors import check as echeck
 from . import EMPTY_SET, abcs, absindex, slicerange
@@ -200,7 +199,7 @@ class LinkSequence(Sequence[_T], abcs.Copyable):
 
     __slots__ = ('__link_first__', '__link_last__')
 
-    @abstract
+    @abstractmethod
     def __new__(cls, *args, **kw):
         inst = super().__new__(cls)
         inst.__link_first__ = None

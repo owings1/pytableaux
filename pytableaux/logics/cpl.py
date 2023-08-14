@@ -21,11 +21,10 @@ from ..proof import Branch, Node, Tableau, snode
 from . import k as K
 from . import LogicType
 
-name = 'CPL'
-
-class Meta:
-    title       = 'Classical Predicate Logic'
-    category    = 'Bivalent'
+class Meta(LogicType.Meta):
+    name = 'CPL'
+    title = 'Classical Predicate Logic'
+    category = 'Bivalent'
     description = 'Standard bivalent logic with predication, without quantification'
     category_order = 1
     tags = (

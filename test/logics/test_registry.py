@@ -44,3 +44,8 @@ class TestRegistry(Base):
         res = list(reg.all())
         self.assertEqual(set(res), set(f'pytableaux.logics.{x}' for x in logics.__all__))
         self.assertEqual(res, list(registry.package_all('pytableaux.logics')))
+
+    def test_meta_names(self):
+        registry.import_all()
+        for logic in registry.values():
+            self.assertEqual(logic.Meta.name, logic.__name__.split('.')[-1].upper())

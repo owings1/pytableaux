@@ -31,7 +31,6 @@ from types import MappingProxyType as MapProxy
 from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, Any
 
-from .. import __docformat__
 from ..errors import Emsg, check
 from ..lang import Operator
 from ..tools import EMPTY_SET, abcs, closure, qset
@@ -51,11 +50,12 @@ class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None)
     "Stub class definition for a logic interface."
     name: str
     class Meta:
+        name: str
         category: str
         description: str
         category_order: int
-        tags: tuple
-        native_operators: tuple[Operator, ...]
+        tags: tuple = ()
+        native_operators: tuple[Operator, ...] = ()
     TableauxSystem: type[TableauxSystem]
     Model: type[BaseModel]
     class TabRules:
@@ -271,8 +271,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
     def import_all(self):
         """Import all logics for all registry packages. See ``.import_package()``.
         """
-        for pkgname in self.packages:
-            self.import_package(pkgname)
+        for _ in map(self.import_package, self.packages): pass
 
     def import_package(self, package: str|ModuleType, /):
         """Import all logic modules for a package. Uses the ``__all__`` attribute
@@ -331,11 +330,12 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
             logic: The logic module.
         
         Returns:
-            The tuple with the keys, as sepcified in ``.get()``.
+            Generator for the keys, as sepcified in ``.get()``.
         """
-        return (
-            logic, logic.name, logic.__name__,
-            logic.__name__.split('.')[-1].lower())
+        yield logic
+        yield logic.Meta.name
+        yield logic.__name__
+        yield logic.__name__.split('.')[-1].lower()
         
     @staticmethod
     def _package_all(package: ModuleType, /):
@@ -379,14 +379,9 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
                 raise Emsg.DuplicateKey(key)
             super().__setitem__(key, value)
 
-        def update(self, mapping = None, **kw):
+        def update(self, *args, **kw):
             # Check all keys before updating.
-            if mapping is None:
-                upd = kw
-            elif len(kw):
-                upd = dict(mapping, **kw)
-            else:
-                upd = dict(mapping)
+            upd = dict(*args, **kw)
             for key in upd:
                 if key in self:
                     raise Emsg.DuplicateKey(key)
@@ -398,27 +393,27 @@ def key_category_order(logic: LogicType) -> int:
     return logic.Meta.category_order
 
 
+registry: Registry = Registry()
+"The default built-in registry"
+
+registry.packages.add(__package__)
+
+
 @closure
 def instancecheck():
 
+    from ..proof import TableauxSystem
+    from ..models import BaseModel
+
+    LogicType.TableauxSystem = TableauxSystem
+    LogicType.Model = BaseModel
+
     def validate(obj):
         check.inst(obj, ModuleType)
-        check.inst(obj.name, str)
-        check.inst(obj.TabRules, type)
-        check.inst(obj.Model, type)
-        validate_tabsys(obj.TableauxSystem)
-        validate_meta(obj.Meta)
-
-    def validate_tabsys(tabsys):
-        check.callable(tabsys.build_trunk)
-        check.callable(tabsys.add_rules)
-        check.callable(tabsys.branching_complexity)
-
-    def validate_meta(meta):
-        meta.category
-        meta.description
-        meta.category_order
-        meta.tags
+        check.subcls(obj.TabRules, LogicType.TabRules)
+        check.subcls(obj.Meta, LogicType.Meta)
+        check.subcls(obj.TableauxSystem, LogicType.TableauxSystem)
+        check.subcls(obj.Model, LogicType.Model)
 
     cache = set()
 
@@ -429,16 +424,9 @@ def instancecheck():
                 validate(obj)
             except:
                 return False
-            else:
-                cache.add(key)
+            cache.add(key)
         return True
 
     type(LogicType).__instancecheck__ = staticmethod(instancecheck)
 
     return instancecheck
-
-
-registry: Registry = Registry()
-"The default built-in registry"
-
-registry.packages.add(__package__)

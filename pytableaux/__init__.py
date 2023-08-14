@@ -20,7 +20,7 @@ pytableaux
 
 """
 from __future__ import annotations
-
+import os
 # ----- package info
 
 from ._package_info import package as package
@@ -44,16 +44,11 @@ class _Settings:
     ITEM_CACHE_SIZE: int
     DOC_MODE: bool
 
-_ENV: _Settings
+_ENV = _Settings(
+    DEBUG = tools.sbool(os.getenv('DEBUG', '')),
+    ITEM_CACHE_SIZE = int(os.getenv('ITEM_CACHE_SIZE', 1000) or 0),
+    DOC_MODE = tools.sbool(os.getenv('DOC_MODE', '')))
 
-@tools.closure
-def _():
-    from os import environ as env
-    global _ENV
-    _ENV = _Settings(
-        DEBUG = tools.sbool(env.get('DEBUG', '')),
-        ITEM_CACHE_SIZE = int(env.get('ITEM_CACHE_SIZE', 1000) or 0),
-        DOC_MODE = tools.sbool(env.get('DOC_MODE', '')))
 
 del(dataclasses,_Settings)
 

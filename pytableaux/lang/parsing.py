@@ -25,9 +25,8 @@ from abc import abstractmethod as abstract
 from collections import deque
 from enum import Enum
 from types import MappingProxyType as MapProxy
-from typing import Callable, ClassVar, Iterable, Mapping
+from typing import ClassVar, Iterable, Mapping
 
-from .. import __docformat__
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
                       UnboundVariableError)
 from ..tools import (EMPTY_SET, MapCover, abcs, for_defaults, itemsiter, key0,

@@ -23,9 +23,8 @@ from . import fde as FDE
 from . import k3 as K3
 from . import l3 as L3
 
-name = 'G3'
-
 class Meta(L3.Meta):
+    name = 'G3'
     title = 'Gödel 3-valued Logic'
     description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
     category_order = 90
@@ -52,9 +51,9 @@ class TabRules(L3.TabRules):
         From an unticked, designated double-negation node `n` on a branch `b`,
         add an undesignated node with the negatum of `n`. Then tick `n`.
         """
-        designation = True
-        negated     = True
-        operator    = Operator.Negation
+        # designation = True
+        # negated     = True
+        # operator    = Operator.Negation
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s, not d)))
@@ -64,7 +63,7 @@ class TabRules(L3.TabRules):
         From an unticked, undesignated double-negation node `n` on a branch `b`,
         add a designated node with the negatum of `n`. Then tick `n`.
         """
-        designation = False
+        # designation = False
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -75,9 +74,9 @@ class TabRules(L3.TabRules):
         the negation of the antecedent, and one designated node with the negation
         of the consequent. Then tick `n`.
         """
-        designation = True
-        negated     = True
-        operator    = Operator.Conditional
+        # designation = True
+        # negated     = True
+        # operator    = Operator.Conditional
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
@@ -98,9 +97,9 @@ class TabRules(L3.TabRules):
         node with the negation of the antecedent. On `b''` add an undesignated
         node with the negation of the consequent. Then tick `n`.
         """
-        designation = False
-        negated     = True
-        operator    = Operator.Conditional
+        # designation = False
+        # negated     = True
+        # operator    = Operator.Conditional
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
@@ -112,35 +111,35 @@ class TabRules(L3.TabRules):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        designation = True
-        operator    = Operator.Biconditional
+        # designation = True
+        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        designation = True
-        negated     = True
-        operator    = Operator.Biconditional
+        # designation = True
+        # negated     = True
+        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        designation = False
-        negated     = None
-        operator    = Operator.Biconditional
+        # designation = False
+        # negated     = None
+        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        designation = False
-        negated     = True
-        operator    = Operator.Biconditional
+        # designation = False
+        # negated     = True
+        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     rule_groups = (

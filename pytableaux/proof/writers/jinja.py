@@ -28,7 +28,6 @@ from typing import Sequence
 
 import jinja2
 
-from ... import __docformat__
 from ...lang import Marking, Notation, RenderSet
 from ...tools import EMPTY_SET, qset
 from ..tableaux import Tableau

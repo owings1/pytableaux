@@ -1,6 +1,6 @@
 {% set stats = tab.stats %}
 {% set logic = tab.logic %}
-{% set desc = [logic.name, logic.Meta.title]|join(' - ') %}
+{% set desc = [logic.Meta.name, logic.Meta.title]|join(' - ') %}
 {% set col1len = 17 %}
 {% set col2len = desc|length %}
 {% set f = "%-" + ((1 + col2len)|string) + 's' %}

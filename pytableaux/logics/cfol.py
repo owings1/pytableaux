@@ -20,11 +20,10 @@ from ..lang import Quantified
 from . import cpl as CPL
 from . import k as K
 
-name = 'CFOL'
-
 class Meta(CPL.Meta):
-    title       = 'Classical First Order Logic'
-    category    = 'Bivalent'
+    name = 'CFOL'
+    title = 'Classical First Order Logic'
+    category = 'Bivalent'
     description = 'Standard bivalent logic with full first-order quantification'
     category_order = 2
     tags = (

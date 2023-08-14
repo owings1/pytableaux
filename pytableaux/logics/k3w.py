@@ -22,10 +22,9 @@ from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 
-name = 'K3W'
-
 class Meta(K3.Meta):
-    title       = 'Weak Kleene Logic'
+    name = 'K3W'
+    title = 'Weak Kleene Logic'
     description = 'Three-valued logic with values T, F, and N'
     category_order = 30
 
@@ -65,9 +64,9 @@ class TabRules(K3.TabRules):
         conjunct, and a designated node with the second conjunct. On *b'''* add
         designated nodes with the negation of each conjunct. Then tick *n*.
         """
-        negated     = True
-        designation = True
-        operator    = Operator.Conjunction
+        # negated     = True
+        # designation = True
+        # operator    = Operator.Conjunction
         branching   = 2
 
         def _get_sd_targets(self, s, d, /):
@@ -85,9 +84,9 @@ class TabRules(K3.TabRules):
         second conjunct and its negation. On *b'''* add a designated node for each conjunct.
         Then tick *n*. 
         """
-        negated     = True
-        operator    = Operator.Conjunction
-        designation = False
+        # negated     = True
+        # operator    = Operator.Conjunction
+        # designation = False
         branching   = 2
 
         def _get_sd_targets(self, s, d, /):
@@ -106,8 +105,8 @@ class TabRules(K3.TabRules):
         disjunct, and a designated node with the second disjunct. On *b'''* add a
         designated node with each disjunct. Then tick *n*.
         """
-        operator    = Operator.Disjunction
-        designation = True
+        # operator    = Operator.Disjunction
+        # designation = True
         branching   = 2
 
         def _get_sd_targets(self, s, d, /):
@@ -125,8 +124,8 @@ class TabRules(K3.TabRules):
         second disjunct and its negation. On *b'''* add designated nodes for the negation
         of each disjunct. Then tick *n*.
         """
-        operator    = Operator.Disjunction
-        designation = False
+        # operator    = Operator.Disjunction
+        # designation = False
         branching   = 2
 
         def _get_sd_targets(self, s, d, /):
@@ -146,9 +145,9 @@ class TabRules(K3.TabRules):
         negation, respectively. On *b'''* add undesignated nodes with the second
         disjunct and its negation, respectively. Then tick *n*.
         """
-        negated     = True
-        designation = False
-        operator    = Operator.Disjunction
+        # negated     = True
+        # designation = False
+        # operator    = Operator.Disjunction
         branching   = 2
 
         def _get_sd_targets(self, s, d, /):
@@ -161,8 +160,8 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        operator    = Operator.MaterialConditional
-        designation = True
+        # operator    = Operator.MaterialConditional
+        # designation = True
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs | s.rhs, d)))
@@ -171,9 +170,9 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a negated disjunction.
         """
-        negated     = True
-        operator    = Operator.MaterialConditional
-        designation = True
+        # negated     = True
+        # operator    = Operator.MaterialConditional
+        # designation = True
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
@@ -182,92 +181,92 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        negated     = None
-        designation = False
+        # negated     = None
+        # designation = False
 
     class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated):
         """
         This rule reduces to a negated disjunction.
         """
-        negated     = True
-        designation = False
+        # negated     = True
+        # designation = False
 
     class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        designation = True
-        operator    = Operator.MaterialBiconditional
+        # designation = True
+        # operator    = Operator.MaterialBiconditional
         conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
-        negated     = True
-        designation = True
-        operator    = Operator.MaterialBiconditional
+        # negated     = True
+        # designation = True
+        # operator    = Operator.MaterialBiconditional
         conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        designation = False
+        # designation = False
 
     class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
-        designation = False
+        # designation = False
 
     class ConditionalDesignated(MaterialConditionalDesignated):
         """
         Same as for the material conditional designated.
         """
-        operator = Operator.Conditional
+        # operator = Operator.Conditional
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
         Same as for the negated material conditional designated.
         """
-        operator = Operator.Conditional
+        # operator = Operator.Conditional
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
         Same as for the material conditional undesignated.
         """
-        operator = Operator.Conditional
+        # operator = Operator.Conditional
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
         Same as for the negated material conditional undesignated.
         """
-        operator = Operator.Conditional
+        # operator = Operator.Conditional
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
         Same as for the material biconditional designated.
         """
-        operator = Operator.Biconditional
+        # operator = Operator.Biconditional
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
         Same as for the negated material biconditional designated.
         """
-        operator = Operator.Biconditional
+        # operator = Operator.Biconditional
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
         Same as for the material biconditional undesignated.
         """
-        operator = Operator.Biconditional
+        # operator = Operator.Biconditional
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
         Same as for the negated material biconditional undesignated.
         """
-        operator = Operator.Biconditional
+        # operator = Operator.Biconditional
 
     rule_groups = (
         (

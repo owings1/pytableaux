@@ -28,7 +28,7 @@ import prometheus_client.metrics as pm
 import prometheus_client.metrics_core as pmc
 from prometheus_client.registry import CollectorRegistry
 
-from .. import __docformat__, package
+from .. import package
 from ..tools import MapCover, abcs
 
 if TYPE_CHECKING:

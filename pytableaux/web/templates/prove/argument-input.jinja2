@@ -57,9 +57,9 @@
         {% for category, group in logic_categories.items() -%}
             <optgroup label="{{ category|e }}">
                 {% for logic in group -%}
-                    {%- set namelc = logic.name.lower() -%}
+                    {%- set namelc = logic.Meta.name.lower() -%}
                     <option value="{{ namelc|e }}" {{- helper.select_opt(form_data, 'logic', namelc) }}>
-                        {{- logic.name|e -}}
+                        {{- logic.Meta.name|e -}}
                     </option>
                 {% endfor %}
             </optgroup>
