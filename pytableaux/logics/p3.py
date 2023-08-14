@@ -384,7 +384,7 @@ class TabRules(K3.TabRules):
         of `r` to `b`. If there are no constants yet on `b`, use a new constant.
         The node `n` is never ticked.
         """
-        designation = True
+        designation = None
         negated     = True
         quantifier  = Quantifier.Existential
 
@@ -402,7 +402,7 @@ class TabRules(K3.TabRules):
         `b`. The node is never ticked.
         """
         designation = True
-        negated     = False
+        negated     = None
         quantifier  = Quantifier.Universal
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
@@ -434,7 +434,7 @@ class TabRules(K3.TabRules):
         a constant new to `b` for the variable. Then tick `n`.
         """
         designation = False
-        negated     = False
+        negated     = None
 
     class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """

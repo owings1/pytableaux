@@ -64,3 +64,9 @@ class TestQuantifierRules(Base):
         self.rule_eg(f'{q.name}Undesignated')
         self.rule_eg(f'{q.name}NegatedDesignated')
         self.rule_eg(f'{q.name}NegatedUndesignated')
+    def test_Existential(self):
+        q = Quantifier.Existential
+        self.rule_eg(f'{q.name}Designated')
+        self.rule_eg(f'{q.name}Undesignated')
+        self.rule_eg(f'{q.name}NegatedDesignated')
+        self.rule_eg(f'{q.name}NegatedUndesignated')
