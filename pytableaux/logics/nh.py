@@ -19,6 +19,7 @@ from __future__ import annotations
 from ..lang import Operator, Quantified
 from ..proof import adds, sdnode
 from ..tools import group
+from . import LogicType
 from . import fde as FDE
 from . import lp as LP
 from . import mh as MH
@@ -70,7 +71,7 @@ class TableauxSystem(LP.TableauxSystem):
         Operator.Biconditional: ((0, 0), (0, 0))}
 
 @TableauxSystem.initialize
-class TabRules(LP.TabRules):
+class TabRules(LogicType.TabRules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -178,11 +179,6 @@ class TabRules(LP.TabRules):
         This rule reduces to a negated conjunction of material conditionals.
         """
 
-    ConditionalDesignated = MH.TabRules.ConditionalDesignated
-    ConditionalNegatedDesignated = MH.TabRules.ConditionalNegatedDesignated
-    ConditionalUndesignated = MH.TabRules.ConditionalUndesignated
-    ConditionalNegatedUndesignated = MH.TabRules.ConditionalNegatedUndesignated
-
     class BiconditionalDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
@@ -205,14 +201,7 @@ class TabRules(LP.TabRules):
         This rule reduces to a negated conjunction of conditionals.
         """
 
-    ExistentialDesignated = None
-    ExistentialNegatedDesignated = None
-    ExistentialUndesignated = None
-    ExistentialNegatedUndesignated = None
-    UniversalDesignated = None
-    UniversalNegatedDesignated = None
-    UniversalUndesignated = None
-    UniversalNegatedUndesignated = None
+    closure_rules = LP.TabRules.closure_rules
 
     rule_groups = (
         # Non-branching rules.
@@ -232,8 +221,8 @@ class TabRules(LP.TabRules):
             MaterialBiconditionalNegatedDesignated,
             MaterialBiconditionalUndesignated,
             MaterialBiconditionalNegatedUndesignated,
-            ConditionalUndesignated,
-            ConditionalNegatedDesignated,
+            MH.TabRules.ConditionalUndesignated,
+            MH.TabRules.ConditionalNegatedDesignated,
             BiconditionalDesignated,
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
@@ -247,8 +236,8 @@ class TabRules(LP.TabRules):
             ConjunctionNegatedUndesignated,
             FDE.TabRules.DisjunctionDesignated,
             FDE.TabRules.DisjunctionNegatedUndesignated,
-            ConditionalDesignated,
-            ConditionalNegatedUndesignated,
+            MH.TabRules.ConditionalDesignated,
+            MH.TabRules.ConditionalNegatedUndesignated,
         ),
         # 3-branching rules.
         (

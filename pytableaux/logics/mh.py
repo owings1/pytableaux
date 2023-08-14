@@ -17,8 +17,9 @@
 from __future__ import annotations
 
 from ..lang import Operator, Quantified, Sentence
-from ..proof import Node, adds, sdnode
+from ..proof import adds, sdnode
 from ..tools import group
+from . import LogicType
 from . import fde as FDE
 from . import k3 as K3
 
@@ -71,7 +72,7 @@ class TableauxSystem(K3.TableauxSystem):
         Operator.Biconditional: ((0, 0), (0, 0))}
 
 @TableauxSystem.initialize
-class TabRules(K3.TabRules):
+class TabRules(LogicType.TabRules):
 
     class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -82,10 +83,8 @@ class TabRules(K3.TabRules):
         """
         branching = 1
 
-        def _get_node_targets(self, node: Node, _, /):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
-            d = self.designation
             yield adds(
                 group(
                     sdnode( lhs, not d),
@@ -119,9 +118,8 @@ class TabRules(K3.TabRules):
         """
         branching = 3
 
-        def _get_node_targets(self, node: Node, _):
-            lhs, rhs = self.sentence(node)
-            d = self.designation
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
             yield adds(
                 group(
                     sdnode(lhs, not d)),
@@ -137,20 +135,16 @@ class TabRules(K3.TabRules):
         This rule reduces to a disjunction.
         """
 
-        def _get_node_targets(self, node: Node, _):
-            lhs, rhs = self.sentence(node)
-            yield adds(
-                group(sdnode(~lhs | rhs, self.designation)))
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(~s.lhs | s.rhs, d)))
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a negated disjunction.
         """
 
-        def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
-            yield adds(
-                group(sdnode(~(~s.lhs | s.rhs), self.designation)))
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
         """
@@ -192,8 +186,7 @@ class TabRules(K3.TabRules):
         """
         branching = 1
 
-        def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.
             yield adds(
                 group(sdnode(s.lhs, False)),
@@ -210,11 +203,9 @@ class TabRules(K3.TabRules):
         Then tick *n*.
         """
 
-        def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.
-            yield adds(
-                group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
+            yield adds(group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):
         """
@@ -261,14 +252,7 @@ class TabRules(K3.TabRules):
         This rule reduces to a negated conjunction of conditionals.
         """
 
-    ExistentialDesignated = None
-    ExistentialNegatedDesignated = None
-    ExistentialUndesignated = None
-    ExistentialNegatedUndesignated = None
-    UniversalDesignated = None
-    UniversalNegatedDesignated = None
-    UniversalUndesignated = None
-    UniversalNegatedUndesignated = None
+    closure_rules = K3.TabRules.closure_rules
 
     rule_groups = (
         # Non-branching rules.

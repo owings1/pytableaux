@@ -362,9 +362,6 @@ class TabRules(B3E.TabRules):
         From an unticked, undesignated universal node *n* on a branch *b*, add a designated
         node to *b* with the negation of the universal sentence, then tick *n*.
         """
-        # designation = False
-        # negated     = None
-        # quantifier  = Quantifier.Universal
 
     class UniversalNegatedUndesignated(ExistentialNegatedUndesignated):
         """

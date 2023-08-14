@@ -75,4 +75,4 @@ class TabRules(FDE.TabRules):
             yield sdnode(a, True)
             yield sdnode(~a, True)
 
-    closure_rules = FDE.TabRules.closure_rules + (GlutClosure,)
+    closure_rules = (GlutClosure,) + FDE.TabRules.closure_rules
