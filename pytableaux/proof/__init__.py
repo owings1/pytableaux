@@ -300,8 +300,7 @@ class RuleMeta(abcs.AbcMeta):
             default = {}, transform = MapProxy)
         abcs.merge_attr(rulecls, 'timer_names', mcls = cls,
             default = EMPTY_QSET, transform = qsetf)
-        autoattrs = getattr(rulecls, 'autoattrs', None)
-        if autoattrs:
+        if rulecls.autoattrs:
             attrs = rulecls.induce_attrs()
             if attrs:
                 for name, value in attrs.items():
@@ -415,9 +414,6 @@ class RuleMeta(abcs.AbcMeta):
             self.listen_on()
 
         def listen_on(self):
-            pass
-
-        def listen_off(self):
             pass
 
         @classmethod

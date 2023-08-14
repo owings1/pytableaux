@@ -89,6 +89,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     modal: ClassVar[bool|None] = None
     "Whether this is a modal rule."
 
+    autoattrs: ClassVar[bool|None] = None
+
     branching: ClassVar[int] = 0
     "The number of additional branches created."
 

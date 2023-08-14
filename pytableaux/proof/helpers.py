@@ -30,8 +30,7 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, minfloor, wraps
-from . import (WorldPair, Branch, Node, Rule, Tableau, Target,
-               filters)
+from . import Branch, Node, Rule, Tableau, Target, WorldPair, filters
 from .common import QuitFlagNode
 from .filters import NodeCompare
 
@@ -107,25 +106,15 @@ class BranchCache(dict[Branch, _VT], Rule.Helper):
     __init__ = Rule.Helper.__init__
 
     def listen_on(self):
+        super().listen_on()
+        def after_branch_add(branch: Branch):
+            if branch.parent:
+                self[branch] = copy(self[branch.parent])
+            else:
+                self[branch] = self._empty_value(branch)
         self.rule.tableau.on({
-            Tableau.Events.AFTER_BRANCH_ADD: self.__after_branch_add,
-            Tableau.Events.AFTER_BRANCH_CLOSE: self.__after_branch_close})
-
-    def listen_off(self):
-        self.rule.tableau.off({
-            Tableau.Events.AFTER_BRANCH_ADD: self.__after_branch_add,
-            Tableau.Events.AFTER_BRANCH_CLOSE: self.__after_branch_close})
-
-    def __after_branch_add(self, branch: Branch):
-        # Event: Tableau.Events.AFTER_BRANCH_ADD
-        if branch.parent:
-            self[branch] = copy(self[branch.parent])
-        else:
-            self[branch] = self._empty_value(branch)
-
-    def __after_branch_close(self, branch,/):
-        # Event: Tableau.Events.AFTER_BRANCH_CLOSE
-        del self[branch]
+            Tableau.Events.AFTER_BRANCH_ADD: after_branch_add,
+            Tableau.Events.AFTER_BRANCH_CLOSE: self.__delitem__})
 
     def __repr__(self):
         info = self._reprdict()
@@ -147,17 +136,11 @@ class BranchDictCache(BranchCache[dict[_KT, _VT]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.tableau.on(Tableau.Events.AFTER_BRANCH_ADD, self.__after_branch_add)
-
-    def listen_off(self):
-        self.rule.tableau.off(Tableau.Events.AFTER_BRANCH_ADD, self.__after_branch_add)
-        super().listen_off()
-
-    def __after_branch_add(self, branch: Branch, /):
-        # Event: Tableau.Events.AFTER_BRANCH_ADD
-        if branch.parent is not None:
-            for key in self[branch]:
-                self[branch][key] = copy(self[branch.parent][key])
+        def after_branch_add(branch: Branch):
+            if branch.parent:
+                for key in self[branch]:
+                    self[branch][key] = copy(self[branch.parent][key])
+        self.rule.tableau.on(Tableau.Events.AFTER_BRANCH_ADD, after_branch_add)
 
 class QuitFlag(BranchCache[bool]):
     """
@@ -169,15 +152,9 @@ class QuitFlag(BranchCache[bool]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.on(Rule.Events.AFTER_APPLY, self.__after_apply)
-
-    def listen_off(self):
-        self.rule.off(Rule.Events.AFTER_APPLY, self.__after_apply)
-        super().listen_off()
-
-    def __after_apply(self, target: Target, /):
-        # Event: Rule.Events.AFTER_APPLY
-        self[target.branch] = bool(target.get(Node.Key.flag))
+        def after_apply(target: Target):
+            self[target.branch] = bool(target.get(Node.Key.flag))        
+        self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
 
 class BranchValueHook(BranchCache[_VT]):
     """Check each node as it is added, until a (truthy) value is returned,
@@ -197,19 +174,13 @@ class BranchValueHook(BranchCache[_VT]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-
-    def listen_off(self):
-        self.rule.tableau.off(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-        super().listen_off()
-
-    def __after_node_add(self, node, branch, /) -> None:
-        # Event: Tableau.Events.AFTER_NODE_ADD
-        if self[branch]:
-            return
-        res = self.hook(node, branch)
-        if res:
-            self[branch] = res
+        def after_node_add(node, branch) -> None:
+            if self[branch]:
+                return
+            res = self.hook(node, branch)
+            if res:
+                self[branch] = res
+        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
     @classmethod
     def configure_rule(cls, rulecls, config, **kw):
@@ -235,19 +206,13 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.on(Rule.Events.AFTER_APPLY, self.__after_apply)
-
-    def listen_off(self):
-        self.rule.off(Rule.Events.AFTER_APPLY, self.__after_apply)
-        super().listen_off()
-
-    def __after_apply(self, target: Target):
-        # Event: Rule.Events.AFTER_APPLY
-        if target.get(Node.Key.flag):
-            return
-        counts = self[target.branch]
-        sentence = target.sentence
-        counts[sentence] = counts.get(sentence, 0) + 1
+        def after_apply(target: Target):
+            if target.get(Node.Key.flag):
+                return
+            counts = self[target.branch]
+            sentence = target.sentence
+            counts[sentence] = counts.get(sentence, 0) + 1
+        self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
 
 class NodeCount(BranchCache[dict[Node, int]]):
     "Track the number of rule applications to each node."
@@ -257,11 +222,13 @@ class NodeCount(BranchCache[dict[Node, int]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.on(Rule.Events.AFTER_APPLY, self.__after_apply)
-
-    def listen_off(self):
-        self.rule.off(Rule.Events.AFTER_APPLY, self.__after_apply)
-        super().listen_off()
+        def after_apply(target: Target):
+            if target.get(Node.Key.flag):
+                return
+            counts = self[target.branch]
+            node = target.node
+            counts[node] = counts.get(node, 0) + 1
+        self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
 
     def min(self, branch: Branch) -> int:
         """Count the minimum number of applications of any node on the branch.
@@ -288,14 +255,6 @@ class NodeCount(BranchCache[dict[Node, int]]):
         """        
         return self.min(branch) >= self[branch].get(node, 0)
 
-    def __after_apply(self, target: Target, /):
-        # Event: Rule.Events.AFTER_APPLY
-        if target.get(Node.Key.flag):
-            return
-        counts = self[target.branch]
-        node = target.node
-        counts[node] = counts.get(node, 0) + 1
-
 class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
     """
     Track the nodes applied to by the rule for each world on the branch. The
@@ -307,17 +266,11 @@ class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.on(Rule.Events.AFTER_APPLY, self.__after_apply)
-
-    def listen_off(self):
-        self.rule.off(Rule.Events.AFTER_APPLY, self.__after_apply)
-        super().listen_off()
-
-    def __after_apply(self, target: Target, /):
-        # Event: Rule.Events.AFTER_APPLY
-        if target.get(Node.Key.flag):
-            return
-        self[target.branch].add((target.node, target.world))
+        def after_apply(target: Target):
+            if target.get(Node.Key.flag):
+                return
+            self[target.branch].add((target.node, target.world))
+        self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
 
 class UnserialWorlds(BranchCache[set[int]]):
     "Track the unserial worlds on the branch."
@@ -327,19 +280,13 @@ class UnserialWorlds(BranchCache[set[int]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-
-    def listen_off(self):
-        self.rule.tableau.off(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-        super().listen_off()
-
-    def __after_node_add(self, node: Node, branch: Branch, /):
-        # Event: Tableau.Events.AFTER_NODE_ADD
-        for w in node.worlds:
-            if node.get(Node.Key.w1) == w or branch.has({Node.Key.w1: w}):
-                self[branch].discard(w)
-            else:
-                self[branch].add(w)
+        def after_node_add(node: Node, branch: Branch):
+            for w in node.worlds:
+                if node.get(Node.Key.w1) == w or branch.has({Node.Key.w1: w}):
+                    self[branch].discard(w)
+                else:
+                    self[branch].add(w)
+        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
 class WorldIndex(BranchDictCache[int, set[int]]):
     'Index the visible worlds for each world on the branch.'
@@ -359,11 +306,14 @@ class WorldIndex(BranchDictCache[int, set[int]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-
-    def listen_off(self):
-        self.rule.tableau.off(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-        super().listen_off()
+        def after_node_add(node: Node, branch: Branch):
+            if node.is_access:
+                w1, w2 = WorldPair.fornode(node)
+                if w1 not in self[branch]:
+                    self[branch][w1] = set()
+                self[branch][w1].add(w2)
+                self.nodes.add(node, branch)
+        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
     def has(self, branch, access):
         'Whether w1 sees w2 on the given branch.'
@@ -384,15 +334,6 @@ class WorldIndex(BranchDictCache[int, set[int]]):
         # TODO: can we make this more efficient? for each world pair,
         #       track the intransitives?
         return self[branch].get(w2, EMPTY_SET) - self[branch].get(w1, EMPTY_SET)
-
-    def __after_node_add(self, node: Node, branch: Branch):
-        # Event: Tableau.Events.AFTER_NODE_ADD
-        if node.is_access:
-            w1, w2 = WorldPair.fornode(node)
-            if w1 not in self[branch]:
-                self[branch][w1] = set()
-            self[branch][w1].add(w2)
-            self.nodes.add(node, branch)
 
 class FilterNodeCache(BranchCache[set[Node]]):
     "Base class for caching nodes "
@@ -439,22 +380,14 @@ class FilterNodeCache(BranchCache[set[Node]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
+        def after_node_add(node, branch):
+            if self(node, branch):
+                self[branch].add(node)
+        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
         if self.ignore_ticked:
-            self.rule.tableau.on(Tableau.Events.AFTER_NODE_TICK, self.__after_node_tick)
-
-    def listen_off(self):
-        self.rule.tableau.off({
-            Tableau.Events.AFTER_NODE_ADD: self.__after_node_add,
-            Tableau.Events.AFTER_NODE_TICK: self.__after_node_tick})
-        super().listen_off()
-
-    def __after_node_add(self, node, branch, /):
-        if self(node, branch):
-            self[branch].add(node)
-
-    def __after_node_tick(self, node, branch, /):
-        self[branch].discard(node)
+            def after_node_tick(node, branch):
+                self[branch].discard(node)
+            self.rule.tableau.on(Tableau.Events.AFTER_NODE_TICK, after_node_tick)
 
     @classmethod
     def configure_rule(cls, rulecls, config, **kw):
@@ -492,7 +425,6 @@ class PredNodes(FilterNodeCache):
 
     def __call__(self, node: Node, _):
         return type(self.rule.sentence(node)) is Predicated
-        # return type(node.get(Node.Key.sentence)) is Predicated
 
 class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``
@@ -612,34 +544,28 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.on(Rule.Events.AFTER_APPLY, self.__after_apply)
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
 
-    def listen_off(self):
-        self.rule.off(Rule.Events.AFTER_APPLY, self.__after_apply)
-        self.rule.tableau.off(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-        super().listen_off()
+        def after_apply(target: Target):
+            if target.get(Node.Key.flag):
+                return
+            self[target.branch][target.node].discard(target.constant)
 
-    def __after_apply(self, target: Target, /):
-        # Event: Rule.Events.AFTER_APPLY
-        if target.get(Node.Key.flag):
-            return
-        self[target.branch][target.node].discard(target.constant)
-
-    def __after_node_add(self, node: Node, branch, /):
-        # Event: Tableau.Events.AFTER_NODE_ADD
-        if self.filter(node, branch):
-            if node not in self[branch]:
-                # By tracking per node, we are tracking per world, a fortiori.
-                self[branch][node] = self.consts[branch].copy()
-        s = node.get(Node.Key.sentence)
-        if s is None:
-            return
-        consts = s.constants - self.consts[branch]
-        if len(consts):
-            for node in self[branch]:
-                self[branch][node].update(consts)
-            self.consts[branch].update(consts)
+        def after_node_add(node: Node, branch):
+            if self.filter(node, branch):
+                if node not in self[branch]:
+                    # By tracking per node, we are tracking per world, a fortiori.
+                    self[branch][node] = self.consts[branch].copy()
+            s = node.get(Node.Key.sentence)
+            if s is None:
+                return
+            consts = s.constants - self.consts[branch]
+            if len(consts):
+                for node in self[branch]:
+                    self[branch][node].update(consts)
+                self.consts[branch].update(consts)
+    
+        self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
+        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
 class WorldConsts(BranchDictCache[int, set[Constant]]):
     """
@@ -650,23 +576,17 @@ class WorldConsts(BranchDictCache[int, set[Constant]]):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-
-    def listen_off(self):
-        self.rule.tableau.off(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-        super().listen_off()
-
-    def __after_node_add(self, node: Node, branch: Branch, /):
-        # Event: Tableau.Events.AFTER_NODE_ADD
-        s = node.get(Node.Key.sentence)
-        if s is None:
-            return
-        world = node.get(Node.Key.world)
-        if world is None:
-            world = 0
-        if world not in self[branch]:
-            self[branch][world] = set()
-        self[branch][world].update(s.constants)
+        def after_node_add(node: Node, branch: Branch):
+            s = node.get(Node.Key.sentence)
+            if s is None:
+                return
+            world = node.get(Node.Key.world)
+            if world is None:
+                world = 0
+            if world not in self[branch]:
+                self[branch][world] = set()
+            self[branch][world].update(s.constants)
+        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
 class MaxConsts(dict[Branch, int], Rule.Helper):
     """
@@ -681,10 +601,13 @@ class MaxConsts(dict[Branch, int], Rule.Helper):
         self.wconsts = WorldConsts(self.rule)
 
     def listen_on(self):
-        self.rule.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, self.__after_trunk_build)
-
-    def listen_off(self):
-        self.rule.tableau.off(Tableau.Events.AFTER_TRUNK_BUILD, self.__after_trunk_build)
+        def after_trunk_build(tableau: Tableau):
+            for branch in tableau:
+                origin = branch.origin
+                if origin in self:
+                    raise NotImplementedError('Multiple trunk branches not implemented.')
+                self[origin] = self._compute(branch)
+        self.rule.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, after_trunk_build)
 
     def is_reached(self, branch: Branch, world = 0, /):
         """
@@ -734,14 +657,6 @@ class MaxConsts(dict[Branch, int], Rule.Helper):
             f'{self.rule.name}:{type(self).__name__}'
             f'({self.get(branch.origin, 1)})')})
 
-    def __after_trunk_build(self, tableau: Tableau, /):
-        # Event: Tableau.Events.AFTER_TRUNK_BUILD
-        for branch in tableau:
-            origin = branch.origin
-            if origin in self:
-                raise NotImplementedError('Multiple trunk branches not implemented.')
-            self[origin] = self._compute(branch)
-
     def _compute(self, branch: Branch, /) -> int:
         """
         Project the maximum number of constants for a branch (origin) as
@@ -761,7 +676,7 @@ class MaxConsts(dict[Branch, int], Rule.Helper):
         s = node.get(Node.Key.sentence)
         return len(s.quantifiers) if s else 0
 
-class MaxWorlds(BranchDictCache[Branch, int], Rule.Helper):
+class MaxWorlds(BranchDictCache[Branch, int]):
     """Project the maximum number of worlds required for each branch by examining
     the branches after the trunk is built.
     """
@@ -783,15 +698,18 @@ class MaxWorlds(BranchDictCache[Branch, int], Rule.Helper):
             return self.setdefault(s, sum(map(self.filter, s.operators)))
 
     def __init__(self, rule: Rule,/):
-        # Rule.Helper.__init__(self, rule)
         super().__init__(rule)
         self.modals = self.Modals(self.rule.modal_operators)
 
     def listen_on(self):
-        self.rule.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, self.__after_trunk_build)
-
-    def listen_off(self):
-        self.rule.tableau.off(Tableau.Events.AFTER_TRUNK_BUILD, self.__after_trunk_build)
+        def after_trunk_build(tableau: Tableau):
+            for branch in tableau:
+                origin = branch.origin
+                # For normal logics, we will have only one trunk branch.
+                if origin in self:
+                    raise NotImplementedError('Multiple trunk branches not implemented.')
+                self[origin] = self._compute(branch)
+        self.rule.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, after_trunk_build)
 
     def is_reached(self, branch: Branch, /):
         """
@@ -836,15 +754,6 @@ class MaxWorlds(BranchDictCache[Branch, int], Rule.Helper):
         return QuitFlagNode(Node.PropMap.QuitFlag | {Node.Key.info: (
             f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin)})')})
 
-    def __after_trunk_build(self, tableau: Tableau, /):
-        # Event: Tableau.Events.AFTER_TRUNK_BUILD
-        for branch in tableau:
-            origin = branch.origin
-            # For normal logics, we will have only one trunk branch.
-            if origin in self:
-                raise NotImplementedError('Multiple trunk branches not implemented.')
-            self[origin] = self._compute(branch)
-
     def _compute(self, branch: Branch, /) -> int:
         # Project the maximum number of worlds for a branch (origin) as
         # the number of worlds already on the branch + the number of modal
@@ -865,4 +774,3 @@ class MaxWorlds(BranchDictCache[Branch, int], Rule.Helper):
             raise Emsg.MissingAttribute(str(err))
         else:
             check.inst(ops, Set)
-
