@@ -3,6 +3,9 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'B3E'
 
+class TestTabRules(Base, autorules=True): pass
+
+
 class TestArguments(Base):
 
     def test_valid_cond_contraction(self):

@@ -3,6 +3,8 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'G3'
 
+class TestTabRules(Base, autorules=True): pass
+
 class TestArguments(Base):
 
     def test_invalid_demorgan_8_model(self):

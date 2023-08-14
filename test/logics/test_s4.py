@@ -3,6 +3,8 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'S4'
 
+class TestTabRules(Base, autorules=True, bare=True): pass
+
 class TestS4(Base):
 
     def test_valid_s4_material_inf_1(self):

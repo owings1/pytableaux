@@ -3,13 +3,7 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'LP'
 
-class TestClosureRules(Base):
-
-    def test_DesignationClosure(self):
-        self.rule_eg('DesignationClosure')
-
-    def test_GapClosure(self):
-        self.rule_eg('GapClosure')
+class TestTabRules(Base, autorules=True): pass
 
 class TestOperatorRules(Base):
 

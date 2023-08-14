@@ -3,6 +3,8 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'RM3'
 
+class TestTabRules(Base, autorules=True): pass
+
 class TestArguments(Base):
     def test_valid_cond_mp(self):
         self.valid_tab('Conditional Modus Ponens')

@@ -5,6 +5,8 @@ from pytableaux.proof import *
 class Base(BaseCase):
     logic = 'GO'
 
+class TestTabRules(Base, autorules=True): pass
+
 class TestGO(Base):
 
     def test_truth_table_assertion(self):

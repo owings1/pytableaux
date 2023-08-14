@@ -8,6 +8,8 @@ A = Atomic.first()
 class Base(BaseCase):
     logic = 'FDE'
 
+class TestTabRules(Base, autorules=True): pass
+
 class TestArguments(Base):
 
     def test_DeMorgan(self):
@@ -23,27 +25,14 @@ class TestClosure(Base):
 
 class TestOperators(Base):
 
-    def test_Negation(self):
-        self.rule_eg('DoubleNegationDesignated')
-        self.rule_eg('DoubleNegationUndesignated')
 
     def test_Assertion(self):
-        o = Operator.Assertion
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
         # ¬ ○ A  ⊢  ¬ A
-        Operator.Negation(Operator.Assertion(A))
-        Operator.Negation(A)
         self.valid_tab('Na', 'NTa')
 
     def test_Conjunction(self):
         o = Operator.Conjunction
-        rtd = self.rule_eg(f'{o.name}Designated')
-        rtu = self.rule_eg(f'{o.name}Undesignated')
         rtnd = self.rule_eg(f'{o.name}NegatedDesignated')
-        rtnu = self.rule_eg(f'{o.name}NegatedUndesignated')
 
         self.invalid_tab('LNC')
 
@@ -54,63 +43,23 @@ class TestOperators(Base):
             (Operator.Negation, Operator.Conjunction, True))
 
     def test_Disjunction(self):
-        o = Operator.Disjunction
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
         self.valid_tab('Addition')
         self.invalid_tab('LEM')
 
-    def test_MaterialConditional(self):
-        o = Operator.MaterialConditional
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
-
     def test_MaterialBiconditional(self):
-        o = Operator.MaterialBiconditional
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
         self.invalid_tab('Material Biconditional Elimination 3')
 
-    def test_Conditional(self):
-        o = Operator.Conditional
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
-
-    def test_Biconditional(self):
-        o = Operator.Biconditional
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
 
 
 class TestQuantifiers(Base):
 
     def test_Existential(self):
         q = Quantifier.Existential
-        rtd = self.rule_eg(f'{q.name}Designated')
         rtu = self.rule_eg(f'{q.name}Undesignated')
-        rtnd = self.rule_eg(f'{q.name}NegatedDesignated')
-        rtnu = self.rule_eg(f'{q.name}NegatedUndesignated')
 
         b = rtu[1][0]
         self.assertTrue(b.has(
             {'sentence': Quantified.first(q), 'designated': False}))
-
-    def test_Universal(self):
-        q = Quantifier.Universal
-        self.rule_eg(f'{q.name}Designated')
-        self.rule_eg(f'{q.name}Undesignated')
-        self.rule_eg(f'{q.name}NegatedDesignated')
-        self.rule_eg(f'{q.name}NegatedUndesignated')
 
     def test_arguments(self):
         self.valid_tab('Quantifier Interdefinability 4')

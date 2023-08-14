@@ -68,10 +68,21 @@ class BaseCase(TestCase):
         self.assertTrue(tab.invalid)
         return tab
 
-    def __init_subclass__(subcls, **kw):
+    def __init_subclass__(subcls, autorules=False, **kw):
+        if autorules:
+            bare = bool(kw.pop('bare', None))
         super().__init_subclass__(**kw)
         if getattr(subcls, 'logic', None):
             subcls.logic = registry(subcls.logic)
+        if autorules:
+            for rulecls in subcls.logic.TabRules.all_rules:
+                name = f'test_{rulecls.name}'
+                old = getattr(subcls, name, None)
+                def test(self: BaseCase):
+                    self.rule_eg(rulecls, bare=bare)
+                    if callable(old):
+                        old(self)
+                setattr(subcls, name, test)
 
 
     def crparser(self, *args, **kw):

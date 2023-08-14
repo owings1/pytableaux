@@ -6,8 +6,9 @@ from pytableaux.proof import *
 class Base(BaseCase):
     logic = 'K'
 
-class TestTabRules(Base):
+class TestTabRules(Base, autorules=True): pass
 
+class TestRuleAttrs(Base):
     def test_rules_modal(self):
         for rcls in self.logic.TabRules.all_rules:
             self.assertIs(rcls.modal, True)
@@ -15,39 +16,24 @@ class TestTabRules(Base):
 class TestClosureRules(Base):
 
     def test_ContradictionClosure(self):
-        self.rule_eg('ContradictionClosure')
         self.valid_tab('EFQ')
 
     def test_SelfIdentityClosure(self):
-        self.rule_eg('SelfIdentityClosure')
         self.valid_tab('Self Identity 1')
 
     def test_NonExistenceClosure(self):
-        self.rule_eg('NonExistenceClosure')
         self.valid_tab('b', 'NJm')
 
 class TestOperatorRules(Base):
 
     def test_Assertion(self):
-        rule, tab = self.rule_eg('Assertion')
-        rule, tab = self.rule_eg('AssertionNegated')
-
         self.valid_tab('Assertion Elimination 1')
         self.valid_tab('Assertion Elimination 2')
 
-    def test_Negation(self):
-        rule, tab = self.rule_eg('DoubleNegation')
-
     def test_Conjunction(self):
-        rule, tab = self.rule_eg('Conjunction')
-        rule, tab = self.rule_eg('ConjunctionNegated')
-
         self.valid_tab('Conjunction Introduction')
 
     def test_Disjunction(self):
-        rule, tab = self.rule_eg('Disjunction')
-        rule, tab = self.rule_eg('DisjunctionNegated')
-
         rule, tab = self.rule_eg('DisjunctionNegated', step = False)
         s = tab[0][0]['sentence']
         self.assertEqual(s.operator, Operator.Negation)
@@ -58,38 +44,24 @@ class TestOperatorRules(Base):
         self.valid_tab('Disjunctive Syllogism 2')
 
     def test_MaterialConditional(self):
-        rule, tab = self.rule_eg('MaterialConditional')
-        rule, tab = self.rule_eg('MaterialConditionalNegated')
         self.valid_tab('MMP')
         self.valid_tab('MMT')
 
     def test_MaterialBiconditional(self):
-        rule, tab = self.rule_eg('MaterialBiconditional')
-        rule, tab = self.rule_eg('MaterialBiconditionalNegated')
         self.valid_tab('Material Biconditional Elimination 1')
         self.valid_tab('Material Biconditional Introduction 1')
 
     def test_Conditional(self):
-        rule, tab = self.rule_eg('Conditional')
-        rule, tab = self.rule_eg('ConditionalNegated')
         self.valid_tab('MP')
         self.valid_tab('MT')
         self.invalid_tab('Denying the Antecedent')
 
-    def test_Biconditional(self):
-        rule, tab = self.rule_eg('Biconditional')
-        rule, tab = self.rule_eg('BiconditionalNegated')
-
 class TestModalOperatorRules(Base):
 
     def test_Necessity(self):
-        srule, tab = self.rule_eg('Necessity')
-        srule, tab = self.rule_eg('NecessityNegated')
         self.invalid_tab('Necessity Elimination')
 
     def test_Possibility(self):
-        srule, tab = self.rule_eg('Possibility')
-        srule, tab = self.rule_eg('PossibilityNegated')
         rule, tab = self.rule_eg('Possibility', step = False)
         node = tab[0][0]
         self.assertEqual(node['world'], 0)
@@ -106,13 +78,7 @@ class TestModalOperatorRules(Base):
 
 class TestQuantifierRules(Base):
 
-    def test_Universal(self):
-        rule, tab = self.rule_eg('Universal')
-        rule, tab = self.rule_eg('UniversalNegated')
-
     def test_Existential(self):
-        rule, tab = self.rule_eg('Existential')
-        rule, tab = self.rule_eg('ExistentialNegated')
         rule, tab = self.rule_eg('Existential', step = False)
         node = tab[0][0]
         self.assertEqual(node['sentence'].quantifier, Quantifier.Existential)

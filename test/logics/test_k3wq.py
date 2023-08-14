@@ -3,6 +3,8 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'K3WQ'
 
+class TestTabRules(Base, autorules=True): pass
+
 class TestArguments(Base):
 
     def test_valid_quantifier_interdefinability_1(self):

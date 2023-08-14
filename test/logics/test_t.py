@@ -3,6 +3,8 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'T'
 
+class TestTabRules(Base, autorules=True, bare=True): pass
+
 class TestT(Base):
 
     def test_valid_np_collapse_1(self):

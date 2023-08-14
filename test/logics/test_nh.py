@@ -3,6 +3,8 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'NH'
 
+class TestTabRules(Base, autorules=True): pass
+
 class TestNH(Base):
 
     def test_valid_hnh_ax1(self):

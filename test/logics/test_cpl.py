@@ -9,21 +9,9 @@ Fa = Predicated.first()
 class Base(BaseCase):
     logic = 'CPL'
 
-class TestClosureRules(Base):
-
-    def test_ContradictionClosure(self):
-        self.rule_eg('ContradictionClosure')
-
-    def test_SelfIdentityClosure(self):
-        self.rule_eg('SelfIdentityClosure')
-
-    def test_NonExistenceClosure(self):
-        self.rule_eg('NonExistenceClosure')
+class TestTabRules(Base, autorules=True): pass
 
 class TestIdentityRules(Base):
-
-    def test_IdentityIndiscernability(self):
-        self.rule_eg('IdentityIndiscernability')
 
     def test_IdentityIndiscernability_not_applies(self):
         preds = Predicates({(0, 0, 2)})

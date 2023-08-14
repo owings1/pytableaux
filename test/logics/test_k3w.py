@@ -6,6 +6,8 @@ from pytableaux.errors import *
 class Base(BaseCase):
     logic = 'K3W'
 
+class TestTabRules(Base, autorules=True): pass
+
 class TestClosure(Base):
 
     def test_GlutClosure(self):
@@ -13,61 +15,11 @@ class TestClosure(Base):
 
 class TestOperators(Base):
 
-    def test_Negation(self):
-        self.assertEqual(self.logic.name, 'K3W')
-        self.rule_eg('DoubleNegationDesignated')
-        self.rule_eg('DoubleNegationUndesignated')
-
-    def test_Assertion(self):
-        o = Operator.Assertion
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
-
     def test_Conjunction(self):
-        o = Operator.Conjunction
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
         self.valid_tab('LNC')
 
     def test_Disjunction(self):
-        o = Operator.Disjunction
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
         self.invalid_tab('LEM')
-
-    def test_MaterialConditional(self):
-        o = Operator.MaterialConditional
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
-
-    def test_MaterialBiconditional(self):
-        o = Operator.MaterialBiconditional
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
-
-    def test_Conditional(self):
-        o = Operator.Conditional
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
-
-    def test_Biconditional(self):
-        o = Operator.Biconditional
-        self.rule_eg(f'{o.name}Designated')
-        self.rule_eg(f'{o.name}Undesignated')
-        self.rule_eg(f'{o.name}NegatedDesignated')
-        self.rule_eg(f'{o.name}NegatedUndesignated')
 
     def test_arguments(self):
 

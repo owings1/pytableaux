@@ -9,7 +9,9 @@ from .. import BaseCase
 class Base(BaseCase):
     logic = 'CFOL'
 
-class TestTabRules(Base):
+class TestTabRules(Base, autorules=True): pass
+
+class TestRuleAttrs(Base):
     def test_rules_not_modal(self):
         for rcls in self.logic.TabRules.all_rules:
             self.assertIs(rcls.modal, False)

@@ -5,9 +5,9 @@ from pytableaux.lang import *
 class Base(BaseCase):
     logic = 'D'
 
+class TestTabRules(Base, autorules=True): pass
 
 class Test(Base):
-
 
     def test_valid_long_serial_max_steps_50(self):
         self.valid_tab('MMMMMa', 'LLLLLa', max_steps = 50)
@@ -23,9 +23,6 @@ class Test(Base):
 
     def test_invalid_s4_cond_inf_2(self):
         self.invalid_tab('S4 Conditional Inference 2')
-
-    def test_rule_Serial_eg(self):
-        self.rule_eg('Serial')
 
     def test_rule_Serial_not_applies_to_branch_empty(self):
         tab = self.tab()
