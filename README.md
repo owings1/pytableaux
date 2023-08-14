@@ -56,15 +56,25 @@ Bivalent Modal
 
 Python **3.11** or later is required.
 
-To install requirements:
+To install basic requirements:
 
 ```bash
 pipenv install
 ```
 
-For system-level dependencies, refer to the [Dockerfile][dockerfile].
+To install requirements for the web interface:
+
+```bash
+pipenv install --categories="web-packages"
+```
 
 ## Development
+
+To install dev dependencies:
+
+```bash
+pipenv install --categoies="dev-packages web-packages"
+```
 
 Run tests:
 
@@ -73,6 +83,13 @@ python3 -m pytest
 ```
 
 <!-- optional: python-Levenshtein -->
+### Docs
+
+To install doc building dependencies:
+
+```bash
+pipenv install --categoies="doc-packages"
+```
 
 Build docs:
 
@@ -80,12 +97,15 @@ Build docs:
 cd doc && make clean html
 ```
 
+### Docker
+
 Build docker image
 
 ```bash
-docker build .
+docker build -t localhost/pytableaux:dev  .
 ```
 
+For other targets (doc, test, etc.), seel the [Dockerfile][dockerfile]
 ## Contributing
 
 You can file any issues on [github][issues], or contact me directly [via email][mailto].

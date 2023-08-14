@@ -348,17 +348,20 @@ class ApiProveView(ApiView):
                 options = self.pw.opts))
 
     def build(self):
-        metrics = self.app.metrics
+        metrics = self.app.metrics if self.config['metrics_enabled'] else None
         logic = self.logic
         with StopWatch() as timer:
-            metrics.proofs_inprogress_count(logic.name).inc()
+            if metrics:
+                metrics.proofs_inprogress_count(logic.name).inc()
             tab = Tableau(logic, self.argument, **self.tabopts)
             try:
                 tab.build()
-                metrics.proofs_completed_count(logic.name, tab.stats['result']).inc()
+                if metrics:
+                    metrics.proofs_completed_count(logic.name, tab.stats['result']).inc()
             finally:
-                metrics.proofs_inprogress_count(logic.name).dec()
-                metrics.proofs_execution_time(logic.name).observe(timer.elapsed_secs())
+                if metrics:
+                    metrics.proofs_inprogress_count(logic.name).dec()
+                    metrics.proofs_execution_time(logic.name).observe(timer.elapsed_secs())
         return tab
 
     def get_logic(self):

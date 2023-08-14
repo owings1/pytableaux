@@ -24,7 +24,6 @@ pytableaux.web.mail
 __all__ = ('Mailroom',)
 
 import logging
-import re
 import smtplib
 import ssl
 import threading
@@ -36,13 +35,8 @@ from typing import Any, Callable, Mapping, Sequence
 from .. import errors
 from ..errors import Emsg, check
 from . import get_logger
+from .util import is_valid_email
 
-re_email = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
-'Email regex.'
-
-def is_valid_email(value: str) -> bool:
-    "Whether a string is a valid email address."
-    return re_email.fullmatch(value) is not None
 
 class Mailroom:
 

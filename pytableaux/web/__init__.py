@@ -20,7 +20,6 @@ pytableaux.web
 """
 from __future__ import annotations
 
-import logging
 import mimetypes
 import os.path
 from datetime import datetime
@@ -28,45 +27,15 @@ from enum import Enum, auto
 from types import MappingProxyType as MapProxy
 from typing import Any, Mapping
 
-from .. import __docformat__, package, tools
+from .. import package, tools
 from ..tools.abcs import ItemMapEnum
+from .util import get_logger
 
 __all__ = ()
 
 class Wevent(Enum):
     before_dispatch = auto()
     after_dispatch = auto()
-
-def get_logger(name: str|Any, conf: Mapping[str, Any] = None) -> logging.Logger:
-    "Get a logger and configure it for web format."
-    if not isinstance(name, str):
-        if not isinstance(name, type):
-            name = type(name)
-        name = name.__qualname__
-    logger = logging.Logger(name)
-    ch = logging.StreamHandler()
-    formatter = logging.Formatter(
-        # Similar to cherrypy's format for consistency.
-        '[%(asctime)s] %(name)s.%(levelname)s %(message)s',
-        datefmt = '%d/%b/%Y:%H:%M:%S')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-    if conf is not None:
-        set_conf_loglevel(logger, conf)
-    return logger
-
-def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]):
-    "Update a logger's loglevel based on the config."
-    if conf['is_debug']:
-        logger.setLevel(10)
-        logger.info(f'Setting debug loglevel {logger.getEffectiveLevel()}')
-        return
-    leveluc = conf['loglevel'].upper()
-    if not hasattr(logging, leveluc):
-        logger.warn(f"Ignoring invalid loglevel '{leveluc}'")
-        leveluc = EnvConfig.loglevel['default'].upper()
-    levelnum = getattr(logging, leveluc)
-    logger.setLevel(levelnum)
 
 class EnvConfig(ItemMapEnum):
 
@@ -113,6 +82,10 @@ class EnvConfig(ItemMapEnum):
     doc_dir = dict(
         default = os.path.abspath(f'{package.root}/../doc/_build/html'),
         envvar  = 'PT_DOC_DIR',
+        type    = str)
+    test_dir = dict(
+        default = None,
+        envvar  = 'PT_TEST_DIR',
         type    = str)
     google_analytics_id = dict(
         default = None,

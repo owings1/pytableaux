@@ -38,6 +38,7 @@ ppol = Parser('polish')
 pstd = Parser('standard')
 
 htm = TabWriter('html', 'standard')
+ltx = TabWriter('latex', 'standard')
 
 class TestStandard(BaseCase):
 
@@ -143,3 +144,14 @@ class TestHtml(BaseCase):
         htm(tab)
 
     
+class TestLatex(BaseCase):
+
+    def test_write_no_arg(self):
+        tab = Tableau('FDE')
+        tab.build()
+        res = ltx(tab)
+
+    def test_write_std_fde_1(self):
+        arg = examples.argument('Addition')
+        tab = Tableau('fde', arg).build()
+        ltx(tab)

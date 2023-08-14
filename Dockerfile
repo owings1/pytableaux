@@ -2,29 +2,39 @@
 FROM docker.io/python:3.11.4-alpine as base
 WORKDIR /app
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/app/.local/bin
-RUN addgroup -S appgroup &&\
-    adduser -S appuser -G appgroup -h /app &&\
-    apk add --no-cache curl &&\
-    pip -qqq --no-cache-dir --no-input install pipenv
+RUN pip -qqq --no-cache-dir --no-input install pipenv
 COPY ./Pipfile* ./
 RUN pipenv install --quiet --deploy --system --extra-pip-args "--no-cache-dir --no-input"
+COPY . .
 
 FROM base as doc
-RUN apk add --no-cache g++ make &&\
-    mkdir /build &&\
-    pipenv install --dev --quiet --deploy --system --extra-pip-args "--no-cache-dir --no-input"
-COPY . .
-RUN cd doc &&\
-    make clean html &&\
-    mv _build/html /build &&\
-    make clean
+RUN apk add --quiet --no-cache g++ make &&\
+    pipenv install --quiet --deploy --system --extra-pip-args "--no-cache-dir --no-input" \
+        --categories="doc-packages" &&\
+    apk del --quiet g++ &&\
+    cd doc &&\
+    make clean html BUILDDIR=/build
+
+FROM doc as test
+RUN pipenv install --quiet --deploy --system --extra-pip-args "--no-cache-dir --no-input" \
+        --categories="dev-packages web-packages" &&\
+    coverage run --source pytableaux -m pytest &&\
+    coverage report -m &&\
+    coverage html &&\
+    cd doc &&\
+    make clean doctest BUILDDIR=/build
 
 FROM base
-COPY --from=doc --chown=root:root /app /app
+RUN pipenv install --quiet --deploy --system --extra-pip-args "--no-cache-dir --no-input" \
+        --categories="web-packages" &&\
+    rm -rf /app/test /app/doc /app/pytest.ini
 COPY --from=doc /build/html /srv/doc
-USER appuser
+COPY --from=test /app/htmlcov /srv/test/coverage
+COPY --from=test /build/doctest/output.txt /srv/test/doctest.txt
+USER nobody
 EXPOSE 8080 8181
 ENV PT_HOST=0.0.0.0
 ENV PT_DOC_DIR=/srv/doc
-HEALTHCHECK CMD ["curl", "--fail", "-I", "http://localhost:8080/health"]
+ENV PT_TEST_DIR=/srv/test
+HEALTHCHECK CMD ["python", "-c", "from urllib import request;request.urlopen('http://localhost:8080/health')"]
 CMD ["python", "-m", "pytableaux.web"]

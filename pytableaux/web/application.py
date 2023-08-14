@@ -24,12 +24,11 @@ __all__ = ('Api', 'WebApp')
 
 import logging
 from types import MappingProxyType as MapProxy
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
 import cherrypy
 import cherrypy._cpdispatch
 import jinja2
-import prometheus_client as prom
 from cherrypy import HTTPError, NotFound, expose
 from cherrypy._cprequest import Request, Response
 
@@ -39,11 +38,11 @@ from ..lang import (LexType, Notation, Operator, ParseTable, Predicate,
 from ..logics import LogicType
 from ..proof import writers
 from ..tools.events import EventEmitter
-from ..web import StaticResource, Wevent
-from ..web.mail import Mailroom
-from ..web.metrics import AppMetrics
-from ..web.util import tojson
-from . import views
+from . import StaticResource, Wevent, views
+from .util import cp_staticdir_conf, tojson
+
+if TYPE_CHECKING:
+    from .metrics import AppMetrics
 
 EMPTY = ()
 NOARG = object()
@@ -111,6 +110,16 @@ class WebApp(EventEmitter):
     health = views.HealthView()
     feedback = views.FeedbackView()
 
+    cp_config = MapProxy({
+        '/': {
+            'tools.gzip.on': True,
+            'tools.gzip.mime_types': {
+                'text/html',
+                'text/plain',
+                'text/css',
+                'application/javascript',
+                'application/xml'}}})
+
     @expose
     def static(self, *args, **kw):
         req: Request = cherrypy.request
@@ -119,7 +128,7 @@ class WebApp(EventEmitter):
         try:
             resource = self.static_res[path]
         except KeyError:
-            raise NotFound()
+            raise NotFound() from None
         if req.method != 'GET' and req.method != 'HEAD':
             raise HTTPError(405)
         res.headers.update(resource.headers)
@@ -140,8 +149,15 @@ class WebApp(EventEmitter):
         self.config = web.EnvConfig.env_config()
         self.config.update(*args, **kw)
         self.logger = web.get_logger(self, self.config)
-        self.mailroom = Mailroom(self.config)
-        self.metrics = AppMetrics(self.config, prom.CollectorRegistry())
+        self.cp_config = self._build_cp_config()
+        if self.config['feedback_enabled']:
+            from .mail import Mailroom
+            self.mailroom = Mailroom(self.config)
+        if self.config['metrics_enabled']:
+            from prometheus_client import CollectorRegistry
+
+            from .metrics import AppMetrics
+            self.metrics = AppMetrics(self.config, CollectorRegistry())
         self.template_cache = {}
         self.jinja = jinja2.Environment(
             loader = jinja2.FileSystemLoader(self.config['templates_path']))
@@ -162,55 +178,21 @@ class WebApp(EventEmitter):
 
     def start(self):
         """Start the web server."""
-        config = self.config
-        self.mailroom.start()
         cherrypy.config.update({
             'global': {
                 'server.max_request_body_size': 1024 * 1000,
-                'server.socket_host'   : config['host'],
-                'server.socket_port'   : config['port'],
-                'engine.autoreload.on' : config['is_debug']}})
-        if config['metrics_enabled']:
-            metrics_host = config['metrics_host']
-            metrics_port = config['metrics_port']
-            self.logger.info(f'Starting metrics on port {metrics_host}:{metrics_port}')
-            prom.start_http_server(metrics_port, metrics_host, self.metrics.registry)
-        cherrypy.quickstart(self, '/', self._routes())
-
-    def _routes(self) -> dict[str, dict[str, Any]]:
-        "Cherrypy routing config."
-        config = self.config
-        static_dir = config['static_dir']
-        return {
-            '/': {
-                'request.dispatch': self.dispatcher,
-                'tools.gzip.on': True,
-                'tools.gzip.mime_types': {
-                    'text/html',
-                    'text/plain',
-                    'text/css',
-                    'application/javascript',
-                    'application/xml'}},
-            '/static': {
-                'tools.staticdir.on': True,
-                'tools.staticdir.dir': static_dir,
-                'tools.etags.on': True,
-                'tools.etags.autotags': True},
-            '/doc': {
-                'tools.staticdir.on': True,
-                'tools.staticdir.dir': config['doc_dir'],
-                'tools.staticdir.index': 'index.html',
-                'tools.etags.on': True,
-                'tools.etags.autotags': True},
-            '/favicon.ico': {
-                'tools.staticfile.on': True,
-                'tools.staticfile.filename': f'{static_dir}/favicon.ico'},
-            '/robots.txt': {
-                'tools.staticfile.on': True,
-                'tools.staticfile.filename': f'{static_dir}/robots.txt'}}
+                'server.socket_host'   : self.config['host'],
+                'server.socket_port'   : self.config['port'],
+                'engine.autoreload.on' : self.config['is_debug']}})
+        if self.config['feedback_enabled']:
+            self.mailroom.start()
+        if self.config['metrics_enabled']:
+            self._start_metrics_server()
+        cherrypy.quickstart(self, '/', self.cp_config)
 
     def before_dispatch(self, path):
-        self.metrics.app_requests_count(path).inc()
+        if self.config['metrics_enabled']:
+            self.metrics.app_requests_count(path).inc()
 
     def get_template(self, name: str) -> jinja2.Template:
         cache = self.template_cache
@@ -259,3 +241,27 @@ class WebApp(EventEmitter):
             nups = MapProxy({
                 notn.name: ParseTable.fetch(notn).chars[LexType.Predicate]
                 for notn in Notation})))
+
+    def _build_cp_config(self):
+        cp_config = dict(self.cp_config)
+        cp_config['/']['request.dispatch'] = self.dispatcher
+        cp_config.update({
+            '/static': cp_staticdir_conf(self.config['static_dir'], index=None),
+            '/favicon.ico': {
+                'tools.staticfile.on': True,
+                'tools.staticfile.filename': f"{self.config['static_dir']}/favicon.ico"},
+            '/robots.txt': {
+                'tools.staticfile.on': True,
+                'tools.staticfile.filename': f"{self.config['static_dir']}/robots.txt"}})
+        if self.config['doc_dir']:
+            cp_config['/doc'] = cp_staticdir_conf(self.config['doc_dir'])
+        if self.config['test_dir']:
+            cp_config['/test'] = cp_staticdir_conf(self.config['test_dir'])
+        return cp_config
+    
+    def _start_metrics_server(self):
+        metrics_host = self.config['metrics_host']
+        metrics_port = self.config['metrics_port']
+        self.logger.info(f'Starting metrics on port {metrics_host}:{metrics_port}')
+        from prometheus_client import start_http_server
+        start_http_server(metrics_port, metrics_host, self.metrics.registry)

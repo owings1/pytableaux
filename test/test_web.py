@@ -22,8 +22,7 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 import cherrypy
-import pytest
-import simplejson as json
+import json
 from cherrypy.test import helper
 
 from pytableaux.errors import *
@@ -57,8 +56,8 @@ class AppTest(helper.CPWebCase):
 
     @classmethod
     def setup_server(cls):
-        cls.app = WebApp()
-        cherrypy.tree.mount(cls.app, '/', cls.app._routes())
+        cls.app = WebApp(metrics_enabled=True, feedback_enabled=True)
+        cherrypy.tree.mount(cls.app, '/', cls.app.cp_config)
 
     def test_index_get(self):
         self.getPage('/')

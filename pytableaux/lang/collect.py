@@ -43,7 +43,7 @@ EMPTY_IT = iter(())
 class ArgumentMeta(LangCommonMeta):
     'Argument Metaclass.'
 
-    def __call__(cls, *args, **kw):
+    def __call__(cls, *args, **kw) -> Argument:
         if len(args) == 1 and not len(kw) and isinstance(args[0], cls):
             return args[0]
         return super().__call__(*args, **kw)

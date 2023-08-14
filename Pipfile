@@ -7,14 +7,18 @@ name = 'pypi'
 python_version = '3.11'
 
 [packages]
-CherryPy = "*"
 Jinja2 = "*"
-prometheus-client = "*"
-simplejson = "*"
 
 [dev-packages]
 coverage = "*"
 pytest = "*"
+
+[web-packages]
+CherryPy = "*"
+simplejson = "*"
+prometheus-client = "*"
+
+[doc-packages]
 Sphinx = "*"
 sphinx-rtd-theme = "*"
 sphinx-toolbox = "*"

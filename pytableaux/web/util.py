@@ -20,6 +20,8 @@ pytableaux.web.util
 """
 from __future__ import annotations
 
+import re
+import logging
 from typing import Any, Mapping, Sequence
 
 import simplejson as json
@@ -27,6 +29,8 @@ import simplejson as json
 from ..errors import Emsg
 from ..lang import Lexical
 
+re_email = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
+'Email regex.'
 
 def json_default(obj: Any):
     if isinstance(obj, Lexical):
@@ -64,3 +68,48 @@ def errstr(err: Exception|str) -> str:
     if isinstance(err, Exception):
         return f'{type(err).__name__}: {err}'
     return err
+
+def is_valid_email(value: str) -> bool:
+    "Whether a string is a valid email address."
+    return re_email.fullmatch(value) is not None
+
+def cp_staticdir_conf(path, index='index.html'):
+    conf = {
+        'tools.staticdir.on': True,
+        'tools.staticdir.dir': path,
+        'tools.etags.on': True,
+        'tools.etags.autotags': True}
+    if index:
+        conf['tools.staticdir.index'] = index
+    return conf
+
+def get_logger(name: str|Any, conf: Mapping[str, Any] = None) -> logging.Logger:
+    "Get a logger and configure it for web format."
+    if not isinstance(name, str):
+        if not isinstance(name, type):
+            name = type(name)
+        name = name.__qualname__
+    logger = logging.Logger(name)
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter(
+        # Similar to cherrypy's format for consistency.
+        '[%(asctime)s] %(name)s.%(levelname)s %(message)s',
+        datefmt = '%d/%b/%Y:%H:%M:%S')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    if conf is not None:
+        set_conf_loglevel(logger, conf)
+    return logger
+
+def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]):
+    "Update a logger's loglevel based on the config."
+    if conf['is_debug']:
+        logger.setLevel(10)
+        logger.info(f'Setting debug loglevel {logger.getEffectiveLevel()}')
+        return
+    leveluc = conf['loglevel'].upper()
+    if not hasattr(logging, leveluc):
+        logger.warn(f"Ignoring invalid loglevel '{leveluc}'")
+        leveluc = 'INFO'
+    levelnum = getattr(logging, leveluc)
+    logger.setLevel(levelnum)
