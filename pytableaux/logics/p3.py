@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Constant, Operator, Quantified, Quantifier
+from ..lang import Constant, Operator, Quantified
 from ..proof import Branch, Node, adds, sdnode
 from ..tools import group, maxceil
 from . import fde as FDE
@@ -89,9 +89,6 @@ class TabRules(K3.TabRules):
         add two undesignated nodes to `b`, one with the double-negatum, and one
         with the negatum. Then tick `n`.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Negation
 
         def _get_sd_targets(self, s, d, /):
             si = s.lhs
@@ -105,10 +102,7 @@ class TabRules(K3.TabRules):
         node with the negatum, and on `b'` add a designated node with the
         double-negatum. Then tick `n`.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.Negation
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             si = s.lhs
@@ -122,8 +116,6 @@ class TabRules(K3.TabRules):
         four undesignated nodes to `b`, one for each conjunct, and one for the
         negation of each conjunct. Then tick `n`.
         """
-        # designation = True
-        # operator    = Operator.Conjunction
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -143,10 +135,7 @@ class TabRules(K3.TabRules):
         conjunct, and an undesignated node with the negation of the frist conjunct.
         Then tick `n`.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Conjunction
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -163,9 +152,7 @@ class TabRules(K3.TabRules):
         node with the negation of the second conjunct. On `b''''`, add a designated
         node with the second conjunct. Then tick `n`.
         """
-        # designation = False
-        # operator    = Operator.Conjunction
-        branching   = 3
+        branching = 3
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -184,10 +171,7 @@ class TabRules(K3.TabRules):
         the first conjunct. On `b'''`, add a designated node with the negation
         of the second conjunct. Then tick `n`.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.Conjunction
-        branching   = 2
+        branching = 2
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -205,8 +189,6 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        # designation = True
-        # operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs | s.rhs, d)))
@@ -215,9 +197,6 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
@@ -226,8 +205,6 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        # designation = False
-        # operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs | s.rhs, d)))
@@ -236,9 +213,6 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
@@ -247,86 +221,68 @@ class TabRules(K3.TabRules):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        # designation = True
-        # operator    = Operator.MaterialBiconditional
         conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.MaterialBiconditional
         conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        # designation = False
-        # operator    = Operator.MaterialBiconditional
         conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.MaterialBiconditional
         conjunct_op = Operator.MaterialConditional
 
     class ConditionalDesignated(MaterialConditionalDesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        # operator = Operator.Conditional
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        # operator = Operator.Conditional
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        # operator = Operator.Conditional
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        # operator = Operator.Conditional
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class ExistentialNegatedDesignated(FDE.QuantifierFatRule):
@@ -338,9 +294,6 @@ class TabRules(K3.TabRules):
         `r` to `b`. If there are no constants yet on `b`, use a new constant.
         The node `n` is never ticked.
         """
-        # designation = True
-        # negated     = True
-        # quantifier  = Quantifier.Existential
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             yield sdnode(c >> self.sentence(node), self.designation)
@@ -354,9 +307,6 @@ class TabRules(K3.TabRules):
         of `r` to `b`. If there are no constants yet on `b`, use a new constant.
         The node `n` is never ticked.
         """
-        # designation = False
-        # negated     = True
-        # quantifier  = Quantifier.Existential
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             yield sdnode(~(c >> self.sentence(node)), not self.designation)
@@ -371,9 +321,6 @@ class TabRules(K3.TabRules):
         provided that the both the nodes to be added do not already appear on
         `b`. The node is never ticked.
         """
-        # designation = True
-        # negated     = None
-        # quantifier  = Quantifier.Universal
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             r = c >> self.sentence(node)
@@ -387,9 +334,6 @@ class TabRules(K3.TabRules):
         designated node to `b` with the quantified sentence, substituting a
         constant new to `b` for the variable. Then tick `n`.
         """
-        # designation = True
-        # negated     = True
-        # quantifier  = Quantifier.Universal
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
@@ -403,8 +347,6 @@ class TabRules(K3.TabRules):
         an undesignated node to `b` with the quantified sentence, substituting
         a constant new to `b` for the variable. Then tick `n`.
         """
-        # designation = False
-        # negated     = None
 
     class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """
@@ -414,10 +356,7 @@ class TabRules(K3.TabRules):
         new to `b` for the variable. On `b''` add a designated node with the
         negatum of `n`. Then tick `n`.
         """
-        # designation = False
-        # negated     = True
-        # quantifier  = Quantifier.Universal
-        branching   = 1
+        branching = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)

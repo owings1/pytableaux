@@ -118,10 +118,7 @@ class TabRules(B3E.TabRules):
         *b'* with one conjunct, and an undesignated node to *b''* with the other
         conjunct, then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Conjunction
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -133,8 +130,6 @@ class TabRules(B3E.TabRules):
         From an unticked, undesignated conjunction node *n* on a branch *b*, add a
         designated node to *b* with the negation of the conjunction, then tick *n*.
         """
-        # designation = False
-        # operator    = Operator.Conjunction
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -145,9 +140,6 @@ class TabRules(B3E.TabRules):
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) conjuction, then tick *n*.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.Conjunction
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -158,9 +150,6 @@ class TabRules(B3E.TabRules):
         From an unticked, designated, negated disjunction node *n* on a branch *b*,
         add an undesignated node to *b* for each disjunct, then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Disjunction
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -171,14 +160,12 @@ class TabRules(B3E.TabRules):
         From an unticked, undesignated disjunction node *n* on a branch *b*, add a
         designated node to *b* with the negation of the disjunction, then tick *n*.
         """
-        # operator = Operator.Disjunction
 
     class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated):
         """
         From an unticked, undesignated, negated disjunction node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) disjunction, then tick *n*.
         """
-        # operator = Operator.Disjunction
         
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -186,9 +173,6 @@ class TabRules(B3E.TabRules):
         *b*, add an undesignated node with the negation of the antecedent, and an
         undesignated node with the consequent to *b*, then tick *n*.
         """
-        # negated     = True
-        # operator    = Operator.MaterialConditional
-        # designation = True
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -199,14 +183,12 @@ class TabRules(B3E.TabRules):
         From an unticked, undesignated, material conditional node *n* on a branch *b*,
         add a designated node to *b* with the negation of the conditional, then tick *n*.
         """
-        # operator = Operator.MaterialConditional
 
     class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
         """
         From an unticked, undesignated, negated material conditional node *n* on a branch
         *b*, add a designated node with the (un-negated) conditional to *b*, then tick *n*.
         """
-        # operator = Operator.MaterialConditional
         
     class MaterialBiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -215,10 +197,7 @@ class TabRules(B3E.TabRules):
         the negation of the antecent, and for the consequent. On *b''* add undesignated
         nodes for the antecedent, and for the negation of the consequent. Then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.MaterialBiconditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -230,14 +209,12 @@ class TabRules(B3E.TabRules):
         From an unticked, undesignated, material biconditional node *n* on a branch *b*,
         add a designated node to *b* with the negation of the biconditional, then tick *n*.
         """
-        # operator = Operator.MaterialBiconditional
 
     class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
         """
         From an unticked, undesignated, negated material biconditional node *n* on a branch
         *b*, add a designated node to *b* with the (un-negated) biconditional, then tick *n*.
         """
-        # operator = Operator.MaterialBiconditional
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -246,9 +223,7 @@ class TabRules(B3E.TabRules):
         negated antecedent and the consequent. On *b''* add undesignated nodes for the
         antecedent, consequent, and their negations. Then tick *n*.
         """
-        # designation = True
-        # operator    = Operator.Conditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -269,10 +244,7 @@ class TabRules(B3E.TabRules):
         undesignated node with the negation of the antencedent, and a designated node
         with the negation of the consequent. Then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Conditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -285,18 +257,12 @@ class TabRules(B3E.TabRules):
         From an unticked, undesignated conditional node *n* on a branch *b*, add a
         designated node to *b* with the negation of the conditional, then tick *n*.
         """
-        # designation = False
-        # negated     = None
-        # operator    = Operator.Conditional
 
     class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
         """
         From an unticked, undesignated, negated conditional node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) conditional, then tick *n*.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.Conditional
 
     class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -304,8 +270,6 @@ class TabRules(B3E.TabRules):
         designated conditional nodes to *b*, one with the operands of the biconditional,
         and the other with the reversed operands. Then tick *n*.
         """
-        # designation = True
-        # operator    = Operator.Biconditional
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -320,10 +284,7 @@ class TabRules(B3E.TabRules):
         node with the operands of the biconditional. On *b''* add a designated negated
         conditional node with the reversed operands of the biconditional. Then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Biconditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -337,14 +298,12 @@ class TabRules(B3E.TabRules):
         From an unticked, undesignated biconditional node *n* on a branch *b*, add a
         designated node to *b* with the negation of the biconditional, then tick *n*.
         """
-        # operator = Operator.Biconditional
 
     class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
         """
         From an unticked, undesignated, negated biconditional node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) biconditional, then tick *n*.
         """
-        # operator = Operator.Biconditional
         
     class ExistentialNegatedDesignated(FDE.DefaultNodeRule, rules.QuantifiedSentenceRule):
         """
@@ -355,10 +314,7 @@ class TabRules(B3E.TabRules):
         first disjunct of *d* is the inner sentence of *n*, and the second disjunct
         of *d* is the negation of the inner sentence of *n*. Then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # quantifier  = Quantifier.Existential
-        convert     = Quantifier.Universal
+        convert = Quantifier.Universal
 
         def _get_sd_targets(self, s, d, /):
             v, si = s[1:]
@@ -371,10 +327,6 @@ class TabRules(B3E.TabRules):
         designated node to *b* with the negation of the existential sentence, then
         tick *n*.
         """
-        # designation = False
-        # negated     = None
-        # operator    = None
-        # quantifier  = Quantifier.Existential
 
     class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated):
         """
@@ -382,10 +334,6 @@ class TabRules(B3E.TabRules):
         add a designated node to *b* with the negated existential sentence (negatum),
         then tick *n*.
         """
-        # designation = False
-        # negated     = True
-        # operator    = None
-        # quantifier  = Quantifier.Existential
         
     class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
         """
@@ -396,11 +344,8 @@ class TabRules(B3E.TabRules):
         nodes to *b''*, one with the substituted inner sentence, and one with its
         negation, then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # quantifier  = Quantifier.Universal
-        convert     = Quantifier.Existential
-        branching   = 1
+        convert = Quantifier.Existential
+        branching = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
@@ -427,9 +372,6 @@ class TabRules(B3E.TabRules):
         add a designated node to *b* with the negated universal sentence (negatum),
         then tick *n*.
         """
-        # designation = False
-        # negated     = True
-        # quantifier  = Quantifier.Universal
 
     rule_groups = (
         (

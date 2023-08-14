@@ -51,9 +51,6 @@ class TabRules(L3.TabRules):
         From an unticked, designated double-negation node `n` on a branch `b`,
         add an undesignated node with the negatum of `n`. Then tick `n`.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Negation
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s, not d)))
@@ -63,7 +60,6 @@ class TabRules(L3.TabRules):
         From an unticked, undesignated double-negation node `n` on a branch `b`,
         add a designated node with the negatum of `n`. Then tick `n`.
         """
-        # designation = False
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -74,10 +70,7 @@ class TabRules(L3.TabRules):
         the negation of the antecedent, and one designated node with the negation
         of the consequent. Then tick `n`.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Conditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -97,10 +90,7 @@ class TabRules(L3.TabRules):
         node with the negation of the antecedent. On `b''` add an undesignated
         node with the negation of the consequent. Then tick `n`.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.Conditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -111,35 +101,24 @@ class TabRules(L3.TabRules):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # designation = True
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # designation = False
-        # negated     = None
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     rule_groups = (

@@ -93,10 +93,7 @@ class TabRules(LP.TabRules):
 
         Then, tick *n*.
         """
-        # negated     = True
-        # designation = True
-        # operator    = Operator.Conjunction
-        branching   = 3
+        branching = 3
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -119,10 +116,7 @@ class TabRules(LP.TabRules):
         one for the negation of each conjunct. On *b''*, add four designated nodes, one
         for each of the conjuncts and its negation. Then tick *n*.
         """
-        # negated     = True
-        # designation = False
-        # operator    = Operator.Conjunction
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -140,8 +134,6 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        # designation = True
-        # operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs | s.rhs, d)))
@@ -150,9 +142,6 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a negated disjunction.
         """
-        # negated     = True
-        # designation = True
-        # operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
@@ -161,44 +150,33 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        # negated     = None
-        # designation = False
 
     class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated):
         """
         This rule reduces to a negated disjunction.
         """
-        # negated     = True
-        # designation = False
 
     class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        # designation  = True
-        # operator     = Operator.MaterialBiconditional
-        conjunct_op  = Operator.MaterialConditional
+        conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
-        # negated      = True
-        # designation  = True
-        # operator     = Operator.MaterialBiconditional
-        conjunct_op  = Operator.MaterialConditional
+        conjunct_op = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        # designation = False
 
     class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
-        # designation = False
 
     ConditionalDesignated = MH.TabRules.ConditionalDesignated
     ConditionalNegatedDesignated = MH.TabRules.ConditionalNegatedDesignated
@@ -209,30 +187,23 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # designation = True
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a negated conjunction of conditionals.
         """
-        # negated     = True
-        # designation = True
-        # operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 
     class BiconditionalUndesignated(BiconditionalDesignated):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        # designation = False
 
     class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated):
         """
         This rule reduces to a negated conjunction of conditionals.
         """
-        # designation = False
 
     ExistentialDesignated = None
     ExistentialNegatedDesignated = None

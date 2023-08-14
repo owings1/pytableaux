@@ -61,9 +61,7 @@ class TabRules(K3.TabRules):
         a node with the consequent, and a node with the negation of the consequent.
         Then tick *n*.
         """
-        # operator    = Operator.Conditional
-        # designation = True
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -85,9 +83,7 @@ class TabRules(K3.TabRules):
         add undesignated nodes for the antecedent and its negation, and a designated
         with the negation of the consequent. Then tick *n*.   
         """
-        # operator    = Operator.Conditional
-        # designation = False
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -111,9 +107,7 @@ class TabRules(K3.TabRules):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-        # operator    = Operator.Biconditional
-        # designation = True
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -134,9 +128,7 @@ class TabRules(K3.TabRules):
         node with the same operands. On *b''* add an undesignated conditional node
         with the reversed operands. Then tick *n*.
         """
-        # operator    = Operator.Biconditional
-        # designation = False
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -153,10 +145,7 @@ class TabRules(K3.TabRules):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-        # negated     = True
-        # operator    = Operator.Biconditional
-        # designation = False
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s

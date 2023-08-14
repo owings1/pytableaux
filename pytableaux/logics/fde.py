@@ -554,9 +554,6 @@ class TabRules(LogicType.TabRules):
         From an unticked designated negated negation node *n* on a branch *b*,
         add a designated node to *b* with the double-negatum of *n*, then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Negation
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d)))
@@ -566,16 +563,12 @@ class TabRules(LogicType.TabRules):
         From an unticked undesignated negated negation node *n* on a branch *b*, add an
         undesignated node to *b* with the double-negatum of *n*, then tick *n*.
         """
-        # designation = False
-        # negated     = True
 
     class AssertionDesignated(OperatorNodeRule):
         """
         From an unticked, designated, assertion node *n* on a branch *b*, add a designated
         node to *b* with the operand of *b*, then tick *n*.
         """
-        # designation = True
-        # operator    = Operator.Assertion
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d)))
@@ -585,16 +578,12 @@ class TabRules(LogicType.TabRules):
         From an unticked, undesignated, assertion node *n* on a branch *b*, add an undesignated
         node to *b* with the operand of *n*, then tick *n*.
         """
-        # designation = False
 
     class AssertionNegatedDesignated(OperatorNodeRule):
         """
         From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Assertion
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs, d)))
@@ -604,15 +593,12 @@ class TabRules(LogicType.TabRules):
         From an unticked, undesignated, negated assertion node *n* on branch *b*, add an undesignated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
-        # designation = False
 
     class ConjunctionDesignated(OperatorNodeRule):
         """
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
         """
-        # designation = True
-        # operator    = Operator.Conjunction
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d), sdnode(s.rhs, d)))
@@ -623,10 +609,7 @@ class TabRules(LogicType.TabRules):
         for each conjunct *c*, make a new branch *b'* from *b* and add a designated
         node with the negation of *c* to *b'*, then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.Conjunction
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -639,9 +622,7 @@ class TabRules(LogicType.TabRules):
         for each conjunct *c*, make a new branch *b'* from *b* and add an
         undesignated node with *c* to *b'*, then tick *n*.
         """
-        # designation = False
-        # operator    = Operator.Conjunction
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -654,9 +635,6 @@ class TabRules(LogicType.TabRules):
         *b*, for each conjunct *c*, add an undesignated node with the negation
         of *c* to *b*, then tick *n*.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.Conjunction
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -668,24 +646,18 @@ class TabRules(LogicType.TabRules):
         *d*, make a new branch *b'* from *b* and add a designated node with *d* to *b'*,
         then tick *n*.
         """
-        # designation = True
-        # operator    = Operator.Disjunction
 
     class DisjunctionNegatedDesignated(ConjunctionNegatedUndesignated):
         """
         From an unticked designated negated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add a designated node with the negation of *d* to *b*, then tick *n*.
         """
-        # designation = True
-        # operator    = Operator.Disjunction
 
     class DisjunctionUndesignated(ConjunctionDesignated):
         """
         From an unticked undesignated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add an undesignated node with *d* to *b*, then tick *n*.
         """
-        # designation = False
-        # operator    = Operator.Disjunction
 
     class DisjunctionNegatedUndesignated(ConjunctionNegatedDesignated):
         """
@@ -693,8 +665,6 @@ class TabRules(LogicType.TabRules):
         *d*, make a new branch *b'* from *b* and add an undesignated node with the negation of *d* to
         *b'*, then tick *n*.
         """
-        # designation = False
-        # operator    = Operator.Disjunction
 
     class MaterialConditionalDesignated(OperatorNodeRule):
         """
@@ -703,9 +673,7 @@ class TabRules(LogicType.TabRules):
         of the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        # designation = True
-        # operator    = Operator.MaterialConditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -718,9 +686,6 @@ class TabRules(LogicType.TabRules):
         branch *b*, add a designated node with the antecedent, and a designated
         node with the negation of the consequent to *b*, then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
@@ -731,8 +696,6 @@ class TabRules(LogicType.TabRules):
         an undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
-        # designation = False
-        # operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs, d), sdnode(s.rhs, d)))
@@ -744,10 +707,7 @@ class TabRules(LogicType.TabRules):
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
-        # designation = False
-        # negated     = True
-        # operator    = Operator.MaterialConditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -762,9 +722,7 @@ class TabRules(LogicType.TabRules):
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
-        # designation = True
-        # operator    = Operator.MaterialBiconditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -779,10 +737,7 @@ class TabRules(LogicType.TabRules):
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # operator    = Operator.MaterialBiconditional
-        branching   = 1
+        branching = 1
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -797,8 +752,6 @@ class TabRules(LogicType.TabRules):
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
-        # designation = False
-        # negated     = None
 
     class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalDesignated):
         """
@@ -808,8 +761,6 @@ class TabRules(LogicType.TabRules):
         and add an undesignated node with the antecedent and an undesignated node with the
         consequent to *b''*, then tick *n*.
         """
-        # designation = False
-        # negated     = True
 
     class ConditionalDesignated(MaterialConditionalDesignated):
         """
@@ -820,7 +771,6 @@ class TabRules(LogicType.TabRules):
         the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        # operator = Operator.Conditional
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
@@ -830,7 +780,6 @@ class TabRules(LogicType.TabRules):
         designated node with the antecedent, and a designated node with the negation of
         the consequent to *b*, then tick *n*.
         """
-        # operator = Operator.Conditional
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
@@ -840,7 +789,6 @@ class TabRules(LogicType.TabRules):
         undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
-        # operator = Operator.Conditional
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
@@ -851,7 +799,6 @@ class TabRules(LogicType.TabRules):
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
-        # operator = Operator.Conditional
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
@@ -863,7 +810,6 @@ class TabRules(LogicType.TabRules):
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
-        # operator = Operator.Biconditional
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
@@ -875,7 +821,6 @@ class TabRules(LogicType.TabRules):
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        # operator = Operator.Biconditional
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
@@ -887,7 +832,6 @@ class TabRules(LogicType.TabRules):
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
-        # operator = Operator.Biconditional
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
@@ -899,7 +843,6 @@ class TabRules(LogicType.TabRules):
         and add an undesignated node with the antecedent and an undesignated node with the
         consequent to *b''*, then tick *n*.
         """
-        # operator = Operator.Biconditional
 
     class ExistentialDesignated(rules.NarrowQuantifierRule, DefaultNodeRule):
         """
@@ -907,8 +850,6 @@ class TabRules(LogicType.TabRules):
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
         into *s* of a new constant not yet appearing on *b* for *v*, then tick *n*.
         """
-        # designation = True
-        # quantifier  = Quantifier.Existential
 
         def _get_node_targets(self, node: Node, branch: Branch,/):
             s = self.sentence(node)
@@ -922,10 +863,7 @@ class TabRules(LogicType.TabRules):
         that universally quantifies over *v* into the negation of *s* (i.e. change
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
-        # designation = True
-        # negated     = True
-        # quantifier  = Quantifier.Existential
-        convert     = Quantifier.Universal
+        convert = Quantifier.Universal
 
         def _get_node_targets(self, node: Node, _, /):
             v, si = self.sentence(node)[1:]
@@ -940,8 +878,6 @@ class TabRules(LogicType.TabRules):
         If there are no constants yet on *b*, then instantiate with a new constant. The node
         *n* is never ticked.
         """
-        # designation = False
-        # quantifier  = Quantifier.Existential
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             yield sdnode(c >> self.sentence(node), self.designation)
@@ -953,7 +889,6 @@ class TabRules(LogicType.TabRules):
         that universally quantifies over *v* into the negation of *s* (e.g. change
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
-        # designation = False
 
     class UniversalDesignated(ExistentialUndesignated):
         """
@@ -963,8 +898,6 @@ class TabRules(LogicType.TabRules):
         are no constants yet on *b*, then instantiate with a new constant. The node *n* is
         never ticked.
         """
-        # designation = True
-        # quantifier  = Quantifier.Universal
 
     class UniversalNegatedDesignated(ExistentialNegatedDesignated):
         """
@@ -973,8 +906,7 @@ class TabRules(LogicType.TabRules):
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
-        # quantifier = Quantifier.Universal
-        convert    = Quantifier.Existential
+        convert = Quantifier.Existential
 
     class UniversalUndesignated(ExistentialDesignated):
         """
@@ -982,8 +914,6 @@ class TabRules(LogicType.TabRules):
         into sentence *s*, add an undesignated node to *b* with the result of substituting into
         *s* a constant new to *b* for *v*, then tick *n*.
         """
-        # designation = False
-        # quantifier  = Quantifier.Universal
 
     class UniversalNegatedUndesignated(ExistentialNegatedDesignated):
         """
@@ -992,8 +922,6 @@ class TabRules(LogicType.TabRules):
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
-        # designation = False
-        # quantifier  = Quantifier.Universal
         convert     = Quantifier.Existential
 
     closure_rules = group(DesignationClosure)

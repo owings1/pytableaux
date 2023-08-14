@@ -662,8 +662,6 @@ class TabRules(LogicType.TabRules):
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.Negation
 
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(s.lhs, w)))
@@ -673,7 +671,6 @@ class TabRules(LogicType.TabRules):
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
         """
-        # operator = Operator.Assertion
 
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(s.lhs, w)))
@@ -684,8 +681,6 @@ class TabRules(LogicType.TabRules):
         add a node to *b* with the negation of the assertion of *n* and world *w*,
         then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.Assertion
 
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(~s.lhs, w)))
@@ -696,7 +691,6 @@ class TabRules(LogicType.TabRules):
         for each conjunct, add a node with world *w* to *b* with the conjunct,
         then tick *n*.
         """
-        # operator = Operator.Conjunction
 
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(s.lhs, w), swnode(s.rhs, w)))
@@ -707,8 +701,6 @@ class TabRules(LogicType.TabRules):
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
         the conjunct to *b*, then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.Conjunction
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
@@ -722,7 +714,6 @@ class TabRules(LogicType.TabRules):
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
         then tick *n*.
         """
-        # operator = Operator.Disjunction
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
@@ -735,8 +726,6 @@ class TabRules(LogicType.TabRules):
         From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.Disjunction
 
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(~s.lhs, w), swnode(~s.rhs, w)))
@@ -748,7 +737,6 @@ class TabRules(LogicType.TabRules):
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-        # operator = Operator.MaterialConditional
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
@@ -762,8 +750,6 @@ class TabRules(LogicType.TabRules):
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.MaterialConditional
 
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(s.lhs, w), swnode(~s.rhs, w)))
@@ -776,7 +762,6 @@ class TabRules(LogicType.TabRules):
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-        # operator = Operator.MaterialBiconditional
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
@@ -792,8 +777,6 @@ class TabRules(LogicType.TabRules):
         *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.MaterialBiconditional
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
@@ -810,8 +793,6 @@ class TabRules(LogicType.TabRules):
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-        # negated  = None
-        # operator = Operator.Conditional
 
     class ConditionalNegated(MaterialConditionalNegated):
         """
@@ -821,8 +802,6 @@ class TabRules(LogicType.TabRules):
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.Conditional
 
     class Biconditional(MaterialBiconditional):
         """
@@ -834,8 +813,6 @@ class TabRules(LogicType.TabRules):
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-        # negated  = None
-        # operator = Operator.Biconditional
 
     class BiconditionalNegated(MaterialBiconditionalNegated):
         """
@@ -847,8 +824,6 @@ class TabRules(LogicType.TabRules):
         *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.Biconditional
 
     class Existential(rules.NarrowQuantifierRule, DefaultNodeRule):
         """
@@ -856,7 +831,6 @@ class TabRules(LogicType.TabRules):
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
-        # quantifier = Quantifier.Existential
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -869,9 +843,7 @@ class TabRules(LogicType.TabRules):
         quantifying over variable *v* into sentence *s*, add a universally quantified
         node to *b* with world *w* over *v* into the negation of *s*, then tick *n*.
         """
-        # negated    = True
-        # quantifier = Quantifier.Existential
-        convert    = Quantifier.Universal
+        convert = Quantifier.Universal
 
         def _get_node_targets(self, node: Node, _):
             v, si = self.sentence(node)[1:]
@@ -886,7 +858,6 @@ class TabRules(LogicType.TabRules):
         exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
         *b*. The node *n* is never ticked.
         """
-        # quantifier = Quantifier.Universal
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             yield swnode(c >> self.sentence(node), node.get('world'))
@@ -898,9 +869,7 @@ class TabRules(LogicType.TabRules):
         quantified node to *b* with world *w* over *v* into the negation of *s*,
         then tick *n*.
         """
-        # negated    = True
-        # quantifier = Quantifier.Universal
-        convert    = Quantifier.Existential
+        convert = Quantifier.Existential
 
     class Possibility(rules.OperatedSentenceRule, DefaultNodeRule):
         """
@@ -908,8 +877,6 @@ class TabRules(LogicType.TabRules):
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
         world1 *w* and world2 *w'* to *b*, then tick *n*.
         """
-        # operator = Operator.Possibility
-
         Helpers = (QuitFlag, MaxWorlds, AplSentCount)
         modal_operators = Model.modal_operators
 
@@ -959,9 +926,7 @@ class TabRules(LogicType.TabRules):
         necessity node to *b* with *w*, whose operand is the negation of the negated 
         possibilium of *n*, then tick *n*.
         """
-        # negated  = True
-        # operator = Operator.Possibility
-        convert  = Operator.Necessity
+        convert = Operator.Necessity
 
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(self.convert(~s.lhs), w)))
@@ -973,7 +938,6 @@ class TabRules(LogicType.TabRules):
         with *s* at *w2*, add it to *b*. The node *n* is never ticked.
         """
         ticking = False
-        # operator = Operator.Necessity
 
         Helpers = (QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex)
         modal_operators = Model.modal_operators
@@ -1047,8 +1011,7 @@ class TabRules(LogicType.TabRules):
         possibility node whose operand is the negation of the negated necessitatum of *n*,
         then tick *n*.
         """
-        # operator = Operator.Necessity
-        convert  = Operator.Possibility
+        convert = Operator.Possibility
 
     class IdentityIndiscernability(rules.PredicatedSentenceRule, DefaultNodeRule):
         """

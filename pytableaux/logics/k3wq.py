@@ -102,10 +102,7 @@ class TabRules(K3W.TabRules):
         quantifying over the disjunction of the inner sentence with its negation.
         The other node is a substitution of a constant new to `b`. Then tick `n`.
         """
-        # designation = True
-        # negated     = None
-        # quantifier  = Quantifier.Existential
-        convert     = Quantifier.Universal
+        convert = Quantifier.Universal
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -128,11 +125,8 @@ class TabRules(K3W.TabRules):
         node with universal quantifier over the negation of the inner sentence.
         Then tick `n`.
         """
-        # designation = False
-        # negated     = None
-        # quantifier  = Quantifier.Existential
-        convert     = Quantifier.Universal
-        branching   = 1
+        convert = Quantifier.Universal
+        branching = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -151,9 +145,6 @@ class TabRules(K3W.TabRules):
         sentence, substituting a constant new to `b` for the variable. Then
         tick `n`.
         """
-        # designation = False
-        # negated     = True
-        # quantifier  = Quantifier.Existential
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -168,9 +159,6 @@ class TabRules(K3W.TabRules):
         negation of the inner sentence, substituting a constant new to `b` for the
         variable. Then tick `n`.
         """
-        # designation = True
-        # negated     = True
-        # quantifier  = Quantifier.Universal
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -190,10 +178,7 @@ class TabRules(K3W.TabRules):
         of `n`, and the other with the negation of that sentence. On `b''`, add
         a designated node with the negatum of `n`. Then tick `n`.
         """
-        # designation = False
-        # negated     = True
-        # quantifier  = Quantifier.Universal
-        branching   = 1
+        branching = 1
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
