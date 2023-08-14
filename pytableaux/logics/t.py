@@ -17,8 +17,9 @@
 from __future__ import annotations
 
 from ..lang import Atomic
-from ..proof import WorldPair, Branch, Node, adds, anode, group, swnode
+from ..proof import WorldPair, Branch, Node, adds, anode, swnode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from ..tools import group
 from . import k as K
 
 name = 'T'
@@ -52,7 +53,7 @@ class TabRules(K.TabRules):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-        Helpers = MaxWorlds, WorldIndex,
+        Helpers = (MaxWorlds, WorldIndex)
 
         ignore_ticked = False
         ticking = False
@@ -64,15 +65,15 @@ class TabRules(K.TabRules):
             if self[MaxWorlds].is_exceeded(branch):
                 self[FilterHelper].release(node, branch)
                 return
-
             for w in node.worlds:
                 access = WorldPair(w, w)
                 if not self[WorldIndex].has(branch, access):
-                    return adds(group(anode(*access)), world = w)
+                    yield adds(group(anode(*access)), world = w)
+                    return
 
         @staticmethod
         def example_nodes():
-            return group(swnode(Atomic.first(), 0))
+            yield swnode(Atomic.first(), 0)
 
     rule_groups = (
         (

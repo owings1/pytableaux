@@ -19,15 +19,16 @@ from __future__ import annotations
 from collections import deque
 
 from ..lang import Atomic
-from ..proof import Branch, Target, adds, anode, group, swnode
+from ..proof import Branch, Target, adds, anode, swnode
 from ..proof.helpers import MaxWorlds, UnserialWorlds
 from ..proof.rules import BaseSimpleRule
+from ..tools import group
 from . import k as K
 
 name = 'D'
 
 class Meta(K.Meta):
-    title       = 'Deontic Normal Modal Logic'
+    title = 'Deontic Normal Modal Logic'
     description = 'Normal modal logic with a serial access relation'
     category_order = 2
 
@@ -79,16 +80,15 @@ class TabRules(K.TabRules):
                 return
             if not self._should_apply(branch):
                 return
-            return deque(
-                Target(adds(
+            for w in unserials:
+                yield Target(adds(
                     group(anode(w, branch.new_world())),
                     world = w,
                     branch = branch))
-                for w in unserials)
 
         @staticmethod
         def example_nodes():
-            return swnode(Atomic.first(), 0),
+            yield swnode(Atomic.first(), 0)
 
         def _should_apply(self, branch: Branch,/):
             # TODO: Shouldn't this check the history only relative to the branch?

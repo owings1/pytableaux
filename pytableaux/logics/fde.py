@@ -24,8 +24,8 @@ from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, ValueFDE
 from ..proof import (Branch, Node, Tableau, TableauxSystem, Target, adds,
-                     filters, group, rules, sdnode)
-from ..tools import closure, qsetf
+                     filters, rules, sdnode)
+from ..tools import closure, group, qsetf
 from . import LogicType
 
 name = 'FDE'
@@ -459,9 +459,7 @@ class TableauxSystem(TableauxSystem):
 
     @classmethod
     def branching_complexity(cls, node: Node, /) -> int:
-        s = node.get('sentence')
-        if s is None:
-            return 0
+        s = node['sentence']
         lastneg = False
         result = 0
         for oper in s.operators:
@@ -473,6 +471,9 @@ class TableauxSystem(TableauxSystem):
                 lastneg = False
         return result
 
+    @classmethod
+    def branching_complexity_hashable(cls, node: Node, /):
+        return node['sentence'], node['designated']
 
 class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default FDE node rule with:
@@ -516,7 +517,7 @@ class ConjunctionReducingRule(OperatorNodeRule):
         s = oper(lhs, rhs) & oper(rhs, lhs)
         if self.negated:
             s = ~s
-        return adds(group(sdnode(s, d)))
+        yield adds(group(sdnode(s, d)))
 
 @TableauxSystem.initialize
 class TabRules(LogicType.TabRules):
@@ -540,7 +541,8 @@ class TabRules(LogicType.TabRules):
         @staticmethod
         def example_nodes():
             s = Atomic.first()
-            return (sdnode(s, True), sdnode(s, False))
+            yield sdnode(s, True)
+            yield sdnode(s, False)
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
@@ -557,7 +559,7 @@ class TabRules(LogicType.TabRules):
         operator    = Operator.Negation
 
         def _get_sd_targets(self, s, d, /):
-            return adds(group(sdnode(s.lhs, d)))
+            yield adds(group(sdnode(s.lhs, d)))
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
@@ -576,7 +578,7 @@ class TabRules(LogicType.TabRules):
         operator    = Operator.Assertion
 
         def _get_sd_targets(self, s, d, /):
-            return adds(group(sdnode(s.lhs, d)))
+            yield adds(group(sdnode(s.lhs, d)))
 
     class AssertionUndesignated(AssertionDesignated):
         """
@@ -595,7 +597,7 @@ class TabRules(LogicType.TabRules):
         operator    = Operator.Assertion
 
         def _get_sd_targets(self, s, d, /):
-            return adds(group(sdnode(~s.lhs, d)))
+            yield adds(group(sdnode(~s.lhs, d)))
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated):
         """
@@ -613,7 +615,7 @@ class TabRules(LogicType.TabRules):
         operator    = Operator.Conjunction
 
         def _get_sd_targets(self, s, d, /):
-            return adds(group(sdnode(s.lhs, d), sdnode(s.rhs, d)))
+            yield adds(group(sdnode(s.lhs, d), sdnode(s.rhs, d)))
 
     class ConjunctionNegatedDesignated(OperatorNodeRule):
         """
@@ -627,7 +629,7 @@ class TabRules(LogicType.TabRules):
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
-            return adds(
+            yield adds(
                 group(sdnode(~s.lhs, d)),
                 group(sdnode(~s.rhs, d)))
 
@@ -642,7 +644,7 @@ class TabRules(LogicType.TabRules):
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
-            return adds(
+            yield adds(
                 group(sdnode(s.lhs, d)),
                 group(sdnode(s.rhs, d)))
 
@@ -657,7 +659,7 @@ class TabRules(LogicType.TabRules):
         operator    = Operator.Conjunction
 
         def _get_sd_targets(self, s, d, /):
-            return adds(
+            yield adds(
                 group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)))
 
     class DisjunctionDesignated(ConjunctionUndesignated):
@@ -706,7 +708,7 @@ class TabRules(LogicType.TabRules):
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
-            return adds(
+            yield adds(
                 group(sdnode(~s.lhs, d)),
                 group(sdnode( s.rhs, d)))
 
@@ -721,7 +723,7 @@ class TabRules(LogicType.TabRules):
         operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
-            return adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
+            yield adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
 
     class MaterialConditionalUndesignated(OperatorNodeRule):
         """
@@ -733,7 +735,7 @@ class TabRules(LogicType.TabRules):
         operator    = Operator.MaterialConditional
 
         def _get_sd_targets(self, s, d, /):
-            return adds(group(sdnode(~s.lhs, d), sdnode(s.rhs, d)))
+            yield adds(group(sdnode(~s.lhs, d), sdnode(s.rhs, d)))
 
     class MaterialConditionalNegatedUndesignated(OperatorNodeRule):
         """
@@ -748,7 +750,7 @@ class TabRules(LogicType.TabRules):
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
-            return adds(
+            yield adds(
                 group(sdnode( s.lhs, d)),
                 group(sdnode(~s.rhs, d)))
 
@@ -765,7 +767,7 @@ class TabRules(LogicType.TabRules):
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
-            return adds(
+            yield adds(
                 group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)),
                 group(sdnode( s.rhs, d), sdnode( s.lhs, d)))
 
@@ -783,7 +785,7 @@ class TabRules(LogicType.TabRules):
         branching   = 1
 
         def _get_sd_targets(self, s, d, /):
-            return adds(
+            yield adds(
                 group(sdnode( s.lhs, d), sdnode(~s.rhs, d)),
                 group(sdnode(~s.lhs, d), sdnode( s.rhs, d)))
 
@@ -910,7 +912,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch,/):
             s = self.sentence(node)
-            return adds(
+            yield adds(
                 group(sdnode(branch.new_constant() >> s, self.designation)))
 
     class ExistentialNegatedDesignated(rules.QuantifiedSentenceRule, DefaultNodeRule):
@@ -927,7 +929,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, _, /):
             v, si = self.sentence(node)[1:]
-            return adds(
+            yield adds(
                 group(sdnode(self.convert(v, ~si), self.designation)))
 
     class ExistentialUndesignated(QuantifierFatRule):
@@ -942,7 +944,7 @@ class TabRules(LogicType.TabRules):
         quantifier  = Quantifier.Existential
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            return group(sdnode(c >> self.sentence(node), self.designation))
+            yield sdnode(c >> self.sentence(node), self.designation)
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """

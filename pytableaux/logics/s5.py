@@ -16,8 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import WorldPair, Branch, Node, adds, anode, group
+from ..proof import WorldPair, Branch, Node, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from ..tools import group
 from . import k as K
 from . import s4 as S4
 from . import t as T
@@ -25,7 +26,7 @@ from . import t as T
 name = 'S5'
 
 class Meta(K.Meta):
-    title       = 'S5 Normal Modal Logic'
+    title = 'S5 Normal Modal Logic'
     description = (
         'Normal modal logic with a reflexive, symmetric, and transitive '
         'access relation')
@@ -77,11 +78,11 @@ class TabRules(S4.TabRules):
                 return
             access = WorldPair.fornode(node).reversed()
             if not self[WorldIndex].has(branch, access):
-                return adds(group(a := access.tonode()), **a)
+                yield adds(group(a := access.tonode()), **a)
 
         @staticmethod
         def example_nodes():
-            return group(anode(0, 1))
+            yield anode(0, 1)
 
     rule_groups = (
         (

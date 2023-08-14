@@ -17,8 +17,8 @@
 from __future__ import annotations
 
 from ..lang import Quantified, Quantifier
-from ..proof import Branch, Node, adds, group, sdnode
-from ..tools import maxceil, minfloor
+from ..proof import Branch, Node, adds, sdnode
+from ..tools import group, maxceil, minfloor
 from . import fde as FDE
 from . import k3w as K3W
 
@@ -113,7 +113,7 @@ class TabRules(K3W.TabRules):
             v = s.variable
             si = s.sentence
             d = self.designation
-            return adds(
+            yield adds(
                 group(
                     sdnode(self.convert(v, si | ~si), d),
                     sdnode(branch.new_constant() >> s, d),
@@ -141,7 +141,7 @@ class TabRules(K3W.TabRules):
             si = s.sentence
             r = branch.new_constant() >> s
             d = self.designation
-            return adds(
+            yield adds(
                 group(sdnode(r, d), sdnode(~r, d)),
                 group(sdnode(self.convert(v, ~si), not d)),
             )
@@ -159,7 +159,7 @@ class TabRules(K3W.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            return adds(
+            yield adds(
                 group(sdnode(~(branch.new_constant() >> s), self.designation))
             )
 
@@ -180,7 +180,7 @@ class TabRules(K3W.TabRules):
             v = s.variable
             si = s.sentence
             d = self.designation
-            return adds(
+            yield adds(
                 group(
                     sdnode(self.quantifier(v, si | ~si), d),
                     sdnode(~(branch.new_constant() >> s), d)
@@ -206,7 +206,7 @@ class TabRules(K3W.TabRules):
             si = s.sentence
             r = branch.new_constant() >> s
             d = self.designation
-            return adds(
+            yield adds(
                 group(sdnode(r, d), sdnode(~r, d)),
                 group(sdnode(self.quantifier(v, si), not d)),
             )

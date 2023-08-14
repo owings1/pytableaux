@@ -2,16 +2,19 @@
 :mod:`pytableaux.proof.writers`
 =================================
 
+.. contents:: Contents
+  :local:
+  :depth: 2
 
 .. module:: pytableaux.proof.writers
 
-classes
+Classes
 -------
     
 .. autoclass:: TabWriter()
     :members:
 
-.. autoclass:: TabWriterRegistry()
+.. autoclass:: TabWriterRegistry
     :members:
 
 registry

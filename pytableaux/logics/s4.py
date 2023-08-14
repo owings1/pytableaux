@@ -18,15 +18,16 @@ from __future__ import annotations
 
 from typing import Generator
 
-from ..proof import WorldPair, Branch, Node, Target, adds, anode, group
+from ..proof import WorldPair, Branch, Node, Target, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from ..tools import group
 from . import k as K
 from . import t as T
 
 name = 'S4'
 
 class Meta(K.Meta):
-    title       = 'S4 Normal Modal Logic'
+    title = 'S4 Normal Modal Logic'
     description = 'Normal modal logic with a reflexive and transitive access relation'
     category_order = 4
 
@@ -61,26 +62,20 @@ class TabRules(T.TabRules):
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.
         """
-        Helpers = MaxWorlds, WorldIndex,
+        Helpers = (MaxWorlds, WorldIndex)
         access = True
         ticking = False
         modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: Node, branch: Branch,/) -> Generator[dict, None, None]:
-
             if self[MaxWorlds].is_reached(branch):
                 self[FilterHelper].release(node, branch)
                 return
-
             w1, w2 = WorldPair.fornode(node)
-
-            return (
-                adds(
+            for w3 in self[WorldIndex].intransitives(branch, w1, w2):
+                yield adds(
                     group(a := anode(w1, w3)), **a,
-                    nodes = (node, branch.find(anode(w2, w3))),
-                )
-                for w3 in self[WorldIndex].intransitives(branch, w1, w2)
-            )
+                    nodes = (node, branch.find(anode(w2, w3))))
 
         def score_candidate(self, target: Target, /) -> float:
             # Rank the highest world
@@ -88,7 +83,8 @@ class TabRules(T.TabRules):
 
         @staticmethod
         def example_nodes():
-            return anode(0, 1), anode(1, 2)
+            yield anode(0, 1)
+            yield anode(1, 2)
 
     rule_groups = (
         (

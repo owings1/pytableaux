@@ -17,20 +17,22 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..proof import Node, adds, group, sdnode
+from ..proof import adds, sdnode
+from ..tools import group
 from . import fde as FDE
 from . import lp as LP
 
 name = 'RM3'
 
 class Meta(LP.Meta):
-    title       = 'R-mingle 3'
+    title = 'R-mingle 3'
     description = (
         'Three-valued logic (True, False, Both) with a primitive '
-        'Conditional operator'
-    )
+        'Conditional operator')
     category_order = 130
-    native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
+    native_operators = FDE.Meta.native_operators + (
+        Operator.Conditional,
+        Operator.Biconditional)
 
 class Model(LP.Model):
 
@@ -44,8 +46,7 @@ class TableauxSystem(LP.TableauxSystem):
 
     branchables = LP.TableauxSystem.branchables | {
         Operator.Conditional: ((1, 2), (1, 0)),
-        Operator.Biconditional: ((1, 2), (1, 1)),
-    }
+        Operator.Biconditional: ((1, 2), (1, 1))}
 
 @TableauxSystem.initialize
 class TabRules(LP.TabRules):
@@ -63,18 +64,16 @@ class TabRules(LP.TabRules):
         operator    = Operator.Conditional
         branching   = 2
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(sdnode( lhs, False)),
                 group(sdnode(~rhs, False)),
                 group(
                     sdnode( lhs, True),
                     sdnode(~lhs, True),
                     sdnode( rhs, True),
-                    sdnode(~rhs, True),
-                )
-            )
+                    sdnode(~rhs, True)))
 
     class ConditionalUndesignated(FDE.OperatorNodeRule):
         """
@@ -88,12 +87,15 @@ class TabRules(LP.TabRules):
         operator    = Operator.Conditional
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
-                group(sdnode( lhs, True),  sdnode( rhs, False)),
-                group(sdnode(~lhs, False), sdnode(~rhs, True)),
-            )
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(
+                    sdnode( lhs, True),
+                    sdnode( rhs, False)),
+                group(
+                    sdnode(~lhs, False),
+                    sdnode(~rhs, True)))
 
     class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -107,18 +109,20 @@ class TabRules(LP.TabRules):
         operator    = Operator.Biconditional
         branching   = 2
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
-                group(sdnode( lhs, False), sdnode( rhs, False)),
-                group(sdnode(~lhs, False), sdnode(~rhs, False)),
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(
+                    sdnode( lhs, False),
+                    sdnode( rhs, False)),
+                group(
+                    sdnode(~lhs, False),
+                    sdnode(~rhs, False)),
                 group(
                     sdnode( lhs, True),
                     sdnode(~lhs, True),
                     sdnode( rhs, True),
-                    sdnode(~rhs, True),
-                )
-            )
+                    sdnode(~rhs, True)))
 
     class BiconditionalUndesignated(FDE.OperatorNodeRule):
         """
@@ -131,13 +135,12 @@ class TabRules(LP.TabRules):
         operator    = Operator.Biconditional
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
             Cond = Operator.Conditional
-            return adds(
+            yield adds(
                 group(sdnode(Cond(lhs, rhs), False)),
-                group(sdnode(Cond(rhs, lhs), False)),
-            )
+                group(sdnode(Cond(rhs, lhs), False)))
 
     class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -151,12 +154,15 @@ class TabRules(LP.TabRules):
         operator    = Operator.Biconditional
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
-                group(sdnode( lhs, False), sdnode( rhs, False)),
-                group(sdnode(~lhs, False), sdnode(~rhs, False)),
-            )
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(
+                    sdnode(lhs, False),
+                    sdnode(rhs, False)),
+                group(
+                    sdnode(~lhs, False),
+                    sdnode(~rhs, False)))
 
     rule_groups = (
         (

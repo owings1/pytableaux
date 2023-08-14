@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from ..lang import Atomic
 from ..models import BaseModel, ValueK3
 from ..proof import Branch, Node, Target, sdnode
 from ..proof.rules import BaseClosureRule
@@ -71,8 +72,8 @@ class TabRules(FDE.TabRules):
 
         @staticmethod
         def example_nodes():
-            from ..lang import Atomic
             a = Atomic.first()
-            return sdnode(a, True), sdnode(~a, True)
+            yield sdnode(a, True)
+            yield sdnode(~a, True)
 
     closure_rules = FDE.TabRules.closure_rules + (GlutClosure,)

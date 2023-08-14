@@ -26,8 +26,8 @@ from collections import deque
 from typing import Generator, Generic, Iterable, TypeVar, final
 
 from ..lang import Constant, Operated, Predicated, Quantified, Sentence
-from ..tools import EMPTY_SET
-from . import Branch, Node, Rule, Target, adds, filters, group
+from ..tools import group, EMPTY_SET
+from . import Branch, Node, Rule, Target, adds, filters
 
 __all__ = (
     'BaseClosureRule',
@@ -91,7 +91,8 @@ class BaseClosureRule(ClosingRule):
         """
         target = self[BranchTarget][branch]
         if target is not None:
-            return group(target)
+            yield target
+            # return group(target)
 
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
         """For calculating a target's closure score. This default
@@ -141,7 +142,7 @@ class BaseNodeRule(BaseSimpleRule):
 
     def example_nodes(self) -> tuple[dict]:
         'Delegates to ``(FilterHelper.example_node(),)``'
-        return group(self[FilterHelper].example_node())
+        yield self[FilterHelper].example_node()
 
 class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
 
@@ -174,11 +175,11 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
     def _get_targets(self, node: Node, branch: Branch, /):
         if self[MaxConsts].is_exceeded(branch, node.get(Node.Key.world)):
             self[FilterHelper].release(node, branch)
-            if self[QuitFlag].get(branch):
-                return
-            fnode = self[MaxConsts].quit_flag(branch)
-            return adds(group(fnode), flag = fnode[Node.Key.flag])
-        return self._get_node_targets(node, branch)
+            if not self[QuitFlag].get(branch):
+                fnode = self[MaxConsts].quit_flag(branch)
+                yield adds(group(fnode), flag = fnode[Node.Key.flag])
+            return
+        yield from self._get_node_targets(node, branch)
 
     @abstractmethod
     def _get_node_targets(self, node: Node, branch: Branch):
@@ -202,7 +203,8 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
         for c in constants:
             nodes = deque(self._get_constant_nodes(node, c, branch))
             if unapplied or not branch.all(nodes):
-                yield dict(adds = group(nodes), constant = c)
+                yield adds(nodes, constant=c)
+                # yield dict(adds = group(nodes), constant = c)
 
     @abstractmethod
     def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /):

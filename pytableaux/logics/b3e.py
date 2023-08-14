@@ -17,7 +17,8 @@
 from __future__ import annotations
 
 from ..lang import Operator as Operator
-from ..proof import adds, group, sdnode
+from ..proof import adds, sdnode
+from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W

@@ -17,7 +17,8 @@
 from __future__ import annotations
 
 from ..lang import Operator, Quantified
-from ..proof import Branch, Node, adds, group, sdnode
+from ..proof import adds, sdnode
+from ..tools import group
 from . import fde as FDE
 from . import lp as LP
 from . import mh as MH
@@ -35,7 +36,8 @@ class Meta(LP.Meta):
         'glutty',
         'non-modal')
     native_operators = FDE.Meta.native_operators + (
-        Operator.Conditional, Operator.Biconditional)
+        Operator.Conditional,
+        Operator.Biconditional)
 
 class Model(LP.Model):
 
@@ -97,18 +99,19 @@ class TabRules(LP.TabRules):
         operator    = Operator.Conjunction
         branching   = 3
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(sdnode(lhs, False)),
                 group(sdnode(rhs, False)),
                 group(
-                    sdnode(lhs, True), sdnode(~lhs, True), sdnode(~rhs, False)
-                ),
+                    sdnode(lhs, True),
+                    sdnode(~lhs, True),
+                    sdnode(~rhs, False)),
                 group(
-                    sdnode(rhs, True), sdnode(~rhs, True), sdnode(~lhs, False)
-                )
-            )
+                    sdnode(rhs, True),
+                    sdnode(~rhs, True),
+                    sdnode(~lhs, False)))
 
     class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -122,17 +125,17 @@ class TabRules(LP.TabRules):
         operator    = Operator.Conjunction
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
-                group(sdnode(~lhs, False), sdnode(~rhs, False)),
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(
+                    sdnode(~lhs, False),
+                    sdnode(~rhs, False)),
                 group(
                     sdnode( lhs, True),
                     sdnode(~lhs, True),
                     sdnode( rhs, True),
-                    sdnode(~rhs, True),
-                )
-            )
+                    sdnode(~rhs, True)))
 
     class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -141,11 +144,8 @@ class TabRules(LP.TabRules):
         designation = True
         operator    = Operator.MaterialConditional
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
-            return adds(
-                group(sdnode(~s.lhs | s.rhs, self.designation))
-            )
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(~s.lhs | s.rhs, d)))
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -155,11 +155,8 @@ class TabRules(LP.TabRules):
         designation = True
         operator    = Operator.MaterialConditional
 
-        def _get_node_targets(self, node: Node, _: Branch):
-            s = self.sentence(node)
-            return adds(
-                group(sdnode(~(~s.lhs | s.rhs), self.designation))
-            )
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
         """

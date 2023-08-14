@@ -2,12 +2,18 @@
 :mod:`pytableaux.tools` package
 ============================================
 
-.. toctree::
-    :caption: Modules
-    :maxdepth: 1
-    :glob:
+.. contents:: Contents
+  :local:
+  :depth: 2
 
-    tools.*
+Functions
+=========
 
 .. automodule:: pytableaux.tools
+    :members:
+
+abcs module
+===========
+
+.. automodule:: pytableaux.tools.abcs
     :members:

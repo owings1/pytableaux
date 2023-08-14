@@ -17,8 +17,8 @@
 from __future__ import annotations
 
 from ..lang import Operator, Quantified, Quantifier
-from ..proof import Branch, Node, adds, group, rules, sdnode
-from ..tools import maxceil, minfloor
+from ..proof import Branch, Node, adds, rules, sdnode
+from ..tools import group, maxceil, minfloor
 from . import b3e as B3E
 from . import fde as FDE
 from . import k3 as K3
@@ -30,7 +30,9 @@ class Meta(K3.Meta):
     title       = 'Gappy Object 3-valued Logic'
     description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
     category_order = 60
-    native_operators = FDE.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
+    native_operators = FDE.Meta.native_operators + (
+        Operator.Conditional,
+        Operator.Biconditional)
 
 class Model(K3.Model):
 

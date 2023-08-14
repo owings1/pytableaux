@@ -8,10 +8,12 @@ Modules
 
     modules/lang
 
+    modules/logics
+
     modules/proof
 
-    modules/tools
+    modules/proof.writers
 
-    modules/logics
+    modules/tools
 
     modules/errors

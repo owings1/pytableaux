@@ -17,7 +17,8 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..proof import Branch, Node, adds, group, sdnode
+from ..proof import adds, sdnode
+from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 from . import l3 as L3
@@ -55,9 +56,8 @@ class TabRules(L3.TabRules):
         negated     = True
         operator    = Operator.Negation
 
-        def _get_node_targets(self, node: Node, _,/):
-            return adds(
-                group(sdnode(self.sentence(node), not self.designation)))
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(s, not d)))
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
@@ -80,10 +80,9 @@ class TabRules(L3.TabRules):
         operator    = Operator.Conditional
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _: Branch):
-            lhs, rhs = self.sentence(node)
-            d = self.designation
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(
                     sdnode( lhs, d),
                     sdnode(~rhs, d)),
@@ -104,10 +103,8 @@ class TabRules(L3.TabRules):
         operator    = Operator.Conditional
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
-            d = self.designation
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            yield adds(
                 group(sdnode(~s.lhs, not d)),
                 group(sdnode(~s.rhs, d)))
 

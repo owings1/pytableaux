@@ -222,6 +222,10 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         return 0
 
     @classmethod
+    def branching_complexity_hashable(cls, node: Node, /):
+        return node
+
+    @classmethod
     def add_rules(cls, logic: LogicType, rules: RulesRoot, /) -> None:
         """Populate rules/groups for a tableau.
 
@@ -262,10 +266,10 @@ class RuleMeta(abcs.AbcMeta):
         INIT   = 1
         LOCKED = 2
 
-    class Events(Enum):
+    class Events(str, Enum):
         'Rule events.'
-        BEFORE_APPLY = auto()
-        AFTER_APPLY  = auto()
+        BEFORE_APPLY = 'BEFORE_APPLY'
+        AFTER_APPLY  = 'AFTER_APPLY'
 
     class Legend(str, Enum):
         closure = 'closure'
@@ -311,6 +315,8 @@ class RuleMeta(abcs.AbcMeta):
         configs: dict[type[Rule.Helper], Any] = {}
         for parent in abcs.mroiter(rulecls, mcls = cls):
             v = parent.Helpers
+            if isinstance(v, type):
+                v = v,
             if isinstance(v, Sequence):
                 for helpercls in v:
                     configs.setdefault(helpercls, None)
@@ -349,43 +355,57 @@ class RuleMeta(abcs.AbcMeta):
     def induce_attrs(self):
         attrs = {}
         todo = self.name
-        for oper in sorted(Operator, key=lambda oper: len(oper.name), reverse=True):
-            if todo.startswith(oper.name):
-                attrs['operator'] = oper
-                todo = todo[len(oper.name):]
-                break
+        Legend = self.Legend
+        indicator = 'DoubleNegation'
+        isdoubleneg = todo.startswith(indicator)
+        if isdoubleneg:
+            attrs[Legend.operator] = Operator.Negation
+            attrs[Legend.negated] = True
+            todo = todo[len(indicator):]
         else:
-            if hasattr(self, 'operator'):
-                attrs['operator'] = None
+            it = sorted(Operator,
+                key=lambda oper: len(oper.name),
+                reverse=True)
+            for oper in it:
+                if todo.startswith(oper.name):
+                    attrs[Legend.operator] = oper
+                    todo = todo[len(oper.name):]
+                    break
+            else:
+                if hasattr(self, Legend.operator):
+                    attrs[Legend.operator] = None
         for quant in Quantifier:
             if todo.startswith(quant.name):
-                attrs['quantifier'] = quant
+                attrs[Legend.quantifier] = quant
                 todo = todo[len(quant.name):]
                 break
         else:
-            if hasattr(self, 'quantifier'):
-                attrs['quantifier'] = None
+            if hasattr(self, Legend.quantifier):
+                attrs[Legend.quantifier] = None
         for pred in Predicate.System:
             if todo.startswith(pred.name):
-                attrs['predicate'] = pred
+                attrs[Legend.predicate] = pred
                 todo = todo[len(pred.name):]
                 break
         else:
-            if hasattr(self, 'predicate'):
-                attrs['predicate'] = None
-        if todo.startswith('Negated'):
-            attrs['negated'] = True
-            todo = todo[len('Negated'):]
-        elif hasattr(self, 'negated'):
-            attrs['negated'] = None
-        if todo.startswith('Designated'):
-            attrs['designation'] = True
-            todo = todo[len('Designated'):]
-        elif todo.startswith('Undesignated'):
-            attrs['designation'] = False
-            todo = todo[len('Undesignated'):]
-        elif hasattr(self, 'designation'):
-            attrs['designation'] = None
+            if hasattr(self, Legend.predicate):
+                attrs[Legend.predicate] = None
+        if not isdoubleneg:
+            indicator = 'Negated'
+            if todo.startswith(indicator):
+                attrs[Legend.negated] = True
+                todo = todo[len(indicator):]
+            elif hasattr(self, Legend.negated):
+                attrs[Legend.negated] = None
+        indicators = 'Designated', 'Undesignated'
+        if todo.startswith(indicators[0]):
+            attrs[Legend.designation] = True
+            todo = todo[len(indicators[0]):]
+        elif todo.startswith(indicators[1]):
+            attrs[Legend.designation] = False
+            todo = todo[len(indicators[1]):]
+        elif hasattr(self, Legend.designation):
+            attrs[Legend.designation] = None
         if not len(todo):
             return attrs
 

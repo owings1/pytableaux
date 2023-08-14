@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Callable, Optional, cast
 
@@ -24,28 +23,29 @@ from ..errors import DenotationError, ModelValueError, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, ValueCPL
-from ..proof import (WorldPair, Branch, Node, Tableau, TableauxSystem, Target,
-                     adds, anode, filters, group, rules, swnode)
+from ..proof import (Branch, Node, Tableau, TableauxSystem, Target, WorldPair,
+                     adds, anode, filters, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
-                             NodeCount, NodesWorlds, PredNodes, QuitFlag, PredNodes,
+                             NodeCount, NodesWorlds, PredNodes, QuitFlag,
                              WorldIndex)
-from ..tools import EMPTY_SET, closure, substitute
+from ..tools import EMPTY_SET, closure, group, substitute
 from . import LogicType
 from . import fde as FDE
 
 name = 'K'
 
 class Meta:
-    title       = 'Kripke Normal Modal Logic'
-    category    = 'Bivalent Modal'
+    title = 'Kripke Normal Modal Logic'
+    category = 'Bivalent Modal'
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
     tags = (
         'bivalent',
         'modal',
-        'first-order',
-    )
-    native_operators = FDE.Meta.native_operators + (Operator.Possibility, Operator.Necessity)
+        'first-order')
+    native_operators = FDE.Meta.native_operators + (
+        Operator.Possibility,
+        Operator.Necessity)
 
 class AccessGraph(defaultdict[int, set[int]]):
 
@@ -551,6 +551,10 @@ class TableauxSystem(TableauxSystem):
                 complexity += 1
         return complexity
 
+    @classmethod
+    def branching_complexity_hashable(cls, node, /):
+        return node.get('sentence')
+
 class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default K node rule with:
     
@@ -595,7 +599,8 @@ class TabRules(LogicType.TabRules):
         def example_nodes(self):
             s = Atomic.first()
             w = 0 if self.modal else None
-            return (swnode(s, w), swnode(~s, w))
+            yield swnode(s, w)
+            yield swnode(~s, w)
 
         # private util
 
@@ -707,7 +712,7 @@ class TabRules(LogicType.TabRules):
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
-            return adds(
+            yield adds(
                 group(swnode(~s.lhs, w)),
                 group(swnode(~s.rhs, w)))
 
@@ -917,6 +922,7 @@ class TabRules(LogicType.TabRules):
                     return
                 fnode = self[MaxWorlds].quit_flag(branch)
                 yield adds(group(fnode), flag = fnode['flag'])
+                return
 
             si = self.sentence(node).lhs
             w1 = node['world']
@@ -959,7 +965,7 @@ class TabRules(LogicType.TabRules):
         convert  = Operator.Necessity
 
         def _get_sw_targets(self, s, w, /):
-            return adds(group(swnode(self.convert(~s.lhs), w)))
+            yield adds(group(swnode(self.convert(~s.lhs), w)))
 
     class Necessity(rules.OperatedSentenceRule, DefaultNodeRule):
         """
@@ -1034,7 +1040,8 @@ class TabRules(LogicType.TabRules):
         def example_nodes(cls):
             s = Operated.first(cls.operator)
             a = WorldPair(0, 1)
-            return swnode(s, a.w1), anode(*a)
+            yield swnode(s, a.w1)
+            yield anode(*a)
 
     class NecessityNegated(PossibilityNegated):
         """
@@ -1056,11 +1063,11 @@ class TabRules(LogicType.TabRules):
         predicate = Predicate.System.Identity
 
         def _get_node_targets(self, node: Node, branch: Branch, /) -> list[Target]:
-            pnodes = self[PredNodes][branch]
             pa, pb = self.sentence(node)
             if pa == pb:
                 # Substituting a param for itself would be silly.
                 return
+            pnodes = self[PredNodes][branch]
             w = node.get('world')
             # Find other nodes with one of the identicals.
             for n in pnodes:

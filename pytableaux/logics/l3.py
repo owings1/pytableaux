@@ -18,7 +18,8 @@ from __future__ import annotations
 
 from ..lang import Operator
 from ..models import ValueK3
-from ..proof import Node, adds, group, sdnode
+from ..proof import adds, sdnode
+from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 
@@ -28,10 +29,11 @@ class Meta(K3.Meta):
     title       = u'Łukasiewicz 3-valued Logic'
     description = (
         'Three-valued logic (True, False, Neither) with a '
-        'primitive Conditional operator'
-    )
+        'primitive Conditional operator')
     category_order = 80
-    native_operators = K3.Meta.native_operators + (Operator.Conditional, Operator.Biconditional)
+    native_operators = K3.Meta.native_operators + (
+        Operator.Conditional,
+        Operator.Biconditional)
 
 class Model(K3.Model):
 
@@ -45,8 +47,7 @@ class TableauxSystem(K3.TableauxSystem):
 
     branchables = K3.TableauxSystem.branchables | {
         Operator.Conditional: ((1, 1), (1, 0)),
-        Operator.Biconditional: ((1, 1), (1, 1)),
-    }
+        Operator.Biconditional: ((1, 1), (1, 1))}
 
 @TableauxSystem.initialize
 class TabRules(K3.TabRules):
@@ -65,9 +66,9 @@ class TabRules(K3.TabRules):
         designation = True
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(sdnode(~lhs | rhs, True)),
                 group(
                     sdnode( lhs, False),
@@ -89,9 +90,9 @@ class TabRules(K3.TabRules):
         designation = False
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(
                     sdnode(lhs, True),
                     sdnode(rhs, False),
@@ -115,9 +116,9 @@ class TabRules(K3.TabRules):
         designation = True
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(sdnode(Operator.MaterialBiconditional(lhs, rhs), True)),
                 group(
                     sdnode( lhs, False),
@@ -138,9 +139,9 @@ class TabRules(K3.TabRules):
         designation = False
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(sdnode(Operator.Conditional(lhs, rhs), False)),
                 group(sdnode(Operator.Conditional(rhs, lhs), False)),
             )
@@ -158,9 +159,9 @@ class TabRules(K3.TabRules):
         designation = False
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(sdnode(~Operator.MaterialBiconditional(lhs, rhs), False)),
                 group(
                     sdnode( lhs, False),

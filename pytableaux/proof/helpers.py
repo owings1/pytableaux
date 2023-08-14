@@ -20,8 +20,7 @@ pytableaux.proof.helpers
 """
 from __future__ import annotations
 
-from abc import abstractmethod as abstract
-from collections import deque
+from abc import abstractmethod
 from collections.abc import Set
 from copy import copy
 from itertools import filterfalse
@@ -30,7 +29,7 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
 
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
-from ..tools import EMPTY_MAP, EMPTY_SET, abcs, closure, minfloor, wraps
+from ..tools import EMPTY_MAP, EMPTY_SET, abcs, minfloor, wraps
 from . import (WorldPair, Branch, Node, Rule, Tableau, Target,
                filters)
 from .common import QuitFlagNode
@@ -405,7 +404,7 @@ class FilterNodeCache(BranchCache[set[Node]]):
     #: after they are ticked.
     ignore_ticked: bool
 
-    @abstract
+    @abstractmethod
     def __call__(self, node, branch, /) -> bool:
         'Whether to add the node to the branch set.'
         return False
@@ -468,53 +467,24 @@ class FilterNodeCache(BranchCache[set[Node]]):
                 raise Emsg.MissingAttribute('ignore_ticked')
 
     @classmethod
-    @closure
-    def node_targets():
-
-        def make_targets_fn(cls: type[FilterNodeCache], source_fn, /):
-            """
-            Method decorator to only iterate through nodes matching the
-            configured `FilterNodeCache` filters.
-
-            The rule may return a falsy value for no targets, a single
-            target (non-empty `Mapping`), an `Iterator` or a `Sequence`.
-            
-            Returns a flat tuple of targets.
-            """
-            targiter = make_targiter(source_fn)
-            @wraps(targiter)
-            def get_targets_filtered(rule: Rule, branch, /):
-                helper = rule[cls]
-                helper.gc()
-                return deque(targiter(rule, helper[branch], branch))
-            return get_targets_filtered
-
-        def create(it, r, b, n, /):
-            if isinstance(it, Target):
-                it.update(rule=r, branch=b, node=n)
-                return it
-            return Target(it, rule=r, branch=b, node=n)
-
-        def make_targiter(source_fn):
-            @wraps(source_fn)
-            def targets_gen(rule, nodes, branch, /):
-                for node in nodes:
-                    results = source_fn(rule, node, branch)
-                    if not results:
-                        # Filter anything falsy.
-                        continue
-                    if isinstance(results, Mapping):
-                        # Single target result.
-                        yield create(results, rule, branch, node)
+    def node_targets(cls, source_fn, /):
+        """
+        Method decorator to only iterate through nodes matching the
+        configured `FilterNodeCache` filters.
+        """
+        @wraps(source_fn)
+        def wrapped(rule: Rule, branch, /):
+            helper = rule[cls]
+            helper.gc()
+            for node in helper[branch]:
+                for target in source_fn(rule, node, branch):
+                    if isinstance(target, Target):
+                        target.update(rule=rule, branch=branch, node=node)
                     else:
-                        # Multiple targets result.
-                        # check.inst(results, (Sequence, Iterator))
-                        for res in results:
-                            yield create(res, rule, branch, node)
+                        target = Target(target, rule=rule, branch=branch, node=node)
+                    yield target
+        return wrapped
 
-            return targets_gen
-
-        return make_targets_fn
 
 class PredNodes(FilterNodeCache):
     'Track all predicated nodes on the branch.'

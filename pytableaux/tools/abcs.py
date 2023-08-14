@@ -28,11 +28,11 @@ import itertools
 import operator as opr
 from abc import abstractmethod
 from collections import deque
-from collections.abc import Mapping, Set
+from collections.abc import Iterable, Mapping, Set
 from enum import Enum, Flag
 from enum import auto as eauto
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Sequence, TypeVar
+from typing import TYPE_CHECKING, Callable, Iterator, Sequence, TypeVar
 
 from .. import __docformat__, tools
 from ..tools import EMPTY_SET, thru

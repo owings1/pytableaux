@@ -17,7 +17,8 @@
 from __future__ import annotations
 
 from ..lang import Operator, Quantified, Sentence
-from ..proof import Node, adds, group, sdnode
+from ..proof import Node, adds, sdnode
+from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 
@@ -88,7 +89,7 @@ class TabRules(K3.TabRules):
             s = self.sentence(node)
             lhs, rhs = s
             d = self.designation
-            return adds(
+            yield adds(
                 group(
                     sdnode( lhs, not d),
                     sdnode(~lhs, not d),
@@ -127,7 +128,7 @@ class TabRules(K3.TabRules):
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
             d = self.designation
-            return adds(
+            yield adds(
                 group(
                     sdnode(lhs, not d)),
                 group(
@@ -146,7 +147,7 @@ class TabRules(K3.TabRules):
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
-            return adds(
+            yield adds(
                 group(sdnode(~lhs | rhs, self.designation)))
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
@@ -159,7 +160,7 @@ class TabRules(K3.TabRules):
 
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
-            return adds(
+            yield adds(
                 group(sdnode(~(~s.lhs | s.rhs), self.designation)))
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
@@ -216,7 +217,7 @@ class TabRules(K3.TabRules):
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
             # Keep designation fixed for inheritance below.
-            return adds(
+            yield adds(
                 group(sdnode(s.lhs, False)),
                 group(sdnode(s.rhs, True)))
 
@@ -237,7 +238,7 @@ class TabRules(K3.TabRules):
         def _get_node_targets(self, node: Node, _):
             s = self.sentence(node)
             # Keep designation fixed for inheritance below.
-            return adds(
+            yield adds(
                 group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):

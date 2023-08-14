@@ -137,8 +137,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         self.state |= self.state.INIT
 
     @abstractmethod
-    def _get_targets(self, branch: Branch, /) -> Optional[Sequence[Target]]:
-        "Return targets that the rule should apply to."
+    def _get_targets(self, branch: Branch, /) -> Iterable[Target]:
+        "Yield targets that the rule should apply to."
         return None
 
     @abstractmethod
@@ -147,7 +147,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def example_nodes(self) -> Iterable[Mapping]:
+    def example_nodes(self) -> Iterable[Node]:
         "Return example nodes that would trigger the rule."
         raise NotImplementedError
 
@@ -170,6 +170,10 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         with self.timers['search']:
             targets = self._get_targets(branch)
             if targets:
+                if not isinstance(targets, Sequence):
+                    targets = deque(targets)
+                    if not targets:
+                        return
                 self._extend_targets(targets)
                 return self._select_best_target(targets)
 
@@ -228,7 +232,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         """
         is_rank_optim = self.opts['is_rank_optim']
         if is_rank_optim:
-            scores = tuple(map(self.score_candidate, targets))
+            scores = deque(map(self.score_candidate, targets))
             max_score = max(scores)
             min_score = min(scores)
         else:
@@ -275,7 +279,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         tab = Tableau()
         tab.rules.append(cls)
         rule = tab.rules.get(cls)
-        nodes = rule.example_nodes()
+        nodes = deque(rule.example_nodes())
         branch = tab.branch()
         branch.extend(nodes)
         result = tab.step()
@@ -954,13 +958,14 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         # TODO: Consider potential optimization using hash equivalence for nodes,
         #       to avoid redundant calculations. Perhaps the TableauxSystem should
         #       provide a special branch-complexity node hashing function.
+        system = self.System
+        if system is None:
+            return 0
+        key = system.branching_complexity_hashable(node)
         cache = self._complexities
-        if node not in cache:
-            system = self.System
-            if system is None:
-                return 0
-            cache[node] = system.branching_complexity(node)
-        return cache[node]
+        if key not in cache:
+            cache[key] = system.branching_complexity(node)
+        return cache[key]
 
     def __bool__(self):
         return True
@@ -1113,7 +1118,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         Returns:
             A highest scoring entry.
         """
-        group_scores = tuple(entry.rule.group_score(entry.target)
+        group_scores = deque(entry.rule.group_score(entry.target)
             for entry in entries)
         max_group_score = max(group_scores)
         min_group_score = min(group_scores)
@@ -1452,7 +1457,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             widths = [0] * 3
             for i, node in enumerate(nodes):
                 # recurse
-                next_branches = tuple(b for b in branches if b[depth] == node)
+                next_branches = deque(b for b in branches if b[depth] == node)
                 child = cls._build(tab, next_branches, depth, memo)
                 tree.descendant_node_count = len(child.nodes) + child.descendant_node_count
                 tree.width += child.width

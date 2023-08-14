@@ -1,34 +1,54 @@
-============================
-:mod:`pytableaux.errors`
-============================
+================================
+:mod:`pytableaux.errors` package
+================================
 
-.. automodule:: pytableaux.errors
+.. contents:: Contents
+  :local:
+  :depth: 2
+
+.. module:: pytableaux.errors
+
+Classes
+=======
+
+.. autoclass::  IllegalStateError
     :show-inheritance:
 
-    .. autoclass::  IllegalStateError
+.. autoclass::  ProofTimeoutError
+    :show-inheritance:
 
-    .. autoclass::  ProofTimeoutError
+.. autoclass::  ParseError
+    :show-inheritance:
 
-    .. autoclass::  ParseError
+.. autoclass::  UnboundVariableError
+    :show-inheritance:
 
-    .. autoclass::  UnboundVariableError
+.. autoclass::  BoundVariableError
+    :show-inheritance:
 
-    .. autoclass::  BoundVariableError
+.. autoclass::  MissingAttributeError
+    :show-inheritance:
 
-    .. autoclass::  MissingAttributeError
+.. autoclass::  AttributeConflictError
+    :show-inheritance:
 
-    .. autoclass::  AttributeConflictError
+.. autoclass::  DuplicateKeyError
+    :show-inheritance:
 
-    .. autoclass::  DuplicateKeyError
+.. autoclass::  MissingKeyError
+    :show-inheritance:
 
-    .. autoclass::  MissingKeyError
+.. autoclass::  DuplicateValueError
+    :show-inheritance:
 
-    .. autoclass::  DuplicateValueError
+.. autoclass::  MissingValueError
+    :show-inheritance:
 
-    .. autoclass::  MissingValueError
+.. autoclass::  ConfigError
+    :show-inheritance:
 
-    .. autoclass::  ConfigError
+.. autoclass::  ModelValueError
+    :show-inheritance:
 
-    .. autoclass::  ModelValueError
-
-    .. autoclass::  DenotationError
+.. autoclass::  DenotationError
+    :show-inheritance:

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import enum
 import re
-from collections import defaultdict
+from collections import defaultdict, deque
 from inspect import getsource
 from typing import Any, Collection
 
@@ -272,7 +272,7 @@ class EllipsisExampleHelper(Rule.Helper):
         if self.isclosure:
             self.closenodes = list(
                 dict(n)
-                for n in reversed(rule.example_nodes()))
+                for n in reversed(deque(rule.example_nodes())))
         else:
             self.closenodes = []
         self.istrunk = False

@@ -17,8 +17,8 @@
 from __future__ import annotations
 
 from ..lang import Constant, Operator, Quantified, Quantifier
-from ..proof import Branch, Node, adds, group, sdnode
-from ..tools import maxceil
+from ..proof import Branch, Node, adds, sdnode
+from ..tools import group, maxceil
 from . import fde as FDE
 from . import k3 as K3
 
@@ -94,13 +94,10 @@ class TabRules(K3.TabRules):
         negated     = True
         operator    = Operator.Negation
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             si = s.lhs
-            d = self.designation
-            return adds(
-                group(sdnode(~si, not d), sdnode(si, not d))
-            )
+            yield adds(
+                group(sdnode(~si, not d), sdnode(si, not d)))
 
     class DoubleNegationUndesignated(FDE.OperatorNodeRule):
         """
@@ -114,14 +111,11 @@ class TabRules(K3.TabRules):
         operator    = Operator.Negation
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             si = s.lhs
-            d = self.designation
-            return adds(
+            yield adds(
                 group(sdnode(~si, not d)),
-                group(sdnode( si, not d)),
-            )
+                group(sdnode( si, not d)))
 
     class ConjunctionDesignated(FDE.OperatorNodeRule):
         """
@@ -132,18 +126,14 @@ class TabRules(K3.TabRules):
         designation = True
         operator    = Operator.Conjunction
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
-            d = self.designation
-            return adds(
+            yield adds(
                 group(
                     sdnode(~lhs, not d),
                     sdnode( lhs, not d),
                     sdnode(~rhs, not d),
-                    sdnode( rhs, not d),
-                )
-            )
+                    sdnode( rhs, not d)))
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -159,14 +149,11 @@ class TabRules(K3.TabRules):
         operator    = Operator.Conjunction
         branching   = 1
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
+        def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
-            d = self.designation
-            return adds(
+            yield adds(
                 group(sdnode(lhs, d), sdnode(~rhs, not d)),
-                group(sdnode(rhs, d), sdnode(~lhs, not d)),
-            )
+                group(sdnode(rhs, d), sdnode(~lhs, not d)))
 
     class ConjunctionUndesignated(FDE.OperatorNodeRule):
         """
@@ -181,15 +168,13 @@ class TabRules(K3.TabRules):
         operator    = Operator.Conjunction
         branching   = 3
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            d = self.designation
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(sdnode(~lhs, not d)),
                 group(sdnode( lhs, not d)),
                 group(sdnode( rhs, not d)),
-                group(sdnode(~rhs, not d)),
-            )
+                group(sdnode(~rhs, not d)))
 
     class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -205,10 +190,9 @@ class TabRules(K3.TabRules):
         operator    = Operator.Conjunction
         branching   = 2
 
-        def _get_node_targets(self, node: Node, _,/):
-            lhs, rhs = self.sentence(node)
-            d = self.designation
-            return adds(
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
                 group(
                     sdnode(~lhs, d),
                     sdnode( lhs, d),
@@ -216,8 +200,7 @@ class TabRules(K3.TabRules):
                     sdnode( rhs, d),
                 ),
                 group(sdnode(~lhs, not d)),
-                group(sdnode(~rhs, not d)),
-            )
+                group(sdnode(~rhs, not d)))
 
     class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -226,11 +209,8 @@ class TabRules(K3.TabRules):
         designation = True
         operator    = Operator.MaterialConditional
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
-            return adds(
-                group(sdnode(~s.lhs | s.rhs, self.designation))
-            )
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(~s.lhs | s.rhs, d)))
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -240,11 +220,8 @@ class TabRules(K3.TabRules):
         negated     = True
         operator    = Operator.MaterialConditional
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
-            return adds(
-                group(sdnode(~(~s.lhs | s.rhs), self.designation))
-            )
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
     class MaterialConditionalUndesignated(FDE.OperatorNodeRule):
         """
@@ -253,11 +230,8 @@ class TabRules(K3.TabRules):
         designation = False
         operator    = Operator.MaterialConditional
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
-            return adds(
-                group(sdnode(~s.lhs | s.rhs, self.designation))
-            )
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(~s.lhs | s.rhs, d)))
 
     class MaterialConditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -267,11 +241,8 @@ class TabRules(K3.TabRules):
         negated     = True
         operator    = Operator.MaterialConditional
 
-        def _get_node_targets(self, node: Node, _,/):
-            s = self.sentence(node)
-            return adds(
-                group(sdnode(~(~s.lhs | s.rhs), self.designation))
-            )
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
     class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
         """
@@ -373,7 +344,7 @@ class TabRules(K3.TabRules):
         quantifier  = Quantifier.Existential
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            return sdnode(c >> self.sentence(node), self.designation),
+            yield sdnode(c >> self.sentence(node), self.designation)
 
     class ExistentialNegatedUndesignated(FDE.QuantifierFatRule):
         """
@@ -384,12 +355,12 @@ class TabRules(K3.TabRules):
         of `r` to `b`. If there are no constants yet on `b`, use a new constant.
         The node `n` is never ticked.
         """
-        designation = None
+        designation = False
         negated     = True
         quantifier  = Quantifier.Existential
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            return sdnode(~(c >> self.sentence(node)), not self.designation),
+            yield sdnode(~(c >> self.sentence(node)), not self.designation)
 
     class UniversalDesignated(FDE.QuantifierFatRule):
         """
@@ -408,7 +379,8 @@ class TabRules(K3.TabRules):
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             r = c >> self.sentence(node)
             d = self.designation
-            return sdnode(r, not d), sdnode(~r, not d)
+            yield sdnode(r, not d)
+            yield sdnode(~r, not d)
 
     class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
         """
@@ -422,10 +394,9 @@ class TabRules(K3.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
-            return adds(
+            yield adds(
                 # Keep designation neutral for UniversalUndesignated
-                group(sdnode(branch.new_constant() >> s, self.designation))
-            )
+                group(sdnode(branch.new_constant() >> s, self.designation)))
 
     class UniversalUndesignated(UniversalNegatedDesignated):
         """
@@ -452,10 +423,9 @@ class TabRules(K3.TabRules):
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
             d = self.designation
-            return adds(
+            yield adds(
                 group(sdnode(branch.new_constant() >> s, not d)),
-                group(sdnode(s, not d)),
-            )
+                group(sdnode(s, not d)))
 
     rule_groups = (
         (
