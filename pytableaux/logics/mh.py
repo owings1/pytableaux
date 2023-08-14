@@ -167,7 +167,7 @@ class TabRules(K3.TabRules):
         This rule reduces to a disjunction.
         """
         designation = False
-        negated     = False
+        negated     = None
 
     class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated):
         """
@@ -254,7 +254,7 @@ class TabRules(K3.TabRules):
         *ConditionalNegatedDesignated* rule.
         """
         designation = False
-        negated     = False
+        negated     = None
 
     class ConditionalNegatedUndesignated(ConditionalDesignated):
         """

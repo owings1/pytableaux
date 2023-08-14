@@ -80,7 +80,7 @@ class TabRules(K3W.TabRules):
 
         def _get_sd_targets(self, s, d, /):
             # Keep designation fixed to False for inheritance below
-            return adds(group(sdnode(s.lhs, False)))
+            yield adds(group(sdnode(s.lhs, False)))
 
     class AssertionUndesignated(AssertionNegatedDesignated):
         """
@@ -88,7 +88,7 @@ class TabRules(K3W.TabRules):
         an undesignated node to *b* with the assertion of *n*, then tick *n*.
         """
         designation = False
-        negated     = False
+        negated     = None
 
     class AssertionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -100,7 +100,7 @@ class TabRules(K3W.TabRules):
         operator    = Operator.Assertion
 
         def _get_sd_targets(self, s, d, /):
-            return adds(group(sdnode(s.lhs, not d)))
+            yield adds(group(sdnode(s.lhs, not d)))
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -118,7 +118,7 @@ class TabRules(K3W.TabRules):
             if self.negated:
                 sn = ~sn
             # keep designation neutral for inheritance below
-            return adds(group(sdnode(sn, d)))
+            yield adds(group(sdnode(sn, d)))
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -132,7 +132,7 @@ class TabRules(K3W.TabRules):
 
         def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.
-            return adds(
+            yield adds(
                 group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):
@@ -142,7 +142,7 @@ class TabRules(K3W.TabRules):
         with the consequent to *b*. Then tick *n*.
         """
         designation = False
-        negated     = False
+        negated     = None
 
     class ConditionalNegatedUndesignated(ConditionalDesignated):
         """
@@ -175,7 +175,7 @@ class TabRules(K3W.TabRules):
                 sn1 = ~sn1
                 sn2 = ~sn2
             # Keep designation neutral for inheritance below.
-            return adds(
+            yield adds(
                 group(sdnode(sn1, d), sdnode(sn2, d)))
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated):
@@ -198,7 +198,7 @@ class TabRules(K3W.TabRules):
         inverted. Then tick *n*.
         """
         designation = False
-        negated     = False
+        negated     = None
 
     class BiconditionalNegatedUndesignated(BiconditionalUndesignated):
         """

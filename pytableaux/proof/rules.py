@@ -22,6 +22,7 @@ pytableaux.proof.rules
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections import deque
 from typing import Generator, Generic, Iterable, TypeVar, final
 
 from ..lang import Constant, Operated, Predicated, Quantified, Sentence
@@ -199,7 +200,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
             return
         constants = unapplied or FIRST_CONST_SET
         for c in constants:
-            nodes = self._get_constant_nodes(node, c, branch)
+            nodes = deque(self._get_constant_nodes(node, c, branch))
             if unapplied or not branch.all(nodes):
                 yield dict(adds = group(nodes), constant = c)
 

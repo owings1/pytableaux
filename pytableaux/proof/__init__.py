@@ -255,6 +255,8 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
 class RuleMeta(abcs.AbcMeta):
     """Rule meta class."""
 
+    name: str
+
     class State(Flag):
         'Rule state bit flags.'
         INIT   = 1
@@ -320,6 +322,13 @@ class RuleMeta(abcs.AbcMeta):
         if modal is False:
             rulecls.disable_filter(filters.ModalNode)
         rulecls.legend = tuple(cls.Legend.make(rulecls))
+        autoattrs = rulecls.induce_attrs()
+        if autoattrs:
+            # rulecls._autoattrs = MapProxy(autoattrs)
+            for name, value in autoattrs.items():
+                old = getattr(rulecls, name)
+                if old != value:
+                    print(f'{rulecls=} {name=} {old=} {value=}')
         return rulecls
 
     def disable_filter(self: Self|type[Rule], filtercls):
@@ -337,6 +346,50 @@ class RuleMeta(abcs.AbcMeta):
         configs[helpercls] = helpercls.configure_rule(self, ...)
         self.Helpers = MapProxy(configs)
 
+    def induce_attrs(self):
+        attrs = {}
+        todo = self.name
+        for oper in sorted(Operator, key=lambda oper: len(oper.name), reverse=True):
+            if todo.startswith(oper.name):
+                attrs['operator'] = oper
+                todo = todo[len(oper.name):]
+                break
+        else:
+            if hasattr(self, 'operator'):
+                attrs['operator'] = None
+        for quant in Quantifier:
+            if todo.startswith(quant.name):
+                attrs['quantifier'] = quant
+                todo = todo[len(quant.name):]
+                break
+        else:
+            if hasattr(self, 'quantifier'):
+                attrs['quantifier'] = None
+        for pred in Predicate.System:
+            if todo.startswith(pred.name):
+                attrs['predicate'] = pred
+                todo = todo[len(pred.name):]
+                break
+        else:
+            if hasattr(self, 'predicate'):
+                attrs['predicate'] = None
+        if todo.startswith('Negated'):
+            attrs['negated'] = True
+            todo = todo[len('Negated'):]
+        elif hasattr(self, 'negated'):
+            attrs['negated'] = None
+        if todo.startswith('Designated'):
+            attrs['designation'] = True
+            todo = todo[len('Designated'):]
+        elif todo.startswith('Undesignated'):
+            attrs['designation'] = False
+            todo = todo[len('Undesignated'):]
+        elif hasattr(self, 'designation'):
+            attrs['designation'] = None
+        if not len(todo):
+            return attrs
+
+        # if self.
     class Helper(metaclass = abcs.AbcMeta):
         'Rule helper interface.'
 
@@ -412,7 +465,12 @@ from .common import Node
 from .common import QuitFlagNode as QuitFlagNode
 from .common import (SentenceDesignationNode, SentenceNode, SentenceWorldNode,
                      Target)
-from .tableaux import Rule, RulesRoot, Tableau
+from .tableaux import Rule as Rule
+from .tableaux import RulesRoot as RulesRoot
+from .tableaux import RuleGroup as RuleGroup
+from .tableaux import RuleGroups as RuleGroups
+from .tableaux import Tableau as Tableau
+
 
 pass
 from .rules import ClosingRule as ClosingRule

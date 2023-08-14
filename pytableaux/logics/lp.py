@@ -19,7 +19,7 @@ from __future__ import annotations as annotations
 from ..models import BaseModel, ValueLP
 from ..proof import Branch, Node, Target, sdnode
 from ..proof.rules import BaseClosureRule
-from ..tools import qsetf
+from ..tools import qsetf, group
 from . import fde as FDE
 
 name = 'LP'
@@ -72,6 +72,4 @@ class TabRules(FDE.TabRules):
             s = Atomic.first()
             return sdnode(s, False), sdnode(~s, False)
 
-    closure_rules = (
-        GapClosure,
-        FDE.TabRules.DesignationClosure)
+    closure_rules = group(GapClosure) + FDE.TabRules.closure_rules

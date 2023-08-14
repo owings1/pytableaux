@@ -627,7 +627,7 @@ class TabRules(LogicType.TabRules):
         def example_nodes(cls):
             w = 0 if cls.modal else None
             c = Constant.first()
-            return group(swnode(~cls.predicate((c, c)), w))
+            yield swnode(~cls.predicate((c, c)), w)
 
     class NonExistenceClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
         """
@@ -650,7 +650,7 @@ class TabRules(LogicType.TabRules):
         def example_nodes(cls):
             s = ~Predicated.first(Predicate.System.Existence)
             w = 0 if cls.modal else None
-            return group(swnode(s, w))
+            yield swnode(s, w)
 
     class DoubleNegation(OperatorNodeRule):
         """
@@ -661,7 +661,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.Negation
 
         def _get_sw_targets(self, s, w, /):
-            return adds(group(swnode(s.lhs, w)))
+            yield adds(group(swnode(s.lhs, w)))
 
     class Assertion(OperatorNodeRule):
         """
@@ -671,7 +671,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.Assertion
 
         def _get_sw_targets(self, s, w, /):
-            return adds(group(swnode(s.lhs, w)))
+            yield adds(group(swnode(s.lhs, w)))
 
     class AssertionNegated(OperatorNodeRule):
         """
@@ -683,7 +683,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.Assertion
 
         def _get_sw_targets(self, s, w, /):
-            return adds(group(swnode(~s.lhs, w)))
+            yield adds(group(swnode(~s.lhs, w)))
 
     class Conjunction(OperatorNodeRule):
         """
@@ -694,7 +694,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.Conjunction
 
         def _get_sw_targets(self, s, w, /):
-            return adds(group(swnode(s.lhs, w), swnode(s.rhs, w)))
+            yield adds(group(swnode(s.lhs, w), swnode(s.rhs, w)))
 
     class ConjunctionNegated(OperatorNodeRule):
         """
@@ -721,7 +721,7 @@ class TabRules(LogicType.TabRules):
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
-            return adds(
+            yield adds(
                 group(swnode(s.lhs, w)),
                 group(swnode(s.rhs, w)))
 
@@ -734,7 +734,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.Disjunction
 
         def _get_sw_targets(self, s, w, /):
-            return adds(group(swnode(~s.lhs, w), swnode(~s.rhs, w)))
+            yield adds(group(swnode(~s.lhs, w), swnode(~s.rhs, w)))
 
     class MaterialConditional(OperatorNodeRule):
         """
@@ -747,7 +747,7 @@ class TabRules(LogicType.TabRules):
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
-            return adds(
+            yield adds(
                 group(swnode(~s.lhs, w)),
                 group(swnode( s.rhs, w)))
 
@@ -761,7 +761,7 @@ class TabRules(LogicType.TabRules):
         operator = Operator.MaterialConditional
 
         def _get_sw_targets(self, s, w, /):
-            return adds(group(swnode(s.lhs, w), swnode(~s.rhs, w)))
+            yield adds(group(swnode(s.lhs, w), swnode(~s.rhs, w)))
 
     class MaterialBiconditional(OperatorNodeRule):
         """
@@ -775,10 +775,9 @@ class TabRules(LogicType.TabRules):
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
-            lhs, rhs = s
-            return adds(
-                group(swnode(~lhs, w), swnode(~rhs, w)),
-                group(swnode( rhs, w), swnode( lhs, w)))
+            yield adds(
+                group(swnode(~s.lhs, w), swnode(~s.rhs, w)),
+                group(swnode( s.rhs, w), swnode( s.lhs, w)))
 
     class MaterialBiconditionalNegated(OperatorNodeRule):
         """
@@ -793,10 +792,9 @@ class TabRules(LogicType.TabRules):
         branching = 1
 
         def _get_sw_targets(self, s, w, /):
-            lhs, rhs = s
-            return adds(
-                group(swnode( lhs, w), swnode(~rhs, w)),
-                group(swnode(~lhs, w), swnode( rhs, w)))
+            yield adds(
+                group(swnode( s.lhs, w), swnode(~s.rhs, w)),
+                group(swnode(~s.lhs, w), swnode( s.rhs, w)))
 
     class Conditional(MaterialConditional):
         """
@@ -807,7 +805,7 @@ class TabRules(LogicType.TabRules):
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-        negated  = False
+        negated  = None
         operator = Operator.Conditional
 
     class ConditionalNegated(MaterialConditionalNegated):
@@ -831,7 +829,7 @@ class TabRules(LogicType.TabRules):
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-        negated  = False
+        negated  = None
         operator = Operator.Biconditional
 
     class BiconditionalNegated(MaterialBiconditionalNegated):
@@ -857,7 +855,7 @@ class TabRules(LogicType.TabRules):
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            return adds(
+            yield adds(
                 group(swnode(branch.new_constant() >> s, node.get('world'))))
 
     class ExistentialNegated(rules.QuantifiedSentenceRule, DefaultNodeRule):
@@ -873,7 +871,7 @@ class TabRules(LogicType.TabRules):
         def _get_node_targets(self, node: Node, _):
             v, si = self.sentence(node)[1:]
             # Keep conversion neutral for inheritance below.
-            return adds(
+            yield adds(
                 group(swnode(self.convert(v, ~si), node.get('world'))))
 
     class Universal(rules.ExtendedQuantifierRule, DefaultNodeRule):
@@ -886,7 +884,7 @@ class TabRules(LogicType.TabRules):
         quantifier = Quantifier.Universal
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            return group(swnode(c >> self.sentence(node), node.get('world')))
+            yield swnode(c >> self.sentence(node), node.get('world'))
 
     class UniversalNegated(ExistentialNegated):
         """
@@ -918,12 +916,12 @@ class TabRules(LogicType.TabRules):
                 if self[QuitFlag].get(branch):
                     return
                 fnode = self[MaxWorlds].quit_flag(branch)
-                return adds(group(fnode), flag = fnode['flag'])
+                yield adds(group(fnode), flag = fnode['flag'])
 
             si = self.sentence(node).lhs
             w1 = node['world']
             w2 = branch.new_world()
-            return adds(
+            yield adds(
                 group(swnode(si, w2), anode(w1, w2)),
                 sentence = si)
 
@@ -1063,7 +1061,6 @@ class TabRules(LogicType.TabRules):
             if pa == pb:
                 # Substituting a param for itself would be silly.
                 return
-            targets = []
             w = node.get('world')
             # Find other nodes with one of the identicals.
             for n in pnodes:
@@ -1089,17 +1086,15 @@ class TabRules(LogicType.TabRules):
                 if branch.has(n_new):
                     continue
                 # The rule applies.
-                targets.append(dict(
-                    nodes = (node, n),
-                    ** adds(group(n_new))))
-            return targets
+                yield adds(group(n_new), nodes=(node, n))
 
         @classmethod
         def example_nodes(cls):
             w = 0 if cls.modal else None
             s1 = Predicated.first()
+            yield swnode(s1, w)
             s2 = cls.predicate((s1[0], s1[0].next()))
-            return swnode(s1, w), swnode(s2, w)
+            yield swnode(s2, w)
 
     closure_rules = (
         ContradictionClosure,

@@ -165,7 +165,7 @@ class TabRules(LP.TabRules):
         """
         This rule reduces to a disjunction.
         """
-        negated     = False
+        negated     = None
         designation = False
 
     class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated):

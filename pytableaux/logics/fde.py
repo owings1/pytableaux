@@ -478,21 +478,25 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default FDE node rule with:
     
     - filters.DesignationNode with defaults: designation = `None`
-    - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
-    - FilterHelper implements `example_nodes()` with its `example_node()` method.
     - AdzHelper implements `_apply()` with its `_apply()` method.
+    - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
+    - This class implements `_get_node_targets() defaulting to `_get_sd_targers()`,
+        which raises NotImplementedError.
+    - FilterHelper implements `example_nodes()` with its `example_node()` method.
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
     """
     NodeFilters = filters.DesignationNode,
     designation: Optional[bool] = None
 
-class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
-    'Mixin class for typical operator rules.'
     def _get_node_targets(self, node: Node, branch: Branch, /):
         return self._get_sd_targets(self.sentence(node), node['designated'])
 
     def _get_sd_targets(self, s: Operated, d: bool, /):
         raise NotImplementedError
+
+class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
+    'Mixin class for typical operator rules.'
+    pass
 
 class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule):
     'Mixin class for "narrow" quantifier rules.'
@@ -506,13 +510,13 @@ class ConjunctionReducingRule(OperatorNodeRule):
 
     conjunct_op: Operator
 
-    def _get_node_targets(self, node: Node, _, /):
+    def _get_sd_targets(self, s, d, /):
         oper = self.conjunct_op
-        lhs, rhs = self.sentence(node)
+        lhs, rhs = s
         s = oper(lhs, rhs) & oper(rhs, lhs)
         if self.negated:
             s = ~s
-        return adds(group(sdnode(s, self.designation)))
+        return adds(group(sdnode(s, d)))
 
 @TableauxSystem.initialize
 class TabRules(LogicType.TabRules):
@@ -792,7 +796,7 @@ class TabRules(LogicType.TabRules):
         the consequent to *b''*, then tick *n*.
         """
         designation = False
-        negated     = False
+        negated     = None
 
     class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalDesignated):
         """

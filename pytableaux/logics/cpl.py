@@ -19,6 +19,7 @@ from __future__ import annotations
 from ..lang import Argument, Operated, Operator, Quantified, Sentence
 from ..proof import Branch, Node, Tableau, snode
 from . import k as K
+from . import LogicType
 
 name = 'CPL'
 
@@ -65,7 +66,7 @@ class TableauxSystem(K.TableauxSystem):
 
 
 @TableauxSystem.initialize
-class TabRules:
+class TabRules(LogicType.TabRules):
 
     class ContradictionClosure(K.TabRules.ContradictionClosure):
         """
@@ -216,8 +217,7 @@ class TabRules:
     closure_rules = (
         ContradictionClosure,
         SelfIdentityClosure,
-        NonExistenceClosure,
-    )
+        NonExistenceClosure)
 
     rule_groups = (
         (
@@ -229,8 +229,7 @@ class TabRules:
             DisjunctionNegated,
             MaterialConditionalNegated,
             ConditionalNegated,
-            DoubleNegation,
-        ),
+            DoubleNegation),
         (
             # branching rules
             ConjunctionNegated,
@@ -240,6 +239,4 @@ class TabRules:
             MaterialBiconditionalNegated,
             Conditional,
             Biconditional,
-            BiconditionalNegated,
-        ),
-    )
+            BiconditionalNegated))

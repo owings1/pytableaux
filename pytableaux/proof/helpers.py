@@ -21,6 +21,7 @@ pytableaux.proof.helpers
 from __future__ import annotations
 
 from abc import abstractmethod as abstract
+from collections import deque
 from collections.abc import Set
 from copy import copy
 from itertools import filterfalse
@@ -485,11 +486,14 @@ class FilterNodeCache(BranchCache[set[Node]]):
             def get_targets_filtered(rule: Rule, branch, /):
                 helper = rule[cls]
                 helper.gc()
-                return tuple(targiter(rule, helper[branch], branch))
+                return deque(targiter(rule, helper[branch], branch))
             return get_targets_filtered
 
         def create(it, r, b, n, /):
-            return Target(it, rule = r, branch = b, node = n)
+            if isinstance(it, Target):
+                it.update(rule=r, branch=b, node=n)
+                return it
+            return Target(it, rule=r, branch=b, node=n)
 
         def make_targiter(source_fn):
             @wraps(source_fn)

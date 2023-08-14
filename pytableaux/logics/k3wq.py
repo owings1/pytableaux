@@ -104,7 +104,7 @@ class TabRules(K3W.TabRules):
         The other node is a substitution of a constant new to `b`. Then tick `n`.
         """
         designation = True
-        negated     = False
+        negated     = None
         quantifier  = Quantifier.Existential
         convert     = Quantifier.Universal
 
@@ -130,7 +130,7 @@ class TabRules(K3W.TabRules):
         Then tick `n`.
         """
         designation = False
-        negated     = False
+        negated     = None
         quantifier  = Quantifier.Existential
         convert     = Quantifier.Universal
         branching   = 1

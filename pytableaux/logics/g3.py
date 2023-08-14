@@ -133,7 +133,7 @@ class TabRules(L3.TabRules):
         This rule reduces to a conjunction of conditionals.
         """
         designation = False
-        negated     = False
+        negated     = None
         operator    = Operator.Biconditional
         conjunct_op = Operator.Conditional
 

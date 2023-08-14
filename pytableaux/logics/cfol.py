@@ -49,6 +49,7 @@ class TabRules(CPL.TabRules):
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,
     including the CPL closure rules, and adds additional rules for the quantifiers.
     """
+
     class Existential(K.TabRules.Existential):
         """
         From an unticked existential node *n* on a branch *b*, quantifying over
