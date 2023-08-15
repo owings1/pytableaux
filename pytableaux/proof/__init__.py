@@ -21,6 +21,7 @@ pytableaux.proof
 """
 from __future__ import annotations
 
+import itertools
 from abc import abstractmethod
 from enum import Enum, Flag
 from types import MappingProxyType as MapProxy
@@ -167,8 +168,11 @@ class TableauMeta(abcs.AbcMeta):
         models : StopWatch
 
         @classmethod
-        def create(cls, it = (False,) * 4):
-            return cls._make(map(StopWatch, it))
+        def create(cls):
+            return cls._make(
+                map(
+                    StopWatch,
+                    itertools.repeat(False, len(cls._fields))))
 
     class Flag(Flag):
         'Tableau state bit flags.'
@@ -239,26 +243,29 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         return node
 
     @classmethod
-    def add_rules(cls, logic: LogicType, rules: RulesRoot, /) -> None:
+    def add_rules(cls, rules: RulesRoot, /) -> None:
         """Populate rules/groups for a tableau.
 
         Args:
             logic (LogicType): The logic.
             rules (RulesRoot): The tableau's rules.
         """
-        Rules = logic.TabRules
-        rules.groups.create('closure').extend(Rules.closure_rules)
-        for classes in Rules.rule_groups:
+        rules.groups.create('closure').extend(cls.Rules.closure_rules)
+        for classes in cls.Rules.rule_groups:
             rules.groups.create().extend(classes)
 
     @classmethod
-    def initialize(cls, RulesClass: type[LogicType.TabRules]|_TT) -> _TT:
-        RulesClass.all_rules = RulesClass.closure_rules + tuple(
-            r for g in RulesClass.rule_groups for r in g)
-        cls.Rules = RulesClass
-        for rulecls in RulesClass.all_rules:
-            rulecls.modal = cls.modal
-            if 'branching' not in rulecls.__dict__:
+    def initialize(cls, TabRules: type[LogicType.TabRules]|_TT) -> _TT:
+        if 'Rules' in cls.__dict__:
+            raise TypeError(f'System already initialized: {cls}')
+        TabRules.all_rules = TabRules.closure_rules + tuple(
+            itertools.chain.from_iterable(TabRules.rule_groups))
+        cls.Rules = TabRules
+        for rulecls in TabRules.all_rules:
+            ns = rulecls.__dict__
+            if 'modal' not in ns:
+                rulecls.modal = cls.modal
+            if 'branching' not in ns:
                 try:
                     rulecls.branching = rulecls.induce_branching()
                 except Exception as err:
@@ -266,7 +273,7 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
                         f'failed to induce branching for {rulecls}: '
                         f'{type(err)}: {err}')
                     raise TypeError(msg)
-        return RulesClass
+        return TabRules
 
 class RuleMeta(abcs.AbcMeta):
     """Rule meta class."""
@@ -420,10 +427,14 @@ class RuleMeta(abcs.AbcMeta):
         rule.apply(rule.target(rule.branch().extend(rule.example_nodes())))
         return len(rule.tableau) - 1
 
-    class Helper(metaclass = abcs.AbcMeta):
-        'Rule helper interface.'
+    class HelperMeta(abcs.AbcMeta):
 
-        __slots__ = EMPTY_SET
+        @classmethod
+        def __prepare__(cls, clsname, bases, **kw):
+            return dict(__slots__=EMPTY_SET)
+
+    class Helper(metaclass = HelperMeta):
+        'Rule helper interface.'
 
         rule: Rule
         config: Any

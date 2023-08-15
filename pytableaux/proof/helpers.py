@@ -21,8 +21,10 @@ pytableaux.proof.helpers
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections import defaultdict
 from collections.abc import Set
 from copy import copy
+from functools import partial
 from itertools import filterfalse
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
@@ -123,16 +125,15 @@ class BranchCache(dict[Branch, _VT], Rule.Helper):
         return f'<{type(self).__name__} {pstr}>'
 
     def _reprdict(self):
-        return dict(branches = len(self))
+        return dict(branches=len(self))
 
     @classmethod
-    def _empty_value(cls, branch,/):
+    def _empty_value(cls, branch: Branch, /):
         'Override, for example, if the value type takes arguments.'
         return cls._valuetype()
 
 class BranchDictCache(BranchCache[dict[_KT, _VT]]):
     'Copies each K->V item for parent branch via copy(V).'
-    __slots__ = EMPTY_SET
     _valuetype = dict
 
     def listen_on(self):
@@ -148,7 +149,6 @@ class QuitFlag(BranchCache[bool]):
     Track the application of a flag node by the rule for each branch. A branch
     is considered flagged when the target has a non-empty ``flag`` property.
     """
-    __slots__ = EMPTY_SET
     _valuetype = bool
 
     def listen_on(self):
@@ -193,7 +193,6 @@ class BranchValueHook(BranchCache[_VT]):
         check.callable(value)
 
 class BranchTarget(BranchValueHook[Target]):
-    __slots__ = EMPTY_SET
     hook_method_name = '_branch_target_hook'
 
 class AplSentCount(BranchCache[dict[Sentence, int]]):
@@ -202,7 +201,6 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
     the `sentence` property of the rule's target. The target should also include
     the `branch` key.
     """
-    __slots__ = EMPTY_SET
     _valuetype = dict
 
     def listen_on(self):
@@ -218,7 +216,6 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
 class NodeCount(BranchCache[dict[Node, int]]):
     "Track the number of rule applications to each node."
 
-    __slots__ = EMPTY_SET
     _valuetype = dict
 
     def listen_on(self):
@@ -262,7 +259,6 @@ class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
     target must have `node`, and `world` attributes. The values of the cache
     are ``(node, world)`` pairs.
     """
-    __slots__ = EMPTY_SET
     _valuetype = set
 
     def listen_on(self):
@@ -275,15 +271,13 @@ class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
 
 class UnserialWorlds(BranchCache[set[int]]):
     "Track the unserial worlds on the branch."
-
-    __slots__ = EMPTY_SET
     _valuetype = set
 
     def listen_on(self):
         super().listen_on()
         def after_node_add(node: Node, branch: Branch):
             for w in node.worlds():
-                if node.get(Node.Key.w1) == w or branch.has({Node.Key.w1: w}):
+                if node.get(Node.Key.world1) == w or branch.has({Node.Key.world1: w}):
                     self[branch].discard(w)
                 else:
                     self[branch].add(w)
@@ -294,12 +288,13 @@ class WorldIndex(BranchDictCache[int, set[int]]):
 
     __slots__ = ('nodes',)
 
+    _valuetype = partial(defaultdict, set)
+
     class Nodes(BranchCache[dict[WorldPair, Node]]):
-        __slots__ = EMPTY_SET
         _valuetype = dict
 
-        def add(self, node: Node, branch: Branch):
-            self[branch][WorldPair.fornode(node)] = node
+        def add(self, node: AccessNode, branch: Branch):
+            self[branch][node.pair()] = node
 
     def __init__(self, rule, /):
         super().__init__(rule)
@@ -308,12 +303,11 @@ class WorldIndex(BranchDictCache[int, set[int]]):
     def listen_on(self):
         super().listen_on()
         def after_node_add(node: Node, branch: Branch):
-            if isinstance(node, AccessNode):
-                w1, w2 = WorldPair.fornode(node)
-                if w1 not in self[branch]:
-                    self[branch][w1] = set()
-                self[branch][w1].add(w2)
-                self.nodes.add(node, branch)
+            if not isinstance(node, AccessNode):
+                return
+            w1, w2 = node.pair()
+            self[branch][w1].add(w2)
+            self.nodes.add(node, branch)
         self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
     def has(self, branch, access):
@@ -335,6 +329,7 @@ class WorldIndex(BranchDictCache[int, set[int]]):
         # TODO: can we make this more efficient? for each world pair,
         #       track the intransitives?
         return self[branch].get(w2, EMPTY_SET) - self[branch].get(w1, EMPTY_SET)
+
 
 class FilterNodeCache(BranchCache[set[Node]]):
     "Base class for caching nodes "
@@ -422,7 +417,6 @@ class FilterNodeCache(BranchCache[set[Node]]):
 
 class PredNodes(FilterNodeCache):
     'Track all predicated nodes on the branch.'
-    __slots__ = EMPTY_SET
 
     def __call__(self, node: Node, _):
         return type(self.rule.sentence(node)) is Predicated
@@ -502,6 +496,7 @@ class FilterHelper(FilterNodeCache):
             else:
                 for fcls, flag in dict(v).items():
                     configs.setdefault(fcls, flag)
+        # print(f'{rulecls=} {configs=}')
         for fcls in configs:
             check.subcls(check.inst(fcls, type), filters.CompareNode)
         if not abcs.isabstract(rulecls):
@@ -518,11 +513,9 @@ class FilterHelper(FilterNodeCache):
         configs: Mapping = rulecls.NodeFilters
         types = tuple(fcls for fcls, flag in configs.items()
             if flag is not NotImplemented)
-        filters = MapProxy(dict(zip(
-            types, funcs := tuple(ftype(rulecls) for ftype in types))))
-        def pred(node, /):
-            return all(f(node) for f in funcs)
-        return filters, pred
+        funcs = tuple(ftype(rulecls) for ftype in types)
+        filters = MapProxy(dict(zip(types, funcs)))
+        return filters, lambda node: all(f(node) for f in funcs)
 
 class NodeConsts(BranchDictCache[Node, set[Constant]]):
     """Track the unapplied constants per branch for each potential node.
@@ -536,7 +529,6 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
     _valuetype = dict
 
     class Consts(BranchCache[set[Constant]]):
-        __slots__ = EMPTY_SET
         _valuetype = set
 
     consts: NodeConsts.Consts # type: ignore
@@ -575,8 +567,6 @@ class WorldConsts(BranchDictCache[int, set[Constant]]):
     """
     Track the constants appearing at each world.
     """
-
-    __slots__ = EMPTY_SET
 
     def listen_on(self):
         super().listen_on()

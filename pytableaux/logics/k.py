@@ -227,7 +227,7 @@ class Model(BaseModel[ValueCPL]):
                 self.set_literal_value(s, self.Value.T, world = w)
             self.predicates.update(s.predicates)
         elif isinstance(node, AccessNode):
-            self.R.add(WorldPair.fornode(node))
+            self.R.add(node.pair())
 
     def finish(self):
         # track all atomics and opaques
@@ -568,7 +568,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     """
     NodeFilters = filters.NodeType,
     modal: bool = True
-    access: Optional[bool] = None
+    # access: Optional[bool] = None
     autoattrs = True
 
     def _get_node_targets(self, node: Node, branch: Branch, /):
@@ -579,7 +579,6 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
 
 class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule):
     'Convenience mixin class for most common rules.'
-    NodeFilters = filters.NodeType, filters.NodeSentence
     NodeType = SentenceNode
 
 @TableauxSystem.initialize
@@ -606,8 +605,6 @@ class TabRules(LogicType.TabRules):
             w = 0 if self.modal else None
             yield swnode(s, w)
             yield swnode(~s, w)
-
-        # private util
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)

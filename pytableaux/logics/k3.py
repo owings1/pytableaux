@@ -22,6 +22,7 @@ from ..proof import Branch, Node, Target, sdnode
 from ..proof.rules import BaseClosureRule
 from . import fde as FDE
 
+
 class Meta(FDE.Meta):
     name = 'K3'
     title = 'Strong Kleene Logic'
@@ -52,7 +53,7 @@ class TabRules(FDE.TabRules):
         """A branch closes when a sentence and its negation both appear as
         designated nodes on the branch.
         """
-
+    
         def _branch_target_hook(self, node: Node, branch: Branch, /):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:

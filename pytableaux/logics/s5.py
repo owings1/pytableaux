@@ -72,11 +72,11 @@ class TabRules(S4.TabRules):
         _defaults = dict(is_rank_optim = False)
         modal_operators = Model.modal_operators
 
-        def _get_node_targets(self, node: Node, branch: Branch,/):
+        def _get_node_targets(self, node: AccessNode, branch: Branch,/):
             if self[MaxWorlds].is_exceeded(branch):
                 self[FilterHelper].release(node, branch)
                 return
-            access = WorldPair.fornode(node).reversed()
+            access = node.pair().reversed()
             if not self[WorldIndex].has(branch, access):
                 yield adds(group(a := access.tonode()), **a)
 

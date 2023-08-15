@@ -152,6 +152,7 @@ class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
     operator   = None
     quantifier = None
     predicate  = None
+    designation = None
 
     def sentence(self, node: Node, /) -> _ST:
         'Delegates to ``filters.SentenceNode`` of ``FilterHelper``.'

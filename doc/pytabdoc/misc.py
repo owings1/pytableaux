@@ -224,13 +224,7 @@ def _rule_is_grouped(rule: type[Rule], logic) -> bool:
         logic = registry.locate(logic)
     except:
         return False
-    tabrules = logic.TabRules
-    if rule in tabrules.closure_rules:
-        return True
-    for grp in tabrules.rule_groups:
-        if rule in grp:
-            return True
-    return False
+    return rule in logic.TabRules.all_rules
 
 def _rule_is_self_grouped(rule: type[Rule]) -> bool:
     'Whether the Rule class is grouped in the TabRules of its own logic.'
@@ -259,6 +253,8 @@ class EllipsisExampleHelper(Rule.Helper):
     isclosure: bool
     istrunk: bool
     mynode = Node.PropMap.Ellipsis
+
+    __slots__ = ('__dict__',)
 
     def __init__(self, rule: Rule,/):
         super().__init__(rule)

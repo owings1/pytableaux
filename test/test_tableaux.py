@@ -353,8 +353,8 @@ class TestFilters(BaseCase):
             testname = True
         class AttrFilt(filters.CompareAttr):
             attrmap = {'testname': 'designated'}
+            rget = staticmethod(getkey)
         f = AttrFilt(Lhs())
-        f.rget = getkey#gets.key()
         assert f(Node.for_mapping({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
 

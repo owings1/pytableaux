@@ -743,7 +743,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             raise Emsg.IllegalState("Tableau already started")
         self._logic = registry(value)
         self.rules.clear()
-        self.System.add_rules(self.logic, self.rules)
+        self.System.add_rules(self.rules)
         if self.argument is not None and self.opts['auto_build_trunk']:
             self.build_trunk()
 

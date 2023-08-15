@@ -51,22 +51,12 @@ def getkey_safe(obj: Any, key: Any) -> Any:
     except KeyError:
         return None
 
-# class SkipFilter(Exception): pass
+class ComparerMeta(abcs.AbcMeta):
+    @classmethod
+    def __prepare__(cls, clsname, bases, **kw):
+        return dict(__slots__=EMPTY_SET)
 
-class CompSentenceCompItem(NamedTuple):
-    "Comparison parameters for a sentence filter/comparator."
-    type: type[Sentence]
-    "The expected sentence type."
-    item: Lexical
-    "The specific lexical item to match."
-    name: str
-    "The attribute name of the item, e.g. `'operator'`."
-    fcmp: Callable
-    "The comparison function for the expected item, e.g. `is` or `equals`."
-    negated: bool
-    "Whether the sentence must be negated."
-
-class Comparer(abcs.Abc):
+class Comparer(metaclass=ComparerMeta):
     "Filter/comparer base class."
 
     __slots__ = ('compitem',)
@@ -74,8 +64,8 @@ class Comparer(abcs.Abc):
     compitem: object
     "The hashable comparison item tuple."
 
-    def __init__(self, *args, **kw):
-        self.compitem = self._build(*args, **kw)
+    def __init__(self, lhs, /):
+        self.compitem = self._build(lhs)
 
     def __hash__(self):
         return hash((type(self), self.compitem))
@@ -90,7 +80,7 @@ class Comparer(abcs.Abc):
         return NotImplemented
 
     @abstractmethod
-    def __call__(self, rhs) -> bool:
+    def __call__(self, rhs, /) -> bool:
         raise NotImplementedError
 
     @abstractmethod
@@ -99,13 +89,19 @@ class Comparer(abcs.Abc):
 
     @classmethod
     @abstractmethod
-    def _build(cls, *args, **kw):
+    def _build(cls, lhs, /):
+        """Build a comparison item.
+
+        Args:
+            lhs: The base object.
+
+        Returns:
+            The comparison item tuple.
+        """
         raise NotImplementedError
 
 class CompareType(Comparer):
     "Compare isinstance type."
-
-    __slots__ = EMPTY_SET
 
     attr = None
     basetype = object
@@ -114,11 +110,11 @@ class CompareType(Comparer):
     rget = staticmethod(thru)
 
     @classmethod
-    def _build(cls, obj):
+    def _build(cls, lhs, /):
         if cls.attr:
-            types = getattr(obj, cls.attr, None)
+            types = getattr(lhs, cls.attr, None)
         else:
-            types = obj
+            types = lhs
         if isinstance(types, type):
             return types,
         if types:
@@ -130,54 +126,36 @@ class CompareType(Comparer):
     def __call__(self, rhs):
         return isinstance(self.rget(rhs), self.compitem)
 
+    def __repr__(self):
+        return f'<{type(self).__qualname__}:({self.compitem})>'
+
 class CompareAttr(Comparer):
     "Attribute filter/comparer."
 
-    __slots__ = EMPTY_SET
-
     attrmap = EMPTY_MAP
-    "LHS attr -> RHS attr mapping."
+    "LHS attr -> RHS attr mapping. LHS can be a tuple of names."
+    lget = staticmethod(getattr_safe)
     rget = staticmethod(getattr)
     fcmp = staticmethod(opr.eq)
 
     @classmethod
-    def _build(cls, lhs, /, attrs = None, attrmap = None, getitem = False,):
-        """Build a comparison item.
-
-        Args:
-            lhs: The base object.
-            attrs: Names of attributes to use. The attrmap translates into rhs name.
-            attrmap: Lhs to rhs attr name mapping. Merges with class attrmap.
-            getitem: Use mapping subscript to get lhs values, intead of getattr.
-
-        Returns:
-            The comparison item tuple.
-        """
-        if getitem:
-            lget = getkey_safe
-        else:
-            lget = getattr_safe
-        if attrs is None:
-            attrs = EMPTY_SET
-        if attrmap is None:
-            attrmap = EMPTY_MAP
-        attrmap = dict(zip(attrs, attrs)) | cls.attrmap | attrmap
-        trans = attrmap.get
-        return tuple(
-            (trans(name, name), value)
-            for name, value in (
-                (name, lget(lhs, name))
-                for name in attrmap)
-            if value is not None)
+    def _build(cls, lhs, /):
+        builder = {}
+        for sources, dest in cls.attrmap.items():
+            if isinstance(sources, str):
+                sources = sources,
+            for src in sources:
+                exp = cls.lget(lhs, src)
+                if exp is not None:
+                    builder[dest] = exp
+                    break
+        return tuple(builder.items())
 
     def __call__(self, rhs, /) -> bool:
         "Return whether the rhs passes the filter."
-        rget = self.rget
-        fcmp = self.fcmp
-        for name, value in self.compitem:
-            if not fcmp(value, rget(rhs, name)):
-                return False
-        return True
+        return all(
+            self.fcmp(exp, self.rget(rhs, name))
+            for name, exp in self.compitem)
 
     def example(self):
         "Build an example object/mapping that satisfies the filter."
@@ -191,8 +169,6 @@ class CompareAttr(Comparer):
 class CompareSentence(Comparer):
     "Sentence filter/comparer."
 
-    __slots__ = EMPTY_SET
-
     compmap = (
         *dict(
             operator   = (Operated, opr.is_),
@@ -200,11 +176,25 @@ class CompareSentence(Comparer):
             predicate  = (Predicated, opr.eq),
         ).items(),)
         
+    lget = staticmethod(getattr_safe)
     rget = staticmethod(thru)
-    compitem: CompSentenceCompItem
+    compitem: CompareSentence.CompItem
+
+    class CompItem(NamedTuple):
+        "Comparison parameters for a sentence filter/comparator."
+        type: type[Sentence]
+        "The expected sentence type."
+        item: Lexical
+        "The specific lexical item to match."
+        name: str
+        "The attribute name of the item, e.g. `'operator'`."
+        fcmp: Callable
+        "The comparison function for the expected item, e.g. `is` or `equals`."
+        negated: bool
+        "Whether the sentence must be negated."
 
     @classmethod
-    def _build(cls, lhs, /, getitem = False,):
+    def _build(cls, lhs, /):
         """Build a sentence comparison item.
 
         Args:
@@ -214,19 +204,15 @@ class CompareSentence(Comparer):
         Returns:
             The sentence comparison item tuple.
         """
-        if getitem:
-            lget = getkey_safe
-        else:
-            lget = getattr_safe
         for s_name, (s_type, s_fcmp) in cls.compmap:
-            if (s_item := lget(lhs, s_name)) is not None:
-                s_negated = bool(lget(lhs, 'negated'))
+            if (s_item := cls.lget(lhs, s_name)) is not None:
+                s_negated = bool(cls.lget(lhs, 'negated'))
                 break
         else:
             return None
-        return CompSentenceCompItem(s_type, s_item, s_name, s_fcmp, s_negated)
+        return cls.CompItem(s_type, s_item, s_name, s_fcmp, s_negated)
 
-    def sentence(self, rhs):
+    def sentence(self, rhs, /):
         """Get the sentence to be examined from the rhs, or None. For a `negated`
         filter, returns the negatum, if any, else None. For a non-`negated`
         filter, returns the value retrieved unaltered.
@@ -264,16 +250,12 @@ class CompareSentence(Comparer):
 class CompareNode(Comparer):
     "Node filter mixin class."
 
-    __slots__ = EMPTY_SET
-
     @abstractmethod
     def example_node(self) -> dict:
         raise NotImplementedError
 
 class NodeSentence(CompareSentence, CompareNode):
     "Sentence node filter."
-
-    __slots__ = EMPTY_SET
 
     @staticmethod
     def rget(node: Node, /):
@@ -289,8 +271,6 @@ class NodeSentence(CompareSentence, CompareNode):
 class NodeDesignation(CompareAttr, CompareNode):
     "Designation node filter."
 
-    __slots__ = EMPTY_SET
-
     attrmap = MapProxy(dict(designation = Node.Key.designated))
 
     @staticmethod
@@ -302,8 +282,6 @@ class NodeDesignation(CompareAttr, CompareNode):
 
 class NodeType(CompareType, CompareNode):
     "Node type filter."
-
-    __slots__ = EMPTY_SET
 
     attr = 'NodeType'
     basetype = Node

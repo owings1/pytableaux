@@ -29,9 +29,9 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Optional, Self
 from ..errors import Emsg, check
 from ..lang import Constant, Sentence
 from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, SequenceSet, SetView,
-                     abcs, dictattr, isattrstr, isint, itemsiter, lazy, qset)
+                     abcs, dictattr, isattrstr, isint, itemsiter, qset)
 from ..tools.events import EventEmitter
-from . import BranchMeta, NodeMeta
+from . import BranchMeta, NodeMeta, WorldPair
 
 if TYPE_CHECKING:
 
@@ -616,7 +616,9 @@ class FlagNode(Node): pass
 class ClosureNode(FlagNode): pass
 class QuitFlagNode(FlagNode): pass
 class WorldNode(Node, Modal): pass
-class AccessNode(Node, Modal): pass
+class AccessNode(Node, Modal):
+    def pair(self) -> WorldPair:
+        return WorldPair.fornode(self)
 class DesignationNode(Node, Designation): pass
 class SentenceNode(Node): pass
 class SentenceWorldNode(SentenceNode, WorldNode): pass

@@ -67,11 +67,11 @@ class TabRules(T.TabRules):
         ticking = False
         modal_operators = Model.modal_operators
 
-        def _get_node_targets(self, node: Node, branch: Branch,/) -> Generator[dict, None, None]:
+        def _get_node_targets(self, node: AccessNode, branch: Branch, /) -> Generator[dict, None, None]:
             if self[MaxWorlds].is_reached(branch):
                 self[FilterHelper].release(node, branch)
                 return
-            w1, w2 = WorldPair.fornode(node)
+            w1, w2 = node.pair()
             for w3 in self[WorldIndex].intransitives(branch, w1, w2):
                 yield adds(
                     group(a := anode(w1, w3)), **a,
