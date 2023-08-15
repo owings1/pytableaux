@@ -235,15 +235,16 @@ class RoleDirectiveMixin(AppEnvMixin):
     def run(self): ...
 
 class LogicOptionMixin(RoleDirectiveMixin):
+
     @property
     def logic(self) -> logics.LogicType:
         return self.options.get('logic', self.current_logic)
+
     @logic.setter
     def logic(self, value):
         self.options['logic'] = logics.registry(value)
 
 class ParserOptionMixin(RoleDirectiveMixin):
-
 
     def parser_option(self) -> Parser:
         opts, conf = self.options, self.config

@@ -8,6 +8,9 @@ Glossary
 
 .. glossary::
 
+  addition
+    :s:`A` !{conseq} :s:`A V B`
+
   conditional identity
     :s:`B` !{|-} :s:`A $ A`
 

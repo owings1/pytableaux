@@ -43,8 +43,7 @@ Truth Tables
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -118,10 +117,6 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/cpl/rules_blurb.rst
 
 Additional rules are given for the quantifiers.
@@ -129,7 +124,7 @@ Additional rules are given for the quantifiers.
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: non_native_operators
+  :exclude: non_native
 
 .. tableau-rules::
   :docflags:
@@ -139,4 +134,15 @@ Additional rules are given for the quantifiers.
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: non_native_operators
+  :include: non_native
+
+Notes
+=====
+
+References
+==========
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

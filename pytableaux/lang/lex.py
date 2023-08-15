@@ -1054,7 +1054,7 @@ class Predicated(Sentence, Sequence[Parameter]):
     predicate: Predicate
     "The predicate."
 
-    params: tuple
+    params: tuple[Parameter, ...]
     "The parameters."
 
     @lazy.prop

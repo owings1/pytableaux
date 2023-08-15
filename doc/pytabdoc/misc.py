@@ -128,7 +128,7 @@ def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /
     RulesCls = logic.TabRules
     native_members = []
     todo = set(rules)
-    for member in RulesCls.__dict__.values():
+    for member in filter(is_rule_class, RulesCls.__dict__.values()):
         if member in todo:
             native_members.append(member)
             todo.remove(member)

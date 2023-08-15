@@ -58,8 +58,7 @@ An `Assertion` :s:`*` operator is definable in terms of :s:`&`:
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 The `Conditional` :s:`$` is definable as follows:
 
@@ -70,11 +69,7 @@ The `Conditional` :s:`$` is definable as follows:
 This can be read as: either :s:`A > B` or both :s:`A` and :s:`B` are
 `gappy` (i.e. have the value T{N}).
 
-Likewise the `Biconditional` is defined as:
-
-.. sentence::
-
-  A % B := (A $ B) & (B $ A)
+.. include:: include/bicond_define.rst
 
 .. truth-tables::
   :operators: Conditional, Biconditional
@@ -146,10 +141,6 @@ Closure
 Rules
 -----
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
@@ -201,3 +192,8 @@ References
 .. _Colin Caret: https://sites.google.com/view/colincaret
 .. _Indeterminacy and Logical Atoms: https://github.com/owings1/dissertation/raw/master/output/dissertation.pdf
 .. _Hybridized Paracomplete and Paraconsistent Logics: https://ojs.victoria.ac.nz/ajl/article/view/4035/3588
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

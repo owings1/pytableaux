@@ -46,16 +46,13 @@ Truth Tables
 
 .. rubric:: Defined Operators
 
-The `Biconditional` :s:`%` is defined in the usual way:
+.. include:: include/bicond_define.rst
 
-.. sentence::
-
-  A % B := (A $ B) & (B $ A)
+.. include:: include/bicond_table.rst
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: Biconditional, MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -90,8 +87,7 @@ Quantification
 Consequence
 -----------
 
-**Logical Consequence** is defined in terms of the set of *designated* values
-{ V{T} }:
+**Logical Consequence** is defined in terms of the set of *designated* values { V{T} }:
 
 .. include:: include/fde/m.consequence.rst
 
@@ -130,16 +126,12 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: non_native_operators
+  :exclude: non_native
 
 .. tableau-rules::
   :docflags:
@@ -149,13 +141,13 @@ Rules
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: non_native_operators
+  :include: non_native
 
 
 Notes
 =====
 
-* Conditional Identity holds: !{conseq} :s:`A $ A`.
+* :term:`Conditional Identity` holds: !{conseq} :s:`A $ A`.
 
 References
 ==========
@@ -164,3 +156,8 @@ References
 
 * Łukasiewicz, J. (1957). Aristotle's Syllogistic from the Standpoint of Modern
     Formal Logic. Oxford: Clarendon Press
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

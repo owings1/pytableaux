@@ -23,9 +23,9 @@ from ..errors import DenotationError, ModelValueError, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, ValueCPL
-from ..proof import (Branch, Node, Tableau, TableauxSystem, Target, WorldPair, AccessNode, SentenceWorldNode,
-                     SentenceNode,
-                     adds, anode, filters, rules, swnode)
+from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
+                     Tableau, TableauxSystem, Target, WorldPair, adds, anode,
+                     filters, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
                              WorldIndex)
@@ -568,7 +568,6 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     """
     NodeFilters = filters.NodeType,
     modal: bool = True
-    # access: Optional[bool] = None
     autoattrs = True
 
     def _get_node_targets(self, node: Node, branch: Branch, /):
@@ -609,7 +608,7 @@ class TabRules(LogicType.TabRules):
         def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             if s is not None:
-                return branch.find(swnode(self.sentence(node).negative(), node.get('world')))
+                return branch.find(swnode(s.negative(), node.get('world')))
 
     class SelfIdentityClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
         """

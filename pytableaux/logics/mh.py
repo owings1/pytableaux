@@ -158,7 +158,7 @@ class TabRules(LogicType.TabRules):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        conjunct_op = Operator.MaterialConditional
+        conjoined = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(MaterialBiconditionalDesignated):
         """
@@ -232,7 +232,7 @@ class TabRules(LogicType.TabRules):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        conjunct_op = Operator.Conditional
+        conjoined = Operator.Conditional
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated):
         """

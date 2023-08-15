@@ -49,8 +49,7 @@ Truth Tables
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -129,16 +128,12 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: non_native_operators
+  :exclude: non_native
 
 .. tableau-rules::
   :docflags:
@@ -148,14 +143,23 @@ Rules
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: non_native_operators
+  :include: non_native
 
 
 Notes
 =====
 
-- Addition fails in L{K3W}. That is :s:`A` does not imply :s:`A V B`.
+- :term:`Addition` fails in L{K3W}. That is :s:`A` does not imply :s:`A V B`.
 
 For further reading, see:
 
 * Beall, Jc `Off-topic: a new interpretation of Weak Kleene logic <http://entailments.net/papers/beall-ajl-wk3-interp.pdf>`_. 2016.
+
+References
+==========
+
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

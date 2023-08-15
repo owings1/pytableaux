@@ -433,7 +433,7 @@ class RuleMeta(abcs.AbcMeta):
         def __prepare__(cls, clsname, bases, **kw):
             return dict(__slots__=EMPTY_SET)
 
-    class Helper(metaclass = HelperMeta):
+    class Helper(metaclass=HelperMeta):
         'Rule helper interface.'
 
         rule: Rule

@@ -47,16 +47,13 @@ Truth Tables
 
 .. rubric:: Defined Operators
 
-The `Biconditional` :s:`%` is defined in the usual way:
+.. include:: include/bicond_define.rst
 
-.. sentence::
-
-  A % B := (A $ B) & (B $ A)
+.. include:: include/bicond_table.rst
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: Biconditional, MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -131,10 +128,6 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
@@ -155,7 +148,7 @@ Rules
 Notes
 =====
 
-* With the Conditional operator :s:`$`, Modus Ponens (:s:`A`, :s:`A $ B` !{conseq} :s:`B`) is
+* With the Conditional operator :s:`$`, :term:`Modus Ponens` (:s:`A`, :s:`A $ B` !{conseq} :s:`B`) is
   valid in L{RM3}, which fails in {@LP}.
 
 * The argument :s:`B`, therefore :s:`A $ B` is invalid in L{RM3}, which is valid in L{LP}.
@@ -175,3 +168,7 @@ References
 .. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
 
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

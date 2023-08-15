@@ -67,8 +67,7 @@ Given the behavior of :s:`~`, however, this yields a non-standard table:
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -150,16 +149,12 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: non_native_operators
+  :exclude: non_native
 
 .. tableau-rules::
   :docflags:
@@ -169,7 +164,7 @@ Rules
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: non_native_operators
+  :include: non_native
 
 Notes
 =====
@@ -187,3 +182,8 @@ References
     https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
 
 .. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

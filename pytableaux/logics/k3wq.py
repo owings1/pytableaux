@@ -25,7 +25,9 @@ from . import k3w as K3W
 class Meta(K3W.Meta):
     name = 'K3WQ'
     title = 'Weak Kleene alt-Q Logic'
-    description = 'Three-valued logic with values T, F, and N, with alternate quantification'
+    description = (
+        'Three-valued logic with values T, F, and N, '
+        'with alternate quantification')
     category_order = 40
 
 class Model(K3W.Model):
@@ -196,9 +198,7 @@ class TabRules(K3W.TabRules):
             FDE.TabRules.AssertionNegatedUndesignated,
             FDE.TabRules.ConjunctionDesignated, 
             FDE.TabRules.DisjunctionNegatedDesignated,
-
             FDE.TabRules.ExistentialNegatedDesignated,
-
             FDE.TabRules.DoubleNegationDesignated,
             FDE.TabRules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)

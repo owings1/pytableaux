@@ -42,10 +42,6 @@ L{D} tableaux are constructed just like {@K system} tableaux.
 Rules
 -----
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 L{D} contains all the {@K rules} plus an additional Serial rule.
 
 The Serial rule applies to a an open branch *b* when there is a world *w*
@@ -66,3 +62,8 @@ References
 * `Stanford Encyclopedia on Deontic Logic`_
 
 .. _Stanford Encyclopedia on Deontic Logic: http://plato.stanford.edu/entries/logic-deontic/
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

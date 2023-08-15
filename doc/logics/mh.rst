@@ -46,16 +46,13 @@ Truth Tables
 
 .. rubric:: Defined Operators
 
-The `Biconditional` :s:`%` is defined in the usual way:
+.. include:: include/bicond_define.rst
 
-.. sentence::
-
-  A % B := (A $ B) & (B $ A)
+.. include:: include/bicond_table.rst
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: Biconditional, MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -117,10 +114,6 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
@@ -148,3 +141,8 @@ References
 
 .. _Colin Caret: https://sites.google.com/view/colincaret
 .. _Hybridized Paracomplete and Paraconsistent Logics: https://ojs.victoria.ac.nz/ajl/article/view/4035/3588
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

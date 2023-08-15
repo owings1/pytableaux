@@ -43,8 +43,7 @@ Truth Tables
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -108,19 +107,26 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/cpl/rules_blurb.rst
 
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: non_native_operators
+  :exclude: non_native
 
 .. tableau-rules::
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: non_native_operators
+  :include: non_native
+
+Notes
+=====
+
+References
+==========
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

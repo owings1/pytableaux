@@ -62,13 +62,14 @@ the Assertion operator :s:`*`:
 
   A $ B := ~*A V *B
 
+.. include:: include/bicond_define.rst
+
 .. truth-tables::
   :operators: Conditional, Biconditional
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. _b3e-external-connectives:
 
@@ -162,10 +163,6 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
@@ -181,7 +178,7 @@ Notes
 
 * Unlike L{K3W}, L{B3E} has some logical truths. For example
   :s:`(A $ B) V ~(A $ B)`. This logical truth is an instance of the
-  Law of Excluded Middle.
+  :term:`Law of Excluded Middle`.
 
 * The Assertion operator :s:`*` can express alternate versions of validities
   that fail in L{K3W}. For example, :s:`A` !{conseq} :s:`A V *B` in L{B3E},
@@ -201,3 +198,9 @@ For further reading, see:
 
 * Beall, Jc `Off-topic: a new interpretation of Weak Kleene logic
   <http://entailments.net/papers/beall-ajl-wk3-interp.pdf>`_. 2016.
+
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

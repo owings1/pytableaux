@@ -176,110 +176,77 @@ class TabRules(K3.TabRules):
                     sdnode(~lhs, d),
                     sdnode( lhs, d),
                     sdnode(~rhs, d),
-                    sdnode( rhs, d),
-                ),
+                    sdnode( rhs, d)),
                 group(sdnode(~lhs, not d)),
                 group(sdnode(~rhs, not d)))
 
     class MaterialConditionalDesignated(FDE.OperatorNodeRule):
-        """
-        This rule reduces to a disjunction.
-        """
+        "This rule reduces to a disjunction."
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs | s.rhs, d)))
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
-        """
-        This rule reduces to a disjunction.
-        """
+        "This rule reduces to a disjunction."
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
     class MaterialConditionalUndesignated(FDE.OperatorNodeRule):
-        """
-        This rule reduces to a disjunction.
-        """
+        "This rule reduces to a disjunction."
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs | s.rhs, d)))
 
     class MaterialConditionalNegatedUndesignated(FDE.OperatorNodeRule):
-        """
-        This rule reduces to a disjunction.
-        """
+        "This rule reduces to a disjunction."
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
     class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
-        """
-        This rule reduces to a conjunction of material conditionals.
-        """
-        conjunct_op = Operator.MaterialConditional
+        "This rule reduces to a conjunction of material conditionals."
+        conjoined = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
-        """
-        This rule reduces to a conjunction of material conditionals.
-        """
-        conjunct_op = Operator.MaterialConditional
+        "This rule reduces to a conjunction of material conditionals."
+        conjoined = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(FDE.ConjunctionReducingRule):
-        """
-        This rule reduces to a conjunction of material conditionals.
-        """
-        conjunct_op = Operator.MaterialConditional
+        "This rule reduces to a conjunction of material conditionals."
+        conjoined = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
-        """
-        This rule reduces to a conjunction of material conditionals.
-        """
-        conjunct_op = Operator.MaterialConditional
+        "This rule reduces to a conjunction of material conditionals."
+        conjoined = Operator.MaterialConditional
 
     class ConditionalDesignated(MaterialConditionalDesignated):
-        """
-        This is the same as the rule for the material conditional.
-        """
+        "This is the same as the rule for the material conditional."
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
-        """
-        This is the same as the rule for the material conditional.
-        """
+        "This is the same as the rule for the material conditional."
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
-        """
-        This is the same as the rule for the material conditional.
-        """
+        "This is the same as the rule for the material conditional."
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
-        """
-        This is the same as the rule for the material conditional.
-        """
+        "This is the same as the rule for the material conditional."
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
-        """
-        This rule reduces to a conjunction of conditionals.
-        """
-        conjunct_op = Operator.Conditional
+        "This rule reduces to a conjunction of conditionals."
+        conjoined = Operator.Conditional
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
-        """
-        This rule reduces to a conjunction of conditionals.
-        """
-        conjunct_op = Operator.Conditional
+        "This rule reduces to a conjunction of conditionals."
+        conjoined = Operator.Conditional
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
-        """
-        This rule reduces to a conjunction of conditionals.
-        """
-        conjunct_op = Operator.Conditional
+        "This rule reduces to a conjunction of conditionals."
+        conjoined = Operator.Conditional
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
-        """
-        This rule reduces to a conjunction of conditionals.
-        """
-        conjunct_op = Operator.Conditional
+        "This rule reduces to a conjunction of conditionals."
+        conjoined = Operator.Conditional
 
     class ExistentialNegatedDesignated(FDE.QuantifierFatRule):
         """

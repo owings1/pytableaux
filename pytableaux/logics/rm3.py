@@ -21,6 +21,7 @@ from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import lp as LP
+from . import LogicType
 
 class Meta(LP.Meta):
     name = 'RM3'
@@ -48,7 +49,7 @@ class TableauxSystem(LP.TableauxSystem):
         Operator.Biconditional: ((1, 2), (1, 1))}
 
 @TableauxSystem.initialize
-class TabRules(LP.TabRules):
+class TabRules(LogicType.TabRules):
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -146,6 +147,8 @@ class TabRules(LP.TabRules):
                 group(
                     sdnode(~lhs, False),
                     sdnode(~rhs, False)))
+
+    closure_rules = LP.TabRules.closure_rules
 
     rule_groups = (
         (

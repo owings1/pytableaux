@@ -99,25 +99,25 @@ class TabRules(L3.TabRules):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        conjunct_op = Operator.Conditional
+        conjoined = Operator.Conditional
 
     class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        conjunct_op = Operator.Conditional
+        conjoined = Operator.Conditional
 
     class BiconditionalUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        conjunct_op = Operator.Conditional
+        conjoined = Operator.Conditional
 
     class BiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        conjunct_op = Operator.Conditional
+        conjoined = Operator.Conditional
 
     rule_groups = (
         (

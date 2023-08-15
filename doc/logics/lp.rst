@@ -48,8 +48,7 @@ Truth Tables
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -57,7 +56,7 @@ L{LP} does not have separate `Assertion` or `Conditional` operators,
 but we include tables and rules for them, for cross-compatibility.
 
 .. truth-tables::
-  :include: non_native_operators
+  :include: non_native
 
 .. _lp-predication:
 
@@ -145,16 +144,12 @@ when a sentence and its negation both appear as undesignated nodes on the branch
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/fde/rules_blurb.rst
 
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: non_native_operators
+  :exclude: non_native
 
 .. tableau-rules::
   :docflags:
@@ -164,7 +159,7 @@ Rules
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: non_native_operators
+  :include: non_native
 
 
 Notes
@@ -174,15 +169,15 @@ Some notable features of L{LP} include:
 
 * Everything valid in {@FDE} is valid in L{LP}.
 
-* Like {@FDE}, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
+* Like {@FDE}, the :term:`Law of Non-Contradiction` fails :s:`~(A & ~A)`.
 
-* Unlike {@FDE}, L{LP} has some logical truths. For example, the Law of Excluded
-  Middle (:s:`(A V ~A)`), and Conditional Identity (:s:`(A $ A)`).
+* Unlike {@FDE}, L{LP} has some logical truths. For example, the :term:`Law of Excluded Middle`
+  (:s:`(A V ~A)`), and :term:`Conditional Identity` (:s:`(A $ A)`).
 
-* Many classical validities fail, such as Modus Ponens, Modus Tollens,
-  and Disjunctive Syllogism.
+* Many classical validities fail, such as :term:`Modus Ponens`, :term:`Modus Tollens`,
+  and :term:`Disjunctive Syllogism`.
 
-* DeMorgan laws are valid.
+* :term:`DeMorgan laws` are valid.
 
 References
 ==========
@@ -196,3 +191,8 @@ For futher reading see:
   <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
 
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

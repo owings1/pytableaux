@@ -49,8 +49,7 @@ Truth Tables
 
 .. include:: include/material_defines.rst
 
-.. truth-tables::
-  :operators: MaterialConditional, MaterialBiconditional
+.. include:: include/material_tables.rst
 
 .. rubric:: Compatibility Tables
 
@@ -136,10 +135,6 @@ Closure
 Rules
 --------
 
-.. cssclass:: hidden
-
-  .. class:: TabRules()
-
 .. include:: include/cpl/rules_blurb.rst
 
 Additional rules are given for the quantifiers.
@@ -147,14 +142,14 @@ Additional rules are given for the quantifiers.
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: non_native_operators modal_operators
+  :exclude: non_native modal
 
 .. tableau-rules::
   :docflags:
   :title: Modal Operator Rules
   :group: operator
-  :include: modal_operators
-  :exclude: non_native_operators
+  :include: modal_
+  :exclude: non_native
 
 .. tableau-rules::
   :docflags:
@@ -168,7 +163,7 @@ Additional rules are given for the quantifiers.
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: non_native_operators
+  :include: non_native
 
 
 Notes
@@ -182,3 +177,9 @@ References
 - `Stanford Encyclopedia on Modal Logic`_
 
 .. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
+
+
+.. cssclass:: hidden
+
+.. autoclass:: TabRules()
+    :members:

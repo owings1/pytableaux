@@ -329,30 +329,28 @@ class Model(BaseModel[ValueFDE]):
             value = Value[value]
         except KeyError:
             raise Emsg.UnknownForSentence(value, s)
-        predicate = s.predicate
-        params = s.params
-        for param in params:
-            if param.is_constant:
+        for param in s:
+            if type(param) is Constant:
                 self.constants.add(param)
-        extension = self.get_extension(predicate)
-        anti_extension = self.get_anti_extension(predicate)
+        extension = self.get_extension(s.predicate)
+        anti_extension = self.get_anti_extension(s.predicate)
         if value is Value.N:
-            if params in extension:
-                raise Emsg.ConflictForExtension(value, params)
-            if params in anti_extension:
-                raise Emsg.ConflictForAntiExtension(value, params)
+            if s.params in extension:
+                raise Emsg.ConflictForExtension(value, s.params)
+            if s.params in anti_extension:
+                raise Emsg.ConflictForAntiExtension(value, s.params)
         elif value is Value.T:
-            if params in anti_extension:
-                raise Emsg.ConflictForAntiExtension(value, params)
-            extension.add(params)
+            if s.params in anti_extension:
+                raise Emsg.ConflictForAntiExtension(value, s.params)
+            extension.add(s.params)
         elif value is Value.F:
-            if params in extension:
-                raise Emsg.ConflictForExtension(value, params)
-            anti_extension.add(params)
+            if s.params in extension:
+                raise Emsg.ConflictForExtension(value, s.params)
+            anti_extension.add(s.params)
         elif value is Value.B:
-            extension.add(params)
-            anti_extension.add(params)
-        self.predicates.add(predicate)
+            extension.add(s.params)
+            anti_extension.add(s.params)
+        self.predicates.add(s.predicate)
 
     def get_extension(self, pred: Predicate, /) -> set[tuple[Constant, ...]]:
         if pred not in self.extensions:
@@ -451,10 +449,9 @@ class TableauxSystem(TableauxSystem):
 
     @classmethod
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
-        append = tab.branch().append
-        for premise in arg.premises:
-            append(sdnode(premise, True))
-        append(sdnode(arg.conclusion, False))
+        b = tab.branch()
+        b.extend(sdnode(s, True) for s in arg.premises)
+        b.append(sdnode(arg.conclusion, False))
 
     @classmethod
     def branching_complexity(cls, node: Node, /) -> int:
@@ -483,6 +480,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
         which raises NotImplementedError.
     - FilterHelper implements `example_nodes()` with its `example_node()` method.
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
+    - autoattrs = True to induce rule properties from the name.
     """
     NodeFilters = filters.NodeDesignation,
     designation: Optional[bool] = None
@@ -508,10 +506,10 @@ class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule):
 
 class ConjunctionReducingRule(OperatorNodeRule):
 
-    conjunct_op: Operator
+    conjoined: Operator
 
     def _get_sd_targets(self, s, d, /):
-        oper = self.conjunct_op
+        oper = self.conjoined
         lhs, rhs = s
         s = oper(lhs, rhs) & oper(rhs, lhs)
         if self.negated:
@@ -634,8 +632,7 @@ class TabRules(LogicType.TabRules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            yield adds(
-                group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)))
+            yield adds(group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)))
 
     class DisjunctionDesignated(ConjunctionUndesignated):
         """

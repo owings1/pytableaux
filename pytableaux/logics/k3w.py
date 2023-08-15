@@ -139,92 +139,60 @@ class TabRules(K3.TabRules):
                 group(sdnode(s.rhs, False), sdnode(~s.rhs, False)))
 
     class MaterialConditionalDesignated(FDE.OperatorNodeRule):
-        """
-        This rule reduces to a disjunction.
-        """
+        "This rule reduces to a disjunction."
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs | s.rhs, d)))
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
-        """
-        This rule reduces to a negated disjunction.
-        """
+        "This rule reduces to a negated disjunction."
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
-        """
-        This rule reduces to a disjunction.
-        """
+        "This rule reduces to a disjunction."
 
     class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated):
-        """
-        This rule reduces to a negated disjunction.
-        """
+        "This rule reduces to a negated disjunction."
 
     class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
-        """
-        This rule reduces to a conjunction of material conditionals.
-        """
-        conjunct_op = Operator.MaterialConditional
+        "This rule reduces to a conjunction of material conditionals."
+        conjoined = Operator.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
-        """
-        This rule reduces to a negated conjunction of material conditionals.
-        """
-        conjunct_op = Operator.MaterialConditional
+        "This rule reduces to a negated conjunction of material conditionals."
+        conjoined = Operator.MaterialConditional
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
-        """
-        This rule reduces to a conjunction of material conditionals.
-        """
+        "This rule reduces to a conjunction of material conditionals."
 
     class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated):
-        """
-        This rule reduces to a negated conjunction of material conditionals.
-        """
+        "This rule reduces to a negated conjunction of material conditionals."
 
     class ConditionalDesignated(MaterialConditionalDesignated):
-        """
-        Same as for the material conditional designated.
-        """
+        "Same as for the material conditional designated."
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
-        """
-        Same as for the negated material conditional designated.
-        """
+        "Same as for the negated material conditional designated."
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
-        """
-        Same as for the material conditional undesignated.
-        """
+        "Same as for the material conditional undesignated."
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
-        """
-        Same as for the negated material conditional undesignated.
-        """
+        "Same as for the negated material conditional undesignated."
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
-        """
-        Same as for the material biconditional designated.
-        """
+        "Same as for the material biconditional designated."
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
-        """
-        Same as for the negated material biconditional designated.
-        """
+        "Same as for the negated material biconditional designated."
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
-        """
-        Same as for the material biconditional undesignated.
-        """
+        "Same as for the material biconditional undesignated."
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
-        """
-        Same as for the negated material biconditional undesignated.
-        """
+        "Same as for the negated material biconditional undesignated."
 
     rule_groups = (
         (

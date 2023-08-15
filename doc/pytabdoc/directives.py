@@ -237,28 +237,29 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             return
         self._setup = True
 
-        opts = self.options
-        conf = self.config
-        opts['classes'] = self.set_classes()
-        classes = opts['classes']
-
-        wformat = opts.setdefault('format', 'html')
-        opts['wnotn'] = Notation[opts.get('wnotn', conf[ConfKey.wnotn])]
-        wnotn = opts['wnotn']
-
         self.mode = self._check_options_mode()
+
+        opts = self.options
+        opts['classes'] = self.set_classes()
+        opts['wnotn'] = Notation[opts.get('wnotn', self.config[ConfKey.wnotn])]
+        opts.setdefault('format', 'html')
+
+        classes: qset[str] = opts['classes']
         classes.add(self.mode)
+        if self.mode in ('rule', 'build-trunk'):
+            classes.add('example')
 
-        self.charset = writers.registry[wformat].default_charsets[wnotn]
+        self.charset = writers.registry[opts['format']].default_charsets[opts['wnotn']]
         if self.mode == 'build-trunk':
-            self.renderset = self.get_trunk_renderset(wnotn, self.charset)
+            self.renderset = self.get_trunk_renderset(opts['wnotn'], self.charset)
         else:
-            self.renderset = RenderSet.fetch(wnotn, self.charset)
+            self.renderset = RenderSet.fetch(opts['wnotn'], self.charset)
 
-        self.writer = TabWriter(wformat,
-            lw = LexWriter(wnotn, renderset = self.renderset),
-            classes = classes, wrapper = False)
-        self.lwuni = LexWriter(wnotn, 'unicode')
+        self.writer = TabWriter(opts['format'],
+            lw=LexWriter(opts['wnotn'], renderset=self.renderset),
+            classes=classes,
+            wrapper=False)
+        self.lwuni = LexWriter(opts['wnotn'], 'unicode')
 
     def run(self):
 
@@ -269,15 +270,12 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
 
         if self.mode == 'argument':
             tab = self.gettab_argument()
+        elif self.mode == 'rule':
+            tab = self.gettab_rule()
+            rule: Rule = tab.rules.get(opts['rule'])
+            rulecls = type(rule)
         else:
-            classes.add('example')
-            if self.mode == 'rule':
-                tab = self.gettab_rule()
-                rule: Rule = tab.rules.get(opts['rule'])
-                rulecls = type(rule)
-            else:
-                assert self.mode == 'build-trunk'
-                tab = self.gettab_trunk()
+            tab = self.gettab_trunk()
 
         if self.mode == 'rule':
             tab.step()
@@ -288,17 +286,17 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         output = self.writer(tab)
     
         if opts['format'] == 'html':
-            tabnode = nodes.raw(format = 'html', text = output)
+            tabnode = nodes.raw(format='html', text=output)
         else:
-            tabnode = nodes.literal_block(text = output, classes = ['tableau'])
+            tabnode = nodes.literal_block(text=output, classes=['tableau'])
 
-        tabwrapper = nodes.container(classes = ['tableau-wrapper'] + classes)
+        tabwrapper = nodes.container(classes=['tableau-wrapper'] + classes)
 
         if self.mode == 'rule':
 
             if 'doc' in opts:
                 if 'legend' in opts:
-                    legend = nodes.inline(classes = ['rule-legend'])
+                    legend = nodes.inline(classes=['rule-legend'])
                     legend += self.getnodes_rule_legend(rule)
                     inserts = legend,
                 else:
@@ -312,7 +310,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
                 return [docwrapper]
 
             if 'legend' in opts:
-                legend = nodes.container(classes = ['rule-legend'])
+                legend = nodes.container(classes=['rule-legend'])
                 legend += self.getnodes_rule_legend(rule)
                 tabwrapper += legend
 
@@ -320,7 +318,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             return [tabwrapper]
         
         if 'prolog' in opts:
-            prolog = nodes.container(classes = ['prolog'])
+            prolog = nodes.container(classes=['prolog'])
             prolog += self.getnodes_trunk_prolog()
             tabwrapper += prolog
 
@@ -362,7 +360,8 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             container += ...
         """
         refname = rulecls.__qualname__
-        refid = f'{rulecls.__module__}.{refname}'
+        nodeid = f'{rulecls.__module__}.{refname}'
+        refid = refname
         domain = 'py'
         objtype = 'class'
         return addnodes.desc('',
@@ -381,7 +380,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
                         reftarget=self.viewcode_target(rulecls),
                         classes=['ruledoc']),
                     classes=['pre', 'ruledoc', 'rule-sig']),
-                ids=[refid],
+                ids=[nodeid],
                 classes=['ruledoc']),
             domain=domain,
             objtype=objtype,
@@ -410,19 +409,19 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
     def getnodes_trunk_prolog(self):
         # Plain docutils nodes, not raw html.
         notn = self.options['wnotn']
-        argnode = nodes.inline(classes = ['argument'], notn = notn)
-        prem2 = nodez.sentence(sentence = Atomic(0,0), notn = notn)
+        argnode = nodes.inline(classes=['argument'], notn=notn)
+        prem2 = nodez.sentence(sentence = Atomic(0,0), notn=notn)
         prem2 += nodes.subscript('n', 'n')
         argnode += (
-            nodez.sentence(sentence = Atomic(0,1), notn = notn),
-            nodes.inline(text = ' ... '),
+            nodez.sentence(sentence=Atomic(0,1), notn=notn),
+            nodes.inline(text=' ... '),
             prem2,
-            nodes.inline(text = ' ∴ '),
-            nodez.sentence(sentence = Atomic(1, 0), notn = notn))
+            nodes.inline(text=' ∴ '),
+            nodez.sentence(sentence=Atomic(1, 0), notn=notn))
         return [
-            nodes.inline(text = 'For the argument '),
+            nodes.inline(text='For the argument '),
             argnode,
-            nodes.inline(text = ' write:')]
+            nodes.inline(text=' write:')]
 
     @classmethod
     def get_trunk_renderset(cls, notn, charset):
@@ -478,10 +477,10 @@ class RuleGroupDirective(TableauDirective):
     group_choices = {'closure', 'operator', 'quantifier', 'predicate', 'ungrouped'}
     # can be used in 'include' and 'exclude' options
     special_names = {
-        'native_operators',
-        'non_native_operators',
-        'modal_operators',
-        'non_modal_operators'}
+        'native',
+        'non_native',
+        'modal',
+        'non_modal'}
 
     option_spec = dict(
         # Common
@@ -617,9 +616,9 @@ class RuleGroupDirective(TableauDirective):
                 optset.update(self.get_special_name_values(name))
 
     def get_special_name_values(self, name: str) -> Iterator[str]:
-        if name in ('native_operators', 'non_native_operators'):
+        if name in ('native', 'non_native'):
             base = self.logic.Meta.native_operators
-        elif name in ('modal_operators', 'non_modal_operators'):
+        elif name in ('modal', 'non_modal'):
             base = self.logic.Model.modal_operators
         else:
             return
