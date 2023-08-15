@@ -46,10 +46,10 @@ class LatexTranslator(Translator, NodeVisitor):
             '\\begin{document}\n\n'))
 
     def depart_document(self, node):
-        self.foot.append('\n\n\end{document}')
+        self.foot.append('\n\n\\end{document}')
 
     def visit_tableau(self, node):
-        self.body.append('\Tree')
+        self.body.append('\\Tree')
         raise SkipDeparture
 
     def visit_tree(self, node):
