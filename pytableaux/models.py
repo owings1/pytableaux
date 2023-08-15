@@ -24,11 +24,11 @@ from __future__ import annotations
 from abc import abstractmethod as abstract
 from dataclasses import dataclass
 from itertools import product, repeat
-from typing import Any, ClassVar, Generic, Mapping, TypeVar
 from types import MappingProxyType as MapProxy
+from typing import Any, ClassVar, Generic, Mapping, TypeVar
 
 from .errors import check
-from .lang import (Argument, Atomic, LexType, Operated, Operator, Predicated,
+from .lang import (Argument, Atomic, Operated, Operator, Predicated,
                    Quantified, Quantifier, Sentence)
 from .proof import Branch
 from .tools import closure
@@ -146,15 +146,15 @@ class BaseModel(Generic[MvalT_co], Abc):
     @closure
     def value_of():
         _methmap = {
-            LexType.Atomic     : 'value_of_atomic',
-            LexType.Operated   : 'value_of_operated',
-            LexType.Predicated : 'value_of_predicated',
-            LexType.Quantified : 'value_of_quantified'}
+            Atomic     : 'value_of_atomic',
+            Operated   : 'value_of_operated',
+            Predicated : 'value_of_predicated',
+            Quantified : 'value_of_quantified'}
         def value_of(self: BaseModel, s: Sentence, /, **kw) -> MvalT_co:
             if self.is_sentence_opaque(s):
                 return self.value_of_opaque(s, **kw)
             try:
-                return getattr(self, _methmap[s.TYPE])(s, **kw)
+                return getattr(self, _methmap[type(s)])(s, **kw)
             except KeyError:
                 pass
             check.inst(s, Sentence)
@@ -168,7 +168,7 @@ class BaseModel(Generic[MvalT_co], Abc):
             raise TypeError
         if q is Quantifier.Existential:
             return self.value_of_existential(s, **kw)
-        elif q is Quantifier.Universal:
+        if q is Quantifier.Universal:
             return self.value_of_universal(s, **kw)
         check.inst(s, Quantified)
         raise NotImplementedError
@@ -187,10 +187,9 @@ class BaseModel(Generic[MvalT_co], Abc):
         raise NotImplementedError
 
     def value_of_modal(self, s: Operated, /, **kw) -> MvalT_co:
-        oper = s.operator
-        if oper is Operator.Possibility:
+        if s.operator is Operator.Possibility:
             return self.value_of_possibility(s, **kw)
-        if oper is Operator.Necessity:
+        if s.operator is Operator.Necessity:
             return self.value_of_necessity(s, **kw)
         raise NotImplementedError
 
@@ -310,5 +309,7 @@ class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):
         return self.mapping[key]
     def __iter__(self):
         return iter(self.mapping)
+    def __reversed__(self):
+        return reversed(self.mapping)
     def __len__(self):
         return len(self.mapping)
