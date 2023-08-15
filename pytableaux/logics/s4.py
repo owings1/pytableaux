@@ -18,11 +18,12 @@ from __future__ import annotations
 
 from typing import Generator
 
-from ..proof import WorldPair, Branch, Node, Target, adds, anode
+from ..proof import AccessNode, Branch, Node, Target, WorldPair, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
 from . import t as T
+
 
 class Meta(K.Meta):
     name = 'S4'
@@ -62,7 +63,7 @@ class TabRules(T.TabRules):
         appear on *b*, then add *wRw''* to *b*.
         """
         Helpers = (MaxWorlds, WorldIndex)
-        access = True
+        NodeType = AccessNode
         ticking = False
         modal_operators = Model.modal_operators
 

@@ -27,7 +27,7 @@ from typing import Generic, Iterable, TypeVar, final
 
 from ..lang import Constant, Operated, Predicated, Quantified, Sentence
 from ..tools import group, EMPTY_SET
-from . import Branch, Node, Rule, Target, adds, filters
+from . import Branch, Node, Rule, Target, adds, filters, SentenceNode
 
 __all__ = (
     'BaseClosureRule',
@@ -146,7 +146,7 @@ class BaseNodeRule(BaseSimpleRule):
 
 class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
 
-    NodeFilters = group(filters.SentenceNode)
+    NodeFilters = filters.NodeSentence,
 
     negated    = None
     operator   = None
@@ -155,7 +155,7 @@ class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
 
     def sentence(self, node: Node, /) -> _ST:
         'Delegates to ``filters.SentenceNode`` of ``FilterHelper``.'
-        return self[FilterHelper].filters[filters.SentenceNode].sentence(node)
+        return self[FilterHelper].filters[filters.NodeSentence].sentence(node)
 
 class PredicatedSentenceRule(BaseSentenceRule[Predicated]):
 

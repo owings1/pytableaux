@@ -34,7 +34,6 @@ from . import LangCommonMeta, Predicate, Sentence
 
 __all__ = (
     'Argument',
-    'ArgumentMeta',
     'Predicates')
 
 NOARG = object()
@@ -48,14 +47,26 @@ class ArgumentMeta(LangCommonMeta):
             return args[0]
         return super().__call__(*args, **kw)
 
-class Argument(Sequence[Sentence], abcs.Copyable, immutcopy = True, metaclass = ArgumentMeta):
+class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=ArgumentMeta):
     """Argument class.
     
     A container of sentences (premises, conclusion) with sequence implementation,
     ordering and hashing.
+
+    Two arguments are considered equal just when their conclusions are
+    equal, and their premises are equal (and in the same order). The
+    title is not considered in equality.
     """
 
-    def __init__(self, conclusion, premises = None, title = None):
+    def __init__(self, conclusion, premises=None, *, title=None):
+        """
+        Args:
+            conclusion: The conclusion.
+            premises: The premises or None.
+        
+        Kwargs:
+            title: An optional title or None.
+        """
         self.seq = tuple(
             (Sentence(conclusion),) if premises is None
             else map(Sentence, (conclusion, *premises)))
@@ -68,15 +79,18 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy = True, metaclass = 
 
     premises: tuple[Sentence, ...]
     "The argument's premises"
+    title: str|None
+    "Optional title"
 
     @property
     def conclusion(self) -> Sentence:
-        """The argument's conclusion."""
+        "The argument's conclusion."
         return self.seq[0]
 
     @lazy.prop
     def hash(self) -> int:
-        return hash(tuple(self))
+        "The argument's hash. Does not consider title."
+        return hash(self.seq)
 
     def predicates(self, **kw):
         """Return the predicates occuring in the argument.
@@ -90,10 +104,6 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy = True, metaclass = 
         return Predicates((p for s in self for p in s.predicates), **kw)
 
     #******  Equality & Ordering
-
-    # Two arguments are considered equal just when their conclusions are
-    # equal, and their premises are equal (and in the same order). The
-    # title is not considered in equality.
 
     @abcs.abcf.temp
     @tools.closure

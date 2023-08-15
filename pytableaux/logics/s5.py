@@ -16,12 +16,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import WorldPair, Branch, Node, adds, anode
+from ..proof import AccessNode, Branch, Node, WorldPair, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
 from . import s4 as S4
 from . import t as T
+
 
 class Meta(K.Meta):
     name = 'S5'
@@ -67,7 +68,7 @@ class TabRules(S4.TabRules):
         *w'Rw* to *b*.
         """
         Helpers = (MaxWorlds, WorldIndex)
-        access = True
+        NodeType = AccessNode
         _defaults = dict(is_rank_optim = False)
         modal_operators = Model.modal_operators
 

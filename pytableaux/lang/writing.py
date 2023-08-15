@@ -273,9 +273,9 @@ class StandardLexWriter(DefaultLexWriter):
         if arity == 1:
             s = item.lhs
             if (
-                oper == Operator.Negation and
+                oper is Operator.Negation and
                 type(s) is Predicated and
-                s.predicate == Predicate.System.Identity
+                s.predicate is Predicate.System.Identity
             ):
                 return self._write_negated_identity(item)
             else:

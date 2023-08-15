@@ -75,7 +75,7 @@ class TestBranchingComplexity(Base):
         def wrap(fn):
             def testfn(self: Base):
                 tab = self.tab()
-                tab.branch().add({'sentence': self.p(s), 'designated': des})
+                tab.branch().append({'sentence': self.p(s), 'designated': des})
                 node = tab[0][0]
                 fn(self, tab[0][0], node['sentence'], tab)
             return testfn
@@ -111,7 +111,7 @@ class TestModels(Base):
     def mb(self, *nitems):
         b = Branch()
         for s, d in nitems:
-            b.add(sdnode(self.p(s), d))
+            b.append(sdnode(self.p(s), d))
         m = self.Model()
         m.read_branch(b)
         return (m,b)
@@ -149,7 +149,7 @@ class TestModels(Base):
 
     def test_model_necessity_opaque_des_value_branch(self):
         s1 = self.p('La')
-        b = Branch().add({'sentence': s1, 'designated': True})
+        b = Branch().append({'sentence': s1, 'designated': True})
         m = self.Model()
         m.read_branch(b)
         self.assertIn(m.value_of(s1), ('B', 'T'))
@@ -165,7 +165,7 @@ class TestModels(Base):
 
     def test_model_atomic_undes_value_branch(self):
         s1 = self.p('a')
-        b = Branch().add({'sentence': s1, 'designated': False})
+        b = Branch().append({'sentence': s1, 'designated': False})
         m = self.Model()
         m.read_branch(b)
         self.assertIn(m.value_of(s1), ('F', 'N'))

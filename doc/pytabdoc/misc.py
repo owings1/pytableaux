@@ -35,7 +35,7 @@ from pytableaux.proof import (Branch, ClosingRule, ClosureNode, Node, Rule,
                               Tableau)
 from pytableaux.proof import TableauxSystem as TabSys
 from pytableaux.proof import Target
-from pytableaux.proof.filters import SentenceCompare
+from pytableaux.proof.filters import CompareSentence
 from pytableaux.tools.abcs import isabstract
 
 __all__ = (
@@ -88,7 +88,7 @@ def rules_sorted(logic: LogicType, rules = None, /) -> dict:
     return results
 
 def rule_sortkey_legend(rule: type[Rule]):
-    if (c := SentenceCompare(rule).compitem) is None:
+    if (c := CompareSentence(rule).compitem) is None:
         if issubclass(rule, ClosingRule):
             return 0,
         return LexType._seq[-1].rank + 1,
@@ -314,7 +314,7 @@ class EllipsisExampleHelper(Rule.Helper):
 
     def add_node(self, branch: Branch):
         self.applied.add(branch)
-        branch.add(self.mynode)
+        branch.append(self.mynode)
 
 # def rsttable(data, /, headers = (), **kw):
 #     from tabulate import tabulate

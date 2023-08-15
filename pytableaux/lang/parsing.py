@@ -142,7 +142,7 @@ class Parser(metaclass = ParserMeta):
         raise NotImplementedError
 
 
-    def argument(self, conclusion: str, premises: Iterable[str] = None, /, title: str = None) -> Argument:
+    def argument(self, conclusion: str, premises: Iterable[str] = None, /, title: str|None = None) -> Argument:
         """Parse the input strings and create an argument.
 
         Args:
@@ -165,13 +165,13 @@ class Parser(metaclass = ParserMeta):
         """
         return Argument(
             self(conclusion),
-            premises and tuple(map(self, premises)),
-            title = title)
+            premises and map(self, premises),
+            title=title)
 
     def __init_subclass__(subcls, primary = False, **kw):
-        'Merge ``_defaults``, sync ``__call__()``, set primary.'
+        'Merge ``_defaults``, set primary.'
         super().__init_subclass__(**kw)
-        abcs.merge_attr(subcls, '_defaults', supcls = __class__)
+        abcs.merge_attr(subcls, '_defaults', supcls=__class__)
         if primary:
             subcls.notation.Parser = subcls
 
@@ -451,7 +451,7 @@ class DefaultParser(Parser):
 
     __delattr__ = Emsg.ReadOnly.razr
 
-class PolishParser(DefaultParser, primary = True):
+class PolishParser(DefaultParser, primary=True):
     "Polish notation parser."
 
     __slots__ = EMPTY_SET
@@ -465,13 +465,13 @@ class PolishParser(DefaultParser, primary = True):
             oper,
             tuple(self._read(context) for _ in range(oper.arity)))
 
-class StandardParser(DefaultParser, primary = True):
+class StandardParser(DefaultParser, primary=True):
     "Standard notation parser."
 
     __slots__ = '_parens_rev_lazy',
 
     notation = Notation.standard
-    _defaults = dict(drop_parens = True)
+    _defaults = dict(drop_parens=True)
 
     def __call__(self, input_: str, /) -> Sentence:
         try:

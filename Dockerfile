@@ -29,7 +29,7 @@ RUN pipenv install --quiet --deploy --system --extra-pip-args "--no-cache-dir --
         --categories="web-packages" &&\
     rm -rf /app/test /app/doc /app/pytest.ini
 COPY --from=doc /build/html /srv/doc
-COPY --from=test /app/htmlcov /srv/test/coverage
+COPY --from=test /app/htmlcov /srv/test
 COPY --from=test /build/doctest/output.txt /srv/test/doctest.txt
 USER nobody
 EXPOSE 8080 8181

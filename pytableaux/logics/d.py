@@ -25,6 +25,7 @@ from ..proof.rules import BaseSimpleRule
 from ..tools import group
 from . import k as K
 
+
 class Meta(K.Meta):
     name = 'D'
     title = 'Deontic Normal Modal Logic'

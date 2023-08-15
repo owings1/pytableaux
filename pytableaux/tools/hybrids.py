@@ -21,7 +21,7 @@ pytableaux.tools.hybrids
 """
 from __future__ import annotations
 
-from abc import abstractmethod as abstract
+from abc import abstractmethod
 from collections.abc import MutableSequence, MutableSet, Sequence, Set
 from itertools import chain, filterfalse
 from typing import Iterable, SupportsIndex, TypeVar
@@ -54,7 +54,7 @@ class SequenceSet(Sequence[_T], Set[_T], metaclass = abcs.AbcMeta):
             raise Emsg.MissingValue(value)
         return super().index(value, start, stop)
 
-    @abstract
+    @abstractmethod
     def __contains__(self, value):
         'Set-based `contains` implementation.'
         return False
@@ -165,7 +165,7 @@ class MutableSequenceSet(SequenceSet[_T], MutableSequence[_T], MutableSet[_T]):
     def update(self, it):
         for _ in map(self.add, it): pass
 
-    @abstract
+    @abstractmethod
     def reverse(self):
         'Reverse in place.'
         # Must re-implement MutableSequence method.

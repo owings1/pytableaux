@@ -65,6 +65,7 @@ __all__ = (
     'sbool',
     'select_fget',
     'SeqCover',
+    'SequenceSet',
     'SetView',
     'slicerange',
     'substitute',
@@ -869,3 +870,4 @@ class ForObjectBuilder(Generic[_T]):
 from .hybrids import EMPTY_QSET as EMPTY_QSET
 from .hybrids import qset as qset
 from .hybrids import qsetf as qsetf
+from .hybrids import SequenceSet as SequenceSet

@@ -17,10 +17,11 @@
 from __future__ import annotations
 
 from ..lang import Atomic
-from ..proof import WorldPair, Branch, Node, adds, swnode
+from ..proof import Branch, Node, WorldPair, adds, swnode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
+
 
 class Meta(K.Meta):
     name = 'T'
@@ -64,7 +65,7 @@ class TabRules(K.TabRules):
             if self[MaxWorlds].is_exceeded(branch):
                 self[FilterHelper].release(node, branch)
                 return
-            for w in node.worlds:
+            for w in node.worlds():
                 access = WorldPair(w, w)
                 if not self[WorldIndex].has(branch, access):
                     yield adds(group(access.tonode()), world = w)

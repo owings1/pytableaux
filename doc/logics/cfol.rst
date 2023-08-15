@@ -41,18 +41,7 @@ Truth Tables
 
 .. rubric:: Defined Operators
 
-The `Material Conditional` :s:`>` is definable in terms of disjunction:
-
-.. sentence::
-
-  A > B := ~A V B
-
-Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
-and :s:`&`:
-
-.. sentence::
-
-  A < B := (A > B) & (B > A)
+.. include:: include/material_defines.rst
 
 .. truth-tables::
   :operators: MaterialConditional, MaterialBiconditional
@@ -63,7 +52,7 @@ L{CFOL} does not have separate `Assertion` or `Conditional` operators,
 but we include tables and rules for them, for cross-compatibility.
 
 .. truth-tables::
-  :operators: Assertion, Conditional, Biconditional
+  :include: non_native
 
 .. _cfol-predication:
 
@@ -140,7 +129,7 @@ Additional rules are given for the quantifiers.
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: Assertion, Conditional, Biconditional
+  :exclude: non_native_operators
 
 .. tableau-rules::
   :docflags:
@@ -150,4 +139,4 @@ Additional rules are given for the quantifiers.
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: Assertion, Conditional, Biconditional
+  :include: non_native_operators

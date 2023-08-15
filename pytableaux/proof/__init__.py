@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from enum import Enum, Flag
 from types import MappingProxyType as MapProxy
-from typing import Any, NamedTuple, Self, Sequence, TypeVar
+from typing import Any, NamedTuple, Sequence, TypeVar
 
 from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
@@ -34,19 +34,33 @@ from ..tools.timing import Counter, StopWatch
 _TT = TypeVar('_TT', bound=type)
 
 __all__ = (
+    'AccessNode',
     'adds',
     'anode',
     'Branch',
     'ClosingRule',
+    'ClosureNode',
+    'Designation',
+    'EllipsisNode',
+    'filters',
+    'FlagNode',
+    'helpers',
+    'Modal',
     'Node',
+    'QuitFlagNode',
     'Rule',
     'sdnode',
+    'SentenceDesignationNode',
+    'SentenceNode',
+    'SentenceWorldNode',
     'snode',
     'swnode',
     'Tableau',
     'TableauxSystem',
     'TabWriter',
-    'Target')
+    'Target',
+    'WorldNode',
+    'WorldPair')
 
 NOARG = object()
 
@@ -117,6 +131,10 @@ class NodeMeta(abcs.AbcMeta):
             is_flag = True)
         Ellipsis = dict(
             ellipsis = True)
+
+    @classmethod
+    def __prepare__(cls, clsname, bases, **kw):
+        return dict(__slots__ = EMPTY_SET)
 
 class BranchMeta(abcs.AbcMeta):
     """Branch meta class."""
@@ -240,10 +258,14 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         cls.Rules = RulesClass
         for rulecls in RulesClass.all_rules:
             rulecls.modal = cls.modal
-            if not rulecls.modal:
-                rulecls.disable_filter(filters.ModalNode)
             if 'branching' not in rulecls.__dict__:
-                rulecls.branching = rulecls.induce_branching()
+                try:
+                    rulecls.branching = rulecls.induce_branching()
+                except Exception as err:
+                    msg = (
+                        f'failed to induce branching for {rulecls}: '
+                        f'{type(err)}: {err}')
+                    raise TypeError(msg)
         return RulesClass
 
 class RuleMeta(abcs.AbcMeta):
@@ -318,25 +340,23 @@ class RuleMeta(abcs.AbcMeta):
         rulecls.Helpers = MapProxy(configs)
         for helpercls, _ in configs.items():
             configs[helpercls] = helpercls.configure_rule(rulecls, ...)
-        if rulecls.modal is False:
-            rulecls.disable_filter(filters.ModalNode)
         rulecls.legend = tuple(cls.Legend.make(rulecls))
         return rulecls
 
-    def disable_filter(self: Self|type[Rule], filtercls):
-        try:
-            filts = self.NodeFilters
-        except AttributeError:
-            return
-        if filtercls not in filts:
-            return
-        filts[filtercls] = NotImplemented
-        helpercls = helpers.FilterHelper
-        if helpercls not in self.Helpers:
-            return
-        configs = dict(self.Helpers)
-        configs[helpercls] = helpercls.configure_rule(self, ...)
-        self.Helpers = MapProxy(configs)
+    # def disable_filter(self: Self|type[Rule], filtercls):
+    #     try:
+    #         filts = self.NodeFilters
+    #     except AttributeError:
+    #         return
+    #     if filtercls not in filts:
+    #         return
+    #     filts[filtercls] = NotImplemented
+    #     helpercls = helpers.FilterHelper
+    #     if helpercls not in self.Helpers:
+    #         return
+    #     configs = dict(self.Helpers)
+    #     configs[helpercls] = helpercls.configure_rule(self, ...)
+    #     self.Helpers = MapProxy(configs)
 
     def induce_attrs(self):
         attrs = {}
@@ -462,23 +482,26 @@ def anode(w1, w2):
         Node.Key.world1: w1,
         Node.Key.world2: w2})
 
-from .common import AccessNode, Branch
+from .common import AccessNode as AccessNode
+from .common import Branch as Branch
 from .common import ClosureNode as ClosureNode
 from .common import Designation as Designation
+from .common import DesignationNode as DesignationNode
 from .common import EllipsisNode as EllipsisNode
 from .common import FlagNode as FlagNode
+from .common import Modal as Modal
 from .common import Node as Node
 from .common import QuitFlagNode as QuitFlagNode
 from .common import SentenceDesignationNode as SentenceDesignationNode
 from .common import SentenceNode as SentenceNode
 from .common import SentenceWorldNode as SentenceWorldNode
 from .common import Target as Target
+from .common import WorldNode as WorldNode
 from .tableaux import Rule as Rule
-from .tableaux import RulesRoot as RulesRoot
 from .tableaux import RuleGroup as RuleGroup
 from .tableaux import RuleGroups as RuleGroups
+from .tableaux import RulesRoot as RulesRoot
 from .tableaux import Tableau as Tableau
-
 
 pass
 from .rules import ClosingRule as ClosingRule

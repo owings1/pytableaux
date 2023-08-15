@@ -476,7 +476,7 @@ class TableauxSystem(TableauxSystem):
 class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default FDE node rule with:
     
-    - filters.DesignationNode with defaults: designation = `None`
+    - filters.NodeDesignation with defaults: designation = `None`
     - AdzHelper implements `_apply()` with its `_apply()` method.
     - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
     - This class implements `_get_node_targets() defaulting to `_get_sd_targers()`,
@@ -484,7 +484,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     - FilterHelper implements `example_nodes()` with its `example_node()` method.
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
     """
-    NodeFilters = filters.DesignationNode,
+    NodeFilters = filters.NodeDesignation,
     designation: Optional[bool] = None
     autoattrs = True
 

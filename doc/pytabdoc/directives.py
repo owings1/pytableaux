@@ -23,7 +23,7 @@ from __future__ import annotations
 import csv
 import sys
 from abc import abstractmethod
-from typing import Any, Iterable, Iterator, Literal, TypeVar
+from typing import Iterable, Iterator, Literal, TypeVar
 
 import sphinx.config
 import sphinx.directives.code
@@ -37,8 +37,9 @@ from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
 
 from pytableaux import examples, logics
-from pytableaux.lang import (Argument, Atomic, Lexical, LexWriter, Marking, Predicate, Quantifier,
-                             Notation, Operator, Predicates, RenderSet)
+from pytableaux.lang import (Argument, Atomic, LexWriter, Marking, Notation,
+                             Operator, Predicate, Predicates, Quantifier,
+                             RenderSet)
 from pytableaux.proof import Rule, Tableau, TabWriter, writers
 from pytableaux.tools import EMPTY_SET, inflect, qset
 
@@ -360,13 +361,14 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             wrapper += container
             container += ...
         """
-        refid = rulecls.__qualname__
+        refname = rulecls.__qualname__
+        refid = f'{rulecls.__module__}.{refname}'
         domain = 'py'
-        objtype = 'object'
+        objtype = 'class'
         return addnodes.desc('',
             addnodes.desc_signature('', '',
                 *inserts,
-                addnodes.desc_name('', '',
+                addnodes.desc_name(refname, '',
                     nodes.inline(
                         rulecls.name,
                         inflect.snakespace(rulecls.name),
@@ -378,8 +380,8 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
                         refid=refid,
                         reftarget=self.viewcode_target(rulecls),
                         classes=['ruledoc']),
-                        classes=['pre', 'ruledoc', 'rule-sig']),
-                ids=[f'{rulecls.__module__}.{refid}'],
+                    classes=['pre', 'ruledoc', 'rule-sig']),
+                ids=[refid],
                 classes=['ruledoc']),
             domain=domain,
             objtype=objtype,

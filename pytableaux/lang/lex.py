@@ -202,14 +202,15 @@ class Lexical:
                 a valid :attr:`TYPE` attribute.
         """
         def cmpgen(a: Lexical, b: Lexical, /):
+            if a is b:
+                yield 0
+                return
             yield a.TYPE.rank - b.TYPE.rank
             it = zip(ast := a.sort_tuple, bst := b.sort_tuple)
             yield from (ai - bi for ai, bi in it)
             yield len(ast) - len(bst)
 
         def orderitems(lhs, rhs, /) -> int:
-            if lhs is rhs:
-                return 0
             try:
                 for cmp in cmpgen(lhs, rhs):
                     if cmp:
@@ -285,7 +286,7 @@ class Lexical:
                 setattr(subcls, name, value)
 
 
-class LexicalAbc(Lexical, metaclass = LexicalAbcMeta, lexcopy = True):
+class LexicalAbc(Lexical, metaclass=LexicalAbcMeta, lexcopy=True):
     'Base class for non-Enum lexical classes.'
 
     __slots__ = ('_ident', '_hash',)
@@ -324,7 +325,7 @@ class LexicalAbc(Lexical, metaclass = LexicalAbcMeta, lexcopy = True):
         return self.spec
 
 
-class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
+class LexicalEnum(Lexical, LangCommonEnum, lexcopy=True):
     """Base class for Enum lexical classes. Subclassed by :class:`Quantifier`
     and :class:`Operator`.
     """
@@ -349,8 +350,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy = True):
     "The member index in the members sequence."
 
     strings: frozenset[str]
-    """Name, label, or other strings unique to a member.
-    """
+    "Name, label, or other strings unique to a member."
 
     def __eq__(self, other):
         'Allow equality with the string name.'

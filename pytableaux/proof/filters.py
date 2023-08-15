@@ -22,24 +22,22 @@ pytableaux.proof.filters
 from __future__ import annotations
 
 import operator as opr
-from abc import abstractmethod as abstract
+from abc import abstractmethod
 from types import MappingProxyType as MapProxy
-from typing import Any, Callable, Mapping, NamedTuple
+from typing import Any, Callable, NamedTuple
 
 from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
                     Sentence)
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, thru
-from . import WorldPair, Node
-from .common import AccessNode, SentenceWorldNode, Modal
+from . import AccessNode, DesignationNode, Node, SentenceNode, WorldNode
 
 __all__ = (
-    'AttrCompare',
+    'CompareAttr',
     'Comparer',
-    'DesignationNode',
-    'ModalNode',
-    'NodeCompare',
-    'SentenceCompare',
-    'SentenceNode')
+    'NodeDesignation',
+    'CompareNode',
+    'CompareSentence',
+    'NodeSentence')
 
 def getattr_safe(obj: Any, name: str) -> Any:
     return getattr(obj, name, None)
@@ -91,50 +89,48 @@ class Comparer(abcs.Abc):
             return False
         return NotImplemented
 
-    @abstract
+    @abstractmethod
     def __call__(self, rhs) -> bool:
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def example(self):
         raise NotImplementedError
 
     @classmethod
-    @abstract
+    @abstractmethod
     def _build(cls, *args, **kw):
         raise NotImplementedError
 
-class NodeCompare(Comparer):
-    "Node filter mixin class."
+class CompareType(Comparer):
+    "Compare isinstance type."
 
     __slots__ = EMPTY_SET
 
-    @abstract
-    def example_node(self) -> dict:
-        raise NotImplementedError
+    attr = None
+    basetype = object
+    compitem: tuple[type, ...]
 
-class IsInstanceCompare(Comparer):
-    __slots__ = EMPTY_SET
-    compitem: tuple[tuple[type, ...], tuple[type, ...]]
-    attrtypemap: Mapping[str, type] = EMPTY_MAP
+    rget = staticmethod(thru)
 
     @classmethod
-    def _build(cls, lhs) -> tuple[type, ...]:
-        cmpitem = (set(), set())
-        for name, ctype in cls.attrtypemap.items():
-            if (value := getattr(lhs, name, None)) is not None:
-                cmpitem[bool(value)].add(ctype)
-        return tuple(map(tuple, cmpitem))
+    def _build(cls, obj):
+        if cls.attr:
+            types = getattr(obj, cls.attr, None)
+        else:
+            types = obj
+        if isinstance(types, type):
+            return types,
+        if types:
+            return tuple(types)
+        if isinstance(cls.basetype, type):
+            return cls.basetype,
+        return cls.basetype
 
-    def __call__(self, rhs, /) -> bool:
-        falses, trues = self.compitem
-        if falses and isinstance(rhs, falses):
-            return False
-        if trues and not isinstance(rhs, trues):
-            return False
-        return True
+    def __call__(self, rhs):
+        return isinstance(self.rget(rhs), self.compitem)
 
-class AttrCompare(Comparer):
+class CompareAttr(Comparer):
     "Attribute filter/comparer."
 
     __slots__ = EMPTY_SET
@@ -192,7 +188,7 @@ class AttrCompare(Comparer):
         pstr = ', '.join(props)
         return f'<{type(self).__qualname__}:({pstr})>'
 
-class SentenceCompare(Comparer):
+class CompareSentence(Comparer):
     "Sentence filter/comparer."
 
     __slots__ = EMPTY_SET
@@ -265,7 +261,16 @@ class SentenceCompare(Comparer):
         return (f'<{clsname}:'
             f'{compitem.name}' '=' f'{compitem.item}' f'{nstr}''>')
 
-class SentenceNode(SentenceCompare, NodeCompare):
+class CompareNode(Comparer):
+    "Node filter mixin class."
+
+    __slots__ = EMPTY_SET
+
+    @abstractmethod
+    def example_node(self) -> dict:
+        raise NotImplementedError
+
+class NodeSentence(CompareSentence, CompareNode):
     "Sentence node filter."
 
     __slots__ = EMPTY_SET
@@ -281,7 +286,7 @@ class SentenceNode(SentenceCompare, NodeCompare):
             n[Node.Key.sentence] = s
         return n
 
-class DesignationNode(AttrCompare, NodeCompare):
+class NodeDesignation(CompareAttr, CompareNode):
     "Designation node filter."
 
     __slots__ = EMPTY_SET
@@ -295,46 +300,27 @@ class DesignationNode(AttrCompare, NodeCompare):
     def example_node(self):
         return dict(self.example())
 
-# class ModalNode(IsInstanceCompare, NodeCompare):
-#     "Modal node filter."
-
-#     __slots__ = EMPTY_SET
-
-#     attrtypemap = MapProxy(dict(
-#         modal = Modal,
-#         access = AccessNode))
-
-#     def example(self):
-#         return dict(self.example_node())
-#     def example_node(self):
-#         falses, trues = self.compitem
-#         if AccessNode in trues:
-#             # return Node.for_mapping(Access(0, 1)._asdict())
-#             return Access(0, 1).tonode()
-#         if Modal in trues:
-#             return SentenceWorldNode({
-#                 # Node.Key.sentence: Sentence.first(),
-#                 Node.Key.world: 0})
-#         return Node.for_mapping({})
-
-
-class ModalNode(AttrCompare, NodeCompare):
-    "Modal node filter."
+class NodeType(CompareType, CompareNode):
+    "Node type filter."
 
     __slots__ = EMPTY_SET
 
-    attrmap = MapProxy(dict(
-        modal = 'is_modal',
-        access = 'is_access'))
+    attr = 'NodeType'
+    basetype = Node
 
     def example_node(self):
-        n = {}
-        attrs = self.example()
-        if attrs.get('is_access'):
-            return WorldPair(0, 1).tonode()
-        elif attrs.get('is_modal'):
-            return SentenceWorldNode({
-                # Node.Key.sentence: Sentence.first(),
-                Node.Key.world: 0})
-            # n[Node.Key.world] = 0
-        return n
+        obj = dictns()
+        for cls in self.compitem:
+            if issubclass(cls, SentenceNode):
+                obj['sentence'] = Sentence.first()
+            if issubclass(cls, WorldNode):
+                obj['world'] = 0
+            if issubclass(cls, DesignationNode):
+                obj['designated'] = True
+            if issubclass(cls, AccessNode):
+                obj['world1'] = 0
+                obj['world2'] = 1
+        return Node.for_mapping(obj)
+
+    def example(self):
+        return self.example_node()

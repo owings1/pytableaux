@@ -126,7 +126,7 @@ class TestModelAtomics(Base):
     def test_model_branch_no_proof_atomic(self):
         model = self.m()
         branch = Branch()
-        branch.add({'sentence': Atomic(0, 0), 'world': 0})
+        branch.append({'sentence': Atomic(0, 0), 'world': 0})
         model.read_branch(branch)
         self.assertEqual(model.value_of(Atomic(0, 0), world=0), 'T')
 
@@ -149,7 +149,7 @@ class TestModelPredication(Base):
         model = self.m()
         branch = Branch()
         s1 = self.p('Imn')
-        branch.add({'sentence': s1, 'world': 0})
+        branch.append({'sentence': s1, 'world': 0})
         model.read_branch(branch)
         self.assertEqual(model.value_of(s1, world=0), 'T')
 
@@ -181,7 +181,7 @@ class TestModelModalAccess(Base):
     def test_model_branch_no_proof_access(self):
         model = self.m()
         branch = Branch()
-        branch.add({'world1': 0, 'world2': 1})
+        branch.append({'world1': 0, 'world2': 1})
         model.read_branch(branch)
         self.assertIn(1, model.R[0])
 

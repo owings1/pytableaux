@@ -25,6 +25,7 @@ from time import time as _time
 from typing import Self
 
 from ..errors import IllegalStateError
+from . import EMPTY_SET
 
 __all__ = 'StopWatch', 'Counter'
 
@@ -34,7 +35,7 @@ def _nowms() -> int:
 
 class TimingCommon:
 
-    __slots__ = ()
+    __slots__ = EMPTY_SET
 
     @classmethod
     def gen(cls, n: int, *args, **kw):

@@ -47,18 +47,7 @@ Truth Tables
 
 .. rubric:: Defined Operators
 
-The `Material Conditional` :s:`>` is definable in terms of disjunction:
-
-.. sentence::
-
-  A > B := ~A V B
-
-Likewise the `Material Biconditional` :s:`<` is defined in terms of :s:`>`
-and :s:`&`:
-
-.. sentence::
-
-  A < B := (A > B) & (B > A)
+.. include:: include/material_defines.rst
 
 .. truth-tables::
   :operators: MaterialConditional, MaterialBiconditional
@@ -69,7 +58,7 @@ L{K3WQ} does not have separate `Assertion` or `Conditional` operators,
 but we include tables and rules for them, for cross-compatibility.
 
 .. truth-tables::
-  :include: non_native_operators
+  :include: non_native
 
 .. _k3wq-predication:
 
@@ -146,7 +135,7 @@ Rules
 
 .. cssclass:: hidden
 
-  .. class:: TabRules()
+.. class:: TabRules()
 
 .. include:: include/fde/rules_blurb.rst
 

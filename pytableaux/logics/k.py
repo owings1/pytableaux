@@ -23,7 +23,8 @@ from ..errors import DenotationError, ModelValueError, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, ValueCPL
-from ..proof import (Branch, Node, Tableau, TableauxSystem, Target, WorldPair,
+from ..proof import (Branch, Node, Tableau, TableauxSystem, Target, WorldPair, AccessNode, SentenceWorldNode,
+                     SentenceNode,
                      adds, anode, filters, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
@@ -225,7 +226,7 @@ class Model(BaseModel[ValueCPL]):
             elif self.is_sentence_literal(s):
                 self.set_literal_value(s, self.Value.T, world = w)
             self.predicates.update(s.predicates)
-        elif node.is_access:
+        elif isinstance(node, AccessNode):
             self.R.add(WorldPair.fornode(node))
 
     def finish(self):
@@ -559,13 +560,13 @@ class TableauxSystem(TableauxSystem):
 class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default K node rule with:
     
-    - filters.ModalNode with defaults: modal = `True`, access = `None`.
+    - (removing...) filters.ModalNode with defaults: modal = `True`, access = `None`.
     - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
     - FilterHelper implements `example_nodes()` with its `example_node()` method.
     - AdzHelper implements `_apply()` with its `_apply()` method.
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
     """
-    NodeFilters = filters.ModalNode,
+    NodeFilters = filters.NodeType,
     modal: bool = True
     access: Optional[bool] = None
     autoattrs = True
@@ -576,8 +577,10 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     def _get_sw_targets(self, s: Operated, w: int|None, /):
         raise NotImplementedError
 
-class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
+class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule):
     'Convenience mixin class for most common rules.'
+    NodeFilters = filters.NodeType, filters.NodeSentence
+    NodeType = SentenceNode
 
 @TableauxSystem.initialize
 class TabRules(LogicType.TabRules):
@@ -609,7 +612,7 @@ class TabRules(LogicType.TabRules):
         def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             if s is not None:
-                return branch.find(swnode(s.negative(), node.get('world')))
+                return branch.find(swnode(self.sentence(node).negative(), node.get('world')))
 
     class SelfIdentityClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
         """
@@ -621,7 +624,7 @@ class TabRules(LogicType.TabRules):
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):
             if self.node_will_close_branch(node, branch):
-                return Target(node = node, branch = branch)
+                return Target(node=node, branch=branch)
             self[FilterHelper].release(node, branch)
             self[PredNodes].release(node, branch)
 
@@ -646,7 +649,7 @@ class TabRules(LogicType.TabRules):
 
         def _branch_target_hook(self, node: Node, branch: Branch, /):
             if self.node_will_close_branch(node, branch):
-                return Target(node = node, branch = branch)
+                return Target(node=node, branch=branch)
             self[FilterHelper].release(node, branch)
             self[PredNodes].release(node, branch)
 
@@ -867,12 +870,13 @@ class TabRules(LogicType.TabRules):
         """
         convert = Quantifier.Existential
 
-    class Possibility(rules.OperatedSentenceRule, DefaultNodeRule):
+    class Possibility(OperatorNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
         world1 *w* and world2 *w'* to *b*, then tick *n*.
         """
+        NodeType = SentenceWorldNode
         Helpers = (QuitFlag, MaxWorlds, AplSentCount)
         modal_operators = Model.modal_operators
 
@@ -922,18 +926,19 @@ class TabRules(LogicType.TabRules):
         possibilium of *n*, then tick *n*.
         """
         convert = Operator.Necessity
+        NodeType = SentenceWorldNode
 
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(self.convert(~s.lhs), w)))
 
-    class Necessity(rules.OperatedSentenceRule, DefaultNodeRule):
+    class Necessity(OperatorNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
         with *s* at *w2*, add it to *b*. The node *n* is never ticked.
         """
         ticking = False
-
+        NodeType = SentenceWorldNode
         Helpers = (QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex)
         modal_operators = Model.modal_operators
 
@@ -1008,7 +1013,7 @@ class TabRules(LogicType.TabRules):
         """
         convert = Operator.Possibility
 
-    class IdentityIndiscernability(rules.PredicatedSentenceRule, DefaultNodeRule):
+    class IdentityIndiscernability(DefaultNodeRule, rules.PredicatedSentenceRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,

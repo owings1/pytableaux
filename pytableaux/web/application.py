@@ -32,14 +32,14 @@ import jinja2
 from cherrypy import HTTPError, NotFound, expose
 from cherrypy._cprequest import Request, Response
 
-from .. import examples, logics, package, web
+from .. import examples, logics, package
 from ..lang import (LexType, Notation, Operator, ParseTable, Predicate,
                     Quantifier)
 from ..logics import LogicType
 from ..proof import writers
 from ..tools.events import EventEmitter
-from . import StaticResource, Wevent, views
-from .util import cp_staticdir_conf, tojson
+from . import EnvConfig, StaticResource, Wevent, views
+from .util import cp_staticdir_conf, get_logger, tojson
 
 if TYPE_CHECKING:
     from .metrics import AppMetrics
@@ -146,9 +146,9 @@ class WebApp(EventEmitter):
 
     def __init__(self, *args, **kw):
         super().__init__(*Wevent)
-        self.config = web.EnvConfig.env_config()
+        self.config = EnvConfig.env_config()
         self.config.update(*args, **kw)
-        self.logger = web.get_logger(self, self.config)
+        self.logger = get_logger(self, self.config)
         self.cp_config = self._build_cp_config()
         if self.config['feedback_enabled']:
             from .mail import Mailroom
@@ -161,7 +161,10 @@ class WebApp(EventEmitter):
         self.jinja = jinja2.Environment(
             loader = jinja2.FileSystemLoader(self.config['templates_path']))
         self.example_args = self._build_example_args()
-        self.logics_map = MapProxy({key: logics.registry(key) for key in logics.__all__})
+        logics.registry.import_all()
+        self.logics_map = MapProxy({
+            logic.Meta.name.lower(): logic
+            for logic in logics.registry.values()})
         self.jsapp_data = self._build_jsapp_data()
         self.static_res = self._create_static_res()
         self.default_context = MapProxy(dict(self.default_context,
@@ -255,7 +258,13 @@ class WebApp(EventEmitter):
         if self.config['doc_dir']:
             cp_config['/doc'] = cp_staticdir_conf(self.config['doc_dir'])
         if self.config['test_dir']:
-            cp_config['/test'] = cp_staticdir_conf(self.config['test_dir'])
+            cp_config['/test'] = {
+                'tools.redirect.on': True,
+                'tools.redirect.url': '/test/coverage/index.html',
+                'tools.redirect.internal': False}
+            cp_config['/test/coverage'] = {
+                **cp_staticdir_conf(self.config['test_dir'], index=None),
+                'tools.redirect.on': False}
         return cp_config
     
     def _start_metrics_server(self):

@@ -34,8 +34,8 @@ from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Callable, Iterator, Sequence, TypeVar
 
 from .. import tools
-from ..tools import EMPTY_SET, thru
 from ..errors import Emsg, check
+from ..tools import EMPTY_SET, thru
 
 __all__ = (
     'Abc',

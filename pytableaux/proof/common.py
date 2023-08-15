@@ -22,14 +22,14 @@ pytableaux.proof.common
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Mapping, Sequence, Set
+from collections.abc import Mapping, Set
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Optional, Self
 
 from ..errors import Emsg, check
 from ..lang import Constant, Sentence
-from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, SetView, abcs, dictattr,
-                     isattrstr, isint, itemsiter, lazy, qset)
+from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, SequenceSet, SetView,
+                     abcs, dictattr, isattrstr, isint, itemsiter, lazy, qset)
 from ..tools.events import EventEmitter
 from . import BranchMeta, NodeMeta
 
@@ -44,13 +44,13 @@ __all__ = (
     'Target')
 
 _FIRST_CONST = Constant.first()
-
+_WORLD_KEYS = (NodeMeta.Key.world, NodeMeta.Key.world1, NodeMeta.Key.world2)
 NOARG = object()
 
 class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
     'A tableau node.'
 
-    __slots__ = ('_worlds', 'step', 'ticked')
+    __slots__ = ('step', 'ticked')
 
     def __init__(self, mapping = EMPTY_MAP, /):
         if mapping is self:
@@ -74,28 +74,11 @@ class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
         "The unique object ID."
         return id(self)
 
-    @property
-    def is_modal(self) -> bool:
-        "Whether this is a modal node."
-        return isinstance(self, Modal)
-
-    @property
-    def is_access(self) -> bool:
-        "Whether this is a modal access node."
-        return isinstance(self, AccessNode)
-
-    @property
-    def is_flag(self) -> bool:
-        "Whether this is a flag node."
-        return isinstance(self, FlagNode)
-
-    @lazy.prop
-    def worlds(self, /, *, names = (NodeMeta.Key.world, NodeMeta.Key.w1, NodeMeta.Key.w2)):
+    def worlds(self) -> Iterator[int]:
         """
-        The set of worlds referenced in the node properties. This combines
-        the properties `world`, `world1`, and `world2`.
+        Yield from int values for world, world1, and world2 keys.
         """
-        return frozenset(filter(isint, map(self.get, names)))
+        yield from filter(isint, map(self.get, _WORLD_KEYS))
 
     def has(self, *names) -> bool:
         'Whether the node has a non-``None`` property of all the given names.'
@@ -161,140 +144,22 @@ class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
             if mapping.get(Node.Key.designation) is not None:
                 return SentenceDesignationNode(mapping)
             return SentenceNode(mapping)
+        if mapping.get(Node.Key.designation) is not None:
+            return DesignationNode(mapping)
+        if mapping.get(Node.Key.world) is not None:
+            return WorldNode(mapping)
         if mapping.get(Node.Key.ellipsis):
             return EllipsisNode(mapping)
         return UnknownNode(mapping)
 
-class Modal: __slots__ = EMPTY_SET
-class Designation: __slots__ = EMPTY_SET
-class UnknownNode(Node): __slots__ = EMPTY_SET
-class EllipsisNode(Node): __slots__ = EMPTY_SET
-class FlagNode(Node): __slots__ = EMPTY_SET
-class ClosureNode(FlagNode): __slots__ = EMPTY_SET
-class QuitFlagNode(FlagNode): __slots__ = EMPTY_SET
-class SentenceNode(Node): __slots__ = EMPTY_SET
-class SentenceWorldNode(SentenceNode, Modal): __slots__ = EMPTY_SET
-class SentenceDesignationNode(SentenceNode, Designation): __slots__ = EMPTY_SET
-class AccessNode(Node, Modal): __slots__ = EMPTY_SET
-
-class NodeIndex(dict[tuple[str, ...], dict[tuple[Any, ...], set[Node]]], abcs.Copyable):
-    "Branch node index."
-
-    __slots__ = EMPTY_SET
-
-    INDEXES = (
-        (Node.Key.sentence,),
-        (Node.Key.designation,),
-        (Node.Key.world,),
-        (Node.Key.world1, Node.Key.world2),
-        (Node.Key.world1,),
-        (Node.Key.world2,))
-
-    def __init__(self):
-        self.update((key, defaultdict(set)) for key in self.INDEXES)
-
-    def add(self, node: Node, /):
-        for key, index in self.items():
-            try:
-                index[*map(node.__getitem__, key)].add(node)
-            except KeyError:
-                continue
-
-    def copy(self):
-        inst = type(self)()
-        for key, index in self.items():
-            for value, base in index.items():
-                inst[key][value].update(base)
-        return inst
-
-    def select(self, mapping: Mapping, default, /) -> set[Node]:
-        bestsize = max(map(len, (self, mapping)))
-        best = default
-        for key, index in self.items():
-            if len(best) <= bestsize:
-                break
-            try:
-                base = index[*map(mapping.__getitem__, key)]
-            except KeyError:
-                continue
-            if len(base) < len(best):
-                best = base
-        return best
-
-class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
+class Branch(SequenceSet[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
     'A tableau branch.'
 
-    __constants: set[Constant]
-    __index: NodeIndex
-    __model: BaseModel
-    __nextconst: Constant
-    __nextworld: int
-    __nodes: qset[Node]
-    __origin: Branch
-    __parent: Optional[Branch]
-    __ticked: set[Node]
-    __worlds: set[int]
-    _constants: SetView[Constant]
-    _worlds: SetView[int]
+    constants: Set[Constant]
+    "The set of constants on the branch."
 
-    __slots__ = (
-        '__constants',
-        '__index',
-        '__model',
-        '__nextconst',
-        '__nextworld',
-        '__nodes',
-        '__origin',
-        '__parent',
-        '__ticked',
-        '__worlds',
-        '_constants',
-        '_worlds')
-
-    def __init__(self, parent = None, /):
-        """Create a branch.
-        
-        Args:
-            parent (Optional[Branch]): The parent branch, if any.
-        """
-        EventEmitter.__init__(self, *Branch.Events)
-        self.parent = parent
-        # Make sure properties are copied if needed in copy()
-        self.__nodes = qset()
-        self.__ticked = set()
-        self.__index = NodeIndex()
-        self.__worlds = set()
-        self.__constants = set()
-        self.__nextworld = 0
-        self.__nextconst = _FIRST_CONST
-
-    def copy(self, *, parent = None, listeners = False):
-        """Copy of the branch.
-        
-        Args:
-            parent (Optional[Branch]): The branch to set as the new branch's parent.
-                Defaults to None.
-            listeners (bool): Whether to copy event listeners. Defaults to `False`.
-        
-        Returns:
-            Branch: The new branch.
-        """
-        cls = type(self)
-        b = cls.__new__(cls)
-        b.parent = parent
-        b.events = self.events.copy(listeners = listeners)
-        b.__nodes = self.__nodes.copy()
-        b.__ticked = self.__ticked.copy()
-        b.__index = self.__index.copy()
-        b.__worlds = self.__worlds.copy()
-        b.__constants = self.__constants.copy()
-        b.__nextworld = self.__nextworld
-        b.__nextconst = self.__nextconst
-        try:
-            b.__model = self.__model
-        except AttributeError:
-            pass
-        return b
+    worlds: Set[int]
+    "The set of worlds on the branch."
 
     @property
     def id(self) -> int:
@@ -304,12 +169,12 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
     @property
     def parent(self) -> Branch|None:
         "The parent branch, if any."
-        return self.__parent
+        return self._parent
 
     @parent.setter
     def parent(self, parent: Branch|None):
         try:
-            self.__parent
+            self._parent
         except AttributeError:
             pass
         else:
@@ -317,15 +182,15 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         if parent is not None:
             if parent is self:
                 raise ValueError('A branch cannot be its own parent')
-            self.__origin = parent.origin
+            self._origin = parent.origin
         else:
-            self.__origin = self
-        self.__parent = parent
+            self._origin = self
+        self._parent = parent
 
     @property
     def origin(self) -> Branch:
         "The root branch."
-        return self.__origin
+        return self._origin
 
     @property
     def closed(self) -> bool:
@@ -341,29 +206,100 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
     def model(self) -> Optional[BaseModel]:
         "The associated model, if any."
         try:
-            return self.__model
+            return self._model
         except AttributeError:
             pass
 
     @model.setter
     def model(self, model: BaseModel):
         try:
-            self.__model
+            self._model
         except AttributeError:
-            pass
+            self._model = model
         else:
             raise AttributeError
-        self.__model = model
 
-    @lazy.prop
-    def worlds(self) -> SetView[int]:
-        "The set of worlds on the branch."
-        return SetView(self.__worlds)
+    _constants: set[Constant]
+    _index: Branch.Index
+    _model: BaseModel
+    _nextconst: Constant
+    _nextworld: int
+    _nodes: qset[Node]
+    _origin: Branch
+    _parent: Optional[Branch]
+    _ticked: set[Node]
+    _worlds: set[int]
 
-    @lazy.prop
-    def constants(self) -> SetView[Constant]:
-        "The set of constants on the branch."
-        return SetView(self.__constants)
+    __slots__ = (
+        '_constants',
+        '_index',
+        '_model',
+        '_nextconst',
+        '_nextworld',
+        '_nodes',
+        '_origin',
+        '_parent',
+        '_ticked',
+        '_worlds',
+        'constants',
+        'worlds')
+
+    INDEX_KEYS = (
+        (Node.Key.sentence,),
+        (Node.Key.designation,),
+        (Node.Key.world,),
+        (Node.Key.world1, Node.Key.world2),
+        (Node.Key.world1,),
+        (Node.Key.world2,))
+
+    def __init__(self, parent:Branch|None=None, /):
+        """Create a branch.
+        
+        Args:
+            parent (Optional[Branch]): The parent branch, if any.
+        """
+        EventEmitter.__init__(self, *Branch.Events)
+        self.parent = parent
+        # Make sure properties are copied if needed in copy()
+        self._nodes = qset()
+        self._ticked = set()
+        self._index = self.Index(self.INDEX_KEYS)
+        self._worlds = set()
+        self._constants = set()
+        self._nextworld = 0
+        self._nextconst = _FIRST_CONST
+        self.worlds = SetView(self._worlds)
+        self.constants = SetView(self._constants)
+
+    def copy(self, *, parent:Branch|None=None, listeners=False) -> Self:
+        """Copy of the branch.
+        
+        Kwargs:
+            parent (Optional[Branch]): The branch to set as the new branch's parent.
+                Defaults to None.
+            listeners (bool): Whether to copy event listeners. Defaults to `False`.
+        
+        Returns:
+            Branch: The new branch.
+        """
+        cls = type(self)
+        b = cls.__new__(cls)
+        b.parent = parent
+        b.events = self.events.copy(listeners=listeners)
+        b._nodes = self._nodes.copy()
+        b._ticked = self._ticked.copy()
+        b._index = self._index.copy()
+        b._worlds = self._worlds.copy()
+        b._constants = self._constants.copy()
+        b._nextworld = self._nextworld
+        b._nextconst = self._nextconst
+        b.worlds = SetView(b._worlds)
+        b.constants = SetView(b._constants)
+        try:
+            b._model = self._model
+        except AttributeError:
+            pass
+        return b
 
     def has(self, mapping: Mapping, /) -> bool:
         """Whether there is a node on the branch that matches the given properties.
@@ -374,9 +310,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns:
             bool: Whether there is a match.
         """
-        for _ in self.search(mapping, limit = 1):
-            return True
-        return False
+        return self.find(mapping) is not None
 
     def any(self, mappings: Iterable[Mapping], /) -> bool:
         """Check a list of property mappings against the :attr:`has` method.
@@ -387,10 +321,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns:
             bool: True when the first match is found, else False.
         """
-        for mapping in mappings:
-            for _ in self.search(mapping, limit = 1):
-                return True
-        return False
+        return any(map(self.has, mappings))
 
     def all(self, mappings: Iterable[Mapping], /) -> bool:
         """Check a list of property mappings against the :attr:`has` method.
@@ -401,12 +332,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns:
             bool: False when the first non-match is found, else True.
         """
-        for props in mappings:
-            for _ in self.search(props, limit = 1):
-                break
-            else:
-                return False
-        return True
+        return all(map(self.has, mappings))
 
     def find(self, mapping: Mapping, /) -> Node|None:
         """Find the first node on the branch that matches the given properties.
@@ -417,10 +343,10 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns:
             Optional[Node]: The node, or ``None`` if not found.
         """
-        for node in self.search(mapping, limit = 1):
+        for node in self.search(mapping):
             return node
 
-    def search(self, mapping: Mapping, /, limit: int|None = None):
+    def search(self, mapping: Mapping, /) -> Iterator[Node]:
         """
         Search the nodes on the branch that match the given properties, up to the
         limit, if given.
@@ -432,15 +358,11 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns:
             Generator[Node]: Results generator.
         """
-        n = 0
-        for node in self.__index.select(mapping, self):
-            if limit is not None and n >= limit:
-                break
+        for node in self._index.select(mapping, self):
             if node.meets(mapping):
-                n += 1
                 yield node
 
-    def append(self, node: Node|Mapping, /):
+    def append(self, node: Node|Mapping, /) -> Self:
         """Append a node.
 
         Args:
@@ -453,36 +375,35 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
             DuplicateValueError: if the node is already on the branch.
         """
         if self.closed:
-            raise ValueError('Already closed')
+            raise Emsg.IllegalState('Already closed')
         if not isinstance(node, Node):
             node = Node.for_mapping(node)
         
-        self.__nodes.append(node)
+        self._nodes.append(node)
 
         if isinstance(node, SentenceNode):
             s: Sentence = node[Node.Key.sentence]
             if len(cons := s.constants):
-                if self.__nextconst in cons:
-                    self.__nextconst = max(cons).next()
-                self.__constants.update(cons)
+                if self._nextconst in cons:
+                    self._nextconst = max(cons).next()
+                self._constants.update(cons)
 
         if isinstance(node, Modal):
-            if len(worlds := node.worlds):
+            worlds = frozenset(node.worlds())
+            if len(worlds):
                 maxworld = max(worlds)
-                if maxworld >= self.__nextworld:
-                    self.__nextworld = maxworld + 1
-                self.__worlds.update(worlds)
+                if maxworld >= self._nextworld:
+                    self._nextworld = maxworld + 1
+                self._worlds.update(worlds)
 
         # Add to index *before* after_node_add event
-        self.__index.add(node)
+        self._index.add(node)
         self.emit(Branch.Events.AFTER_ADD, node, self)
         if isinstance(node, ClosureNode):
             self.emit(Branch.Events.AFTER_CLOSE, self)
         return self
 
-    add = append
-
-    def extend(self, nodes: Iterable[Node|Mapping], /):
+    def extend(self, nodes: Iterable[Node|Mapping], /) -> Self:
         """Add multiple nodes.
 
         Args:
@@ -497,19 +418,23 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         for _ in map(self.append, nodes): pass
         return self
 
-    def tick(self, node: Node) -> None:
+    def tick(self, node: Node, /) -> Self:
         """Tick a node for the branch.
         
         Args:
             node (Node): The node to tick.
+
+        Returns:
+            Branch: self
         """
-        if node not in self.__ticked:
-            self.__ticked.add(node)
+        if not self.is_ticked(node):
+            self._ticked.add(node)
             node.ticked = True
             self.emit(Branch.Events.AFTER_TICK, node, self)
+        return self
 
-    def close(self):
-        """Close the branch. Adds a flag node and emits the `AFTER_BRANCH_CLOSE
+    def close(self) -> Self:
+        """Close the branch. Adds a flag node and emits the `AFTER_BRANCH_CLOSE`
         event.
         
         Returns:
@@ -526,7 +451,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns
             bool: Whether the node is ticked.
         """
-        return node in self.__ticked
+        return node in self._ticked
 
     def new_constant(self) -> Constant:
         """Return a new constant that does not appear on the branch.
@@ -534,7 +459,7 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns:
             Constant: The new constant.
         """
-        return self.__nextconst
+        return self._nextconst
 
     def new_world(self) -> int:
         """Return a new world that does not appear on the branch.
@@ -542,13 +467,13 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
         Returns:
             int: A new word.
         """
-        return self.__nextworld
+        return self._nextworld
 
     def __getitem__(self, i):
-        return self.__nodes[i]
+        return self._nodes[i]
 
     def __len__(self):
-        return len(self.__nodes)
+        return len(self._nodes)
 
     def __bool__(self):
         return True
@@ -559,14 +484,62 @@ class Branch(Sequence[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
     def __hash__(self):
         return id(self)
 
-    def __contains__(self, node, /):
-        return node in self.__nodes
+    def __contains__(self, node):
+        return node in self._nodes
+
+    def __iadd__(self, other) -> Self:
+        if isinstance(other, Mapping):
+            return self.append(other)
+        return self.extend(other)
 
     def __repr__(self):
         leafid = self.leaf.id if self.leaf else None
         return (f'<{type(self).__name__} id:{self.id} nodes:{len(self)} '
             f'leaf:{leafid} closed:{self.closed}>')
 
+    @classmethod
+    def _from_iterable(cls, it):
+        self = cls()
+        self.extend(it)
+        return self
+
+    class Index(dict[tuple[str, ...], dict[tuple[Any, ...], set[Node]]], abcs.Copyable):
+        "Branch node index."
+
+        __slots__ = EMPTY_SET
+
+        def __init__(self, indexes: Iterable[tuple[str, ...]]):
+            self.update((key, defaultdict(set)) for key in indexes)
+
+        def add(self, node: Node, /):
+            for key in self:
+                try:
+                    value = tuple(map(node.__getitem__, key))
+                except KeyError:
+                    continue
+                self[key][value].add(node)
+
+        def copy(self):
+            inst = type(self)(self)
+            for key, index in self.items():
+                for value, base in index.items():
+                    inst[key][value].update(base)
+            return inst
+
+        def select(self, mapping: Mapping, default: Set[Node], /) -> set[Node]:
+            bestsize = max(map(len, (self, mapping)))
+            best = default
+            for key in self:
+                if len(best) <= bestsize:
+                    break
+                try:
+                    value = tuple(map(mapping.__getitem__, key))
+                except KeyError:
+                    continue
+                base = self[key].get(value, EMPTY_SET)
+                if len(base) < len(best):
+                    best = base
+            return best
 
 class Target(dictattr):
     """Rule application target.
@@ -632,3 +605,19 @@ class Target(dictattr):
 
     def _names(self):
         return filter(self._keyattr_ok, self)
+
+
+class Modal: __slots__ = EMPTY_SET
+class Designation: __slots__ = EMPTY_SET
+
+class UnknownNode(Node): pass
+class EllipsisNode(Node): pass
+class FlagNode(Node): pass
+class ClosureNode(FlagNode): pass
+class QuitFlagNode(FlagNode): pass
+class WorldNode(Node, Modal): pass
+class AccessNode(Node, Modal): pass
+class DesignationNode(Node, Designation): pass
+class SentenceNode(Node): pass
+class SentenceWorldNode(SentenceNode, WorldNode): pass
+class SentenceDesignationNode(SentenceNode, DesignationNode): pass

@@ -30,9 +30,10 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, minfloor, wraps
-from . import Branch, Node, Rule, Tableau, Target, WorldPair, filters
+from . import (AccessNode, Branch, Node, Rule, Tableau, Target, WorldPair,
+               filters)
 from .common import QuitFlagNode
-from .filters import NodeCompare
+from .filters import CompareNode
 
 if TYPE_CHECKING:
     from ..tools import TypeInstMap
@@ -281,7 +282,7 @@ class UnserialWorlds(BranchCache[set[int]]):
     def listen_on(self):
         super().listen_on()
         def after_node_add(node: Node, branch: Branch):
-            for w in node.worlds:
+            for w in node.worlds():
                 if node.get(Node.Key.w1) == w or branch.has({Node.Key.w1: w}):
                     self[branch].discard(w)
                 else:
@@ -307,7 +308,7 @@ class WorldIndex(BranchDictCache[int, set[int]]):
     def listen_on(self):
         super().listen_on()
         def after_node_add(node: Node, branch: Branch):
-            if node.is_access:
+            if isinstance(node, AccessNode):
                 w1, w2 = WorldPair.fornode(node)
                 if w1 not in self[branch]:
                     self[branch][w1] = set()
@@ -432,7 +433,7 @@ class FilterHelper(FilterNodeCache):
     """
     __slots__ = ('filters', 'pred')
 
-    filters: TypeInstMap[NodeCompare]
+    filters: TypeInstMap[CompareNode]
     "Mapping from ``NodeCompare`` class to instance."
 
     pred: Callable
@@ -493,6 +494,8 @@ class FilterHelper(FilterNodeCache):
         configs = {}
         for relcls in abcs.mroiter(cls = rulecls, supcls = Rule, reverse = False):
             v = getattr(relcls, attr, EMPTY_MAP)
+            if isinstance(v, type):
+                v = v,
             if isinstance(v, Sequence):
                 for fcls in v:
                     configs.setdefault(fcls, None)
@@ -500,13 +503,14 @@ class FilterHelper(FilterNodeCache):
                 for fcls, flag in dict(v).items():
                     configs.setdefault(fcls, flag)
         for fcls in configs:
-            check.subcls(check.inst(fcls, type), filters.NodeCompare)
+            check.subcls(check.inst(fcls, type), filters.CompareNode)
         if not abcs.isabstract(rulecls):
             setattr(rulecls, attr, configs)
             if not configs:
-                import warnings
-                warnings.warn(f"EMPTY '{attr}' attribute for {rulecls}. "
-                    "All nodes will be cached.")
+                pass
+                # import warnings
+                # warnings.warn(f"EMPTY '{attr}' attribute for {rulecls}. "
+                #     "All nodes will be cached.")
             return cls._build_config(rulecls)
 
     @staticmethod

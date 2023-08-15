@@ -92,7 +92,7 @@ class TestTableau(BaseCase):
                 self._checkbranch = branch
                 self._checkparent = branch.parent
 
-        b = Branch().add({'test': True})
+        b = Branch().append({'test': True})
         tab = Tableau()
         tab.rules.append(MockRule)
         tab.add(b)
@@ -124,7 +124,7 @@ class TestBranch(BaseCase):
         while i <= Constant.TYPE.maxi:
             c = Constant(i, 0)
             sen = Predicated('Identity', (c, c))
-            b.add({'sentence': sen})
+            b.append({'sentence': sen})
             i += 1
         self.assertEqual(b.new_constant(), Constant(0, 1))
 
@@ -147,7 +147,7 @@ class TestBranch(BaseCase):
 
     def test_branch_has_world1(self):
         proof = Tableau()
-        branch = proof.branch().add({'world1': 4, 'world2': 1})
+        branch = proof.branch().append({'world1': 4, 'world2': 1})
         self.assertTrue(branch.has({'world1': 4}))
 
 
@@ -170,7 +170,7 @@ class TestBranch(BaseCase):
         proof = Tableau()
         proof.rules.append(MyRule)
         rule = proof.rules.get(MyRule)
-        proof.branch().add({'world1': 7})
+        proof.branch().append({'world1': 7})
 
         self.assertTrue(rule.should_be)
         self.assertFalse(rule.shouldnt_be)
@@ -178,18 +178,17 @@ class TestBranch(BaseCase):
 
     def test_select_index_non_indexed_prop(self):
         branch = Branch()
-        branch.add({'foo': 'bar'})
-        idx = branch._Branch__index.select({'foo': 'bar'}, branch)
+        branch.append({'foo': 'bar'})
+        idx = branch._index.select({'foo': 'bar'}, branch)
         self.assertEqual(list(idx), list(branch))
 
     def test_select_index_access(self):
         b = Branch()
-        bindex = b._Branch__index
         b.extend((
             {'world1': 0, 'world2': 1},
-            *({'foo': 'bar'} for _ in range(len(bindex))),
+            *({'foo': 'bar'} for _ in range(len(b._index))),
         ))
-        base = bindex.select({'world1': 0, 'world2': 1}, b)
+        base = b._index.select({'world1': 0, 'world2': 1}, b)
         self.assertEqual(set(base), {b[0]})
 
     def test_close_adds_flag_node(self):
@@ -209,7 +208,7 @@ class TestBranch(BaseCase):
     # def test_constants_or_new_returns_pair_with_constants(self):
     #     branch = Branch()
     #     s1 = Predicated('Identity', [Constant(0, 0), Constant(1, 0)])
-    #     branch.add({sen: s1})
+    #     branch.append({sen: s1})
     #     res = branch.constants_or_new()
     #     self.assertEqual(len(res), 2)
     #     constants, is_new = res
@@ -298,7 +297,7 @@ class TestNode(BaseCase):
 
     def test_worlds_contains_worlds(self):
         node = Node.for_mapping({'world1': 0, 'world2': 1})
-        res = node.worlds
+        res = set(node.worlds())
         self.assertIn(0, res)
         self.assertIn(1, res)
 
@@ -348,19 +347,11 @@ class TestClosureRule(BaseCase):
 
 class TestFilters(BaseCase):
 
-    def test_AttrFilter_node_is_modal(self):
-        class Lhs(object):
-            testname = True
-        class AttrFilt(filters.AttrCompare):
-            attrmap = {'testname': 'is_modal'}
-        f = AttrFilt(Lhs())
-        assert f(Node.for_mapping({'world1': 0, 'world2': 0}))
-        assert not f(Node({'foo': 'bar'}))
 
     def test_AttrFilter_key_node_designated(self):
         class Lhs(object):
             testname = True
-        class AttrFilt(filters.AttrCompare):
+        class AttrFilt(filters.CompareAttr):
             attrmap = {'testname': 'designated'}
         f = AttrFilt(Lhs())
         f.rget = getkey#gets.key()
@@ -431,14 +422,9 @@ class TestMaxConstantsTracker(BaseCase):
         class FilterNodeRule(NoopRule):
             Helpers = FilterHelper,
             ignore_ticked = None
-            NodeFilters = filters.ModalNode,
-            modal = None
     
         class MtrTestRule(FilterNodeRule):
-            Helpers = (
-                *FilterNodeRule.Helpers,
-                MaxConsts,
-            )
+            Helpers = MaxConsts,
     
         proof = self.tab()
         proof.rules.append(MtrTestRule)
@@ -454,7 +440,7 @@ class TestMaxConstantsTracker(BaseCase):
         proof = Tableau()
         rule = Rule(proof)
         branch = proof.branch()
-        branch.add(node)
+        branch.append(node)
         res = rule[MaxConsts]._compute_needed_constants_for_node(node, branch)
         self.assertEqual(res, 1)
 

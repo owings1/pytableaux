@@ -60,14 +60,14 @@ class TestGO(Base):
     def test_MaterialConditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': self.p('NCab'), 'designated': True})
+        branch.append({'sentence': self.p('NCab'), 'designated': True})
         proof.step()
         self.assertTrue(branch.has({'sentence': self.p('Na'), 'designated': False}))
         self.assertTrue(branch.has({'sentence': self.p('b'), 'designated': False}))
 
     def test_MaterialBionditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
-        proof.branch().add({'sentence': self.p('NEab'), 'designated': True})
+        proof.branch().append({'sentence': self.p('NEab'), 'designated': True})
         proof.step()
         b1, b2 = proof
         self.assertTrue(b1.has({'sentence': self.p('Na'), 'designated': False}))
@@ -77,7 +77,7 @@ class TestGO(Base):
 
     def test_ConditionalDesignated_step(self):
         proof = Tableau(self.logic)
-        proof.branch().add({'sentence': self.p('Uab'), 'designated': True})
+        proof.branch().append({'sentence': self.p('Uab'), 'designated': True})
         proof.step()
         b1, b2 = proof
         self.assertTrue(b1.has({'sentence': self.p('ANab'), 'designated': True}))
@@ -88,7 +88,7 @@ class TestGO(Base):
 
     def test_ConditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
-        proof.branch().add({'sentence': self.p('NUab'), 'designated': True})
+        proof.branch().append({'sentence': self.p('NUab'), 'designated': True})
         proof.step()
         b1, b2 = proof
         self.assertTrue(b1.has({'sentence': self.p('a'), 'designated': True}))
@@ -99,14 +99,14 @@ class TestGO(Base):
     def test_BiconditionalDesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': self.p('Bab'), 'designated': True})
+        branch.append({'sentence': self.p('Bab'), 'designated': True})
         proof.step()
         self.assertTrue(branch.has({'sentence': self.p('Uab'), 'designated': True}))
         self.assertTrue(branch.has({'sentence': self.p('Uba'), 'designated': True}))
 
     def test_BiconditionalNegatedDesignated_step(self):
         proof = Tableau(self.logic)
-        proof.branch().add({'sentence': self.p('NBab'), 'designated': True})
+        proof.branch().append({'sentence': self.p('NBab'), 'designated': True})
         proof.step()
         b1, b2 = proof
         self.assertTrue(b1.has({'sentence': self.p('NUab'), 'designated': True}))
@@ -115,21 +115,21 @@ class TestGO(Base):
     def test_AssertionUndesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': self.p('Ta'), 'designated': False})
+        branch.append({'sentence': self.p('Ta'), 'designated': False})
         proof.step()
         self.assertTrue(branch.has({'sentence': self.p('a'), 'designated': False}))
 
     def test_AssertionNegatedDesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': self.p('NTa'), 'designated': True})
+        branch.append({'sentence': self.p('NTa'), 'designated': True})
         proof.step()
         self.assertTrue(branch.has({'sentence': self.p('a'), 'designated': False}))
 
     def test_AssertionNegatedUndesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': self.p('NTa'), 'designated': False})
+        branch.append({'sentence': self.p('NTa'), 'designated': False})
         proof.step()
         self.assertTrue(branch.has({'sentence': self.p('a'), 'designated': True}))
 
@@ -160,6 +160,6 @@ class TestGO(Base):
     def test_branching_complexity_inherits_branchables(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
-        branch.add({'sentence': self.p('Kab'), 'designated': False})
+        branch.append({'sentence': self.p('Kab'), 'designated': False})
         node = branch[0]
         self.assertEqual(self.logic.TableauxSystem.branching_complexity(node), 0)
