@@ -1,4 +1,4 @@
-from .. import BaseCase
+from ..utils import BaseCase
 from pytableaux.errors import *
 from pytableaux.lang import *
 from pytableaux.proof import *

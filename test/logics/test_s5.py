@@ -1,4 +1,4 @@
-from .. import BaseCase
+from ..utils import BaseCase
 
 class Base(BaseCase):
     logic = 'S5'

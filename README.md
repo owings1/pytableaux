@@ -14,7 +14,7 @@ The docker image is available on [Docker Hub][dockerhub].
 docker run -p 8080:8080 owings1/pytableaux:latest
 ```
 
-The web UI should then be available on port 8080, e.g. `http://localhost:8080`.
+The web UI will then be available on port 8080, e.g. `http://localhost:8080`.
 
 ## Documentation
 
@@ -79,7 +79,7 @@ pipenv install --categoies="dev-packages web-packages"
 Run tests:
 
 ```bash
-python3 -m pytest
+python -m test
 ```
 
 <!-- optional: python-Levenshtein -->
@@ -94,7 +94,7 @@ pipenv install --categoies="doc-packages"
 Build docs:
 
 ```bash
-cd doc && make clean html
+python -m doc clean html
 ```
 
 ### Docker

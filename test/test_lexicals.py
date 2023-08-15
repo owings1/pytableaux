@@ -31,7 +31,7 @@ from pytableaux.lang import *
 from pytableaux.lang.lex import *
 from pytableaux.tools import EMPTY_SET
 
-from . import BaseCase
+from .utils import BaseCase
 
 Firsts = dict(
     (cls, cls.first()) for cls in LexType.classes)

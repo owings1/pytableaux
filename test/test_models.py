@@ -4,7 +4,7 @@ from pytableaux.lang import Operator
 from pytableaux.logics import registry
 from pytableaux.models import BaseModel
 
-from . import BaseCase as Base
+from .utils import BaseCase as Base
 
 
 class TestModel(Base):

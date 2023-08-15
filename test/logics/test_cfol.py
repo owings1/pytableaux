@@ -3,7 +3,7 @@ from unittest import skip
 from pytableaux.errors import *
 from pytableaux.proof import *
 
-from .. import BaseCase
+from ..utils import BaseCase
 
 
 class Base(BaseCase):

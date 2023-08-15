@@ -1,7 +1,7 @@
 from pytableaux.tools import *
 from pytableaux.tools import inflect
 
-from . import BaseCase
+from .utils import BaseCase
 
 class TestMinFloor(BaseCase):
 

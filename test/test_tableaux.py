@@ -15,7 +15,7 @@ from pytableaux.proof.tableaux import Tableau
 from types import MappingProxyType as MapProxy
 from pytest import raises
 from unittest import skip
-from . import BaseCase
+from .utils import BaseCase
 
 
 
