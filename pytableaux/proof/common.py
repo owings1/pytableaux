@@ -44,7 +44,6 @@ __all__ = (
     'Target')
 
 _FIRST_CONST = Constant.first()
-_WORLD_KEYS = (NodeMeta.Key.world, NodeMeta.Key.world1, NodeMeta.Key.world2)
 NOARG = object()
 
 class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
@@ -78,7 +77,7 @@ class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
         """
         Yield from int values for world, world1, and world2 keys.
         """
-        yield from filter(isint, map(self.get, _WORLD_KEYS))
+        yield from filter(isint, map(self.get, Node.WORLD_KEYS))
 
     def has(self, *names) -> bool:
         'Whether the node has a non-``None`` property of all the given names.'
@@ -136,8 +135,9 @@ class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
             if value == Node.PropMap.QuitFlag[Node.Key.flag]:
                 return QuitFlagNode(mapping)
             return FlagNode(mapping)
-        if mapping.get(Node.Key.w1) is not None and mapping.get(Node.Key.w2) is not None:
-            return AccessNode(mapping)
+        if mapping.get(Node.Key.world1) is not None:
+            if mapping.get(Node.Key.world2) is not None:
+                return AccessNode(mapping)
         if mapping.get(Node.Key.sentence) is not None:
             if mapping.get(Node.Key.world) is not None:
                 return SentenceWorldNode(mapping)
@@ -226,7 +226,7 @@ class Branch(SequenceSet[Node], EventEmitter, abcs.Copyable, metaclass=BranchMet
     _nextworld: int
     _nodes: qset[Node]
     _origin: Branch
-    _parent: Optional[Branch]
+    _parent: Branch|None
     _ticked: set[Node]
     _worlds: set[int]
 
@@ -566,11 +566,8 @@ class Target(dictattr):
 
     __slots__ += ('_entry',)
 
-    def __init__(self, it: Iterable = None, /, **kw):
-        if it is not None:
-            self.update(it)
-        if len(kw):
-            self.update(kw)
+    def __init__(self, *args, **kw):
+        self.update(*args, **kw)
         if 'branch' not in self:
             raise Emsg.MissingValue('branch')
 

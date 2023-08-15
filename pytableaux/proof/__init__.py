@@ -118,6 +118,8 @@ class NodeMeta(abcs.AbcMeta):
         def __str__(self):
             return self.value
 
+    WORLD_KEYS = (Key.world, Key.world1, Key.world2)
+
     class PropMap(abcs.ItemMapEnum):
         Defaults = dict(
             designated = None,
@@ -270,7 +272,7 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
                     rulecls.branching = rulecls.induce_branching()
                 except Exception as err:
                     msg = (
-                        f'failed to induce branching for {rulecls}: '
+                        f'Failed to induce branching for {rulecls}: '
                         f'{type(err)}: {err}')
                     raise TypeError(msg)
         return TabRules
@@ -369,12 +371,13 @@ class RuleMeta(abcs.AbcMeta):
         attrs = {}
         todo = self.name
         Legend = self.Legend
+
         indicator = 'DoubleNegation'
         isdoubleneg = todo.startswith(indicator)
         if isdoubleneg:
             attrs[Legend.operator] = Operator.Negation
             attrs[Legend.negated] = True
-            todo = todo[len(indicator):]
+            todo = todo.removeprefix(indicator)
         else:
             it = sorted(Operator,
                 key=lambda oper: len(oper.name),
@@ -382,43 +385,47 @@ class RuleMeta(abcs.AbcMeta):
             for oper in it:
                 if todo.startswith(oper.name):
                     attrs[Legend.operator] = oper
-                    todo = todo[len(oper.name):]
+                    todo = todo.removeprefix(oper.name)
                     break
             else:
                 if hasattr(self, Legend.operator):
                     attrs[Legend.operator] = None
+
         for quant in Quantifier:
             if todo.startswith(quant.name):
                 attrs[Legend.quantifier] = quant
-                todo = todo[len(quant.name):]
+                todo = todo.removeprefix(quant.name)
                 break
         else:
             if hasattr(self, Legend.quantifier):
                 attrs[Legend.quantifier] = None
+
         for pred in Predicate.System:
             if todo.startswith(pred.name):
                 attrs[Legend.predicate] = pred
-                todo = todo[len(pred.name):]
+                todo = todo.removeprefix(pred.name)
                 break
         else:
             if hasattr(self, Legend.predicate):
                 attrs[Legend.predicate] = None
+
         if not isdoubleneg:
             indicator = 'Negated'
             if todo.startswith(indicator):
                 attrs[Legend.negated] = True
-                todo = todo[len(indicator):]
+                todo = todo.removeprefix(indicator)
             elif hasattr(self, Legend.negated):
                 attrs[Legend.negated] = None
-        indicators = 'Designated', 'Undesignated'
-        if todo.startswith(indicators[0]):
-            attrs[Legend.designation] = True
-            todo = todo[len(indicators[0]):]
-        elif todo.startswith(indicators[1]):
-            attrs[Legend.designation] = False
-            todo = todo[len(indicators[1]):]
-        elif hasattr(self, Legend.designation):
-            attrs[Legend.designation] = None
+
+        for i, indicator in enumerate(('Undesignated', 'Designated')):
+            if todo.startswith(indicator):
+                attrs[Legend.designation] = bool(i)
+                todo = todo.removeprefix(indicator)
+                break
+        else:
+            if hasattr(self, Legend.designation):
+                attrs[Legend.designation] = None
+
         if not len(todo):
             return attrs
 
@@ -467,7 +474,7 @@ def adds(*groups, **kw):
     Returns:
         A dict built from ``dict(adds = groups, **kw)``.
     """
-    return dict(adds = groups, **kw)
+    return dict(adds=groups, **kw)
 
 def snode(s):
     'Make a sentence node.'

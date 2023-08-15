@@ -657,7 +657,7 @@ class Sentence(LexicalAbc):
         Returns:
             The new sentence.
         """
-        return Operated(Operator.Negation, (self,))
+        return Operator.Negation(self)
 
     def asserted(self) -> Operated:
         """Apply the :obj:`Assertion` operator.
@@ -665,7 +665,7 @@ class Sentence(LexicalAbc):
         Returns:
             The new sentence.
         """
-        return Operated(Operator.Assertion, (self,))
+        return Operator.Assertion(self)
 
     def disjoin(self, rhs: Sentence, /) -> Operated:
         """Apply the :obj:`Disjunction` operator to the right-hand sentence.
@@ -677,7 +677,7 @@ class Sentence(LexicalAbc):
         Returns:
             The new sentence.
         """
-        return Operated(Operator.Disjunction, (self, rhs))
+        return Operator.Disjunction(self, rhs)
 
     def conjoin(self, rhs: Sentence, /) -> Operated:
         """Apply the :obj:`Conjunction` operator to the right-hand sentence.
@@ -689,7 +689,7 @@ class Sentence(LexicalAbc):
         Returns:
             The new sentence.
         """
-        return Operated(Operator.Conjunction, (self, rhs))
+        return Operator.Conjunction(self, rhs)
 
     def negative(self) -> Sentence:
         """Either negate this sentence, or, if this is already a negated
@@ -704,7 +704,7 @@ class Sentence(LexicalAbc):
         Returns:
             The new sentence.
         """
-        return Operated(Operator.Negation, (self,))
+        return self.negate()
 
     def substitute(self, pnew: Parameter, pold: Parameter, /) -> Self:
         """Return the recursive substitution of ``pnew`` for all occurrences
@@ -725,26 +725,17 @@ class Sentence(LexicalAbc):
             return Atomic.first()
         raise TypeError(f'Abstract type {cls}')
 
-    @abcs.abcf.temp
-    @membr.defer
-    def libopers_1(member: membr):
-        @wraps(oper := Operator.lib_opmap[member.name])
-        def wrapper(self: Sentence) -> Operated:
-            return Operated(oper, self)
-        return wrapper
+    def __invert__(self):
+        return self.negate()
 
-    @abcs.abcf.temp
-    @membr.defer
-    def libopers_2(member: membr):
-        @wraps(oper := Operator.lib_opmap[member.name])
-        def wrapper(self: Sentence, other: Sentence, /) -> Operated:
-            if not isinstance(other, Sentence):
-                return NotImplemented
-            return Operated(oper, (self, other))
-        return wrapper
+    def __and__(self, other):
+        return self.conjoin(other)
 
-    __invert__ = libopers_1()
-    __and__ = __or__ = libopers_2()
+    def __or__(self, other):
+        return self.disjoin(other)
+
+    def __neg__(self):
+        return self.negative()
 
 #----------------------------------------------------------
 #
@@ -1301,7 +1292,8 @@ class Operated(Sentence, Sequence[Sentence]):
     def negative(self) -> Sentence:
         if self.operator is Operator.Negation:
             return self.lhs
-        return Operated(Operator.Negation, self)
+        return self.negate()
+        # return Operated(Operator.Negation, self)
 
     @classmethod
     def first(cls, oper = Operator.first(), /):
