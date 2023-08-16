@@ -59,10 +59,6 @@ class TestConstant(BaseCase):
         with self.assertRaises(ValueError):
             Constant(Constant.TYPE.maxi + 1, 0)
 
-    def test_is_constante(self):
-        c = Constant(0, 0)
-        self.assertTrue(c.is_constant)
-        self.assertFalse(c.is_variable)
 
 class TestVariable(BaseCase):
 

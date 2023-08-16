@@ -155,6 +155,7 @@ class WebApp(EventEmitter):
             self.mailroom = Mailroom(self.config)
         if self.config['metrics_enabled']:
             from prometheus_client import CollectorRegistry
+
             from .metrics import AppMetrics
             self.metrics = AppMetrics(self.config, CollectorRegistry())
         self.template_cache = {}

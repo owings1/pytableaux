@@ -27,7 +27,6 @@ from types import MappingProxyType as MapProxy
 from ....errors import SkipDeparture
 from ....lang import Notation
 from ....tools import EMPTY_SET, closure
-from ...tableaux import Tableau
 from . import DoctreeTabWriter, NodeVisitor, Translator
 
 
@@ -141,43 +140,8 @@ class LatexTranslator(Translator, NodeVisitor):
     # visit_wrapper = noop
 
     @staticmethod
-    @closure
-    def escape():
-        # Table copied from sphinx.util.texescape.
-        # https://github.com/sphinx-doc/sphinx/blob/a7f5d91/sphinx/util/texescape.py
-        # Copyright (c) 2007-2023 by the Sphinx team.
-        # BSD-2 License. See NOTICE file for details.
-        trans = dict((ord(key), value) for key, value in (
-            # map TeX special chars
-            ('$', r'\$'),
-            ('%', r'\%'),
-            ('&', r'\&'),
-            ('#', r'\#'),
-            ('_', r'\_'),
-            ('{', r'\{'),
-            ('}', r'\}'),
-            ('\\', r'\textbackslash{}'),
-            ('~', r'\textasciitilde{}'),
-            ('^', r'\textasciicircum{}'),
-            # map chars to avoid mis-interpretation in LaTeX
-            ('[', r'{[}'),
-            (']', r'{]}'),
-            # map special Unicode characters to TeX commands
-            ('✓', r'\(\checkmark\)'),
-            ('✔', r'\(\pmb{\checkmark}\)'),
-            ('✕', r'\(\times\)'),
-            ('✖', r'\(\pmb{\times}\)'),
-            # used to separate -- in options
-            ('﻿', r'{}'),
-            # map some special Unicode characters to similar ASCII ones
-            # (even for Unicode LaTeX as may not be supported by OpenType font)
-            ('⎽', r'\_'),
-            ('ℯ', r'e'),
-            ('ⅈ', r'i')))
-        
-        def escape(s: str):
-            return s.translate(trans)
-        return escape
+    def escape(s: str, /):
+        return escape_latex(s)
 
 class LatexTabWriter(DoctreeTabWriter):
 
@@ -187,5 +151,43 @@ class LatexTabWriter(DoctreeTabWriter):
     translator_type = LatexTranslator
     default_charsets = MapProxy({notn: 'latex' for notn in Notation})
 
-    def build_doc(self, tab: Tableau, /):
+    def build_doc(self, tab, /):
         return super().build_doc(tab)
+
+@closure
+def escape_latex():
+    # Table copied from sphinx.util.texescape.
+    # https://github.com/sphinx-doc/sphinx/blob/a7f5d91/sphinx/util/texescape.py
+    # Copyright (c) 2007-2023 by the Sphinx team.
+    # BSD-2 License. See NOTICE file for details.
+    trans = dict((ord(key), value) for key, value in (
+        # map TeX special chars
+        ('$', r'\$'),
+        ('%', r'\%'),
+        ('&', r'\&'),
+        ('#', r'\#'),
+        ('_', r'\_'),
+        ('{', r'\{'),
+        ('}', r'\}'),
+        ('\\', r'\textbackslash{}'),
+        ('~', r'\textasciitilde{}'),
+        ('^', r'\textasciicircum{}'),
+        # map chars to avoid mis-interpretation in LaTeX
+        ('[', r'{[}'),
+        (']', r'{]}'),
+        # map special Unicode characters to TeX commands
+        ('✓', r'\(\checkmark\)'),
+        ('✔', r'\(\pmb{\checkmark}\)'),
+        ('✕', r'\(\times\)'),
+        ('✖', r'\(\pmb{\times}\)'),
+        # used to separate -- in options
+        ('﻿', r'{}'),
+        # map some special Unicode characters to similar ASCII ones
+        # (even for Unicode LaTeX as may not be supported by OpenType font)
+        ('⎽', r'\_'),
+        ('ℯ', r'e'),
+        ('ⅈ', r'i')))
+    
+    def escape(s: str):
+        return s.translate(trans)
+    return escape

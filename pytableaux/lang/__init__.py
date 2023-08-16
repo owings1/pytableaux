@@ -38,7 +38,6 @@ __all__ = (
     'Marking',
     'Notation',
     'RenderSet',
-    'SysPredEnumMeta',
     'TableStore',
     'TriCoords',
 
@@ -46,6 +45,7 @@ __all__ = (
     'Argument',
     'Atomic',
     'Constant',
+    'CoordsItem',
     'Lexical',
     'LexType',
     'LexWriter',
@@ -73,6 +73,10 @@ class LangCommonMeta(abcs.AbcMeta):
     # The nosetattr member is shared among these classes and is activated after
     # the modules are fully initialized.
 
+    @classmethod
+    def __prepare__(cls, clsname, bases, **kw):
+        return dict(__slots__=EMPTY_SET)
+
     _readonly : bool
     __delattr__ = Emsg.ReadOnly.razr
     __setattr__ = nosetattr(abcs.AbcMeta)
@@ -91,14 +95,11 @@ class LexicalAbcMeta(LangCommonMeta):
     # Populated in lex module.
     __call__ = NotImplemented
 
-class SysPredEnumMeta(LangCommonEnumMeta):
-    "Meta class for special system predicates enum."
-
 #==========================+
 #  Base classes            |
 #==========================+
 
-class LangCommonEnum(abcs.Ebc, metaclass = LangCommonEnumMeta):
+class LangCommonEnum(abcs.Ebc, metaclass=LangCommonEnumMeta):
     'Common Enum base class for lang classes.'
 
     # __slots__   = 'value', '_value_', '_name_',
@@ -307,7 +308,7 @@ BiCoords.first = BiCoords.make(BiCoords.first)
 TriCoords.first = TriCoords.make(TriCoords.first)
 
 
-class TableStore(metaclass = LangCommonMeta):
+class TableStore(metaclass=LangCommonMeta):
 
     default_fetch_key: ClassVar[str]
 

@@ -48,7 +48,6 @@ NOARG = object()
 
 class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None))):
     "Stub class definition for a logic interface."
-    name: str
     class Meta:
         name: str
         category: str
@@ -56,6 +55,7 @@ class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None)
         category_order: int
         tags: tuple = ()
         native_operators: tuple[Operator, ...] = ()
+        modal_operators: tuple[Operator, ...] = (Operator.Possibility, Operator.Necessity)
     TableauxSystem: type[TableauxSystem]
     Model: type[BaseModel]
     class TabRules:
@@ -346,7 +346,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
     def __contains__(self, key):
         return key in self.index
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> LogicType:
         modname = self.index[key]
         try:
             return sys.modules[modname]
@@ -363,7 +363,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         return len(self.modules)
 
     def __repr__(self):
-        names = (v.name for v in self.values())
+        names = (v.Meta.name for v in self.values())
         if self is registry:
             ident = 'default'
         else:

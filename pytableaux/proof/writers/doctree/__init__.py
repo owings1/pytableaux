@@ -136,7 +136,7 @@ class DoctreeTabWriter(TabWriter):
         return self.render(doc, fulldoc=fulldoc)
 
     @abstractmethod
-    def build_doc(self, tab: Tableau) -> nodes.document:
+    def build_doc(self, tab: Tableau, /) -> nodes.document:
         types = self.docnode_type.types
         return types[nodes.document](types[nodes.tableau].for_object(tab))
 

@@ -20,7 +20,6 @@ pytableaux
 
 """
 from __future__ import annotations
-import os
 # ----- package info
 
 from ._package_info import package as package
@@ -34,23 +33,6 @@ from . import errors as errors
 from . import tools as tools
 
 
-# ----- env
-
-import dataclasses
-
-@dataclasses.dataclass
-class _Settings:
-    DEBUG: bool
-    ITEM_CACHE_SIZE: int
-    DOC_MODE: bool
-
-_ENV = _Settings(
-    DEBUG = tools.sbool(os.getenv('DEBUG', '')),
-    ITEM_CACHE_SIZE = int(os.getenv('ITEM_CACHE_SIZE', 1000) or 0),
-    DOC_MODE = tools.sbool(os.getenv('DOC_MODE', '')))
-
-
-del(dataclasses,_Settings)
 
 from . import examples as examples
 from . import logics as logics

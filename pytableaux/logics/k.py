@@ -328,7 +328,7 @@ class Model(BaseModel[ValueCPL]):
         params = s.params
         self.predicates.add(pred)
         for param in s:
-            if param.is_constant:
+            if type(param) is Constant:
                 self.constants.add(param)
         extension = self.get_extension(pred, **kw)
         anti_extension = self.get_anti_extension(pred, **kw)

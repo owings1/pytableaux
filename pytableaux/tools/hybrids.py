@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import MutableSequence, MutableSet, Sequence, Set
 from itertools import chain, filterfalse
-from typing import Iterable, SupportsIndex, TypeVar
+from typing import TYPE_CHECKING, Iterable, Iterator, SupportsIndex, TypeVar, Self, Callable
 
 from ..errors import DuplicateValueError, Emsg, check
 from . import EMPTY_SEQ, EMPTY_SET, abcs, slicerange
@@ -39,7 +39,7 @@ __all__ = (
 
 _T = TypeVar('_T')
 
-class SequenceSet(Sequence[_T], Set[_T], metaclass = abcs.AbcMeta):
+class SequenceSet(Sequence[_T], Set[_T], metaclass=abcs.AbcMeta):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
 
     __slots__ = EMPTY_SET
@@ -76,11 +76,11 @@ class SequenceSet(Sequence[_T], Set[_T], metaclass = abcs.AbcMeta):
             return type(other)(chain(other, self))
         return NotImplemented
 
-class qsetf(SequenceSet[_T], abcs.Copyable, immutcopy = True):
+class qsetf(SequenceSet[_T], abcs.Copyable, immutcopy=True):
     'Immutable sequence set implementation with frozenset and tuple bases.'
 
-    _set_: frozenset
-    _seq_: tuple
+    _set_: Set[_T]
+    _seq_: Sequence[_T]
 
     __slots__ = ('_set_', '_seq_')
 
@@ -116,21 +116,23 @@ class qsetf(SequenceSet[_T], abcs.Copyable, immutcopy = True):
 
 EMPTY_QSET = qsetf()
 
-class QsetView(SequenceSet, abcs.Copyable, immutcopy = True):
+class QsetView(SequenceSet[_T], abcs.Copyable, immutcopy=True):
     """SequenceSet view.
     """
 
+    if TYPE_CHECKING:
+        __iter__: Callable[[Self], Iterator[_T]]
+        __reversed__: Callable[[Self], Iterator[_T]]
+
     __slots__ = ('__len__', '__contains__', '__getitem__', '__iter__', '__reversed__')
 
-    def __new__(cls, base: SequenceSet, /,):
+    def __new__(cls, base, /):
         check.inst(base, SequenceSet)
         self = object.__new__(cls)
-        self.__len__ = base.__len__
-        self.__iter__ = base.__iter__
-        self.__getitem__ = base.__getitem__
-        self.__contains__ = base.__contains__
-        self.__reversed__ = base.__reversed__
+        for name in __class__.__slots__:
+            setattr(self, name, getattr(base, name))
         return self
+
 
     @classmethod
     def _from_iterable(cls, it):
@@ -177,8 +179,8 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
     _set_type_ = set
     _seq_type_ = list
 
-    _set_: set
-    _seq_: list
+    _set_: set[_T]
+    _seq_: list[_T]
 
     __slots__ = qsetf.__slots__
 
@@ -209,9 +211,9 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
         'Reverse in place.'
         self._seq_.reverse()
 
-    def sort(self, /, *, key = None, reverse = False):
+    def sort(self, /, *, key=None, reverse=False):
         'Sort the list in place.'
-        self._seq_.sort(key = key, reverse = reverse)
+        self._seq_.sort(key=key, reverse=reverse)
 
     def clear(self):
         'Clear the list and set.'

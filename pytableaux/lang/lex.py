@@ -24,17 +24,19 @@ Lexical classes.
 """
 import operator as opr
 from abc import abstractmethod
+from functools import partial
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar, Iterator, Mapping, Self, Sequence, Set
+from typing import (TYPE_CHECKING, Any, ClassVar, Iterable, Iterator, Literal, Mapping, Self, Sequence, Set,
+                    SupportsIndex)
 
-from .. import _ENV, errors
+from .. import errors
 from ..errors import Emsg, check
-from ..tools import (EMPTY_SEQ, EMPTY_SET, abcs, closure, dund, lazy, membr,
-                     qsetf, wraps)
+from ..tools import (EMPTY_SEQ, EMPTY_SET, abcs, closure, dund, group, inflect,
+                     lazy, membr, qsetf, wraps)
 from . import (BiCoords, LangCommonEnum, LangCommonMeta, LexicalAbcMeta,
-               SysPredEnumMeta, TriCoords, nosetattr)
+               TriCoords, nosetattr)
 
 __all__ = (
     'Atomic',
@@ -50,7 +52,6 @@ __all__ = (
     'Predicate',
     'Predicated',
     'Quantified',
-    'Quantifier',
     'Quantifier',
     'Sentence',
     'Variable')
@@ -92,7 +93,7 @@ class Lexical:
     numbers or strings.
     """
 
-    ident: tuple
+    ident: tuple[str, tuple]
     """Equality identifier able to compare across types. Equivalent to
     ``(classname, spec)``.
     """
@@ -121,7 +122,7 @@ class Lexical:
         raise NotImplementedError
 
     @classmethod
-    def gen(cls, stop: int|None, /, first: Lexical|None = None, **nextkw) -> Iterator[Self]:
+    def gen(cls, stop: int|None, /, first: Self|None = None, **nextkw) -> Iterator[Self]:
         """Generate items of the type, using :func:`first` and :func:`next` methods.
 
         This is convenient for making sequential lexical items quickly, without
@@ -160,13 +161,13 @@ class Lexical:
             pass
 
     @staticmethod
-    def identitem(item: Lexical, /) -> tuple:
+    def identitem(item: Lexical, /) -> tuple[str, tuple]:
         """Build an :attr:`ident` tuple for the item from the class name and :attr:`spec`.
 
         This method should generally not need to be called, as it is used to
         generate and cache the instance :attr:`ident` property.
         """
-        return type(item).__name__, item.spec
+        return (type(item).__name__, item.spec)
 
     @staticmethod
     def hashitem(item: Lexical, /) -> int:
@@ -206,16 +207,16 @@ class Lexical:
                 yield 0
                 return
             yield a.TYPE.rank - b.TYPE.rank
-            it = zip(ast := a.sort_tuple, bst := b.sort_tuple)
-            yield from (ai - bi for ai, bi in it)
-            yield len(ast) - len(bst)
+            sta, stb = a.sort_tuple, b.sort_tuple
+            yield from (ai - bi for ai, bi in zip(sta, stb))
+            yield len(sta) - len(stb)
 
         def orderitems(lhs, rhs, /) -> int:
             try:
                 for cmp in cmpgen(lhs, rhs):
                     if cmp:
-                        return cmp
-                return 0
+                        break
+                return cmp
             except AttributeError:
                 raise TypeError
 
@@ -224,15 +225,15 @@ class Lexical:
     @abcs.abcf.temp
     @membr.defer
     def ordr(member: membr):
-        cmpoper = getattr(opr, member.name)
-        def f(self, other, /):
+        @wraps(oper := getattr(opr, member.name))
+        def wrapper(self, other, /):
             try:
-                return cmpoper(Lexical.orderitems(self, other), 0)
+                return oper(Lexical.orderitems(self, other), 0)
             except TypeError:
                 if isinstance(other, Lexical):
                     raise
                 return NotImplemented
-        return wraps(cmpoper)(f)
+        return wrapper
 
     __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr()
 
@@ -241,7 +242,7 @@ class Lexical:
 
     __delattr__ = Emsg.ReadOnly.razr
 
-    __setattr__ = nosetattr(object, cls = LexicalAbcMeta)
+    __setattr__ = nosetattr(object, cls=LexicalAbcMeta)
 
     def __copy__(self):
         return self
@@ -300,7 +301,7 @@ class LexicalAbc(Lexical, metaclass=LexicalAbcMeta, lexcopy=True):
         return self.hashitem(self)
 
     @classmethod
-    def first(cls):
+    def first(cls) -> Self:
         if cls is __class__:
             return Lexical.first()
         raise TypeError(f'Abstract type {cls}')
@@ -311,12 +312,13 @@ class LexicalAbc(Lexical, metaclass=LexicalAbcMeta, lexcopy=True):
     __delattr__ = Emsg.ReadOnly.razr
 
     def __setattr__(self, name, value, /):
-        if (v := getattr(self, name, NOARG)) is not NOARG:
+        v = getattr(self, name, NOARG)
+        if v is not NOARG:
             if getattr(LexicalAbc, '_readonly', False):
-                if v == value:#isinstance(v, tuple) and v == value:
-                    errors.warn(f'duplicate value for attribute {name}',
+                if v == value:
+                    errors.warn(
+                        f'duplicate value for attribute {name}',
                         errors.RepeatValueWarning)
-                    # return
                 else:
                     raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
@@ -371,7 +373,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy=True):
     __hash__ = Lexical.__hash__
 
     @classmethod
-    def first(cls):
+    def first(cls) -> Self:
         if cls is __class__:
             return Quantifier._seq[0]
         return cls._seq[0]
@@ -394,11 +396,11 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy=True):
             return seq[0]
         raise StopIteration
 
-    def __init__(self, order: int, label: str, /):
+    def __init__(self, order: int, /):
         self.spec = self.name,
         self.order = order
         self.sort_tuple = _Ranks[type(self).__name__], order
-        self.label = label
+        self.label = inflect.snakespace(self.name)
         self.strings = frozenset((self.name, self.label))
         self.ident = self.identitem(self)
         self.hash = self.hashitem(self)
@@ -418,7 +420,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy=True):
         Store the sequence index of each member to ``.index``.
         """
         super()._on_init(subcls)
-        for i, member in enumerate(subcls._seq):
+        for i, member in enumerate(subcls):
             member.index = i
 
 class CoordsItem(LexicalAbc):
@@ -443,8 +445,10 @@ class CoordsItem(LexicalAbc):
     subscript: int
     "The `subscript` coordinate."
 
+    spec: BiCoords|TriCoords
+
     @classmethod
-    def first(cls):
+    def first(cls) -> Self:
         if cls is __class__:
             return Predicate.first()
         return cls(cls.Coords.first)
@@ -484,15 +488,7 @@ class CoordsItem(LexicalAbc):
 class Parameter(CoordsItem):
     """Parameter base class for :class:`Constant` & :class:`Variable`."""
 
-    __slots__ = EMPTY_SET
-
     spec: BiCoords
-
-    is_constant: bool
-    "Whether the parameter is a :class:`Constant`."
-
-    is_variable: bool
-    "Whether the parameter is a :class:`Variable`."
 
     @classmethod
     def first(cls):
@@ -522,13 +518,13 @@ class Quantifier(LexicalEnum):
       True
     """
 
-    Existential = (0, 'Existential')
+    Existential = 0
     "The :s:`X` Existential quantifier"
 
-    Universal = (1, 'Universal')
+    Universal = 1
     "The :s:`L` Universal quantifier"
 
-    def __call__(self, *spec) -> Quantified:
+    def __call__(self, *spec):
         'Quantify a variable over a sentence.'
         return Quantified(self, *spec)
 
@@ -549,7 +545,7 @@ class Operator(LexicalEnum):
     # .. member-table:: pytableaux.lang.lex.Operator
     #     :columns: order, label, arity, libname
 
-    __slots__ = ('arity', 'libname',)
+    __slots__ = ('arity', 'libname')
 
     arity: int
     "The operator arity."
@@ -561,28 +557,26 @@ class Operator(LexicalEnum):
     which implements ``&``, the value is ``'__and__'``.
     """
 
-    Assertion             = (10,  'Assertion',              1, None)
+    Assertion             = (10,  1, '__pos__')
     'The Assertion operator'
-    Negation              = (20,  'Negation',               1, '__invert__')
+    Negation              = (20,  1, '__invert__')
     'The Negation (not) operator'
-    Conjunction           = (30,  'Conjunction',            2, '__and__')
+    Conjunction           = (30,  2, '__and__')
     'The Conjunction (and) operator'
-    Disjunction           = (40,  'Disjunction',            2, '__or__')
+    Disjunction           = (40,  2, '__or__')
     'The Disjunction (or) operator'
-    MaterialConditional   = (50,  'Material Conditional',   2, None)
+    MaterialConditional   = (50,  2)
     'The Material Conditional operator'
-    MaterialBiconditional = (60,  'Material Biconditional', 2, None)
+    MaterialBiconditional = (60,  2)
     'The Material Biconditional operator'
-    Conditional           = (70,  'Conditional',            2, None)
+    Conditional           = (70,  2)
     'The Conditional operator'
-    Biconditional         = (80,  'Biconditional',          2, None)
+    Biconditional         = (80,  2)
     'The Biconditional operator'
-    Possibility           = (90,  'Possibility',            1, None)
+    Possibility           = (90,  1)
     'The Possibility operator'
-    Necessity             = (100, 'Necessity',              1, None)
+    Necessity             = (100, 1)
     'The Necessity operator'
-
-    lib_opmap: ClassVar[Mapping[str, Operator]]
 
     def __call__(self, *args):
         'Apply the operator to make a new sentence.'
@@ -590,19 +584,12 @@ class Operator(LexicalEnum):
             return Operated(self, args)
         return Operated(self, *args)
 
-    def __init__(self, order, label, arity, libname, /):
-        super().__init__(order, label)
+    def __init__(self, order, arity, libname=None, /):
+        super().__init__(order)
         self.arity = arity
         self.libname = libname
         if libname is not None:
             self.strings |= {libname}
-
-    @classmethod
-    def _after_init(cls):
-        "Class init hook. Build the :attr:`lib_opmap`."
-        super()._after_init()
-        cls.lib_opmap = MapProxy({
-            o.libname: o for o in cls if o.libname is not None})
 
 #----------------------------------------------------------
 #
@@ -630,8 +617,6 @@ class Sentence(LexicalAbc):
       True
     """
 
-    __slots__ = EMPTY_SET
-
     predicates: frozenset[Predicate]
     "Set of predicates, recursive."
 
@@ -650,7 +635,7 @@ class Sentence(LexicalAbc):
     operators: tuple[Operator, ...]
     "Sequence of operators, recursive."
 
-    def negate(self) -> Operated:
+    def negate(self):
         """Negate this sentence, returning the new sentence. This can also be
         invoked using the ``~`` operator.
 
@@ -659,7 +644,7 @@ class Sentence(LexicalAbc):
         """
         return Operator.Negation(self)
 
-    def asserted(self) -> Operated:
+    def asserted(self):
         """Apply the :obj:`Assertion` operator.
         
         Returns:
@@ -667,7 +652,7 @@ class Sentence(LexicalAbc):
         """
         return Operator.Assertion(self)
 
-    def disjoin(self, rhs: Sentence, /) -> Operated:
+    def disjoin(self, rhs: Sentence, /):
         """Apply the :obj:`Disjunction` operator to the right-hand sentence.
         This can also be invoked using the ``|`` operator.
 
@@ -679,7 +664,7 @@ class Sentence(LexicalAbc):
         """
         return Operator.Disjunction(self, rhs)
 
-    def conjoin(self, rhs: Sentence, /) -> Operated:
+    def conjoin(self, rhs: Sentence, /):
         """Apply the :obj:`Conjunction` operator to the right-hand sentence.
         This can also be invoked using the ``&`` operator.
 
@@ -737,6 +722,8 @@ class Sentence(LexicalAbc):
     def __neg__(self):
         return self.negative()
 
+    def __pos__(self):
+        return self.asserted()
 #----------------------------------------------------------
 #
 #   Concrete Classes
@@ -795,20 +782,16 @@ class Predicate(CoordsItem):
             raise ValueError('`arity` must be > 0')
         self.bicoords = BiCoords(self.index, self.subscript)
         if self.index < 0:
-            if len(self.System):
+            if self.System:
                 raise ValueError('`index` must be >= 0')
             if len(spec) != 4:
                 raise TypeError(f'need 4 elements, got {len(spec)}')
-            self.is_system = True
             self.name = spec[3]
+            self._value_ = self
         else:
             if len(spec) != 3:
                 raise TypeError(f'need 3 elements, got {len(spec)}')
-            self.is_system = False
             self.name = self.spec
-            self.__objclass__ = __class__
-        self._name_ = self.name
-        self._value_ = self
 
     def __new__(cls, *spec):
         if len(spec) == 1:
@@ -823,6 +806,10 @@ class Predicate(CoordsItem):
             self = object.__new__(cls)
         return self
 
+    @property
+    def is_system(self):
+        return self.index < 0
+
     __slots__ = (
         '__objclass__',
         '_name_',
@@ -831,7 +818,6 @@ class Predicate(CoordsItem):
         '_sort_order_',
         'arity',
         'bicoords',
-        'is_system',
         'name',
         'value')
 
@@ -887,16 +873,20 @@ class Predicate(CoordsItem):
                     return pred
         return super().next()
 
-    class System(LangCommonEnum):
-        'System predicates enum.'
-
-        Existence = (-2, 0, 1, 'Existence')
-        "The Existence predicate :sc:`!`"
-        Identity  = (-1, 0, 2, 'Identity')
-        "The Identity predicate :sc:`=`"
-
-    Existence: Predicate.System|Predicate
-    Identity: Predicate.System|Predicate
+    if TYPE_CHECKING:
+        class _SPT(type):
+            def __iter__(self) -> Iterator[Predicate]: ...
+            def __call__(self, _) -> Predicate: ...
+        class System(LangCommonEnum, metaclass=_SPT):
+            'System predicates enum.'
+            Existence: Predicate
+            "The Existence predicate :sc:`!`"
+            Identity: Predicate
+            "The Identity predicate :sc:`=`"
+        Existence: Predicate
+        Identity: Predicate
+    else:
+        System = MapProxy(dict(Existence=(-2, 0, 1), Identity=(-1, 0, 2)))
 
 class Constant(Parameter):
     """
@@ -926,23 +916,11 @@ class Constant(Parameter):
     def __init__(self, *spec):
         pass
 
-    def __new__(cls, *spec):
-        self = CoordsItem.__new__(cls, *spec)
-        sa = object.__setattr__
-        sa(self, 'is_constant', True)
-        sa(self, 'is_variable', False)
-        return self
-
-    __slots__ = (
-        'is_constant',
-        'is_variable')
-
     def __rshift__(self, other):
         'Same as ``other.unquantify(self)``.'
         if not isinstance(other, Quantified):
             return NotImplemented
         return other.unquantify(self)
-
 
 class Variable(Parameter):
     """
@@ -957,16 +935,6 @@ class Variable(Parameter):
     def __init__(self, *spec):
         pass
 
-    def __new__(cls, *spec):
-        self = CoordsItem.__new__(cls, *spec)
-        sa = object.__setattr__
-        sa(self, 'is_constant', False)
-        sa(self, 'is_variable', True)
-        return self
-
-    __slots__ = Constant.__slots__
-
-
 class Atomic(CoordsItem, Sentence):
     """
     An atomic sentence sentence, like a :class:`Parameter`, is specified by an
@@ -977,24 +945,23 @@ class Atomic(CoordsItem, Sentence):
     True
     """
 
+    predicates = EMPTY_SET
+    constants = EMPTY_SET
+    variables = EMPTY_SET
+    quantifiers = EMPTY_SEQ
+    operators = EMPTY_SEQ
+
+    __slots__ = group('atomics')
+
     def __init__(self, *spec):
-        self.predicates = self.constants = self.variables = EMPTY_SET
-        self.quantifiers = self.operators = EMPTY_SEQ
         self.atomics = frozenset((self,))
-
-    def __new__(cls, *spec):
-        return CoordsItem.__new__(cls, *spec)
-
-    __slots__ = (
-        'atomics',
-        'constants',
-        'operators',
-        'predicates',
-        'quantifiers',
-        'variables')
 
 class Predicated(Sentence, Sequence[Parameter]):
     'Predicated sentence implementation.'
+
+    operators = EMPTY_SEQ
+    quantifiers = EMPTY_SEQ
+    atomics = EMPTY_SET
 
     def __init__(self, pred, params, /):
         """
@@ -1019,9 +986,6 @@ class Predicated(Sentence, Sequence[Parameter]):
         if len(params) != pred.arity:
             raise TypeError(self.predicate, len(params), pred.arity)
         self.predicates = frozenset((pred,))
-        self.operators = EMPTY_SEQ
-        self.quantifiers = EMPTY_SEQ
-        self.atomics = EMPTY_SET
         self.spec = (
             pred.spec,
             tuple(p.ident for p in params))
@@ -1033,12 +997,9 @@ class Predicated(Sentence, Sequence[Parameter]):
     __slots__ = (
         '_constants',
         '_variables',
-        'atomics',
-        'operators',
         'params',
         'predicate',
         'predicates',
-        'quantifiers',
         'sort_tuple',
         'spec')
 
@@ -1057,13 +1018,12 @@ class Predicated(Sentence, Sequence[Parameter]):
         return frozenset(p for p in self if type(p) is Variable)
 
     def substitute(self, pnew: Parameter, pold: Parameter, /):
-        if pnew == pold or pold not in self:
+        if pnew == pold:
             return self
-        return Predicated(self.predicate, tuple(
-            (pnew if p == pold else p for p in self)))
+        return self.predicate(pnew if p == pold else p for p in self)
 
     @classmethod
-    def first(cls, pred = None, /):
+    def first(cls, pred=None, /):
         """
         Args:
             pred (Predicate): The :class:`Predicate` or :attr:`spec`.
@@ -1071,10 +1031,12 @@ class Predicated(Sentence, Sequence[Parameter]):
         """
         if pred is None:
             pred = Predicate.first()
-        return cls(pred, tuple(repeat(Constant.first(), pred.arity)))
+        else:
+            pred = Predicate(pred)
+        return pred(repeat(Constant.first(), pred.arity))
 
     def next(self):
-        return Predicated(self.predicate.next(), self.params)
+        return self.predicate.next()(self.params)
 
     def __len__(self):
         return len(self.params)
@@ -1082,7 +1044,7 @@ class Predicated(Sentence, Sequence[Parameter]):
     def __contains__(self, p):
         return p in self.params
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: SupportsIndex|slice):
         return self.params[index]
 
 class Quantified(Sentence, Sequence):
@@ -1123,7 +1085,7 @@ class Quantified(Sentence, Sequence):
     sentence: Sentence
     "The inner sentence."
 
-    items: tuple
+    items: tuple[Quantifier, Variable, Sentence]
     "The items sequence: :class:`Quantifer`, :class:`Variable`, :class:`Sentence`."
 
     @property
@@ -1164,8 +1126,7 @@ class Quantified(Sentence, Sequence):
     def substitute(self, pnew, pold, /):
         if pnew == pold:
             return self
-        return Quantified(
-            self.quantifier, self.variable, self.sentence.substitute(pnew, pold))
+        return self.quantifier(self.variable, self.sentence.substitute(pnew, pold))
 
     @classmethod
     def first(cls, q = Quantifier.first(), /):
@@ -1199,7 +1160,7 @@ class Quantified(Sentence, Sequence):
     def count(self, item,/):
         return int(item in self.items)
 
-    def __getitem__(self, index, /):
+    def __getitem__(self, index: SupportsIndex|slice):
         return self.items[index]
 
 
@@ -1286,22 +1247,20 @@ class Operated(Sentence, Sequence[Sentence]):
     def substitute(self, pnew, pold, /):
         if pnew == pold:
             return self
-        return Operated(self.operator, tuple(
-            s.substitute(pnew, pold) for s in self))
+        return self.operator(s.substitute(pnew, pold) for s in self)
 
     def negative(self) -> Sentence:
         if self.operator is Operator.Negation:
             return self.lhs
         return self.negate()
-        # return Operated(Operator.Negation, self)
 
     @classmethod
-    def first(cls, oper = Operator.first(), /):
-        return cls(oper, Atomic.gen(Operator(oper).arity))
+    def first(cls, oper=Operator.first(), /):
+        oper = Operator(oper)
+        return oper(Atomic.gen(oper.arity))
 
     def next(self, **kw):
-        return Operated(self.operator,
-            (*self.operands[0:-1], self.operands[-1].next(**kw)))
+        return self.operator(*self[0:-1], self[-1].next(**kw))
 
     def __len__(self):
         return len(self.operands)
@@ -1309,7 +1268,7 @@ class Operated(Sentence, Sequence[Sentence]):
     def __contains__(self, s: Any, /):
         return s in self.operands
 
-    def __getitem__(self, index, /):
+    def __getitem__(self, index: SupportsIndex|slice):
         return self.operands[index]
 
 #----------------------------------------------------------
@@ -1324,12 +1283,13 @@ class LexType(LangCommonEnum):
 
     .. csv-table::
         :generator: member-table
-        :generator-args: name rank cls role maxi
+        :generator-args: name rank cls role maxi, pcls
     
     """
     __slots__ = (
         'rank',
         'cls',
+        'pcls',
         'role',
         'maxi',
         'hash')
@@ -1362,15 +1322,15 @@ class LexType(LangCommonEnum):
 
     #******  Members
 
-    Predicate  = (_Ranks['Predicate'],  Predicate,  Predicate,     3, Predicated)
-    Constant   = (_Ranks['Constant'],   Constant,   Parameter,     3, None)
-    Variable   = (_Ranks['Variable'],   Variable,   Parameter,     3, None)
-    Quantifier = (_Ranks['Quantifier'], Quantifier, Quantifier, None, Quantified)
-    Operator   = (_Ranks['Operator'],   Operator,   Operator,   None, Operated)
-    Atomic     = (_Ranks['Atomic'],     Atomic,     Sentence,      4, None)
-    Predicated = (_Ranks['Predicated'], Predicated, Sentence,   None, Predicate[1])
-    Quantified = (_Ranks['Quantified'], Quantified, Sentence,   None, Quantifier[1])
-    Operated   = (_Ranks['Operated'],   Operated,   Sentence,   None, Operator[1])
+    Predicate  = Predicate
+    Constant   = Constant
+    Variable   = Variable
+    Quantifier = Quantifier
+    Operator   = Operator
+    Atomic     = Atomic
+    Predicated = Predicated
+    Quantified = Quantified
+    Operated   = Operated
 
     #******  Call Behavior
 
@@ -1384,11 +1344,11 @@ class LexType(LangCommonEnum):
     def ordr(member: membr):
         oper = getattr(opr, member.name)
         @wraps(oper)
-        def f(self: LexType, other):
+        def wrapper(self: LexType, other):
             if type(other) is not LexType:
                 return NotImplemented
             return oper(self.rank, other.rank)
-        return f
+        return wrapper
 
     __lt__ = __le__ = __gt__ = __ge__ = ordr()
 
@@ -1408,14 +1368,24 @@ class LexType(LangCommonEnum):
     def __hash__(self):
         return self.hash
 
-    def __init__(self, rank, cls: type[Lexical], role, maxi, pcls, /):
-        self.rank = rank
-        self.cls = cls
-        self.role = role
-        self.maxi = maxi
-        self.pcls = pcls
-        self.hash = hash(type(self)) + self.rank
-        self.cls.TYPE = self
+    @closure
+    def __init__():
+        partners = dict((
+            (Predicate, Predicated),
+            (Quantifier, Quantified),
+            (Operator, Operated)))
+        partners.update(map(reversed, tuple(partners.items())))
+        def init(self: LexType, cls: type[Lexical], /):
+            self.cls = cls
+            self.cls.TYPE = self
+            self.rank = _Ranks[cls.__name__]
+            self.hash = hash(type(self)) + self.rank
+            self.pcls = partners.get(cls)
+            self.maxi = 3 * issubclass(cls, CoordsItem) + (cls is Atomic) or None
+            for role in filter(partial(issubclass, cls), (Parameter, Sentence, cls)):
+                self.role = role
+                break
+        return init
 
     @classmethod
     def _member_keys(cls, member: LexType):
@@ -1426,34 +1396,44 @@ class LexType(LangCommonEnum):
     def _after_init(cls):
         """``EbcMeta`` hook. Build :attr:`classes` list, and System Predicates."""
         super()._after_init()
+
         cls.classes = qsetf(m.cls for m in cls)
-        class _(LangCommonEnum, metaclass = SysPredEnumMeta):
+
+        members = {
+            name: (*value, name)
+            for name, value in dict(Predicate.System).items()}
+        attrs = dict(__name__='System', __qualname__='Predicate.System')
+
+        Predicate.System = None
+
+        class SystemPredicate(LangCommonEnum):
+
             def __new__(cls, *spec):
                 return Predicate.__new__(Predicate, *spec)
+
             @classmethod
             def _member_keys(cls, pred: Predicate):
                 return super()._member_keys(pred) | pred.refs | {pred}
+
             @abcs.abcf.before
-            def expand(ns:dict, bases):
-                members = {name: m.value for name, m in Predicate.System._member_map_.items()}
+            def prepare(ns: dict, bases):               
                 ns.update(members)
-                if isinstance(ns._member_names, list):
-                    # In Python 3.10 _member_names is a list
-                    ns._member_names += members.keys()
-                elif isinstance(ns._member_names, dict):
+                member_names = check.inst(ns._member_names, (dict, list))
+                if isinstance(member_names, dict):
                     # In Python 3.11 _member_names is a dict
                     for key in members:
-                        ns._member_names[key] = None
-                else:
-                    raise TypeError(f"Unhandled _member_names type: {type(ns._member_names)}")
-                Predicate.System = EMPTY_SET
-            @classmethod
-            def _after_init(cls):
-                cls.__name__ = 'Predicate'
-                cls.__qualname__ = 'Predicate.System'
-                for pred in cls:
-                    setattr(Predicate, pred.name, pred)
-                Predicate.System = cls
+                        member_names[key] = None
+                    return
+                # In Python 3.10 _member_names is a list
+                member_names += members.keys()
+
+        Predicate.System = SystemPredicate
+
+        for name, value in attrs.items():
+            setattr(Predicate.System, name, value)
+        for pred in Predicate.System:
+            setattr(Predicate, pred.name, pred)
+
 
 #----------------------------------------------------------
 #
@@ -1464,39 +1444,48 @@ class LexType(LangCommonEnum):
 @closure
 def metacall():
 
+    import os
     from collections import deque
+
     class DequeCache:
 
-        __slots__ = ('__getitem__', '__len__', 'queue', 'idx', 'rev')
+        __slots__ = ('__getitem__', '__setitem__', 'queue')
+
+        queue: deque[Lexical]
 
         @property
         def maxlen(self) -> int:
             return self.queue.maxlen
 
-        def __init__(self, maxlen = 100):
+        def __len__(self):
+            return len(self.queue)
+        def __init__(self, maxlen=int(os.getenv('ITEM_CACHE_SIZE', 1000) or 0)):
 
-            self.idx = {}
-            self.rev: dict[object, set] = {}
-            self.queue = deque(maxlen = maxlen)
+            idx: dict[Any, Lexical] = {}
+            "Mapping of called args/specs to lexical, including the lexical itself"
+            rev: dict[Lexical, set] = {}
+            "Mapping of leixcal to index keys, to enable removing"
+            queue = self.queue = deque(maxlen=maxlen)
 
-            self.__getitem__ = self.idx.__getitem__
-            self.__len__ = self.rev.__len__
+            def setitem(key, value: Lexical):
+                if value in rev:
+                    value = idx[value]
+                else:
+                    if len(rev) >= queue.maxlen:
+                        old = queue.popleft()
+                        for k in rev.pop(old):
+                            del(idx[k])
+                    idx[value] = value
+                    rev[value] = {value}
+                    queue.append(value)
+                idx[key] = value
+                rev[value].add(key)
+            self.__setitem__ = setitem
+            self.__getitem__ = idx.__getitem__
 
-        def __setitem__(self, key, item, /):
-            if item in self.rev:
-                item = self.idx[item]
-            else:
-                if len(self) >= self.queue.maxlen:
-                    old = self.queue.popleft()
-                    for k in self.rev.pop(old):
-                        del(self.idx[k])
-                self.idx[item] = item
-                self.rev[item] = {item}
-                self.queue.append(item)
-            self.idx[key] = item
-            self.rev[item].add(key)
 
-    cache = DequeCache(maxlen = _ENV.ITEM_CACHE_SIZE)
+    cache = DequeCache()
+
     supercall = LangCommonMeta.__call__
 
     def call(cls, *spec):
@@ -1513,8 +1502,6 @@ def metacall():
             if cls is Predicate and isinstance(arg, str):
                 # System Predicate string
                 return Predicate.System(arg)
-
-            
 
         # Invoked class name.
         clsname = cls.__name__
