@@ -469,7 +469,13 @@ class FilterHelper(FilterNodeCache):
             n = filt.example_node()
             if n is not None:
                 node.update(n)
-        return node
+        if 'sentence' in node:
+            w = node.get('world')
+            if self.rule.modal and w is None:
+                node['world'] = 0
+            elif not self.rule.modal and w is not None:
+                del(node['world'])
+        return Node.for_mapping(node)
 
     def _reprdict(self) -> dict:
         return super()._reprdict() | dict(

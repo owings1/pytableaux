@@ -38,6 +38,9 @@ class Meta(LogicType.Meta):
     name = 'K'
     title = 'Kripke Normal Modal Logic'
     modal = True
+    values = ValueCPL
+    designated_values = frozenset({values.T})
+    unassigned_value = values.F
     category = 'Bivalent Modal'
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
@@ -77,9 +80,9 @@ class Model(BaseModel[ValueCPL]):
     relation, and a set of constants (the domain).
     """
 
-    Value = ValueCPL
-
-    unassigned_value = Value.F
+    Value = Meta.values
+    designated_values = Meta.designated_values
+    unassigned_value = Meta.unassigned_value
 
     frames: Frames
     "A map from worlds to their frame"
@@ -627,11 +630,10 @@ class TabRules(LogicType.TabRules):
                 self[FilterHelper](node, branch) and
                 len(set(self.sentence(node))) == 1)
 
-        @classmethod
-        def example_nodes(cls):
-            w = 0 if cls.modal else None
+        def example_nodes(self):
+            w = 0 if self.modal else None
             c = Constant.first()
-            yield swnode(~cls.predicate((c, c)), w)
+            yield swnode(~self.predicate((c, c)), w)
 
     class NonExistenceClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
         """
@@ -650,10 +652,9 @@ class TabRules(LogicType.TabRules):
         def node_will_close_branch(self, node: Node, branch: Branch, /):
             return self[FilterHelper](node, branch)
 
-        @classmethod
-        def example_nodes(cls):
+        def example_nodes(self):
             s = ~Predicated.first(Predicate.System.Existence)
-            w = 0 if cls.modal else None
+            w = 0 if self.modal else None
             yield swnode(s, w)
 
     class DoubleNegation(OperatorNodeRule):
@@ -990,12 +991,11 @@ class TabRules(LogicType.TabRules):
 
             return -1.0 * self[NodeCount][target.branch].get(target.node, 0)
 
-        @classmethod
-        def example_nodes(cls):
-            s = Operated.first(cls.operator)
+        def example_nodes(self):
+            s = Operated.first(self.operator)
             a = WorldPair(0, 1)
             yield swnode(s, a.w1)
-            yield anode(*a)
+            yield a.tonode()
 
     class NecessityNegated(PossibilityNegated):
         """
@@ -1048,12 +1048,11 @@ class TabRules(LogicType.TabRules):
                 # The rule applies.
                 yield adds(group(n_new), nodes=(node, n))
 
-        @classmethod
-        def example_nodes(cls):
-            w = 0 if cls.modal else None
+        def example_nodes(self):
+            w = 0 if self.modal else None
             s1 = Predicated.first()
             yield swnode(s1, w)
-            s2 = cls.predicate((s1[0], s1[0].next()))
+            s2 = self.predicate((s1[0], s1[0].next()))
             yield swnode(s2, w)
 
     closure_rules = (

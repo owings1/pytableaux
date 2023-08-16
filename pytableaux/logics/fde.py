@@ -30,8 +30,11 @@ from . import LogicType
 
 class Meta(LogicType.Meta):
     name = 'FDE'
-    modal = False
     title = 'First Degree Entailment'
+    modal = False
+    values = ValueFDE
+    designated_values = frozenset({values.B, values.T})
+    unassigned_value = values.N
     category = 'Many-valued'
     description = 'Four-valued logic (True, False, Neither, Both)'
     category_order = 10
@@ -42,18 +45,21 @@ class Meta(LogicType.Meta):
         'non-modal',
         'first-order')
     native_operators = (
-        Operator.Negation, Operator.Conjunction, Operator.Disjunction,
-        Operator.MaterialConditional, Operator.MaterialBiconditional)
+        Operator.Negation,
+        Operator.Conjunction,
+        Operator.Disjunction,
+        Operator.MaterialConditional,
+        Operator.MaterialBiconditional)
 
 class Model(BaseModel[ValueFDE]):
     'An FDE Model.'
 
-    Value = ValueFDE
+    Value = Meta.values
 
-    designated_values = frozenset({Value.B, Value.T})
+    designated_values = Meta.designated_values
     "The set of designated values."
 
-    unassigned_value = Value.N
+    unassigned_value = Meta.unassigned_value
 
     extensions: dict[Predicate, set[tuple[Constant, ...]]]
     """A mapping from each predicate to its extension.
@@ -517,6 +523,12 @@ class ConjunctionReducingRule(OperatorNodeRule):
             s = ~s
         yield adds(group(sdnode(s, d)))
 
+class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule):
+    conjoined = Operator.MaterialConditional
+
+class ConditionalConjunctsReducingRule(ConjunctionReducingRule):
+    conjoined = Operator.Conditional
+
 @TableauxSystem.initialize
 class TabRules(LogicType.TabRules):
 
@@ -912,7 +924,7 @@ class TabRules(LogicType.TabRules):
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
-        convert     = Quantifier.Existential
+        convert = Quantifier.Existential
 
     closure_rules = group(DesignationClosure)
 

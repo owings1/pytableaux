@@ -272,8 +272,6 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             tab = self.gettab_argument()
         elif self.mode == 'rule':
             tab = self.gettab_rule()
-            rule: Rule = tab.rules.get(opts['rule'])
-            rulecls = type(rule)
         else:
             tab = self.gettab_trunk()
 
@@ -293,6 +291,9 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         tabwrapper = nodes.container(classes=['tableau-wrapper'] + classes)
 
         if self.mode == 'rule':
+
+            rule: Rule = tab.rules.get(opts['rule'])
+            rulecls = type(rule)
 
             if 'doc' in opts:
                 if 'legend' in opts:

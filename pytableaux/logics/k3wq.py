@@ -32,7 +32,7 @@ class Meta(K3W.Meta):
 
 class Model(K3W.Model):
 
-    Value = K3W.Model.Value
+    Value = Meta.values
     # generalized conjunction
     mc_nvals = {
         Value.F: 2,

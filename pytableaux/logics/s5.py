@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import AccessNode, Branch, Node, WorldPair, adds, anode
+from ..proof import AccessNode, Branch, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
@@ -70,7 +70,6 @@ class TabRules(S4.TabRules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         _defaults = dict(is_rank_optim = False)
-        # modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: AccessNode, branch: Branch,/):
             if self[MaxWorlds].is_exceeded(branch):
@@ -80,8 +79,7 @@ class TabRules(S4.TabRules):
             if not self[WorldIndex].has(branch, access):
                 yield adds(group(a := access.tonode()), **a)
 
-        @staticmethod
-        def example_nodes():
+        def example_nodes(self):
             yield anode(0, 1)
 
     rule_groups = (

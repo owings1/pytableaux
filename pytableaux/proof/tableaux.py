@@ -733,14 +733,6 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         except AttributeError:
             pass
 
-    @property
-    def System(self) -> type[TableauxSystem]|None:
-        "Alias for :attr:`logic.TableauxSystem`"
-        try:
-            return self.logic.TableauxSystem
-        except AttributeError:
-            pass
-
     @argument.setter
     def argument(self, value):
         if self.flag.STARTED in self.flag:
@@ -755,7 +747,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             raise Emsg.IllegalState("Tableau already started")
         self._logic = registry(value)
         self.rules.clear()
-        self.System.add_rules(self.rules)
+        self.logic.TableauxSystem.add_rules(self.rules)
         if self.argument is not None and self.opts['auto_build_trunk']:
             self.build_trunk()
 
@@ -953,7 +945,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             raise Emsg.IllegalState("Tableau already started")
         with self.timers.trunk:
             self.emit(Tableau.Events.BEFORE_TRUNK_BUILD, self)
-            self.System.build_trunk(self, self.argument)
+            self.logic.TableauxSystem.build_trunk(self, self.argument)
             self.flag |= self.flag.TRUNK_BUILT | self.flag.STARTED
             self.emit(Tableau.Events.AFTER_TRUNK_BUILD, self)
         return self
@@ -971,8 +963,9 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         # TODO: Consider potential optimization using hash equivalence for nodes,
         #       to avoid redundant calculations. Perhaps the TableauxSystem should
         #       provide a special branch-complexity node hashing function.
-        system = self.System
-        if system is None:
+        try:
+            system = self.logic.TableauxSystem
+        except AttributeError:
             return 0
         key = system.branching_complexity_hashable(node)
         cache = self._complexities

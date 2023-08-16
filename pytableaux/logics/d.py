@@ -70,7 +70,6 @@ class TabRules(K.TabRules):
         yet appear on *b*.
         """
         Helpers = (MaxWorlds, UnserialWorlds)
-        # modal_operators = Model.modal_operators
         ignore_ticked = False
         ticking = False
 

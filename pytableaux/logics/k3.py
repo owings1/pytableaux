@@ -26,6 +26,9 @@ from . import fde as FDE
 class Meta(FDE.Meta):
     name = 'K3'
     title = 'Strong Kleene Logic'
+    values = ValueK3
+    designated_values = frozenset({values.T})
+    unassigned_value = values.N
     description = 'Three-valued logic (T, F, N)'
     category_order = 20
     tags = (
@@ -35,13 +38,10 @@ class Meta(FDE.Meta):
         'first-order')
 
 class Model(FDE.Model, BaseModel[ValueK3]):
-
-    Value = ValueK3
-
-    designated_values = frozenset({Value.T})
+    Value = Meta.values
+    designated_values = Meta.designated_values
     "The (singleton) set of designated values."
-
-    unassigned_value = Value.N
+    unassigned_value = Meta.unassigned_value
 
 class TableauxSystem(FDE.TableauxSystem):
     pass

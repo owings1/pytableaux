@@ -70,8 +70,7 @@ class TabRules(K.TabRules):
                     yield adds(group(access.tonode()), world = w)
                     return
 
-        @staticmethod
-        def example_nodes():
+        def example_nodes(self):
             yield swnode(Atomic.first(), 0)
 
     rule_groups = (

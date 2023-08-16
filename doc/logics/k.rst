@@ -148,7 +148,7 @@ Additional rules are given for the quantifiers.
   :docflags:
   :title: Modal Operator Rules
   :group: operator
-  :include: modal_
+  :include: modal
   :exclude: non_native
 
 .. tableau-rules::

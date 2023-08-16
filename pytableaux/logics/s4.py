@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Generator
 
-from ..proof import AccessNode, Branch, Node, Target, WorldPair, adds, anode
+from ..proof import AccessNode, Branch, Target, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
@@ -65,7 +65,6 @@ class TabRules(T.TabRules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         ticking = False
-        # modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: AccessNode, branch: Branch, /) -> Generator[dict, None, None]:
             if self[MaxWorlds].is_reached(branch):
@@ -81,8 +80,7 @@ class TabRules(T.TabRules):
             # Rank the highest world
             return float(target.world2)
 
-        @staticmethod
-        def example_nodes():
+        def example_nodes(self):
             yield anode(0, 1)
             yield anode(1, 2)
 

@@ -26,6 +26,9 @@ from . import fde as FDE
 class Meta(FDE.Meta):
     name = 'LP'
     title = 'Logic of Paradox'
+    values = ValueLP
+    designated_values = frozenset({values.B, values.T})
+    unassigned_value = values.F
     description = 'Three-valued logic (T, F, B)'
     category_order = 100
     tags = (
@@ -35,9 +38,9 @@ class Meta(FDE.Meta):
         'first-order')
 
 class Model(FDE.Model, BaseModel[ValueLP]):
-    Value = ValueLP
-    designated_values = frozenset({Value.B, Value.T})
-    unassigned_value = Value.F
+    Value = Meta.values
+    designated_values = Meta.designated_values
+    unassigned_value = Meta.unassigned_value
 
 class TableauxSystem(FDE.TableauxSystem):
     pass

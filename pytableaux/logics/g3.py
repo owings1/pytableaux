@@ -43,6 +43,7 @@ class TableauxSystem(K3.TableauxSystem):
         Operator.Conditional: ((1, 1), (1, 1)),
         Operator.Biconditional: ((0, 0), (0, 0))}
 
+
 @TableauxSystem.initialize
 class TabRules(L3.TabRules):
 
@@ -95,21 +96,10 @@ class TabRules(L3.TabRules):
                 group(sdnode(~s.lhs, not d)),
                 group(sdnode(~s.rhs, d)))
 
-    class BiconditionalDesignated(FDE.ConjunctionReducingRule):
-        "This rule reduces to a conjunction of conditionals."
-        conjoined = Operator.Conditional
-
-    class BiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
-        "This rule reduces to a conjunction of conditionals."
-        conjoined = Operator.Conditional
-
-    class BiconditionalUndesignated(FDE.ConjunctionReducingRule):
-        "This rule reduces to a conjunction of conditionals."
-        conjoined = Operator.Conditional
-
-    class BiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
-        "This rule reduces to a conjunction of conditionals."
-        conjoined = Operator.Conditional
+    class BiconditionalDesignated(FDE.ConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedDesignated(FDE.ConditionalConjunctsReducingRule): pass
+    class BiconditionalUndesignated(FDE.ConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedUndesignated(FDE.ConditionalConjunctsReducingRule): pass
 
     rule_groups = (
         (
