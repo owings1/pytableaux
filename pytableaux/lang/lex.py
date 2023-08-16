@@ -28,7 +28,7 @@ from functools import partial
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, ClassVar, Iterable, Iterator, Literal, Mapping, Self, Sequence, Set,
+from typing import (TYPE_CHECKING, Any, ClassVar, Hashable, Iterable, Iterator, Literal, Mapping, Self, Sequence, Set,
                     SupportsIndex)
 
 from .. import errors
@@ -710,20 +710,22 @@ class Sentence(LexicalAbc):
             return Atomic.first()
         raise TypeError(f'Abstract type {cls}')
 
+    def __pos__(self):
+        return Operator.Assertion(self)
+
     def __invert__(self):
-        return self.negate()
+        return Operator.Negation(self)
 
     def __and__(self, other):
-        return self.conjoin(other)
+        return Operator.Conjunction(self, other)
 
     def __or__(self, other):
-        return self.disjoin(other)
+        return Operator.Disjunction(self, other)
 
     def __neg__(self):
         return self.negative()
 
-    def __pos__(self):
-        return self.asserted()
+
 #----------------------------------------------------------
 #
 #   Concrete Classes
@@ -807,7 +809,8 @@ class Predicate(CoordsItem):
         return self
 
     @property
-    def is_system(self):
+    def is_system(self) -> bool:
+        "Whether this is a system predicate."
         return self.index < 0
 
     __slots__ = (
@@ -829,9 +832,6 @@ class Predicate(CoordsItem):
 
     arity: int
     "The predicate's arity."
-
-    is_system: bool
-    "Whether this is a system predicate."
 
     name: tuple[int, ...] | str
     """The name, for system predicates. For non-system predicates, this is the
@@ -1180,10 +1180,13 @@ class Operated(Sentence, Sequence[Sentence]):
             self.operands = operands = operands,
         else:
             self.operands = operands = tuple(map(Sentence, operands))
-        self.lhs = operands[0]
-        self.rhs = operands[-1]
+        try:
+            self.lhs = operands[0]
+            self.rhs = operands[-1]
+        except IndexError:
+            raise Emsg.ArityMismatch(oper, oper.arity, operands)
         if len(operands) != oper.arity:
-            raise Emsg.WrongLength(operands, oper.arity)
+            raise Emsg.ArityMismatch(oper, oper.arity, operands)
         self.spec = (*oper.spec, tuple(s.ident for s in operands))
         self.sort_tuple = (
             self.TYPE.rank,
@@ -1283,7 +1286,7 @@ class LexType(LangCommonEnum):
 
     .. csv-table::
         :generator: member-table
-        :generator-args: name rank cls role maxi, pcls
+        :generator-args: name rank cls role maxi pcls
     
     """
     __slots__ = (

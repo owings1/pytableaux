@@ -121,18 +121,15 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
 
         @membr.defer
         def ordr(member: membr):
-            oper = getattr(opr, member.name)
-            @wraps(oper)
-            def f(self: Argument, other: Any, /):
+            @wraps(oper := getattr(opr, member.name))
+            def wrapper(self: Argument, other: Any, /):
                 if not isinstance(other, Argument):
                     return NotImplemented
                 for cmp in cmpgen(self, other):
                     if cmp:
                         break
-                else:
-                    cmp = 0
                 return oper(cmp, 0)
-            return f
+            return wrapper
 
         return ordr
 

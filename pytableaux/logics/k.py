@@ -37,6 +37,7 @@ from . import fde as FDE
 class Meta(LogicType.Meta):
     name = 'K'
     title = 'Kripke Normal Modal Logic'
+    modal = True
     category = 'Bivalent Modal'
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
@@ -506,8 +507,6 @@ class Frames(dict[int, Frame]):
 
 class TableauxSystem(TableauxSystem):
 
-    modal = True
-
     neg_branchable = {
         Operator.Conjunction,
         Operator.MaterialBiconditional,
@@ -567,7 +566,6 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
     """
     NodeFilters = filters.NodeType,
-    modal: bool = True
     autoattrs = True
 
     def _get_node_targets(self, node: Node, branch: Branch, /):
@@ -874,7 +872,6 @@ class TabRules(LogicType.TabRules):
         """
         NodeType = SentenceWorldNode
         Helpers = (QuitFlag, MaxWorlds, AplSentCount)
-        modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
 
@@ -936,7 +933,6 @@ class TabRules(LogicType.TabRules):
         ticking = False
         NodeType = SentenceWorldNode
         Helpers = (QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex)
-        modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
 

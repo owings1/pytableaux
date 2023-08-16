@@ -34,9 +34,7 @@ class Meta(CPL.Meta):
 class Model(CPL.Model):
 
     def is_sentence_opaque(self, s, /) -> bool:
-        """
-        A sentence is opaque if its operator is either Necessity or Possibility.
-        """
+        "A sentence is opaque if its operator is either Necessity or Possibility."
         return type(s) is not Quantified and super().is_sentence_opaque(s)
 
 class TableauxSystem(CPL.TableauxSystem):
@@ -90,8 +88,8 @@ class TabRules(CPL.TabRules):
             CPL.TabRules.DisjunctionNegated,
             CPL.TabRules.MaterialConditionalNegated,
             CPL.TabRules.ConditionalNegated,
-            ExistentialNegated,
-            UniversalNegated,
+            K.TabRules.ExistentialNegated,
+            K.TabRules.UniversalNegated,
         ),
         (
             # branching rules
@@ -106,8 +104,8 @@ class TabRules(CPL.TabRules):
         #),
         #(
 
-            Existential,
-            Universal,
+            K.TabRules.Existential,
+            K.TabRules.Universal,
         ),
     )
 

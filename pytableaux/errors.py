@@ -126,7 +126,9 @@ class Emsg(Enum):
     WrongValue = (ValueError,
         "Value '{0}' does not match expected: '{1}'", 2)
     WrongLength = (ValueError,
-        "Expected value of length '{1}' but got length '{0}'", (_len, _len))
+        "Expected value of length {1} but got length {0}", (_len, _len))
+    ArityMismatch = (ValueError,
+        "{0} has arity {1} but received input of size {2}", (_thru, _len, _len))
     MismatchSliceSize = (ValueError,
         'Attempt to assign sequence of size {0} to slice of size {1}', (_len, _len))
     MismatchExtSliceSize = (ValueError,

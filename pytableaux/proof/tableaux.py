@@ -86,8 +86,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     ticking: ClassVar[bool] = False
     "Whether this is a ticking rule."
 
-    modal: ClassVar[bool|None] = None
-    "Whether this is a modal rule."
 
     autoattrs: ClassVar[bool|None] = None
 
@@ -121,6 +119,20 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         except AttributeError:
             return False
 
+    @property
+    def Meta(self) -> type[LogicType.Meta]|None:
+        if self.tableau.logic:
+            return self.tableau.logic.Meta
+        return type(self).Meta
+
+    @property
+    def modal(self) -> bool|None:
+        return self.Meta and self.Meta.modal
+
+    Meta: type[LogicType.Meta]|None
+
+    modal: bool|None
+    "Whether this is a modal rule."
     def __init__(self, tableau: Tableau, /, **opts):
         self.state = Rule.State(0)
         super().__init__(*Rule.Events)
@@ -300,14 +312,14 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 def locking(method: _F) -> _F:
     'Decorator for locking RulesRoot methods after Tableau is started.'
     @wraps(method)
-    def f(self: RulesRoot, *args, **kw):
+    def wrapper(self: RulesRoot, *args, **kw):
         try:
             if self.root.locked:
                 raise Emsg.IllegalState('locked')
         except AttributeError:
             pass
         return method(self, *args, **kw)
-    return f
+    return wrapper
 
 class RuleGroup(Sequence[Rule]):
     """A rule group of a Tableau's ``rules``.

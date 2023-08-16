@@ -23,6 +23,7 @@ from . import LogicType
 
 class Meta(LogicType.Meta):
     name = 'CPL'
+    modal = False
     title = 'Classical Predicate Logic'
     category = 'Bivalent'
     description = 'Standard bivalent logic with predication, without quantification'
@@ -55,8 +56,6 @@ class Model(K.Model):
 
 class TableauxSystem(K.TableauxSystem):
 
-    modal = False
-
     @classmethod
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
         b = tab.branch()
@@ -68,9 +67,7 @@ class TableauxSystem(K.TableauxSystem):
 class TabRules(LogicType.TabRules):
 
     class ContradictionClosure(K.TabRules.ContradictionClosure):
-        """
-        A branch is closed if a sentence and its negation appear on the branch.
-        """
+        "A branch is closed if a sentence and its negation appear on the branch."
         def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             if s is not None:
@@ -214,28 +211,55 @@ class TabRules(LogicType.TabRules):
         """
 
     closure_rules = (
-        ContradictionClosure,
-        SelfIdentityClosure,
-        NonExistenceClosure)
+        K.TabRules.ContradictionClosure,
+        K.TabRules.SelfIdentityClosure,
+        K.TabRules.NonExistenceClosure)
 
     rule_groups = (
         (
             # non-branching rules
-            IdentityIndiscernability,
-            Assertion,
-            AssertionNegated,
-            Conjunction,
-            DisjunctionNegated,
-            MaterialConditionalNegated,
-            ConditionalNegated,
-            DoubleNegation),
+            K.TabRules.IdentityIndiscernability,
+            K.TabRules.Assertion,
+            K.TabRules.AssertionNegated,
+            K.TabRules.Conjunction,
+            K.TabRules.DisjunctionNegated,
+            K.TabRules.MaterialConditionalNegated,
+            K.TabRules.ConditionalNegated,
+            K.TabRules.DoubleNegation),
         (
             # branching rules
-            ConjunctionNegated,
-            Disjunction,
-            MaterialConditional,
-            MaterialBiconditional,
-            MaterialBiconditionalNegated,
-            Conditional,
-            Biconditional,
-            BiconditionalNegated))
+            K.TabRules.ConjunctionNegated,
+            K.TabRules.Disjunction,
+            K.TabRules.MaterialConditional,
+            K.TabRules.MaterialBiconditional,
+            K.TabRules.MaterialBiconditionalNegated,
+            K.TabRules.Conditional,
+            K.TabRules.Biconditional,
+            K.TabRules.BiconditionalNegated))
+
+    # closure_rules = (
+    #     ContradictionClosure,
+    #     SelfIdentityClosure,
+    #     NonExistenceClosure)
+
+    # rule_groups = (
+    #     (
+    #         # non-branching rules
+    #         IdentityIndiscernability,
+    #         Assertion,
+    #         AssertionNegated,
+    #         Conjunction,
+    #         DisjunctionNegated,
+    #         MaterialConditionalNegated,
+    #         ConditionalNegated,
+    #         DoubleNegation),
+    #     (
+    #         # branching rules
+    #         ConjunctionNegated,
+    #         Disjunction,
+    #         MaterialConditional,
+    #         MaterialBiconditional,
+    #         MaterialBiconditionalNegated,
+    #         Conditional,
+    #         Biconditional,
+    #         BiconditionalNegated))

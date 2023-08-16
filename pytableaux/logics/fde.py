@@ -30,6 +30,7 @@ from . import LogicType
 
 class Meta(LogicType.Meta):
     name = 'FDE'
+    modal = False
     title = 'First Degree Entailment'
     category = 'Many-valued'
     description = 'Four-valued logic (True, False, Neither, Both)'

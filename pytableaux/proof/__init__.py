@@ -28,7 +28,7 @@ from types import MappingProxyType as MapProxy
 from typing import Any, NamedTuple, Sequence, TypeVar
 
 from ..lang import Argument, Operator, Predicate, Quantifier
-from ..logics import LogicType
+from ..logics import LogicType, GetLogicMetaMixinMetaType
 from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from ..tools.timing import Counter, StopWatch
 
@@ -171,10 +171,8 @@ class TableauMeta(abcs.AbcMeta):
 
         @classmethod
         def create(cls):
-            return cls._make(
-                map(
-                    StopWatch,
-                    itertools.repeat(False, len(cls._fields))))
+            it = itertools.repeat(False, len(cls._fields))
+            return cls._make(map(StopWatch, it))
 
     class Flag(Flag):
         'Tableau state bit flags.'
@@ -210,11 +208,18 @@ class TableauMeta(abcs.AbcMeta):
         def __repr__(self):
             return f'<StepEntry:{id(self)}:{self.rule.name}:{self.target.type}>'
 
-class TableauxSystem(metaclass = abcs.AbcMeta):
+
+
+class TableauxSystemMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
+
+    @property
+    def modal(self) -> bool|None:
+        return self.Meta and self.Meta.modal
+
+class TableauxSystem(metaclass=TableauxSystemMeta):
     'Tableaux system base class.'
 
     Rules: type[LogicType.TabRules]
-    modal: bool|None = None
 
     @classmethod
     @abstractmethod
@@ -265,8 +270,6 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
         cls.Rules = TabRules
         for rulecls in TabRules.all_rules:
             ns = rulecls.__dict__
-            if 'modal' not in ns:
-                rulecls.modal = cls.modal
             if 'branching' not in ns:
                 try:
                     rulecls.branching = rulecls.induce_branching()
@@ -277,7 +280,7 @@ class TableauxSystem(metaclass = abcs.AbcMeta):
                     raise TypeError(msg)
         return TabRules
 
-class RuleMeta(abcs.AbcMeta):
+class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
     """Rule meta class."""
 
     name: str
@@ -321,6 +324,11 @@ class RuleMeta(abcs.AbcMeta):
                 elif attr in getters:
                     if value:
                         yield attr, getters[attr](value)
+
+    @property
+    def modal(self) -> bool|None:
+        return self.Meta and self.Meta.modal
+
     @classmethod
     def __prepare__(cls, clsname, bases, **kw):
         return dict(__slots__ = EMPTY_SET, name = clsname)
@@ -455,7 +463,7 @@ class RuleMeta(abcs.AbcMeta):
             pass
 
         @classmethod
-        def configure_rule(cls, rulecls: type[Rule], config: Any, /):
+        def configure_rule(cls, rulecls: type[Rule], config: Any):
             """Hook for initializing & verifiying a ``Rule`` class.
             
             Args:

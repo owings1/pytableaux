@@ -27,7 +27,7 @@ from copy import copy
 from functools import partial
 from itertools import filterfalse
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Mapping, NamedTuple, Sequence, TypeVar
 
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
@@ -402,7 +402,7 @@ class FilterNodeCache(BranchCache[set[Node]]):
         configured `FilterNodeCache` filters.
         """
         @wraps(source_fn)
-        def wrapped(rule: Rule, branch, /):
+        def wrapper(rule: Rule, branch, /):
             helper = rule[cls]
             helper.gc()
             for node in helper[branch]:
@@ -412,7 +412,7 @@ class FilterNodeCache(BranchCache[set[Node]]):
                     else:
                         target = Target(target, rule=rule, branch=branch, node=node)
                     yield target
-        return wrapped
+        return wrapper
 
 
 class PredNodes(FilterNodeCache):
@@ -496,7 +496,6 @@ class FilterHelper(FilterNodeCache):
             else:
                 for fcls, flag in dict(v).items():
                     configs.setdefault(fcls, flag)
-        # print(f'{rulecls=} {configs=}')
         for fcls in configs:
             check.subcls(check.inst(fcls, type), filters.CompareNode)
         if not abcs.isabstract(rulecls):
@@ -677,6 +676,11 @@ class MaxWorlds(BranchDictCache[Branch, int]):
 
     __slots__ = ('rule', 'config', 'modals')
 
+    class Config(NamedTuple):
+        filter: Callable[[Operator], bool]
+
+    config: MaxWorlds.Config
+
     class Modals(dict[Sentence, int]):
         """
         Compute and cache the modal complexity of a sentence by counting its
@@ -685,15 +689,15 @@ class MaxWorlds(BranchDictCache[Branch, int]):
 
         __slots__ = ('filter',)
 
-        def __init__(self, operators: Set[Operator]):
-            self.filter = operators.__contains__
+        def __init__(self, config: MaxWorlds.Config):
+            self.filter = config.filter
 
         def __missing__(self, s: Sentence):
             return self.setdefault(s, sum(map(self.filter, s.operators)))
 
     def __init__(self, rule: Rule,/):
         super().__init__(rule)
-        self.modals = self.Modals(self.rule.modal_operators)
+        self.modals = self.Modals(self.config)
 
     def listen_on(self):
         def after_trunk_build(tableau: Tableau):
@@ -758,13 +762,12 @@ class MaxWorlds(BranchDictCache[Branch, int]):
                 for node in filterfalse(branch.is_ticked, branch)
                     if Node.Key.sentence in node)))
 
+
     @classmethod
-    def configure_rule(cls, rulecls, config, **kw):
+    def configure_rule(cls, rulecls, config):
         "``Rule.Helper`` init hook. Set the `modal_operators` attribute."
-        super().configure_rule(rulecls, config, **kw)
+        super().configure_rule(rulecls, config)
         try:
-            ops = rulecls.modal_operators
+            return cls.Config(frozenset(rulecls.Meta.modal_operators).__contains__)
         except AttributeError as err:
             raise Emsg.MissingAttribute(str(err))
-        else:
-            check.inst(ops, Set)

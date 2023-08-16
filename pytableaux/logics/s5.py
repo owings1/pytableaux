@@ -70,7 +70,7 @@ class TabRules(S4.TabRules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         _defaults = dict(is_rank_optim = False)
-        modal_operators = Model.modal_operators
+        # modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: AccessNode, branch: Branch,/):
             if self[MaxWorlds].is_exceeded(branch):

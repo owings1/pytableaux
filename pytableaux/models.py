@@ -30,6 +30,7 @@ from typing import Any, ClassVar, Generic, Mapping, TypeVar
 from .errors import check
 from .lang import (Argument, Atomic, Operated, Operator, Predicated,
                    Quantified, Quantifier, Sentence)
+from .logics import LogicType, _metamap
 from .proof import Branch
 from .tools import closure
 from .tools.abcs import Abc, Ebc
@@ -119,25 +120,15 @@ MvalT = TypeVar('MvalT', bound = Mval)
 MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 
 class BaseModel(Generic[MvalT_co], Abc):
+    Meta = LogicType.Meta
 
     # Value: ClassVar[type[Mval]]
     Value: ClassVar[type[MvalT_co]]
 
     unassigned_value: ClassVar[MvalT_co]
 
-    truth_functional_operators = frozenset({
-        Operator.Assertion,
-        Operator.Negation,
-        Operator.Conjunction,
-        Operator.Disjunction,
-        Operator.MaterialConditional,
-        Operator.Conditional,
-        Operator.MaterialBiconditional,
-        Operator.Biconditional})
-
-    modal_operators = frozenset({
-        Operator.Necessity,
-        Operator.Possibility})
+    truth_functional_operators = frozenset(Meta.truth_functional_operators)
+    modal_operators = frozenset(Meta.modal_operators)
 
     @property
     def id(self) -> int:
@@ -294,6 +285,13 @@ class BaseModel(Generic[MvalT_co], Abc):
     def get_data(self) -> Mapping[str, Any]:
         return {}
 
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+        Meta = cls.__dict__.get('Meta', _metamap.get(cls.__module__))
+        if Meta:
+            cls.Meta = Meta
+            cls.modal_operators = frozenset(Meta.modal_operators)
+            cls.truth_functional_operators = frozenset(Meta.truth_functional_operators)
 
 @dataclass(kw_only = True)
 class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):

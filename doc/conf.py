@@ -11,18 +11,18 @@ from __future__ import annotations
 import os
 import sys
 
-_dir = os.path.abspath(os.path.dirname(__file__))
-if _dir not in sys.path:
-    sys.path.insert(1, _dir)
+def _():
+    thisdir = os.path.abspath(os.path.dirname(__file__))
+    rootdir = os.path.abspath(f'{thisdir}/..')
 
-addpath = os.path.abspath(os.path.join(_dir, '..'))
-if addpath not in sys.path:
-    sys.path.insert(0, addpath)
+    for i, addpath in enumerate([rootdir, thisdir]):
+        if addpath not in sys.path:
+            sys.path.insert(i, addpath)
+
+_()
 
 
 from sphinx.application import Sphinx
-
-os.environ['DOC_MODE'] = 'True'
 
 # =================================================================================
 # =================================================================================

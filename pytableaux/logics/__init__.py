@@ -46,24 +46,53 @@ __all__ = (
 
 NOARG = object()
 
+
+_metamap = {}
+_metamap_setdefault = _metamap.setdefault
+_metamap: Mapping[str, type[LogicType.Meta]] = MapProxy(_metamap)
+
+class GetLogicMetaMixinMetaType(type):
+    @property
+    def Meta(self) -> type[LogicType.Meta]|None:
+        return _metamap.get(self.__module__)
+
 class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None))):
     "Stub class definition for a logic interface."
     class Meta:
         name: str
+        modal: bool|None = None
         category: str
         description: str
         category_order: int
-        tags: tuple = ()
+        tags: tuple[str, ...] = ()
         native_operators: tuple[Operator, ...] = ()
-        modal_operators: tuple[Operator, ...] = (Operator.Possibility, Operator.Necessity)
+        modal_operators: tuple[Operator, ...] = (
+            Operator.Possibility,
+            Operator.Necessity)
+        truth_functional_operators: tuple[Operator, ...] = (
+            Operator.Assertion,
+            Operator.Negation,
+            Operator.Conjunction,
+            Operator.Disjunction,
+            Operator.MaterialConditional,
+            Operator.MaterialBiconditional,
+            Operator.Conditional,
+            Operator.Biconditional)
+
+        def __init_subclass__(cls):
+            super().__init_subclass__()
+            _metamap_setdefault(cls.__module__, cls)
+
     TableauxSystem: type[TableauxSystem]
     Model: type[BaseModel]
     class TabRules:
+        Meta: type[LogicType.Meta]
         closure_rules: tuple[type[ClosingRule], ...]
         rule_groups: tuple[tuple[type[Rule], ...], ...]
         all_rules: tuple[type[Rule], ...]
 
 
+        
 class Registry(Mapping[Any, LogicType], abcs.Copyable):
     """Logic module registry.
     """
@@ -138,13 +167,12 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         else:
             return sys.modules[modname]
 
-        check.inst(key, (ModuleType, str))
-
         if isinstance(key, ModuleType):
             module = key
             if module.__package__ not in self.packages:
                 raise Emsg.NotLogicsPackage(module.__package__)
         else:
+            check.inst(key, str)
             if '.' in key:
                 pkgstr = '.'.join(key.split('.')[0:-1])
                 if pkgstr not in self.packages:

@@ -103,7 +103,7 @@ class TabRules(K3W.TabRules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            sn = ~s.lhs.asserted() | s.rhs.asserted()
+            sn = ~+s.lhs | +s.rhs
             # keep negated neutral for inheritance below
             if self.negated:
                 sn = ~sn
@@ -145,8 +145,8 @@ class TabRules(K3W.TabRules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            lhsa = s.lhs.asserted()
-            rhsa = s.rhs.asserted()
+            lhsa = +s.lhs
+            rhsa = +s.rhs
             sn1 = ~lhsa | rhsa
             sn2 = ~rhsa | lhsa
             # Keep negated neutral for inheritance below.

@@ -12,9 +12,10 @@ class Base(BaseCase):
 class TestTabRules(Base, autorules=True): pass
 
 class TestRuleAttrs(Base):
+
     def test_rules_not_modal(self):
-        for rcls in self.logic.TabRules.all_rules:
-            self.assertIs(rcls.modal, False)
+        for rule in self.tab().rules:
+            self.assertIs(rule.modal, False)
 
 class TestArguments(Base):
 

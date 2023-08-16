@@ -65,7 +65,7 @@ class TabRules(T.TabRules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         ticking = False
-        modal_operators = Model.modal_operators
+        # modal_operators = Model.modal_operators
 
         def _get_node_targets(self, node: AccessNode, branch: Branch, /) -> Generator[dict, None, None]:
             if self[MaxWorlds].is_reached(branch):
