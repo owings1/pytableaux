@@ -53,6 +53,8 @@ EMPTY = ()
 NOARG = object()
 
 _T = TypeVar('_T')
+_T1 = TypeVar('_T1')
+_T2 = TypeVar('_T2')
 _EnumT = TypeVar('_EnumT', bound=Enum)
 
 class Eset(frozenset, Enum):
@@ -572,8 +574,8 @@ def merged_attr(name: str, it: Iterable = None, /, *,
         value = functools.reduce(oper, it, initial)
     return transform(value)
 
-def mroiter(cls: type, *,
-    supcls = None, mcls = None, reverse = True, start = None, stop = None):
+def mroiter(cls:type[_T], *, supcls:type[_T1]=None, mcls:type[_T2]=None,
+    reverse=True) -> Iterator[type[_T]|type[_T1]|_T2]:
     """Returns an iterator for a class's mro with filters.
 
     Args:
@@ -583,8 +585,6 @@ def mroiter(cls: type, *,
         supcls (type): The class(es) of which members must be a subclass.
         mcls (type): The metaclass(es) of which members must be an instance.
         reverse (bool): Start from the top with :obj:`object`. Default ``True``.
-        start (int): An index from which to start.
-        stop (int): An index at which to stop.
     
     Returns:
         An iterator.
@@ -592,15 +592,11 @@ def mroiter(cls: type, *,
     it = cls.mro()
     if reverse:
         it = reversed(it)
-    else:
-        it = iter(it)
     if mcls is not None:
         it = filter(lambda c: isinstance(c, mcls), it)
     if supcls is not None:
         it = filter(lambda c: issubclass(c, supcls), it)
-    if start is not None or stop is not None:
-        it = itertools.islice(it, start, stop) # type: ignore
-    return it
+    yield from it
 
 def hookable(*hooks: str, attr = Astr.hookinfo):
     'Decorator factory for specifying available hooks (provider).'
