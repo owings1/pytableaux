@@ -22,12 +22,13 @@ pytableaux.proof
 from __future__ import annotations
 
 import itertools
+import operator as opr
 from abc import abstractmethod
 from enum import Enum, Flag
 from types import MappingProxyType as MapProxy
 from typing import Any, NamedTuple, Sequence, TypeVar
 
-from ..lang import Argument, Operator, Predicate, Quantifier
+from ..lang import Argument, Operator, Predicate, Quantifier, Marking
 from ..logics import LogicType
 from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from ..tools.timing import Counter, StopWatch
@@ -274,6 +275,7 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         quantifier = 'quantifier'
         predicate = 'predicate'
         designation = 'designation'
+        marklegend = 'marklegend'
 
         @classmethod
         def make(cls, obj):
@@ -290,6 +292,9 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
                 elif attr is cls.designation:
                     if value is not None:
                         yield attr, value
+                elif attr is cls.marklegend:
+                    if value is not None:
+                        yield from value
                 elif attr is cls.closure:
                     if value:
                         yield attr, True
@@ -312,22 +317,17 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         abcs.merge_attr(rulecls, 'timer_names', mcls = cls,
             default = EMPTY_QSET, transform = qsetf)
         if rulecls.autoattrs:
-            attrs = rulecls.induce_attrs()
-            if attrs:
-                for name, value in attrs.items():
-                    setattr(rulecls, name, value)
+            for name, value in rulecls.induce_attrs():
+                setattr(rulecls, name, value)
         configs: dict[type[Rule.Helper], Any] = {}
-        for parent in abcs.mroiter(rulecls, mcls = cls):
-            v = parent.Helpers
-            if isinstance(v, type):
-                v = v,
-            if isinstance(v, Sequence):
-                for helpercls in v:
-                    configs.setdefault(helpercls, None)
+        for parent in abcs.mroiter(rulecls, mcls=cls):
+            value = parent.Helpers
+            if isinstance(value, Sequence):
+                configs = dict.fromkeys(value) | configs
             else:
-                configs.update(v)
+                configs.update(value)
         rulecls.Helpers = MapProxy(configs)
-        for helpercls, _ in configs.items():
+        for helpercls in configs:
             configs[helpercls] = helpercls.configure_rule(rulecls, ...)
         rulecls.legend = tuple(cls.Legend.make(rulecls))
         if rulecls.legend and not abcs.isabstract(rulecls):
@@ -415,8 +415,17 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
             if hasattr(self, Legend.designation):
                 attrs[Legend.designation] = None
 
+        checks = {
+            name: (getattr(self, name), value)
+            for name, value in attrs.items()
+                if name in self.__dict__}
+        conflicts = {
+            name: item for name, item in checks.items() if opr.ne(*item)}
+        if conflicts:
+            raise TypeError(
+                f'Direct __dict__ conflicts inducing autoattrs for {self} : {conflicts}')
         if not len(todo):
-            return attrs
+            yield from attrs.items()
 
     def induce_branching(self):
         rule: Rule = self(Tableau())

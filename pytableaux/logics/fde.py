@@ -480,17 +480,22 @@ class System(System):
 class DefaultNodeRule(rules.GetNodeTargetsRule):
     """Default FDE node rule with:
     
-    - filters.NodeDesignation with defaults: designation = `None`
-    - AdzHelper implements `_apply()` with its `_apply()` method.
-    - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
-    - This class implements `_get_node_targets() defaulting to `_get_sd_targers()`,
-        which raises NotImplementedError.
-    - FilterHelper implements `example_nodes()` with its `example_node()` method.
-    - AdzHelper implements `score_candidate()` with its `closure_score()` method.
-    - autoattrs = True to induce rule properties from the name.
+    - BaseSimpleRule:
+        - `_apply()` delegates to AdzHelper's `_apply()`. ticking is default True
+        - `score_candidate()` delegates to AdzHelper's `closure_score()`
+    - BaseNodeRule:
+        - loads FilterHelper. ignore_ticked is default True
+        - `example_nodes()` delegates to FilterHelper.
+    - GetNodeTargetsRule:
+        - `_get_targets()` wrapped by FilterHelper, then delegates to
+          abstract `_get_node_targets()`.
+    - DefaultNodeRule (this rule):
+        - uses autoattrs to set attrs from the rule name.
+        - implements `_get_node_targets()` with optional `_get_sd_targers()`.
+            NB it is not marked as abstract but will throw NotImplementError.
+        - adds a NodeDesignation filter.
     """
     NodeFilters = filters.NodeDesignation,
-    designation: Optional[bool] = None
     autoattrs = True
 
     def _get_node_targets(self, node: Node, branch: Branch, /):
