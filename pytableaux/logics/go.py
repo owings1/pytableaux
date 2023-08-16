@@ -17,42 +17,48 @@
 from __future__ import annotations
 
 from ..lang import Operator, Quantified, Quantifier
-from ..proof import Branch, Node, adds, rules, sdnode
+from ..proof import adds, rules, sdnode
 from ..tools import group, maxceil, minfloor
 from . import b3e as B3E
 from . import fde as FDE
 from . import k3 as K3
 from .b3e import crunch, gap
 
+
 class Meta(K3.Meta):
     name = 'GO'
     title = 'Gappy Object 3-valued Logic'
-    description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
+    description = (
+        'Three-valued logic (True, False, Neither) with '
+        'classical-like binary operators')
     category_order = 60
-    native_operators = FDE.Meta.native_operators + (
+    native_operators = tuple(sorted(FDE.Meta.native_operators + (
         Operator.Conditional,
-        Operator.Biconditional)
+        Operator.Biconditional)))
 
 class Model(K3.Model):
 
     def truth_function(self, oper, a, b=None):
         oper = Operator(oper)
         if oper is Operator.Assertion:
-            return self.Value[crunch(self.Value[a].num)]
-        elif oper is Operator.Disjunction:
-            return self.Value[max(crunch(self.Value[a].num), crunch(self.Value[b].num))]
-        elif oper is Operator.Conjunction:
-            return self.Value[min(crunch(self.Value[a].num), crunch(self.Value[b].num))]
-        elif oper is Operator.Conditional:
-            return self.Value[
+            return self.values[crunch(self.values[a].num)]
+        if oper is Operator.Disjunction:
+            return self.values[
+                max(
+                    crunch(self.values[a].num),
+                    crunch(self.values[b].num))]
+        if oper is Operator.Conjunction:
+            return self.values[
+                min(
+                    crunch(self.values[a].num),
+                    crunch(self.values[b].num))]
+        if oper is Operator.Conditional:
+            return self.values[
                 crunch(
                     max(
-                        1 - self.Value[a].num,
-                        self.Value[b].num,
-                        gap(self.Value[a].num) + gap(self.Value[b].num)
-                    )
-                )
-            ]
+                        1 - self.values[a].num,
+                        self.values[b].num,
+                        gap(self.values[a].num) + gap(self.values[b].num)))]
         return super().truth_function(oper, a, b)
 
     def value_of_existential(self, sentence: Quantified, **kw):
@@ -63,15 +69,10 @@ class Model(K3.Model):
         """
         sub = sentence.sentence.substitute
         v = sentence.variable
-        return self.Value[
-            maxceil(
-                self.Value.T,
-                (
-                    crunch(self.Value[self.value_of(sub(c, v), **kw)].num)
-                    for c in self.constants
-                ),
-            )
-        ]
+        return self.values[
+            maxceil(self.values.T, (
+                crunch(self.values[self.value_of(sub(c, v), **kw)].num)
+                for c in self.constants))]
 
     def value_of_universal(self, sentence: Quantified, **kw):
         """
@@ -81,15 +82,10 @@ class Model(K3.Model):
         """
         sub = sentence.sentence.substitute
         v = sentence.variable
-        return self.Value[
-            minfloor(
-                self.Value.F,
-                (
-                    crunch(self.Value[self.value_of(sub(c, v), **kw)].num)
-                    for c in self.constants
-                ),
-            )
-        ]
+        return self.values[
+            minfloor(self.values.F, (
+                crunch(self.values[self.value_of(sub(c, v), **kw)].num)
+                for c in self.constants))]
 
 class System(K3.System):
     """
@@ -237,10 +233,9 @@ class Rules(B3E.Rules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
             yield adds(
-                group(sdnode( lhs,     d), sdnode( rhs, not d)),
-                group(sdnode(~lhs, not d), sdnode(~rhs,     d)))
+                group(sdnode( s.lhs,     d), sdnode( s.rhs, not d)),
+                group(sdnode(~s.lhs, not d), sdnode(~s.rhs,     d)))
 
     class ConditionalUndesignated(ConjunctionUndesignated):
         """
@@ -260,12 +255,12 @@ class Rules(B3E.Rules):
         designated conditional nodes to *b*, one with the operands of the biconditional,
         and the other with the reversed operands. Then tick *n*.
         """
+        convert = Operator.Conditional
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
-            Cond = Operator.Conditional
-            yield adds(
-                group(sdnode(Cond(lhs, rhs), d), sdnode(Cond(rhs, lhs), d)))
+            yield adds(group(
+                sdnode(self.convert(s.lhs, s.rhs), d),
+                sdnode(self.convert(s.rhs, s.lhs), d)))
 
     class BiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -274,13 +269,12 @@ class Rules(B3E.Rules):
         node with the operands of the biconditional. On *b''* add a designated negated
         conditional node with the reversed operands of the biconditional. Then tick *n*.
         """
+        convert = Operator.Conditional
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
-            Cond = Operator.Conditional
             yield adds(
-                group(sdnode(~Cond(lhs, rhs), d)),
-                group(sdnode(~Cond(rhs, lhs), d)))
+                group(sdnode(~self.convert(s.lhs, s.rhs), d)),
+                group(sdnode(~self.convert(s.rhs, s.lhs), d)))
 
     class BiconditionalUndesignated(ConjunctionUndesignated):
         """
@@ -335,7 +329,7 @@ class Rules(B3E.Rules):
         """
         convert = Quantifier.Existential
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
@@ -344,7 +338,7 @@ class Rules(B3E.Rules):
             yield adds(
                 group(sdnode(self.convert(v, ~si), d)),
                 group(sdnode(r, not d), sdnode(~r, not d)))
-            
+
     class UniversalUndesignated(ExistentialUndesignated):
         """
         From an unticked, undesignated universal node *n* on a branch *b*, add a designated
@@ -389,8 +383,7 @@ class Rules(B3E.Rules):
             UniversalUndesignated,
             UniversalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated,
-        ),
+            FDE.Rules.DoubleNegationUndesignated),
         (
             # branching rules
             FDE.Rules.DisjunctionDesignated,
@@ -401,6 +394,4 @@ class Rules(B3E.Rules):
             ConditionalDesignated,
             ConditionalNegatedDesignated,
             BiconditionalNegatedDesignated,
-            UniversalNegatedDesignated,
-        ),
-    )
+            UniversalNegatedDesignated))

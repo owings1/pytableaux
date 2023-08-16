@@ -16,8 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from collections import deque
-
 from ..lang import Atomic, Marking
 from ..proof import Branch, Target, adds, anode, swnode
 from ..proof.helpers import MaxWorlds, UnserialWorlds
@@ -71,9 +69,9 @@ class Rules(K.Rules):
         Helpers = (MaxWorlds, UnserialWorlds)
         ignore_ticked = False
         ticking = False
-        marklegend = [(Marking.tableau, ('access', 'serial'))]
+        marklegend = group((Marking.tableau, ('access', 'serial')))
 
-        def _get_targets(self, branch: Branch,/) -> deque[Target]|None:
+        def _get_targets(self, branch: Branch, /):
             unserials = self[UnserialWorlds][branch]
             if not unserials:
                 return
@@ -82,11 +80,8 @@ class Rules(K.Rules):
             for w in unserials:
                 yield Target(adds(
                     group(anode(w, branch.new_world())),
-                    world = w,
-                    branch = branch))
-
-        def example_nodes(self):
-            yield swnode(Atomic.first(), 0)
+                    world=w,
+                    branch=branch))
 
         def _should_apply(self, branch: Branch,/):
             # TODO: Shouldn't this check the history only relative to the branch?
@@ -96,12 +91,54 @@ class Rules(K.Rules):
             # at least in its current form (all modal operators + worlds + 1).
             if len(self.tableau.history) and self.tableau.history[-1].rule == self:
                 return False
-
             # As above, this is unnecessary
             if self[MaxWorlds].is_exceeded(branch):
                 return False
-
             return True
+
+        def example_nodes(self):
+            yield swnode(Atomic.first(), 0)
+
+    groups = (
+        group(
+            # non-branching rules
+            K.Rules.IdentityIndiscernability,
+            K.Rules.Conjunction, 
+            K.Rules.DisjunctionNegated, 
+            K.Rules.MaterialConditionalNegated,
+            K.Rules.ConditionalNegated,
+            K.Rules.DoubleNegation,
+            K.Rules.PossibilityNegated,
+            K.Rules.NecessityNegated,
+            K.Rules.ExistentialNegated,
+            K.Rules.UniversalNegated),
+        group(
+            # modal rules
+            K.Rules.Necessity,
+            K.Rules.Possibility),
+        group(
+            # branching rules
+            K.Rules.ConjunctionNegated,
+            K.Rules.Disjunction, 
+            K.Rules.MaterialConditional, 
+            K.Rules.MaterialBiconditional,
+            K.Rules.MaterialBiconditionalNegated,
+            K.Rules.Conditional,
+            K.Rules.Biconditional,
+            K.Rules.BiconditionalNegated),
+        #[
+        #    # See comment on rule above -- using K rule now
+        #    ## special ordering of serial rule
+        #    #IdentityIndiscernability,
+        #    
+        #],
+        group(
+            K.Rules.Existential,
+            K.Rules.Universal),
+            # special ordering of serial rule
+        group(Serial))
+
+
 
     # NB: Since we have redesigned the modal rules, it is not obvious that we need this
     #     alternate rule. So far I have not been able to think of a way to break it. I
@@ -121,49 +158,3 @@ class Rules(K.Rules):
     #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], Rules.Serial):
     #            return False
     #        return super(Rules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
-
-    groups = (
-        (
-            # non-branching rules
-            K.Rules.IdentityIndiscernability,
-            K.Rules.Conjunction, 
-            K.Rules.DisjunctionNegated, 
-            K.Rules.MaterialConditionalNegated,
-            K.Rules.ConditionalNegated,
-            K.Rules.DoubleNegation,
-            K.Rules.PossibilityNegated,
-            K.Rules.NecessityNegated,
-            K.Rules.ExistentialNegated,
-            K.Rules.UniversalNegated,
-        ),
-        (
-            # modal rules
-            K.Rules.Necessity,
-            K.Rules.Possibility,
-        ),
-        (
-            # branching rules
-            K.Rules.ConjunctionNegated,
-            K.Rules.Disjunction, 
-            K.Rules.MaterialConditional, 
-            K.Rules.MaterialBiconditional,
-            K.Rules.MaterialBiconditionalNegated,
-            K.Rules.Conditional,
-            K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated,
-        ),
-        #[
-        #    # See comment on rule above -- using K rule now
-        #    ## special ordering of serial rule
-        #    #IdentityIndiscernability,
-        #    
-        #],
-        (
-            K.Rules.Existential,
-            K.Rules.Universal,
-        ),
-        (
-            # special ordering of serial rule
-            Serial,
-        ),
-    )

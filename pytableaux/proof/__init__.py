@@ -26,12 +26,15 @@ import operator as opr
 from abc import abstractmethod
 from enum import Enum, Flag
 from types import MappingProxyType as MapProxy
-from typing import Any, NamedTuple, Sequence
+from typing import Any, NamedTuple, Sequence, TypeVar
 
 from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
 from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from ..tools.timing import Counter, StopWatch
+
+_KT = TypeVar('_KT')
+_VT = TypeVar('_VT')
 
 __all__ = (
     'AccessNode',
@@ -137,6 +140,12 @@ class NodeMeta(abcs.AbcMeta):
     @classmethod
     def __prepare__(cls, clsname, bases, **kw):
         return dict(__slots__ = EMPTY_SET)
+
+class HelperMeta(abcs.AbcMeta):
+
+    @classmethod
+    def __prepare__(cls, clsname, bases, **kw):
+        return dict(__slots__=EMPTY_SET)
 
 class BranchMeta(abcs.AbcMeta):
     """Branch meta class."""
@@ -431,18 +440,16 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         rule.apply(rule.target(rule.branch().extend(rule.example_nodes())))
         return len(rule.tableau) - 1
 
-    class HelperMeta(abcs.AbcMeta):
-
-        @classmethod
-        def __prepare__(cls, clsname, bases, **kw):
-            return dict(__slots__=EMPTY_SET)
-
-    class Helper(metaclass=HelperMeta):
+    class AbstractHelper(metaclass=HelperMeta):
         'Rule helper interface.'
+
+        shareable = False
+        requires = EMPTY_SET
 
         rule: Rule
         config: Any
 
+        @abstractmethod
         def __init__(self, rule: Rule, /):
             self.rule = rule
             self.config = rule.Helpers.get(type(self))
@@ -460,6 +467,22 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
                 config: Config from the rule class, if any.
             """
             pass
+
+    class Helper(AbstractHelper):
+        "Rule helper basic base class."
+
+        __slots__ = ('rule', 'config')
+
+        def __init__(self, rule: Rule, /):
+            Rule.AbstractHelper.__init__(self, rule)
+
+    class HelperDict(AbstractHelper, dict[_KT, _VT]):
+        "Rule helper base class that also subclasses dict."
+
+        __slots__ = ('rule', 'config')
+
+        def __init__(self, rule: Rule, /):
+            Rule.AbstractHelper.__init__(self, rule)
 
 def adds(*groups, **kw):
     """Target dict builder for `AdzHelper`.

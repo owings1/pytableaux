@@ -26,12 +26,14 @@ from . import l3 as L3
 class Meta(L3.Meta):
     name = 'G3'
     title = 'Gödel 3-valued Logic'
-    description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
+    description = (
+        'Three-valued logic (T, F, N) with alternate '
+        'negation and conditional')
     category_order = 90
 
 class Model(L3.Model):
 
-    def truth_function(self, operator, a, b = None, /):
+    def truth_function(self, operator, a, b=None, /):
         if operator == Operator.Negation:
             if a == self.Value.N:
                 return self.Value.F
@@ -81,7 +83,7 @@ class Rules(L3.Rules):
                     sdnode( lhs, not d),
                     sdnode(~lhs, not d),
                     sdnode(~rhs, d)))
-    
+
     class ConditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conditional node `n` on a branch
@@ -101,7 +103,7 @@ class Rules(L3.Rules):
     class BiconditionalNegatedUndesignated(FDE.ConditionalConjunctsReducingRule): pass
 
     groups = (
-        (
+        group(
             # non-branching rules
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
@@ -125,9 +127,8 @@ class Rules(L3.Rules):
             FDE.Rules.UniversalNegatedUndesignated,
 
             DoubleNegationDesignated,
-            DoubleNegationUndesignated,
-        ),
-        (
+            DoubleNegationUndesignated),
+        group(
             # branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.ConjunctionUndesignated,
@@ -143,14 +144,10 @@ class Rules(L3.Rules):
             L3.Rules.ConditionalDesignated,
             L3.Rules.ConditionalUndesignated,
             ConditionalNegatedUndesignated,
-            ConditionalNegatedDesignated,
-        ),
-        (
+            ConditionalNegatedDesignated),
+        group(
             FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated,
-        ),
-        (
+            FDE.Rules.ExistentialUndesignated),
+        group(
             FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated,
-        ),
-    )
+            FDE.Rules.UniversalUndesignated))

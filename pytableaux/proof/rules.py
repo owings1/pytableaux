@@ -26,8 +26,8 @@ from collections import deque
 from typing import Generic, Iterable, TypeVar, final
 
 from ..lang import Constant, Operated, Predicated, Quantified, Sentence
-from ..tools import group, EMPTY_SET
-from . import Branch, Node, Rule, Target, adds, filters, SentenceNode
+from ..tools import EMPTY_SET, group
+from . import Branch, Node, Rule, Target, adds, filters
 
 __all__ = (
     'BaseClosureRule',
@@ -42,7 +42,23 @@ __all__ = (
     'Rule')
 
 _ST = TypeVar('_ST', bound=Sentence)
+
 FIRST_CONST_SET = frozenset({Constant.first()})
+
+class NoopRule(Rule):
+    "Rule stub that does not apply."
+
+    def _get_targets(self, branch: Branch, /):
+        "Yields from empty set."
+        yield from EMPTY_SET
+
+    def _apply(self, target: Target, /):
+        "Noop apply."
+        pass
+
+    def example_nodes(self):
+        "Yields from empty set."
+        yield from EMPTY_SET
 
 class ClosingRule(Rule):
     'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
@@ -65,27 +81,11 @@ from .helpers import (AdzHelper, BranchTarget, FilterHelper, MaxConsts,
                       NodeConsts, NodeCount, PredNodes, QuitFlag)
 
 
-class NoopRule(Rule):
-    "Rule stub that does not apply."
-
-    def _get_targets(self, branch: Branch, /):
-        "Yields from empty set."
-        yield from EMPTY_SET
-
-    def _apply(self, target: Target, /):
-        "Noop apply."
-        pass
-
-    @staticmethod
-    def example_nodes():
-        "Yields from empty set."
-        yield from EMPTY_SET
-
 class BaseClosureRule(ClosingRule):
 
     Helpers = group(BranchTarget)
 
-    def _get_targets(self, branch: Branch, /) -> tuple[Target]:
+    def _get_targets(self, branch: Branch, /):
         """Return the cached target from ``BranchTarget`` helper as a
         singleton, if any.
         """
@@ -140,13 +140,13 @@ class BaseNodeRule(BaseSimpleRule):
     ignore_ticked = True
     '(FilterHelper) Whether to ignore all ticked nodes.'
 
-    def example_nodes(self) -> tuple[dict]:
+    def example_nodes(self):
         'Delegates to ``(FilterHelper.example_node(),)``'
         yield self[FilterHelper].example_node()
 
 class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
 
-    NodeFilters = filters.NodeSentence,
+    NodeFilters = group(filters.NodeSentence)
 
     negated    = None
     operator   = None
@@ -159,7 +159,6 @@ class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
         return self[FilterHelper].filters[filters.NodeSentence].sentence(node)
 
 class PredicatedSentenceRule(BaseSentenceRule[Predicated]):
-
     Helpers = group(PredNodes)
 
 class QuantifiedSentenceRule(BaseSentenceRule[Quantified]): pass
@@ -167,7 +166,7 @@ class OperatedSentenceRule(BaseSentenceRule[Operated]): pass
 
 class NarrowQuantifierRule(QuantifiedSentenceRule):
 
-    Helpers = (QuitFlag, MaxConsts)
+    Helpers = (FilterHelper, QuitFlag, MaxConsts)
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -192,8 +191,7 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
 class ExtendedQuantifierRule(NarrowQuantifierRule):
 
     ticking = False
-
-    Helpers = (NodeConsts, NodeCount)
+    Helpers = (AdzHelper, NodeConsts, NodeCount)
 
     def _get_node_targets(self, node: Node, branch: Branch):
         unapplied = self[NodeConsts][branch][node]

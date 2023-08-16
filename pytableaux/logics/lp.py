@@ -17,10 +17,9 @@
 from __future__ import annotations as annotations
 
 from ..lang import Atomic
-from ..models import BaseModel, ValueLP
+from ..models import ValueLP
 from ..proof import Branch, Node, Target, sdnode
 from ..proof.rules import BaseClosureRule
-from ..tools import qsetf, group
 from . import fde as FDE
 
 class Meta(FDE.Meta):
@@ -37,10 +36,8 @@ class Meta(FDE.Meta):
         'non-modal',
         'first-order')
 
-class Model(FDE.Model, BaseModel[ValueLP]):
-    Value = Meta.values
-    designated_values = Meta.designated_values
-    unassigned_value = Meta.unassigned_value
+class Model(FDE.Model):
+    pass
 
 class System(FDE.System):
     pass
@@ -55,11 +52,9 @@ class Rules(FDE.Rules):
         def _branch_target_hook(self, node, branch, /):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
-                return Target(
-                    nodes = qsetf((node, nnode)),
-                    branch = branch)
+                return Target(nodes=(node, nnode), branch=branch)
 
-        def node_will_close_branch(self, node, branch, /) -> bool:
+        def node_will_close_branch(self, node, branch, /):
             return bool(self._find_closing_node(node, branch))
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
@@ -71,4 +66,4 @@ class Rules(FDE.Rules):
             yield sdnode(s, False)
             yield sdnode(~s, False)
 
-    closure = group(GapClosure) + FDE.Rules.closure
+    closure = (GapClosure,) + FDE.Rules.closure

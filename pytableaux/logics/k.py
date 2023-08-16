@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import cast
+from typing import TYPE_CHECKING, Iterable, cast
 
 from .. import proof
 from ..errors import DenotationError, ModelValueError, check
@@ -38,7 +38,7 @@ class Meta(LogicType.Meta):
     name = 'K'
     title = 'Kripke Normal Modal Logic'
     modal = True
-    values = ValueCPL
+    values: type[ValueCPL] = ValueCPL
     designated_values = frozenset({values.T})
     unassigned_value = values.F
     category = 'Bivalent Modal'
@@ -74,15 +74,11 @@ class AccessGraph(defaultdict[int, set[int]]):
             worlds.update(sees)
         return worlds
 
-class Model(BaseModel[ValueCPL]):
+class Model(BaseModel[Meta.values]):
     """
     A K model comprises a non-empty collection of K-frames, a world access
     relation, and a set of constants (the domain).
     """
-
-    Value = Meta.values
-    designated_values = Meta.designated_values
-    unassigned_value = Meta.unassigned_value
 
     frames: Frames
     "A map from worlds to their frame"
@@ -118,63 +114,58 @@ class Model(BaseModel[ValueCPL]):
             if param not in self.constants:
                 raise DenotationError(f'Parameter {param} is not in the constants')
         if params in self.get_extension(s.predicate, **kw):
-            return self.Value.T
-        return self.Value.F
+            return self.values.T
+        return self.values.F
 
     def value_of_existential(self, s: Quantified, **kw):
         """
         An existential sentence is true at :m:`w`, just when the sentence resulting in the
         subsitution of some constant in the domain for the variable is true at :m:`w`.
         """
-        Value = self.Value
         for c in self.constants:
-            if self.value_of(c >> s, **kw) is Value.T:
-                return Value.T
-        return Value.F
+            if self.value_of(c >> s, **kw) is self.values.T:
+                return self.values.T
+        return self.values.F
 
     def value_of_universal(self, s: Quantified, **kw):
         """
         A universal sentence is true at :m:`w`, just when the sentence resulting in the
         subsitution of each constant in the domain for the variable is true at :m:`w`.
         """
-        Value = self.Value
         for c in self.constants:
-            if self.value_of(c >> s, **kw) is Value.F:
-                return Value.F
-        return Value.T
+            if self.value_of(c >> s, **kw) is self.values.F:
+                return self.values.F
+        return self.values.T
 
     def value_of_possibility(self, s: Operated, world: int = 0, **kw):
         """
         A possibility sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
         """
-        Value = self.Value
         for w2 in self.R[world]:
-            if self.value_of(s.lhs, world=w2, **kw) is Value.T:
-                return Value.T
-        return Value.F
+            if self.value_of(s.lhs, world=w2, **kw) is self.values.T:
+                return self.values.T
+        return self.values.F
 
     def value_of_necessity(self, s: Operated, /, world: int = 0, **kw):
         """
         A necessity sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         each :m:`w'` such that :m:`<w, w'>` is in the access relation.
         """
-        Value = self.Value
         for w2 in self.R[world]:
-            if self.value_of(s.lhs, world=w2, **kw) is Value.F:
-                return Value.F
-        return Value.T
+            if self.value_of(s.lhs, world=w2, **kw) is self.values.F:
+                return self.values.F
+        return self.values.T
 
     def is_countermodel_to(self, arg: Argument, /) -> bool:
         """
         A model is a countermodel for an argument iff the value of each premise
         is V{T} at `w0` and the value of the conclusion is V{F} at :m:`w0`.
         """
-        Value = self.Value
         for premise in arg.premises:
-            if self.value_of(premise, world = 0) is not Value.T:
+            if self.value_of(premise, world = 0) is not self.values.T:
                 return False
-        return self.value_of(arg.conclusion, world = 0) is Value.F
+        return self.value_of(arg.conclusion, world = 0) is self.values.F
 
     def get_data(self) -> dict:
         return dict(
@@ -219,9 +210,9 @@ class Model(BaseModel[ValueCPL]):
             if w is None:
                 w = 0
             if self.is_sentence_opaque(s):
-                self.set_opaque_value(s, self.Value.T, world = w)
+                self.set_opaque_value(s, self.values.T, world = w)
             elif self.is_sentence_literal(s):
-                self.set_literal_value(s, self.Value.T, world = w)
+                self.set_literal_value(s, self.values.T, world = w)
             self.predicates.update(s.predicates)
         elif isinstance(node, AccessNode):
             self.R.add(node.pair())
@@ -299,7 +290,7 @@ class Model(BaseModel[ValueCPL]):
             raise NotImplementedError
 
     def set_opaque_value(self, s: Sentence, value, /, world = 0):
-        value = self.Value[value]
+        value = self.values[value]
         frame = self.frames[world]
         if frame.opaques.get(s, value) is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
@@ -312,15 +303,15 @@ class Model(BaseModel[ValueCPL]):
         frame.opaques[s] = value
 
     def set_atomic_value(self, s: Atomic, value, /, world = 0):
-        value = self.Value[value]
+        value = self.values[value]
         frame = self.frames[world]
         if s in frame.atomics and frame.atomics[s] is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         frame.atomics[s] = value
 
     def set_predicated_value(self, s: Predicated, value, /, **kw):
-        Value = self.Value
-        value = Value[value]
+        values = self.values
+        value = values[value]
         pred = s.predicate
         params = s.params
         self.predicates.add(pred)
@@ -329,12 +320,12 @@ class Model(BaseModel[ValueCPL]):
                 self.constants.add(param)
         extension = self.get_extension(pred, **kw)
         anti_extension = self.get_anti_extension(pred, **kw)
-        if value is Value.F:
+        if value is values.F:
             if params in extension:
                 raise ModelValueError(f'Cannot set value {value} for tuple '
                     f'{params} already in extension')
             anti_extension.add(params)
-        if value is Value.T:
+        if value is values.T:
             if params in anti_extension:
                 raise ModelValueError(f'Cannot set value {value} for tuple '
                     f'{params} already in anti-extension')
@@ -564,15 +555,18 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     NodeFilters = filters.NodeType,
     autoattrs = True
 
-    def _get_node_targets(self, node, branch, /):
+    def _get_node_targets(self, node: Node, branch: Branch, /):
         return self._get_sw_targets(self.sentence(node), node.get('world'))
 
-    def _get_sw_targets(self, s: Operated, w: int|None, /):
+    def _get_sw_targets(self, s: Sentence, w: int|None, /):
         raise NotImplementedError
 
 class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule):
     'Convenience mixin class for most common rules.'
     NodeType = SentenceNode
+
+    def _get_sw_targets(self, s: Operated, w: int|None, /):
+        raise NotImplementedError
 
 class Rules(LogicType.Rules):
 
@@ -957,30 +951,23 @@ class Rules(LogicType.Rules):
                         nodes = (node, anode))
 
         def score_candidate(self, target, /) -> float:
-
             if target.get('flag'):
                 return 1.0
-
             # We are already restricted to least-applied-to nodes by
             # ``_get_node_targets()``
-
             # Check for closure
             if self[AdzHelper].closure_score(target) == 1:
                 return 1.0
-
             # Not applied to yet
             apcount = self[NodeCount][target.branch].get(target.node, 0)
             if apcount == 0:
                 return 1.0
-
             # Pick the least branching complexity
             return -1.0 * self.tableau.branching_complexity(target.node)
 
-        def group_score(self, target: Target, /) -> float:
-
+        def group_score(self, target, /) -> float:
             if self.score_candidate(target) > 0:
                 return 1.0
-
             return -1.0 * self[NodeCount][target.branch].get(target.node, 0)
 
         def example_nodes(self):

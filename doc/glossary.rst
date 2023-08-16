@@ -11,14 +11,14 @@ Glossary
   addition
     :s:`A` !{conseq} :s:`A V B`
 
+  conditional contraction
+    :s:`A $ (A $ B)` !{conseq} :s:`A $ B`
+
   conditional identity
     :s:`B` !{|-} :s:`A $ A`
 
   DeMorgan laws
     . . .
-
-  conditional contraction
-    :s:`A $ (A $ B)` !{conseq} :s:`A $ B`
 
   disjunctive syllogism
     :s:`A V B`, :s:`~B` !{|?-} :s:`A`
@@ -45,11 +45,14 @@ Glossary
   logical truth
     . . . 
 
-  truth-functional operator
-    . . .
+  material identity
+    :s:`B` !{conseq} :s:`A > A`
 
   modus ponens
     :s:`A $ B`, :s:`A` !{|-} :s:`B`
 
   modus tollens
     :s:`A $ B`, :s:`~B` !{|-} :s:`A`
+
+  truth-functional operator
+    . . .

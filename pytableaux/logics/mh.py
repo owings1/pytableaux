@@ -16,10 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified, Sentence
+from ..lang import Operator, Quantified
 from ..proof import adds, sdnode
 from ..tools import group
-from . import LogicType
 from . import fde as FDE
 from . import k3 as K3
 
@@ -34,25 +33,24 @@ class Meta(K3.Meta):
         'many-valued',
         'gappy',
         'non-modal')
-    native_operators = K3.Meta.native_operators + (
+    native_operators = tuple(sorted(FDE.Meta.native_operators + (
         Operator.Conditional,
-        Operator.Biconditional)
+        Operator.Biconditional)))
 
 class Model(K3.Model):
 
-    def is_sentence_opaque(self, s: Sentence, /):
+    def is_sentence_opaque(self, s, /):
         return type(s) is Quantified or super().is_sentence_opaque(s)
 
-    def truth_function(self, oper: Operator, a, b = None, /):
+    def truth_function(self, oper, a, b=None, /):
         oper = Operator(oper)
-        Value = self.Value
+        if oper is Operator.Conditional:
+            if self.values[a] is self.values.T and self.values[b] is not self.values.T:
+                return self.values.F
+            return self.values.T
         if oper is Operator.Disjunction:
-            if Value[a] is Value.N and Value[b] is Value.N:
-                return Value.F
-        elif oper is Operator.Conditional:
-            if Value[a] is Value.T and Value[b] is not Value.T:
-                return Value.F
-            return Value.T
+            if self.values[a] is self.values.N and self.values[b] is self.values.N:
+                return self.values.F
         return super().truth_function(oper, a, b)
 
 class System(K3.System):
@@ -71,7 +69,7 @@ class System(K3.System):
         # for now, reduce to conjunction
         Operator.Biconditional: ((0, 0), (0, 0))}
 
-class Rules(LogicType.Rules):
+class Rules(K3.Rules):
 
     class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -224,7 +222,6 @@ class Rules(LogicType.Rules):
     class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated):
         "This rule reduces to a negated conjunction of conditionals."
 
-    closure = K3.Rules.closure
 
     groups = (
         # Non-branching rules.
@@ -251,8 +248,7 @@ class Rules(LogicType.Rules):
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated,
-        ),
+            FDE.Rules.DoubleNegationUndesignated),
         # 1-branching rules.
         (
             FDE.Rules.ConjunctionUndesignated,
@@ -260,10 +256,7 @@ class Rules(LogicType.Rules):
             FDE.Rules.DisjunctionDesignated,
             DisjunctionNegatedDesignated,
             ConditionalDesignated,
-            ConditionalNegatedUndesignated,
-        ),
+            ConditionalNegatedUndesignated),
         # 3-branching rules.
         (
-            DisjunctionNegatedUndesignated,
-        ),
-    )
+            DisjunctionNegatedUndesignated,))

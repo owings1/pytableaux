@@ -170,8 +170,8 @@ Notes
   the non-classical V{N} value.
 
   This property of "classical containment" means that we can define
-  a conditional operator that satisfies :term:`Identity` :s:`A $ A`. It also
-  allows us to give a formal description of a subset of sentences
+  a conditional operator that satisfies :term:`Conditional Identity` :s:`A $ A`.
+  It also allows us to give a formal description of a subset of sentences
   that obey all principles of classical logic. For example, although
   the :term:`Law of Excluded Middle` fails for atomic sentences :s:`A V ~A`,
   complex sentences -- those with at least one binary connective --

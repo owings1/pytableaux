@@ -16,20 +16,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from typing import Generator
-
 from ..lang import Marking
-from ..proof import AccessNode, Branch, Target, adds, anode
+from ..proof import AccessNode, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
 from . import t as T
 
 
-class Meta(K.Meta):
+class Meta(T.Meta):
     name = 'S4'
     title = 'S4 Normal Modal Logic'
-    description = 'Normal modal logic with a reflexive and transitive access relation'
+    description = (
+        'Normal modal logic with a reflexive and '
+        'transitive access relation')
     category_order = 4
 
 class Model(T.Model):
@@ -49,7 +49,7 @@ class Model(T.Model):
             for w1, w2 in to_add:
                 R[w1].add(w2)
 
-class System(K.System):
+class System(T.System):
     pass
 
 class Rules(T.Rules):
@@ -65,19 +65,20 @@ class Rules(T.Rules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         ticking = False
-        marklegend = [(Marking.tableau, ('access', 'transitive'))]
+        marklegend = group((Marking.tableau, ('access', 'transitive')))
 
-        def _get_node_targets(self, node: AccessNode, branch: Branch, /) -> Generator[dict, None, None]:
+        def _get_node_targets(self, node: AccessNode, branch, /):
             if self[MaxWorlds].is_reached(branch):
                 self[FilterHelper].release(node, branch)
                 return
             w1, w2 = node.pair()
             for w3 in self[WorldIndex].intransitives(branch, w1, w2):
-                yield adds(
-                    group(a := anode(w1, w3)), **a,
-                    nodes = (node, branch.find(anode(w2, w3))))
+                nnode = anode(w1, w3)
+                yield adds(group(nnode),
+                    nodes=(node, branch.find(anode(w2, w3))),
+                    **nnode)
 
-        def score_candidate(self, target: Target, /) -> float:
+        def score_candidate(self, target, /):
             # Rank the highest world
             return float(target.world2)
 
@@ -86,7 +87,7 @@ class Rules(T.Rules):
             yield anode(1, 2)
 
     groups = (
-        (
+        group(
             # non-branching rules
             K.Rules.IdentityIndiscernability,
             K.Rules.Assertion,
@@ -99,25 +100,21 @@ class Rules(T.Rules):
             K.Rules.PossibilityNegated,
             K.Rules.NecessityNegated,
             K.Rules.ExistentialNegated,
-            K.Rules.UniversalNegated,
-        ),
+            K.Rules.UniversalNegated),
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
         # However, if we put the Transitive after, then some trees
         # fail to close. It is so far an open question whether this
         # is a good idea.
-        (
-            Transitive,
-        ),
-        (
+        group(
+            Transitive),
+        group(
             # modal operator rules
             K.Rules.Necessity,
-            K.Rules.Possibility,
-        ),
-        (
-            T.Rules.Reflexive,
-        ),
-        (
+            K.Rules.Possibility),
+        group(
+            T.Rules.Reflexive),
+        group(
             # branching rules
             K.Rules.ConjunctionNegated,
             K.Rules.Disjunction, 
@@ -126,10 +123,7 @@ class Rules(T.Rules):
             K.Rules.MaterialBiconditionalNegated,
             K.Rules.Conditional,
             K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated,
-        ),
-        (
+            K.Rules.BiconditionalNegated),
+        group(
             K.Rules.Existential,
-            K.Rules.Universal,
-        ),
-    )
+            K.Rules.Universal))

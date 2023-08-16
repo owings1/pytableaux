@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Quantified, Quantifier
-from ..proof import Branch, Node, adds, sdnode
+from ..proof import adds, sdnode
 from ..tools import group, maxceil, minfloor
 from . import fde as FDE
 from . import k3w as K3W

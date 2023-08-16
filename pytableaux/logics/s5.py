@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Marking
-from ..proof import AccessNode, Branch, adds, anode
+from ..proof import AccessNode, adds
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
@@ -25,19 +25,13 @@ from . import s4 as S4
 from . import t as T
 
 
-class Meta(K.Meta):
+class Meta(S4.Meta):
     name = 'S5'
     title = 'S5 Normal Modal Logic'
     description = (
         'Normal modal logic with a reflexive, symmetric, and transitive '
         'access relation')
     category_order = 5
-
-
-# TODO:
-# Some problematic arguments for S5:
-#
-#   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)
 
 class Model(S4.Model):
 
@@ -54,7 +48,7 @@ class Model(S4.Model):
             for w1, w2 in to_add:
                 self.R[w1].add(w2)
 
-class System(K.System):
+class System(S4.System):
     pass
 
 class Rules(S4.Rules):
@@ -70,67 +64,25 @@ class Rules(S4.Rules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         ticking = False
-        marklegend = [(Marking.tableau, ('access', 'symmetric'))]
+        marklegend = group((Marking.tableau, ('access', 'symmetric')))
         _defaults = dict(is_rank_optim = False)
 
-        def _get_node_targets(self, node: AccessNode, branch: Branch,/):
+        def _get_node_targets(self, node: AccessNode, branch,/):
             if self[MaxWorlds].is_exceeded(branch):
                 self[FilterHelper].release(node, branch)
                 return
-            access = node.pair().reversed()
-            if self[WorldIndex].has(branch, access):
+            pair = node.pair().reversed()
+            if self[WorldIndex].has(branch, pair):
                 self[FilterHelper].release(node, branch)
                 return
-            yield adds(group(a := access.tonode()), **a)
+            nnode = pair.tonode()
+            yield adds(group(nnode), **nnode)
 
-    groups = (
-        (
-            # non-branching rules
-            K.Rules.IdentityIndiscernability,
-            K.Rules.Assertion,
-            K.Rules.AssertionNegated,
-            K.Rules.Conjunction, 
-            K.Rules.DisjunctionNegated, 
-            K.Rules.MaterialConditionalNegated,
-            K.Rules.ConditionalNegated,
-            K.Rules.DoubleNegation,
-            K.Rules.PossibilityNegated,
-            K.Rules.NecessityNegated,
-            K.Rules.ExistentialNegated,
-            K.Rules.UniversalNegated,
-        ),
-        # Things seem to work better with the Transitive rule before
-        # the modal operator rules, and the other access rules after.
-        # However, if we put the Transitive after, then some trees
-        # fail to close. It is so far an open question whether this
-        # is a good idea.
-        (
-            S4.Rules.Transitive,
-        ),
-        (
-            # modal operator rules
-            K.Rules.Necessity,
-            K.Rules.Possibility,
-        ),
-        (
-            T.Rules.Reflexive,
-        ),
-        (
-            # branching rules
-            K.Rules.ConjunctionNegated,
-            K.Rules.Disjunction, 
-            K.Rules.MaterialConditional, 
-            K.Rules.MaterialBiconditional,
-            K.Rules.MaterialBiconditionalNegated,
-            K.Rules.Conditional,
-            K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated,
-        ),
-        (
-            K.Rules.Existential,
-            K.Rules.Universal,
-        ),
-        (
-            Symmetric,
-        ),
-    )
+    groups = S4.Rules.groups + group(
+        group(Symmetric))
+
+
+# TODO:
+# Some problematic arguments for S5:
+#
+#   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)

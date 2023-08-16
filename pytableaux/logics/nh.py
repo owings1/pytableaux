@@ -19,7 +19,6 @@ from __future__ import annotations
 from ..lang import Operator, Quantified
 from ..proof import adds, sdnode
 from ..tools import group
-from . import LogicType
 from . import fde as FDE
 from . import lp as LP
 from . import mh as MH
@@ -35,25 +34,22 @@ class Meta(LP.Meta):
         'many-valued',
         'glutty',
         'non-modal')
-    native_operators = FDE.Meta.native_operators + (
-        Operator.Conditional,
-        Operator.Biconditional)
+    native_operators = MH.Meta.native_operators
 
 class Model(LP.Model):
 
     def is_sentence_opaque(self, s,/):
         return type(s) is Quantified or super().is_sentence_opaque(s)
 
-    def truth_function(self, oper, a, b = None, /):
+    def truth_function(self, oper, a, b=None, /):
         oper = Operator(oper)
-        Value = self.Value
+        if oper is Operator.Conditional:
+            if self.values[a] is not self.values.F and self.values[b] is self.values.F:
+                return self.values.F
+            return self.values.T
         if oper is Operator.Conjunction:
-            if Value[a] is Value.B and Value[b] is Value.B:
-                return Value.T
-        elif oper is Operator.Conditional:
-            if Value[a] is not Value.F and Value[b] is Value.F:
-                return Value.F
-            return Value.T
+            if self.values[a] is self.values.B and self.values[b] is self.values.B:
+                return self.values.T
         return super().truth_function(oper, a, b)
 
 class System(LP.System):
@@ -70,7 +66,7 @@ class System(LP.System):
         # for now, reduce to conjunction
         Operator.Biconditional: ((0, 0), (0, 0))}
 
-class Rules(LogicType.Rules):
+class Rules(LP.Rules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -151,11 +147,9 @@ class Rules(LogicType.Rules):
     class BiconditionalUndesignated(BiconditionalDesignated): pass
     class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated): pass
 
-    closure = LP.Rules.closure
-
     groups = (
         # Non-branching rules.
-        (
+        group(
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
             FDE.Rules.AssertionNegatedDesignated,
@@ -178,19 +172,15 @@ class Rules(LogicType.Rules):
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated,
-        ),
+            FDE.Rules.DoubleNegationUndesignated),
         # 1-branching rules.
-        (
+        group(
             FDE.Rules.ConjunctionUndesignated,
             ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionDesignated,
             FDE.Rules.DisjunctionNegatedUndesignated,
             MH.Rules.ConditionalDesignated,
-            MH.Rules.ConditionalNegatedUndesignated,
-        ),
+            MH.Rules.ConditionalNegatedUndesignated),
         # 3-branching rules.
-        (
-            ConjunctionNegatedDesignated,
-        ),
-    )
+        group(
+            ConjunctionNegatedDesignated))

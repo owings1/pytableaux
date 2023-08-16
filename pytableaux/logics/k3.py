@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Atomic
-from ..models import BaseModel, ValueK3
+from ..models import ValueK3
 from ..proof import Branch, Node, Target, sdnode
 from ..proof.rules import BaseClosureRule
 from . import fde as FDE
@@ -26,7 +26,7 @@ from . import fde as FDE
 class Meta(FDE.Meta):
     name = 'K3'
     title = 'Strong Kleene Logic'
-    values = ValueK3
+    values: type[ValueK3] = ValueK3
     designated_values = frozenset({values.T})
     unassigned_value = values.N
     description = 'Three-valued logic (T, F, N)'
@@ -37,14 +37,9 @@ class Meta(FDE.Meta):
         'non-modal',
         'first-order')
 
-class Model(FDE.Model, BaseModel[ValueK3]):
-    Value = Meta.values
-    designated_values = Meta.designated_values
-    "The (singleton) set of designated values."
-    unassigned_value = Meta.unassigned_value
+class Model(FDE.Model): pass
 
-class System(FDE.System):
-    pass
+class System(FDE.System): pass
 
 class Rules(FDE.Rules):
 
@@ -63,7 +58,7 @@ class Rules(FDE.Rules):
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
             if node[Node.Key.designated]:
-                return branch.find(sdnode(self.sentence(node).negative(), True))
+                return branch.find(sdnode(-self.sentence(node), True))
 
         def example_nodes(self):
             a = Atomic.first()

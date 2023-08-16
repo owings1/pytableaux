@@ -26,7 +26,7 @@ from abc import abstractmethod
 from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator,
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Iterator,
                     Mapping, Optional, Self, Sequence, SupportsIndex, TypeVar,
                     final)
 
@@ -37,7 +37,7 @@ from ..logics import registry
 from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults, qset,
                      qsetf, wraps)
 from ..tools.events import EventEmitter
-from ..tools.hybrids import SequenceSet
+from ..tools.hybrids import SequenceSet, qset
 from ..tools.linked import linqset
 from ..tools.timing import Counter, StopWatch
 from . import RuleMeta, TableauMeta
@@ -75,7 +75,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     legend: tuple
     "The rule class legend."
 
-    Helpers = {}
+    Helpers: Mapping[type[Rule.Helper], Any] = {}
     "Helper classes mapped to their settings."
 
     timer_names: Sequence[str] = qsetf(('search', 'apply'))
@@ -133,6 +133,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     modal: bool|None
     "Whether this is a modal rule."
+
     def __init__(self, tableau: Tableau, /, **opts):
         self.state = Rule.State(0)
         super().__init__(*Rule.Events)
@@ -142,7 +143,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         self.history = SeqCover(history := deque())
         self.on(Rule.Events.AFTER_APPLY, history.append)
         self.helpers = {}
-        # Add one at a time, to support helper dependency checks.
+        # # Add one at a time, to support helper dependency checks.
         for Helper in self.Helpers:
             self.helpers[Helper] = Helper(self)
         if not self.opts['nolock']:
@@ -523,9 +524,11 @@ class RuleGroups(Sequence[RuleGroup]):
     __setattr__ = locking(object.__setattr__)
 
     def __repr__(self):
-        logic = self.root.tableau.logic
-        lname = logic.Meta.name if logic else None
-        return (f'<{type(self).__name__} logic:{lname} groups:{len(self)} '
+        try:
+            logic = self.root.tableau.logic.Meta.name
+        except AttributeError:
+            logic = None
+        return (f'<{type(self).__name__} logic:{logic} groups:{len(self)} '
             f'names:{list(self.names())} rules:{sum(map(len, self))}>')
 
 class RulesRoot(Sequence[Rule]):
@@ -659,6 +662,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         '_argument',
         '_complexities',
         '_logic',
+        '_shared',
         'flag',
         'history',
         'models',
@@ -687,6 +691,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             stat := self.Stat(),
             opens := linqset(),
             branches := [])
+        self._shared = {}
         self.__len__ = branches.__len__
         self.__getitem__ = branches.__getitem__
         self.__contains__ = stat.__contains__

@@ -53,10 +53,9 @@ class Rules(K.Rules):
         is *w*.
         """
         Helpers = (MaxWorlds, WorldIndex)
-
         ignore_ticked = False
         ticking = False
-        marklegend = [(Marking.tableau, ('access', 'reflexive'))]
+        marklegend = group((Marking.tableau, ('access', 'reflexive')))
 
         _defaults = dict(is_rank_optim = False)
 
@@ -75,7 +74,7 @@ class Rules(K.Rules):
             yield swnode(Atomic.first(), 0)
 
     groups = (
-        (
+        group(
             # non-branching rules
             K.Rules.IdentityIndiscernability,
             K.Rules.Assertion,
@@ -88,17 +87,14 @@ class Rules(K.Rules):
             K.Rules.PossibilityNegated,
             K.Rules.NecessityNegated,
             K.Rules.ExistentialNegated,
-            K.Rules.UniversalNegated,
-        ),
-        (
+            K.Rules.UniversalNegated),
+        group(
             # modal rules
             K.Rules.Necessity,
-            K.Rules.Possibility,
-        ),
-        (
-            Reflexive,
-        ),
-        (
+            K.Rules.Possibility),
+        group(
+            Reflexive),
+        group(
             # branching rules
             K.Rules.ConjunctionNegated,
             K.Rules.Disjunction, 
@@ -107,10 +103,7 @@ class Rules(K.Rules):
             K.Rules.MaterialBiconditionalNegated,
             K.Rules.Conditional,
             K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated,
-        ),
-        (
+            K.Rules.BiconditionalNegated),
+        group(
             K.Rules.Existential,
-            K.Rules.Universal,
-        ),
-    )
+            K.Rules.Universal))

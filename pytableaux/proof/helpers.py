@@ -22,12 +22,12 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections import defaultdict
-from collections.abc import Set
 from copy import copy
 from functools import partial
 from itertools import filterfalse
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Callable, Mapping, NamedTuple, Sequence, TypeVar
+from typing import (TYPE_CHECKING, Any, Callable, Mapping, NamedTuple,
+                    Sequence, TypeVar)
 
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
@@ -41,12 +41,12 @@ if TYPE_CHECKING:
     from ..tools import TypeInstMap
     from .rules import ClosingRule
 
-_F = TypeVar('_F', bound=Callable)
 _RT = TypeVar('_RT', bound=Rule)
 _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')
 
 __all__ = (
+    'AccessNodesIndex',
     'AdzHelper',
     'AplSentCount',
     'BranchTarget',
@@ -65,7 +65,7 @@ NOGET = object()
 
 class AdzHelper(Rule.Helper):
 
-    __slots__ = ('rule', 'config', 'closure_rules')
+    __slots__ = ('closure_rules',)
 
     closure_rules: tuple[ClosingRule, ...]
 
@@ -88,27 +88,25 @@ class AdzHelper(Rule.Helper):
             target.branch.tick(target.node)
 
     def closure_score(self, target: Target):
-        rules = self.closure_rules
-        if not len(rules):
+
+        if not len(self.closure_rules):
             return 0.0
         close_count = 0
         branch = target.branch
         for nodes in target['adds']:
             # assert all(isinstance(node, Node) for node in nodes)
             # nodes = tuple(map(Node, nodes))
-            for rule in rules:
+            for rule in self.closure_rules:
                 if rule.nodes_will_close_branch(nodes, branch):
                     close_count += 1
                     break
         return close_count / min(1, len(target['adds']))
 
-class BranchCache(dict[Branch, _VT], Rule.Helper):
+
+class BranchCache(Rule.HelperDict[Branch, _VT]):
     "Base class for caching per branch."
 
-    __slots__ = ('rule', 'config')
     _valuetype: type[_VT] = bool
-
-    __init__ = Rule.Helper.__init__
 
     def listen_on(self):
         super().listen_on()
@@ -273,6 +271,8 @@ class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
 
 class UnserialWorlds(BranchCache[set[int]]):
     "Track the unserial worlds on the branch."
+
+    shareable = True
     _valuetype = set
 
     def listen_on(self):
@@ -285,25 +285,30 @@ class UnserialWorlds(BranchCache[set[int]]):
                     self[branch].add(w)
         self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
+class AccessNodesIndex(BranchCache[dict[WorldPair, Node]]):
+
+    shareable = True
+    _valuetype = dict
+
+    def add(self, node: AccessNode, branch: Branch):
+        self[branch][node.pair()] = node
+
 class WorldIndex(BranchDictCache[int, set[int]]):
     'Index the visible worlds for each world on the branch.'
 
-    __slots__ = ('nodes',)
-
+    requires = {AccessNodesIndex}
+    shareable = True
     _valuetype = partial(defaultdict, set)
 
-    class Nodes(BranchCache[dict[WorldPair, Node]]):
-        _valuetype = dict
-
-        def add(self, node: AccessNode, branch: Branch):
-            self[branch][node.pair()] = node
+    __slots__ = ('nodes',)
 
     def __init__(self, rule, /):
         super().__init__(rule)
-        self.nodes = self.Nodes(rule)
+        self.nodes = AccessNodesIndex(rule)
 
     def listen_on(self):
         super().listen_on()
+        # nodes = self.rule.helpers[AccessNodesIndex]
         def after_node_add(node: Node, branch: Branch):
             if not isinstance(node, AccessNode):
                 return
@@ -336,8 +341,9 @@ class WorldIndex(BranchDictCache[int, set[int]]):
 class FilterNodeCache(BranchCache[set[Node]]):
     "Base class for caching nodes "
 
-    __slots__ = ('ignore_ticked', '_garbage')
     _valuetype = set
+
+    __slots__ = ('ignore_ticked', '_garbage')
 
     #: Copied from Rule.ignore_ticked - whether to discard nodes
     #: after they are ticked.
@@ -451,8 +457,8 @@ class FilterHelper(FilterNodeCache):
             branch: The branch
 
         Return:
-            bool: Whether the node meets the filter conditions and `ignore_ticked`
-            setting.
+            bool: Whether the node meets the filter conditions and
+              `ignore_ticked` setting.
         """
         if self.ignore_ticked and branch.is_ticked(node):
             return False
@@ -494,7 +500,7 @@ class FilterHelper(FilterNodeCache):
         super().configure_rule(rulecls, config, **kw)
         attr = 'NodeFilters'
         configs = {}
-        for relcls in abcs.mroiter(cls = rulecls, supcls = Rule, reverse = False):
+        for relcls in abcs.mroiter(cls=rulecls, supcls=Rule, reverse=False):
             v = getattr(relcls, attr, EMPTY_MAP)
             if isinstance(v, type):
                 v = v,
@@ -516,7 +522,7 @@ class FilterHelper(FilterNodeCache):
             return cls._build_config(rulecls)
 
     @staticmethod
-    def _build_config(rulecls,/):
+    def _build_config(rulecls, /):
         configs: Mapping = rulecls.NodeFilters
         types = tuple(fcls for fcls, flag in configs.items()
             if flag is not NotImplemented)
@@ -532,13 +538,13 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
     method are tracked.
     """
 
-    __slots__ = ('consts', 'filter')
-    _valuetype = dict
-
     class Consts(BranchCache[set[Constant]]):
         _valuetype = set
 
-    consts: NodeConsts.Consts # type: ignore
+    _valuetype = dict
+    __slots__ = ('consts', 'filter')
+
+    consts: NodeConsts.Consts
 
     def __init__(self, rule, /):
         super().__init__(rule)
@@ -574,6 +580,7 @@ class WorldConsts(BranchDictCache[int, set[Constant]]):
     """
     Track the constants appearing at each world.
     """
+    shareable = True
 
     def listen_on(self):
         super().listen_on()
@@ -589,16 +596,19 @@ class WorldConsts(BranchDictCache[int, set[Constant]]):
             self[branch][world].update(s.constants)
         self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
-class MaxConsts(dict[Branch, int], Rule.Helper):
+class MaxConsts(Rule.HelperDict[Branch, int]):
     """
     Project the maximum number of constants per world required for each branch
     by examining the branches after the trunk is built.
     """
 
-    __slots__ = ('rule', 'config', 'wconsts')
+    shareable = True
+    requires = {WorldConsts}
+
+    __slots__ = ('wconsts',)
 
     def __init__(self, rule, /):
-        Rule.Helper.__init__(self, rule)
+        super().__init__(rule)
         self.wconsts = WorldConsts(self.rule)
 
     def listen_on(self):
@@ -621,6 +631,8 @@ class MaxConsts(dict[Branch, int], Rule.Helper):
         """
         if world is None:
             world = 0
+        # wconsts = self.rule.helpers[WorldConsts]
+        # return len(wconsts[branch][world]) >= self.get(branch.origin, 1)
         return len(self.wconsts[branch][world]) >= self.get(branch.origin, 1)
 
     def is_exceeded(self, branch: Branch, world = 0, /):
@@ -637,6 +649,8 @@ class MaxConsts(dict[Branch, int], Rule.Helper):
         """
         if world is None:
             world = 0
+        # wconsts = self.rule.helpers[WorldConsts]
+        # return len(wconsts[branch][world]) > self.get(branch.origin, 1)
         return len(self.wconsts[branch][world]) > self.get(branch.origin, 1)
 
     def quit_flag(self, branch: Branch, /):
@@ -682,10 +696,12 @@ class MaxWorlds(BranchDictCache[Branch, int]):
     the branches after the trunk is built.
     """
 
-    __slots__ = ('rule', 'config', 'modals')
-
     class Config(NamedTuple):
         filter: Callable[[Operator], bool]
+
+    shareable = True
+
+    __slots__ = ('modals',)
 
     config: MaxWorlds.Config
 

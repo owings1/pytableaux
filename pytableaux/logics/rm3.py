@@ -21,7 +21,6 @@ from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import lp as LP
-from . import LogicType
 
 class Meta(LP.Meta):
     name = 'RM3'
@@ -30,16 +29,15 @@ class Meta(LP.Meta):
         'Three-valued logic (True, False, Both) with a primitive '
         'Conditional operator')
     category_order = 130
-    native_operators = FDE.Meta.native_operators + (
+    native_operators = tuple(sorted(FDE.Meta.native_operators + (
         Operator.Conditional,
-        Operator.Biconditional)
+        Operator.Biconditional)))
 
 class Model(LP.Model):
 
-    def truth_function(self, oper: Operator, a, b=None, /):
-        Value = self.Value
-        if oper == Operator.Conditional and Value[a] > Value[b]:
-            return Value.F
+    def truth_function(self, oper, a, b=None, /):
+        if oper == Operator.Conditional and self.values[a] > self.values[b]:
+            return self.values.F
         return super().truth_function(oper, a, b)
 
 class System(LP.System):
@@ -48,7 +46,7 @@ class System(LP.System):
         Operator.Conditional: ((1, 2), (1, 0)),
         Operator.Biconditional: ((1, 2), (1, 1))}
 
-class Rules(LogicType.Rules):
+class Rules(LP.Rules):
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -81,14 +79,13 @@ class Rules(LogicType.Rules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
             yield adds(
                 group(
-                    sdnode( lhs, True),
-                    sdnode( rhs, False)),
+                    sdnode( s.lhs, True),
+                    sdnode( s.rhs, False)),
                 group(
-                    sdnode(~lhs, False),
-                    sdnode(~rhs, True)))
+                    sdnode(~s.lhs, False),
+                    sdnode(~s.rhs, True)))
 
     class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -122,12 +119,12 @@ class Rules(LogicType.Rules):
         with the reversed operands of *n*, then tick *n*.
         """
 
+        convert = Operator.Conditional
+
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
-            Cond = Operator.Conditional
             yield adds(
-                group(sdnode(Cond(lhs, rhs), False)),
-                group(sdnode(Cond(rhs, lhs), False)))
+                group(sdnode(self.convert(s.lhs, s.rhs), False)),
+                group(sdnode(self.convert(s.rhs, s.lhs), False)))
 
     class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -138,19 +135,16 @@ class Rules(LogicType.Rules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
             yield adds(
                 group(
-                    sdnode(lhs, False),
-                    sdnode(rhs, False)),
+                    sdnode(s.lhs, False),
+                    sdnode(s.rhs, False)),
                 group(
-                    sdnode(~lhs, False),
-                    sdnode(~rhs, False)))
-
-    closure = LP.Rules.closure
+                    sdnode(~s.lhs, False),
+                    sdnode(~s.rhs, False)))
 
     groups = (
-        (
+        group(
             # non-branching rules
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
@@ -169,9 +163,8 @@ class Rules(LogicType.Rules):
             FDE.Rules.UniversalNegatedDesignated,
             FDE.Rules.UniversalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated,
-        ),
-        (
+            FDE.Rules.DoubleNegationUndesignated),
+        group(
             # 2 branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.ConjunctionUndesignated,
@@ -186,19 +179,14 @@ class Rules(LogicType.Rules):
             FDE.Rules.ConditionalNegatedUndesignated,
             FDE.Rules.BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
-            BiconditionalNegatedUndesignated,
-        ),
-        (
+            BiconditionalNegatedUndesignated),
+        group(
             # 3 branching rules
             ConditionalDesignated,
-            BiconditionalDesignated,
-        ),
-        (
+            BiconditionalDesignated),
+        group(
             FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated,
-        ),
-        (
+            FDE.Rules.ExistentialUndesignated),
+        group(
             FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated,
-        ),
-    )
+            FDE.Rules.UniversalUndesignated))

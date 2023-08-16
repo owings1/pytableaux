@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..models import ValueK3
 from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
@@ -36,11 +35,11 @@ class Meta(K3.Meta):
 
 class Model(K3.Model):
 
-    def truth_function(self, operator, a, b = None) -> ValueK3:
-        if operator == Operator.Conditional:
-            if a == self.Value.N and b == self.Value.N:
-                return self.Value.T
-        return super().truth_function(operator, a, b)
+    def truth_function(self, oper, a, b=None):
+        if oper == Operator.Conditional:
+            if a == self.values.N and b == self.values.N:
+                return self.values.T
+        return super().truth_function(oper, a, b)
 
 class System(K3.System):
 
@@ -100,10 +99,12 @@ class Rules(K3.Rules):
         and the negation of the consequent, respectively. Then tick *n*.
         """
 
+        convert = Operator.MaterialBiconditional
+
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode(Operator.MaterialBiconditional(lhs, rhs), True)),
+                group(sdnode(self.convert(lhs, rhs), True)),
                 group(
                     sdnode( lhs, False),
                     sdnode(~lhs, False),
@@ -118,11 +119,13 @@ class Rules(K3.Rules):
         with the reversed operands. Then tick *n*.
         """
 
+        convert = Operator.Conditional
+
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode(Operator.Conditional(lhs, rhs), False)),
-                group(sdnode(Operator.Conditional(rhs, lhs), False)))
+                group(sdnode(self.convert(lhs, rhs), False)),
+                group(sdnode(self.convert(rhs, lhs), False)))
 
     class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -133,10 +136,12 @@ class Rules(K3.Rules):
         and the negation of the consequent, respectively. Then tick *n*.
         """
 
+        convert = Operator.MaterialBiconditional
+
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode(~Operator.MaterialBiconditional(lhs, rhs), False)),
+                group(sdnode(~self.convert(lhs, rhs), False)),
                 group(
                     sdnode( lhs, False),
                     sdnode(~lhs, False),
@@ -163,8 +168,7 @@ class Rules(K3.Rules):
             FDE.Rules.UniversalNegatedDesignated,
             FDE.Rules.UniversalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated,
-        ),
+            FDE.Rules.DoubleNegationUndesignated),
         (
             # branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
@@ -182,14 +186,10 @@ class Rules(K3.Rules):
             FDE.Rules.ConditionalNegatedUndesignated,
             BiconditionalDesignated,
             BiconditionalNegatedUndesignated,
-            BiconditionalUndesignated,
-        ),
+            BiconditionalUndesignated),
         (
             FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated,
-        ),
+            FDE.Rules.ExistentialUndesignated),
         (
             FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated,
-        ),
-    )
+            FDE.Rules.UniversalUndesignated))

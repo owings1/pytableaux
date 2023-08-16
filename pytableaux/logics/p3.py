@@ -16,8 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Constant, Operator, Quantified
-from ..proof import Branch, Node, adds, sdnode
+from ..lang import Operator, Quantified
+from ..proof import adds, sdnode
 from ..tools import group, maxceil
 from . import fde as FDE
 from . import k3 as K3
@@ -31,6 +31,18 @@ class Meta(K3.Meta):
     category_order = 120
 
 class Model(K3.Model):
+
+    def truth_function(self, oper, a, b=None, /):
+        oper = Operator(oper)
+        if oper is Operator.Negation:
+            return self.back_cycle(a)
+        if oper is Operator.Conjunction:
+            return self.truth_function(
+                Operator.Negation,
+                self.truth_function(
+                    Operator.Disjunction,
+                    *(self.truth_function(Operator.Negation, x) for x in (a, b))))
+        return super().truth_function(oper, a, b)
 
     def value_of_universal(self, s: Quantified, /, **kw):
         """
@@ -46,24 +58,12 @@ class Model(K3.Model):
         return self.truth_function(
             Operator.Negation,
             maxceil(
-                self.Value.T,
+                self.values.T,
                 (self.truth_function(Operator.Negation, self.value_of(sub(c, v), **kw))
                     for c in self.constants)))
 
-    def truth_function(self, oper, a, b=None, /):
-        oper = Operator(oper)
-        if oper is Operator.Negation:
-            return self.back_cycle(a)
-        if oper is Operator.Conjunction:
-            return self.truth_function(
-                Operator.Negation,
-                self.truth_function(
-                    Operator.Disjunction,
-                    *(self.truth_function(Operator.Negation, x) for x in (a, b))))
-        return super().truth_function(oper, a, b)
-
     def back_cycle(self, value):
-        seq = self.Value._seq
+        seq = self.values._seq
         return seq[seq.index(value) - 1]
 
 class System(K3.System):
@@ -92,9 +92,8 @@ class Rules(K3.Rules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            si = s.lhs
             yield adds(
-                group(sdnode(~si, not d), sdnode(si, not d)))
+                group(sdnode(~s.lhs, not d), sdnode(s.lhs, not d)))
 
     class DoubleNegationUndesignated(FDE.OperatorNodeRule):
         """
@@ -105,10 +104,9 @@ class Rules(K3.Rules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            si = s.lhs
             yield adds(
-                group(sdnode(~si, not d)),
-                group(sdnode( si, not d)))
+                group(sdnode(~s.lhs, not d)),
+                group(sdnode( s.lhs, not d)))
 
     class ConjunctionDesignated(FDE.OperatorNodeRule):
         """
@@ -118,13 +116,12 @@ class Rules(K3.Rules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
             yield adds(
                 group(
-                    sdnode(~lhs, not d),
-                    sdnode( lhs, not d),
-                    sdnode(~rhs, not d),
-                    sdnode( rhs, not d)))
+                    sdnode(~s.lhs, not d),
+                    sdnode( s.lhs, not d),
+                    sdnode(~s.rhs, not d),
+                    sdnode( s.rhs, not d)))
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -137,10 +134,9 @@ class Rules(K3.Rules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
             yield adds(
-                group(sdnode(lhs, d), sdnode(~rhs, not d)),
-                group(sdnode(rhs, d), sdnode(~lhs, not d)))
+                group(sdnode(s.lhs, d), sdnode(~s.rhs, not d)),
+                group(sdnode(s.rhs, d), sdnode(~s.lhs, not d)))
 
     class ConjunctionUndesignated(FDE.OperatorNodeRule):
         """
@@ -153,12 +149,11 @@ class Rules(K3.Rules):
         """
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
             yield adds(
-                group(sdnode(~lhs, not d)),
-                group(sdnode( lhs, not d)),
-                group(sdnode( rhs, not d)),
-                group(sdnode(~rhs, not d)))
+                group(sdnode(~s.lhs, not d)),
+                group(sdnode( s.lhs, not d)),
+                group(sdnode( s.rhs, not d)),
+                group(sdnode(~s.rhs, not d)))
 
     class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -228,7 +223,7 @@ class Rules(K3.Rules):
         The node `n` is never ticked.
         """
 
-        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
+        def _get_constant_nodes(self, node, c, branch, /):
             yield sdnode(c >> self.sentence(node), self.designation)
 
     class ExistentialNegatedUndesignated(FDE.QuantifierFatRule):
@@ -241,7 +236,7 @@ class Rules(K3.Rules):
         The node `n` is never ticked.
         """
 
-        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
+        def _get_constant_nodes(self, node, c, branch, /):
             yield sdnode(~(c >> self.sentence(node)), not self.designation)
 
     class UniversalDesignated(FDE.QuantifierFatRule):
@@ -255,7 +250,7 @@ class Rules(K3.Rules):
         `b`. The node is never ticked.
         """
 
-        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
+        def _get_constant_nodes(self, node, c, branch, /):
             r = c >> self.sentence(node)
             d = self.designation
             yield sdnode(r, not d)
@@ -268,7 +263,7 @@ class Rules(K3.Rules):
         constant new to `b` for the variable. Then tick `n`.
         """
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             yield adds(
                 # Keep designation neutral for UniversalUndesignated
@@ -290,7 +285,7 @@ class Rules(K3.Rules):
         negatum of `n`. Then tick `n`.
         """
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             d = self.designation
             yield adds(
@@ -298,20 +293,16 @@ class Rules(K3.Rules):
                 group(sdnode(s, not d)))
 
     groups = (
-        (
+        group(
             # non-branching rules
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
             FDE.Rules.AssertionNegatedDesignated,
             FDE.Rules.AssertionNegatedUndesignated,
-
             ConjunctionDesignated,
-
             FDE.Rules.DisjunctionUndesignated,
             FDE.Rules.DisjunctionNegatedDesignated,
-
             DoubleNegationDesignated,
-            
             # reduction rules (thus, non-branching)
             MaterialConditionalDesignated,
             MaterialConditionalUndesignated,
@@ -328,35 +319,26 @@ class Rules(K3.Rules):
             BiconditionalDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
-            BiconditionalNegatedUndesignated,
-        ),
-        (
+            BiconditionalNegatedUndesignated),
+        group(
             # two-branching rules
             DoubleNegationUndesignated,
-
             ConjunctionNegatedDesignated,
-
             FDE.Rules.DisjunctionDesignated,
-            FDE.Rules.DisjunctionNegatedUndesignated,            
-        ),
-        (
+            FDE.Rules.DisjunctionNegatedUndesignated),
+        group(
             # three-branching rules
-            ConjunctionNegatedUndesignated,
-        ),
-        (
+            ConjunctionNegatedUndesignated),
+        group(
             # four-branching rules
-            ConjunctionUndesignated,
-        ),
-        (
+            ConjunctionUndesignated),
+        group(
             FDE.Rules.ExistentialDesignated,
             UniversalUndesignated,
             UniversalNegatedDesignated,
-            UniversalNegatedUndesignated,
-        ),
-        (
+            UniversalNegatedUndesignated),
+        group(
             UniversalDesignated,
             FDE.Rules.ExistentialUndesignated,
             ExistentialNegatedDesignated,
-            ExistentialNegatedUndesignated,
-        )
-    )
+            ExistentialNegatedUndesignated))

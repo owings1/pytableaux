@@ -32,8 +32,8 @@ class Model(K3.Model):
 
     def truth_function(self, oper: Operator, a, b=None, /):
         oper = Operator(oper)
-        if oper.arity == 2 and self.Value.N in (a, b):
-            return self.Value.N
+        if oper.arity == 2 and self.values.N in (a, b):
+            return self.values.N
         return super().truth_function(oper, a, b)
 
 class System(K3.System):
@@ -194,7 +194,7 @@ class Rules(K3.Rules):
         "Same as for the negated material biconditional undesignated."
 
     groups = (
-        (
+        group(
             # non-branching rules
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
@@ -224,27 +224,21 @@ class Rules(K3.Rules):
             BiconditionalDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
-            BiconditionalNegatedUndesignated,
-        ),
-        (
+            BiconditionalNegatedUndesignated),
+        group(
             # two-branching rules
-            FDE.Rules.ConjunctionUndesignated,
-        ),
-        (
+            FDE.Rules.ConjunctionUndesignated),
+        group(
             # three-branching rules
             DisjunctionDesignated,
             DisjunctionUndesignated,
             ConjunctionNegatedDesignated,
             ConjunctionNegatedUndesignated,
             # five-branching rules (formerly)
-            DisjunctionNegatedUndesignated,
-        ),
-        (
+            DisjunctionNegatedUndesignated),
+        group(
             FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated,
-        ),
-        (
+            FDE.Rules.ExistentialUndesignated),
+        group(
             FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated,
-        ),
-    )
+            FDE.Rules.UniversalUndesignated))
