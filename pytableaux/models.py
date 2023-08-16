@@ -115,7 +115,6 @@ class ValueCPL(Mval):
     T = 'True' , 1.0
 
 MvalId = Mval | str | float
-
 MvalT = TypeVar('MvalT', bound = Mval)
 MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 

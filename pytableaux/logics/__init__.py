@@ -47,8 +47,7 @@ __all__ = (
 NOARG = object()
         
 class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
-    """Logic module registry.
-    """
+    """Logic module registry."""
 
     packages: qset[str]
     "Packages containing logic modules to load from."

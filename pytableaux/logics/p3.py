@@ -25,7 +25,9 @@ from . import k3 as K3
 class Meta(K3.Meta):
     name = 'P3'
     title = 'Post 3-valued Logic'
-    description = 'Emil Post three-valued logic (T, F, and N) with mirror-image negation'
+    description = (
+        'Emil Post three-valued logic (T, F, and N) '
+        'with mirror-image negation')
     category_order = 120
 
 class Model(K3.Model):
