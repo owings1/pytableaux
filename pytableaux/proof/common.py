@@ -24,7 +24,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Mapping, Set
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Optional, Self
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Optional, Self
 
 from ..errors import Emsg, check
 from ..lang import Constant, Sentence
@@ -34,7 +34,7 @@ from ..tools.events import EventEmitter
 from . import BranchMeta, NodeMeta, WorldPair
 
 if TYPE_CHECKING:
-
+    from typing import overload
     from ..models import BaseModel
     from . import Rule, Tableau
 
@@ -151,6 +151,12 @@ class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
         if mapping.get(Node.Key.ellipsis):
             return EllipsisNode(mapping)
         return UnknownNode(mapping)
+
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, key: Literal['sentence']) -> Sentence: ...
+        @overload
+        def get(self, key: Literal['sentence']) -> Sentence|None: ...
 
 class Branch(SequenceSet[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
     'A tableau branch.'

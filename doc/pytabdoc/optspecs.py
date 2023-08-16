@@ -73,13 +73,9 @@ def string(arg: str|None, /) -> str:
 
 def strings(arg: str=NOARG, /, *, splitter=re_comma.split) -> list[str]:
     "Simple splitter, default comma. Spec or spec generator."
-    if callable(splitter):
-        spec = splitter
-    else:
-        spec = splitter.split
     if arg is NOARG:
-        return spec
-    return spec(arg)
+        return splitter
+    return splitter(arg)
 
 def preds(arg: str) -> Predicates:
     """Option spec for list of predicate specs.

@@ -16,24 +16,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Argument, Operated, Operator, Quantified, Sentence
-from ..proof import Branch, Node, Tableau, snode
+from ..lang import Operated, Quantified, Sentence
+from . import fde as FDE
 from . import k as K
 from . import LogicType
 
-class Meta(LogicType.Meta):
+class Meta(K.Meta):
     name = 'CPL'
-    modal = False
     title = 'Classical Predicate Logic'
+    modal = False
     category = 'Bivalent'
     description = 'Standard bivalent logic with predication, without quantification'
     category_order = 1
     tags = (
         'bivalent',
         'non-modal')
-    native_operators = (
-        Operator.Negation, Operator.Conjunction, Operator.Disjunction,
-        Operator.MaterialConditional, Operator.MaterialBiconditional)
+    native_operators = FDE.Meta.native_operators
 
 class Model(K.Model):
 
@@ -55,22 +53,16 @@ class Model(K.Model):
         return data
 
 class System(K.System):
-
-    @classmethod
-    def build_trunk(cls, tab: Tableau, arg: Argument, /):
-        b = tab.branch()
-        b.extend(map(snode, arg.premises))
-        b.append(snode(~arg.conclusion))
-
+    pass
 
 class Rules(LogicType.Rules):
 
-    closure_rules = (
+    closure = (
         K.Rules.ContradictionClosure,
         K.Rules.SelfIdentityClosure,
         K.Rules.NonExistenceClosure)
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             K.Rules.IdentityIndiscernability,

@@ -122,7 +122,7 @@ class Rules(K.Rules):
     #            return False
     #        return super(Rules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             K.Rules.IdentityIndiscernability,

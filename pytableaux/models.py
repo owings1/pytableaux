@@ -21,11 +21,12 @@ pytableaux.models
 """
 from __future__ import annotations
 
-from abc import abstractmethod as abstract
+from abc import abstractmethod
+from collections.abc import Set
 from dataclasses import dataclass
 from itertools import product, repeat
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar, Generic, Mapping, TypeVar
+from typing import Any, Generic, Mapping, TypeVar
 
 from .errors import check
 from .lang import (Argument, Atomic, Operated, Operator, Predicated,
@@ -120,10 +121,17 @@ MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 
 class BaseModel(Generic[MvalT_co], Abc):
     Meta = LogicType.Meta
-    Value: ClassVar[type[MvalT_co]]
-    unassigned_value: ClassVar[MvalT_co]
-    truth_functional_operators = frozenset(Meta.truth_functional_operators)
-    modal_operators = frozenset(Meta.modal_operators)
+    Value: type[MvalT_co]
+    values: type[MvalT_co]
+    "The values of the model"
+    designated_values: Set[MvalT_co]
+    "The set of designated values"
+    unassigned_value: MvalT_co
+    "The default 'unassigned' value"
+    truth_functional_operators: Set[Operator] = frozenset(Meta.truth_functional_operators)
+    "The truth-functional operators"
+    modal_operators: Set[Operator] = frozenset(Meta.modal_operators)
+    "The modal operators"
 
     @property
     def id(self) -> int:
@@ -208,75 +216,75 @@ class BaseModel(Generic[MvalT_co], Abc):
     def finish(self):
         pass
 
-    @abstract
+    @abstractmethod
     def truth_function(self, oper: Operator, a, b = None, /) -> MvalT_co:
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def read_branch(self, branch: Branch, /):
         self.finish()
 
-    @abstract
+    @abstractmethod
     def value_of_existential(self, s: Quantified, /, **kw) -> MvalT_co:
         check.inst(s, Quantified)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def value_of_universal(self, s: Quantified, /, **kw) -> MvalT_co:
         check.inst(s, Quantified)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def value_of_possibility(self, s: Operated, /, **kw) -> MvalT_co:
         check.inst(s, Operated)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def value_of_necessity(self, s: Operated, /, **kw) -> MvalT_co:
         check.inst(s, Operated)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def set_literal_value(self, s: Sentence, value: Any, /):
         check.inst(s, Sentence)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def set_opaque_value(self, s: Sentence, value: Any, /):
         check.inst(s, Sentence)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def set_atomic_value(self, s: Atomic, value: Any, /):
         check.inst(s, Atomic)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def set_predicated_value(self, s: Predicated, value: Any, /):
         check.inst(s, Predicated)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def value_of_opaque(self, s: Sentence, /) -> MvalT_co:
         check.inst(s, Sentence)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def value_of_atomic(self, s: Atomic, /) -> MvalT_co:
         check.inst(s, Atomic)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def value_of_predicated(self, s: Predicated, /) -> MvalT_co:
         check.inst(s, Predicated)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def is_countermodel_to(self, a: Argument, /) -> bool:
         check.inst(a, Argument)
         raise NotImplementedError
 
-    @abstract
+    @abstractmethod
     def get_data(self) -> Mapping[str, Any]:
         return {}
 
@@ -285,6 +293,10 @@ class BaseModel(Generic[MvalT_co], Abc):
         Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
         if Meta:
             cls.Meta = Meta
+            cls.Value = Meta.values
+            cls.values = Meta.values
+            cls.designated_values = Meta.designated_values
+            cls.unassigned_value = Meta.unassigned_value
             cls.modal_operators = frozenset(Meta.modal_operators)
             cls.truth_functional_operators = frozenset(Meta.truth_functional_operators)
 

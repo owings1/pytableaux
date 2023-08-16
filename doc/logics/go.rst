@@ -155,10 +155,10 @@ Rules
 Notes
 =====
 
-- GO has some similarities to L{K3}. Material Identity :s:`A > A` and the
-  Law of Excluded Middle :s:`A V ~A` fail.
+- GO has some similarities to L{K3}. :term:`Material Identity` :s:`A > A` and the
+  :term:`Law of Excluded Middle` :s:`A V ~A` fail.
 
-- Unlike L{K3}, there are logical truths, e.g. The Law of Non-Contradiction
+- Unlike L{K3}, there are logical truths, e.g. the :term:`Law of Non-Contradiction`
   :s:`~(A & ~A)`.
 
 - GO contains an additional conditional operator besides the material conditional,
@@ -170,10 +170,10 @@ Notes
   the non-classical V{N} value.
 
   This property of "classical containment" means that we can define
-  a conditional operator that satisfies Identity :s:`A $ A`. It also
+  a conditional operator that satisfies :term:`Identity` :s:`A $ A`. It also
   allows us to give a formal description of a subset of sentences
   that obey all principles of classical logic. For example, although
-  the Law of Excluded Middle fails for atomic sentences :s:`A V ~A`,
+  the :term:`Law of Excluded Middle` fails for atomic sentences :s:`A V ~A`,
   complex sentences -- those with at least one binary connective --
   do obey the law: !{conseq} :s:`(A V A) V ~(A V A)`.
 

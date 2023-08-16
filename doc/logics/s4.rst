@@ -44,6 +44,29 @@ L{S4} tableaux are constructed just like {@K system} tableaux.
 
 .. _s4-rules:
 
+Nodes
+-----
+
+.. include:: include/k/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/k/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau-rules::
+  :group: closure
+  :titles:
+  :legend:
+  :docs:
+
 Rules
 -----
 

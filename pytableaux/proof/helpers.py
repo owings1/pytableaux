@@ -41,6 +41,8 @@ if TYPE_CHECKING:
     from ..tools import TypeInstMap
     from .rules import ClosingRule
 
+_F = TypeVar('_F', bound=Callable)
+_RT = TypeVar('_RT', bound=Rule)
 _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')
 
@@ -396,17 +398,17 @@ class FilterNodeCache(BranchCache[set[Node]]):
                 raise Emsg.MissingAttribute('ignore_ticked')
 
     @classmethod
-    def node_targets(cls, source_fn, /):
+    def node_targets(cls, wrapped: Callable[[_RT, Node, Branch], Any], /):
         """
         Method decorator to only iterate through nodes matching the
         configured `FilterNodeCache` filters.
         """
-        @wraps(source_fn)
-        def wrapper(rule: Rule, branch, /):
+        @wraps(wrapped)
+        def wrapper(rule: _RT, branch: Branch, /):
             helper = rule[cls]
             helper.gc()
             for node in helper[branch]:
-                for target in source_fn(rule, node, branch):
+                for target in wrapped(rule, node, branch):
                     if isinstance(target, Target):
                         target.update(rule=rule, branch=branch, node=node)
                     else:

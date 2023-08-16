@@ -28,7 +28,7 @@ class Meta(K3.Meta):
     title = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 50
-    native_operators = FDE.Meta.native_operators + group(Operator.Assertion)
+    native_operators = tuple(sorted(FDE.Meta.native_operators + group(Operator.Assertion)))
 
 def gap(v):
     return min(v, 1 - v)
@@ -78,11 +78,7 @@ class Rules(K3W.Rules):
             # Keep designation fixed to False for inheritance below
             yield adds(group(sdnode(s.lhs, False)))
 
-    class AssertionUndesignated(AssertionNegatedDesignated):
-        """
-        From an unticked, undesignated assertion node *n* on a branch *b*, add
-        an undesignated node to *b* with the assertion of *n*, then tick *n*.
-        """
+    class AssertionUndesignated(AssertionNegatedDesignated): pass
 
     class AssertionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -120,19 +116,9 @@ class Rules(K3W.Rules):
             # Keep designation fixed for inheritance below.
             yield adds(group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
-    class ConditionalUndesignated(ConditionalNegatedDesignated):
-        """
-        From an unticked, undesignated conditional node *n* on a branch *b*,
-        add a designated node with the antecedent, and an undesigntated node
-        with the consequent to *b*. Then tick *n*.
-        """
+    class ConditionalUndesignated(ConditionalNegatedDesignated): pass
 
-    class ConditionalNegatedUndesignated(ConditionalDesignated):
-        """
-        From an unticked, undesignated, negated conditional node *n* on a branch *b*,
-        add an undesignated node to *b* with a negated material conditional, where the
-        operands are preceded by the Assertion operator, then tick *n*.
-        """
+    class ConditionalNegatedUndesignated(ConditionalDesignated): pass
 
     class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -182,7 +168,7 @@ class Rules(K3W.Rules):
         inverted. Then tick *n*.
         """
 
-    rule_groups = (
+    groups = (
         (
             FDE.Rules.AssertionDesignated,
             AssertionUndesignated,

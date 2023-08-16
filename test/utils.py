@@ -62,7 +62,7 @@ class BaseCase(TestCase):
         if getattr(subcls, 'logic', None):
             subcls.logic = registry(subcls.logic)
         if autorules:
-            for rulecls in subcls.logic.Rules.all_rules:
+            for rulecls in subcls.logic.Rules.all():
                 name = f'test_{rulecls.name}'
                 old = getattr(subcls, name, None)
                 def test(self: BaseCase):

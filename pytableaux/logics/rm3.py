@@ -147,9 +147,9 @@ class Rules(LogicType.Rules):
                     sdnode(~lhs, False),
                     sdnode(~rhs, False)))
 
-    closure_rules = LP.Rules.closure_rules
+    closure = LP.Rules.closure
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             FDE.Rules.AssertionDesignated,

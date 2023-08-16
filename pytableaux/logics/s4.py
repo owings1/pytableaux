@@ -85,7 +85,7 @@ class Rules(T.Rules):
             yield anode(0, 1)
             yield anode(1, 2)
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             K.Rules.IdentityIndiscernability,

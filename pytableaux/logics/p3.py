@@ -297,7 +297,7 @@ class Rules(K3.Rules):
                 group(sdnode(branch.new_constant() >> s, not d)),
                 group(sdnode(s, not d)))
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             FDE.Rules.AssertionDesignated,

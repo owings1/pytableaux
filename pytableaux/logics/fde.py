@@ -17,16 +17,16 @@
 from __future__ import annotations
 
 from types import MappingProxyType as MapProxy
-from typing import Any, Optional
+from typing import Any
 
 from ..errors import Emsg
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
-from ..models import BaseModel, ValueFDE
-from ..proof import (Branch, Node, Tableau, System, Target, adds,
-                     filters, rules, sdnode)
+from ..models import ValueFDE
+from ..proof import Branch, Node, Target, adds, filters, rules, sdnode
 from ..tools import closure, group, qsetf
 from . import LogicType
+
 
 class Meta(LogicType.Meta):
     name = 'FDE'
@@ -51,15 +51,8 @@ class Meta(LogicType.Meta):
         Operator.MaterialConditional,
         Operator.MaterialBiconditional)
 
-class Model(BaseModel[ValueFDE]):
+class Model(LogicType.Model[ValueFDE]):
     'An FDE Model.'
-
-    Value = Meta.values
-
-    designated_values = Meta.designated_values
-    "The set of designated values."
-
-    unassigned_value = Meta.unassigned_value
 
     extensions: dict[Predicate, set[tuple[Constant, ...]]]
     """A mapping from each predicate to its extension.
@@ -99,11 +92,11 @@ class Model(BaseModel[ValueFDE]):
         anti_extension = self.get_anti_extension(pred)
         if params in extension:
             if params in anti_extension:
-                return self.Value.B
-            return self.Value.T
+                return self.values.B
+            return self.values.T
         if params in anti_extension:
-            return self.Value.F
-        return self.Value.N
+            return self.values.F
+        return self.values.N
 
     def value_of_existential(self, s: Quantified, /, **kw):
         """
@@ -111,8 +104,8 @@ class Model(BaseModel[ValueFDE]):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
         """
-        maxval = max(self.Value)
-        value = min(self.Value)
+        maxval = max(self.values)
+        value = min(self.values)
         value_of = self.value_of
         for c in self.constants:
             v = value_of(c >> s, **kw)
@@ -128,8 +121,8 @@ class Model(BaseModel[ValueFDE]):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
         """
-        minval = min(self.Value)
-        value = max(self.Value)
+        minval = min(self.values)
+        value = max(self.values)
         for c in self.constants:
             v = self.value_of(c >> s, **kw)
             if v < value:
@@ -220,7 +213,7 @@ class Model(BaseModel[ValueFDE]):
                     ]
                     for predicate in sorted(self.predicates)]))
 
-    def read_branch(self, branch: Branch, /):
+    def read_branch(self, branch, /):
         for node in branch:
             s = node.get('sentence')
             if s is None:
@@ -236,40 +229,40 @@ class Model(BaseModel[ValueFDE]):
                         if branch.has(sdnode(s, True)):
                             # If the node is designated, and the negatum is
                             # also designated on b, the value is B
-                            value = self.Value.B
+                            value = self.values.B
                         else:
                             # If the node is designated, but the negatum is
                             # not also designated on b, the value is F
-                            value = self.Value.F
+                            value = self.values.F
                     else:
                         if branch.has(sdnode(s, False)):
                             # If the node is undesignated, and the negatum is
                             # also undesignated on b, the value is N
-                            value = self.Value.N
+                            value = self.values.N
                         else:
                             # If the node is undesignated, but the negatum is
                             # not also undesignated on b, the value is T
-                            value = self.Value.T
+                            value = self.values.T
                 else:
                     # If the sentence is unnegated, set the value of the sentence
                     if node['designated']:
                         if branch.has(sdnode(~s, True)):
                             # If the node is designated, and its negation is
                             # also designated on b, the value is B
-                            value = self.Value.B
+                            value = self.values.B
                         else:
                             # If the node is designated, but the negation is
                             # not also designated on b, the value is T
-                            value = self.Value.T
+                            value = self.values.T
                     else:
                         if branch.has(sdnode(~s, False)):
                             # If the node is undesignated, and its negation is
                             # also undesignated on b, the value is N
-                            value = self.Value.N
+                            value = self.values.N
                         else:
                             # If the node is undesginated, but the negation is
                             # not also undesignated on b, the value is F
-                            value = self.Value.F
+                            value = self.values.F
                 if is_opaque:
                     self.set_opaque_value(s, value)
                 else:
@@ -290,7 +283,7 @@ class Model(BaseModel[ValueFDE]):
 
     def set_literal_value(self, s: Sentence, value, /):
         try:
-            value = self.Value[value]
+            value = self.values[value]
         except KeyError:
             raise Emsg.UnknownForSentence(value, s)
         if self.is_sentence_opaque(s):
@@ -310,7 +303,7 @@ class Model(BaseModel[ValueFDE]):
 
     def set_opaque_value(self, s: Sentence, value, /):
         try:
-            value = self.Value[value]
+            value = self.values[value]
         except KeyError:
             raise Emsg.UnknownForSentence(value, s)
         if s in self.opaques and self.opaques[s] is not value:
@@ -323,7 +316,7 @@ class Model(BaseModel[ValueFDE]):
         
     def set_atomic_value(self, s: Atomic, value, /):
         try:
-            value = self.Value[value]
+            value = self.values[value]
         except KeyError:
             raise Emsg.UnknownForSentence(value, s)
         if s in self.atomics and self.atomics[s] is not value:
@@ -331,9 +324,8 @@ class Model(BaseModel[ValueFDE]):
         self.atomics[s] = value
 
     def set_predicated_value(self, s: Predicated, value, /):
-        Value = self.Value
         try:
-            value = Value[value]
+            value = self.values[value]
         except KeyError:
             raise Emsg.UnknownForSentence(value, s)
         for param in s:
@@ -341,20 +333,20 @@ class Model(BaseModel[ValueFDE]):
                 self.constants.add(param)
         extension = self.get_extension(s.predicate)
         anti_extension = self.get_anti_extension(s.predicate)
-        if value is Value.N:
+        if value is self.values.N:
             if s.params in extension:
                 raise Emsg.ConflictForExtension(value, s.params)
             if s.params in anti_extension:
                 raise Emsg.ConflictForAntiExtension(value, s.params)
-        elif value is Value.T:
+        elif value is self.values.T:
             if s.params in anti_extension:
                 raise Emsg.ConflictForAntiExtension(value, s.params)
             extension.add(s.params)
-        elif value is Value.F:
+        elif value is self.values.F:
             if s.params in extension:
                 raise Emsg.ConflictForExtension(value, s.params)
             anti_extension.add(s.params)
-        elif value is Value.B:
+        elif value is self.values.B:
             extension.add(s.params)
             anti_extension.add(s.params)
         self.predicates.add(s.predicate)
@@ -386,21 +378,20 @@ class Model(BaseModel[ValueFDE]):
         # Define as generically as possible for reuse.
 
         def assertion(self: Model, a, _, /):
-            return self.Value[a]
+            return self.values[a]
 
         def negation(self: Model, a, _, /):
-            Value = self.Value
-            if a == Value.F:
-                return Value.T
-            if a == Value.T:
-                return Value.F
-            return Value[a]
+            if a == self.values.F:
+                return self.values.T
+            if a == self.values.T:
+                return self.values.F
+            return self.values[a]
 
         def conjunction(self: Model, a, b, /):
-            return min(self.Value[a], self.Value[b])
+            return min(self.values[a], self.values[b])
 
         def disjunction(self: Model, a, b, /):
-            return max(self.Value[a], self.Value[b])
+            return max(self.values[a], self.values[b])
 
         def conditional(self: Model, a, b, /):
             return self.truth_function(Operator.MaterialConditional, a, b)
@@ -441,7 +432,7 @@ class Model(BaseModel[ValueFDE]):
 
         return func_mapper
 
-class System(System):
+class System(LogicType.System):
 
     # operator => negated => designated
     branchables = {
@@ -455,13 +446,13 @@ class System(System):
         Operator.Biconditional: ((1, 1), (1, 1))}
 
     @classmethod
-    def build_trunk(cls, tab: Tableau, arg: Argument, /):
+    def build_trunk(cls, tab, arg, /):
         b = tab.branch()
         b.extend(sdnode(s, True) for s in arg.premises)
         b.append(sdnode(arg.conclusion, False))
 
     @classmethod
-    def branching_complexity(cls, node: Node, /) -> int:
+    def branching_complexity(cls, node, /):
         lastneg = False
         result = 0
         for oper in node['sentence'].operators:
@@ -474,7 +465,7 @@ class System(System):
         return result
 
     @classmethod
-    def branching_complexity_hashable(cls, node: Node, /):
+    def branching_complexity_hashable(cls, node, /):
         return node['sentence'], node['designated']
 
 class DefaultNodeRule(rules.GetNodeTargetsRule):
@@ -498,7 +489,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     NodeFilters = filters.NodeDesignation,
     autoattrs = True
 
-    def _get_node_targets(self, node: Node, branch: Branch, /):
+    def _get_node_targets(self, node, branch, /):
         return self._get_sd_targets(self.sentence(node), node['designated'])
 
     def _get_sd_targets(self, s: Operated, d: bool, /):
@@ -542,14 +533,14 @@ class Rules(LogicType.Rules):
         and the same sentence appears on a node marked *undesignated*.
         """
 
-        def _branch_target_hook(self, node: Node, branch: Branch, /):
+        def _branch_target_hook(self, node, branch, /):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
                 return Target(
                     nodes = qsetf((node, nnode)),
                     branch = branch)
 
-        def node_will_close_branch(self, node: Node, branch: Branch, /):
+        def node_will_close_branch(self, node, branch, /):
             return bool(self._find_closing_node(node, branch))
 
         def example_nodes(self):
@@ -857,7 +848,7 @@ class Rules(LogicType.Rules):
         into *s* of a new constant not yet appearing on *b* for *v*, then tick *n*.
         """
 
-        def _get_node_targets(self, node: Node, branch: Branch,/):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             yield adds(
                 group(sdnode(branch.new_constant() >> s, self.designation)))
@@ -884,7 +875,7 @@ class Rules(LogicType.Rules):
         *n* is never ticked.
         """
 
-        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
+        def _get_constant_nodes(self, node, c, branch, /):
             yield sdnode(c >> self.sentence(node), self.designation)
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
@@ -929,9 +920,9 @@ class Rules(LogicType.Rules):
         """
         convert = Quantifier.Existential
 
-    closure_rules = group(DesignationClosure)
+    closure = group(DesignationClosure)
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             AssertionDesignated,
@@ -951,8 +942,7 @@ class Rules(LogicType.Rules):
             UniversalNegatedDesignated,
             UniversalNegatedUndesignated,
             DoubleNegationDesignated,
-            DoubleNegationUndesignated,
-        ),
+            DoubleNegationUndesignated),
         (
             # branching rules
             ConjunctionNegatedDesignated,
@@ -970,15 +960,11 @@ class Rules(LogicType.Rules):
             BiconditionalDesignated,
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
-            BiconditionalNegatedUndesignated,
-        ),
+            BiconditionalNegatedUndesignated),
         (
             ExistentialDesignated,
-            ExistentialUndesignated,
-        ),
+            ExistentialUndesignated),
         (
             UniversalDesignated,
-            UniversalUndesignated,
-        ),
-    )
+            UniversalUndesignated))
 

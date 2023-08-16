@@ -32,7 +32,7 @@ class Model(K3.Model):
 
     def truth_function(self, oper: Operator, a, b=None, /):
         oper = Operator(oper)
-        if oper.arity == 2 and (a == self.Value.N or b == self.Value.N):
+        if oper.arity == 2 and self.Value.N in (a, b):
             return self.Value.N
         return super().truth_function(oper, a, b)
 
@@ -193,7 +193,7 @@ class Rules(K3.Rules):
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         "Same as for the negated material biconditional undesignated."
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             FDE.Rules.AssertionDesignated,

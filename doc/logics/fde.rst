@@ -154,14 +154,14 @@ Notes
 
 Some notable features of L{FDE} include:
 
-* No logical truths. The means that the Law of Excluded Middle :s:`A V ~A`, and the
-  Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as :term:`Conditional Identity`
+* No logical truths. The means that the :term:`Law of Excluded Middle` :s:`A V ~A`, and the
+  :term:`Law of Non-Contradiction` :s:`~(A & ~A)` fail, as well as :term:`Conditional Identity`
   :s:`A $ A`.
 
 * Failure of :term:`Modus Ponens`, :term:`Modus Tollens`, :term:`Disjunctive Syllogism`,
   and other Classical validities.
 
-* DeMorgan laws are valid, as well as :term:`Conditional Contraction` (:s:`A $ (A $ B)`
+* :term:`DeMorgan laws` are valid, as well as :term:`Conditional Contraction` (:s:`A $ (A $ B)`
   !{conseq} :s:`A $ B`).
 
 References

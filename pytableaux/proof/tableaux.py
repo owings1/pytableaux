@@ -748,8 +748,8 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         self.rules.clear()
         self._logic = registry(value)
         Rules = self.logic.Rules
-        self.rules.groups.create('closure').extend(Rules.closure_rules)
-        for group in Rules.rule_groups:
+        self.rules.groups.create('closure').extend(Rules.closure)
+        for group in Rules.groups:
             self.rules.groups.create().extend(group)
         if self.argument is not None and self.opts['auto_build_trunk']:
             self.build_trunk()

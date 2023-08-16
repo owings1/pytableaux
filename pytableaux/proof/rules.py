@@ -107,7 +107,7 @@ class BaseClosureRule(ClosingRule):
         raise NotImplementedError
 
     @abstractmethod
-    def _branch_target_hook(self, node: Node, branch: Branch, /):
+    def _branch_target_hook(self, node: Node, branch: Branch, /) -> Target|None:
         'Method for ``BranchTarget`` helper.'
         raise NotImplementedError
 
@@ -170,7 +170,7 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
     Helpers = (QuitFlag, MaxConsts)
 
     @FilterHelper.node_targets
-    def _get_targets(self, node: Node, branch: Branch, /):
+    def _get_targets(self, node: Node, branch: Branch):
         if self[MaxConsts].is_exceeded(branch, node.get(Node.Key.world)):
             self[FilterHelper].release(node, branch)
             if not self[QuitFlag].get(branch):
@@ -183,7 +183,7 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
         yield from self._get_node_targets(node, branch)
 
     @abstractmethod
-    def _get_node_targets(self, node: Node, branch: Branch):
+    def _get_node_targets(self, node: Node, branch: Branch, /):
         raise NotImplementedError
 
     def score_candidate(self, target: Target):
@@ -210,7 +210,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
                     rule=self))
 
     @abstractmethod
-    def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /):
+    def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /) -> Iterable[Node]:
         raise NotImplementedError
 
     def score_candidate(self, target: Target) -> float:

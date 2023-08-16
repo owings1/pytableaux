@@ -83,7 +83,7 @@ class Rules(S4.Rules):
                 return
             yield adds(group(a := access.tonode()), **a)
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             K.Rules.IdentityIndiscernability,

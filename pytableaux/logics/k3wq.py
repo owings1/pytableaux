@@ -105,7 +105,7 @@ class Rules(K3W.Rules):
         """
         convert = Quantifier.Universal
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
@@ -126,7 +126,7 @@ class Rules(K3W.Rules):
         """
         convert = Quantifier.Universal
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
@@ -144,7 +144,7 @@ class Rules(K3W.Rules):
         tick `n`.
         """
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             yield adds(
                 group(sdnode(~(branch.new_constant() >> s), self.designation)))
@@ -158,7 +158,7 @@ class Rules(K3W.Rules):
         variable. Then tick `n`.
         """
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
@@ -177,7 +177,7 @@ class Rules(K3W.Rules):
         a designated node with the negatum of `n`. Then tick `n`.
         """
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
@@ -187,7 +187,7 @@ class Rules(K3W.Rules):
                 group(sdnode(r, d), sdnode(~r, d)),
                 group(sdnode(self.quantifier(v, si), not d)))
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
 

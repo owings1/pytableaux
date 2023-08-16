@@ -30,9 +30,9 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator')
     category_order = 80
-    native_operators = K3.Meta.native_operators + (
+    native_operators = tuple(sorted(K3.Meta.native_operators + (
         Operator.Conditional,
-        Operator.Biconditional)
+        Operator.Biconditional)))
 
 class Model(K3.Model):
 
@@ -143,7 +143,7 @@ class Rules(K3.Rules):
                     sdnode( rhs, False),
                     sdnode(~rhs, False)))
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             FDE.Rules.AssertionDesignated,

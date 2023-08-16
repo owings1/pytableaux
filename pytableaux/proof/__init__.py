@@ -26,14 +26,12 @@ import operator as opr
 from abc import abstractmethod
 from enum import Enum, Flag
 from types import MappingProxyType as MapProxy
-from typing import Any, NamedTuple, Sequence, TypeVar
+from typing import Any, NamedTuple, Sequence
 
-from ..lang import Argument, Operator, Predicate, Quantifier, Marking
+from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
 from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from ..tools.timing import Counter, StopWatch
-
-_TT = TypeVar('_TT', bound=type)
 
 __all__ = (
     'AccessNode',
@@ -216,6 +214,7 @@ class GetLogicMetaMixinMetaType(type):
         return LogicType.meta_for_module(self.__module__)
 
 class SystemMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
+    pass
 
     @property
     def modal(self) -> bool|None:
@@ -226,7 +225,7 @@ class System(metaclass=SystemMeta):
 
     @classmethod
     @abstractmethod
-    def build_trunk(cls, tableau: Tableau, argument: Argument, /) -> None:
+    def build_trunk(cls, tab: Tableau, arg: Argument, /) -> None:
         """Build the trunk for an argument on the tableau.
         
         Args:

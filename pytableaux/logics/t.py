@@ -74,7 +74,7 @@ class Rules(K.Rules):
         def example_nodes(self):
             yield swnode(Atomic.first(), 0)
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             K.Rules.IdentityIndiscernability,

@@ -52,24 +52,23 @@ class Rules(FDE.Rules):
         A branch closes when a sentence and its negation both appear as undesignated nodes.
         """
 
-        def _branch_target_hook(self, node: Node, branch: Branch, /):
+        def _branch_target_hook(self, node, branch, /):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
                 return Target(
                     nodes = qsetf((node, nnode)),
                     branch = branch)
 
-        def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
+        def node_will_close_branch(self, node, branch, /) -> bool:
             return bool(self._find_closing_node(node, branch))
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
             if node['designated'] is False:
-                return branch.find(sdnode(self.sentence(node).negative(), False))
+                return branch.find(sdnode(-self.sentence(node), False))
 
-        @staticmethod
-        def example_nodes():
+        def example_nodes(self):
             s = Atomic.first()
             yield sdnode(s, False)
             yield sdnode(~s, False)
 
-    closure_rules = group(GapClosure) + FDE.Rules.closure_rules
+    closure = group(GapClosure) + FDE.Rules.closure

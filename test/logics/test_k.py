@@ -10,7 +10,7 @@ class TestRules(Base, autorules=True): pass
 
 class TestRuleAttrs(Base):
     def test_rules_modal(self):
-        for rcls in self.logic.Rules.all_rules:
+        for rcls in self.logic.Rules.all():
             self.assertIs(rcls.modal, True)
 
 class TestClosureRules(Base):
@@ -488,5 +488,5 @@ class TestBranchables(Base):
         UniversalNegated=0)
 
     def test_known_branchable_values(self):
-        for rulecls in self.logic.Rules.all_rules:
+        for rulecls in self.logic.Rules.all():
             self.assertEqual(rulecls.branching, self.exp[rulecls.name])

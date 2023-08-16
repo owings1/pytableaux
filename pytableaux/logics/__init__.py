@@ -29,7 +29,7 @@ from importlib import import_module
 from types import FunctionType
 from types import MappingProxyType as MapProxy
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, TypeVar
 
 from ..errors import Emsg, check
 from ..lang import Operator
@@ -37,8 +37,10 @@ from ..tools import EMPTY_SET, abcs, closure, qset
 from ..tools.hybrids import QsetView
 
 if TYPE_CHECKING:
-    from ..models import Mval as Mval
+    from ..models import BaseModel, Mval
     from ..proof import Rule, ClosingRule
+
+_T = TypeVar('_T')
 
 __all__ = (
     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
@@ -436,18 +438,19 @@ class LogicType(metaclass=LogicTypeMeta):
 
     if TYPE_CHECKING:
         from ..proof import System
-        from ..models import BaseModel as Model
+        class Model(BaseModel[_T]): ...
+        # from ..models import BaseModel as Model
 
     class Rules:
-        Meta: type[LogicType.Meta]
-        closure_rules: tuple[type[ClosingRule], ...]
-        rule_groups: tuple[tuple[type[Rule], ...], ...]
-        all_rules: tuple[type[Rule], ...]
+        closure: tuple[type[ClosingRule], ...]
+        groups: tuple[tuple[type[Rule], ...], ...]
 
-        def __init_subclass__(cls):
-            super().__init_subclass__()
-            cls.all_rules = cls.closure_rules + tuple(
-                itertools.chain.from_iterable(cls.rule_groups))
+        @classmethod
+        def all(cls):
+            yield from cls.closure
+            for group in cls.groups:
+                yield from group
+
 
 @closure
 def instancecheck():

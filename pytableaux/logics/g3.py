@@ -100,7 +100,7 @@ class Rules(L3.Rules):
     class BiconditionalUndesignated(FDE.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedUndesignated(FDE.ConditionalConjunctsReducingRule): pass
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             FDE.Rules.AssertionDesignated,

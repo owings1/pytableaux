@@ -358,7 +358,7 @@ class Rules(B3E.Rules):
         then tick *n*.
         """
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             FDE.Rules.AssertionDesignated,

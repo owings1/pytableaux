@@ -17,19 +17,19 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Callable, Optional, cast
+from typing import cast
 
+from .. import proof
 from ..errors import DenotationError, ModelValueError, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, ValueCPL
 from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
-                     Tableau, System, Target, WorldPair, adds, anode,
-                     filters, rules, swnode)
+                     Target, WorldPair, adds, anode, filters, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
                              WorldIndex)
-from ..tools import EMPTY_SET, closure, group, substitute
+from ..tools import EMPTY_SET, group, substitute
 from . import LogicType
 from . import fde as FDE
 
@@ -106,14 +106,7 @@ class Model(BaseModel[ValueCPL]):
         # ensure there is a w0
         self.frames[0]
 
-    @staticmethod
-    @closure
-    def truth_function(Value = Value):
-        model = FDE.Model()
-        model.Value = Value
-        return cast(
-            Callable[[Operator, Any, Optional[Any]], ValueCPL],
-            model.truth_function)
+    truth_function = FDE.Model.truth_function
 
     def value_of_predicated(self, s: Predicated, **kw):
         """
@@ -508,7 +501,7 @@ class Frames(dict[int, Frame]):
             return self[0]
         return self.setdefault(check.inst(key, int), Frame(key))
 
-class System(System):
+class System(proof.System):
 
     neg_branchable = {
         Operator.Conjunction,
@@ -521,7 +514,7 @@ class System(System):
         Operator.Conditional}
 
     @classmethod
-    def build_trunk(cls, tab: Tableau, arg: Argument, /):
+    def build_trunk(cls, tab, arg, /):
         """
         To build the trunk for an argument, add a node with each premise, with
         world :m:`w0`, followed by a node with the negation of the conclusion
@@ -533,7 +526,7 @@ class System(System):
         b.append(swnode(~arg.conclusion, w))
 
     @classmethod
-    def branching_complexity(cls, node: Node) -> int:
+    def branching_complexity(cls, node, /) -> int:
         s = node.get('sentence')
         if s is None:
             return 0
@@ -571,7 +564,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     NodeFilters = filters.NodeType,
     autoattrs = True
 
-    def _get_node_targets(self, node: Node, branch: Branch, /):
+    def _get_node_targets(self, node, branch, /):
         return self._get_sw_targets(self.sentence(node), node.get('world'))
 
     def _get_sw_targets(self, s: Operated, w: int|None, /):
@@ -589,14 +582,14 @@ class Rules(LogicType.Rules):
         same world** on the branch.
         """
 
-        def _branch_target_hook(self, node: Node, branch: Branch, /):
+        def _branch_target_hook(self, node, branch, /):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
                 return Target(
                     nodes = (node, nnode),
                     branch = branch,)
 
-        def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
+        def node_will_close_branch(self, node, branch, /):
             return bool(self._find_closing_node(node, branch))
 
         def example_nodes(self):
@@ -618,13 +611,13 @@ class Rules(LogicType.Rules):
         negated = True
         predicate = Predicate.System.Identity
 
-        def _branch_target_hook(self, node: Node, branch: Branch, /):
+        def _branch_target_hook(self, node, branch, /):
             if self.node_will_close_branch(node, branch):
                 return Target(node=node, branch=branch)
             self[FilterHelper].release(node, branch)
             self[PredNodes].release(node, branch)
 
-        def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
+        def node_will_close_branch(self, node, branch, /) -> bool:
             return (
                 self[FilterHelper](node, branch) and
                 len(set(self.sentence(node))) == 1)
@@ -642,17 +635,17 @@ class Rules(LogicType.Rules):
         negated = True
         predicate = Predicate.System.Existence
 
-        def _branch_target_hook(self, node: Node, branch: Branch, /):
+        def _branch_target_hook(self, node, branch, /):
             if self.node_will_close_branch(node, branch):
                 return Target(node=node, branch=branch)
             self[FilterHelper].release(node, branch)
             self[PredNodes].release(node, branch)
 
-        def node_will_close_branch(self, node: Node, branch: Branch, /):
+        def node_will_close_branch(self, node, branch, /):
             return self[FilterHelper](node, branch)
 
         def example_nodes(self):
-            s = ~Predicated.first(Predicate.System.Existence)
+            s = ~Predicated.first(self.predicate)
             w = 0 if self.modal else None
             yield swnode(s, w)
 
@@ -826,7 +819,7 @@ class Rules(LogicType.Rules):
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             yield adds(
                 group(swnode(branch.new_constant() >> s, node.get('world'))))
@@ -852,7 +845,7 @@ class Rules(LogicType.Rules):
         *b*. The node *n* is never ticked.
         """
 
-        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
+        def _get_constant_nodes(self, node, c, branch, /):
             yield swnode(c >> self.sentence(node), node.get('world'))
 
     class UniversalNegated(ExistentialNegated):
@@ -873,7 +866,7 @@ class Rules(LogicType.Rules):
         NodeType = SentenceWorldNode
         Helpers = (QuitFlag, MaxWorlds, AplSentCount)
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch, /):
 
             # Check for max worlds reached
             if self[MaxWorlds].is_exceeded(branch):
@@ -890,7 +883,7 @@ class Rules(LogicType.Rules):
                 group(swnode(si, w2), anode(w1, w2)),
                 sentence = si)
 
-        def score_candidate(self, target: Target, /) -> float:
+        def score_candidate(self, target, /) -> float:
             """
             Overrides `AdzHelper` closure score
             """
@@ -905,7 +898,7 @@ class Rules(LogicType.Rules):
                 return 1.0
             return -1.0 * self[MaxWorlds].modals[s] * track_count
 
-        def group_score(self, target: Target, /) -> float:
+        def group_score(self, target, /) -> float:
             if target['candidate_score'] > 0:
                 return 1.0
             s = self.sentence(target.node)
@@ -934,7 +927,7 @@ class Rules(LogicType.Rules):
         NodeType = SentenceWorldNode
         Helpers = (QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex)
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch, /):
 
             # Check for max worlds reached
             if self[MaxWorlds].is_exceeded(branch):
@@ -963,7 +956,7 @@ class Rules(LogicType.Rules):
                         world = w2,
                         nodes = (node, anode))
 
-        def score_candidate(self, target: Target, /) -> float:
+        def score_candidate(self, target, /) -> float:
 
             if target.get('flag'):
                 return 1.0
@@ -1014,7 +1007,7 @@ class Rules(LogicType.Rules):
         ticking   = False
         predicate = Predicate.System.Identity
 
-        def _get_node_targets(self, node: Node, branch: Branch, /) -> list[Target]:
+        def _get_node_targets(self, node, branch, /):
             pa, pb = self.sentence(node)
             if pa == pb:
                 # Substituting a param for itself would be silly.
@@ -1054,12 +1047,12 @@ class Rules(LogicType.Rules):
             s2 = self.predicate((s1[0], s1[0].next()))
             yield swnode(s2, w)
 
-    closure_rules = (
+    closure = (
         ContradictionClosure,
         SelfIdentityClosure,
         NonExistenceClosure)
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             IdentityIndiscernability,
@@ -1073,8 +1066,7 @@ class Rules(LogicType.Rules):
             PossibilityNegated,
             NecessityNegated,
             ExistentialNegated,
-            UniversalNegated,
-        ),
+            UniversalNegated),
         (
             # branching rules
             ConjunctionNegated,
@@ -1084,15 +1076,11 @@ class Rules(LogicType.Rules):
             MaterialBiconditionalNegated,
             Conditional,
             Biconditional,
-            BiconditionalNegated,
-        ),
+            BiconditionalNegated),
         (
             # modal operator rules
             Necessity,
-            Possibility,
-        ),
+            Possibility),
         (
             Existential,
-            Universal,
-        ),
-    )
+            Universal))

@@ -70,9 +70,8 @@ def is_transparent_rule(obj: Any) -> bool:
 
 def rules_sorted(logic: LogicType, rules = None, /) -> dict:
     logic = registry(logic)
-    RulesCls = logic.Rules
     if rules is None:
-        rules = list(RulesCls.all_rules)
+        rules = list(logic.Rules.all())
     results = dict(
         member_order = rules_sorted_member_order(logic, rules),
         legend_groups = (groups := rules_grouped_legend_order(rules)),
@@ -216,15 +215,18 @@ def _is_nocode(obj: Any) -> bool:
         return False
     return True
 
-def _rule_is_grouped(rule: type[Rule], logic) -> bool:
+def _rule_is_grouped(rulecls: type[Rule], logic) -> bool:
     'Whether the rule class is grouped in the Rules of the given logic.'
-    if not is_rule_class(rule):
+    if not is_rule_class(rulecls):
         return False
     try:
         logic = registry.locate(logic)
     except:
         return False
-    return rule in logic.Rules.all_rules
+    for other in logic.Rules.all():
+        if rulecls == other:
+            return True
+    return False
 
 def _rule_is_self_grouped(rule: type[Rule]) -> bool:
     'Whether the Rule class is grouped in the Rules of its own logic.'

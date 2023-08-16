@@ -53,24 +53,21 @@ class Rules(FDE.Rules):
         designated nodes on the branch.
         """
     
-        def _branch_target_hook(self, node: Node, branch: Branch, /):
+        def _branch_target_hook(self, node, branch, /):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
-               return Target(
-                   nodes = (node, nnode),
-                   branch = branch)
+               return Target(nodes=(node, nnode), branch=branch)
 
-        def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
+        def node_will_close_branch(self, node, branch, /) -> bool:
             return bool(self._find_closing_node(node, branch))
 
         def _find_closing_node(self, node: Node, branch: Branch, /):
             if node[Node.Key.designated]:
                 return branch.find(sdnode(self.sentence(node).negative(), True))
 
-        @staticmethod
-        def example_nodes():
+        def example_nodes(self):
             a = Atomic.first()
             yield sdnode(a, True)
             yield sdnode(~a, True)
 
-    closure_rules = (GlutClosure,) + FDE.Rules.closure_rules
+    closure = (GlutClosure,) + FDE.Rules.closure

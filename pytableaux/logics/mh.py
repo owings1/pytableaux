@@ -224,9 +224,9 @@ class Rules(LogicType.Rules):
     class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated):
         "This rule reduces to a negated conjunction of conditionals."
 
-    closure_rules = K3.Rules.closure_rules
+    closure = K3.Rules.closure
 
-    rule_groups = (
+    groups = (
         # Non-branching rules.
         (
             FDE.Rules.AssertionDesignated,

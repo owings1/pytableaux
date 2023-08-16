@@ -151,9 +151,9 @@ class Rules(LogicType.Rules):
     class BiconditionalUndesignated(BiconditionalDesignated): pass
     class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated): pass
 
-    closure_rules = LP.Rules.closure_rules
+    closure = LP.Rules.closure
 
-    rule_groups = (
+    groups = (
         # Non-branching rules.
         (
             FDE.Rules.AssertionDesignated,

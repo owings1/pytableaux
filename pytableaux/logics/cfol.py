@@ -42,7 +42,7 @@ class System(CPL.System):
 
 class Rules(CPL.Rules):
 
-    rule_groups = (
+    groups = (
         (
             # non-branching rules
             K.Rules.IdentityIndiscernability,
@@ -54,8 +54,7 @@ class Rules(CPL.Rules):
             K.Rules.MaterialConditionalNegated,
             K.Rules.ConditionalNegated,
             K.Rules.ExistentialNegated,
-            K.Rules.UniversalNegated,
-        ),
+            K.Rules.UniversalNegated),
         (
             # branching rules
             K.Rules.ConjunctionNegated,
@@ -68,9 +67,6 @@ class Rules(CPL.Rules):
             K.Rules.BiconditionalNegated,
         #),
         #(
-
             K.Rules.Existential,
-            K.Rules.Universal,
-        ),
-    )
+            K.Rules.Universal))
 
