@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import Generator
 
+from ..lang import Marking
 from ..proof import AccessNode, Branch, Target, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
@@ -64,6 +65,7 @@ class Rules(T.Rules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         ticking = False
+        marklegend = [(Marking.tableau, ('access', 'transitive'))]
 
         def _get_node_targets(self, node: AccessNode, branch: Branch, /) -> Generator[dict, None, None]:
             if self[MaxWorlds].is_reached(branch):

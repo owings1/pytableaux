@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from ..lang import Marking
 from ..proof import AccessNode, Branch, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
@@ -68,6 +69,8 @@ class Rules(S4.Rules):
         """
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
+        ticking = False
+        marklegend = [(Marking.tableau, ('access', 'symmetric'))]
         _defaults = dict(is_rank_optim = False)
 
         def _get_node_targets(self, node: AccessNode, branch: Branch,/):
@@ -75,11 +78,10 @@ class Rules(S4.Rules):
                 self[FilterHelper].release(node, branch)
                 return
             access = node.pair().reversed()
-            if not self[WorldIndex].has(branch, access):
-                yield adds(group(a := access.tonode()), **a)
-
-        def example_nodes(self):
-            yield anode(0, 1)
+            if self[WorldIndex].has(branch, access):
+                self[FilterHelper].release(node, branch)
+                return
+            yield adds(group(a := access.tonode()), **a)
 
     rule_groups = (
         (

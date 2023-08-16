@@ -51,6 +51,29 @@ Tableaux
 
 L{S5} tableaux are constructed just like {@K system} tableaux.
 
+Nodes
+-----
+
+.. include:: include/k/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/k/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau-rules::
+  :group: closure
+  :titles:
+  :legend:
+  :docs:
+
 .. _s5-rules:
 
 Rules
@@ -59,17 +82,15 @@ Rules
 L{S5} contains all the {@K rules}, the {@T} Reflexive rule, the
 {@S4} Transitive rule, plus an additional Symmetric rule.
 
-.. tableau::
-  :rule: Reflexive
-  :doc:
 
-.. tableau::
-  :rule: Transitive
-  :doc:
+.. tableau-rules::
+  :group: ungrouped
+  :docflags:
+  :title: Access Rules
+  :include: Reflexive, Transitive, Symmetric
 
-.. tableau::
-  :rule: Symmetric
-  :doc:
+
+.. include:: include/k/rule_groups.rst
 
 Notes
 =====

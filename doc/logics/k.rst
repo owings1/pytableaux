@@ -139,32 +139,7 @@ Rules
 
 Additional rules are given for the quantifiers.
 
-.. tableau-rules::
-  :docflags:
-  :group: operator
-  :exclude: non_native modal
-
-.. tableau-rules::
-  :docflags:
-  :title: Modal Operator Rules
-  :group: operator
-  :include: modal
-  :exclude: non_native
-
-.. tableau-rules::
-  :docflags:
-  :group: predicate
-
-.. tableau-rules::
-  :docflags:
-  :group: quantifier
-
-.. tableau-rules::
-  :docflags:
-  :title: Compatibility Rules
-  :group: operator
-  :include: non_native
-
+.. include:: include/k/rule_groups.rst
 
 Notes
 =====

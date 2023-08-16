@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections import deque
 
-from ..lang import Atomic
+from ..lang import Atomic, Marking
 from ..proof import Branch, Target, adds, anode, swnode
 from ..proof.helpers import MaxWorlds, UnserialWorlds
 from ..proof.rules import BaseSimpleRule
@@ -71,6 +71,7 @@ class Rules(K.Rules):
         Helpers = (MaxWorlds, UnserialWorlds)
         ignore_ticked = False
         ticking = False
+        marklegend = [(Marking.tableau, ('access', 'serial'))]
 
         def _get_targets(self, branch: Branch,/) -> deque[Target]|None:
             unserials = self[UnserialWorlds][branch]

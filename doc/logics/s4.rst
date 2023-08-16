@@ -50,13 +50,13 @@ Rules
 L{S4} contains all the {@K rules}, the {@T} Reflexive rule, plus an
 additional Transitive rule.
 
-.. tableau::
-  :rule: Reflexive
-  :doc:
+.. tableau-rules::
+  :group: ungrouped
+  :docflags:
+  :title: Access Rules
+  :include: Reflexive, Transitive
 
-.. tableau::
-  :rule: Transitive
-  :doc:
+.. include:: include/k/rule_groups.rst
 
 Notes
 =====

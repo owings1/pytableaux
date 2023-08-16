@@ -16,8 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Atomic
-from ..proof import Branch, Node, WorldPair, adds, swnode
+from ..lang import Atomic, Marking
+from ..proof import WorldPair, adds, swnode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
@@ -56,18 +56,20 @@ class Rules(K.Rules):
 
         ignore_ticked = False
         ticking = False
+        marklegend = [(Marking.tableau, ('access', 'reflexive'))]
 
         _defaults = dict(is_rank_optim = False)
 
-        def _get_node_targets(self, node: Node, branch: Branch,/):
+        def _get_node_targets(self, node, branch, /):
             if self[MaxWorlds].is_exceeded(branch):
                 self[FilterHelper].release(node, branch)
                 return
             for w in node.worlds():
                 access = WorldPair(w, w)
-                if not self[WorldIndex].has(branch, access):
-                    yield adds(group(access.tonode()), world = w)
-                    return
+                if self[WorldIndex].has(branch, access):
+                    self[FilterHelper].release(node, branch)
+                    continue
+                yield adds(group(access.tonode()), world = w)
 
         def example_nodes(self):
             yield swnode(Atomic.first(), 0)

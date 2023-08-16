@@ -400,11 +400,16 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             if lw.canwrite(value):
                 text = lw(value)
             else:
+                if name == Marking.tableau:
+                    args = name, value
+                else:
+                    args = Marking.tableau, (name, value)
                 try:
-                    text = renderset.string(Marking.tableau, (name, value))
+                    text = renderset.string(*args)
                 except KeyError:
                     raise self.error(
-                        f'Unwriteable legend item: {(name, value)} for {rule}')
+                        f'Unwriteable legend item: {(name, value)}'
+                        f'for {rule}. Tried renderset.string with args {args}')
             yield nodes.inline(text, text, classes=['legend-item', name])
 
     def getnodes_trunk_prolog(self):

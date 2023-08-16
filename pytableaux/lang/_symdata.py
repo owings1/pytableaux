@@ -207,18 +207,30 @@ def rendersets():
             ('designation', False):  '[-]',
             ('flag', 'closure') : '(x)',
             ('flag', 'quit') : '(q)',
+            ('access', 'symmetric') : 'R(sym)',
+            ('access', 'transitive') : 'R(+)',
+            ('access', 'reflexive'): 'R(<=)',
+            ('access', 'serial'): 'R(ser)',
             'access': 'R'},
         html = {
             ('designation', True) : '&oplus;',  # '\2295'
             ('designation', False): '&ominus;', # '\2296'
             ('flag', 'closure') : '&otimes;', # '\2297'
             ('flag', 'quit'): '&#9872;', # '⚐', '\U+2690'
+            ('access', 'symmetric'): 'R&#9007;', # '⌯', '\U+232F'
+            ('access', 'transitive'): 'R+',
+            ('access', 'reflexive'): 'R&le;',
+            ('access', 'serial'): 'Rser',
             'access': 'R'},
         latex = {
             ('designation', True) : '\\varoplus{}',
             ('designation', False) : '\\varominus{}',
             ('flag', 'closure') : '\\varotimes{}',
             ('flag', 'quit') : '\\bowtie{}',
+            ('access', 'symmetric') : '\\mathcal{R}' + subfunc['latex']('sym'),
+            ('access', 'transitive') : '\\mathcal{R}' + subfunc['latex']('+'),
+            ('access', 'reflexive') : '\\mathcal{R}' + subfunc['latex']('\\leq{}'),
+            ('access', 'serial') : '\\mathcal{R}' + subfunc['latex']('ser'),
             'access': '\\mathcal{R}'})
 
     for key in tabsym:

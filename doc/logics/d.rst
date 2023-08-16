@@ -47,9 +47,13 @@ L{D} contains all the {@K rules} plus an additional Serial rule.
 The Serial rule applies to a an open branch *b* when there is a world *w*
 that appears on *b*, but there is no world *w'* such that *w* accesses *w'*.
 
-.. tableau::
-  :rule: Serial
-  :doc:
+.. tableau-rules::
+  :group: ungrouped
+  :docflags:
+  :title: Access Rules
+  :include: Serial
+
+.. include:: include/k/rule_groups.rst
 
 Notes
 =====

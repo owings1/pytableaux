@@ -45,9 +45,13 @@ L{T} contains all the {@K rules} plus an additional Reflexive rule.
 The Reflexive rule applies to an open branch *b* when there is a node *n*
 on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
 
-.. tableau::
-  :rule: Reflexive
-  :doc:
+.. tableau-rules::
+  :group: ungrouped
+  :docflags:
+  :title: Access Rules
+  :include: Reflexive
+
+.. include:: include/k/rule_groups.rst
 
 Notes
 =====
