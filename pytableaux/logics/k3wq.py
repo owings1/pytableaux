@@ -91,11 +91,10 @@ class Model(K3W.Model):
             ].name
         ]
 
-class TableauxSystem(K3W.TableauxSystem):
+class System(K3W.System):
     pass
 
-@TableauxSystem.initialize
-class TabRules(K3W.TabRules):
+class Rules(K3W.Rules):
 
     class ExistentialDesignated(FDE.QuantifierSkinnyRule):
         """
@@ -192,45 +191,45 @@ class TabRules(K3W.TabRules):
         (
             # non-branching rules
 
-            FDE.TabRules.AssertionDesignated,
-            FDE.TabRules.AssertionUndesignated,
-            FDE.TabRules.AssertionNegatedDesignated,
-            FDE.TabRules.AssertionNegatedUndesignated,
-            FDE.TabRules.ConjunctionDesignated, 
-            FDE.TabRules.DisjunctionNegatedDesignated,
-            FDE.TabRules.ExistentialNegatedDesignated,
-            FDE.TabRules.DoubleNegationDesignated,
-            FDE.TabRules.DoubleNegationUndesignated,
+            FDE.Rules.AssertionDesignated,
+            FDE.Rules.AssertionUndesignated,
+            FDE.Rules.AssertionNegatedDesignated,
+            FDE.Rules.AssertionNegatedUndesignated,
+            FDE.Rules.ConjunctionDesignated, 
+            FDE.Rules.DisjunctionNegatedDesignated,
+            FDE.Rules.ExistentialNegatedDesignated,
+            FDE.Rules.DoubleNegationDesignated,
+            FDE.Rules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)
-            K3W.TabRules.MaterialConditionalDesignated,
-            K3W.TabRules.MaterialConditionalUndesignated,
-            K3W.TabRules.MaterialConditionalNegatedDesignated,
-            K3W.TabRules.MaterialConditionalNegatedUndesignated,
-            K3W.TabRules.ConditionalDesignated,
-            K3W.TabRules.ConditionalUndesignated,
-            K3W.TabRules.ConditionalNegatedDesignated,
-            K3W.TabRules.ConditionalNegatedUndesignated,
-            K3W.TabRules.MaterialBiconditionalDesignated,
-            K3W.TabRules.MaterialBiconditionalUndesignated,
-            K3W.TabRules.MaterialBiconditionalNegatedDesignated,
-            K3W.TabRules.MaterialBiconditionalNegatedUndesignated,
-            K3W.TabRules.BiconditionalDesignated,
-            K3W.TabRules.BiconditionalUndesignated,
-            K3W.TabRules.BiconditionalNegatedDesignated,
-            K3W.TabRules.BiconditionalNegatedUndesignated,
+            K3W.Rules.MaterialConditionalDesignated,
+            K3W.Rules.MaterialConditionalUndesignated,
+            K3W.Rules.MaterialConditionalNegatedDesignated,
+            K3W.Rules.MaterialConditionalNegatedUndesignated,
+            K3W.Rules.ConditionalDesignated,
+            K3W.Rules.ConditionalUndesignated,
+            K3W.Rules.ConditionalNegatedDesignated,
+            K3W.Rules.ConditionalNegatedUndesignated,
+            K3W.Rules.MaterialBiconditionalDesignated,
+            K3W.Rules.MaterialBiconditionalUndesignated,
+            K3W.Rules.MaterialBiconditionalNegatedDesignated,
+            K3W.Rules.MaterialBiconditionalNegatedUndesignated,
+            K3W.Rules.BiconditionalDesignated,
+            K3W.Rules.BiconditionalUndesignated,
+            K3W.Rules.BiconditionalNegatedDesignated,
+            K3W.Rules.BiconditionalNegatedUndesignated,
         ),
         (
             # two-branching rules
-            FDE.TabRules.ConjunctionUndesignated,
+            FDE.Rules.ConjunctionUndesignated,
         ),
         (
             # three-branching rules
-            K3W.TabRules.DisjunctionDesignated,
-            K3W.TabRules.DisjunctionUndesignated,
-            K3W.TabRules.ConjunctionNegatedDesignated,
-            K3W.TabRules.ConjunctionNegatedUndesignated,
+            K3W.Rules.DisjunctionDesignated,
+            K3W.Rules.DisjunctionUndesignated,
+            K3W.Rules.ConjunctionNegatedDesignated,
+            K3W.Rules.ConjunctionNegatedUndesignated,
             # five-branching rules (formerly)
-            K3W.TabRules.DisjunctionNegatedUndesignated,
+            K3W.Rules.DisjunctionNegatedUndesignated,
         ),
         (
             ExistentialDesignated,
@@ -240,7 +239,7 @@ class TabRules(K3W.TabRules):
             UniversalNegatedUndesignated,
         ),
         (
-            FDE.TabRules.UniversalDesignated,
-            FDE.TabRules.UniversalUndesignated,
+            FDE.Rules.UniversalDesignated,
+            FDE.Rules.UniversalUndesignated,
         ),
     )

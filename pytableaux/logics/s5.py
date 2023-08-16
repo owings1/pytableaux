@@ -53,11 +53,10 @@ class Model(S4.Model):
             for w1, w2 in to_add:
                 self.R[w1].add(w2)
 
-class TableauxSystem(K.TableauxSystem):
+class System(K.System):
     pass
 
-@TableauxSystem.initialize
-class TabRules(S4.TabRules):
+class Rules(S4.Rules):
     
     class Symmetric(K.DefaultNodeRule):
         """
@@ -85,18 +84,18 @@ class TabRules(S4.TabRules):
     rule_groups = (
         (
             # non-branching rules
-            K.TabRules.IdentityIndiscernability,
-            K.TabRules.Assertion,
-            K.TabRules.AssertionNegated,
-            K.TabRules.Conjunction, 
-            K.TabRules.DisjunctionNegated, 
-            K.TabRules.MaterialConditionalNegated,
-            K.TabRules.ConditionalNegated,
-            K.TabRules.DoubleNegation,
-            K.TabRules.PossibilityNegated,
-            K.TabRules.NecessityNegated,
-            K.TabRules.ExistentialNegated,
-            K.TabRules.UniversalNegated,
+            K.Rules.IdentityIndiscernability,
+            K.Rules.Assertion,
+            K.Rules.AssertionNegated,
+            K.Rules.Conjunction, 
+            K.Rules.DisjunctionNegated, 
+            K.Rules.MaterialConditionalNegated,
+            K.Rules.ConditionalNegated,
+            K.Rules.DoubleNegation,
+            K.Rules.PossibilityNegated,
+            K.Rules.NecessityNegated,
+            K.Rules.ExistentialNegated,
+            K.Rules.UniversalNegated,
         ),
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
@@ -104,30 +103,30 @@ class TabRules(S4.TabRules):
         # fail to close. It is so far an open question whether this
         # is a good idea.
         (
-            S4.TabRules.Transitive,
+            S4.Rules.Transitive,
         ),
         (
             # modal operator rules
-            K.TabRules.Necessity,
-            K.TabRules.Possibility,
+            K.Rules.Necessity,
+            K.Rules.Possibility,
         ),
         (
-            T.TabRules.Reflexive,
+            T.Rules.Reflexive,
         ),
         (
             # branching rules
-            K.TabRules.ConjunctionNegated,
-            K.TabRules.Disjunction, 
-            K.TabRules.MaterialConditional, 
-            K.TabRules.MaterialBiconditional,
-            K.TabRules.MaterialBiconditionalNegated,
-            K.TabRules.Conditional,
-            K.TabRules.Biconditional,
-            K.TabRules.BiconditionalNegated,
+            K.Rules.ConjunctionNegated,
+            K.Rules.Disjunction, 
+            K.Rules.MaterialConditional, 
+            K.Rules.MaterialBiconditional,
+            K.Rules.MaterialBiconditionalNegated,
+            K.Rules.Conditional,
+            K.Rules.Biconditional,
+            K.Rules.BiconditionalNegated,
         ),
         (
-            K.TabRules.Existential,
-            K.TabRules.Universal,
+            K.Rules.Existential,
+            K.Rules.Universal,
         ),
         (
             Symmetric,

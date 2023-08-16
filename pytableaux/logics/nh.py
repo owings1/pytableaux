@@ -56,7 +56,7 @@ class Model(LP.Model):
             return Value.T
         return super().truth_function(oper, a, b)
 
-class TableauxSystem(LP.TableauxSystem):
+class System(LP.System):
     branchables = {
         Operator.Negation: (None, (0, 0)),
         Operator.Assertion: ((0, 0), (0, 0)),
@@ -70,8 +70,7 @@ class TableauxSystem(LP.TableauxSystem):
         # for now, reduce to conjunction
         Operator.Biconditional: ((0, 0), (0, 0))}
 
-@TableauxSystem.initialize
-class TabRules(LogicType.TabRules):
+class Rules(LogicType.Rules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -152,18 +151,18 @@ class TabRules(LogicType.TabRules):
     class BiconditionalUndesignated(BiconditionalDesignated): pass
     class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated): pass
 
-    closure_rules = LP.TabRules.closure_rules
+    closure_rules = LP.Rules.closure_rules
 
     rule_groups = (
         # Non-branching rules.
         (
-            FDE.TabRules.AssertionDesignated,
-            FDE.TabRules.AssertionUndesignated,
-            FDE.TabRules.AssertionNegatedDesignated,
-            FDE.TabRules.AssertionNegatedUndesignated,
-            FDE.TabRules.ConjunctionDesignated,
-            FDE.TabRules.DisjunctionUndesignated,
-            FDE.TabRules.DisjunctionNegatedDesignated,
+            FDE.Rules.AssertionDesignated,
+            FDE.Rules.AssertionUndesignated,
+            FDE.Rules.AssertionNegatedDesignated,
+            FDE.Rules.AssertionNegatedUndesignated,
+            FDE.Rules.ConjunctionDesignated,
+            FDE.Rules.DisjunctionUndesignated,
+            FDE.Rules.DisjunctionNegatedDesignated,
             MaterialConditionalDesignated,
             MaterialConditionalNegatedDesignated,
             MaterialConditionalUndesignated,
@@ -172,23 +171,23 @@ class TabRules(LogicType.TabRules):
             MaterialBiconditionalNegatedDesignated,
             MaterialBiconditionalUndesignated,
             MaterialBiconditionalNegatedUndesignated,
-            MH.TabRules.ConditionalUndesignated,
-            MH.TabRules.ConditionalNegatedDesignated,
+            MH.Rules.ConditionalUndesignated,
+            MH.Rules.ConditionalNegatedDesignated,
             BiconditionalDesignated,
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
-            FDE.TabRules.DoubleNegationDesignated,
-            FDE.TabRules.DoubleNegationUndesignated,
+            FDE.Rules.DoubleNegationDesignated,
+            FDE.Rules.DoubleNegationUndesignated,
         ),
         # 1-branching rules.
         (
-            FDE.TabRules.ConjunctionUndesignated,
+            FDE.Rules.ConjunctionUndesignated,
             ConjunctionNegatedUndesignated,
-            FDE.TabRules.DisjunctionDesignated,
-            FDE.TabRules.DisjunctionNegatedUndesignated,
-            MH.TabRules.ConditionalDesignated,
-            MH.TabRules.ConditionalNegatedUndesignated,
+            FDE.Rules.DisjunctionDesignated,
+            FDE.Rules.DisjunctionNegatedUndesignated,
+            MH.Rules.ConditionalDesignated,
+            MH.Rules.ConditionalNegatedUndesignated,
         ),
         # 3-branching rules.
         (

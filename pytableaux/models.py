@@ -30,7 +30,7 @@ from typing import Any, ClassVar, Generic, Mapping, TypeVar
 from .errors import check
 from .lang import (Argument, Atomic, Operated, Operator, Predicated,
                    Quantified, Quantifier, Sentence)
-from .logics import LogicType, _metamap
+from .logics import LogicType
 from .proof import Branch
 from .tools import closure
 from .tools.abcs import Abc, Ebc
@@ -121,12 +121,8 @@ MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 
 class BaseModel(Generic[MvalT_co], Abc):
     Meta = LogicType.Meta
-
-    # Value: ClassVar[type[Mval]]
     Value: ClassVar[type[MvalT_co]]
-
     unassigned_value: ClassVar[MvalT_co]
-
     truth_functional_operators = frozenset(Meta.truth_functional_operators)
     modal_operators = frozenset(Meta.modal_operators)
 
@@ -287,7 +283,7 @@ class BaseModel(Generic[MvalT_co], Abc):
 
     def __init_subclass__(cls):
         super().__init_subclass__()
-        Meta = cls.__dict__.get('Meta', _metamap.get(cls.__module__))
+        Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
         if Meta:
             cls.Meta = Meta
             cls.modal_operators = frozenset(Meta.modal_operators)

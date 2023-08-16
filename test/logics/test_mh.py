@@ -3,7 +3,7 @@ from ..utils import BaseCase
 class Base(BaseCase):
     logic = 'MH'
 
-class TestTabRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base):
 
@@ -107,5 +107,5 @@ class TestBranchables(Base):
 
 
     def test_known_branchable_values(self):
-        for rulecls in self.logic.TabRules.all_rules:
+        for rulecls in self.logic.Rules.all_rules:
             self.assertEqual(rulecls.branching, self.exp[rulecls.name])

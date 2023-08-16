@@ -29,7 +29,7 @@ class TestRegistry(Base):
 
     def test_locate(self):
         logic = registry('cpl')
-        self.assertIs(registry.locate(logic.TableauxSystem), logic)
+        self.assertIs(registry.locate(logic.System), logic)
 
     def test_locate_default(self):
         self.assertIs(registry.locate(type(self), None), None)

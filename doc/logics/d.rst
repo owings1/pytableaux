@@ -65,5 +65,5 @@ References
 
 .. cssclass:: hidden
 
-.. autoclass:: TabRules()
+.. autoclass:: Rules()
     :members:

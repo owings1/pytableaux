@@ -6,7 +6,7 @@ from pytableaux.errors import *
 class Base(BaseCase):
     logic = 'K3W'
 
-class TestTabRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestClosure(Base):
 

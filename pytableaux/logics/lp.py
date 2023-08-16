@@ -42,11 +42,10 @@ class Model(FDE.Model, BaseModel[ValueLP]):
     designated_values = Meta.designated_values
     unassigned_value = Meta.unassigned_value
 
-class TableauxSystem(FDE.TableauxSystem):
+class System(FDE.System):
     pass
 
-@TableauxSystem.initialize
-class TabRules(FDE.TabRules):
+class Rules(FDE.Rules):
 
     class GapClosure(BaseClosureRule):
         """
@@ -73,4 +72,4 @@ class TabRules(FDE.TabRules):
             yield sdnode(s, False)
             yield sdnode(~s, False)
 
-    closure_rules = group(GapClosure) + FDE.TabRules.closure_rules
+    closure_rules = group(GapClosure) + FDE.Rules.closure_rules

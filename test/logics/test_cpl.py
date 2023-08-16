@@ -9,7 +9,7 @@ Fa = Predicated.first()
 class Base(BaseCase):
     logic = 'CPL'
 
-class TestTabRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestIdentityRules(Base):
 

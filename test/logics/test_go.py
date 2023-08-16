@@ -5,7 +5,7 @@ from pytableaux.proof import *
 class Base(BaseCase):
     logic = 'GO'
 
-class TestTabRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestGO(Base):
 
@@ -162,4 +162,4 @@ class TestGO(Base):
         branch = proof.branch()
         branch.append({'sentence': self.p('Kab'), 'designated': False})
         node = branch[0]
-        self.assertEqual(self.logic.TableauxSystem.branching_complexity(node), 0)
+        self.assertEqual(self.logic.System.branching_complexity(node), 0)

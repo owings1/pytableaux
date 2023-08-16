@@ -54,7 +54,7 @@ class Model(K.Model):
         del data['world']
         return data
 
-class TableauxSystem(K.TableauxSystem):
+class System(K.System):
 
     @classmethod
     def build_trunk(cls, tab: Tableau, arg: Argument, /):
@@ -63,32 +63,31 @@ class TableauxSystem(K.TableauxSystem):
         b.append(snode(~arg.conclusion))
 
 
-@TableauxSystem.initialize
-class TabRules(LogicType.TabRules):
+class Rules(LogicType.Rules):
 
     closure_rules = (
-        K.TabRules.ContradictionClosure,
-        K.TabRules.SelfIdentityClosure,
-        K.TabRules.NonExistenceClosure)
+        K.Rules.ContradictionClosure,
+        K.Rules.SelfIdentityClosure,
+        K.Rules.NonExistenceClosure)
 
     rule_groups = (
         (
             # non-branching rules
-            K.TabRules.IdentityIndiscernability,
-            K.TabRules.Assertion,
-            K.TabRules.AssertionNegated,
-            K.TabRules.Conjunction,
-            K.TabRules.DisjunctionNegated,
-            K.TabRules.MaterialConditionalNegated,
-            K.TabRules.ConditionalNegated,
-            K.TabRules.DoubleNegation),
+            K.Rules.IdentityIndiscernability,
+            K.Rules.Assertion,
+            K.Rules.AssertionNegated,
+            K.Rules.Conjunction,
+            K.Rules.DisjunctionNegated,
+            K.Rules.MaterialConditionalNegated,
+            K.Rules.ConditionalNegated,
+            K.Rules.DoubleNegation),
         (
             # branching rules
-            K.TabRules.ConjunctionNegated,
-            K.TabRules.Disjunction,
-            K.TabRules.MaterialConditional,
-            K.TabRules.MaterialBiconditional,
-            K.TabRules.MaterialBiconditionalNegated,
-            K.TabRules.Conditional,
-            K.TabRules.Biconditional,
-            K.TabRules.BiconditionalNegated))
+            K.Rules.ConjunctionNegated,
+            K.Rules.Disjunction,
+            K.Rules.MaterialConditional,
+            K.Rules.MaterialBiconditional,
+            K.Rules.MaterialBiconditionalNegated,
+            K.Rules.Conditional,
+            K.Rules.Biconditional,
+            K.Rules.BiconditionalNegated))

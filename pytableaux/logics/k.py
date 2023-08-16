@@ -24,7 +24,7 @@ from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, ValueCPL
 from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
-                     Tableau, TableauxSystem, Target, WorldPair, adds, anode,
+                     Tableau, System, Target, WorldPair, adds, anode,
                      filters, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
@@ -508,7 +508,7 @@ class Frames(dict[int, Frame]):
             return self[0]
         return self.setdefault(check.inst(key, int), Frame(key))
 
-class TableauxSystem(TableauxSystem):
+class System(System):
 
     neg_branchable = {
         Operator.Conjunction,
@@ -581,8 +581,7 @@ class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule):
     'Convenience mixin class for most common rules.'
     NodeType = SentenceNode
 
-@TableauxSystem.initialize
-class TabRules(LogicType.TabRules):
+class Rules(LogicType.Rules):
 
     class ContradictionClosure(rules.BaseClosureRule):
         """

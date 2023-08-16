@@ -43,11 +43,10 @@ class Model(FDE.Model, BaseModel[ValueK3]):
     "The (singleton) set of designated values."
     unassigned_value = Meta.unassigned_value
 
-class TableauxSystem(FDE.TableauxSystem):
+class System(FDE.System):
     pass
 
-@TableauxSystem.initialize
-class TabRules(FDE.TabRules):
+class Rules(FDE.Rules):
 
     class GlutClosure(BaseClosureRule):
         """A branch closes when a sentence and its negation both appear as
@@ -74,4 +73,4 @@ class TabRules(FDE.TabRules):
             yield sdnode(a, True)
             yield sdnode(~a, True)
 
-    closure_rules = (GlutClosure,) + FDE.TabRules.closure_rules
+    closure_rules = (GlutClosure,) + FDE.Rules.closure_rules

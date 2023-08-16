@@ -3,7 +3,7 @@ from ..utils import BaseCase
 class Base(BaseCase):
     logic = 'S4'
 
-class TestTabRules(Base, autorules=True, bare=True): pass
+class TestRules(Base, autorules=True, bare=True): pass
 
 class TestS4(Base):
 

@@ -47,11 +47,10 @@ class Model(K.Model):
             self.R.add(w2, w2)
         super().finish()
 
-class TableauxSystem(K.TableauxSystem):
+class System(K.System):
     pass
 
-@TableauxSystem.initialize
-class TabRules(K.TabRules):
+class Rules(K.Rules):
 
     class Serial(BaseSimpleRule):
         """
@@ -85,8 +84,7 @@ class TabRules(K.TabRules):
                     world = w,
                     branch = branch))
 
-        @staticmethod
-        def example_nodes():
+        def example_nodes(self):
             yield swnode(Atomic.first(), 0)
 
         def _should_apply(self, branch: Branch,/):
@@ -108,7 +106,7 @@ class TabRules(K.TabRules):
     #     alternate rule. So far I have not been able to think of a way to break it. I
     #     am leaving it here just in case
     #
-    #class IdentityIndiscernability(K.TabRules.IdentityIndiscernability):
+    #class IdentityIndiscernability(K.Rules.IdentityIndiscernability):
     #    """
     #    The rule for identity indiscernability is the same as for :ref:`K <K>`, with the exception that
     #    the rule does not apply if the Serial rule was the last rule to apply to the branch.
@@ -119,39 +117,39 @@ class TabRules(K.TabRules):
     #    
     #
     #    def get_targets_for_node(self, node, branch):
-    #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TabRules.Serial):
+    #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], Rules.Serial):
     #            return False
-    #        return super(TabRules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
+    #        return super(Rules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
 
     rule_groups = (
         (
             # non-branching rules
-            K.TabRules.IdentityIndiscernability,
-            K.TabRules.Conjunction, 
-            K.TabRules.DisjunctionNegated, 
-            K.TabRules.MaterialConditionalNegated,
-            K.TabRules.ConditionalNegated,
-            K.TabRules.DoubleNegation,
-            K.TabRules.PossibilityNegated,
-            K.TabRules.NecessityNegated,
-            K.TabRules.ExistentialNegated,
-            K.TabRules.UniversalNegated,
+            K.Rules.IdentityIndiscernability,
+            K.Rules.Conjunction, 
+            K.Rules.DisjunctionNegated, 
+            K.Rules.MaterialConditionalNegated,
+            K.Rules.ConditionalNegated,
+            K.Rules.DoubleNegation,
+            K.Rules.PossibilityNegated,
+            K.Rules.NecessityNegated,
+            K.Rules.ExistentialNegated,
+            K.Rules.UniversalNegated,
         ),
         (
             # modal rules
-            K.TabRules.Necessity,
-            K.TabRules.Possibility,
+            K.Rules.Necessity,
+            K.Rules.Possibility,
         ),
         (
             # branching rules
-            K.TabRules.ConjunctionNegated,
-            K.TabRules.Disjunction, 
-            K.TabRules.MaterialConditional, 
-            K.TabRules.MaterialBiconditional,
-            K.TabRules.MaterialBiconditionalNegated,
-            K.TabRules.Conditional,
-            K.TabRules.Biconditional,
-            K.TabRules.BiconditionalNegated,
+            K.Rules.ConjunctionNegated,
+            K.Rules.Disjunction, 
+            K.Rules.MaterialConditional, 
+            K.Rules.MaterialBiconditional,
+            K.Rules.MaterialBiconditionalNegated,
+            K.Rules.Conditional,
+            K.Rules.Biconditional,
+            K.Rules.BiconditionalNegated,
         ),
         #[
         #    # See comment on rule above -- using K rule now
@@ -160,8 +158,8 @@ class TabRules(K.TabRules):
         #    
         #],
         (
-            K.TabRules.Existential,
-            K.TabRules.Universal,
+            K.Rules.Existential,
+            K.Rules.Universal,
         ),
         (
             # special ordering of serial rule

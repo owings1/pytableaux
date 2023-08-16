@@ -36,7 +36,7 @@ class Model(K3.Model):
             return self.Value.N
         return super().truth_function(oper, a, b)
 
-class TableauxSystem(K3.TableauxSystem):
+class System(K3.System):
 
     branchables = {
         Operator.Negation: (None, (0, 0)),
@@ -52,8 +52,7 @@ class TableauxSystem(K3.TableauxSystem):
         # reduction
         Operator.Biconditional: ((0, 0), (0, 0))}
 
-@TableauxSystem.initialize
-class TabRules(K3.TabRules):
+class Rules(K3.Rules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -197,18 +196,18 @@ class TabRules(K3.TabRules):
     rule_groups = (
         (
             # non-branching rules
-            FDE.TabRules.AssertionDesignated,
-            FDE.TabRules.AssertionUndesignated,
-            FDE.TabRules.AssertionNegatedDesignated,
-            FDE.TabRules.AssertionNegatedUndesignated,
-            FDE.TabRules.ConjunctionDesignated, 
-            FDE.TabRules.DisjunctionNegatedDesignated,
-            FDE.TabRules.ExistentialNegatedDesignated,
-            FDE.TabRules.ExistentialNegatedUndesignated,
-            FDE.TabRules.UniversalNegatedDesignated,
-            FDE.TabRules.UniversalNegatedUndesignated,
-            FDE.TabRules.DoubleNegationDesignated,
-            FDE.TabRules.DoubleNegationUndesignated,
+            FDE.Rules.AssertionDesignated,
+            FDE.Rules.AssertionUndesignated,
+            FDE.Rules.AssertionNegatedDesignated,
+            FDE.Rules.AssertionNegatedUndesignated,
+            FDE.Rules.ConjunctionDesignated, 
+            FDE.Rules.DisjunctionNegatedDesignated,
+            FDE.Rules.ExistentialNegatedDesignated,
+            FDE.Rules.ExistentialNegatedUndesignated,
+            FDE.Rules.UniversalNegatedDesignated,
+            FDE.Rules.UniversalNegatedUndesignated,
+            FDE.Rules.DoubleNegationDesignated,
+            FDE.Rules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)
             MaterialConditionalDesignated,
             MaterialConditionalUndesignated,
@@ -229,7 +228,7 @@ class TabRules(K3.TabRules):
         ),
         (
             # two-branching rules
-            FDE.TabRules.ConjunctionUndesignated,
+            FDE.Rules.ConjunctionUndesignated,
         ),
         (
             # three-branching rules
@@ -241,11 +240,11 @@ class TabRules(K3.TabRules):
             DisjunctionNegatedUndesignated,
         ),
         (
-            FDE.TabRules.ExistentialDesignated,
-            FDE.TabRules.ExistentialUndesignated,
+            FDE.Rules.ExistentialDesignated,
+            FDE.Rules.ExistentialUndesignated,
         ),
         (
-            FDE.TabRules.UniversalDesignated,
-            FDE.TabRules.UniversalUndesignated,
+            FDE.Rules.UniversalDesignated,
+            FDE.Rules.UniversalUndesignated,
         ),
     )

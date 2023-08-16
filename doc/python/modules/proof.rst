@@ -62,7 +62,7 @@ Classes
 
     .. automethod:: branching_complexity
 
-.. autoclass:: TableauxSystem
+.. autoclass:: System
     :members:
 
 

@@ -33,19 +33,20 @@ from typing import (TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator,
 from ..errors import Emsg, ProofTimeoutError, check
 from ..lang.collect import Argument
 from ..lang.lex import Sentence
-from ..logics import LogicType, registry
+from ..logics import registry
 from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults, qset,
                      qsetf, wraps)
 from ..tools.events import EventEmitter
 from ..tools.hybrids import SequenceSet
 from ..tools.linked import linqset
 from ..tools.timing import Counter, StopWatch
-from . import RuleMeta, TableauMeta, TableauxSystem
+from . import RuleMeta, TableauMeta
 from .common import Branch, Node, Target
 
 if TYPE_CHECKING:
     from typing import overload
 
+    from ..logics import LogicType
     from ..models import BaseModel
     from ..tools import TypeInstMap
 
@@ -71,25 +72,24 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         is_rank_optim = True,
         nolock = False))
 
-    legend: ClassVar[tuple]
+    legend: tuple
     "The rule class legend."
 
     Helpers = {}
     "Helper classes mapped to their settings."
 
-    timer_names: ClassVar[Sequence[str]] = qsetf(('search', 'apply'))
+    timer_names: Sequence[str] = qsetf(('search', 'apply'))
     "StopWatch names to create in ``timers`` mapping."
 
-    name: ClassVar[str]
+    name: str
     "The rule class name."
 
-    ticking: ClassVar[bool] = False
+    ticking: bool = False
     "Whether this is a ticking rule."
 
+    autoattrs: bool|None = None
 
-    autoattrs: ClassVar[bool|None] = None
-
-    branching: ClassVar[int] = 0
+    branching: int = 0
     "The number of additional branches created."
 
     tableau: Tableau
@@ -745,9 +745,12 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     def logic(self, value):
         if self.flag.STARTED in self.flag:
             raise Emsg.IllegalState("Tableau already started")
-        self._logic = registry(value)
         self.rules.clear()
-        self.logic.TableauxSystem.add_rules(self.rules)
+        self._logic = registry(value)
+        Rules = self.logic.Rules
+        self.rules.groups.create('closure').extend(Rules.closure_rules)
+        for group in Rules.rule_groups:
+            self.rules.groups.create().extend(group)
         if self.argument is not None and self.opts['auto_build_trunk']:
             self.build_trunk()
 
@@ -926,7 +929,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
 
     def build_trunk(self) -> Self:
         """Build the trunk of the tableau. Delegates to the ``build_trunk()``
-        method of ``TableauxSystem``. This is called automatically when the
+        method of ``System``. This is called automatically when the
         tableau has non-empty ``argument`` and ``logic`` properties and the
         auto_build_trunk option is True (default).
 
@@ -945,13 +948,13 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             raise Emsg.IllegalState("Tableau already started")
         with self.timers.trunk:
             self.emit(Tableau.Events.BEFORE_TRUNK_BUILD, self)
-            self.logic.TableauxSystem.build_trunk(self, self.argument)
+            self.logic.System.build_trunk(self, self.argument)
             self.flag |= self.flag.TRUNK_BUILT | self.flag.STARTED
             self.emit(Tableau.Events.AFTER_TRUNK_BUILD, self)
         return self
 
     def branching_complexity(self, node: Node, /):
-        """Caching method for the logic's ``TableauxSystem.branching_complexity()``
+        """Caching method for the logic's ``System.branching_complexity()``
         method. If the tableau has no logic, then ``0`` is returned.
 
         Args:
@@ -961,10 +964,10 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             int: The branching complexity.
         """
         # TODO: Consider potential optimization using hash equivalence for nodes,
-        #       to avoid redundant calculations. Perhaps the TableauxSystem should
+        #       to avoid redundant calculations. Perhaps the System should
         #       provide a special branch-complexity node hashing function.
         try:
-            system = self.logic.TableauxSystem
+            system = self.logic.System
         except AttributeError:
             return 0
         key = system.branching_complexity_hashable(node)

@@ -91,7 +91,7 @@ class Model(K3.Model):
             )
         ]
 
-class TableauxSystem(K3.TableauxSystem):
+class System(K3.System):
     """
     GO's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
@@ -105,11 +105,9 @@ class TableauxSystem(K3.TableauxSystem):
         Operator.MaterialConditional: ((0, 1), (0, 0)),
         Operator.MaterialBiconditional: ((0, 1), (0, 1)),
         Operator.Conditional: ((0, 1), (0, 1)),
-        Operator.Biconditional: ((0, 0), (0, 1)),
-    }
+        Operator.Biconditional: ((0, 0), (0, 1))}
 
-@TableauxSystem.initialize
-class TabRules(B3E.TabRules):
+class Rules(B3E.Rules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -363,11 +361,11 @@ class TabRules(B3E.TabRules):
     rule_groups = (
         (
             # non-branching rules
-            FDE.TabRules.AssertionDesignated,
-            B3E.TabRules.AssertionUndesignated,
-            B3E.TabRules.AssertionNegatedDesignated,
-            B3E.TabRules.AssertionNegatedUndesignated,
-            FDE.TabRules.ConjunctionDesignated,
+            FDE.Rules.AssertionDesignated,
+            B3E.Rules.AssertionUndesignated,
+            B3E.Rules.AssertionNegatedDesignated,
+            B3E.Rules.AssertionNegatedUndesignated,
+            FDE.Rules.ConjunctionDesignated,
             ConjunctionUndesignated,
             ConjunctionNegatedUndesignated,
             DisjunctionNegatedDesignated,
@@ -383,22 +381,22 @@ class TabRules(B3E.TabRules):
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalDesignated,
-            FDE.TabRules.ExistentialDesignated,
+            FDE.Rules.ExistentialDesignated,
             ExistentialNegatedDesignated,
             ExistentialUndesignated,
             ExistentialNegatedUndesignated,
-            FDE.TabRules.UniversalDesignated,
+            FDE.Rules.UniversalDesignated,
             UniversalUndesignated,
             UniversalNegatedUndesignated,
-            FDE.TabRules.DoubleNegationDesignated,
-            FDE.TabRules.DoubleNegationUndesignated,
+            FDE.Rules.DoubleNegationDesignated,
+            FDE.Rules.DoubleNegationUndesignated,
         ),
         (
             # branching rules
-            FDE.TabRules.DisjunctionDesignated,
+            FDE.Rules.DisjunctionDesignated,
             ConjunctionNegatedDesignated,
-            FDE.TabRules.MaterialConditionalDesignated,
-            FDE.TabRules.MaterialBiconditionalDesignated,
+            FDE.Rules.MaterialConditionalDesignated,
+            FDE.Rules.MaterialBiconditionalDesignated,
             MaterialBiconditionalNegatedDesignated,
             ConditionalDesignated,
             ConditionalNegatedDesignated,

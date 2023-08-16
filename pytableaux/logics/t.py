@@ -36,11 +36,10 @@ class Model(K.Model):
             self.R[w].add(w)
         super().finish()
 
-class TableauxSystem(K.TableauxSystem):
+class System(K.System):
     pass
 
-@TableauxSystem.initialize
-class TabRules(K.TabRules):
+class Rules(K.Rules):
 
     class Reflexive(K.DefaultNodeRule):
         """
@@ -76,40 +75,40 @@ class TabRules(K.TabRules):
     rule_groups = (
         (
             # non-branching rules
-            K.TabRules.IdentityIndiscernability,
-            K.TabRules.Assertion,
-            K.TabRules.AssertionNegated,
-            K.TabRules.Conjunction, 
-            K.TabRules.DisjunctionNegated, 
-            K.TabRules.MaterialConditionalNegated,
-            K.TabRules.ConditionalNegated,
-            K.TabRules.DoubleNegation,
-            K.TabRules.PossibilityNegated,
-            K.TabRules.NecessityNegated,
-            K.TabRules.ExistentialNegated,
-            K.TabRules.UniversalNegated,
+            K.Rules.IdentityIndiscernability,
+            K.Rules.Assertion,
+            K.Rules.AssertionNegated,
+            K.Rules.Conjunction, 
+            K.Rules.DisjunctionNegated, 
+            K.Rules.MaterialConditionalNegated,
+            K.Rules.ConditionalNegated,
+            K.Rules.DoubleNegation,
+            K.Rules.PossibilityNegated,
+            K.Rules.NecessityNegated,
+            K.Rules.ExistentialNegated,
+            K.Rules.UniversalNegated,
         ),
         (
             # modal rules
-            K.TabRules.Necessity,
-            K.TabRules.Possibility,
+            K.Rules.Necessity,
+            K.Rules.Possibility,
         ),
         (
             Reflexive,
         ),
         (
             # branching rules
-            K.TabRules.ConjunctionNegated,
-            K.TabRules.Disjunction, 
-            K.TabRules.MaterialConditional, 
-            K.TabRules.MaterialBiconditional,
-            K.TabRules.MaterialBiconditionalNegated,
-            K.TabRules.Conditional,
-            K.TabRules.Biconditional,
-            K.TabRules.BiconditionalNegated,
+            K.Rules.ConjunctionNegated,
+            K.Rules.Disjunction, 
+            K.Rules.MaterialConditional, 
+            K.Rules.MaterialBiconditional,
+            K.Rules.MaterialBiconditionalNegated,
+            K.Rules.Conditional,
+            K.Rules.Biconditional,
+            K.Rules.BiconditionalNegated,
         ),
         (
-            K.TabRules.Existential,
-            K.TabRules.Universal,
+            K.Rules.Existential,
+            K.Rules.Universal,
         ),
     )

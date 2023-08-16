@@ -33,7 +33,7 @@ from pytableaux.lang import LexType
 from pytableaux.logics import LogicType, registry
 from pytableaux.proof import (Branch, ClosingRule, ClosureNode, Node, Rule,
                               Tableau)
-from pytableaux.proof import TableauxSystem as TabSys
+from pytableaux.proof import System as TabSys
 from pytableaux.proof import Target
 from pytableaux.proof.filters import CompareSentence
 from pytableaux.tools.abcs import isabstract
@@ -55,7 +55,7 @@ def is_concrete_build_trunk(obj: Any, /,):
 
 def is_transparent_rule(obj: Any) -> bool:
     """Whether a rule class:
-        - is included in TabRules groups for the module it belongs to
+        - is included in Rules groups for the module it belongs to
         - inherits from a rule class that belongs to another logic module
         - the parent class is in the other logic's rule goups
         - there is no implementation besides pass
@@ -70,7 +70,7 @@ def is_transparent_rule(obj: Any) -> bool:
 
 def rules_sorted(logic: LogicType, rules = None, /) -> dict:
     logic = registry(logic)
-    RulesCls = logic.TabRules
+    RulesCls = logic.Rules
     if rules is None:
         rules = list(RulesCls.all_rules)
     results = dict(
@@ -125,7 +125,7 @@ def rules_legend_subgroups(groups: dict[str, list[type[Rule]]]) -> dict:
     return subgroups
 
 def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /) -> list[type[Rule]]:
-    RulesCls = logic.TabRules
+    RulesCls = logic.Rules
     native_members = []
     todo = set(rules)
     for member in filter(is_rule_class, RulesCls.__dict__.values()):
@@ -217,17 +217,17 @@ def _is_nocode(obj: Any) -> bool:
     return True
 
 def _rule_is_grouped(rule: type[Rule], logic) -> bool:
-    'Whether the rule class is grouped in the TabRules of the given logic.'
+    'Whether the rule class is grouped in the Rules of the given logic.'
     if not is_rule_class(rule):
         return False
     try:
         logic = registry.locate(logic)
     except:
         return False
-    return rule in logic.TabRules.all_rules
+    return rule in logic.Rules.all_rules
 
 def _rule_is_self_grouped(rule: type[Rule]) -> bool:
-    'Whether the Rule class is grouped in the TabRules of its own logic.'
+    'Whether the Rule class is grouped in the Rules of its own logic.'
     logic = registry.locate(rule)
     return _rule_is_grouped(rule, logic)
 

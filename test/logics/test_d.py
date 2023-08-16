@@ -5,7 +5,7 @@ from pytableaux.lang import *
 class Base(BaseCase):
     logic = 'D'
 
-class TestTabRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True): pass
 
 class Test(Base):
 

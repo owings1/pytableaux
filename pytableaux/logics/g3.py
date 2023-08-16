@@ -37,15 +37,14 @@ class Model(L3.Model):
                 return self.Value.F
         return super().truth_function(operator, a, b)
 
-class TableauxSystem(K3.TableauxSystem):
+class System(K3.System):
 
-    branchables = FDE.TableauxSystem.branchables | {
+    branchables = FDE.System.branchables | {
         Operator.Conditional: ((1, 1), (1, 1)),
         Operator.Biconditional: ((0, 0), (0, 0))}
 
 
-@TableauxSystem.initialize
-class TabRules(L3.TabRules):
+class Rules(L3.Rules):
 
     class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """
@@ -104,54 +103,54 @@ class TabRules(L3.TabRules):
     rule_groups = (
         (
             # non-branching rules
-            FDE.TabRules.AssertionDesignated,
-            FDE.TabRules.AssertionUndesignated,
-            FDE.TabRules.AssertionNegatedDesignated,
-            FDE.TabRules.AssertionNegatedUndesignated,
-            FDE.TabRules.ConjunctionDesignated,
-            FDE.TabRules.DisjunctionNegatedDesignated,
-            FDE.TabRules.DisjunctionUndesignated,
-            FDE.TabRules.DisjunctionNegatedUndesignated,
-            FDE.TabRules.MaterialConditionalNegatedDesignated,
-            FDE.TabRules.MaterialConditionalUndesignated,
+            FDE.Rules.AssertionDesignated,
+            FDE.Rules.AssertionUndesignated,
+            FDE.Rules.AssertionNegatedDesignated,
+            FDE.Rules.AssertionNegatedUndesignated,
+            FDE.Rules.ConjunctionDesignated,
+            FDE.Rules.DisjunctionNegatedDesignated,
+            FDE.Rules.DisjunctionUndesignated,
+            FDE.Rules.DisjunctionNegatedUndesignated,
+            FDE.Rules.MaterialConditionalNegatedDesignated,
+            FDE.Rules.MaterialConditionalUndesignated,
 
             BiconditionalDesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
 
-            FDE.TabRules.ExistentialNegatedDesignated,
-            FDE.TabRules.ExistentialNegatedUndesignated,
-            FDE.TabRules.UniversalNegatedDesignated,
-            FDE.TabRules.UniversalNegatedUndesignated,
+            FDE.Rules.ExistentialNegatedDesignated,
+            FDE.Rules.ExistentialNegatedUndesignated,
+            FDE.Rules.UniversalNegatedDesignated,
+            FDE.Rules.UniversalNegatedUndesignated,
 
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
         ),
         (
             # branching rules
-            FDE.TabRules.ConjunctionNegatedDesignated,
-            FDE.TabRules.ConjunctionUndesignated,
-            FDE.TabRules.ConjunctionNegatedUndesignated,
-            FDE.TabRules.DisjunctionDesignated,
-            FDE.TabRules.MaterialConditionalDesignated,
-            FDE.TabRules.MaterialConditionalNegatedUndesignated,
-            FDE.TabRules.MaterialBiconditionalDesignated,
-            FDE.TabRules.MaterialBiconditionalNegatedDesignated,
-            FDE.TabRules.MaterialBiconditionalUndesignated,
-            FDE.TabRules.MaterialBiconditionalNegatedUndesignated,
+            FDE.Rules.ConjunctionNegatedDesignated,
+            FDE.Rules.ConjunctionUndesignated,
+            FDE.Rules.ConjunctionNegatedUndesignated,
+            FDE.Rules.DisjunctionDesignated,
+            FDE.Rules.MaterialConditionalDesignated,
+            FDE.Rules.MaterialConditionalNegatedUndesignated,
+            FDE.Rules.MaterialBiconditionalDesignated,
+            FDE.Rules.MaterialBiconditionalNegatedDesignated,
+            FDE.Rules.MaterialBiconditionalUndesignated,
+            FDE.Rules.MaterialBiconditionalNegatedUndesignated,
 
-            L3.TabRules.ConditionalDesignated,
-            L3.TabRules.ConditionalUndesignated,
+            L3.Rules.ConditionalDesignated,
+            L3.Rules.ConditionalUndesignated,
             ConditionalNegatedUndesignated,
             ConditionalNegatedDesignated,
         ),
         (
-            FDE.TabRules.ExistentialDesignated,
-            FDE.TabRules.ExistentialUndesignated,
+            FDE.Rules.ExistentialDesignated,
+            FDE.Rules.ExistentialUndesignated,
         ),
         (
-            FDE.TabRules.UniversalDesignated,
-            FDE.TabRules.UniversalUndesignated,
+            FDE.Rules.UniversalDesignated,
+            FDE.Rules.UniversalUndesignated,
         ),
     )

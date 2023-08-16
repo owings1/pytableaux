@@ -5,7 +5,7 @@ from pytableaux import examples
 from pytableaux.errors import *
 from pytableaux.lang.lex import Atomic, Constant, Predicated
 from pytableaux.logics.k import DefaultNodeRule as DefaultKRule
-from pytableaux.proof import TableauxSystem as TabSys
+from pytableaux.proof import System as TabSys
 from pytableaux.proof import filters
 from pytableaux.proof.common import Branch, Node, Target
 from pytableaux.proof.filters import getkey
@@ -23,7 +23,7 @@ exarg = examples.argument
 sen = 'sentence'
 
 
-class TestTableauxSystem(BaseCase):
+class TestSystem(BaseCase):
 
     def test_build_trunk_base_not_impl(self):
         proof = Tableau()

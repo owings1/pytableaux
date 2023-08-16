@@ -64,7 +64,7 @@ class Model(K3.Model):
         seq = self.Value._seq
         return seq[seq.index(value) - 1]
 
-class TableauxSystem(K3.TableauxSystem):
+class System(K3.System):
 
     branchables = {
         Operator.Negation: (None, (1, 0)),
@@ -80,8 +80,7 @@ class TableauxSystem(K3.TableauxSystem):
         # reduction
         Operator.Biconditional: ((0, 0), (0, 0))}
 
-@TableauxSystem.initialize
-class TabRules(K3.TabRules):
+class Rules(K3.Rules):
 
     class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """
@@ -299,15 +298,15 @@ class TabRules(K3.TabRules):
     rule_groups = (
         (
             # non-branching rules
-            FDE.TabRules.AssertionDesignated,
-            FDE.TabRules.AssertionUndesignated,
-            FDE.TabRules.AssertionNegatedDesignated,
-            FDE.TabRules.AssertionNegatedUndesignated,
+            FDE.Rules.AssertionDesignated,
+            FDE.Rules.AssertionUndesignated,
+            FDE.Rules.AssertionNegatedDesignated,
+            FDE.Rules.AssertionNegatedUndesignated,
 
             ConjunctionDesignated,
 
-            FDE.TabRules.DisjunctionUndesignated,
-            FDE.TabRules.DisjunctionNegatedDesignated,
+            FDE.Rules.DisjunctionUndesignated,
+            FDE.Rules.DisjunctionNegatedDesignated,
 
             DoubleNegationDesignated,
             
@@ -335,8 +334,8 @@ class TabRules(K3.TabRules):
 
             ConjunctionNegatedDesignated,
 
-            FDE.TabRules.DisjunctionDesignated,
-            FDE.TabRules.DisjunctionNegatedUndesignated,            
+            FDE.Rules.DisjunctionDesignated,
+            FDE.Rules.DisjunctionNegatedUndesignated,            
         ),
         (
             # three-branching rules
@@ -347,14 +346,14 @@ class TabRules(K3.TabRules):
             ConjunctionUndesignated,
         ),
         (
-            FDE.TabRules.ExistentialDesignated,
+            FDE.Rules.ExistentialDesignated,
             UniversalUndesignated,
             UniversalNegatedDesignated,
             UniversalNegatedUndesignated,
         ),
         (
             UniversalDesignated,
-            FDE.TabRules.ExistentialUndesignated,
+            FDE.Rules.ExistentialUndesignated,
             ExistentialNegatedDesignated,
             ExistentialNegatedUndesignated,
         )

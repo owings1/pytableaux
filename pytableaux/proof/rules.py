@@ -162,11 +162,8 @@ class PredicatedSentenceRule(BaseSentenceRule[Predicated]):
 
     Helpers = group(PredNodes)
 
-class QuantifiedSentenceRule(BaseSentenceRule[Quantified]):
-    pass
-
-class OperatedSentenceRule(BaseSentenceRule[Operated]):
-    pass
+class QuantifiedSentenceRule(BaseSentenceRule[Quantified]): pass
+class OperatedSentenceRule(BaseSentenceRule[Operated]): pass
 
 class NarrowQuantifierRule(QuantifiedSentenceRule):
 

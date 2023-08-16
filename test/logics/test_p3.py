@@ -5,7 +5,7 @@ from pytableaux.proof import *
 class Base(BaseCase):
     logic = 'P3'
 
-class TestTabRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base):
 

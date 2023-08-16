@@ -202,5 +202,5 @@ For further reading, see:
 
 .. cssclass:: hidden
 
-.. autoclass:: TabRules()
+.. autoclass:: Rules()
     :members:

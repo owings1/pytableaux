@@ -37,41 +37,40 @@ class Model(CPL.Model):
         "A sentence is opaque if its operator is either Necessity or Possibility."
         return type(s) is not Quantified and super().is_sentence_opaque(s)
 
-class TableauxSystem(CPL.TableauxSystem):
+class System(CPL.System):
     pass
 
-@TableauxSystem.initialize
-class TabRules(CPL.TabRules):
+class Rules(CPL.Rules):
 
     rule_groups = (
         (
             # non-branching rules
-            K.TabRules.IdentityIndiscernability,
-            K.TabRules.DoubleNegation,
-            K.TabRules.Assertion,
-            K.TabRules.AssertionNegated,
-            K.TabRules.Conjunction,
-            K.TabRules.DisjunctionNegated,
-            K.TabRules.MaterialConditionalNegated,
-            K.TabRules.ConditionalNegated,
-            K.TabRules.ExistentialNegated,
-            K.TabRules.UniversalNegated,
+            K.Rules.IdentityIndiscernability,
+            K.Rules.DoubleNegation,
+            K.Rules.Assertion,
+            K.Rules.AssertionNegated,
+            K.Rules.Conjunction,
+            K.Rules.DisjunctionNegated,
+            K.Rules.MaterialConditionalNegated,
+            K.Rules.ConditionalNegated,
+            K.Rules.ExistentialNegated,
+            K.Rules.UniversalNegated,
         ),
         (
             # branching rules
-            K.TabRules.ConjunctionNegated,
-            K.TabRules.Disjunction,
-            K.TabRules.MaterialConditional,
-            K.TabRules.MaterialBiconditional,
-            K.TabRules.MaterialBiconditionalNegated,
-            K.TabRules.Conditional,
-            K.TabRules.Biconditional,
-            K.TabRules.BiconditionalNegated,
+            K.Rules.ConjunctionNegated,
+            K.Rules.Disjunction,
+            K.Rules.MaterialConditional,
+            K.Rules.MaterialBiconditional,
+            K.Rules.MaterialBiconditionalNegated,
+            K.Rules.Conditional,
+            K.Rules.Biconditional,
+            K.Rules.BiconditionalNegated,
         #),
         #(
 
-            K.TabRules.Existential,
-            K.TabRules.Universal,
+            K.Rules.Existential,
+            K.Rules.Universal,
         ),
     )
 

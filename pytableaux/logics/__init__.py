@@ -24,12 +24,12 @@ from __future__ import annotations
 import itertools
 import sys
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Mapping, Set
 from importlib import import_module
 from types import FunctionType
 from types import MappingProxyType as MapProxy
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Iterator
 
 from ..errors import Emsg, check
 from ..lang import Operator
@@ -37,63 +37,16 @@ from ..tools import EMPTY_SET, abcs, closure, qset
 from ..tools.hybrids import QsetView
 
 if TYPE_CHECKING:
-    from ..models import BaseModel
-    from ..proof import Rule, ClosingRule, TableauxSystem
+    from ..models import Mval as Mval
+    from ..proof import Rule, ClosingRule
 
 __all__ = (
     'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
     'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't')
 
 NOARG = object()
-
-
-_metamap = {}
-_metamap_setdefault = _metamap.setdefault
-_metamap: Mapping[str, type[LogicType.Meta]] = MapProxy(_metamap)
-
-class GetLogicMetaMixinMetaType(type):
-    @property
-    def Meta(self) -> type[LogicType.Meta]|None:
-        return _metamap.get(self.__module__)
-
-class LogicType(metaclass = type('LogicTypeMeta', (type,), dict(__call__ = None))):
-    "Stub class definition for a logic interface."
-    class Meta:
-        name: str
-        modal: bool|None = None
-        category: str
-        description: str
-        category_order: int
-        tags: tuple[str, ...] = ()
-        native_operators: tuple[Operator, ...] = ()
-        modal_operators: tuple[Operator, ...] = (
-            Operator.Possibility,
-            Operator.Necessity)
-        truth_functional_operators: tuple[Operator, ...] = (
-            Operator.Assertion,
-            Operator.Negation,
-            Operator.Conjunction,
-            Operator.Disjunction,
-            Operator.MaterialConditional,
-            Operator.MaterialBiconditional,
-            Operator.Conditional,
-            Operator.Biconditional)
-
-        def __init_subclass__(cls):
-            super().__init_subclass__()
-            _metamap_setdefault(cls.__module__, cls)
-
-    TableauxSystem: type[TableauxSystem]
-    Model: type[BaseModel]
-    class TabRules:
-        Meta: type[LogicType.Meta]
-        closure_rules: tuple[type[ClosingRule], ...]
-        rule_groups: tuple[tuple[type[Rule], ...], ...]
-        all_rules: tuple[type[Rule], ...]
-
-
         
-class Registry(Mapping[Any, LogicType], abcs.Copyable):
+class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
     """Logic module registry.
     """
 
@@ -151,7 +104,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
 
     def copy(self):
         "Copy the registry."
-        return type(self)(source = self)
+        return type(self)(source=self)
 
     def clear(self):
         "Clear the registry."
@@ -200,7 +153,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         self.add(module)
         return module
 
-    def get(self, ref, default = NOARG, /):
+    def get(self, ref, default = NOARG, /) -> LogicType:
         """Get a logic from the registry, importing if needed.
 
         Args:
@@ -227,7 +180,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
                 raise
             return default
 
-    def locate(self, ref, default = NOARG, /):
+    def locate(self, ref, default = NOARG, /) -> LogicType:
         """Like ``.get()`` but also searches the ``__module__`` attribute of
         classes, methods, and functions to locate the logic in which it was defined.
 
@@ -243,10 +196,10 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
             ValueError: if not found.
             TypeError: on bad key argument.
         """
-        check.inst(ref, (str, type, ModuleType, MethodType, FunctionType))
         try:
             if isinstance(ref, (str, ModuleType)):
                 return self(ref)
+            check.inst(ref, (type, MethodType, FunctionType))
             return self(ref.__module__.lower())
         except ValueError:
             if default is NOARG:
@@ -263,18 +216,18 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         """
         return self._package_all(self._check_package(package))
 
-    def sync(self):
+    def sync(self) -> set[str]:
         """Sync all registry packages by calling ``.sync_package()``.
 
         Returns:
-            Dict of each package name to its ``sync_package()`` result.
+            Set of each package name to its ``sync_package()`` result.
         """
         added = set()
         for pkgname in self.packages:
             added.update(self.sync_package(pkgname))
         return added
 
-    def sync_package(self, package: str|ModuleType, /):
+    def sync_package(self, package: str|ModuleType, /) -> set[str]:
         """Attempt to find and add any logics that are already loaded (imported)
         but not in the registry. Tries the package's ``__all__`` and ``__dict__``
         attributes.
@@ -296,12 +249,12 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
                 added.add(logic)
         return added
 
-    def import_all(self):
+    def import_all(self) -> None:
         """Import all logics for all registry packages. See ``.import_package()``.
         """
         for _ in map(self.import_package, self.packages): pass
 
-    def import_package(self, package: str|ModuleType, /):
+    def import_package(self, package: str|ModuleType, /) -> None:
         """Import all logic modules for a package. Uses the ``__all__`` attribute
         to list the logic names.
 
@@ -313,7 +266,7 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
             if modname not in self.modules:
                 self.add(import_module(modname))
 
-    def grouped(self, keys, /, *, sort = True, key = None, reverse = False):
+    def grouped(self, keys, /, *, sort=True, key=None, reverse=False) -> dict[str, list[LogicType]]:
         """Group logics by category.
 
         Args:
@@ -381,10 +334,10 @@ class Registry(Mapping[Any, LogicType], abcs.Copyable):
         except KeyError:
             raise RuntimeError
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         yield from self.modules
 
-    def __reversed__(self):
+    def __reversed__(self) -> Iterator[str]:
         return reversed(self.modules)
 
     def __len__(self):
@@ -427,20 +380,93 @@ registry: Registry = Registry()
 registry.packages.add(__package__)
 
 
+class LogicTypeMeta(type):
+
+    __call__ = None
+
+    @staticmethod
+    def __instancecheck__(obj):
+        return instancecheck(obj)
+
+    _metamap = {}
+
+    @staticmethod
+    @closure
+    def new_meta(metamap = _metamap):
+        def new(meta):
+            metamap[meta.__module__] = check.subcls(meta, LogicType.Meta)
+        return new
+
+    @staticmethod
+    @closure
+    def meta_for_module(metamap: dict = _metamap):
+        def get(name: str) -> type[LogicType.Meta]|None:
+            return metamap.get(name)
+        return get
+
+    _metamap = MapProxy(_metamap)
+
+class LogicType(metaclass=LogicTypeMeta):
+    "Stub class definition for a logic interface."
+    class Meta:
+        name: str
+        modal: bool|None = None
+        values: type[Mval]
+        designated_values: Set[Mval]
+        unassigned_value: Mval
+        category: str
+        description: str
+        category_order: int
+        tags: tuple[str, ...] = ()
+        native_operators: tuple[Operator, ...] = ()
+        modal_operators: tuple[Operator, ...] = (
+            Operator.Possibility,
+            Operator.Necessity)
+        truth_functional_operators: tuple[Operator, ...] = (
+            Operator.Assertion,
+            Operator.Negation,
+            Operator.Conjunction,
+            Operator.Disjunction,
+            Operator.MaterialConditional,
+            Operator.MaterialBiconditional,
+            Operator.Conditional,
+            Operator.Biconditional)
+        def __init_subclass__(cls):
+            super().__init_subclass__()
+            LogicTypeMeta.new_meta(cls)
+
+    if TYPE_CHECKING:
+        from ..proof import System
+        from ..models import BaseModel as Model
+
+    class Rules:
+        Meta: type[LogicType.Meta]
+        closure_rules: tuple[type[ClosingRule], ...]
+        rule_groups: tuple[tuple[type[Rule], ...], ...]
+        all_rules: tuple[type[Rule], ...]
+
+        def __init_subclass__(cls):
+            super().__init_subclass__()
+            cls.all_rules = cls.closure_rules + tuple(
+                itertools.chain.from_iterable(cls.rule_groups))
+
 @closure
 def instancecheck():
 
-    from ..proof import TableauxSystem
+    from ..proof import System
     from ..models import BaseModel
 
-    LogicType.TableauxSystem = TableauxSystem
+    LogicType.__new__ = None
+    LogicTypeMeta.__new__ = None
+
+    LogicType.System = System
     LogicType.Model = BaseModel
 
-    def validate(obj):
+    def validate(obj: LogicType):
         check.inst(obj, ModuleType)
-        check.subcls(obj.TabRules, LogicType.TabRules)
+        check.subcls(obj.Rules, LogicType.Rules)
         check.subcls(obj.Meta, LogicType.Meta)
-        check.subcls(obj.TableauxSystem, LogicType.TableauxSystem)
+        check.subcls(obj.System, LogicType.System)
         check.subcls(obj.Model, LogicType.Model)
 
     cache = set()
@@ -454,7 +480,5 @@ def instancecheck():
                 return False
             cache.add(key)
         return True
-
-    type(LogicType).__instancecheck__ = staticmethod(instancecheck)
 
     return instancecheck

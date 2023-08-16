@@ -9,7 +9,7 @@ A = Atomic.first()
 class Base(BaseCase):
     logic = 'K3'
 
-class TestTabRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base):
 

@@ -62,7 +62,7 @@ class BaseCase(TestCase):
         if getattr(subcls, 'logic', None):
             subcls.logic = registry(subcls.logic)
         if autorules:
-            for rulecls in subcls.logic.TabRules.all_rules:
+            for rulecls in subcls.logic.Rules.all_rules:
                 name = f'test_{rulecls.name}'
                 old = getattr(subcls, name, None)
                 def test(self: BaseCase):
@@ -205,7 +205,7 @@ class BaseCase(TestCase):
             rule = t.rules.get(rule)
         except KeyError:
             if isinstance(rule, str):
-                rule = getattr(t.logic.TabRules, rule)
+                rule = getattr(t.logic.Rules, rule)
             t.rules.append(rule)
             rule = t.rules.get(rule)
             manual = True

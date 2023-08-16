@@ -55,7 +55,7 @@ class Model(K3.Model):
             return Value.T
         return super().truth_function(oper, a, b)
 
-class TableauxSystem(K3.TableauxSystem):
+class System(K3.System):
 
     # operator => negated => designated
     branchables = {
@@ -71,8 +71,7 @@ class TableauxSystem(K3.TableauxSystem):
         # for now, reduce to conjunction
         Operator.Biconditional: ((0, 0), (0, 0))}
 
-@TableauxSystem.initialize
-class TabRules(LogicType.TabRules):
+class Rules(LogicType.Rules):
 
     class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -225,18 +224,18 @@ class TabRules(LogicType.TabRules):
     class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated):
         "This rule reduces to a negated conjunction of conditionals."
 
-    closure_rules = K3.TabRules.closure_rules
+    closure_rules = K3.Rules.closure_rules
 
     rule_groups = (
         # Non-branching rules.
         (
-            FDE.TabRules.AssertionDesignated,
-            FDE.TabRules.AssertionUndesignated,
-            FDE.TabRules.AssertionNegatedDesignated,
-            FDE.TabRules.AssertionNegatedUndesignated,
-            FDE.TabRules.ConjunctionDesignated,
-            FDE.TabRules.ConjunctionNegatedUndesignated,
-            FDE.TabRules.DisjunctionUndesignated,
+            FDE.Rules.AssertionDesignated,
+            FDE.Rules.AssertionUndesignated,
+            FDE.Rules.AssertionNegatedDesignated,
+            FDE.Rules.AssertionNegatedUndesignated,
+            FDE.Rules.ConjunctionDesignated,
+            FDE.Rules.ConjunctionNegatedUndesignated,
+            FDE.Rules.DisjunctionUndesignated,
             MaterialConditionalDesignated,
             MaterialConditionalNegatedDesignated,
             MaterialConditionalUndesignated,
@@ -251,14 +250,14 @@ class TabRules(LogicType.TabRules):
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
-            FDE.TabRules.DoubleNegationDesignated,
-            FDE.TabRules.DoubleNegationUndesignated,
+            FDE.Rules.DoubleNegationDesignated,
+            FDE.Rules.DoubleNegationUndesignated,
         ),
         # 1-branching rules.
         (
-            FDE.TabRules.ConjunctionUndesignated,
-            FDE.TabRules.ConjunctionNegatedDesignated,
-            FDE.TabRules.DisjunctionDesignated,
+            FDE.Rules.ConjunctionUndesignated,
+            FDE.Rules.ConjunctionNegatedDesignated,
+            FDE.Rules.DisjunctionDesignated,
             DisjunctionNegatedDesignated,
             ConditionalDesignated,
             ConditionalNegatedUndesignated,

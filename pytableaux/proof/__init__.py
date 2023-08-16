@@ -28,7 +28,7 @@ from types import MappingProxyType as MapProxy
 from typing import Any, NamedTuple, Sequence, TypeVar
 
 from ..lang import Argument, Operator, Predicate, Quantifier
-from ..logics import LogicType, GetLogicMetaMixinMetaType
+from ..logics import LogicType
 from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf
 from ..tools.timing import Counter, StopWatch
 
@@ -57,7 +57,7 @@ __all__ = (
     'snode',
     'swnode',
     'Tableau',
-    'TableauxSystem',
+    'System',
     'TabWriter',
     'Target',
     'WorldNode',
@@ -208,18 +208,20 @@ class TableauMeta(abcs.AbcMeta):
         def __repr__(self):
             return f'<StepEntry:{id(self)}:{self.rule.name}:{self.target.type}>'
 
+class GetLogicMetaMixinMetaType(type):
 
+    @property
+    def Meta(self) -> type[LogicType.Meta]|None:
+        return LogicType.meta_for_module(self.__module__)
 
-class TableauxSystemMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
+class SystemMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
 
     @property
     def modal(self) -> bool|None:
         return self.Meta and self.Meta.modal
 
-class TableauxSystem(metaclass=TableauxSystemMeta):
+class System(metaclass=SystemMeta):
     'Tableaux system base class.'
-
-    Rules: type[LogicType.TabRules]
 
     @classmethod
     @abstractmethod
@@ -249,36 +251,6 @@ class TableauxSystem(metaclass=TableauxSystemMeta):
     def branching_complexity_hashable(cls, node: Node, /):
         return node
 
-    @classmethod
-    def add_rules(cls, rules: RulesRoot, /) -> None:
-        """Populate rules/groups for a tableau.
-
-        Args:
-            logic (LogicType): The logic.
-            rules (RulesRoot): The tableau's rules.
-        """
-        rules.groups.create('closure').extend(cls.Rules.closure_rules)
-        for classes in cls.Rules.rule_groups:
-            rules.groups.create().extend(classes)
-
-    @classmethod
-    def initialize(cls, TabRules: type[LogicType.TabRules]|_TT) -> _TT:
-        if 'Rules' in cls.__dict__:
-            raise TypeError(f'System already initialized: {cls}')
-        TabRules.all_rules = TabRules.closure_rules + tuple(
-            itertools.chain.from_iterable(TabRules.rule_groups))
-        cls.Rules = TabRules
-        for rulecls in TabRules.all_rules:
-            ns = rulecls.__dict__
-            if 'branching' not in ns:
-                try:
-                    rulecls.branching = rulecls.induce_branching()
-                except Exception as err:
-                    msg = (
-                        f'Failed to induce branching for {rulecls}: '
-                        f'{type(err)}: {err}')
-                    raise TypeError(msg)
-        return TabRules
 
 class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
     """Rule meta class."""
@@ -358,6 +330,15 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         for helpercls, _ in configs.items():
             configs[helpercls] = helpercls.configure_rule(rulecls, ...)
         rulecls.legend = tuple(cls.Legend.make(rulecls))
+        if rulecls.legend and not abcs.isabstract(rulecls):
+            if 'branching' not in rulecls.__dict__:
+                try:
+                    rulecls.branching = rulecls.induce_branching()
+                except Exception as err:
+                    msg = (
+                        f'Failed to induce branching for {rulecls}: '
+                        f'{type(err)}: {err}')
+                    raise TypeError(msg)
         return rulecls
 
     # def disable_filter(self: Self|type[Rule], filtercls):

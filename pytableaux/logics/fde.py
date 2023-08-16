@@ -23,7 +23,7 @@ from ..errors import Emsg
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, ValueFDE
-from ..proof import (Branch, Node, Tableau, TableauxSystem, Target, adds,
+from ..proof import (Branch, Node, Tableau, System, Target, adds,
                      filters, rules, sdnode)
 from ..tools import closure, group, qsetf
 from . import LogicType
@@ -441,7 +441,7 @@ class Model(BaseModel[ValueFDE]):
 
         return func_mapper
 
-class TableauxSystem(TableauxSystem):
+class System(System):
 
     # operator => negated => designated
     branchables = {
@@ -529,8 +529,7 @@ class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule):
 class ConditionalConjunctsReducingRule(ConjunctionReducingRule):
     conjoined = Operator.Conditional
 
-@TableauxSystem.initialize
-class TabRules(LogicType.TabRules):
+class Rules(LogicType.Rules):
 
     class DesignationClosure(rules.BaseClosureRule):
         """
@@ -548,8 +547,7 @@ class TabRules(LogicType.TabRules):
         def node_will_close_branch(self, node: Node, branch: Branch, /):
             return bool(self._find_closing_node(node, branch))
 
-        @staticmethod
-        def example_nodes():
+        def example_nodes(self):
             s = Atomic.first()
             yield sdnode(s, True)
             yield sdnode(s, False)
