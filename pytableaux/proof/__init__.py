@@ -22,11 +22,10 @@ pytableaux.proof
 from __future__ import annotations
 
 import itertools
-import operator as opr
 from abc import abstractmethod
 from enum import Enum, Flag
 from types import MappingProxyType as MapProxy
-from typing import Any, Hashable, NamedTuple, Sequence, TypeVar
+from typing import Any, Hashable, Iterable, NamedTuple, Sequence, TypeVar
 
 from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
@@ -223,7 +222,6 @@ class GetLogicMetaMixinMetaType(type):
         return LogicType.meta_for_module(self.__module__)
 
 class SystemMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
-    pass
 
     @property
     def modal(self) -> bool|None:
@@ -299,9 +297,8 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
     def modal(self) -> bool|None:
         return self.Meta and self.Meta.modal
 
-    @classmethod
-    def __prepare__(cls, clsname, bases, **kw):
-        return dict(__slots__ = EMPTY_SET, name = clsname)
+    def __prepare__(clsname, bases, **kw):
+        return dict(__slots__=EMPTY_SET, name=clsname)
 
     def __new__(cls, clsname, bases, ns, intermediate=False, **kw):
         self: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
@@ -320,8 +317,8 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
             else:
                 configs.update(value)
         self.Helpers = MapProxy(configs)
-        for helpercls in configs:
-            configs[helpercls] = helpercls.configure_rule(self, ...)
+        for helpercls, config in configs.items():
+            configs[helpercls] = helpercls.configure_rule(self, config)
         isconcrete = not intermediate and not abcs.isabstract(self)
         if isconcrete:
             self.legend = tuple(self.build_legend())
@@ -422,80 +419,83 @@ class RuleNameAttrInducer:
 
     doubleneg = 'DoubleNegation'
     designates = ('Undesignated', 'Designated')
+    negatedstr = 'Negated'
 
     obj: Any
     name: str
     todo: str
     attrs: dict[str, Any]
     notfounds: list[str]
-    conflicts: list[str]
+    conflicts: dict[str, tuple[str, str, str]]
 
     def __init__(self, obj: Any):
         self.obj = obj
+        self.name = self.obj.__name__
+        self.todo = self.name
+        self.attrs = {}
+        self.notfounds = []
+        self.conflicts = {}
 
     @property
     def is_doubleneg(self):
         return self.name.startswith(self.doubleneg)
 
     def build(self):
-        self.name = self.todo = self.obj.__name__
-        self.attrs: dict[str, Any] = {}
-        self.notfounds: list[str] = []
         for name in self.names:
+            name = Rule.Legend(name).value
             if not getattr(self, f'do_{name}')(name):
                 self.notfounds.append(name)
-        self.conflicts = conflicts = []
-        for name, value in self.attrs.items():
-            if name not in self.obj.__dict__:
-                continue
-            old = getattr(self.obj, name, value)
-            if old != value:
-                conflicts.append(f'{name=} {old=} {value=}')
-        if conflicts:
+        self.find_conflicts()
+        if self.conflicts:
             raise TypeError(
                 f'Direct __dict__ conflicts inducing autoattrs for '
-                f'{self.obj} : {", ".join(conflicts)}')
-        if len(self.todo):
+                f'{self.obj} : {self.conflicts}')
             return
         for name in self.notfounds:
             if hasattr(self.obj, name):
                 self.attrs[name] = None
-        if not len(self.todo):
+        if not self.todo:
             return self.attrs
 
-    def found(self, name: str, indicator: str, value):
+    def do_operator(self, name: str):
+        if self.is_doubleneg:
+            return self.found(name, self.doubleneg, Operator.Negation)
+        return self.common_enum(name, Operator)
+
+    def do_quantifier(self, name: str):
+        return self.common_enum(name, Quantifier)
+
+    def do_predicate(self, name: str):
+        return self.common_enum(name, Predicate.System)
+
+    def do_negated(self, name: str):
+        if self.is_doubleneg:
+            return self.found(name, '', True)
+        if self.todo.startswith(self.negatedstr):
+            return self.found(name, self.negatedstr, True)
+
+    def do_designation(self, name: str):
+        for i, indicator in enumerate(self.designates):
+            if self.todo.startswith(indicator):
+                return self.found(name, indicator, bool(i))
+
+    def found(self, name: str, indicator: str, value: Any):
         self.attrs[name] = value
         self.todo = self.todo.removeprefix(indicator)
         return True
 
-    def do_operator(self, name):
-        if self.is_doubleneg:
-            return self.found(name, self.doubleneg, Operator.Negation)
-        for item in Operator:
+    def find_conflicts(self):
+        ns = self.obj.__dict__
+        for name in filter(ns.__contains__, self.attrs):
+            value = self.attrs[name]
+            old = getattr(self.obj, name, value)
+            if old != value:
+                self.conflicts[name] = (old, value)
+
+    def common_enum(self, name: str, it: Iterable[Operator|Quantifier|Predicate]):
+        for item in it:
             if self.todo.startswith(item.name):
                 return self.found(name, item.name, item)
-
-    def do_quantifier(self, name):
-        for item in Quantifier:
-            if self.todo.startswith(item.name):
-                return self.found(name, item.name, item)
-
-    def do_predicate(self, name):
-        for item in Predicate.System:
-            if self.todo.startswith(item.name):
-                return self.found(name, item.name, item)
-
-    def do_negated(self, name):
-        if self.is_doubleneg:
-            return self.found(name, '', True)
-        indicator = 'Negated'
-        if self.todo.startswith(indicator):
-            return self.found(name, indicator, True)
-
-    def do_designation(self, name):
-        for i, indicator in enumerate(self.designates):
-            if self.todo.startswith(indicator):
-                return self.found(name, indicator, bool(i))
 
 def adds(*groups, **kw):
     """Target dict builder for `AdzHelper`.

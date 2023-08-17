@@ -526,31 +526,21 @@ class ConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=Tru
 
 class Rules(LogicType.Rules):
 
-    class DesignationClosure(rules.BaseClosureRule):
+    class DesignationClosure(rules.FindClosingNodeRule):
         """
         A branch closes when a sentence appears on a node marked *designated*,
         and the same sentence appears on a node marked *undesignated*.
         """
 
-        def _branch_target_hook(self, node, branch, /):
-            nnode = self._find_closing_node(node, branch)
-            if nnode is not None:
-                return Target(
-                    nodes = qsetf((node, nnode)),
-                    branch = branch)
-
-        def node_will_close_branch(self, node, branch, /):
-            return bool(self._find_closing_node(node, branch))
+        def _find_closing_node(self, node: Node, branch: Branch, /):
+            s = self.sentence(node)
+            if s is not None:
+                return branch.find(sdnode(s, not node['designated']))
 
         def example_nodes(self):
             s = Atomic.first()
             yield sdnode(s, True)
             yield sdnode(s, False)
-
-        def _find_closing_node(self, node: Node, branch: Branch, /):
-            s = self.sentence(node)
-            if s is not None:
-                return branch.find(sdnode(s, not node['designated']))
             
     class DoubleNegationDesignated(OperatorNodeRule):
         """
@@ -922,7 +912,7 @@ class Rules(LogicType.Rules):
     closure = group(DesignationClosure)
 
     groups = (
-        (
+        group(
             # non-branching rules
             AssertionDesignated,
             AssertionUndesignated,
@@ -942,7 +932,7 @@ class Rules(LogicType.Rules):
             UniversalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated),
-        (
+        group(
             # branching rules
             ConjunctionNegatedDesignated,
             ConjunctionUndesignated,
@@ -960,10 +950,10 @@ class Rules(LogicType.Rules):
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated),
-        (
+        group(
             ExistentialDesignated,
             ExistentialUndesignated),
-        (
+        group(
             UniversalDesignated,
             UniversalUndesignated))
 

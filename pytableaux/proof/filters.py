@@ -24,7 +24,7 @@ from __future__ import annotations
 import operator as opr
 from abc import abstractmethod
 from types import MappingProxyType as MapProxy
-from typing import Any, Callable, NamedTuple, Sequence
+from typing import Any, Callable, NamedTuple
 
 from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
                     Sentence)

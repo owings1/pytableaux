@@ -22,7 +22,6 @@ from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
 from . import s4 as S4
-from . import t as T
 
 
 class Meta(S4.Meta):

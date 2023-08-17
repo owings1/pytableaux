@@ -144,7 +144,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         self.history = SeqCover(history := deque())
         self.on(Rule.Events.AFTER_APPLY, history.append)
         self.helpers = {}
-        # # Add one at a time, to support helper dependency checks.
+        # Add one at a time, to support helper dependency checks.
         for Helper in self.Helpers:
             self.helpers[Helper] = Helper(self)
         if not self.opts['nolock']:
@@ -661,7 +661,6 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         '_argument',
         '_complexities',
         '_logic',
-        '_shared',
         'flag',
         'history',
         'models',
@@ -690,7 +689,6 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             stat := self.Stat(),
             opens := linqset(),
             branches := [])
-        self._shared = {}
         self.__len__ = branches.__len__
         self.__getitem__ = branches.__getitem__
         self.__contains__ = stat.__contains__

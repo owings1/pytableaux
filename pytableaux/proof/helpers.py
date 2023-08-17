@@ -527,11 +527,6 @@ class FilterHelper(FilterNodeCache):
             check.subcls(check.inst(fcls, type), filters.CompareNode)
         if not abcs.isabstract(rulecls):
             setattr(rulecls, attr, configs)
-            if not configs:
-                pass
-                # import warnings
-                # warnings.warn(f"EMPTY '{attr}' attribute for {rulecls}. "
-                #     "All nodes will be cached.")
             return cls._build_config(rulecls)
 
     @classmethod
@@ -543,20 +538,6 @@ class FilterHelper(FilterNodeCache):
         return cls.Config(MapProxy(dict(zip(types, funcs))), funcs)
 
 
-    # def disable_filter(self: Self|type[Rule], filtercls):
-    #     try:
-    #         filts = self.NodeFilters
-    #     except AttributeError:
-    #         return
-    #     if filtercls not in filts:
-    #         return
-    #     filts[filtercls] = NotImplemented
-    #     helpercls = helpers.FilterHelper
-    #     if helpercls not in self.Helpers:
-    #         return
-    #     configs = dict(self.Helpers)
-    #     configs[helpercls] = helpercls.configure_rule(self, ...)
-    #     self.Helpers = MapProxy(configs)
 class NodeConsts(BranchDictCache[Node, set[Constant]]):
     """Track the unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
@@ -658,8 +639,6 @@ class MaxConsts(Rule.HelperDict[Branch, int]):
         """
         if world is None:
             world = 0
-        # wconsts = self.rule.helpers[WorldConsts]
-        # return len(wconsts[branch][world]) >= self.get(branch.origin, 1)
         return len(self.wconsts[branch][world]) >= self.get(branch.origin, 1)
 
     def is_exceeded(self, branch: Branch, world = 0, /):
@@ -676,8 +655,6 @@ class MaxConsts(Rule.HelperDict[Branch, int]):
         """
         if world is None:
             world = 0
-        # wconsts = self.rule.helpers[WorldConsts]
-        # return len(wconsts[branch][world]) > self.get(branch.origin, 1)
         return len(self.wconsts[branch][world]) > self.get(branch.origin, 1)
 
     def quit_flag(self, branch: Branch, /):

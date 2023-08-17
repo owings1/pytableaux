@@ -18,8 +18,8 @@ from __future__ import annotations
 
 from ..lang import Atomic
 from ..models import ValueK3
-from ..proof import Branch, Node, Target, sdnode
-from ..proof.rules import BaseClosureRule
+from ..proof import rules, sdnode
+from ..tools import group
 from . import fde as FDE
 
 
@@ -43,26 +43,18 @@ class System(FDE.System): pass
 
 class Rules(FDE.Rules):
 
-    class GlutClosure(BaseClosureRule):
+    class GlutClosure(rules.FindClosingNodeRule):
         """A branch closes when a sentence and its negation both appear as
         designated nodes on the branch.
         """
-    
-        def _branch_target_hook(self, node, branch, /):
-            nnode = self._find_closing_node(node, branch)
-            if nnode is not None:
-               return Target(nodes=(node, nnode), branch=branch)
 
-        def node_will_close_branch(self, node, branch, /) -> bool:
-            return bool(self._find_closing_node(node, branch))
-
-        def _find_closing_node(self, node: Node, branch: Branch, /):
-            if node[Node.Key.designated]:
-                return branch.find(sdnode(-self.sentence(node), True))
+        def _find_closing_node(self, node, branch, /):
+            if node['designated']:
+                return branch.find(sdnode(-node['sentence'], True))
 
         def example_nodes(self):
             a = Atomic.first()
             yield sdnode(a, True)
             yield sdnode(~a, True)
 
-    closure = (GlutClosure,) + FDE.Rules.closure
+    closure = group(GlutClosure) + FDE.Rules.closure

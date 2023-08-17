@@ -28,8 +28,8 @@ from functools import partial
 from itertools import chain, repeat
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, ClassVar, Hashable, Iterable, Iterator, Literal, Mapping, Self, Sequence, Set,
-                    SupportsIndex)
+from typing import (TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Self,
+                    Sequence, Set, SupportsIndex)
 
 from .. import errors
 from ..errors import Emsg, check

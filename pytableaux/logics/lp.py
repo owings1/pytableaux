@@ -18,9 +18,10 @@ from __future__ import annotations as annotations
 
 from ..lang import Atomic
 from ..models import ValueLP
-from ..proof import Branch, Node, Target, sdnode
-from ..proof.rules import BaseClosureRule
+from ..proof import rules, sdnode
+from ..tools import group
 from . import fde as FDE
+
 
 class Meta(FDE.Meta):
     name = 'LP'
@@ -44,20 +45,12 @@ class System(FDE.System):
 
 class Rules(FDE.Rules):
 
-    class GapClosure(BaseClosureRule):
+    class GapClosure(rules.FindClosingNodeRule):
         """
         A branch closes when a sentence and its negation both appear as undesignated nodes.
         """
 
-        def _branch_target_hook(self, node, branch, /):
-            nnode = self._find_closing_node(node, branch)
-            if nnode is not None:
-                return Target(nodes=(node, nnode), branch=branch)
-
-        def node_will_close_branch(self, node, branch, /):
-            return bool(self._find_closing_node(node, branch))
-
-        def _find_closing_node(self, node: Node, branch: Branch, /):
+        def _find_closing_node(self, node, branch, /):
             if node['designated'] is False:
                 return branch.find(sdnode(-self.sentence(node), False))
 
@@ -66,4 +59,4 @@ class Rules(FDE.Rules):
             yield sdnode(s, False)
             yield sdnode(~s, False)
 
-    closure = (GapClosure,) + FDE.Rules.closure
+    closure = group(GapClosure) + FDE.Rules.closure

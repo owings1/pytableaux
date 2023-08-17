@@ -24,7 +24,8 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import MutableSequence, MutableSet, Sequence, Set
 from itertools import chain, filterfalse
-from typing import TYPE_CHECKING, Iterable, Iterator, SupportsIndex, TypeVar, Self, Callable
+from typing import (TYPE_CHECKING, Callable, Iterable, Iterator, Self,
+                    SupportsIndex, TypeVar)
 
 from ..errors import DuplicateValueError, Emsg, check
 from . import EMPTY_SEQ, EMPTY_SET, abcs, slicerange
