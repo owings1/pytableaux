@@ -167,7 +167,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     @abstractmethod
     def example_nodes(self) -> Iterable[Node]:
         "Return example nodes that would trigger the rule."
-        raise NotImplementedError
+        yield from EMPTY_SET
 
     def sentence(self, node: Node, /) -> Optional[Sentence]:
         'Get the relevant sentence for the node, or ``None``.'

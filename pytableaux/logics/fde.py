@@ -446,8 +446,7 @@ class System(LogicType.System):
         Operator.Biconditional: ((1, 1), (1, 1))}
 
     @classmethod
-    def build_trunk(cls, tab, arg, /):
-        b = tab.branch()
+    def build_trunk(cls, b, arg, /):
         b.extend(sdnode(s, True) for s in arg.premises)
         b.append(sdnode(arg.conclusion, False))
 
@@ -468,7 +467,7 @@ class System(LogicType.System):
     def branching_complexity_hashable(cls, node, /):
         return node['sentence'], node['designated']
 
-class DefaultNodeRule(rules.GetNodeTargetsRule):
+class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default FDE node rule with:
     
     - BaseSimpleRule:
@@ -495,19 +494,19 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     def _get_sd_targets(self, s: Operated, d: bool, /):
         raise NotImplementedError
 
-class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule):
+class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule, intermediate=True):
     'Mixin class for typical operator rules.'
     pass
 
-class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule):
+class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule, intermediate=True):
     'Mixin class for "narrow" quantifier rules.'
     pass
 
-class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule):
+class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule, intermediate=True):
     'Mixin class for "extended" quantifier rules.'
     pass
 
-class ConjunctionReducingRule(OperatorNodeRule):
+class ConjunctionReducingRule(OperatorNodeRule, intermediate=True):
 
     conjoined: Operator
 
@@ -519,10 +518,10 @@ class ConjunctionReducingRule(OperatorNodeRule):
             s = ~s
         yield adds(group(sdnode(s, d)))
 
-class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule):
+class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
     conjoined = Operator.MaterialConditional
 
-class ConditionalConjunctsReducingRule(ConjunctionReducingRule):
+class ConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
     conjoined = Operator.Conditional
 
 class Rules(LogicType.Rules):

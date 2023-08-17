@@ -76,7 +76,7 @@ class ClosingRule(Rule):
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
         """For calculating a target's closure score.
         """
-        raise NotImplementedError
+        return False
 
 from .helpers import (AdzHelper, BranchTarget, FilterHelper, MaxConsts,
                       NodeConsts, NodeCount, PredNodes, QuitFlag)
@@ -87,7 +87,7 @@ class BaseClosureRule(ClosingRule):
     Helpers = group(BranchTarget)
 
     def _get_targets(self, branch: Branch, /):
-        """Return the cached target from ``BranchTarget`` helper as a
+        """Yield the cached target from ``BranchTarget`` helper as a
         singleton, if any.
         """
         target = self[BranchTarget][branch]
@@ -97,6 +97,9 @@ class BaseClosureRule(ClosingRule):
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch, /) -> bool:
         """For calculating a target's closure score. This default
         implementation delegates to the abstract ``node_will_close_branch()``.
+
+        Note that this is may be called before the node is added to the branch,
+        for example, to determine whether to apply a rule.
         """
         for node in nodes:
             if self.node_will_close_branch(node, branch):
@@ -105,12 +108,12 @@ class BaseClosureRule(ClosingRule):
 
     @abstractmethod
     def node_will_close_branch(self, node: Node, branch: Branch, /) -> bool:
-        raise NotImplementedError
+        return False
 
     @abstractmethod
     def _branch_target_hook(self, node: Node, branch: Branch, /) -> Target|None:
         'Method for ``BranchTarget`` helper.'
-        raise NotImplementedError
+        pass
 
     def group_score(self, target: Target, /) -> float:
         # Called in tableau
@@ -120,6 +123,23 @@ class BaseClosureRule(ClosingRule):
     def score_candidate(self, target: Target, /) -> float:
         # Closure rules have is_rank_optim = False by default.
         return 0.0
+
+class FindClosingNodeRule(BaseClosureRule):
+    """For closure rules that apply to two nodes, for example, a contradictory
+    node. This creates a target with a 'nodes' attribute.
+    """
+
+    def node_will_close_branch(self, node, branch, /):
+        return bool(self._find_closing_node(node, branch))
+
+    def _branch_target_hook(self, node, branch, /):
+        nnode = self._find_closing_node(node, branch)
+        if nnode is not None:
+            return Target(nodes=(node, nnode), branch=branch)
+
+    @abstractmethod
+    def _find_closing_node(self, node: Node, branch: Branch, /) -> Node|None:
+        pass
 
 class BaseSimpleRule(Rule):
 

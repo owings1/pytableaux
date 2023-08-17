@@ -505,14 +505,13 @@ class System(proof.System):
         Operator.Conditional}
 
     @classmethod
-    def build_trunk(cls, tab, arg, /):
+    def build_trunk(cls, b, arg, /):
         """
         To build the trunk for an argument, add a node with each premise, with
         world :m:`w0`, followed by a node with the negation of the conclusion
         with world :m:`w0`.
         """
         w = 0 if cls.modal else None
-        b = tab.branch()
         b.extend(swnode(s, w) for s in arg.premises)
         b.append(swnode(~arg.conclusion, w))
 
@@ -543,7 +542,7 @@ class System(proof.System):
     def branching_complexity_hashable(cls, node, /):
         return node.get('sentence')
 
-class DefaultNodeRule(rules.GetNodeTargetsRule):
+class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default K node rule with:
     
     - (removing...) filters.ModalNode with defaults: modal = `True`, access = `None`.
@@ -552,7 +551,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     - AdzHelper implements `_apply()` with its `_apply()` method.
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
     """
-    NodeFilters = filters.NodeType,
+    NodeFilters = group(filters.NodeType)
     autoattrs = True
 
     def _get_node_targets(self, node: Node, branch: Branch, /):
@@ -561,7 +560,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule):
     def _get_sw_targets(self, s: Sentence, w: int|None, /):
         raise NotImplementedError
 
-class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule):
+class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule, intermediate=True):
     'Convenience mixin class for most common rules.'
     NodeType = SentenceNode
 
@@ -570,32 +569,22 @@ class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule):
 
 class Rules(LogicType.Rules):
 
-    class ContradictionClosure(rules.BaseClosureRule):
+    class ContradictionClosure(rules.FindClosingNodeRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
         """
 
-        def _branch_target_hook(self, node, branch, /):
-            nnode = self._find_closing_node(node, branch)
-            if nnode is not None:
-                return Target(
-                    nodes = (node, nnode),
-                    branch = branch,)
-
-        def node_will_close_branch(self, node, branch, /):
-            return bool(self._find_closing_node(node, branch))
+        def _find_closing_node(self, node, branch, /):
+            s = self.sentence(node)
+            if s is not None:
+                return branch.find(swnode(-s, node.get('world')))
 
         def example_nodes(self):
             s = Atomic.first()
             w = 0 if self.modal else None
             yield swnode(s, w)
             yield swnode(~s, w)
-
-        def _find_closing_node(self, node: Node, branch: Branch, /):
-            s = self.sentence(node)
-            if s is not None:
-                return branch.find(swnode(s.negative(), node.get('world')))
 
     class SelfIdentityClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
         """
@@ -613,7 +602,7 @@ class Rules(LogicType.Rules):
 
         def node_will_close_branch(self, node, branch, /) -> bool:
             return (
-                self[FilterHelper](node, branch) and
+                self[FilterHelper].pred(node) and
                 len(set(self.sentence(node))) == 1)
 
         def example_nodes(self):

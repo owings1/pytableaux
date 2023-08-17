@@ -302,10 +302,3 @@ class NodeType(CompareType, CompareNode):
 
     def example(self):
         return self.example_node()
-
-class predstuple(tuple):
-
-    __slots__ = EMPTY_SET
-
-    def __call__(self, obj, /):
-        return all(f(obj) for f in self)

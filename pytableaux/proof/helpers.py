@@ -534,14 +534,13 @@ class FilterHelper(FilterNodeCache):
                 #     "All nodes will be cached.")
             return cls._build_config(rulecls)
 
-    @staticmethod
-    def _build_config(rulecls, /):
+    @classmethod
+    def _build_config(cls, rulecls, /):
         configs: Mapping = rulecls.NodeFilters
         types = tuple(fcls for fcls, flag in configs.items()
             if flag is not NotImplemented)
-        funcs = tuple(ftype(rulecls) for ftype in types)
-        filters = MapProxy(dict(zip(types, funcs)))
-        return filters, lambda node: all(f(node) for f in funcs)
+        funcs = cls.PredTuple(ftype(rulecls) for ftype in types)
+        return cls.Config(MapProxy(dict(zip(types, funcs))), funcs)
 
 
     # def disable_filter(self: Self|type[Rule], filtercls):

@@ -295,31 +295,6 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         designation = 'designation'
         marklegend = 'marklegend'
 
-        @classmethod
-        def make(cls, obj):
-            """Build rule class legend."""
-            getters = {
-                cls.operator: Operator,
-                cls.quantifier: Quantifier,
-                cls.predicate: Predicate}
-            for attr in cls:
-                value = getattr(obj, attr, None)
-                if attr is cls.negated:
-                    if value:
-                        yield attr, Operator.Negation
-                elif attr is cls.designation:
-                    if value is not None:
-                        yield attr, value
-                elif attr is cls.marklegend:
-                    if value is not None:
-                        yield from value
-                elif attr is cls.closure:
-                    if value:
-                        yield attr, True
-                elif attr in getters:
-                    if value:
-                        yield attr, getters[attr](value)
-
     @property
     def modal(self) -> bool|None:
         return self.Meta and self.Meta.modal
@@ -328,127 +303,68 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
     def __prepare__(cls, clsname, bases, **kw):
         return dict(__slots__ = EMPTY_SET, name = clsname)
 
-    def __new__(cls, clsname, bases, ns, **kw):
-        rulecls: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
-        abcs.merge_attr(rulecls, '_defaults', mcls = cls,
-            default = {}, transform = MapProxy)
-        abcs.merge_attr(rulecls, 'timer_names', mcls = cls,
-            default = EMPTY_QSET, transform = qsetf)
-        if rulecls.autoattrs:
-            for name, value in rulecls.induce_attrs():
-                setattr(rulecls, name, value)
+    def __new__(cls, clsname, bases, ns, intermediate=False, **kw):
+        self: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
+        abcs.merge_attr(self, '_defaults', mcls=cls,
+            default={}, transform=MapProxy)
+        abcs.merge_attr(self, 'timer_names', mcls=cls,
+            default=EMPTY_QSET, transform=qsetf)
+        if self.autoattrs:
+            for name, value in self.induce_attrs().items():
+                setattr(self, name, value)
         configs: dict[type[Rule.Helper], Any] = {}
-        for parent in abcs.mroiter(rulecls, mcls=cls):
+        for parent in abcs.mroiter(self, mcls=cls):
             value = parent.Helpers
             if isinstance(value, Sequence):
                 configs = dict.fromkeys(value) | configs
             else:
                 configs.update(value)
-        rulecls.Helpers = MapProxy(configs)
+        self.Helpers = MapProxy(configs)
         for helpercls in configs:
-            configs[helpercls] = helpercls.configure_rule(rulecls, ...)
-        rulecls.legend = tuple(cls.Legend.make(rulecls))
-        if rulecls.legend and not abcs.isabstract(rulecls):
-            if 'branching' not in rulecls.__dict__:
-                try:
-                    rulecls.branching = rulecls.induce_branching()
-                except Exception as err:
-                    msg = (
-                        f'Failed to induce branching for {rulecls}: '
-                        f'{type(err)}: {err}')
-                    raise TypeError(msg)
-        return rulecls
+            configs[helpercls] = helpercls.configure_rule(self, ...)
+        isconcrete = not intermediate and not abcs.isabstract(self)
+        if isconcrete:
+            self.legend = tuple(self.build_legend())
+            if 'branching' not in self.__dict__:
+                self.branching = self.induce_branching()
+        return self
 
-    # def disable_filter(self: Self|type[Rule], filtercls):
-    #     try:
-    #         filts = self.NodeFilters
-    #     except AttributeError:
-    #         return
-    #     if filtercls not in filts:
-    #         return
-    #     filts[filtercls] = NotImplemented
-    #     helpercls = helpers.FilterHelper
-    #     if helpercls not in self.Helpers:
-    #         return
-    #     configs = dict(self.Helpers)
-    #     configs[helpercls] = helpercls.configure_rule(self, ...)
-    #     self.Helpers = MapProxy(configs)
+    def build_legend(self):
+        """Build rule class legend."""
+        Leg = self.Legend
+        getters = {
+            Leg.operator: Operator,
+            Leg.quantifier: Quantifier,
+            Leg.predicate: Predicate}
+        for attr in Leg:
+            value = getattr(self, attr, None)
+            if attr is Leg.negated:
+                if value:
+                    yield attr, Operator.Negation
+            elif attr is Leg.designation:
+                if value is not None:
+                    yield attr, value
+            elif attr is Leg.marklegend:
+                if value is not None:
+                    yield from value
+            elif attr is Leg.closure:
+                if value:
+                    yield attr, True
+            elif attr in getters:
+                if value:
+                    yield attr, getters[attr](value)
 
     def induce_attrs(self):
-        attrs = {}
-        todo = self.name
-        Legend = self.Legend
-
-        indicator = 'DoubleNegation'
-        isdoubleneg = todo.startswith(indicator)
-        if isdoubleneg:
-            attrs[Legend.operator] = Operator.Negation
-            attrs[Legend.negated] = True
-            todo = todo.removeprefix(indicator)
-        else:
-            it = sorted(Operator,
-                key=lambda oper: len(oper.name),
-                reverse=True)
-            for oper in it:
-                if todo.startswith(oper.name):
-                    attrs[Legend.operator] = oper
-                    todo = todo.removeprefix(oper.name)
-                    break
-            else:
-                if hasattr(self, Legend.operator):
-                    attrs[Legend.operator] = None
-
-        for quant in Quantifier:
-            if todo.startswith(quant.name):
-                attrs[Legend.quantifier] = quant
-                todo = todo.removeprefix(quant.name)
-                break
-        else:
-            if hasattr(self, Legend.quantifier):
-                attrs[Legend.quantifier] = None
-
-        for pred in Predicate.System:
-            if todo.startswith(pred.name):
-                attrs[Legend.predicate] = pred
-                todo = todo.removeprefix(pred.name)
-                break
-        else:
-            if hasattr(self, Legend.predicate):
-                attrs[Legend.predicate] = None
-
-        if not isdoubleneg:
-            indicator = 'Negated'
-            if todo.startswith(indicator):
-                attrs[Legend.negated] = True
-                todo = todo.removeprefix(indicator)
-            elif hasattr(self, Legend.negated):
-                attrs[Legend.negated] = None
-
-        for i, indicator in enumerate(('Undesignated', 'Designated')):
-            if todo.startswith(indicator):
-                attrs[Legend.designation] = bool(i)
-                todo = todo.removeprefix(indicator)
-                break
-        else:
-            if hasattr(self, Legend.designation):
-                attrs[Legend.designation] = None
-
-        checks = {
-            name: (getattr(self, name), value)
-            for name, value in attrs.items()
-                if name in self.__dict__}
-        conflicts = {
-            name: item for name, item in checks.items() if opr.ne(*item)}
-        if conflicts:
-            raise TypeError(
-                f'Direct __dict__ conflicts inducing autoattrs for {self} : {conflicts}')
-        if not len(todo):
-            yield from attrs.items()
+        return RuleNameAttrInducer(self).build() or {}
 
     def induce_branching(self):
-        rule: Rule = self(Tableau())
-        rule.apply(rule.target(rule.branch().extend(rule.example_nodes())))
-        return len(rule.tableau) - 1
+        tab = Tableau()
+        rule: Rule = self(tab)
+        branch = tab.branch().extend(rule.example_nodes())
+        target = rule.target(branch)
+        if target:
+            rule.apply(target)
+            return len(rule.tableau) - 1
 
     class AbstractHelper(metaclass=HelperMeta):
         'Rule helper interface.'
@@ -493,6 +409,93 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
 
         def __init__(self, rule: Rule, /):
             Rule.AbstractHelper.__init__(self, rule)
+
+
+class RuleNameAttrInducer:
+
+    names = (
+        'operator',
+        'quantifier',
+        'predicate',
+        'negated',
+        'designation')
+
+    doubleneg = 'DoubleNegation'
+    designates = ('Undesignated', 'Designated')
+
+    obj: Any
+    name: str
+    todo: str
+    attrs: dict[str, Any]
+    notfounds: list[str]
+    conflicts: list[str]
+
+    def __init__(self, obj: Any):
+        self.obj = obj
+
+    @property
+    def is_doubleneg(self):
+        return self.name.startswith(self.doubleneg)
+
+    def build(self):
+        self.name = self.todo = self.obj.__name__
+        self.attrs: dict[str, Any] = {}
+        self.notfounds: list[str] = []
+        for name in self.names:
+            if not getattr(self, f'do_{name}')(name):
+                self.notfounds.append(name)
+        self.conflicts = conflicts = []
+        for name, value in self.attrs.items():
+            if name not in self.obj.__dict__:
+                continue
+            old = getattr(self.obj, name, value)
+            if old != value:
+                conflicts.append(f'{name=} {old=} {value=}')
+        if conflicts:
+            raise TypeError(
+                f'Direct __dict__ conflicts inducing autoattrs for '
+                f'{self.obj} : {", ".join(conflicts)}')
+        if len(self.todo):
+            return
+        for name in self.notfounds:
+            if hasattr(self.obj, name):
+                self.attrs[name] = None
+        if not len(self.todo):
+            return self.attrs
+
+    def found(self, name: str, indicator: str, value):
+        self.attrs[name] = value
+        self.todo = self.todo.removeprefix(indicator)
+        return True
+
+    def do_operator(self, name):
+        if self.is_doubleneg:
+            return self.found(name, self.doubleneg, Operator.Negation)
+        for item in Operator:
+            if self.todo.startswith(item.name):
+                return self.found(name, item.name, item)
+
+    def do_quantifier(self, name):
+        for item in Quantifier:
+            if self.todo.startswith(item.name):
+                return self.found(name, item.name, item)
+
+    def do_predicate(self, name):
+        for item in Predicate.System:
+            if self.todo.startswith(item.name):
+                return self.found(name, item.name, item)
+
+    def do_negated(self, name):
+        if self.is_doubleneg:
+            return self.found(name, '', True)
+        indicator = 'Negated'
+        if self.todo.startswith(indicator):
+            return self.found(name, indicator, True)
+
+    def do_designation(self, name):
+        for i, indicator in enumerate(self.designates):
+            if self.todo.startswith(indicator):
+                return self.found(name, indicator, bool(i))
 
 def adds(*groups, **kw):
     """Target dict builder for `AdzHelper`.
