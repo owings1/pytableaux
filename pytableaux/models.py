@@ -115,22 +115,22 @@ class ValueCPL(Mval):
     F = 'False', 0.0
     T = 'True' , 1.0
 
-MvalId = Mval | str | float
+# MvalId = Mval | str | float
 MvalT = TypeVar('MvalT', bound = Mval)
 MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 
 class BaseModel(Generic[MvalT_co], Abc):
-    Meta = LogicType.Meta
-    Value: type[MvalT_co]
+    Meta: type[LogicType.Meta]
+
     values: type[MvalT_co]
     "The values of the model"
     designated_values: Set[MvalT_co]
     "The set of designated values"
     unassigned_value: MvalT_co
     "The default 'unassigned' value"
-    truth_functional_operators: Set[Operator] = frozenset(Meta.truth_functional_operators)
+    truth_functional_operators: Set[Operator]
     "The truth-functional operators"
-    modal_operators: Set[Operator] = frozenset(Meta.modal_operators)
+    modal_operators: Set[Operator] 
     "The modal operators"
 
     @property
@@ -200,7 +200,7 @@ class BaseModel(Generic[MvalT_co], Abc):
 
     def truth_table(self, oper: Operator, / , reverse = False) -> TruthTable[MvalT_co]:
         oper = Operator(oper)
-        inputs = tuple(product(*repeat(self.Value, oper.arity)))
+        inputs = tuple(product(*repeat(self.values, oper.arity)))
         if reverse:
             inputs = tuple(reversed(inputs))
         outputs = tuple(
@@ -210,7 +210,7 @@ class BaseModel(Generic[MvalT_co], Abc):
             inputs = inputs,
             outputs = outputs,
             operator = oper,
-            Value = self.Value,
+            Value = self.values,
             mapping = MapProxy(dict(zip(inputs, outputs))))
 
     def finish(self):
@@ -293,7 +293,7 @@ class BaseModel(Generic[MvalT_co], Abc):
         Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
         if Meta:
             cls.Meta = Meta
-            cls.Value = Meta.values
+            # cls.Value = Meta.values
             cls.values = Meta.values
             cls.designated_values = Meta.designated_values
             cls.unassigned_value = Meta.unassigned_value

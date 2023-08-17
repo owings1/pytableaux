@@ -113,3 +113,11 @@ def set_conf_loglevel(logger: logging.Logger, conf: Mapping[str, Any]):
         leveluc = 'INFO'
     levelnum = getattr(logging, leveluc)
     logger.setLevel(levelnum)
+
+
+def fromjson_hook(obj):
+    if isinstance(obj, list):
+        return tuple(map(fromjson_hook, obj))
+    if isinstance(obj, dict):
+        return {key: fromjson_hook(value) for key, value in obj.items()}
+    return obj

@@ -35,8 +35,8 @@ class Model(L3.Model):
 
     def truth_function(self, operator, a, b=None, /):
         if operator == Operator.Negation:
-            if a == self.Value.N:
-                return self.Value.F
+            if a == self.values.N:
+                return self.values.F
         return super().truth_function(operator, a, b)
 
 class System(K3.System):

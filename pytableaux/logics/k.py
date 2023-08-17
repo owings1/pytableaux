@@ -932,12 +932,13 @@ class Rules(LogicType.Rules):
                 if (node, w2) in self[NodesWorlds][branch]:
                     continue
                 add = swnode(si, w2)
-                if not branch.has(add):
-                    anode = self[WorldIndex].nodes[branch][w1, w2]
-                    yield adds(group(add),
-                        sentence = si,
-                        world = w2,
-                        nodes = (node, anode))
+                if branch.has(add):
+                    continue
+                anode = self[WorldIndex].nodes[branch][w1, w2]
+                yield adds(group(add),
+                    sentence=si,
+                    world=w2,
+                    nodes=(node, anode))
 
         def score_candidate(self, target, /) -> float:
             if target.get('flag'):

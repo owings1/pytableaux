@@ -243,7 +243,9 @@ class StandardLexWriter(DefaultLexWriter):
     __slots__ = EMPTY_SET
 
     notation = Notation.standard
-    defaults = dict(drop_parens = True)
+    defaults = dict(
+        drop_parens=True,
+        max_infix=3)
 
     def write(self, item):
         if self.opts['drop_parens'] and isinstance(item, Operated):
@@ -251,7 +253,8 @@ class StandardLexWriter(DefaultLexWriter):
         return super().write(item)
 
     def _write_predicated(self, item: Predicated) -> str:
-        if len(item) < 2:
+        arity = len(item)
+        if arity < 2 or arity > self.opts['max_infix']:
             return super()._write_predicated(item)
         # Infix notation for predicates of arity > 1
         pred = item.predicate

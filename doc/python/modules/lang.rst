@@ -4,12 +4,12 @@
 
 .. contents:: Contents
   :local:
-  :depth: 2
+  :depth: 3
 
 .. module:: pytableaux.lang
 
 Lexical Base Classes
-====================
+********************
 
 .. autoclass:: Lexical()
     :members:
@@ -31,67 +31,85 @@ Lexical Base Classes
     :members:
     :show-inheritance:
 
-
 Concrete Lexical Classes
-========================
+************************
 
+Predicate
+----------
 .. autoclass:: Predicate
     :members:
     :exclude-members: Coords
 
+Constant
+----------
+
 .. autoclass:: Constant()
     :show-inheritance:
+
+Variable
+----------
 
 .. autoclass:: Variable()
     :show-inheritance:
 
-Enum types
+Operator
+---------
+
+.. autoclass:: Operator()
+    :members:
+    :show-inheritance:
+
+Quantifier
 ----------
 
 .. autoclass:: Quantifier()
     :members:
     :show-inheritance:
 
-.. autoclass:: Operator()
-    :members:
-    :show-inheritance:
-
-Sentence types
---------------
+Atomic
+------
 
 .. autoclass:: Atomic()
     :members:
     :special-members: __init__
     :show-inheritance:
 
+Predicated
+----------
+
 .. autoclass:: Predicated
     :members:
     :special-members: __init__
     :show-inheritance:
 
+Quantified
+----------
 
 .. autoclass:: Quantified
     :members:
     :special-members: __init__
     :show-inheritance:
 
+Operated
+---------
 
 .. autoclass:: Operated()
     :members:
     :special-members: __init__
     :show-inheritance:
 
-
 Collection Classes
-==================
+*******************
+
+Argument
+---------
 
 .. autoclass:: Argument
 
 .. autoclass:: Predicates
 
-
 Parser Classes
-==============
+**************
 
 .. autoclass:: Parser
     :members: __call__, argument
@@ -102,9 +120,8 @@ Parser Classes
 
 .. autoclass:: StandardParser()
 
-
 Writer Classes
-==============
+***************
 
 .. autoclass:: LexWriter
     :members: __call__
@@ -115,13 +132,11 @@ Writer Classes
 
 .. autoclass:: StandardLexWriter()
 
-
 Utility Classes
-===============
+***************
 
 .. autoclass:: LexType()
     :members:
-
 
 .. autoclass:: TableStore
     :members:

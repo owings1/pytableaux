@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
-
 """
 pytableaux.lang.lex
 -------------------
@@ -77,7 +76,24 @@ _Ranks: Mapping[str, int] = MapProxy(dict(
 
 @abcs.clsafter
 class Lexical:
-    """Base Lexical interface.
+    """Base Lexical class. This is the base class from which all concrete lexical
+    classes inherit, including enum classes. It provides basic features of
+    identitfying, comparing, and generating items.
+
+    * The :attr:`ident` and :attr:`spec` attributes provide canonical ways
+    of specifying items with tuples of numbers, strings, and other
+    tuples. This is useful for serialization and deserialization.
+
+    * The :meth:`first()`, :meth:`next()`, and :meth:`gen()` methods enable
+    programatic creation of items.
+
+    * The :attr:`hash` and :attr:`sort_tuple` attributes allow for rich
+    comparison and ordering of items, with consistency for comparing
+    across different types.
+
+    * The :attr:`TYPE` refers to the corresponding member of the special
+    :class:`LexType` enum class member, which holds meta information about
+    each type.
     """
 
     __slots__ = EMPTY_SET
@@ -111,14 +127,30 @@ class Lexical:
 
     @classmethod
     def first(cls) -> Self:
-        "Get the canonically first item of the type."
+        """Get the canonically first item of the type. This can be called on
+        both concrete and abstract classes. For example:
+
+        >>> Atomic.first()
+        <Sentence: A>
+        >>> Constant.first()
+        <Parameter: a>
+        >>> Constant.first() == Parameter.first()
+        True
+        >>> Operated.first()
+        >>> Lexical.first()
+        <Predicate: F>
+        >>> LexicalEnum.first()
+        <Quantifier: Existential>
+        """
         if cls is __class__:
             return Predicate.first()
         raise TypeError(f'Abstract type {cls}')
 
     @abstractmethod
     def next(self, **kw) -> Self:
-        "Get the canonically next item of the type."
+        """Get the canonically next item of the type. Various subclasses may
+        provide optional keyword arguments.
+        """
         raise NotImplementedError
 
     @classmethod
@@ -128,7 +160,8 @@ class Lexical:
         This is convenient for making sequential lexical items quickly, without
         going through parsing.
 
-        >>> 
+        >>> Predicate(1,0,4)(Constant.gen(4))
+        <Sentence: Gabcd>
 
         Args:
             stop: The number at which to stop generating. If ``None``,
@@ -540,8 +573,26 @@ class Operator(LexicalEnum):
     >>> s2 = Operator.Conditional(s1, s1)
     >>> s2 == Operated(Operator.Conditional, (s1, s1))
     True
-    """
+
+    * Some operators map to Python operators, such as & or ~. This is
+      indicated by the `libname` column in the table below.
     
+    >>> s = Atomic(0, 0)
+    >>> Conjunction(s, s) == s & s
+    True
+    >>> s.negate() == ~s
+    True
+
+    See the :class:`Sentence` class for more.
+
+    Members
+    -------
+
+    .. csv-table::
+        :generator: member-table
+        :generator-args: name arity libname
+    """
+
     # .. member-table:: pytableaux.lang.lex.Operator
     #     :columns: order, label, arity, libname
 
@@ -615,6 +666,14 @@ class Sentence(LexicalAbc):
       True
       >>> a & b == a.conjoin(b)
       True
+    
+      
+    Subclasses
+    ----------
+    * :class:`Atomic`
+    * :class:`Predicated`
+    * :class:`Quantified`
+    * :class:`Operated`
     """
 
     predicates: frozenset[Predicate]

@@ -24,12 +24,12 @@ from __future__ import annotations
 
 import operator as opr
 from collections.abc import Sequence
-from itertools import repeat
+from itertools import repeat, starmap
 from typing import Any, Iterable
 
 from .. import tools
 from ..errors import Emsg, check
-from ..tools import abcs, lazy, membr, qset, wraps
+from ..tools import abcs, group, lazy, membr, qset, wraps
 from . import LangCommonMeta, Predicate, Sentence
 
 __all__ = (
@@ -109,29 +109,27 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
     @tools.closure
     def ordr():
 
-        sorder = Sentence.orderitems
-
         def cmpgen(a: Argument, b: Argument, /,):
             if a is b:
                 yield 0
                 return
             yield bool(a.conclusion) - bool(b.conclusion)
             yield len(a) - len(b)
-            yield from (sorder(sa, sb) for sa, sb in zip(a, b))
+            yield from starmap(Sentence.orderitems, zip(a, b))
 
         @membr.defer
-        def ordr(member: membr):
+        def wrapper(member: membr):
             @wraps(oper := getattr(opr, member.name))
-            def wrapper(self: Argument, other: Any, /):
+            def wrapped(self: Argument, other: Any, /):
                 if not isinstance(other, Argument):
                     return NotImplemented
                 for cmp in cmpgen(self, other):
                     if cmp:
                         break
                 return oper(cmp, 0)
-            return wrapper
+            return wrapped
 
-        return ordr
+        return wrapper
 
     __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr() # type: ignore
 
@@ -168,10 +166,19 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
 
 
 class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dict(cast = Predicate)}):
-    'Predicate store. An ordered set with a multi-keyed lookup index.'
+    """
+    Predicates
+    ----------
+
+    Predicate store. An sequenced set with a multi-keyed lookup index.
+
+    Predicates with the same symbol coordinates (index, subscript) may
+    have different arities. This class ensures that conflicting predicates are not
+    in the same set, which is necessary, for example, for determinate parsing.
+    """
 
     _lookup: dict[Any, Predicate]
-    __slots__ = '_lookup',
+    __slots__ = group('_lookup')
 
     def __init__(self, values = None, /, *,
         sort: bool = False, key = None, reverse: bool = False):

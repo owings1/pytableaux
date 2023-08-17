@@ -26,9 +26,8 @@ from abc import abstractmethod
 from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Iterator,
-                    Mapping, Optional, Self, Sequence, SupportsIndex, TypeVar,
-                    final)
+from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping,
+                    Optional, Self, Sequence, SupportsIndex, TypeVar, final)
 
 from ..errors import Emsg, ProofTimeoutError, check
 from ..lang.collect import Argument

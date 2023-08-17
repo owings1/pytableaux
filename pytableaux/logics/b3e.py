@@ -28,7 +28,8 @@ class Meta(K3.Meta):
     title = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 50
-    native_operators = tuple(sorted(FDE.Meta.native_operators + group(Operator.Assertion)))
+    native_operators = tuple(
+        sorted(FDE.Meta.native_operators + group(Operator.Assertion)))
 
 def gap(v):
     return min(v, 1 - v)
@@ -38,10 +39,10 @@ def crunch(v):
 
 class Model(K3W.Model):
 
-    def truth_function(self, oper: Operator, a, b = None, /):
+    def truth_function(self, oper: Operator, a, b=None, /):
         oper = Operator(oper)
         if oper is Operator.Assertion:
-            return self.Value[crunch(self.Value[a].num)]
+            return self.values[crunch(self.values[a].num)]
         elif oper is Operator.Conditional:
             return self.truth_function(
                 Operator.Disjunction,

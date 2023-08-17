@@ -24,7 +24,7 @@ from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import ValueFDE
 from ..proof import Branch, Node, Target, adds, filters, rules, sdnode
-from ..tools import closure, group, qsetf
+from ..tools import closure, group, qsetf, maxceil, minfloor
 from . import LogicType
 
 
@@ -84,6 +84,8 @@ class Model(LogicType.Model[ValueFDE]):
         self.constants: set[Constant] = set()
         #: Track set of predicates for performance.
         self.predicates: set[Predicate] = set()
+        self.maxval = max(self.values)
+        self.minval = min(self.values)
 
     def value_of_predicated(self, s: Predicated, /, **kw):
         params = s.params
@@ -98,22 +100,18 @@ class Model(LogicType.Model[ValueFDE]):
             return self.values.F
         return self.values.N
 
+    def unquantifier(self, s: Quantified):
+        for c in self.constants:
+            yield self.value_of(c >> s)
+    
     def value_of_existential(self, s: Quantified, /, **kw):
         """
         The value of an existential sentence is the maximum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
         """
-        maxval = max(self.values)
-        value = min(self.values)
-        value_of = self.value_of
-        for c in self.constants:
-            v = value_of(c >> s, **kw)
-            if v > value:
-                value = v
-                if value is maxval:
-                    break
-        return value
+        return maxceil(self.maxval, self.unquantifier(s), self.minval)
+
 
     def value_of_universal(self, s: Quantified, /, **kw):
         """
@@ -121,15 +119,7 @@ class Model(LogicType.Model[ValueFDE]):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
         """
-        minval = min(self.values)
-        value = max(self.values)
-        for c in self.constants:
-            v = self.value_of(c >> s, **kw)
-            if v < value:
-                value = v
-                if value is minval:
-                    break
-        return value
+        return minfloor(self.minval, self.unquantifier(s), self.maxval)
 
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
         """
