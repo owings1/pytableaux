@@ -184,8 +184,8 @@ class BranchValueHook(BranchCache[_VT]):
         self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
     @classmethod
-    def configure_rule(cls, rulecls, config, **kw):
-        super().configure_rule(rulecls, config, **kw)
+    def configure_rule(cls, rulecls, config):
+        super().configure_rule(rulecls, config)
         hookname = cls.hook_method_name
         value = getattr(rulecls, hookname, None)
         if value is None:
@@ -433,7 +433,20 @@ class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
+    class Config(NamedTuple):
+        filters: Mapping
+        pred: Callable
+
+    class PredTuple(tuple):
+
+        __slots__ = EMPTY_SET
+
+        def __call__(self, obj, /):
+            return all(f(obj) for f in self)
+
     __slots__ = ('filters', 'pred')
+
+    config: FilterHelper.Config
 
     filters: TypeInstMap[CompareNode]
     "Mapping from ``NodeCompare`` class to instance."
@@ -530,6 +543,21 @@ class FilterHelper(FilterNodeCache):
         filters = MapProxy(dict(zip(types, funcs)))
         return filters, lambda node: all(f(node) for f in funcs)
 
+
+    # def disable_filter(self: Self|type[Rule], filtercls):
+    #     try:
+    #         filts = self.NodeFilters
+    #     except AttributeError:
+    #         return
+    #     if filtercls not in filts:
+    #         return
+    #     filts[filtercls] = NotImplemented
+    #     helpercls = helpers.FilterHelper
+    #     if helpercls not in self.Helpers:
+    #         return
+    #     configs = dict(self.Helpers)
+    #     configs[helpercls] = helpercls.configure_rule(self, ...)
+    #     self.Helpers = MapProxy(configs)
 class NodeConsts(BranchDictCache[Node, set[Constant]]):
     """Track the unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.

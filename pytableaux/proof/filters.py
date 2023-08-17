@@ -24,7 +24,7 @@ from __future__ import annotations
 import operator as opr
 from abc import abstractmethod
 from types import MappingProxyType as MapProxy
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, NamedTuple, Sequence
 
 from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
                     Sentence)
@@ -302,3 +302,10 @@ class NodeType(CompareType, CompareNode):
 
     def example(self):
         return self.example_node()
+
+class predstuple(tuple):
+
+    __slots__ = EMPTY_SET
+
+    def __call__(self, obj, /):
+        return all(f(obj) for f in self)

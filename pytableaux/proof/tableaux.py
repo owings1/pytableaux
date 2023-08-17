@@ -52,7 +52,8 @@ if TYPE_CHECKING:
 
 _F = TypeVar('_F', bound=Callable)
 _RT = TypeVar('_RT', bound='Rule')
-_RHT = TypeVar('_RHT', bound='Rule.Helper')
+_T = TypeVar('_T')
+_RHT = TypeVar('_RHT', bound=RuleMeta.AbstractHelper)
 
 __all__ = (
     'Rule',
@@ -72,7 +73,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         is_rank_optim = True,
         nolock = False))
 
-    legend: tuple
+    legend: tuple[tuple[str, Any], ...]
     "The rule class legend."
 
     Helpers: Mapping[type[Rule.Helper], Any] = {}
@@ -125,11 +126,11 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             return self.tableau.logic.Meta
         return type(self).Meta
 
+    Meta: type[LogicType.Meta]|None
+
     @property
     def modal(self) -> bool|None:
         return self.Meta and self.Meta.modal
-
-    Meta: type[LogicType.Meta]|None
 
     modal: bool|None
     "Whether this is a modal rule."
@@ -149,6 +150,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         if not self.opts['nolock']:
             tableau.once(Tableau.Events.AFTER_BRANCH_ADD, self.lock)
         self.state |= self.state.INIT
+
+    def __getitem__(self, key: type[_RHT]) -> _RHT:
+        return self.helpers[key]
 
     @abstractmethod
     def _get_targets(self, branch: Branch, /) -> Iterable[Target]:
@@ -179,7 +183,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         return 0.0
 
     @final
-    def target(self, branch: Branch, /) -> Optional[Target]:
+    def target(self, branch: Branch, /) -> Target|None:
         "Get the rule target if it applies."
         with self.timers['search']:
             targets = self._get_targets(branch)
@@ -271,16 +275,12 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
 
-    def __getitem__(self, key: type[_RHT]) -> _RHT:
-        return self.helpers[key]
-
-    __iter__ = None
-
     def __setattr__(self, name, value):
         if self.locked and name in __class__.__slots__:
             raise Emsg.ReadOnly(self, name)
         super().__setattr__(name, value)
 
+    __iter__ = None
     __delattr__ = Emsg.ReadOnly.razr
 
     def __repr__(self):
@@ -307,7 +307,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             branch  = branch,
             nodes   = nodes,
             result  = result)
-
 # ----------------------------------------------
 
 def locking(method: _F) -> _F:
@@ -953,7 +952,8 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             raise Emsg.IllegalState("Tableau already started")
         with self.timers.trunk:
             self.emit(Tableau.Events.BEFORE_TRUNK_BUILD, self)
-            self.logic.System.build_trunk(self, self.argument)
+            branch = self.branch()
+            self.logic.System.build_trunk(branch, self.argument)
             self.flag |= self.flag.TRUNK_BUILT | self.flag.STARTED
             self.emit(Tableau.Events.AFTER_TRUNK_BUILD, self)
         return self

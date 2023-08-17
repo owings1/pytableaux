@@ -26,7 +26,7 @@ import operator as opr
 from abc import abstractmethod
 from enum import Enum, Flag
 from types import MappingProxyType as MapProxy
-from typing import Any, NamedTuple, Sequence, TypeVar
+from typing import Any, Hashable, NamedTuple, Sequence, TypeVar
 
 from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
@@ -234,12 +234,12 @@ class System(metaclass=SystemMeta):
 
     @classmethod
     @abstractmethod
-    def build_trunk(cls, tab: Tableau, arg: Argument, /) -> None:
+    def build_trunk(cls, b: Branch, arg: Argument, /) -> None:
         """Build the trunk for an argument on the tableau.
         
         Args:
-            tableau (Tableau): The tableau instance.
-            argument (Argument): The argument.
+            b (Branch): The branch to construct.
+            arg (Argument): The argument.
         """
         raise NotImplementedError
 
@@ -257,7 +257,17 @@ class System(metaclass=SystemMeta):
         return 0
 
     @classmethod
-    def branching_complexity_hashable(cls, node: Node, /):
+    def branching_complexity_hashable(cls, node: Node, /) -> Hashable:
+        """Return a hashable object corresponding to a node's branching
+        complexity, in order to save redundant computation time. By default
+        it just returns the node itself.
+
+        Args:
+            node (Node): The node instance.
+
+        Returns:
+            A hashable object.
+        """
         return node
 
 

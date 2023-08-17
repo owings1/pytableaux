@@ -404,7 +404,9 @@ class Test_K_DefaultNodeFilterRule(BaseCase):
 
     def case1(self, n = 10, **kw):
         class Impl(DefaultKRule):
-            def _get_node_targets(self, node, branch): pass
+            def _get_node_targets(self, node, branch):
+                yield from ()
+                pass
         rule, tab = self.rule_tab(Impl, **kw)
         tab.branch().extend(self.ngen(n))
         return (rule, tab)

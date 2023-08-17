@@ -26,7 +26,7 @@ from ._package_info import package as package
 
 __docformat__ = package.docformat
 
-del(_package_info)
+# del(_package_info)
 
 
 from . import errors as errors

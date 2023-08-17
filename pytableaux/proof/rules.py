@@ -42,6 +42,7 @@ __all__ = (
     'Rule')
 
 _ST = TypeVar('_ST', bound=Sentence)
+_T = TypeVar('_T')
 
 FIRST_CONST_SET = frozenset({Constant.first()})
 
