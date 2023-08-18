@@ -29,7 +29,7 @@ from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
                              WorldIndex)
-from ..tools import EMPTY_SET, group, substitute
+from ..tools import EMPTY_SET, group, substitute, minfloor, maxceil
 from . import LogicType
 from . import fde as FDE
 
@@ -101,6 +101,8 @@ class Model(BaseModel[Meta.values]):
 
         # ensure there is a w0
         self.frames[0]
+        self.maxval = max(self.values)
+        self.minval = min(self.values)
 
     truth_function = FDE.Model.truth_function
 
@@ -117,25 +119,39 @@ class Model(BaseModel[Meta.values]):
             return self.values.T
         return self.values.F
 
-    def value_of_existential(self, s: Quantified, **kw):
-        """
-        An existential sentence is true at :m:`w`, just when the sentence resulting in the
-        subsitution of some constant in the domain for the variable is true at :m:`w`.
-        """
-        for c in self.constants:
-            if self.value_of(c >> s, **kw) is self.values.T:
-                return self.values.T
-        return self.values.F
+    def value_of_quantified(self, s: Quantified, **kw):
+        it = map(lambda s: self.value_of(s, **kw), map(s.unquantify, self.constants))
+        if s.quantifier is Quantifier.Existential:
+            return maxceil(self.maxval, it, self.minval)
+        if s.quantifier is Quantifier.Universal:
+            return minfloor(self.minval, it, self.maxval)
+        raise TypeError(s.quantifier)
+    # def value_of_existential(self, s: Quantified, **kw):
+    #     """
+    #     An existential sentence is true at :m:`w`, just when the sentence resulting in the
+    #     subsitution of some constant in the domain for the variable is true at :m:`w`.
+    #     """
+    #     for c in self.constants:
+    #         if self.value_of(c >> s, **kw) is self.values.T:
+    #             return self.values.T
+    #     return self.values.F
 
-    def value_of_universal(self, s: Quantified, **kw):
-        """
-        A universal sentence is true at :m:`w`, just when the sentence resulting in the
-        subsitution of each constant in the domain for the variable is true at :m:`w`.
-        """
-        for c in self.constants:
-            if self.value_of(c >> s, **kw) is self.values.F:
-                return self.values.F
-        return self.values.T
+    # def value_of_universal(self, s: Quantified, **kw):
+    #     """
+    #     A universal sentence is true at :m:`w`, just when the sentence resulting in the
+    #     subsitution of each constant in the domain for the variable is true at :m:`w`.
+    #     """
+    #     for c in self.constants:
+    #         if self.value_of(c >> s, **kw) is self.values.F:
+    #             return self.values.F
+    #     return self.values.T
+
+    def value_of_operated(self, s: Operated, **kw):
+        if s.operator is Operator.Possibility:
+            return self.value_of_possibility(s, **kw)
+        if s.operator is Operator.Necessity:
+            return self.value_of_necessity(s, **kw)
+        return super().value_of_operated(s, **kw)
 
     def value_of_possibility(self, s: Operated, world: int = 0, **kw):
         """
@@ -146,6 +162,8 @@ class Model(BaseModel[Meta.values]):
             if self.value_of(s.lhs, world=w2, **kw) is self.values.T:
                 return self.values.T
         return self.values.F
+
+    
 
     def value_of_necessity(self, s: Operated, /, world: int = 0, **kw):
         """

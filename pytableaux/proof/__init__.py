@@ -362,6 +362,7 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         if target:
             rule.apply(target)
             return len(rule.tableau) - 1
+        return NotImplemented
 
     class AbstractHelper(metaclass=HelperMeta):
         'Rule helper interface.'
@@ -371,6 +372,10 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
 
         rule: Rule
         config: Any
+
+        @property
+        def tableau(self) -> Tableau:
+            return self.rule.tableau
 
         @abstractmethod
         def __init__(self, rule: Rule, /):

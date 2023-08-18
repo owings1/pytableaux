@@ -61,31 +61,38 @@ class Model(K3.Model):
                         gap(self.values[a].num) + gap(self.values[b].num)))]
         return super().truth_function(oper, a, b)
 
-    def value_of_existential(self, sentence: Quantified, **kw):
-        """
-        The value of an existential sentence is the maximum of the *crunched
-        values* of the sentences that result from replacing each constant for the
-        quantified variable.
-        """
-        sub = sentence.sentence.substitute
-        v = sentence.variable
-        return self.values[
-            maxceil(self.values.T, (
-                crunch(self.values[self.value_of(sub(c, v), **kw)].num)
-                for c in self.constants))]
+    def value_of_quantified(self, s: Quantified, /):
+        it = map(crunch, map(self.value_of, map(s.unquantify, self.constants)))
+        if s.quantifier is Quantifier.Existential:
+            return maxceil(self.maxval, it, self.minval)
+        if s.quantifier is Quantifier.Universal:
+            return minfloor(self.minval, it, self.maxval)
+        raise TypeError(s.quantifier)
+    # def value_of_existential(self, sentence: Quantified, **kw):
+    #     """
+    #     The value of an existential sentence is the maximum of the *crunched
+    #     values* of the sentences that result from replacing each constant for the
+    #     quantified variable.
+    #     """
+    #     sub = sentence.sentence.substitute
+    #     v = sentence.variable
+    #     return self.values[
+    #         maxceil(self.values.T, (
+    #             crunch(self.values[self.value_of(sub(c, v), **kw)].num)
+    #             for c in self.constants))]
 
-    def value_of_universal(self, sentence: Quantified, **kw):
-        """
-        The value of an universal sentence is the minimum of the *crunched values*
-        of the sentences that result from replacing each constant for the quantified
-        variable.
-        """
-        sub = sentence.sentence.substitute
-        v = sentence.variable
-        return self.values[
-            minfloor(self.values.F, (
-                crunch(self.values[self.value_of(sub(c, v), **kw)].num)
-                for c in self.constants))]
+    # def value_of_universal(self, sentence: Quantified, **kw):
+    #     """
+    #     The value of an universal sentence is the minimum of the *crunched values*
+    #     of the sentences that result from replacing each constant for the quantified
+    #     variable.
+    #     """
+    #     sub = sentence.sentence.substitute
+    #     v = sentence.variable
+    #     return self.values[
+    #         minfloor(self.values.F, (
+    #             crunch(self.values[self.value_of(sub(c, v), **kw)].num)
+    #             for c in self.constants))]
 
 class System(K3.System):
     """

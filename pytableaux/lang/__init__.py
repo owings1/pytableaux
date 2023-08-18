@@ -41,7 +41,7 @@ __all__ = (
     # 'TableStore',
     # 'TriCoords',
 
-    # Subpackage convenience import
+    # Subpackage export
     'Argument',
     'Atomic',
     'Constant',
@@ -76,8 +76,7 @@ class LangCommonMeta(abcs.AbcMeta):
     # The nosetattr member is shared among these classes and is activated after
     # the modules are fully initialized.
 
-    @classmethod
-    def __prepare__(cls, clsname, bases, **kw):
+    def __prepare__(clsname, bases, **kw):
         return dict(__slots__=EMPTY_SET)
 
     _readonly : bool

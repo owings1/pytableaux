@@ -71,7 +71,7 @@ class AdzHelper(Rule.Helper):
 
     def __init__(self, rule, /):
         super().__init__(rule)
-        self.closure_rules = self.rule.tableau.rules.groups.get(
+        self.closure_rules = self.tableau.rules.groups.get(
             'closure', EMPTY_SET)
 
     def _apply(self, target: Target):
@@ -79,7 +79,7 @@ class AdzHelper(Rule.Helper):
         for i, nodes in enumerate(adds):
             if i == 0:
                 continue
-            branch = self.rule.branch(target.branch)
+            branch = self.tableau.branch(target.branch)
             branch.extend(nodes)
             if self.rule.ticking:
                 branch.tick(target.node)
@@ -115,7 +115,7 @@ class BranchCache(Rule.HelperDict[Branch, _VT]):
                 self[branch] = copy(self[branch.parent])
             else:
                 self[branch] = self._empty_value(branch)
-        self.rule.tableau.on({
+        self.tableau.on({
             Tableau.Events.AFTER_BRANCH_ADD: after_branch_add,
             Tableau.Events.AFTER_BRANCH_CLOSE: self.__delitem__})
 
@@ -142,7 +142,7 @@ class BranchDictCache(BranchCache[dict[_KT, _VT]]):
             if branch.parent:
                 for key in self[branch]:
                     self[branch][key] = copy(self[branch.parent][key])
-        self.rule.tableau.on(Tableau.Events.AFTER_BRANCH_ADD, after_branch_add)
+        self.tableau.on(Tableau.Events.AFTER_BRANCH_ADD, after_branch_add)
 
 class QuitFlag(BranchCache[bool]):
     """
@@ -181,7 +181,7 @@ class BranchValueHook(BranchCache[_VT]):
             res = self.hook(node, branch)
             if res:
                 self[branch] = res
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
+        self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
     @classmethod
     def configure_rule(cls, rulecls, config):
@@ -283,7 +283,7 @@ class UnserialWorlds(BranchCache[set[int]]):
                     self[branch].discard(w)
                 else:
                     self[branch].add(w)
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
+        self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
 class AccessNodesIndex(BranchCache[dict[WorldPair, Node]]):
 
@@ -315,7 +315,7 @@ class WorldIndex(BranchDictCache[int, set[int]]):
             w1, w2 = node.pair()
             self[branch][w1].add(w2)
             self.nodes.add(node, branch)
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
+        self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
     def has(self, branch, access):
         'Whether w1 sees w2 on the given branch.'
@@ -387,11 +387,11 @@ class FilterNodeCache(BranchCache[set[Node]]):
         def after_node_add(node, branch):
             if self(node, branch):
                 self[branch].add(node)
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
+        self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
         if self.ignore_ticked:
             def after_node_tick(node, branch):
                 self[branch].discard(node)
-            self.rule.tableau.on(Tableau.Events.AFTER_NODE_TICK, after_node_tick)
+            self.tableau.on(Tableau.Events.AFTER_NODE_TICK, after_node_tick)
 
     @classmethod
     def configure_rule(cls, rulecls, config, **kw):
@@ -582,7 +582,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
                 self.consts[branch].update(consts)
     
         self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
+        self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
 class WorldConsts(BranchDictCache[int, set[Constant]]):
     """
@@ -602,7 +602,7 @@ class WorldConsts(BranchDictCache[int, set[Constant]]):
             if world not in self[branch]:
                 self[branch][world] = set()
             self[branch][world].update(s.constants)
-        self.rule.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
+        self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
 class MaxConsts(Rule.HelperDict[Branch, int]):
     """
@@ -626,7 +626,7 @@ class MaxConsts(Rule.HelperDict[Branch, int]):
                 if origin in self:
                     raise NotImplementedError('Multiple trunk branches not implemented.')
                 self[origin] = self._compute(branch)
-        self.rule.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, after_trunk_build)
+        self.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, after_trunk_build)
 
     def is_reached(self, branch: Branch, world = 0, /):
         """
@@ -735,7 +735,7 @@ class MaxWorlds(BranchDictCache[Branch, int]):
                 if origin in self:
                     raise NotImplementedError('Multiple trunk branches not implemented.')
                 self[origin] = self._compute(branch)
-        self.rule.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, after_trunk_build)
+        self.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, after_trunk_build)
 
     def is_reached(self, branch: Branch, /):
         """

@@ -21,6 +21,7 @@ pytableaux.proof.common
 """
 from __future__ import annotations
 
+import itertools
 from collections import defaultdict
 from collections.abc import Mapping, Set
 from types import MappingProxyType as MapProxy
@@ -29,7 +30,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Optional, Se
 from ..errors import Emsg, check
 from ..lang import Constant, Sentence
 from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, SequenceSet, SetView,
-                     abcs, dictattr, isattrstr, isint, itemsiter, qset)
+                     abcs, dictattr, isattrstr, isint, qset)
 from ..tools.events import EventEmitter
 from . import BranchMeta, NodeMeta, WorldPair
 
@@ -603,7 +604,8 @@ class Target(dictattr):
         return list(self._names())
 
     def __repr__(self):
-        props = dict(itemsiter(self._names(), vget = self.get))
+        props = dict(map(self.__getitem__, self._names()))
+        # props = dict(itemsiter(self._names(), vget = self.get))
         return f'<{type(self).__name__} {props}>'
 
     def _names(self):

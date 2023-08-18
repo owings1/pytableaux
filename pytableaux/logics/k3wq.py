@@ -57,7 +57,14 @@ class Model(K3W.Model):
         3: Value.N,
     }
 
-    def value_of_universal(self, s: Quantified, /, **kw):
+    def value_of_quantified(self, s: Quantified, /):
+        if s.quantifier is Quantifier.Existential:
+            return self._value_of_existential(s)
+        if s.quantifier is Quantifier.Universal:
+            return self._value_of_universal(s)
+        raise TypeError(s.quantifier)
+
+    def _value_of_universal(self, s: Quantified, /, **kw):
         """
         A universal sentence is interpreted in terms of `generalized conjunction`.
         If we order the values least to greatest as V{N}, V{F}, V{T}, then we
@@ -74,7 +81,7 @@ class Model(K3W.Model):
             ].name
         ]
 
-    def value_of_existential(self, s: Quantified, **kw):
+    def _value_of_existential(self, s: Quantified, **kw):
         """
         An existential sentence is interpreted in terms of `generalized disjunction`.
         If we order the values least to greatest as V{N}, V{T}, V{F}, then we

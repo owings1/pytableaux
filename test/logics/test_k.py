@@ -439,8 +439,6 @@ class TestModelErrors(Base):
         model = self.m()
         with self.assertRaises(NotImplementedError):
             model.set_literal_value(s1, 'T')
-        with self.assertRaises(NotImplementedError):
-            model.value_of_modal(s1)
 
     def test_value_error_various(self):
         s1, s2 = self.pp('a', 'Fm')

@@ -33,8 +33,8 @@ from ..errors import Emsg, ProofTimeoutError, check
 from ..lang.collect import Argument
 from ..lang.lex import Sentence
 from ..logics import registry
-from ..tools import (EMPTY_SET, SeqCover, absindex, dictns, for_defaults, qset,
-                     qsetf, wraps)
+from ..tools import (EMPTY_MAP, EMPTY_SET, SeqCover, absindex, dictns,
+                     for_defaults, qset, qsetf, wraps)
 from ..tools.events import EventEmitter
 from ..tools.hybrids import SequenceSet, qset
 from ..tools.linked import linqset
@@ -88,6 +88,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     "Whether this is a ticking rule."
 
     autoattrs: bool|None = None
+    "Whether to induce class attributes from the rule name."
 
     branching: int = 0
     "The number of additional branches created."
@@ -202,18 +203,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             self._apply(target)
             self.emit(Rule.Events.AFTER_APPLY, target)
             self.tableau.emit(Tableau.Events.AFTER_RULE_APPLY, target)
-
-    def branch(self, parent: Branch|None = None, /):
-        """Create a new branch on the tableau. Convenience for
-        ``self.tableau.branch()``.
-
-        Args:
-            parent: The parent branch, if any.
-
-        Returns:
-            The new branch.
-        """
-        return self.tableau.branch(parent)
 
     def stats(self):
         "Compute the rule stats."
@@ -683,6 +672,9 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         """
         EventEmitter.__init__(self)
         self.flag = Tableau.Flag.PREMATURE
+        self.models = EMPTY_SET
+        self.stats = EMPTY_MAP
+        self.tree = None
         self.__listen_on(
             history := [],
             stat := self.Stat(),
@@ -718,8 +710,9 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     def argument(self) -> Argument|None:
         """The argument of the tableau.
 
-        When setting this value, if the tableau has a logic set, then the
-        trunk is automatically built.
+        When setting this value, if the tableau has a logic set, and the
+        `auto_build_trunk` option is true (default), then the trunk is
+        automatically built.
         """
         try:
             return self._argument
@@ -728,7 +721,12 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
 
     @property
     def logic(self) -> LogicType|None:
-        "The logic of the tableau."
+        """The logic of the tableau.
+
+        When setting this value, if the tableau has an argument set, and the
+        `auto_build_trunk` option is true (default), then the trunk is
+        automatically built.
+        """
         try:
             return self._logic
         except AttributeError:
@@ -1195,7 +1193,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         'Build models for the open branches.'
         Model = self.logic.Model
         for branch in self.open:
-            self._check_timeout()            
+            self._check_timeout()
             model = Model()
             model.read_branch(branch)
             branch.model = model

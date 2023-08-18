@@ -16,15 +16,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from collections import defaultdict
 from types import MappingProxyType as MapProxy
 from typing import Any
 
-from ..errors import Emsg
+from ..errors import Emsg, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
-from ..models import ValueFDE
-from ..proof import Branch, Node, Target, adds, filters, rules, sdnode
-from ..tools import closure, group, qsetf, maxceil, minfloor
+from ..models import ValueFDE, PredExtension
+from ..proof import Branch, Node, adds, filters, rules, sdnode
+from ..tools import closure, group, maxceil, minfloor
 from . import LogicType
 
 
@@ -54,17 +55,12 @@ class Meta(LogicType.Meta):
 class Model(LogicType.Model[ValueFDE]):
     'An FDE Model.'
 
-    extensions: dict[Predicate, set[tuple[Constant, ...]]]
-    """A mapping from each predicate to its extension.
+    predicates: dict[Predicate, PredExtension]
+    # extensions: dict[Predicate, set[tuple[Constant, ...]]]
+    # """A mapping from each predicate to its extension.
     
-    :type: dict[Predicate, set[tuple[Constant, ...]]]
-    """
-
-    anti_extensions: dict[Predicate, set[tuple[Constant, ...]]]
-    """A map of predicates to their anti-extension.
-    
-    :type: dict[Predicate, set[tuple[Constant, ...]]]
-    """
+    # :type: dict[Predicate, set[tuple[Constant, ...]]]
+    # """
 
     atomics: dict[Atomic, ValueFDE]
     "An assignment of each atomic sentence to a value."
@@ -74,8 +70,9 @@ class Model(LogicType.Model[ValueFDE]):
 
     def __init__(self):
         super().__init__()
-        self.extensions = {}
-        self.anti_extensions = {}
+        # self.extensions = {}
+        # self.anti_extensions = {}
+        self.predicates = defaultdict(PredExtension)
         self.atomics = {}
         self.opaques = {}
         #: Track set of atomics for performance.
@@ -83,43 +80,37 @@ class Model(LogicType.Model[ValueFDE]):
         #: Track set of constants for performance.
         self.constants: set[Constant] = set()
         #: Track set of predicates for performance.
-        self.predicates: set[Predicate] = set()
+        # self.predicates: set[Predicate] = set()
         self.maxval = max(self.values)
         self.minval = min(self.values)
 
-    def value_of_predicated(self, s: Predicated, /, **kw):
-        params = s.params
-        pred = s.predicate
-        extension = self.get_extension(pred)
-        anti_extension = self.get_anti_extension(pred)
-        if params in extension:
-            if params in anti_extension:
+    def value_of_predicated(self, s: Predicated):
+        predext = self.predicates[s.predicate]
+        if s.params in predext.pos:
+            if s.params in predext.neg:
                 return self.values.B
             return self.values.T
-        if params in anti_extension:
+        if s.params in predext.neg:
             return self.values.F
         return self.values.N
 
-    def unquantifier(self, s: Quantified):
-        for c in self.constants:
-            yield self.value_of(c >> s)
-    
-    def value_of_existential(self, s: Quantified, /, **kw):
+    def value_of_quantified(self, s: Quantified, /):
         """
-        The value of an existential sentence is the maximum value of the sentences that
-        result from replacing each constant for the quantified variable. The ordering of
-        the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
+        The value of a quantified sentence is determined from the values of
+        sentences that result from replacing each constant for the quantified
+        variable. For an existential quantifier, this is the max value, and
+        for a universial quantifier, it is the min value.
         """
-        return maxceil(self.maxval, self.unquantifier(s), self.minval)
-
-
-    def value_of_universal(self, s: Quantified, /, **kw):
-        """
-        The value of an universal sentence is the minimum value of the sentences that
-        result from replacing each constant for the quantified variable. The ordering of
-        the values from least to greatest is: V{F}, V{N}, V{B}, V{T}.
-        """
-        return minfloor(self.minval, self.unquantifier(s), self.maxval)
+        try:
+            it = map(self.value_of, map(s.unquantify, self.constants))
+        except AttributeError:
+            check.inst(s, Quantified)
+            raise
+        if s.quantifier is Quantifier.Existential:
+            return maxceil(self.maxval, it, self.minval)
+        if s.quantifier is Quantifier.Universal:
+            return minfloor(self.minval, it, self.maxval)
+        raise TypeError(s.quantifier)
 
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
         """
@@ -175,6 +166,7 @@ class Model(LogicType.Model[ValueFDE]):
                 in_summary  = True,
                 datatype    = 'list',
                 values      = [
+                    v for predicate in sorted(self.predicates) for v in
                     [
                         dict(
                             description     = 'predicate extension',
@@ -187,7 +179,7 @@ class Model(LogicType.Model[ValueFDE]):
                             values = [
                                 dict(
                                     input  = predicate,
-                                    output = self.get_extension(predicate))]),
+                                    output = self.predicates[predicate].pos)]),
                         dict(
                             description     = 'predicate anti-extension',
                             datatype        = 'function',
@@ -199,9 +191,11 @@ class Model(LogicType.Model[ValueFDE]):
                             values = [
                                 dict(
                                     input  = predicate,
-                                    output = self.get_anti_extension(predicate))])
+                                    output = self.predicates[predicate].neg)])
                     ]
-                    for predicate in sorted(self.predicates)]))
+                ]
+            )
+        )
 
     def read_branch(self, branch, /):
         for node in branch:
@@ -260,7 +254,9 @@ class Model(LogicType.Model[ValueFDE]):
         self.finish()
 
     def _collect_sentence(self, s: Sentence, /):
-        self.predicates.update(s.predicates)
+        for pred in s.predicates:
+            self.predicates[pred]
+        # self.predicates.update(s.predicates)
         self.all_atomics.update(s.atomics)
         self.constants.update(s.constants)
 
@@ -296,7 +292,7 @@ class Model(LogicType.Model[ValueFDE]):
             value = self.values[value]
         except KeyError:
             raise Emsg.UnknownForSentence(value, s)
-        if s in self.opaques and self.opaques[s] is not value:
+        if self.opaques.get(s) not in (value, None):
             raise Emsg.ConflictForSentence(value, s)
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants, as well
@@ -309,7 +305,7 @@ class Model(LogicType.Model[ValueFDE]):
             value = self.values[value]
         except KeyError:
             raise Emsg.UnknownForSentence(value, s)
-        if s in self.atomics and self.atomics[s] is not value:
+        if self.atomics.get(s) not in (value, None):
             raise Emsg.ConflictForSentence(value, s)
         self.atomics[s] = value
 
@@ -321,37 +317,25 @@ class Model(LogicType.Model[ValueFDE]):
         for param in s:
             if type(param) is Constant:
                 self.constants.add(param)
-        extension = self.get_extension(s.predicate)
-        anti_extension = self.get_anti_extension(s.predicate)
-        if value is self.values.N:
-            if s.params in extension:
-                raise Emsg.ConflictForExtension(value, s.params)
-            if s.params in anti_extension:
+            else:
+                raise TypeError(f'free variables not allowed')
+        predext = self.predicates[s.predicate]
+        if value is self.values.T:
+            if s.params in predext.neg:
                 raise Emsg.ConflictForAntiExtension(value, s.params)
-        elif value is self.values.T:
-            if s.params in anti_extension:
-                raise Emsg.ConflictForAntiExtension(value, s.params)
-            extension.add(s.params)
+            predext.addpos(s.params)
         elif value is self.values.F:
-            if s.params in extension:
+            if s.params in predext.pos:
                 raise Emsg.ConflictForExtension(value, s.params)
-            anti_extension.add(s.params)
+            predext.addneg(s.params)
+        elif value is self.values.N:
+            if s.params in predext.pos:
+                raise Emsg.ConflictForExtension(value, s.params)
+            if s.params in predext.neg:
+                raise Emsg.ConflictForAntiExtension(value, s.params)
         elif value is self.values.B:
-            extension.add(s.params)
-            anti_extension.add(s.params)
-        self.predicates.add(s.predicate)
-
-    def get_extension(self, pred: Predicate, /) -> set[tuple[Constant, ...]]:
-        if pred not in self.extensions:
-            self.extensions[pred] = set()
-            self.predicates.add(pred)
-        return self.extensions[pred]
-
-    def get_anti_extension(self, pred: Predicate, /) -> set[tuple[Constant, ...]]:
-        if pred not in self.anti_extensions:
-            self.anti_extensions[pred] = set()
-            self.predicates.add(pred)
-        return self.anti_extensions[pred]
+            predext.addpos(s.params)
+            predext.addneg(s.params)
 
     def value_of_atomic(self, s: Sentence, /, **kw) -> ValueFDE:
         return self.atomics.get(s, self.unassigned_value)
@@ -475,7 +459,7 @@ class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
             NB it is not marked as abstract but will throw NotImplementError.
         - adds a NodeDesignation filter.
     """
-    NodeFilters = filters.NodeDesignation,
+    NodeFilters = group(filters.NodeDesignation)
     autoattrs = True
 
     def _get_node_targets(self, node, branch, /):

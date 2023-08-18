@@ -54,7 +54,6 @@ __all__ = (
     'isdund',
     'isint',
     'isstr',
-    'itemsiter',
     'key0',
     'lazy',
     'MapCover',
@@ -274,32 +273,6 @@ def _prevmodule(thisname = __name__, /):
         val = f.f_globals.get('__name__', '__main__')
         if val != thisname:
             return val
-
-@closure
-def itemsiter():
-
-    def api(obj, /, *, vget = None, kpred = true, vpred = true, koper = truth, voper = truth):
-        if vget:
-            return gen1(obj.__iter__, vget, kpred, vpred, koper, voper)
-        try:
-            return gen1(obj.keys, obj.__getitem__, kpred, vpred, koper, voper)
-        except AttributeError:
-            return gen2(obj, kpred, vpred, koper, voper)
-
-    def gen1(getkeys, vget, kpred, vpred, koper, voper):
-        for k in getkeys():
-            if koper(kpred(k)):
-                v = vget(k)
-                if voper(vpred(v)):
-                    yield k, v
-
-    def gen2(items, kpred, vpred, koper, voper):
-        for k, v in items:
-            if koper(kpred(k)) and voper(vpred(v)):
-                yield k, v
-
-    return api
-
 @closure
 def dxopy():
 
@@ -732,14 +705,12 @@ class KeySetAttr:
 
     def update(self, it = None, /, **kw):
         if it is None:
-            it = iter(EMPTY_SET)
-        else:
-            it = itemsiter(it)
+            it = EMPTY_SET
+        elif isinstance(it, Mapping):
+            it = it.items()
         if len(kw):
-            it = itertools.chain(it, itemsiter(kw))
-        setitem = self.__setitem__
-        for key, value in it:
-            setitem(key, value)
+            it = itertools.chain(it, kw.items())
+        for _ in itertools.starmap(self.__setitem__, it): pass
 
     @classmethod
     def _keyattr_ok(cls, name: str) -> bool:

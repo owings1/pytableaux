@@ -29,7 +29,7 @@ from typing import ClassVar, Iterable, Mapping
 
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
                       UnboundVariableError)
-from ..tools import (EMPTY_SET, MapCover, abcs, for_defaults, itemsiter, key0,
+from ..tools import (EMPTY_SET, MapCover, abcs, for_defaults, key0,
                      lazy, qset)
 from . import BiCoords, LangCommonMeta, LexType, Marking, Notation, TableStore
 from .collect import Argument, Predicates
@@ -621,7 +621,8 @@ class ParseTable(MapCover, TableStore):
         # flipped table
         self.reversed = MapProxy(dict(
             # map(reversed, ItemsIterator(self))
-            map(reversed, itemsiter(self))))
+            # map(reversed, itemsiter(self))))
+            map(reversed, self.items())))
 
         # chars for each type in value order, duplicates discarded
         self.chars = MapProxy({

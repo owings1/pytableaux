@@ -332,6 +332,10 @@ class EbcMeta(_enum.EnumMeta):
         except KeyError:
             # TODO: Python 3.11 will not have named 0 value for Flag
             pass
+        except TypeError:
+            if isinstance(value, slice):
+                return cls._seq[value]
+            raise
         # It must be a pseudo member, since it was not in _lookup.
         return cls._lookup.pseudo(
             # Will raise ValueError for bad value.
@@ -358,7 +362,12 @@ class EbcMeta(_enum.EnumMeta):
             return default
 
     def __getitem__(cls: type[_EnumT], key, /) -> _EnumT:
-        return cls._lookup[key]
+        try:
+            return cls._lookup[key]
+        except TypeError:
+            if isinstance(key, slice):
+                return cls._seq[key]
+            raise
 
     def __contains__(cls, key, /):
         return key in cls._lookup
@@ -433,7 +442,7 @@ class Ebc(Enum, metaclass = EbcMeta, skipflags = True, skipabcm = True):
 class abcf(Flag):
     'Enum flag for AbcMeta functionality.'
 
-    __slots__ = 'name', 'value', '_value_', '_invert_'
+    # __slots__ = 'name', 'value', '_value_', '_invert_'
 
     before = 1 << 0
     temp   = 1 << 1
@@ -470,7 +479,9 @@ def nsinit(ns: dict, bases, /, skipflags = False):
                 member(ns, bases)
     # cast slots to a set
     slots = ns.get('__slots__')
-    if isinstance(slots, Iterable) and not isinstance(slots, Set):
+    if isinstance(slots, str):
+        slots = frozenset({slots})
+    elif isinstance(slots, Iterable) and not isinstance(slots, Set):
         ns['__slots__'] = frozenset(slots)
 
 def clsafter(Class: type[_T], ns: dict|None = None, /, skipflags = False, deleter = type.__delattr__) -> type[_T]:

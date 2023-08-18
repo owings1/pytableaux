@@ -45,16 +45,6 @@ class BaseCase(TestCase):
     notn = Notation.polish
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
 
-    def valid_tab(self, *args, **kw):
-        tab = self.tab(*args, **kw)
-        self.assertTrue(tab.valid)
-        return tab
-
-    def invalid_tab(self, *args, **kw):
-        tab = self.tab(*args, **kw)
-        self.assertTrue(tab.invalid)
-        return tab
-
     def __init_subclass__(subcls, autorules=False, **kw):
         if autorules:
             bare = bool(kw.pop('bare', None))
@@ -72,6 +62,18 @@ class BaseCase(TestCase):
                         old(self)
                 setattr(subcls, name, test)
 
+    def valid_tab(self, *args, **kw):
+        tab = self.tab(*args, **kw)
+        self.assertTrue(tab.valid)
+        return tab
+
+    def invalid_tab(self, *args, **kw):
+        tab = self.tab(*args, **kw)
+        self.assertTrue(tab.invalid)
+        if tab.argument:
+            for model in tab.models:
+                self.assertTrue(model.is_countermodel_to(tab.argument))
+        return tab
 
     def crparser(self, *args, **kw):
         for val in args:
@@ -161,16 +163,6 @@ class BaseCase(TestCase):
         if is_build:
             tab.build()
         self.t = tab
-        return tab
-
-    def valid_tab(self, *args, **kw):
-        tab = self.tab(*args, **kw)
-        assert tab.valid
-        return tab
-
-    def invalid_tab(self, *args, **kw):
-        tab = self.tab(*args, **kw)
-        assert tab.invalid
         return tab
 
     def tabb(self, nn = None, *args, **kw):

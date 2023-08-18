@@ -49,6 +49,8 @@ FIRST_CONST_SET = frozenset({Constant.first()})
 class NoopRule(Rule):
     "Rule stub that does not apply."
 
+    branching = 0
+
     def _get_targets(self, branch: Branch, /):
         "Yields from empty set."
         yield from EMPTY_SET

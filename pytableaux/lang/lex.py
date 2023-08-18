@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+
 """
 pytableaux.lang.lex
 -------------------
@@ -24,7 +25,7 @@ Lexical classes.
 import operator as opr
 from abc import abstractmethod
 from functools import partial
-from itertools import chain, repeat
+from itertools import chain, repeat, starmap, zip_longest
 from types import FunctionType
 from types import MappingProxyType as MapProxy
 from typing import (TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Self,
@@ -114,10 +115,10 @@ class Lexical:
     ``(classname, spec)``.
     """
 
-    sort_tuple: tuple
-    """Sorting identifier, to order tokens of the same type. Numbers only
-    (no strings). This is also used in hashing, so equal objects should
-    have equal sort_tuples.
+    sort_tuple: tuple[int, ...]
+    """Sorting identifier, to order tokens of the same type, consisting of
+    non-negative integers. This is also used in hashing, so equal objects
+    must have equal `sort_tuple` values.
     """
     # **NB**: The first value of the sort_tuple must be the lexical rank of the
     # type as specified in the :class:`LexType` enum class.
@@ -204,16 +205,15 @@ class Lexical:
 
     @staticmethod
     def hashitem(item: Lexical, /) -> int:
-        """Compute a hash for the item based on class name and :attr:`sort_tuple`.
+        """Compute a hash for the item based on :attr:`sort_tuple`.
 
         This method should generally not need to be called, as it is used to
         generate and cache the instance :attr:`hash` property.
         """
-        return hash((type(item).__name__, item.sort_tuple))
+        return hash((__class__, item.sort_tuple))
 
     @staticmethod
-    @closure
-    def orderitems():
+    def orderitems(lhs: Lexical, rhs: Lexical, /) -> int:
         """orderitems(lhs: Lexical, rhs: Lexical, /) -> int
         Pairwise ordering comparison based on type rank and :attr:`sort_tuple`.
         This is the base method used to support equality and rich comparison
@@ -233,42 +233,37 @@ class Lexical:
 
         Raises:
             TypeError: if an argument is not an instance of :class:`Lexical` with
-                a valid :attr:`TYPE` attribute.
+                a valid :attr:`sort_tuple` attribute.
         """
-        def cmpgen(a: Lexical, b: Lexical, /):
-            if a is b:
-                yield 0
-                return
-            yield a.TYPE.rank - b.TYPE.rank
-            sta, stb = a.sort_tuple, b.sort_tuple
-            yield from (ai - bi for ai, bi in zip(sta, stb))
-            yield len(sta) - len(stb)
-
-        def orderitems(lhs, rhs, /) -> int:
+        if lhs is rhs:
+            return 0
+        try:
+            it = zip_longest(lhs.sort_tuple, rhs.sort_tuple, fillvalue=0)
+        except AttributeError:
             try:
-                for cmp in cmpgen(lhs, rhs):
-                    if cmp:
-                        break
-                return cmp
-            except AttributeError:
-                raise TypeError
-
-        return orderitems
+                check.inst(lhs, __class__)
+                check.inst(rhs, __class__)
+            except TypeError as e:
+                raise e from None
+            raise
+        for cmp in filter(None, starmap(opr.sub, it)):
+            return cmp
+        return 0
 
     @abcs.abcf.temp
     @membr.defer
-    def ordr(member: membr):
+    def wrapper(member: membr):
         @wraps(oper := getattr(opr, member.name))
-        def wrapper(self, other, /):
+        def wrapped(self, other, /):
             try:
                 return oper(Lexical.orderitems(self, other), 0)
             except TypeError:
                 if isinstance(other, Lexical):
                     raise
                 return NotImplemented
-        return wrapper
+        return wrapped
 
-    __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr()
+    __lt__ = __le__ = __gt__ = __ge__ = __eq__ = wrapper()
 
     def __hash__(self):
         return self.hash
@@ -292,12 +287,7 @@ class Lexical:
         "JSON Compatibility. Returns :attr:`ident` tuple."
         return self.ident
 
-    def __init_subclass__(subcls: type[Lexical], /, *,
-        lexcopy = False,
-        skipnames = {dund('init_subclass')},
-        _cpnames = frozenset(map(dund, ('copy', 'deepcopy'))),
-        _ftypes = (classmethod, staticmethod, FunctionType),
-        **kw):
+    def __init_subclass__(cls, /, *, lexcopy=False, **kw):
         """Subclass init hook.
 
         If `lexcopy` is ``True``, copy the class members to the next class,
@@ -305,19 +295,18 @@ class Lexical:
         applies to direct sub classes.
         """
         super().__init_subclass__(**kw)
-        if not lexcopy or __class__ not in subcls.__bases__:
+        if not lexcopy or __class__ not in cls.__bases__:
             return
         src = dict(__class__.__dict__)
-        for key in chain(subcls.__dict__, skipnames):
-            src.pop(key, None)
-        for name in _cpnames:
-            if name not in src:
-                for name in _cpnames:
-                    src.pop(name, None)
-                break
+        del src['__init_subclass__']
+        for _ in map(src.__delitem__, filter(src.__contains__, cls.__dict__)): pass
+        cpnames = ('__copy__', '__deepcopy__')
+        if not all(map(src.__contains__, cpnames)):
+            for _ in map(src.__delitem__, cpnames): pass
+        ftypes = (classmethod, staticmethod, FunctionType)
         for name, value in src.items():
-            if isinstance(value, _ftypes):
-                setattr(subcls, name, value)
+            if isinstance(value, ftypes):
+                setattr(cls, name, value)
 
 
 class LexicalAbc(Lexical, metaclass=LexicalAbcMeta, lexcopy=True):
@@ -483,7 +472,7 @@ class CoordsItem(LexicalAbc):
     @classmethod
     def first(cls) -> Self:
         if cls is __class__:
-            return Predicate.first()
+            cls = Predicate
         return cls(cls.Coords.first)
 
     def next(self) -> Self:
@@ -631,8 +620,6 @@ class Operator(LexicalEnum):
 
     def __call__(self, *args):
         'Apply the operator to make a new sentence.'
-        if len(args) > 1:
-            return Operated(self, args)
         return Operated(self, *args)
 
     def __init__(self, order, arity, libname=None, /):
@@ -748,7 +735,7 @@ class Sentence(LexicalAbc):
         Returns:
             The new sentence.
         """
-        return self.negate()
+        return Operator.Negation(self)
 
     def substitute(self, pnew: Parameter, pold: Parameter, /) -> Self:
         """Return the recursive substitution of ``pnew`` for all occurrences
@@ -926,10 +913,7 @@ class Predicate(CoordsItem):
 
     def next(self):
         if self.is_system:
-            arity = self.arity
-            for pred in self.System:
-                if pred is not self and pred.arity == arity and pred > self:
-                    return pred
+            raise StopIteration
         return super().next()
 
     if TYPE_CHECKING:
@@ -946,6 +930,7 @@ class Predicate(CoordsItem):
         Identity: Predicate
     else:
         System = MapProxy(dict(Existence=(-2, 0, 1), Identity=(-1, 0, 2)))
+
 
 class Constant(Parameter):
     """
@@ -977,9 +962,9 @@ class Constant(Parameter):
 
     def __rshift__(self, other):
         'Same as ``other.unquantify(self)``.'
-        if not isinstance(other, Quantified):
-            return NotImplemented
-        return other.unquantify(self)
+        if type(other) is Quantified:
+            return other.unquantify(self)
+        return NotImplemented
 
 class Variable(Parameter):
     """
@@ -1010,7 +995,7 @@ class Atomic(CoordsItem, Sentence):
     quantifiers = EMPTY_SEQ
     operators = EMPTY_SEQ
 
-    __slots__ = group('atomics')
+    __slots__ = 'atomics'
 
     def __init__(self, *spec):
         self.atomics = frozenset((self,))
@@ -1022,28 +1007,27 @@ class Predicated(Sentence, Sequence[Parameter]):
     quantifiers = EMPTY_SEQ
     atomics = EMPTY_SET
 
-    def __init__(self, pred, params, /):
+    def __init__(self, pred, *params):
         """
         Args:
             pred (Predicate): The :class:`Predicate`, or :attr:`spec`, such as
                 ``(1, 0, 2)``.
-            params (Parameter): An iterable of :class:`Parameter`, or
-                :obj:`ParameterSpec`, such as ``(1, 0)``. For a unary predicate,
-                a single parameter/spec is accepted.
+            params (Parameter): An iterable of :class:`Parameter`
         
         Raises:
             TypeError: if the number of params does not equal the predicate's arity.
         """
-        # TODO: Support *-ary params, Predicated(pred, a, b, c)
-        self.predicate = Predicate(pred)
-        pred = self.predicate
+        if len(params) == 1:
+            params, = params
+        pred = Predicate(pred)
         if isinstance(params, Parameter):
-            self.params = params,
+            params = params,
         else:
-            self.params = tuple(map(Parameter, params))
-        params = self.params
+            params = tuple(map(Parameter, params))
         if len(params) != pred.arity:
-            raise TypeError(self.predicate, len(params), pred.arity)
+            raise TypeError(self, len(params), pred.arity)
+        self.predicate = pred
+        self.params = params
         self.predicates = frozenset((pred,))
         self.spec = (
             pred.spec,
@@ -1266,8 +1250,6 @@ class Operated(Sentence, Sequence[Sentence]):
         'sort_tuple',
         'spec')
 
-    spec: tuple   #OperatedSpec
-
     operator: Operator
     "The operator."
 
@@ -1314,7 +1296,7 @@ class Operated(Sentence, Sequence[Sentence]):
     def negative(self) -> Sentence:
         if self.operator is Operator.Negation:
             return self.lhs
-        return self.negate()
+        return Operator.Negation(self)
 
     @classmethod
     def first(cls, oper=Operator.first(), /):
@@ -1325,9 +1307,9 @@ class Operated(Sentence, Sequence[Sentence]):
         return self.operator(*self[0:-1], self[-1].next(**kw))
 
     def __len__(self):
-        return len(self.operands)
+        return self.operator.arity
 
-    def __contains__(self, s: Any, /):
+    def __contains__(self, s: Any):
         return s in self.operands
 
     def __getitem__(self, index: SupportsIndex|slice):
@@ -1403,16 +1385,15 @@ class LexType(LangCommonEnum):
 
     @abcs.abcf.temp
     @membr.defer
-    def ordr(member: membr):
-        oper = getattr(opr, member.name)
-        @wraps(oper)
-        def wrapper(self: LexType, other):
+    def wrapper(member: membr):
+        @wraps(oper := getattr(opr, member.name))
+        def wrapped(self: LexType, other):
             if type(other) is not LexType:
                 return NotImplemented
             return oper(self.rank, other.rank)
-        return wrapper
+        return wrapped
 
-    __lt__ = __le__ = __gt__ = __ge__ = ordr()
+    __lt__ = __le__ = __gt__ = __ge__ = wrapper()
 
     def __eq__(self, other):
         return (
@@ -1420,7 +1401,7 @@ class LexType(LangCommonEnum):
             self.cls is other or
             self is LexType.get(other, None))
 
-    def __repr__(self, /):
+    def __repr__(self):
         name = type(self).__name__
         try:
             return f'<{name}.{self.cls.__name__}>'
@@ -1472,6 +1453,10 @@ class LexType(LangCommonEnum):
 
             def __new__(cls, *spec):
                 return Predicate.__new__(Predicate, *spec)
+
+            @classmethod
+            def first(cls):
+                return cls._seq[0]
 
             @classmethod
             def _member_keys(cls, pred: Predicate):
