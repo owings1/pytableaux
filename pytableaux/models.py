@@ -33,8 +33,7 @@ from .lang import (Argument, Atomic, Constant, Operated, Operator, Predicated, L
                    Quantified, Quantifier, Sentence)
 from .logics import LogicType
 from .proof import Branch
-from .tools import closure
-from .tools.abcs import Abc, Ebc
+from .tools import abcs
 
 __all__ = (
     'BaseModel',
@@ -44,7 +43,7 @@ __all__ = (
     'ValueLP',
     'ValueCPL')
 
-class Mval(Ebc):
+class Mval(abcs.Ebc):
 
     __slots__ = 'name', 'label', 'num'
 
@@ -127,7 +126,7 @@ class ValueCPL(Mval):
 MvalT = TypeVar('MvalT', bound = Mval)
 MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 
-class BaseModel(Generic[MvalT_co], Abc):
+class BaseModel(Generic[MvalT_co], abcs.Abc):
     Meta: type[LogicType.Meta]
 
     values: type[MvalT_co]
@@ -140,12 +139,13 @@ class BaseModel(Generic[MvalT_co], Abc):
     "The truth-functional operators"
     modal_operators: Set[Operator] 
     "The modal operators"
+    truth_function: BaseModel.TruthFunction[MvalT_co]
 
     @property
     def id(self) -> int:
         return id(self)
 
-    def is_sentence_opaque(self, s: Sentence, /, **kw) -> bool:
+    def is_sentence_opaque(self, s: Sentence, /) -> bool:
         return False
 
     def is_sentence_literal(self, s: Sentence, /) -> bool:
@@ -161,16 +161,18 @@ class BaseModel(Generic[MvalT_co], Abc):
         (('value_of', member.cls), f'value_of_{member.name.lower()}')
         for member in LexType if member.role is Sentence)
 
-    def value_of(self: BaseModel, s: Sentence, /, **kw) -> MvalT_co:
+    def value_of(self, s: Sentence, /, **kw) -> MvalT_co:
         if self.is_sentence_opaque(s):
             return self.value_of_opaque(s, **kw)
         try:
             name = self._methmap['value_of', type(s)]
             func = getattr(self, name)
         except (AttributeError, KeyError):
-            check.inst(s, Sentence)
-            raise NotImplementedError
-        return func(s, **kw)
+            pass
+        else:
+            return func(s, **kw)
+        check.inst(s, Sentence)
+        raise NotImplementedError
 
     @abstractmethod
     def value_of_opaque(self, s: Sentence, /) -> MvalT_co:
@@ -186,45 +188,37 @@ class BaseModel(Generic[MvalT_co], Abc):
 
     @abstractmethod
     def value_of_quantified(self, s: Quantified, /, **kw) -> MvalT_co:
-        check.inst(s, Quantified)
         raise NotImplementedError
 
     def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
-        if self.is_sentence_opaque(s):
-            return self.value_of_opaque(s, **kw)
         if s.operator in self.truth_functional_operators:
             return self.truth_function(s.operator,
                 *map(lambda s: self.value_of(s, **kw), s))
         check.inst(s, Operated)
         raise NotImplementedError
 
+    # @abstractmethod
+    # def truth_function(self, oper: Operator, a, b = None, /) -> MvalT_co:
+    #     raise NotImplementedError
+
     @abstractmethod
-    def truth_function(self, oper: Operator, a, b = None, /) -> MvalT_co:
+    def set_literal_value(self, s: Sentence, value: MvalT_co, /):
         raise NotImplementedError
 
     @abstractmethod
-    def set_literal_value(self, s: Sentence, value: Any, /):
-        check.inst(s, Sentence)
+    def set_opaque_value(self, s: Sentence, value: MvalT_co, /):
         raise NotImplementedError
 
     @abstractmethod
-    def set_opaque_value(self, s: Sentence, value: Any, /):
-        check.inst(s, Sentence)
+    def set_atomic_value(self, s: Atomic, value: MvalT_co, /):
         raise NotImplementedError
 
     @abstractmethod
-    def set_atomic_value(self, s: Atomic, value: Any, /):
-        check.inst(s, Atomic)
-        raise NotImplementedError
-
-    @abstractmethod
-    def set_predicated_value(self, s: Predicated, value: Any, /):
-        check.inst(s, Predicated)
+    def set_predicated_value(self, s: Predicated, value: MvalT_co, /):
         raise NotImplementedError
 
     @abstractmethod
     def is_countermodel_to(self, a: Argument, /) -> bool:
-        check.inst(a, Argument)
         raise NotImplementedError
 
     @abstractmethod
@@ -238,7 +232,7 @@ class BaseModel(Generic[MvalT_co], Abc):
     def get_data(self) -> Mapping[str, Any]:
         return {}
 
-    def truth_table(self, oper: Operator, / , reverse = False) -> TruthTable[MvalT_co]:
+    def truth_table(self, oper: Operator, / , *, reverse=False) -> TruthTable[MvalT_co]:
         oper = Operator(oper)
         inputs = tuple(product(*repeat(self.values, oper.arity)))
         if reverse:
@@ -253,10 +247,58 @@ class BaseModel(Generic[MvalT_co], Abc):
             Value = self.values,
             mapping = MapProxy(dict(zip(inputs, outputs))))
 
+    class TruthFunction(Generic[MvalT], abcs.Abc):
+
+        values: type[MvalT]
+
+        def __init__(self, values: type[MvalT]) -> None:
+            self.values = values
+
+        def __call__(self, oper: Operator, *args: MvalT) -> MvalT:
+            try:
+                func = getattr(self, oper.name)
+            except AttributeError:
+                raise ValueError(oper) from None
+            return func(*args)
+
+        @abstractmethod
+        def Assertion(self, a: MvalT, /) -> MvalT:
+            raise NotImplementedError
+
+        @abstractmethod
+        def Negation(self, a: MvalT, /) -> MvalT:
+            raise NotImplementedError
+
+        @abstractmethod
+        def Conjunction(self, a: MvalT, b: MvalT, /) -> MvalT:
+            raise NotImplementedError
+
+        @abstractmethod
+        def Disjunction(self, a: MvalT, b: MvalT, /) -> MvalT:
+            raise NotImplementedError
+
+        @abstractmethod
+        def Conditional(self, a: MvalT, b: MvalT, /) -> MvalT:
+            raise NotImplementedError
+
+        @abstractmethod
+        def Biconditional(self, a: MvalT, b: MvalT, /) -> MvalT:
+            raise NotImplementedError
+
+        @abstractmethod
+        def MaterialConditional(self, a: MvalT, b: MvalT, /) -> MvalT:
+            raise NotImplementedError
+
+        @abstractmethod
+        def MaterialBiconditional(self, a: MvalT, b: MvalT, /) -> MvalT:
+            raise NotImplementedError
+
     _methmap = MapProxy(_methmap)
 
+    @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
+        abcs.merge_attr(cls, '_methmap', supcls=__class__, transform=MapProxy)
         Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
         if Meta:
             cls.Meta = Meta
@@ -266,6 +308,7 @@ class BaseModel(Generic[MvalT_co], Abc):
             cls.unassigned_value = Meta.unassigned_value
             cls.modal_operators = frozenset(Meta.modal_operators)
             cls.truth_functional_operators = frozenset(Meta.truth_functional_operators)
+            cls.truth_function = cls.TruthFunction(cls.values)
 
 @dataclass(kw_only = True)
 class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):
@@ -286,7 +329,7 @@ class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):
     def __len__(self):
         return len(self.mapping)
 
-class PredExtension:
+class PredicateInterpretation:
     pos: set[tuple[Constant, ...]]
     neg: set[tuple[Constant, ...]]
     constants: set[Constant]
@@ -300,3 +343,4 @@ class PredExtension:
     def addneg(self, item: tuple[Constant,...]):
         self.constants.update(item)
         self.neg.add(item)
+

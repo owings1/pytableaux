@@ -35,10 +35,15 @@ class Meta(LP.Meta):
 
 class Model(LP.Model):
 
-    def truth_function(self, oper, a, b=None, /):
-        if oper == Operator.Conditional and self.values[a] > self.values[b]:
-            return self.values.F
-        return super().truth_function(oper, a, b)
+    class TruthFunction(LP.Model.TruthFunction):
+        def Conditional(self, a, b):
+            if self.values[a] > self.values[b]:
+                return self.values.F
+            return super().Conditional(a, b)
+    # def truth_function(self, oper, a, b=None, /):
+    #     if oper == Operator.Conditional and self.values[a] > self.values[b]:
+    #         return self.values.F
+    #     return super().truth_function(oper, a, b)
 
 class System(LP.System):
 

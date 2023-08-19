@@ -64,7 +64,7 @@ class Model(K3W.Model):
             return self._value_of_universal(s)
         raise TypeError(s.quantifier)
 
-    def _value_of_universal(self, s: Quantified, /, **kw):
+    def _value_of_universal(self, s: Quantified, /):
         """
         A universal sentence is interpreted in terms of `generalized conjunction`.
         If we order the values least to greatest as V{N}, V{F}, V{T}, then we
@@ -75,13 +75,13 @@ class Model(K3W.Model):
         return self.Value[
             self.mc_cvals[
                 minfloor(1, (
-                    self.mc_nvals[self.value_of(c >> s, **kw)]
+                    self.mc_nvals[self.value_of(c >> s)]
                     for c in self.constants
                 ))
             ].name
         ]
 
-    def _value_of_existential(self, s: Quantified, **kw):
+    def _value_of_existential(self, s: Quantified, /):
         """
         An existential sentence is interpreted in terms of `generalized disjunction`.
         If we order the values least to greatest as V{N}, V{T}, V{F}, then we
@@ -92,7 +92,7 @@ class Model(K3W.Model):
         return self.Value[
             self.md_cvals[
                 maxceil(3, (
-                    self.md_nvals[self.value_of(c >> s, **kw)]
+                    self.md_nvals[self.value_of(c >> s)]
                     for c in self.constants
                 ))
             ].name

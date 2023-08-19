@@ -41,16 +41,25 @@ class Model(LP.Model):
     def is_sentence_opaque(self, s,/):
         return type(s) is Quantified or super().is_sentence_opaque(s)
 
-    def truth_function(self, oper, a, b=None, /):
-        oper = Operator(oper)
-        if oper is Operator.Conditional:
+    class TruthFunction(LP.Model.TruthFunction):
+        def Conjunction(self, a, b):
+            if self.values[a] is self.values.B and self.values[b] is self.values.B:
+                return self.values.T
+            return super().Conjunction(a, b)
+        def Conditional(self, a, b):
             if self.values[a] is not self.values.F and self.values[b] is self.values.F:
                 return self.values.F
             return self.values.T
-        if oper is Operator.Conjunction:
-            if self.values[a] is self.values.B and self.values[b] is self.values.B:
-                return self.values.T
-        return super().truth_function(oper, a, b)
+    # def truth_function(self, oper, a, b=None, /):
+    #     oper = Operator(oper)
+    #     if oper is Operator.Conditional:
+    #         if self.values[a] is not self.values.F and self.values[b] is self.values.F:
+    #             return self.values.F
+    #         return self.values.T
+    #     if oper is Operator.Conjunction:
+    #         if self.values[a] is self.values.B and self.values[b] is self.values.B:
+    #             return self.values.T
+    #     return super().truth_function(oper, a, b)
 
 class System(LP.System):
     branchables = {

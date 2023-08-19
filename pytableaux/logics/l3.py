@@ -35,11 +35,16 @@ class Meta(K3.Meta):
 
 class Model(K3.Model):
 
-    def truth_function(self, oper, a, b=None):
-        if oper == Operator.Conditional:
+    class TruthFunction(K3.Model.TruthFunction):
+        def Conditional(self, a, b):
             if a == self.values.N and b == self.values.N:
                 return self.values.T
-        return super().truth_function(oper, a, b)
+            return super().Conditional(a, b)
+    # def truth_function(self, oper, a, b=None):
+    #     if oper == Operator.Conditional:
+    #         if a == self.values.N and b == self.values.N:
+    #             return self.values.T
+    #     return super().truth_function(oper, a, b)
 
 class System(K3.System):
 

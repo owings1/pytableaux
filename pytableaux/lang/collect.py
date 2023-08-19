@@ -166,11 +166,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
 
 
 class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dict(cast = Predicate)}):
-    """
-    Predicates
-    ----------
-
-    Predicate store. An sequenced set with a multi-keyed lookup index.
+    """Predicate store. A sequenced set with a multi-keyed lookup index.
 
     Predicates with the same symbol coordinates (index, subscript) may
     have different arities. This class ensures that conflicting predicates are not

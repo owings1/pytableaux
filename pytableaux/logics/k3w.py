@@ -30,11 +30,35 @@ class Meta(K3.Meta):
 
 class Model(K3.Model):
 
-    def truth_function(self, oper: Operator, a, b=None, /):
-        oper = Operator(oper)
-        if oper.arity == 2 and self.values.N in (a, b):
-            return self.values.N
-        return super().truth_function(oper, a, b)
+    class TruthFunction(K3.Model.TruthFunction):
+        def Conjunction(self, a, b, /):
+            if self.values.N in (a, b):
+                return self.values.N
+            return super().Conjunction(a, b)
+        def Disjunction(self, a, b):
+            if self.values.N in (a, b):
+                return self.values.N
+            return super().Disjunction(a, b)
+        def MaterialConditional(self, a, b):
+            if self.values.N in (a, b):
+                return self.values.N
+            return super().MaterialConditional(a, b)
+        def MaterialBiconditional(self, a, b):
+            if self.values.N in (a, b):
+                return self.values.N
+            return super().MaterialBiconditional(a, b)
+        def Conditional(self, a, b):
+            if self.values.N in (a, b):
+                return self.values.N
+            return super().Conditional(a, b)
+        def Biconditional(self, a, b):
+            if self.values.N in (a, b):
+                return self.values.N
+            return super().Biconditional(a, b)
+    # def truth_function(self, oper: Operator, a, b=None, /):
+    #     if oper.arity == 2 and self.values.N in (a, b):
+    #         return self.values.N
+    #     return super().truth_function(oper, a, b)
 
 class System(K3.System):
 

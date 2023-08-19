@@ -104,7 +104,8 @@ class Model(BaseModel[Meta.values]):
         self.maxval = max(self.values)
         self.minval = min(self.values)
 
-    truth_function = FDE.Model.truth_function
+    TruthFunction = FDE.Model.TruthFunction
+    # truth_function = FDE.Model.truth_function
 
     def value_of_predicated(self, s: Predicated, **kw):
         """

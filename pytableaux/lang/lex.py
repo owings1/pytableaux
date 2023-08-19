@@ -81,18 +81,18 @@ class Lexical:
     classes inherit, including enum classes. It provides basic features of
     identitfying, comparing, and generating items.
 
-    * The :attr:`ident` and :attr:`spec` attributes provide canonical ways
+    The :attr:`ident` and :attr:`spec` attributes provide canonical ways
     of specifying items with tuples of numbers, strings, and other
     tuples. This is useful for serialization and deserialization.
 
-    * The :meth:`first()`, :meth:`next()`, and :meth:`gen()` methods enable
+    The :meth:`first()`, :meth:`next()`, and :meth:`gen()` methods enable
     programatic creation of items.
 
-    * The :attr:`hash` and :attr:`sort_tuple` attributes allow for rich
+    The :attr:`hash` and :attr:`sort_tuple` attributes allow for rich
     comparison and ordering of items, with consistency for comparing
     across different types.
 
-    * The :attr:`TYPE` refers to the corresponding member of the special
+    The :attr:`TYPE` refers to the corresponding member of the special
     :class:`LexType` enum class member, which holds meta information about
     each type.
     """
@@ -1155,7 +1155,7 @@ class Quantified(Sentence, Sequence):
     def quantifiers(self):
         return tuple(chain((self.quantifier,), self.sentence.quantifiers))
 
-    def unquantify(self, c, /):
+    def unquantify(self, c: Constant, /):
         """Instantiate the variable with a constant.
         
         Args:
@@ -1197,7 +1197,7 @@ class Quantified(Sentence, Sequence):
     def __len__(self):
         return len(self.items)
 
-    def __contains__(self, item: Any, /):
+    def __contains__(self, item):
         return item in self.items
 
     def count(self, item,/):

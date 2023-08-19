@@ -42,16 +42,25 @@ class Model(K3.Model):
     def is_sentence_opaque(self, s, /):
         return type(s) is Quantified or super().is_sentence_opaque(s)
 
-    def truth_function(self, oper, a, b=None, /):
-        oper = Operator(oper)
-        if oper is Operator.Conditional:
+    class TruthFunction(K3.Model.TruthFunction):
+        def Disjunction(self, a, b):
+            if self.values[a] is self.values.N and self.values[b] is self.values.N:
+                return self.values.F
+            return super().Disjunction(a, b)
+        def Conditional(self, a, b):
             if self.values[a] is self.values.T and self.values[b] is not self.values.T:
                 return self.values.F
             return self.values.T
-        if oper is Operator.Disjunction:
-            if self.values[a] is self.values.N and self.values[b] is self.values.N:
-                return self.values.F
-        return super().truth_function(oper, a, b)
+    # def truth_function(self, oper, a, b=None, /):
+    #     oper = Operator(oper)
+    #     if oper is Operator.Conditional:
+    #         if self.values[a] is self.values.T and self.values[b] is not self.values.T:
+    #             return self.values.F
+    #         return self.values.T
+    #     if oper is Operator.Disjunction:
+    #         if self.values[a] is self.values.N and self.values[b] is self.values.N:
+    #             return self.values.F
+    #     return super().truth_function(oper, a, b)
 
 class System(K3.System):
 

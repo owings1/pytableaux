@@ -38,28 +38,48 @@ class Meta(K3.Meta):
 
 class Model(K3.Model):
 
-    def truth_function(self, oper, a, b=None):
-        oper = Operator(oper)
-        if oper is Operator.Assertion:
+    class TruthFunction(K3.Model.TruthFunction):
+        def Assertion(self, a):
             return self.values[crunch(self.values[a].num)]
-        if oper is Operator.Disjunction:
+        def Disjunction(self, a, b):
             return self.values[
                 max(
                     crunch(self.values[a].num),
                     crunch(self.values[b].num))]
-        if oper is Operator.Conjunction:
+        def Conjunction(self, a, b):
             return self.values[
                 min(
                     crunch(self.values[a].num),
                     crunch(self.values[b].num))]
-        if oper is Operator.Conditional:
+        def Conditional(self, a, b):
             return self.values[
                 crunch(
                     max(
                         1 - self.values[a].num,
                         self.values[b].num,
                         gap(self.values[a].num) + gap(self.values[b].num)))]
-        return super().truth_function(oper, a, b)
+    # def truth_function(self, oper, a, b=None):
+    #     oper = Operator(oper)
+    #     if oper is Operator.Assertion:
+    #         return self.values[crunch(self.values[a].num)]
+    #     if oper is Operator.Disjunction:
+    #         return self.values[
+    #             max(
+    #                 crunch(self.values[a].num),
+    #                 crunch(self.values[b].num))]
+    #     if oper is Operator.Conjunction:
+    #         return self.values[
+    #             min(
+    #                 crunch(self.values[a].num),
+    #                 crunch(self.values[b].num))]
+    #     if oper is Operator.Conditional:
+    #         return self.values[
+    #             crunch(
+    #                 max(
+    #                     1 - self.values[a].num,
+    #                     self.values[b].num,
+    #                     gap(self.values[a].num) + gap(self.values[b].num)))]
+    #     return super().truth_function(oper, a, b)
 
     def value_of_quantified(self, s: Quantified, /):
         it = map(crunch, map(self.value_of, map(s.unquantify, self.constants)))
@@ -68,31 +88,6 @@ class Model(K3.Model):
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
         raise TypeError(s.quantifier)
-    # def value_of_existential(self, sentence: Quantified, **kw):
-    #     """
-    #     The value of an existential sentence is the maximum of the *crunched
-    #     values* of the sentences that result from replacing each constant for the
-    #     quantified variable.
-    #     """
-    #     sub = sentence.sentence.substitute
-    #     v = sentence.variable
-    #     return self.values[
-    #         maxceil(self.values.T, (
-    #             crunch(self.values[self.value_of(sub(c, v), **kw)].num)
-    #             for c in self.constants))]
-
-    # def value_of_universal(self, sentence: Quantified, **kw):
-    #     """
-    #     The value of an universal sentence is the minimum of the *crunched values*
-    #     of the sentences that result from replacing each constant for the quantified
-    #     variable.
-    #     """
-    #     sub = sentence.sentence.substitute
-    #     v = sentence.variable
-    #     return self.values[
-    #         minfloor(self.values.F, (
-    #             crunch(self.values[self.value_of(sub(c, v), **kw)].num)
-    #             for c in self.constants))]
 
 class System(K3.System):
     """
@@ -163,7 +158,7 @@ class Rules(B3E.Rules):
         From an unticked, undesignated, negated disjunction node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) disjunction, then tick *n*.
         """
-        
+
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated material conditional node *n* on a branch
@@ -185,7 +180,7 @@ class Rules(B3E.Rules):
         From an unticked, undesignated, negated material conditional node *n* on a branch
         *b*, add a designated node with the (un-negated) conditional to *b*, then tick *n*.
         """
-        
+
     class MaterialBiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated, material biconditional node *n* on a branch
