@@ -80,6 +80,8 @@ class Model(BaseModel[Meta.values]):
     relation, and a set of constants (the domain).
     """
 
+    TruthFunction = FDE.Model.TruthFunction
+
     frames: Frames
     "A map from worlds to their frame"
 
@@ -104,8 +106,11 @@ class Model(BaseModel[Meta.values]):
         self.maxval = max(self.values)
         self.minval = min(self.values)
 
-    TruthFunction = FDE.Model.TruthFunction
-    # truth_function = FDE.Model.truth_function
+    def value_of_opaque(self, s: Sentence, /, world: int = 0):
+        return self.frames[world].opaques.get(s, self.unassigned_value)
+
+    def value_of_atomic(self, s: Atomic, /, world: int = 0):
+        return self.frames[world].atomics.get(s, self.unassigned_value)
 
     def value_of_predicated(self, s: Predicated, **kw):
         """
@@ -127,25 +132,6 @@ class Model(BaseModel[Meta.values]):
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
         raise TypeError(s.quantifier)
-    # def value_of_existential(self, s: Quantified, **kw):
-    #     """
-    #     An existential sentence is true at :m:`w`, just when the sentence resulting in the
-    #     subsitution of some constant in the domain for the variable is true at :m:`w`.
-    #     """
-    #     for c in self.constants:
-    #         if self.value_of(c >> s, **kw) is self.values.T:
-    #             return self.values.T
-    #     return self.values.F
-
-    # def value_of_universal(self, s: Quantified, **kw):
-    #     """
-    #     A universal sentence is true at :m:`w`, just when the sentence resulting in the
-    #     subsitution of each constant in the domain for the variable is true at :m:`w`.
-    #     """
-    #     for c in self.constants:
-    #         if self.value_of(c >> s, **kw) is self.values.F:
-    #             return self.values.F
-    #     return self.values.T
 
     def value_of_operated(self, s: Operated, **kw):
         if s.operator is Operator.Possibility:
@@ -154,7 +140,7 @@ class Model(BaseModel[Meta.values]):
             return self.value_of_necessity(s, **kw)
         return super().value_of_operated(s, **kw)
 
-    def value_of_possibility(self, s: Operated, world: int = 0, **kw):
+    def value_of_possibility(self, s: Operated, /, world: int = 0, **kw):
         """
         A possibility sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
@@ -163,8 +149,6 @@ class Model(BaseModel[Meta.values]):
             if self.value_of(s.lhs, world=w2, **kw) is self.values.T:
                 return self.values.T
         return self.values.F
-
-    
 
     def value_of_necessity(self, s: Operated, /, world: int = 0, **kw):
         """
@@ -367,12 +351,6 @@ class Model(BaseModel[Meta.values]):
         if pred not in frame.anti_extensions:
             frame.anti_extensions[pred] = set()
         return frame.anti_extensions[pred]
-
-    def value_of_opaque(self, s: Sentence, /, world: int = 0):
-        return self.frames[world].opaques.get(s, self.unassigned_value)
-
-    def value_of_atomic(self, s: Atomic, /, world: int = 0):
-        return self.frames[world].atomics.get(s, self.unassigned_value)
 
 class Frame:
     """

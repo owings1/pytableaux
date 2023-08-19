@@ -29,8 +29,8 @@ from types import MappingProxyType as MapProxy
 from typing import Any, Generic, Mapping, TypeVar
 
 from .errors import check
-from .lang import (Argument, Atomic, Constant, Operated, Operator, Predicated, LexType,
-                   Quantified, Quantifier, Sentence)
+from .lang import (Argument, Atomic, Constant, LexType, Operated, Operator,
+                   Predicated, Quantified, Sentence)
 from .logics import LogicType
 from .proof import Branch
 from .tools import abcs
@@ -122,7 +122,6 @@ class ValueCPL(Mval):
     F = 'False', 0.0
     T = 'True' , 1.0
 
-# MvalId = Mval | str | float
 MvalT = TypeVar('MvalT', bound = Mval)
 MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 
@@ -196,10 +195,6 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
                 *map(lambda s: self.value_of(s, **kw), s))
         check.inst(s, Operated)
         raise NotImplementedError
-
-    # @abstractmethod
-    # def truth_function(self, oper: Operator, a, b = None, /) -> MvalT_co:
-    #     raise NotImplementedError
 
     @abstractmethod
     def set_literal_value(self, s: Sentence, value: MvalT_co, /):

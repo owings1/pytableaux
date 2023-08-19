@@ -25,7 +25,7 @@ from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import ValueFDE, PredicateInterpretation
 from ..proof import Branch, Node, adds, filters, rules, sdnode
-from ..tools import closure, group, maxceil, minfloor
+from ..tools import group, maxceil, minfloor
 from . import LogicType
 
 
@@ -368,69 +368,6 @@ class Model(LogicType.Model[ValueFDE]):
         elif value is self.values.B:
             predext.addpos(s.params)
             predext.addneg(s.params)
-
-    # value_of_possibility = value_of_opaque
-    # value_of_necessity = value_of_opaque
-
-    # @closure
-    # def truth_function():
-
-    #     # Define as generically as possible for reuse.
-
-    #     def assertion(self: Model, a, _, /):
-    #         return self.values[a]
-
-    #     def negation(self: Model, a, _, /):
-    #         if a == self.values.F:
-    #             return self.values.T
-    #         if a == self.values.T:
-    #             return self.values.F
-    #         return self.values[a]
-
-    #     def conjunction(self: Model, a, b, /):
-    #         return min(self.values[a], self.values[b])
-
-    #     def disjunction(self: Model, a, b, /):
-    #         return max(self.values[a], self.values[b])
-
-    #     def conditional(self: Model, a, b, /):
-    #         return self.truth_function(Operator.MaterialConditional, a, b)
-
-    #     def biconditional(self: Model, a, b, /):
-    #         return self.truth_function(
-    #             Operator.Conjunction,
-    #             self.truth_function(Operator.Conditional, a, b),
-    #             self.truth_function(Operator.Conditional, b, a) )
-
-    #     def material_conditional(self: Model, a, b, /):
-    #         return self.truth_function(
-    #             Operator.Disjunction,
-    #             self.truth_function(Operator.Negation, a),
-    #             b)
-
-    #     def material_biconditional(self: Model, a, b, /):
-    #         return self.truth_function(
-    #             Operator.Conjunction,
-    #             self.truth_function(Operator.MaterialConditional, a, b),
-    #             self.truth_function(Operator.MaterialConditional, b, a))
-
-    #     _funcmap = MapProxy({
-    #         Operator.Assertion: assertion,
-    #         Operator.Negation: negation,
-    #         Operator.Conjunction: conjunction,
-    #         Operator.Disjunction: disjunction,
-    #         Operator.Conditional: conditional,
-    #         Operator.Biconditional: biconditional,
-    #         Operator.MaterialConditional: material_conditional,
-    #         Operator.MaterialBiconditional: material_biconditional})
-
-    #     def func_mapper(self: Model, oper: Operator, a, b = None, /):
-    #         try:
-    #             return _funcmap[Operator(oper)](self, a, b)
-    #         except KeyError:
-    #             raise NotImplementedError(oper)
-
-    #     return func_mapper
 
 class System(LogicType.System):
 

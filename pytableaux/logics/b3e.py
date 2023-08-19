@@ -41,31 +41,18 @@ class Model(K3W.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
-        def Assertion(self, a):
+        def Assertion(self, a, /):
             return self.values[crunch(self.values[a].num)]
 
-        def Conditional(self, a, b):
+        def Conditional(self, a, b, /):
             return self.Disjunction(
                 self.Negation(self.Assertion(a)),
                 self.Assertion(b))
 
-        def Biconditional(self, a, b):
+        def Biconditional(self, a, b, /):
             return self.Conjunction(
                 self.Conditional(a, b),
                 self.Conditional(b, a))
-
-    # def truth_function(self, oper: Operator, a, b=None, /):
-    #     oper = Operator(oper)
-    #     if oper is Operator.Assertion:
-    #         return self.values[crunch(self.values[a].num)]
-    #     elif oper is Operator.Conditional:
-    #         return self.truth_function(
-    #             Operator.Disjunction,
-    #             self.truth_function(Operator.Negation, self.truth_function(Operator.Assertion, a)),
-    #             self.truth_function(Operator.Assertion, b))
-    #     elif oper is Operator.Biconditional:
-    #         return FDE.Model.truth_function(self, oper, a, b)
-    #     return super().truth_function(oper, a, b)
 
 class System(K3.System):
 

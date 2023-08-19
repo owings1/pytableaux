@@ -33,24 +33,16 @@ class Meta(K3.Meta):
 class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
+
         def Negation(self, a):
             return self.back_cycle(a)
+
         def Conjunction(self, a, b):
             return self.Negation(self.Disjunction(*map(self.Negation, (a, b))))
+
         def back_cycle(self, value):
             seq = self.values._seq
             return seq[seq.index(value) - 1]
-    # def truth_function(self, oper, a, b=None, /):
-    #     oper = Operator(oper)
-    #     if oper is Operator.Negation:
-    #         return self.back_cycle(a)
-    #     if oper is Operator.Conjunction:
-    #         return self.truth_function(
-    #             Operator.Negation,
-    #             self.truth_function(
-    #                 Operator.Disjunction,
-    #                 *(self.truth_function(Operator.Negation, x) for x in (a, b))))
-    #     return super().truth_function(oper, a, b)
 
     def value_of_universal(self, s: Quantified, /, **kw):
         """
@@ -69,7 +61,6 @@ class Model(K3.Model):
                 self.values.T,
                 (self.truth_function(Operator.Negation, self.value_of(sub(c, v), **kw))
                     for c in self.constants)))
-
 
 
 class System(K3.System):

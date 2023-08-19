@@ -39,18 +39,22 @@ class Meta(K3.Meta):
 class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
+
         def Assertion(self, a):
             return self.values[crunch(self.values[a].num)]
+
         def Disjunction(self, a, b):
             return self.values[
                 max(
                     crunch(self.values[a].num),
                     crunch(self.values[b].num))]
+
         def Conjunction(self, a, b):
             return self.values[
                 min(
                     crunch(self.values[a].num),
                     crunch(self.values[b].num))]
+
         def Conditional(self, a, b):
             return self.values[
                 crunch(
@@ -58,28 +62,6 @@ class Model(K3.Model):
                         1 - self.values[a].num,
                         self.values[b].num,
                         gap(self.values[a].num) + gap(self.values[b].num)))]
-    # def truth_function(self, oper, a, b=None):
-    #     oper = Operator(oper)
-    #     if oper is Operator.Assertion:
-    #         return self.values[crunch(self.values[a].num)]
-    #     if oper is Operator.Disjunction:
-    #         return self.values[
-    #             max(
-    #                 crunch(self.values[a].num),
-    #                 crunch(self.values[b].num))]
-    #     if oper is Operator.Conjunction:
-    #         return self.values[
-    #             min(
-    #                 crunch(self.values[a].num),
-    #                 crunch(self.values[b].num))]
-    #     if oper is Operator.Conditional:
-    #         return self.values[
-    #             crunch(
-    #                 max(
-    #                     1 - self.values[a].num,
-    #                     self.values[b].num,
-    #                     gap(self.values[a].num) + gap(self.values[b].num)))]
-    #     return super().truth_function(oper, a, b)
 
     def value_of_quantified(self, s: Quantified, /):
         it = map(crunch, map(self.value_of, map(s.unquantify, self.constants)))

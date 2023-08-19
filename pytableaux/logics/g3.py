@@ -34,15 +34,12 @@ class Meta(L3.Meta):
 class Model(L3.Model):
 
     class TruthFunction(L3.Model.TruthFunction):
-        def Negation(self, a):
+
+        def Negation(self, a, /):
             if a == self.values.N:
                 return self.values.F
             return super().Negation(a)
-    # def truth_function(self, operator, a, b=None, /):
-    #     if operator == Operator.Negation:
-    #         if a == self.values.N:
-    #             return self.values.F
-    #     return super().truth_function(operator, a, b)
+
 
 class System(K3.System):
 

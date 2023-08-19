@@ -50,16 +50,6 @@ class Model(LP.Model):
             if self.values[a] is not self.values.F and self.values[b] is self.values.F:
                 return self.values.F
             return self.values.T
-    # def truth_function(self, oper, a, b=None, /):
-    #     oper = Operator(oper)
-    #     if oper is Operator.Conditional:
-    #         if self.values[a] is not self.values.F and self.values[b] is self.values.F:
-    #             return self.values.F
-    #         return self.values.T
-    #     if oper is Operator.Conjunction:
-    #         if self.values[a] is self.values.B and self.values[b] is self.values.B:
-    #             return self.values.T
-    #     return super().truth_function(oper, a, b)
 
 class System(LP.System):
     branchables = {
