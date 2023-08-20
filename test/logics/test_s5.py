@@ -4,6 +4,7 @@ class Base(BaseCase):
     logic = 'S5'
 
 class TestRules(Base, autorules=True, bare=True): pass
+class TestAutoArgs(Base, autoargs=True): pass
 
 class TestS5(Base):
 

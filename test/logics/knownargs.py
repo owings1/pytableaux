@@ -2,10 +2,62 @@ from pytableaux.tools import qset, qsetf
 
 validities = {}
 invalidities = {}
-validities['CPL'] = qsetf([
+validities[...] = qsetf([
+    'Modal Platitude 1',
+    'Modal Platitude 2',
+    'Modal Platitude 3',
+])
+validities['FDE'] = validities[...] | [
         'Addition',
         'Assertion Elimination 1',
         'Assertion Elimination 2',
+        'DeMorgan 1',
+        'DeMorgan 2',
+        'DeMorgan 3',
+        'DeMorgan 4',
+        'DeMorgan 5',
+        'DeMorgan 6',
+        'DeMorgan 7',
+        'DeMorgan 8',
+
+        # 'Self Identity 1',
+        'Simplification',
+]
+validities['K3'] = validities['FDE'] | [
+
+]
+validities['LP'] = validities['FDE'] | [
+    
+]
+validities['RM3'] = validities['FDE'] | [
+    
+]
+validities['L3'] = validities['FDE'] | [
+    
+]
+validities['G3'] = validities[...] | [
+    
+]
+validities['GO'] = validities[...] | [
+    
+]
+validities['K3W'] = validities[...] | [
+    
+]
+validities['K3WQ'] = validities[...] | [
+    
+]
+validities['MH'] = validities[...] | [
+    
+]
+validities['NH'] = validities[...] | [
+    
+]
+validities['P3'] = validities[...] | [
+    
+]
+
+validities['CPL'] = validities['FDE'] | [
         'Biconditional Elimination 1',
         'Biconditional Elimination 2',
         'Biconditional Elimination 3',
@@ -25,14 +77,6 @@ validities['CPL'] = qsetf([
         'Conjunction Elimination',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
-        'DeMorgan 1',
-        'DeMorgan 2',
-        'DeMorgan 3',
-        'DeMorgan 4',
-        'DeMorgan 5',
-        'DeMorgan 6',
-        'DeMorgan 7',
-        'DeMorgan 8',
         'Disjunction Commutativity',
         'Disjunction Pseudo Commutativity',
         'Disjunctive Syllogism',
@@ -55,11 +99,7 @@ validities['CPL'] = qsetf([
         'Material Modus Tollens',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
-        'Modal Platitude 1',
-        'Modal Platitude 2',
-        'Modal Platitude 3',
-        'Self Identity 1',
-        'Simplification'])
+        'Self Identity 1']
 
 validities['CFOL'] = validities['CPL'] | [
         'Existential Syllogism',

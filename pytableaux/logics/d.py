@@ -41,8 +41,8 @@ class Model(K.Model):
             # only add one extra world
             w2 = max(self.frames) + 1
             for w1 in needs_world:
-                self.R.add(w1, w2)
-            self.R.add(w2, w2)
+                self.R.add((w1, w2))
+            self.R.add((w2, w2))
         super().finish()
 
 class System(K.System):
@@ -103,6 +103,8 @@ class Rules(K.Rules):
         group(
             # non-branching rules
             K.Rules.IdentityIndiscernability,
+            K.Rules.Assertion,
+            K.Rules.AssertionNegated,
             K.Rules.Conjunction, 
             K.Rules.DisjunctionNegated, 
             K.Rules.MaterialConditionalNegated,

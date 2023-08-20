@@ -4,6 +4,7 @@ class Base(BaseCase):
     logic = 'RM3'
 
 class TestRules(Base, autorules=True): pass
+class TestAutoArgs(Base, autoargs=True): pass
 
 class TestArguments(Base):
     def test_valid_cond_mp(self):

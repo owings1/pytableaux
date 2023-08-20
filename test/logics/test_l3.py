@@ -4,6 +4,7 @@ class Base(BaseCase):
     logic = 'L3'
 
 class TestRules(Base, autorules=True): pass
+class TestAutoArgs(Base, autoargs=True): pass
 
 class TestArguments(Base):
 

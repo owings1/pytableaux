@@ -6,6 +6,7 @@ class Base(BaseCase):
     logic = 'GO'
 
 class TestRules(Base, autorules=True): pass
+class TestAutoArgs(Base, autoargs=True): pass
 
 class TestGO(Base):
 

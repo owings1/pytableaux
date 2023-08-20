@@ -10,6 +10,7 @@ class Base(BaseCase):
     logic = 'K3'
 
 class TestRules(Base, autorules=True): pass
+class TestAutoArgs(Base, autoargs=True): pass
 
 class TestArguments(Base):
 
