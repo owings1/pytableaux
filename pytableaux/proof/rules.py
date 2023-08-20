@@ -227,8 +227,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
             if unapplied or not branch.all(nodes):
                 yield Target(adds(nodes,
                     constant=c,
-                    branch=branch,
-                    rule=self))
+                    branch=branch))
 
     @abstractmethod
     def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /) -> Iterable[Node]:

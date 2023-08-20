@@ -45,12 +45,12 @@ class Model(K3.Model):
     class TruthFunction(K3.Model.TruthFunction):
 
         def Disjunction(self, a, b):
-            if self.values[a] is self.values.N and self.values[b] is self.values.N:
+            if a == self.values.N and b == self.values.N:
                 return self.values.F
             return super().Disjunction(a, b)
 
         def Conditional(self, a, b):
-            if self.values[a] is self.values.T and self.values[b] is not self.values.T:
+            if a == self.values.T and b != self.values.T:
                 return self.values.F
             return self.values.T
 
@@ -138,24 +138,16 @@ class Rules(K3.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
-    class MaterialConditionalUndesignated(MaterialConditionalDesignated):
-        "This rule reduces to a disjunction."
-
-    class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated):
-        "This rule reduces to a negated disjunction."
+    class MaterialConditionalUndesignated(MaterialConditionalDesignated): pass
+    class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated): pass
 
     class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
         "This rule reduces to a conjunction of material conditionals."
         conjoined = Operator.MaterialConditional
 
-    class MaterialBiconditionalNegatedDesignated(MaterialBiconditionalDesignated):
-        "This rule reduces to a negated conjunction of material conditionals."
-
-    class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
-        "This rule reduces to a conjunction of material conditionals."
-
-    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated):
-        "This rule reduces to a negated conjunction of material conditionals."
+    class MaterialBiconditionalNegatedDesignated(MaterialBiconditionalDesignated): pass
+    class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated): pass
+    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated): pass
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """

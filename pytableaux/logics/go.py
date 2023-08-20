@@ -22,7 +22,6 @@ from ..tools import group, maxceil, minfloor
 from . import b3e as B3E
 from . import fde as FDE
 from . import k3 as K3
-from .b3e import crunch, gap
 
 
 class Meta(K3.Meta):
@@ -41,30 +40,28 @@ class Model(K3.Model):
     class TruthFunction(K3.Model.TruthFunction):
 
         def Assertion(self, a):
-            return self.values[crunch(self.values[a].num)]
+            return self.crunch(a)
 
         def Disjunction(self, a, b):
-            return self.values[
-                max(
-                    crunch(self.values[a].num),
-                    crunch(self.values[b].num))]
+            return max(map(self.crunch, (a, b)))
 
         def Conjunction(self, a, b):
-            return self.values[
-                min(
-                    crunch(self.values[a].num),
-                    crunch(self.values[b].num))]
+            return min(map(self.crunch, (a, b)))
 
         def Conditional(self, a, b):
-            return self.values[
-                crunch(
-                    max(
-                        1 - self.values[a].num,
-                        self.values[b].num,
-                        gap(self.values[a].num) + gap(self.values[b].num)))]
+            return self.crunch(
+                max(
+                    self.values[1 - a],
+                    b,
+                    sum(map(self.gap, (a, b)))))
+
+        gap = B3E.Model.TruthFunction.gap
+        crunch = B3E.Model.TruthFunction.crunch
+
+    truth_function: Model.TruthFunction
 
     def value_of_quantified(self, s: Quantified, /):
-        it = map(crunch, map(self.value_of, map(s.unquantify, self.constants)))
+        it = map(self.truth_function.crunch, map(self.value_of, map(s.unquantify, self.constants)))
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:

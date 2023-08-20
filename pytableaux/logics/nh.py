@@ -42,12 +42,14 @@ class Model(LP.Model):
         return type(s) is Quantified or super().is_sentence_opaque(s)
 
     class TruthFunction(LP.Model.TruthFunction):
+
         def Conjunction(self, a, b):
-            if self.values[a] is self.values.B and self.values[b] is self.values.B:
+            if a == self.values.B and b == self.values.B:
                 return self.values.T
             return super().Conjunction(a, b)
+
         def Conditional(self, a, b):
-            if self.values[a] is not self.values.F and self.values[b] is self.values.F:
+            if a != self.values.F and b == self.values.F:
                 return self.values.F
             return self.values.T
 

@@ -8,6 +8,9 @@ from pytableaux.lang import *
 from pytableaux.logics import registry, LogicType
 from pytableaux.models import BaseModel
 from pytableaux.proof import Branch, Node, Tableau, ClosingRule, Rule
+from pytableaux.tools import inflect, qset
+
+from .logics import knownargs
 
 _T = TypeVar('_T')
 
@@ -45,7 +48,7 @@ class BaseCase(TestCase):
     notn = Notation.polish
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
 
-    def __init_subclass__(subcls, autorules=False, **kw):
+    def __init_subclass__(subcls, autorules=False, autoargs=False, **kw):
         if autorules:
             bare = bool(kw.pop('bare', None))
         super().__init_subclass__(**kw)
@@ -53,15 +56,31 @@ class BaseCase(TestCase):
             subcls.logic = registry(subcls.logic)
         if autorules:
             for rulecls in subcls.logic.Rules.all():
-                name = f'test_{rulecls.name}'
+                name = f'test_rule_{rulecls.name}'
                 old = getattr(subcls, name, None)
-                def test(self: BaseCase):
+                def test(self: BaseCase, rulecls=rulecls, old=old):
                     rt = self.rule_eg(rulecls, bare=bare)
                     self.assertEqual(rt.rule.branching, len(rt.tab) - 1)
                     if callable(old):
                         old(self)
                 setattr(subcls, name, test)
-
+        if autoargs:
+            validities = qset()
+            invalidities = qset()
+            if getattr(subcls, 'logic', None):
+                validities.update(knownargs.validities.get(subcls.logic.Meta.name, []))
+                invalidities.update(knownargs.invalidities.get(subcls.logic.Meta.name, []))
+            for arg in validities:
+                name = f'test_valid_{inflect.slug(arg)}'
+                def test(self: BaseCase, arg=arg):
+                    self.valid_tab(arg)
+                setattr(subcls, name, test)
+            for arg in invalidities:
+                name = f'test_invalid_{inflect.slug(arg)}'
+                def test(self: BaseCase, arg=arg):
+                    self.invalid_tab(arg)
+                setattr(subcls, name, test)
+            
     def valid_tab(self, *args, **kw):
         tab = self.tab(*args, **kw)
         self.assertTrue(tab.valid)

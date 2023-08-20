@@ -82,7 +82,7 @@ data = MapProxy({
     'Disjunction Pseudo Commutativity' : (EMPTY, 'BAabAba'),
     'Disjunctive Syllogism'            : (('Aab', 'Nb'), 'a'),
     'Disjunctive Syllogism 2'          : (('ANab', 'Nb'), 'Na'),
-    'Existential from Universal'       : (('SxFx',), 'VxFx'),
+    'Existential from Universal'       : (('VxFx',), 'SxFx'),
     'Existential Syllogism'            : (('VxCFxGx', 'Fn'),  'Gn'),
     'Explosion'                        : (('KaNa',), 'b'),
     'Extracting a Disjunct 1'          : (('Aab',), 'b'),

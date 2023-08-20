@@ -175,11 +175,8 @@ class Rules(K3.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
 
-    class MaterialConditionalUndesignated(MaterialConditionalDesignated):
-        "This rule reduces to a disjunction."
-
-    class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated):
-        "This rule reduces to a negated disjunction."
+    class MaterialConditionalUndesignated(MaterialConditionalDesignated): pass
+    class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated): pass
 
     class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
         "This rule reduces to a conjunction of material conditionals."
@@ -189,35 +186,16 @@ class Rules(K3.Rules):
         "This rule reduces to a negated conjunction of material conditionals."
         conjoined = Operator.MaterialConditional
 
-    class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
-        "This rule reduces to a conjunction of material conditionals."
-
-    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated):
-        "This rule reduces to a negated conjunction of material conditionals."
-
-    class ConditionalDesignated(MaterialConditionalDesignated):
-        "Same as for the material conditional designated."
-
-    class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
-        "Same as for the negated material conditional designated."
-
-    class ConditionalUndesignated(MaterialConditionalUndesignated):
-        "Same as for the material conditional undesignated."
-
-    class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
-        "Same as for the negated material conditional undesignated."
-
-    class BiconditionalDesignated(MaterialBiconditionalDesignated):
-        "Same as for the material biconditional designated."
-
-    class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
-        "Same as for the negated material biconditional designated."
-
-    class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
-        "Same as for the material biconditional undesignated."
-
-    class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
-        "Same as for the negated material biconditional undesignated."
+    class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated): pass
+    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated): pass
+    class ConditionalDesignated(MaterialConditionalDesignated): pass
+    class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated): pass
+    class ConditionalUndesignated(MaterialConditionalUndesignated): pass
+    class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated): pass
+    class BiconditionalDesignated(MaterialBiconditionalDesignated): pass
+    class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated): pass
+    class BiconditionalUndesignated(MaterialBiconditionalUndesignated): pass
+    class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated): pass
 
     groups = (
         group(

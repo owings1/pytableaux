@@ -17,13 +17,12 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from types import MappingProxyType as MapProxy
 from typing import Any
 
 from ..errors import Emsg, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
-from ..models import ValueFDE, PredicateInterpretation
+from ..models import PredicateInterpretation, ValueFDE
 from ..proof import Branch, Node, adds, filters, rules, sdnode
 from ..tools import group, maxceil, minfloor
 from . import LogicType
@@ -67,11 +66,9 @@ class Model(LogicType.Model[ValueFDE]):
                 return self.values.F
             return self.values[a]
 
-        def Conjunction(self, a, b, /):
-            return self.values[min(a, b)]
+        Conjunction = staticmethod(min)
 
-        def Disjunction(self, a, b, /):
-            return self.values[max(a, b)]
+        Disjunction = staticmethod(max)
 
         def MaterialConditional(self, a, b, /):
             return self.Disjunction(self.Negation(a), b)

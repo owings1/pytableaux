@@ -31,18 +31,12 @@ class Meta(K3.Meta):
     native_operators = tuple(
         sorted(FDE.Meta.native_operators + group(Operator.Assertion)))
 
-def gap(v):
-    return min(v, 1 - v)
-
-def crunch(v):
-    return v - gap(v)
-
 class Model(K3W.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
         def Assertion(self, a, /):
-            return self.values[crunch(self.values[a].num)]
+            return self.crunch(self.values[a])
 
         def Conditional(self, a, b, /):
             return self.Disjunction(
@@ -53,6 +47,12 @@ class Model(K3W.Model):
             return self.Conjunction(
                 self.Conditional(a, b),
                 self.Conditional(b, a))
+
+        def gap(self, v, /):
+            return self.values[min(v, 1 - v)]
+
+        def crunch(self, v, /):
+            return self.values[v - self.gap(v)]
 
 class System(K3.System):
 
@@ -120,7 +120,6 @@ class Rules(K3W.Rules):
             yield adds(group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated): pass
-
     class ConditionalNegatedUndesignated(ConditionalDesignated): pass
 
     class BiconditionalDesignated(FDE.OperatorNodeRule):
@@ -144,35 +143,12 @@ class Rules(K3W.Rules):
             # Keep designation neutral for inheritance below.
             yield adds(group(sdnode(sn1, d), sdnode(sn2, d)))
 
-    class BiconditionalNegatedDesignated(BiconditionalDesignated):
-        """
-        From an unticked, designated, biconditional node *n* on a branch *b*, add two
-        undesignated nodes to *b*, one with a negated disjunction, where the
-        first disjunct is the negated asserted antecedent, and the second disjunct
-        is the asserted consequent, and the other node is the same with the disjuncts
-        inverted. Then tick *n*.
-        """
-
-    class BiconditionalUndesignated(BiconditionalDesignated):
-        """
-        From an unticked, undesignated biconditional node *n* on a branch *b*, add two
-        undesignated nodes to *b*, one with a disjunction, where the
-        first disjunct is the negated asserted antecedent, and the second disjunct
-        is the asserted consequent, and the other node is the same with the disjuncts
-        inverted. Then tick *n*.
-        """
-
-    class BiconditionalNegatedUndesignated(BiconditionalUndesignated):
-        """
-        From an unticked, designated, biconditional node *n* on a branch *b*, add two
-        undesignated nodes to *b*, one with a negated disjunction, where the
-        first disjunct is the negated asserted antecedent, and the second disjunct
-        is the asserted consequent, and the other node is the same with the disjuncts
-        inverted. Then tick *n*.
-        """
+    class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
+    class BiconditionalUndesignated(BiconditionalDesignated): pass
+    class BiconditionalNegatedUndesignated(BiconditionalUndesignated): pass
 
     groups = (
-        (
+        group(
             FDE.Rules.AssertionDesignated,
             AssertionUndesignated,
             AssertionNegatedDesignated,
@@ -201,27 +177,21 @@ class Rules(K3W.Rules):
             BiconditionalDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
-            BiconditionalNegatedUndesignated,
-        ),
-        (
+            BiconditionalNegatedUndesignated),
+        group(
             # two-branching rules
-            FDE.Rules.ConjunctionUndesignated,
-        ),
-        (
+            FDE.Rules.ConjunctionUndesignated),
+        group(
             # three-branching rules
             K3W.Rules.DisjunctionDesignated,
             K3W.Rules.DisjunctionUndesignated,
             K3W.Rules.ConjunctionNegatedDesignated,
             K3W.Rules.ConjunctionNegatedUndesignated,
             # (formerly) four-branching rules
-            K3W.Rules.DisjunctionNegatedUndesignated,
-        ),
-        (
+            K3W.Rules.DisjunctionNegatedUndesignated),
+        group(
             FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated,
-        ),
-        (
+            FDE.Rules.ExistentialUndesignated),
+        group(
             FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated,
-        ),
-    )
+            FDE.Rules.UniversalUndesignated))

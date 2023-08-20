@@ -29,5 +29,8 @@ def dashcase(s: str):
     s = pat_dashcase2.sub(r'-', s)
     return s.lower().strip('-')
 
+def slug(s: str):
+    return dashcase(s).replace('-', '_')
+
 def snakespace(s: str):
     return dashcase(s).replace('-', ' ').title()

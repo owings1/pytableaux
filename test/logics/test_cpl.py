@@ -1,3 +1,4 @@
+from . import knownargs
 from ..utils import BaseCase
 from pytableaux.errors import *
 from pytableaux.lang import *
@@ -10,6 +11,8 @@ class Base(BaseCase):
     logic = 'CPL'
 
 class TestRules(Base, autorules=True): pass
+class TestAutoArgs(Base, autoargs=True): pass
+
 
 class TestIdentityRules(Base):
 

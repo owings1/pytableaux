@@ -32,29 +32,29 @@ class Meta(K3W.Meta):
 
 class Model(K3W.Model):
 
-    Value = Meta.values
+    values = Meta.values
     # generalized conjunction
     mc_nvals = {
-        Value.F: 2,
-        Value.N: 1,
-        Value.T: 3,
+        values.F: 2,
+        values.N: 1,
+        values.T: 3,
     }
     mc_cvals = {
-        1: Value.N,
-        2: Value.F,
-        3: Value.T,
+        1: values.N,
+        2: values.F,
+        3: values.T,
     }
 
     # generalized disjunction
     md_nvals = {
-        Value.F: 1,
-        Value.N: 3,
-        Value.T: 2,
+        values.F: 1,
+        values.N: 3,
+        values.T: 2,
     }
     md_cvals = {
-        1: Value.F,
-        2: Value.T,
-        3: Value.N,
+        1: values.F,
+        2: values.T,
+        3: values.N,
     }
 
     def value_of_quantified(self, s: Quantified, /):
@@ -72,7 +72,7 @@ class Model(K3W.Model):
         the set of values for the substitution of each constant in the model for
         the variable.
         """
-        return self.Value[
+        return self.values[
             self.mc_cvals[
                 minfloor(1, (
                     self.mc_nvals[self.value_of(c >> s)]
@@ -89,7 +89,7 @@ class Model(K3W.Model):
         the set of values for the substitution of each constant in the model for
         the variable.
         """
-        return self.Value[
+        return self.values[
             self.md_cvals[
                 maxceil(3, (
                     self.md_nvals[self.value_of(c >> s)]
