@@ -135,8 +135,7 @@ validities['S5'] = validities['S4'] | [
 
 
 
-
-invalidities['S5'] = qsetf([
+invalidities[...] = qsetf([
         'Triviality 1',
         'Triviality 2',
         'Affirming a Disjunct 1',
@@ -150,6 +149,8 @@ invalidities['S5'] = qsetf([
         'Extracting the Consequent',
         'Universal from Existential'
 ])
+invalidities['S5'] = invalidities[...] | [
+]
 
 invalidities['S4'] = invalidities['S5'] | [
 
@@ -195,3 +196,38 @@ invalidities['CPL'] = qsetf([
         'Serial Inference 2',
         'Syllogism',
         'Universal Predicate Syllogism',])
+
+
+invalidities['K3'] = invalidities[...] | [
+
+]
+invalidities['LP'] = invalidities[...] | [
+    
+]
+invalidities['RM3'] = invalidities[...] | [
+    
+]
+invalidities['L3'] = invalidities[...] | [
+    
+]
+invalidities['G3'] = invalidities[...] | [
+    
+]
+invalidities['GO'] = invalidities[...] | [
+    
+]
+invalidities['K3W'] = invalidities[...] | [
+    
+]
+invalidities['K3WQ'] = invalidities[...] | [
+    
+]
+invalidities['MH'] = invalidities[...] | [
+    
+]
+invalidities['NH'] = invalidities[...] | [
+    
+]
+invalidities['P3'] = invalidities[...] | [
+    
+]
