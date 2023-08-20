@@ -9,20 +9,8 @@ class Base(BaseCase):
     logic = 'FDE'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
 
-class TestArguments(Base):
-
-    def test_DeMorgan(self):
-        self.valid_tab('DeMorgan 1')
-        self.valid_tab('DeMorgan 2')
-        self.valid_tab('DeMorgan 3')
-        self.valid_tab('DeMorgan 4')
-
-class TestClosure(Base):
-
-    def test_DesignationClosure(self):
-        self.rule_eg('DesignationClosure')
+class TestArguments(Base, autoargs=True): pass
 
 class TestOperators(Base):
 
@@ -43,15 +31,6 @@ class TestOperators(Base):
             (s.operator, s.lhs.operator, n['designated']),
             (Operator.Negation, Operator.Conjunction, True))
 
-    def test_Disjunction(self):
-        self.valid_tab('Addition')
-        self.invalid_tab('LEM')
-
-    def test_MaterialBiconditional(self):
-        self.invalid_tab('Material Biconditional Elimination 3')
-
-
-
 class TestQuantifiers(Base):
 
     def test_Existential(self):
@@ -62,9 +41,6 @@ class TestQuantifiers(Base):
         self.assertTrue(b.has(
             {'sentence': Quantified.first(q), 'designated': False}))
 
-    def test_arguments(self):
-        self.valid_tab('Quantifier Interdefinability 4')
-        self.invalid_tab('Universal from Existential')
 
     def test_invalid_existential_inside_univ_max_steps(self):
         tab = self.invalid_tab('b', 'VxUFxSyFy', max_steps=100, is_build_models=True)

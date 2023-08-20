@@ -5,30 +5,20 @@ from pytableaux.lang import *
 class Base(BaseCase):
     logic = 'D'
 
-class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
-
-class Test(Base):
-
-    def test_valid_long_serial_max_steps_50(self):
-        self.valid_tab('MMMMMa', 'LLLLLa', max_steps = 50)
-
-    def test_valid_serial_inf_1(self):
-        self.valid_tab('Serial Inference 1')
-
-    def test_invalid_reflex_inf_1(self):
-        self.invalid_tab('Reflexive Inference 1')
-
-    def test_invalid_optimize_nec_rule1_max_steps_50(self):
-        self.invalid_tab('NLVxNFx', 'LMSxFx', max_steps = 50)
-
-    def test_invalid_s4_cond_inf_2(self):
-        self.invalid_tab('S4 Conditional Inference 2')
+class TestRules(Base, autorules=True):
 
     def test_rule_Serial_not_applies_to_branch_empty(self):
         tab = self.tab()
         rule = tab.rules.get('Serial')
         self.assertFalse(rule.target(tab.branch()))
+
+class TestArguments(Base, autoargs=True):
+
+    def test_valid_long_serial_max_steps_50(self):
+        self.valid_tab('MMMMMa', 'LLLLLa', max_steps = 50)
+
+    def test_invalid_optimize_nec_rule1_max_steps_50(self):
+        self.invalid_tab('NLVxNFx', 'LMSxFx', max_steps = 50)
 
     def test_verify_core_bugfix_branch_should_not_have_w1_with_more_than_one_w2(self):
         tab = self.tab('CaLMa')

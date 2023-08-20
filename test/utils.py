@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Collection, Iterable, NamedTuple, TypeVar
+from typing import Collection, Iterable, Mapping, NamedTuple, TypeVar
 from unittest import TestCase
 
 from pytableaux import examples
 from pytableaux.lang import *
 from pytableaux.logics import registry, LogicType
 from pytableaux.models import BaseModel
-from pytableaux.proof import Branch, Node, Tableau, ClosingRule, Rule
+from pytableaux.proof import *
 from pytableaux.tools import inflect, qset
 
 from .logics import knownargs
@@ -48,7 +48,7 @@ class BaseCase(TestCase):
     notn = Notation.polish
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
 
-    def __init_subclass__(subcls, autorules=False, autoargs=False, **kw):
+    def __init_subclass__(subcls, autorules=False, autoargs=False, autotables=False, **kw):
         if autorules:
             bare = bool(kw.pop('bare', None))
         super().__init_subclass__(**kw)
@@ -71,14 +71,28 @@ class BaseCase(TestCase):
                 validities.update(knownargs.validities.get(subcls.logic.Meta.name, []))
                 invalidities.update(knownargs.invalidities.get(subcls.logic.Meta.name, []))
             for arg in validities:
-                name = f'test_valid_{inflect.slug(arg)}'
+                if isinstance(arg, Argument):
+                    title = arg.title or hash(arg)
+                else:
+                    title = arg
+                name = f'test_valid_{inflect.slug(title)}'
                 def test(self: BaseCase, arg=arg):
                     self.valid_tab(arg)
                 setattr(subcls, name, test)
             for arg in invalidities:
-                name = f'test_invalid_{inflect.slug(arg)}'
+                if isinstance(arg, Argument):
+                    title = arg.title or hash(arg)
+                else:
+                    title = arg
+                name = f'test_invalid_{inflect.slug(title)}'
                 def test(self: BaseCase, arg=arg):
                     self.invalid_tab(arg)
+                setattr(subcls, name, test)
+        if autotables:
+            for oper, exp in getattr(subcls, 'tables', {}).items():
+                name = f'test_truth_table_{oper}'
+                def test(self: BaseCase, oper=oper, exp=exp):
+                    self.tttest(oper, exp)
                 setattr(subcls, name, test)
             
     def valid_tab(self, *args, **kw):
@@ -153,7 +167,7 @@ class BaseCase(TestCase):
         kw.setdefault('preds', self.preds)
         kw.setdefault('notn', self.notn)
         parser = Parser(kw['notn'], kw['preds'])
-        return parser.argument(conc, premises)
+        return parser.argument(conc, premises, title=kw.get('title'))
 
     def tab(self, *args, is_build = None, nn = None, ss = None, **kw) -> Tableau:
         kw.setdefault('is_build_models', True)
@@ -177,6 +191,8 @@ class BaseCase(TestCase):
         if nn:
             if isinstance(nn, int):
                 nn = self.ngen(nn, ss = ss, **kw)
+            elif isinstance(nn, Mapping):
+                nn = [nn]
             b = tab[0] if len(tab) else tab.branch()
             b.extend(nn)
         if is_build:
@@ -248,6 +264,17 @@ class BaseCase(TestCase):
         if b:
             m.read_branch(b)
         return m
+
+    def tttest(self, oper, exp: Mapping):
+        exp = {tuple(key): value for key, value in exp.items()}
+        tbl = self.Model().truth_table(oper)
+        res = {
+            tuple(map(str, key)): str(value)
+            for key, value in tbl.items()}
+        self.assertEqual(res, exp)
+
+    def sdnode(self, s, d):
+        return sdnode(self.p(s), d)
 
     @property
     def Model(self) -> type[BaseModel]:

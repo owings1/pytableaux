@@ -24,6 +24,7 @@ Example arguments
 from __future__ import annotations
 
 from types import MappingProxyType as MapProxy
+from typing import Mapping
 
 from . import logics
 from .errors import check
@@ -56,43 +57,45 @@ data = MapProxy({
     'Biconditional Introduction 1'     : (('a', 'b'), 'Bab'),
     'Biconditional Introduction 2'     : (('Na', 'Nb'), 'Bab'),
     'Biconditional Introduction 3'     : (('a', 'Nb'), 'NBab'),
-    'Conditional Contraction'          : (('UaUab',), 'Uab'),
+    'Conditional Contraction'          : (('UaUab',), 'Uab', ('Contraction',)),
     'Conditional Contraposition 1'     : (('Uab',), 'UNbNa'),
     'Conditional Contraposition 2'     : (('UNbNa',), 'Uab'),
+    'Conditional Double Negation'      : (EMPTY, 'UNNaa'),
     'Conditional Equivalence'          : (('Uab',), 'Uba'),
-    'Conditional Identity'             : (EMPTY, 'Uaa'),
-    'Conditional Modus Ponens'         : (('Uab', 'a'), 'b'),
-    'Conditional Modus Tollens'        : (('Uab', 'Nb'), 'Na'),
+    'Conditional Identity'             : (EMPTY, 'Uaa', ('Identity', 'ID')),
+    'Conditional Law of Excluded Middle': (EMPTY, 'AUabNUab', ('Conditional LEM',)),
+    'Conditional Modus Ponens'         : (('Uab', 'a'), 'b', ('MP', 'Modus Ponens')),
+    'Conditional Modus Tollens'        : (('Uab', 'Nb'), 'Na', ('MT', 'Modus Tollens')),
     'Conditional Pseudo Contraction'   : (EMPTY, 'UUaUabUab'),
     'Conditional Pseudo Contraposition': (EMPTY, 'BUabUNbNa'),
     'Conjunction Commutativity'        : (('Kab',), 'Kba'),
-    'Conjunction Elimination'          : (('Kab',), 'a'),
+    'Conjunction Elimination'          : (('Kab',), 'a', ('Simplification',)),
     'Conjunction Introduction'         : (('a', 'b'), 'Kab'),
     'Conjunction Pseudo Commutativity' : (EMPTY, 'BKabKba'),
-    'DeMorgan 1'                       : (('NAab',), 'KNaNb'),
-    'DeMorgan 2'                       : (('NKab',), 'ANaNb'),
-    'DeMorgan 3'                       : (('KNaNb',), 'NAab'),
-    'DeMorgan 4'                       : (('ANaNb',), 'NKab'),
-    'DeMorgan 5'                       : (('Aab',), 'NKNaNb'),
-    'DeMorgan 6'                       : (('Kab',), 'NANaNb'),
-    'DeMorgan 7'                       : (('NKNaNb',), 'Aab'),
-    'DeMorgan 8'                       : (('NANaNb',), 'Kab'),
+    'DeMorgan 1'                       : (('NAab',), 'KNaNb', ('DM', 'DM1', 'DEM', 'DEM1', 'DeMorgan')),
+    'DeMorgan 2'                       : (('NKab',), 'ANaNb', ('DM2', 'DEM2')),
+    'DeMorgan 3'                       : (('KNaNb',), 'NAab', ('DM3', 'DEM3')),
+    'DeMorgan 4'                       : (('ANaNb',), 'NKab', ('DM4', 'DEM4')),
+    'DeMorgan 5'                       : (('Aab',), 'NKNaNb', ('DM5', 'DEM5')),
+    'DeMorgan 6'                       : (('Kab',), 'NANaNb', ('DM6', 'DEM6')),
+    'DeMorgan 7'                       : (('NKNaNb',), 'Aab', ('DM7', 'DEM7')),
+    'DeMorgan 8'                       : (('NANaNb',), 'Kab', ('DM8', 'DEM8')),
     'Denying the Antecedent'           : (('Cab', 'Na'), 'b'),
     'Disjunction Commutativity'        : (('Aab',), 'Aba'),
     'Disjunction Pseudo Commutativity' : (EMPTY, 'BAabAba'),
-    'Disjunctive Syllogism'            : (('Aab', 'Nb'), 'a'),
+    'Disjunctive Syllogism'            : (('Aab', 'Nb'), 'a', ('DS',)),
     'Disjunctive Syllogism 2'          : (('ANab', 'Nb'), 'Na'),
     'Existential from Universal'       : (('VxFx',), 'SxFx'),
     'Existential Syllogism'            : (('VxCFxGx', 'Fn'),  'Gn'),
-    'Explosion'                        : (('KaNa',), 'b'),
+    'Explosion'                        : (('KaNa',), 'b', ('EFQ',)),
     'Extracting a Disjunct 1'          : (('Aab',), 'b'),
     'Extracting a Disjunct 2'          : (('AaNb',), 'Na'),
     'Extracting the Antecedent'        : (('Cab',), 'a'),
     'Extracting the Consequent'        : (('Cab',), 'b'),
     'Identity Indiscernability 1'      : (('Fm', 'Imn'), 'Fn'),
     'Identity Indiscernability 2'      : (('Fm', 'Inm'), 'Fn'),
-    'Law of Excluded Middle'           : (EMPTY, 'AaNa'),
-    'Law of Non-contradiction'         : (('KaNa',), 'b'),
+    'Law of Excluded Middle'           : (EMPTY, 'AaNa', ('LEM',)),
+    'Law of Non-contradiction'         : (('KaNa',), 'b', ('LNC',)),
     'Material Biconditional Elimination 1' : (('Eab', 'a'), 'b'),
     'Material Biconditional Elimination 2' : (('Eab', 'Na'), 'Nb'),
     'Material Biconditional Elimination 3' : (('NEab', 'a'),  'Nb'),
@@ -102,89 +105,63 @@ data = MapProxy({
     'Material Contraposition 1'        : (('Cab',), 'CNbNa'),
     'Material Contraposition 2'        : (('CNbNa',), 'Cab'),
     'Material Identity'                : (EMPTY, 'Caa'),
-    'Material Modus Ponens'            : (('Cab', 'a'), 'b'),
-    'Material Modus Tollens'           : (('Cab', 'Nb'), 'Na'),
+    'Material Modus Ponens'            : (('Cab', 'a'), 'b', ('MMP',)),
+    'Material Modus Tollens'           : (('Cab', 'Nb'), 'Na', ('MMT',)),
     'Material Pseudo Contraction'      : (EMPTY, 'CCaCabCab'),
     'Material Pseudo Contraposition'   : (EMPTY, 'ECabCNbNa'),
     'Modal Platitude 1'                : (('Ma',), 'Ma'),
     'Modal Platitude 2'                : (('La',), 'La'),
     'Modal Platitude 3'                : (('LMa',), 'LMa'),
-    'Modal Transformation 1'           : (('La',), 'NMNa'),
-    'Modal Transformation 2'           : (('NMNa',), 'La'),
-    'Modal Transformation 3'           : (('NLa',), 'MNa'),
-    'Modal Transformation 4'           : (('MNa',), 'NLa'),
+    'Modal Transformation 1'           : (('La',), 'NMNa', ('Modal 1',)),
+    'Modal Transformation 2'           : (('NMNa',), 'La', ('Modal 2',)),
+    'Modal Transformation 3'           : (('NLa',), 'MNa', ('Modal 3',)),
+    'Modal Transformation 4'           : (('MNa',), 'NLa', ('Modal 4',)),
     'Necessity Distribution 1'         : (EMPTY, 'ULUabULaLb'),
     'Necessity Distribution 2'         : (('LUab',), 'ULaLb'),
     'Necessity Elimination'            : (('La',), 'a'),
     'NP Collapse 1'                    : (('LMa',), 'Ma'),
     'Possibility Addition'             : (('a',), 'Ma'),
     'Possibility Distribution'         : (('KMaMb',), 'MKab'),
-    'Quantifier Interdefinability 1'   : (('VxFx',), 'NSxNFx'),
-    'Quantifier Interdefinability 2'   : (('NVxFx',), 'SxNFx'),
-    'Quantifier Interdefinability 3'   : (('SxFx',), 'NVxNFx'),
-    'Quantifier Interdefinability 4'   : (('NSxFx',), 'VxNFx'),
-    'Reflexive Inference 1'            : (EMPTY, 'CLaa'),
+    'Quantifier Interdefinability 1'   : (('VxFx',), 'NSxNFx', ('Q1',)),
+    'Quantifier Interdefinability 2'   : (('NVxFx',), 'SxNFx', ('Q2',)),
+    'Quantifier Interdefinability 3'   : (('SxFx',), 'NVxNFx', ('Q3',)),
+    'Quantifier Interdefinability 4'   : (('NSxFx',), 'VxNFx', ('Q4',)),
+    'Reflexive Inference 1'            : (EMPTY, 'CLaa', ('T', 'Reflexive', 'Reflexivity')),
     'S4 Conditional Inference 1'       : (EMPTY, 'ULaLLa'),
     'S4 Conditional Inference 2'       : (('LUaMNb', 'Ma'), 'MNb'),
-    'S4 Material Inference 1'          : (EMPTY, 'CLaLLa'),
-    'S4 Material Inference 2'          : (('LCaMNb', 'Ma'), 'MNb'),
+    'S4 Material Inference 1'          : (EMPTY, 'CLaLLa', ('S4', 'S41', 'Transitive', 'RT', 'Transitivity')),
+    'S4 Material Inference 2'          : (('LCaMNb', 'Ma'), 'MNb', ('S42',)),
     'S5 Conditional Inference 1'       : (EMPTY, 'UaLMa'),
-    'S5 Material Inference 1'          : (EMPTY, 'CaLMa'),
+    'S5 Material Inference 1'          : (EMPTY, 'CaLMa', ('S5', 'S51', 'RST')),
     'Self Identity 1'                  : (EMPTY, 'Imm'),
     'Self Identity 2'                  : (EMPTY, 'VxIxx'),
-    'Serial Inference 1'               : (EMPTY, 'ULaMa'),
-    'Serial Inference 2'               : (('La',), 'Ma'),
-    'Simplification'                   : (('Kab',), 'a'),
-    'Syllogism'                        : (('VxCFxGx', 'VxCGxHx'), 'VxCFxHx'),
-    'Triviality 1'                     : (EMPTY, 'a'),
-    'Triviality 2'                     : (('a',), 'b'),
+    'Serial Inference 1'               : (EMPTY, 'ULaMa', ('SER', 'SER1', 'Serial', 'Serial 1', 'D')),
+    'Serial Inference 2'               : (('La',), 'Ma', ('SER2', 'Serial 2',)),
+    'Syllogism'                        : (('VxCFxGx', 'VxCGxHx'), 'VxCFxHx', ('SYL', 'SYLL')),
+    'Triviality 1'                     : (EMPTY, 'a', ('TRIV', 'TRIV1')),
+    'Triviality 2'                     : (('a',), 'b', ('TRIV2',)),
     'Universal Predicate Syllogism'    : (('VxVyCFxFy', 'Fm'), 'Fn'),
     'Universal from Existential'       : (('SxFx',), 'VxFx'),
 })
 
-aliases = MapProxy({
-    'Triviality 1': ('TRIV', 'TRIV1'),
-    'Triviality 2': ('TRIV2',),
-    'Law of Excluded Middle': ('LEM',),
-    'Law of Non-contradiction': ('LNC',),
-    'Explosion': ('EFQ',),
-    'Conditional Modus Ponens': ('MP','Modus Ponens'),
-    'Conditional Modus Tollens': ('MT', 'Modus Tollens'),
-    'Material Modus Ponens': ('MMP',),
-    'Material Modus Tollens': ('MMT',),
-    'Conditional Identity': ('Identity', 'ID'),
-    'Conditional Contraction': ('Contraction',),
-    'Disjunctive Syllogism': ('DS',),
-    'DeMorgan 1': ('DM', 'DM1', 'DEM', 'DEM1', 'DeMorgan'),
-    'DeMorgan 2': ('DM2', 'DEM2',),
-    'DeMorgan 3': ('DM3', 'DEM3',),
-    'DeMorgan 4': ('DM4', 'DEM4',),
-    'DeMorgan 5': ('DM5', 'DEM5',),
-    'DeMorgan 6': ('DM6', 'DEM6',),
-    'DeMorgan 7': ('DM7', 'DEM7',),
-    'DeMorgan 8': ('DM8', 'DEM8',),
+preds = Predicates(((0,0,1), (1,0,1), (2,0,1)))
 
-    'Syllogism': ('SYL', 'SYLL'),
-    'Quantifier Interdefinability 1': ('Q1',),
-    'Quantifier Interdefinability 2': ('Q2',),
-    'Quantifier Interdefinability 3': ('Q3',),
-    'Quantifier Interdefinability 4': ('Q4',),
+class Arguments:
 
-    'Modal Transformation 1': ('Modal 1',),
-    'Modal Transformation 2': ('Modal 2',),
-    'Modal Transformation 3': ('Modal 3',),
-    'Modal Transformation 4': ('Modal 4',),
+    def __init__(self, data: Mapping[str, tuple], preds=None, parser=None):
+        self.index = {}
+        self.cache = {}
+        if not parser:
+            if not preds:
+                preds = Predicates(((0,0,1), (1,0,1), (2,0,1)))
+            parser = Parser('polish', preds)
+        self.parser = parser
+    ...
 
-    'Serial Inference 1': ('SER', 'SER1', 'Serial', 'Serial 1', 'D'),
-    'Serial Inference 2': ('SER2', 'Serial 2',),
-    'Reflexive Inference 1': ('T', 'Reflexive', 'Reflexivity'),
-    'S4 Material Inference 1': ('S4', 'S41', 'Transitive', 'RT', 'Transitivity'),
-    'S4 Material Inference 2': ('S42',),
-    'S5 Material Inference 1': ('S5', 'S51', 'RST')})
+
 
 titles = tuple(sorted(data))
 
-preds = Predicates(((0,0,1), (1,0,1), (2,0,1)))
 
 @closure
 def argument():
@@ -192,12 +169,13 @@ def argument():
     index = {}
     cache = {}
 
-    for name in data:
+    for name, entry in data.items():
+        try:
+            aliases = entry[2]
+        except IndexError:
+            aliases = EMPTY
         index.update({
-            k.lower(): name for k in (
-                name,
-                name.replace(' ', ''),
-                *aliases.get(name, ''),)})
+            k: name for k in (name, *aliases)})
 
     parsearg = Parser('polish', preds.copy()).argument
 
@@ -205,9 +183,9 @@ def argument():
         if isinstance(key, Argument):
             return key
         key = check.inst(key, str)
-        title = index[key.lower()]
+        title = index[key]
         if title not in cache:
-            premises, conclusion = data[title]
+            premises, conclusion, *_ = data[title]
             cache[title] = parsearg(conclusion, premises, title = title)
         return cache[title]
 

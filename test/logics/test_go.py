@@ -6,161 +6,181 @@ class Base(BaseCase):
     logic = 'GO'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
+
+class TestArguments(Base, autoargs=True):
+
+    def test_valid_prior_b3e_rule_defect2(self):
+        self.valid_tab('AANaTbNa', 'Na')
+
+class TestTables(Base, autotables=True):
+    _ = [
+        {
+            'FF': '',
+            'FN': '',
+            'FT': '',
+            'NF': '',
+            'NN': '',
+            'NT': '',
+            'TF': '',
+            'TN': '',
+            'TT': '',
+        },
+    ]
+    tables = dict(
+        Assertion = {
+            'F': 'F',
+            'N': 'F',
+            'T': 'T',
+        },
+        Negation = {
+            'F': 'T',
+            'N': 'N',
+            'T': 'F',
+        },
+        Disjunction = {
+            'FF': 'F',
+            'FN': 'F',
+            'FT': 'T',
+            'NF': 'F',
+            'NN': 'F',
+            'NT': 'T',
+            'TF': 'T',
+            'TN': 'T',
+            'TT': 'T',
+        },
+        Conjunction = {
+            'FF': 'F',
+            'FN': 'F',
+            'FT': 'F',
+            'NF': 'F',
+            'NN': 'F',
+            'NT': 'F',
+            'TF': 'F',
+            'TN': 'F',
+            'TT': 'T',
+        },
+        MaterialConditional = {
+            'FF': 'T',
+            'FN': 'T',
+            'FT': 'T',
+            'NF': 'F',
+            'NN': 'F',
+            'NT': 'T',
+            'TF': 'F',
+            'TN': 'F',
+            'TT': 'T',
+        },
+        MaterialBiconditional = {
+            'FF': 'T',
+            'FN': 'F',
+            'FT': 'F',
+            'NF': 'F',
+            'NN': 'F',
+            'NT': 'F',
+            'TF': 'F',
+            'TN': 'F',
+            'TT': 'T',
+        },
+        Conditional = {
+            'FF': 'T',
+            'FN': 'T',
+            'FT': 'T',
+            'NF': 'F',
+            'NN': 'T',
+            'NT': 'T',
+            'TF': 'F',
+            'TN': 'F',
+            'TT': 'T',
+        },
+        Biconditional = {
+            'FF': 'T',
+            'FN': 'F',
+            'FT': 'F',
+            'NF': 'F',
+            'NN': 'T',
+            'NT': 'F',
+            'TF': 'F',
+            'TN': 'F',
+            'TT': 'T',
+        },
+    )
 
 class TestGO(Base):
 
-    def test_truth_table_assertion(self):
-        tbl = self.m().truth_table('Assertion')
-        self.assertEqual(tbl.outputs[0], 'F')
-        self.assertEqual(tbl.outputs[1], 'F')
-        self.assertEqual(tbl.outputs[2], 'T')
-
-    def test_truth_table_negation(self):
-        tbl = self.m().truth_table('Negation')
-        self.assertEqual(tbl.outputs[0], 'T')
-        self.assertEqual(tbl.outputs[1], 'N')
-        self.assertEqual(tbl.outputs[2], 'F')
-
-    def test_truth_table_disjunction(self):
-        tbl = self.m().truth_table('Disjunction')
-        self.assertEqual(tbl.outputs[0], 'F')
-        self.assertEqual(tbl.outputs[1], 'F')
-        self.assertEqual(tbl.outputs[2], 'T')
-
-    def test_truth_table_conjunction(self):
-        tbl = self.m().truth_table('Conjunction')
-        self.assertEqual(tbl.outputs[0], 'F')
-        self.assertEqual(tbl.outputs[1], 'F')
-        self.assertEqual(tbl.outputs[8], 'T')
-
-    def test_truth_table_mat_cond(self):
-        tbl = self.m().truth_table('MaterialConditional')
-        self.assertEqual(tbl.outputs[0], 'T')
-        self.assertEqual(tbl.outputs[1], 'T')
-        self.assertEqual(tbl.outputs[4], 'F')
-
-    def test_truth_table_mat_bicond(self):
-        tbl = self.m().truth_table('MaterialBiconditional')
-        self.assertEqual(tbl.outputs[0], 'T')
-        self.assertEqual(tbl.outputs[1], 'F')
-        self.assertEqual(tbl.outputs[4], 'F')
-
-    def test_truth_table_cond(self):
-        tbl = self.m().truth_table('Conditional')
-        self.assertEqual(tbl.outputs[0], 'T')
-        self.assertEqual(tbl.outputs[3], 'F')
-        self.assertEqual(tbl.outputs[4], 'T')
-
-    def test_truth_table_bicond(self):
-        tbl = self.m().truth_table('Biconditional')
-        self.assertEqual(tbl.outputs[0], 'T')
-        self.assertEqual(tbl.outputs[4], 'T')
-        self.assertEqual(tbl.outputs[7], 'F')
 
     def test_MaterialConditionalNegatedDesignated_step(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.append({'sentence': self.p('NCab'), 'designated': True})
-        proof.step()
-        self.assertTrue(branch.has({'sentence': self.p('Na'), 'designated': False}))
-        self.assertTrue(branch.has({'sentence': self.p('b'), 'designated': False}))
+        sdn = self.sdnode
+        tab, b = self.tabb(sdn('NCab', True))
+        tab.step()
+        self.assertTrue(b.has(sdn('Na',  False)))
+        self.assertTrue(b.has(sdn('b',  False)))
 
     def test_MaterialBionditionalNegatedDesignated_step(self):
-        proof = Tableau(self.logic)
-        proof.branch().append({'sentence': self.p('NEab'), 'designated': True})
-        proof.step()
-        b1, b2 = proof
-        self.assertTrue(b1.has({'sentence': self.p('Na'), 'designated': False}))
-        self.assertTrue(b1.has({'sentence': self.p('b'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('a'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('Nb'), 'designated': False}))
+        sdn = self.sdnode
+        tab = self.tab(nn=sdn('NEab', True))
+        tab.step()
+        b1, b2 = tab
+        self.assertTrue(b1.has(sdn('Na', False)))
+        self.assertTrue(b1.has(sdn('b', False)))
+        self.assertTrue(b2.has(sdn('a', False)))
+        self.assertTrue(b2.has(sdn('Nb', False)))
 
     def test_ConditionalDesignated_step(self):
-        proof = Tableau(self.logic)
-        proof.branch().append({'sentence': self.p('Uab'), 'designated': True})
-        proof.step()
-        b1, b2 = proof
-        self.assertTrue(b1.has({'sentence': self.p('ANab'), 'designated': True}))
-        self.assertTrue(b2.has({'sentence': self.p('a'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('b'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('Na'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('Nb'), 'designated': False}))
+        sdn = self.sdnode
+        tab = self.tab(nn=sdn('Uab', True))
+        tab.step()
+        b1, b2 = tab
+        self.assertTrue(b1.has(sdn('ANab', True)))
+        self.assertTrue(b2.has(sdn('a', False)))
+        self.assertTrue(b2.has(sdn('b', False)))
+        self.assertTrue(b2.has(sdn('Na', False)))
+        self.assertTrue(b2.has(sdn('Nb', False)))
 
     def test_ConditionalNegatedDesignated_step(self):
-        proof = Tableau(self.logic)
-        proof.branch().append({'sentence': self.p('NUab'), 'designated': True})
-        proof.step()
-        b1, b2 = proof
-        self.assertTrue(b1.has({'sentence': self.p('a'), 'designated': True}))
-        self.assertTrue(b1.has({'sentence': self.p('b'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('Na'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('Nb'), 'designated': True}))
+        sdn = self.sdnode
+        tab = self.tab(nn=sdn('NUab', True))
+        tab.step()
+        b1, b2 = tab
+        self.assertTrue(b1.has(sdn('a', True)))
+        self.assertTrue(b1.has(sdn('b', False)))
+        self.assertTrue(b2.has(sdn('Na', False)))
+        self.assertTrue(b2.has(sdn('Nb', True)))
 
     def test_BiconditionalDesignated_step(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.append({'sentence': self.p('Bab'), 'designated': True})
-        proof.step()
-        self.assertTrue(branch.has({'sentence': self.p('Uab'), 'designated': True}))
-        self.assertTrue(branch.has({'sentence': self.p('Uba'), 'designated': True}))
+        sdn = self.sdnode
+        tab, b = self.tabb(sdn('Bab', True))
+        tab.step()
+        self.assertTrue(b.has(sdn('Uab', True)))
+        self.assertTrue(b.has(sdn('Uba', True)))
 
     def test_BiconditionalNegatedDesignated_step(self):
-        proof = Tableau(self.logic)
-        proof.branch().append({'sentence': self.p('NBab'), 'designated': True})
-        proof.step()
-        b1, b2 = proof
-        self.assertTrue(b1.has({'sentence': self.p('NUab'), 'designated': True}))
-        self.assertTrue(b2.has({'sentence': self.p('NUba'), 'designated': True}))
+        sdn = self.sdnode
+        tab = self.tab(nn=sdn('NBab', True))
+        tab.step()
+        b1, b2 = tab
+        self.assertTrue(b1.has(sdn('NUab', True)))
+        self.assertTrue(b2.has(sdn('NUba', True)))
 
     def test_AssertionUndesignated_step(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.append({'sentence': self.p('Ta'), 'designated': False})
-        proof.step()
-        self.assertTrue(branch.has({'sentence': self.p('a'), 'designated': False}))
+        sdn = self.sdnode
+        tab, b = self.tabb(sdn('Ta', False))
+        tab.step()
+        self.assertTrue(b.has(sdn('a', False)))
 
     def test_AssertionNegatedDesignated_step(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.append({'sentence': self.p('NTa'), 'designated': True})
-        proof.step()
-        self.assertTrue(branch.has({'sentence': self.p('a'), 'designated': False}))
+        sdn = self.sdnode
+        tab, b = self.tabb(sdn('NTa', True))
+        tab.step()
+        self.assertTrue(b.has(sdn('a', False)))
 
     def test_AssertionNegatedUndesignated_step(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.append({'sentence': self.p('NTa'), 'designated': False})
-        proof.step()
-        self.assertTrue(branch.has({'sentence': self.p('a'), 'designated': True}))
-
-    def test_valid_neg_exist_from_univ(self):
-        self.tab('Quantifier Interdefinability 1')
-
-    def test_valid_neg_univ_from_exist(self):
-        self.valid_tab('Quantifier Interdefinability 3')
-
-    def test_valid_demorgan_3(self):
-        self.valid_tab('DeMorgan 3')
-
-    def test_invalid_demorgan_1(self):
-        self.invalid_tab('DeMorgan 1')
-
-    def test_invalid_exist_from_neg_univ(self):
-        self.invalid_tab('Quantifier Interdefinability 2')
-
-    def test_invalid_univ_from_neg_exist(self):
-        self.invalid_tab('Quantifier Interdefinability 4')
-
-    def test_valid_prior_b3e_rule_defect2(self):
-        arg = self.parg('AANaTbNa', 'Na')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        self.assertTrue(proof.valid)
+        sdn = self.sdnode
+        tab, b = self.tabb(sdn('NTa', False))
+        tab.step()
+        self.assertTrue(b.has(sdn('a', True)))
 
     def test_branching_complexity_inherits_branchables(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.append({'sentence': self.p('Kab'), 'designated': False})
-        node = branch[0]
+        sdn = self.sdnode
+        _, b = self.tabb(sdn('Kab', False))
+        node = b[0]
         self.assertEqual(self.logic.System.branching_complexity(node), 0)

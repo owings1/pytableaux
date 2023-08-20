@@ -175,7 +175,7 @@ Some notable features of L{K3} include:
 * Like L{FDE}, the :term:`Law of Excluded Middle`, and
   :term:`Conditional Identity` fail.
 
-* Some classical validities are valid, such as :term:`Modus Ponens`,
+* Some classical validities are valid in L{K3}, such as :term:`Modus Ponens`,
   :term:`Modus Tollens`, :term:`Disjunctive Syllogism`, and :term:`DeMorgan laws`.
 
 References

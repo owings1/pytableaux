@@ -10,27 +10,19 @@ class Base(BaseCase):
     logic = 'CFOL'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
-
-class TestRuleAttrs(Base):
-
-    def test_rules_not_modal(self):
-        for rule in self.tab().rules:
-            self.assertIs(rule.modal, False)
-
-class TestArguments(Base):
-
-    def test_valid_syllogism(self):
-        self.valid_tab('Syllogism')
-
-    def test_invalid_possibility_addition(self):
-        self.invalid_tab('Possibility Addition')
+class TestArguments(Base, autoargs=True):
 
     def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
         self.valid_tab('b', 'VxKFxKaNa')
 
     def test_invalid_existential_inside_univ_max_steps(self):
         self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
+
+class TestRuleAttrs(Base):
+
+    def test_rules_not_modal(self):
+        for rule in self.tab().rules:
+            self.assertIs(rule.modal, False)
 
 class TestModels(Base):
 

@@ -4,25 +4,7 @@ class Base(BaseCase):
     logic = 'B3E'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
-
-
-class TestArguments(Base):
-
-    def test_valid_cond_contraction(self):
-        self.valid_tab('Conditional Contraction')
-
-    def test_valid_bicond_elim_1(self):
-        self.valid_tab('Biconditional Elimination 1')
-
-    def test_valid_bicond_elim_3(self):
-        self.valid_tab('Biconditional Elimination 3')
-
-    def test_valid_bicond_intro_1(self):
-        self.valid_tab('Biconditional Introduction 1')
-
-    def test_invalid_lem(self):
-        self.invalid_tab('Law of Excluded Middle')
+class TestArguments(Base, autoargs=True):
 
     def test_invalid_prior_rule_defect(self):
         self.invalid_tab('ANAabNa', 'Na')
@@ -30,11 +12,6 @@ class TestArguments(Base):
     def test_valid_prior_rule_defect2(self):
         self.valid_tab('AANaTbNa', 'Na')
 
-    def test_valid_asserted_addition(self):
-        self.valid_tab('AaTb', 'a')
-
-    def test_valid_cond_lem(self):
-        self.valid_tab('AUabNUab')
 
 class TestTruthTables(Base):
 

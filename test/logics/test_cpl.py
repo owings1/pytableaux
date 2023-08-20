@@ -11,7 +11,12 @@ class Base(BaseCase):
     logic = 'CPL'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
+
+class TestArguments(Base, autoargs=True):
+
+    def test_arguments(self):
+        self.invalid_tab('Nb', ('Bab'))
+        self.invalid_tab('Nb', ('NBab'))
 
 
 class TestIdentityRules(Base):
@@ -24,14 +29,6 @@ class TestIdentityRules(Base):
             {'sentence': s2, 'world': 0}))
         rule = tab.rules.get('IdentityIndiscernability')
         self.assertFalse(rule.target(b))
-
-class TestArguments(Base):
-
-    def test_arguments(self):
-        self.valid_tab('Simplification')
-        self.invalid_tab('Syllogism')
-        self.invalid_tab('Nb', ('Bab'))
-        self.invalid_tab('Nb', ('NBab'))
 
 class TestRuleOptimizations(Base):
 

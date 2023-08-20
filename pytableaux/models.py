@@ -324,6 +324,11 @@ class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):
     def __len__(self):
         return len(self.mapping)
 
+    def stringed(self):
+        return {
+            tuple(map(str, key)): str(value)
+            for key, value in self.items()}
+
 class PredicateInterpretation:
     pos: set[tuple[Constant, ...]]
     neg: set[tuple[Constant, ...]]
