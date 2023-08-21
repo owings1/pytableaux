@@ -54,22 +54,6 @@ class Model(K3.Model):
                 return self.values.F
             return self.values.T
 
-class System(K3.System):
-
-    # operator => negated => designated
-    branchables = {
-        Operator.Negation: (None, (0, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((1, 0), (0, 1)),
-        Operator.Disjunction: ((0, 1), (3, 1)),
-        # for now, reduce to negated disjunction
-        Operator.MaterialConditional: ((0, 0), (0, 0)),
-        # for now, reduce to conjunction
-        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-        Operator.Conditional: ((0, 1), (1, 0)),
-        # for now, reduce to conjunction
-        Operator.Biconditional: ((0, 0), (0, 0))}
-
 class Rules(K3.Rules):
 
     class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
@@ -178,47 +162,21 @@ class Rules(K3.Rules):
             # Keep designation fixed for inheritance below.
             yield adds(group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
-    class ConditionalUndesignated(ConditionalNegatedDesignated):
-        """
-        From an unticked, undesignated conditional node *n* on a branch *b*, add
-        two nodes to *b*:
-
-        - A designated node with the antecedent.
-        - An undesignated node with the consequent.
-
-        Then tick *n*.
-
-        Note that the nodes added are the same as for the above
-        *ConditionalNegatedDesignated* rule.
-        """
-
-    class ConditionalNegatedUndesignated(ConditionalDesignated):
-        """
-        From an unticked, negated, undesignated conditional node *n* on a branch *b*,
-        make two branches *b'* and *b''* from *b*. On *b'* add an undesignated node
-        with the antecedent, and on *b''* add a designated node with the consequent.
-        Then tick *n*.
-
-        Note that the result is the same as for the above *ConditionalDesignated* rule.
-        """
+    class ConditionalUndesignated(ConditionalNegatedDesignated): pass
+    class ConditionalNegatedUndesignated(ConditionalDesignated): pass
 
     class BiconditionalDesignated(FDE.ConjunctionReducingRule):
         "This rule reduces to a conjunction of conditionals."
         conjoined = Operator.Conditional
 
-    class BiconditionalNegatedDesignated(BiconditionalDesignated):
-        "This rule reduces to a negated conjunction of conditionals."
-
-    class BiconditionalUndesignated(BiconditionalDesignated):
-        "This rule reduces to a conjunction of conditionals."
-
-    class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated):
-        "This rule reduces to a negated conjunction of conditionals."
+    class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
+    class BiconditionalUndesignated(BiconditionalDesignated): pass
+    class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated): pass
 
 
     groups = (
         # Non-branching rules.
-        (
+        group(
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
             FDE.Rules.AssertionNegatedDesignated,
@@ -243,7 +201,7 @@ class Rules(K3.Rules):
             FDE.Rules.DoubleNegationDesignated,
             FDE.Rules.DoubleNegationUndesignated),
         # 1-branching rules.
-        (
+        group(
             FDE.Rules.ConjunctionUndesignated,
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.DisjunctionDesignated,
@@ -251,5 +209,22 @@ class Rules(K3.Rules):
             ConditionalDesignated,
             ConditionalNegatedUndesignated),
         # 3-branching rules.
-        (
-            DisjunctionNegatedUndesignated,))
+        group(
+            DisjunctionNegatedUndesignated))
+
+
+class System(K3.System):
+
+    # operator => negated => designated
+    branchables = {
+        Operator.Negation: (None, (0, 0)),
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Conjunction: ((1, 0), (0, 1)),
+        Operator.Disjunction: ((0, 1), (3, 1)),
+        # for now, reduce to negated disjunction
+        Operator.MaterialConditional: ((0, 0), (0, 0)),
+        # for now, reduce to conjunction
+        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
+        Operator.Conditional: ((0, 1), (1, 0)),
+        # for now, reduce to conjunction
+        Operator.Biconditional: ((0, 0), (0, 0))}

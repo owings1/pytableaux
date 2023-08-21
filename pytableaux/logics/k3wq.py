@@ -17,9 +17,10 @@
 from __future__ import annotations
 
 from types import MappingProxyType as MapProxy
-from ..lang import Quantified, Quantifier
+from typing import Iterable, Literal, Mapping
+from ..lang import Quantified, Quantifier, Operator
 from ..proof import adds, sdnode
-from ..tools import group, maxceil, minfloor
+from ..tools import group, maxceil, minfloor, EMPTY_MAP
 from . import fde as FDE
 from . import k3w as K3W
 
@@ -33,13 +34,42 @@ class Meta(K3W.Meta):
 
 class Model(K3W.Model):
 
-    values = Meta.values
-    # generalized conjunction
-    mc_cvals = (values.N, values.F, values.T)
-    mc_nvals = MapProxy(dict(map(reversed, enumerate(mc_cvals))))
-    # generalized disjunction
-    md_cvals = (values.F, values.T, values.N)
-    md_nvals = MapProxy(dict(map(reversed, enumerate(md_cvals))))
+    class TruthFunction(K3W.Model.TruthFunction):
+
+        generalizing_operators: Mapping[Operator, Literal['min', 'max']] = MapProxy({
+            Operator.Disjunction: 'max',
+            Operator.Conjunction: 'min'})
+
+        generalized_orderings: Mapping[Literal['min', 'max'], tuple[Meta.values, ...]] = EMPTY_MAP
+
+        generalized_indexes: Mapping[Literal['min', 'max'], Mapping[Meta.values, int]]
+
+        def __init__(self, values: Meta.values, *args, **kw) -> None:
+            v = values
+            self.generalized_orderings = MapProxy(dict(
+                max = (v.F, v.T, v.N),
+                min = (v.N, v.F, v.T)))
+            super().__init__(values, *args, **kw)
+            orderings = dict(self.generalized_orderings)
+            orderings.setdefault('min', tuple(values))
+            orderings.setdefault('max', tuple(reversed(orderings['min'])))
+            self.generalized_indexes = MapProxy({
+                key: MapProxy(dict(map(reversed, enumerate(value))))
+                for key, value in orderings.items()})
+            self.generalized_orderings = MapProxy(orderings)
+
+        def generalize(self, oper: Operator, it: Iterable[Meta.values], /) -> Meta.values:
+            mode = self.generalizing_operators[oper]
+            ordering = self.generalized_orderings[mode]
+            indexes = self.generalized_indexes[mode]
+            it = map(indexes.__getitem__, it)
+            if mode == 'max':
+                return ordering[maxceil(len(ordering) - 1, it, 0)]
+            if mode == 'min':
+                return ordering[minfloor(0, it, len(ordering) - 1)]
+            raise NotImplementedError from ValueError(mode)
+
+    truth_function: Model.TruthFunction
 
     def value_of_quantified(self, s: Quantified, /):
         """
@@ -55,17 +85,14 @@ class Model(K3W.Model):
         the set of values for the substitution of each constant in the model for
         the variable.
         """
-        it = self._unquantify_value_map(s)
         if s.quantifier is Quantifier.Existential:
-            it = map(self.md_nvals.__getitem__, it)
-            return self.md_cvals[maxceil(2, it)]
-        if s.quantifier is Quantifier.Universal:
-            it = map(self.mc_nvals.__getitem__, it)
-            return self.mc_cvals[minfloor(0, it)]
-        raise TypeError(s.quantifier)
+            oper = Operator.Disjunction
+        elif s.quantifier is Quantifier.Universal:
+            oper = Operator.Conjunction
+        else:
+            raise TypeError(s.quantifier)        
+        return self.truth_function.generalize(oper, self._unquantify_value_map(s))
 
-class System(K3W.System):
-    pass
 
 class Rules(K3W.Rules):
 
@@ -76,7 +103,6 @@ class Rules(K3W.Rules):
         quantifying over the disjunction of the inner sentence with its negation.
         The other node is a substitution of a constant new to `b`. Then tick `n`.
         """
-        convert = Quantifier.Universal
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -85,7 +111,7 @@ class Rules(K3W.Rules):
             d = self.designation
             yield adds(
                 group(
-                    sdnode(self.convert(v, si | ~si), d),
+                    sdnode(self.quantifier.other(v, si | ~si), d),
                     sdnode(branch.new_constant() >> s, d)))
 
     class ExistentialUndesignated(FDE.QuantifierSkinnyRule):
@@ -97,7 +123,6 @@ class Rules(K3W.Rules):
         node with universal quantifier over the negation of the inner sentence.
         Then tick `n`.
         """
-        convert = Quantifier.Universal
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -107,7 +132,7 @@ class Rules(K3W.Rules):
             d = self.designation
             yield adds(
                 group(sdnode(r, d), sdnode(~r, d)),
-                group(sdnode(self.convert(v, ~si), not d)))
+                group(sdnode(self.quantifier.other(v, ~si), not d)))
 
     class ExistentialNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """"
@@ -161,9 +186,8 @@ class Rules(K3W.Rules):
                 group(sdnode(self.quantifier(v, si), not d)))
 
     groups = (
-        (
+        group(
             # non-branching rules
-
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
             FDE.Rules.AssertionNegatedDesignated,
@@ -189,30 +213,27 @@ class Rules(K3W.Rules):
             K3W.Rules.BiconditionalDesignated,
             K3W.Rules.BiconditionalUndesignated,
             K3W.Rules.BiconditionalNegatedDesignated,
-            K3W.Rules.BiconditionalNegatedUndesignated,
-        ),
-        (
+            K3W.Rules.BiconditionalNegatedUndesignated),
+        group(
             # two-branching rules
-            FDE.Rules.ConjunctionUndesignated,
-        ),
-        (
+            FDE.Rules.ConjunctionUndesignated),
+        group(
             # three-branching rules
             K3W.Rules.DisjunctionDesignated,
             K3W.Rules.DisjunctionUndesignated,
             K3W.Rules.ConjunctionNegatedDesignated,
             K3W.Rules.ConjunctionNegatedUndesignated,
             # five-branching rules (formerly)
-            K3W.Rules.DisjunctionNegatedUndesignated,
-        ),
-        (
+            K3W.Rules.DisjunctionNegatedUndesignated),
+        group(
             ExistentialDesignated,
             ExistentialNegatedUndesignated,
             ExistentialUndesignated,
             UniversalNegatedDesignated,
-            UniversalNegatedUndesignated,
-        ),
-        (
+            UniversalNegatedUndesignated),
+        group(
             FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated,
-        ),
-    )
+            FDE.Rules.UniversalUndesignated))
+
+class System(K3W.System):
+    pass

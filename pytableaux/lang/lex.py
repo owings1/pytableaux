@@ -618,10 +618,10 @@ class Operator(LexicalEnum):
     'The Disjunction (or) operator'
     MaterialConditional   = (50,  2)
     'The Material Conditional operator'
-    Conditional           = (60,  2)
-    'The Conditional operator'
-    MaterialBiconditional = (70,  2)
+    MaterialBiconditional = (60,  2)
     'The Material Biconditional operator'
+    Conditional           = (70,  2)
+    'The Conditional operator'
     Biconditional         = (80,  2)
     'The Biconditional operator'
     Possibility           = (90,  1)
@@ -642,7 +642,7 @@ class Operator(LexicalEnum):
 
     @classmethod
     def _after_init(cls):
-        """``EbcMeta`` hook. Build :attr:`classes` list, and System Predicates."""
+        """``EbcMeta`` hook. Set :attr:`other` attribute."""
         super()._after_init()
         it = iter(cls)
         for a in it:

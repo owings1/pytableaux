@@ -52,9 +52,6 @@ class Model(K.Model):
         del data['world']
         return data
 
-class System(K.System):
-    pass
-
 class Rules(LogicType.Rules):
 
     closure = K.Rules.closure
@@ -80,3 +77,6 @@ class Rules(LogicType.Rules):
             K.Rules.Conditional,
             K.Rules.Biconditional,
             K.Rules.BiconditionalNegated))
+
+class System(K.System):
+    pass

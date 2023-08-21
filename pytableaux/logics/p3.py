@@ -75,23 +75,6 @@ class Model(K3.Model):
     #             (neg(self.value_of(sub(c, v)))
     #                 for c in self.constants)))
 
-
-class System(K3.System):
-
-    branchables = {
-        Operator.Negation: (None, (1, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((3, 0), (2, 1)),
-        Operator.Disjunction: ((0, 1), (1, 0)),
-        # reduction
-        Operator.MaterialConditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Conditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Biconditional: ((0, 0), (0, 0))}
-
 class Rules(K3.Rules):
 
     class DoubleNegationDesignated(FDE.OperatorNodeRule):
@@ -279,12 +262,7 @@ class Rules(K3.Rules):
                 # Keep designation neutral for UniversalUndesignated
                 group(sdnode(branch.new_constant() >> s, self.designation)))
 
-    class UniversalUndesignated(UniversalNegatedDesignated):
-        """
-        From an unticked, undesignated universal node `n` on a branch `b`, add
-        an undesignated node to `b` with the quantified sentence, substituting
-        a constant new to `b` for the variable. Then tick `n`.
-        """
+    class UniversalUndesignated(UniversalNegatedDesignated): pass
 
     class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """
@@ -352,3 +330,20 @@ class Rules(K3.Rules):
             FDE.Rules.ExistentialUndesignated,
             ExistentialNegatedDesignated,
             ExistentialNegatedUndesignated))
+
+
+class System(K3.System):
+
+    branchables = {
+        Operator.Negation: (None, (1, 0)),
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Conjunction: ((3, 0), (2, 1)),
+        Operator.Disjunction: ((0, 1), (1, 0)),
+        # reduction
+        Operator.MaterialConditional: ((0, 0), (0, 0)),
+        # reduction
+        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
+        # reduction
+        Operator.Conditional: ((0, 0), (0, 0)),
+        # reduction
+        Operator.Biconditional: ((0, 0), (0, 0))}

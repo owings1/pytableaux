@@ -926,7 +926,7 @@ class Rules(LogicType.Rules):
         NonExistenceClosure)
 
     groups = (
-        (
+        group(
             # non-branching rules
             IdentityIndiscernability,
             Assertion,
@@ -940,7 +940,7 @@ class Rules(LogicType.Rules):
             NecessityNegated,
             ExistentialNegated,
             UniversalNegated),
-        (
+        group(
             # branching rules
             ConjunctionNegated,
             Disjunction,
@@ -950,11 +950,11 @@ class Rules(LogicType.Rules):
             Conditional,
             Biconditional,
             BiconditionalNegated),
-        (
+        group(
             # modal operator rules
             Necessity,
             Possibility),
-        (
+        group(
             Existential,
             Universal))
 

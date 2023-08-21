@@ -45,9 +45,6 @@ class Model(K.Model):
             self.R.add((w2, w2))
         super().finish()
 
-class System(K.System):
-    pass
-
 class Rules(K.Rules):
 
     class Serial(BaseSimpleRule):
@@ -140,8 +137,6 @@ class Rules(K.Rules):
             # special ordering of serial rule
         group(Serial))
 
-
-
     # NB: Since we have redesigned the modal rules, it is not obvious that we need this
     #     alternate rule. So far I have not been able to think of a way to break it. I
     #     am leaving it here just in case
@@ -160,3 +155,6 @@ class Rules(K.Rules):
     #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], Rules.Serial):
     #            return False
     #        return super(Rules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
+
+class System(K.System):
+    pass

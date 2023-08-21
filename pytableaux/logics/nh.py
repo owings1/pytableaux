@@ -53,20 +53,6 @@ class Model(LP.Model):
                 return self.values.F
             return self.values.T
 
-class System(LP.System):
-    branchables = {
-        Operator.Negation: (None, (0, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((1, 0), (1, 3)),
-        Operator.Disjunction: ((0, 1), (1, 0)),
-        # for now, reduce to negated disjunction
-        Operator.MaterialConditional: ((0, 0), (0, 0)),
-        # for now, reduce to conjunction
-        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-        Operator.Conditional: ((0, 1), (1, 0)),
-        # for now, reduce to conjunction
-        Operator.Biconditional: ((0, 0), (0, 0))}
-
 class Rules(LP.Rules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
@@ -185,3 +171,18 @@ class Rules(LP.Rules):
         # 3-branching rules.
         group(
             ConjunctionNegatedDesignated))
+
+
+class System(LP.System):
+    branchables = {
+        Operator.Negation: (None, (0, 0)),
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Conjunction: ((1, 0), (1, 3)),
+        Operator.Disjunction: ((0, 1), (1, 0)),
+        # for now, reduce to negated disjunction
+        Operator.MaterialConditional: ((0, 0), (0, 0)),
+        # for now, reduce to conjunction
+        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
+        Operator.Conditional: ((0, 1), (1, 0)),
+        # for now, reduce to conjunction
+        Operator.Biconditional: ((0, 0), (0, 0))}

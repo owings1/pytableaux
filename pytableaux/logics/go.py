@@ -43,8 +43,6 @@ class Model(K3.Model):
         crunch = B3E.Model.TruthFunction.crunch
 
         Assertion = crunch
-        # def Assertion(self, a):
-        #     return self.crunch(a)
 
         def Disjunction(self, *args):
             return max(map(self.crunch, args))
@@ -69,22 +67,6 @@ class Model(K3.Model):
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
         raise TypeError(s.quantifier)
-
-class System(K3.System):
-    """
-    GO's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
-    employing designation markers, and building the trunk in the same way.
-    """
-    # operator => negated => designated
-    branchables = {
-        Operator.Negation: (None, (0, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((0, 0), (0, 1)),
-        Operator.Disjunction: ((0, 1), (0, 0)),
-        Operator.MaterialConditional: ((0, 1), (0, 0)),
-        Operator.MaterialBiconditional: ((0, 1), (0, 1)),
-        Operator.Conditional: ((0, 1), (0, 1)),
-        Operator.Biconditional: ((0, 0), (0, 1))}
 
 class Rules(B3E.Rules):
 
@@ -128,17 +110,8 @@ class Rules(B3E.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, not d), sdnode(s.rhs, not d)))
 
-    class DisjunctionUndesignated(ConjunctionUndesignated):
-        """
-        From an unticked, undesignated disjunction node *n* on a branch *b*, add a
-        designated node to *b* with the negation of the disjunction, then tick *n*.
-        """
-
-    class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated):
-        """
-        From an unticked, undesignated, negated disjunction node *n* on a branch *b*,
-        add a designated node to *b* with the (un-negated) disjunction, then tick *n*.
-        """
+    class DisjunctionUndesignated(ConjunctionUndesignated): pass
+    class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
     class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -150,17 +123,8 @@ class Rules(B3E.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs, not d), sdnode(s.rhs, not d)))
 
-    class MaterialConditionalUndesignated(ConjunctionUndesignated):
-        """
-        From an unticked, undesignated, material conditional node *n* on a branch *b*,
-        add a designated node to *b* with the negation of the conditional, then tick *n*.
-        """
-
-    class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
-        """
-        From an unticked, undesignated, negated material conditional node *n* on a branch
-        *b*, add a designated node with the (un-negated) conditional to *b*, then tick *n*.
-        """
+    class MaterialConditionalUndesignated(ConjunctionUndesignated): pass
+    class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
     class MaterialBiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -175,17 +139,8 @@ class Rules(B3E.Rules):
                 group(sdnode(~s.lhs, not d), sdnode( s.rhs, not d)),
                 group(sdnode( s.lhs, not d), sdnode(~s.rhs, not d)))
 
-    class MaterialBiconditionalUndesignated(ConjunctionUndesignated):
-        """
-        From an unticked, undesignated, material biconditional node *n* on a branch *b*,
-        add a designated node to *b* with the negation of the biconditional, then tick *n*.
-        """
-
-    class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
-        """
-        From an unticked, undesignated, negated material biconditional node *n* on a branch
-        *b*, add a designated node to *b* with the (un-negated) biconditional, then tick *n*.
-        """
+    class MaterialBiconditionalUndesignated(ConjunctionUndesignated): pass
+    class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -220,17 +175,8 @@ class Rules(B3E.Rules):
                 group(sdnode( s.lhs,     d), sdnode( s.rhs, not d)),
                 group(sdnode(~s.lhs, not d), sdnode(~s.rhs,     d)))
 
-    class ConditionalUndesignated(ConjunctionUndesignated):
-        """
-        From an unticked, undesignated conditional node *n* on a branch *b*, add a
-        designated node to *b* with the negation of the conditional, then tick *n*.
-        """
-
-    class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
-        """
-        From an unticked, undesignated, negated conditional node *n* on a branch *b*,
-        add a designated node to *b* with the (un-negated) conditional, then tick *n*.
-        """
+    class ConditionalUndesignated(ConjunctionUndesignated): pass
+    class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
     class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -238,12 +184,12 @@ class Rules(B3E.Rules):
         designated conditional nodes to *b*, one with the operands of the biconditional,
         and the other with the reversed operands. Then tick *n*.
         """
-        convert = Operator.Conditional
 
         def _get_sd_targets(self, s, d, /):
+            convert = self.operator.other
             yield adds(group(
-                sdnode(self.convert(s.lhs, s.rhs), d),
-                sdnode(self.convert(s.rhs, s.lhs), d)))
+                sdnode(convert(s.lhs, s.rhs), d),
+                sdnode(convert(s.rhs, s.lhs), d)))
 
     class BiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -252,25 +198,16 @@ class Rules(B3E.Rules):
         node with the operands of the biconditional. On *b''* add a designated negated
         conditional node with the reversed operands of the biconditional. Then tick *n*.
         """
-        convert = Operator.Conditional
 
         def _get_sd_targets(self, s, d, /):
+            convert = self.operator.other
             yield adds(
-                group(sdnode(~self.convert(s.lhs, s.rhs), d)),
-                group(sdnode(~self.convert(s.rhs, s.lhs), d)))
+                group(sdnode(~convert(s.lhs, s.rhs), d)),
+                group(sdnode(~convert(s.rhs, s.lhs), d)))
 
-    class BiconditionalUndesignated(ConjunctionUndesignated):
-        """
-        From an unticked, undesignated biconditional node *n* on a branch *b*, add a
-        designated node to *b* with the negation of the biconditional, then tick *n*.
-        """
+    class BiconditionalUndesignated(ConjunctionUndesignated): pass
+    class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
-    class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
-        """
-        From an unticked, undesignated, negated biconditional node *n* on a branch *b*,
-        add a designated node to *b* with the (un-negated) biconditional, then tick *n*.
-        """
-        
     class ExistentialNegatedDesignated(FDE.DefaultNodeRule, rules.QuantifiedSentenceRule):
         """
         From an unticked, designated negated existential node *n* on a branch *b*,
@@ -280,26 +217,14 @@ class Rules(B3E.Rules):
         first disjunct of *d* is the inner sentence of *n*, and the second disjunct
         of *d* is the negation of the inner sentence of *n*. Then tick *n*.
         """
-        convert = Quantifier.Universal
 
         def _get_sd_targets(self, s, d, /):
             v, si = s[1:]
             yield adds(
-                group(sdnode(self.convert(v, ~si | ~(si | ~si)), d)))
+                group(sdnode(self.quantifier.other(v, ~si | ~(si | ~si)), d)))
 
-    class ExistentialUndesignated(ConjunctionUndesignated):
-        """
-        From an unticked, undesignated existential node *n* on a branch *b*, add a
-        designated node to *b* with the negation of the existential sentence, then
-        tick *n*.
-        """
-
-    class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated):
-        """
-        From an unticked, undesignated negated existential node *n* on a branch *b*,
-        add a designated node to *b* with the negated existential sentence (negatum),
-        then tick *n*.
-        """
+    class ExistentialUndesignated(ConjunctionUndesignated): pass
+    class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated): pass
         
     class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
         """
@@ -310,7 +235,6 @@ class Rules(B3E.Rules):
         nodes to *b''*, one with the substituted inner sentence, and one with its
         negation, then tick *n*.
         """
-        convert = Quantifier.Existential
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -319,21 +243,11 @@ class Rules(B3E.Rules):
             r = branch.new_constant() >> s
             d = self.designation
             yield adds(
-                group(sdnode(self.convert(v, ~si), d)),
+                group(sdnode(self.quantifier.other(v, ~si), d)),
                 group(sdnode(r, not d), sdnode(~r, not d)))
 
-    class UniversalUndesignated(ExistentialUndesignated):
-        """
-        From an unticked, undesignated universal node *n* on a branch *b*, add a designated
-        node to *b* with the negation of the universal sentence, then tick *n*.
-        """
-
-    class UniversalNegatedUndesignated(ExistentialNegatedUndesignated):
-        """
-        From an unticked, undesignated negated universal node *n* on a branch *b*,
-        add a designated node to *b* with the negated universal sentence (negatum),
-        then tick *n*.
-        """
+    class UniversalUndesignated(ExistentialUndesignated): pass
+    class UniversalNegatedUndesignated(ExistentialNegatedUndesignated): pass
 
     groups = (
         (
@@ -378,3 +292,20 @@ class Rules(B3E.Rules):
             ConditionalNegatedDesignated,
             BiconditionalNegatedDesignated,
             UniversalNegatedDesignated))
+
+
+class System(K3.System):
+    """
+    GO's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    employing designation markers, and building the trunk in the same way.
+    """
+    # operator => negated => designated
+    branchables = {
+        Operator.Negation: (None, (0, 0)),
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Conjunction: ((0, 0), (0, 1)),
+        Operator.Disjunction: ((0, 1), (0, 0)),
+        Operator.MaterialConditional: ((0, 1), (0, 0)),
+        Operator.MaterialBiconditional: ((0, 1), (0, 1)),
+        Operator.Conditional: ((0, 1), (0, 1)),
+        Operator.Biconditional: ((0, 0), (0, 1))}

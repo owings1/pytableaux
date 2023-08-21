@@ -40,9 +40,6 @@ class Meta(FDE.Meta):
 class Model(FDE.Model):
     pass
 
-class System(FDE.System):
-    pass
-
 class Rules(FDE.Rules):
 
     class GapClosure(rules.FindClosingNodeRule):
@@ -60,3 +57,6 @@ class Rules(FDE.Rules):
             yield sdnode(~s, False)
 
     closure = group(GapClosure) + FDE.Rules.closure
+
+class System(FDE.System):
+    pass

@@ -39,8 +39,6 @@ class Meta(FDE.Meta):
 
 class Model(FDE.Model): pass
 
-class System(FDE.System): pass
-
 class Rules(FDE.Rules):
 
     class GlutClosure(rules.FindClosingNodeRule):
@@ -58,3 +56,6 @@ class Rules(FDE.Rules):
             yield sdnode(~a, True)
 
     closure = group(GlutClosure) + FDE.Rules.closure
+
+
+class System(FDE.System): pass

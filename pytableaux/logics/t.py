@@ -36,9 +36,6 @@ class Model(K.Model):
             self.R[w].add(w)
         super().finish()
 
-class System(K.System):
-    pass
-
 class Rules(K.Rules):
 
     class Reflexive(K.DefaultNodeRule):
@@ -107,3 +104,6 @@ class Rules(K.Rules):
         group(
             K.Rules.Existential,
             K.Rules.Universal))
+
+class System(K.System):
+    pass

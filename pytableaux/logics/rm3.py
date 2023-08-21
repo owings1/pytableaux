@@ -42,12 +42,6 @@ class Model(LP.Model):
                 return self.values.F
             return super().Conditional(a, b)
 
-class System(LP.System):
-
-    branchables = LP.System.branchables | {
-        Operator.Conditional: ((1, 2), (1, 0)),
-        Operator.Biconditional: ((1, 2), (1, 1))}
-
 class Rules(LP.Rules):
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
@@ -121,12 +115,11 @@ class Rules(LP.Rules):
         with the reversed operands of *n*, then tick *n*.
         """
 
-        convert = Operator.Conditional
-
         def _get_sd_targets(self, s, d, /):
+            convert = self.operator.other
             yield adds(
-                group(sdnode(self.convert(s.lhs, s.rhs), False)),
-                group(sdnode(self.convert(s.rhs, s.lhs), False)))
+                group(sdnode(convert(s.lhs, s.rhs), False)),
+                group(sdnode(convert(s.rhs, s.lhs), False)))
 
     class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -192,3 +185,11 @@ class Rules(LP.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+
+
+class System(LP.System):
+
+    branchables = LP.System.branchables | {
+        Operator.Conditional: ((1, 2), (1, 0)),
+        Operator.Biconditional: ((1, 2), (1, 1))}

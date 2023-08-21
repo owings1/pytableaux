@@ -47,22 +47,6 @@ class Model(K3.Model):
                 return self.values.N
             return super().Conditional(a, b)
 
-class System(K3.System):
-
-    branchables = {
-        Operator.Negation: (None, (0, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((1, 0), (2, 2)),
-        Operator.Disjunction: ((2, 2), (2, 0)),
-        # reduction
-        Operator.MaterialConditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Conditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Biconditional: ((0, 0), (0, 0))}
-
 class Rules(K3.Rules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
@@ -231,3 +215,20 @@ class Rules(K3.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+
+class System(K3.System):
+
+    branchables = {
+        Operator.Negation: (None, (0, 0)),
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Conjunction: ((1, 0), (2, 2)),
+        Operator.Disjunction: ((2, 2), (2, 0)),
+        # reduction
+        Operator.MaterialConditional: ((0, 0), (0, 0)),
+        # reduction
+        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
+        # reduction
+        Operator.Conditional: ((0, 0), (0, 0)),
+        # reduction
+        Operator.Biconditional: ((0, 0), (0, 0))}

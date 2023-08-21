@@ -42,12 +42,6 @@ class Model(K3.Model):
                 return self.values.T
             return super().Conditional(a, b)
 
-class System(K3.System):
-
-    branchables = K3.System.branchables | {
-        Operator.Conditional: ((1, 1), (1, 0)),
-        Operator.Biconditional: ((1, 1), (1, 1))}
-
 class Rules(K3.Rules):
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
@@ -150,7 +144,7 @@ class Rules(K3.Rules):
                     sdnode(~rhs, False)))
 
     groups = (
-        (
+        group(
             # non-branching rules
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
@@ -170,7 +164,7 @@ class Rules(K3.Rules):
             FDE.Rules.UniversalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
             FDE.Rules.DoubleNegationUndesignated),
-        (
+        group(
             # branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.ConjunctionUndesignated,
@@ -188,9 +182,16 @@ class Rules(K3.Rules):
             BiconditionalDesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalUndesignated),
-        (
+        group(
             FDE.Rules.ExistentialDesignated,
             FDE.Rules.ExistentialUndesignated),
-        (
+        group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+
+class System(K3.System):
+
+    branchables = K3.System.branchables | {
+        Operator.Conditional: ((1, 1), (1, 0)),
+        Operator.Biconditional: ((1, 1), (1, 1))}
