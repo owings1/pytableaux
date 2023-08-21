@@ -44,20 +44,18 @@ class TestArguments(Base):
     def test_valid_mp_with_neg_bicon(self):
         self.valid_tab('NBab', 'c', 'BcNUab')
 
-
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FBT',
+        Negation = 'TBF',
+        Conjunction = 'FFFFBBFBT',
+        Disjunction = 'FBTBBTTTT',
+        MaterialConditional = 'TTTBBTFBT',
+        MaterialBiconditional = 'TBFBBBFBT',
+        Conditional = 'TTTFBTFFT',
+        Biconditional = 'TFFFBFFFT',
+    )
 class TestModels(Base):
-
-    def test_truth_table_conditional(self):
-        tbl = self.m().truth_table('Conditional')
-        self.assertEqual(tbl.outputs[0], 'T')
-        self.assertEqual(tbl.outputs[1], 'T')
-        self.assertEqual(tbl.outputs[2], 'T')
-        self.assertEqual(tbl.outputs[3], 'F')
-        self.assertEqual(tbl.outputs[4], 'B')
-        self.assertEqual(tbl.outputs[5], 'T')
-        self.assertEqual(tbl.outputs[6], 'F')
-        self.assertEqual(tbl.outputs[7], 'F')
-        self.assertEqual(tbl.outputs[8], 'T')
 
     def test_model_value_of_biconditional(self):
         model = self.m()

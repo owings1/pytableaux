@@ -154,19 +154,13 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
                 type(s.lhs) in (Atomic, Predicated) or
                 self.is_sentence_opaque(s.lhs)))
 
-    _methmap = {}
-
-    _methmap.update(
-        (('value_of', member.cls), f'value_of_{member.name.lower()}')
-        for member in LexType if member.role is Sentence)
-
     def value_of(self, s: Sentence, /, **kw) -> MvalT_co:
         if self.is_sentence_opaque(s):
             return self.value_of_opaque(s, **kw)
         try:
-            name = self._methmap['value_of', type(s)]
+            name = f'value_of_{type(s).__name__.lower()}'
             func = getattr(self, name)
-        except (AttributeError, KeyError):
+        except AttributeError:
             pass
         else:
             return func(s, **kw)
@@ -229,9 +223,11 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
 
     def truth_table(self, oper: Operator, / , *, reverse=False) -> TruthTable[MvalT_co]:
         oper = Operator(oper)
-        inputs = tuple(product(*repeat(self.values, oper.arity)))
         if reverse:
-            inputs = tuple(reversed(inputs))
+            values = tuple(reversed(self.values))
+        else:
+            values = self.values
+        inputs = tuple(product(*repeat(values, oper.arity)))
         outputs = tuple(
             self.truth_function(oper, *values)
             for values in inputs)
@@ -288,16 +284,13 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
         def MaterialBiconditional(self, a: MvalT, b: MvalT, /) -> MvalT:
             raise NotImplementedError
 
-    _methmap = MapProxy(_methmap)
 
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
-        abcs.merge_attr(cls, '_methmap', supcls=__class__, transform=MapProxy)
         Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
         if Meta:
             cls.Meta = Meta
-            # cls.Value = Meta.values
             cls.values = Meta.values
             cls.designated_values = Meta.designated_values
             cls.unassigned_value = Meta.unassigned_value
@@ -323,11 +316,6 @@ class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):
         return reversed(self.mapping)
     def __len__(self):
         return len(self.mapping)
-
-    def stringed(self):
-        return {
-            tuple(map(str, key)): str(value)
-            for key, value in self.items()}
 
 class PredicateInterpretation:
     pos: set[tuple[Constant, ...]]

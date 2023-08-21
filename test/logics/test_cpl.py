@@ -18,7 +18,17 @@ class TestArguments(Base, autoargs=True):
         self.invalid_tab('Nb', ('Bab'))
         self.invalid_tab('Nb', ('NBab'))
 
-
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FT',
+        Negation = 'TF',
+        Conjunction = 'FFFT',
+        Disjunction = 'FTTT',
+        MaterialConditional = 'TTFT',
+        MaterialBiconditional = 'TFFT',
+        Conditional = 'TTFT',
+        Biconditional = 'TFFT',
+    )
 class TestIdentityRules(Base):
 
     def test_IdentityIndiscernability_not_applies(self):

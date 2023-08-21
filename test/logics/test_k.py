@@ -9,6 +9,18 @@ class Base(BaseCase):
 class TestRules(Base, autorules=True): pass
 class TestAutoArgs(Base, autoargs=True): pass
 
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FT',
+        Negation = 'TF',
+        Conjunction = 'FFFT',
+        Disjunction = 'FTTT',
+        MaterialConditional = 'TTFT',
+        MaterialBiconditional = 'TFFT',
+        Conditional = 'TTFT',
+        Biconditional = 'TFFT',
+    )
+
 class TestRuleAttrs(Base):
     def test_rules_modal(self):
         for rcls in self.logic.Rules.all():

@@ -40,3 +40,15 @@ class TestArguments(Base, autoargs=True):
         self.assertEqual(len(access), (len(b.worlds) - 1))
         # sanity check
         self.assertGreater(len(b.worlds), 2)
+
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FT',
+        Negation = 'TF',
+        Conjunction = 'FFFT',
+        Disjunction = 'FTTT',
+        MaterialConditional = 'TTFT',
+        MaterialBiconditional = 'TFFT',
+        Conditional = 'TTFT',
+        Biconditional = 'TFFT',
+    )

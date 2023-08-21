@@ -7,12 +7,18 @@ class Base(BaseCase):
     logic = 'K3W'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
-
-class TestClosure(Base):
-
-    def test_GlutClosure(self):
-        self.rule_eg('GlutClosure')
+class TestArguments(Base, autoargs=True): pass
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNT',
+        Negation = 'TNF',
+        Conjunction = 'FNFNNNFNT',
+        Disjunction = 'FNTNNNTNT',
+        MaterialConditional = 'TNTNNNFNT',
+        MaterialBiconditional = 'TNFNNNFNT',
+        Conditional = 'TNTNNNFNT',
+        Biconditional = 'TNFNNNFNT',
+    )
 
 class TestOperators(Base):
 

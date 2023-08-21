@@ -13,6 +13,18 @@ class TestArguments(Base, autoargs=True):
         self.invalid_tab('NUbc', ('a', 'UaNUbc'))
         self.invalid_tab('NBab', ('c', 'BcNUab'))
 
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FBT',
+        Negation = 'TBF',
+        Conjunction = 'FFFFBBFBT',
+        Disjunction = 'FBTBBTTTT',
+        MaterialConditional = 'TTTBBTFBT',
+        MaterialBiconditional = 'TBFBBBFBT',
+        Conditional = 'TTTBBTFBT',
+        Biconditional = 'TBFBBBFBT',
+    )
+
 class TestOperatorRules(Base):
 
     def test_regression_bad_rule_neg_bicond_undes(self):

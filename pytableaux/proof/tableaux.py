@@ -551,6 +551,10 @@ class RulesRoot(Sequence[Rule]):
         self.groups.clear()
         self._map.clear()
 
+    if TYPE_CHECKING:
+        @overload
+        def get(self, ref:Any, default=...) -> Rule:...
+
     get = RuleGroup.get
     names = RuleGroup.names
 

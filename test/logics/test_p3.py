@@ -31,15 +31,26 @@ class TestArguments(Base):
     def test_valid_demorgan_6(self):
         self.valid_tab('DeMorgan 6')
 
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNT',
+        Negation = 'TFN',
+        Conjunction = 'NNNNTFNFF',
+        Disjunction = 'FNTNNTTTT',
+        MaterialConditional = 'TTTFNTNNT',
+        MaterialBiconditional = 'FNFNTFFFF',
+        Conditional = 'TTTFNTNNT',
+        Biconditional = 'FNFNTFFFF',
+    )
+
 class TestOperatorRules(Base):
 
     def test_Negation(self):
-        self.assertEqual(self.logic.Meta.name, 'P3')
+        sdn = self.sdnode
         rtd = self.rule_eg('DoubleNegationDesignated')
-
         rule, tab = rtd
         self.assertTrue(tab[0].all((
-            {'sentence': self.p('a'),  'designated': False},
-            {'sentence': self.p('Na'), 'designated': False},
+            sdn('a', False),
+            sdn('Na', False),
         )))
 

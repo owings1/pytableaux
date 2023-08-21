@@ -10,15 +10,20 @@ class Base(BaseCase):
     logic = 'K3'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
 
-class TestArguments(Base):
+class TestArguments(Base, autoargs=True): pass
 
-    def test_DeMorgan(self):
-        self.valid_tab('DeMorgan 1')
-        self.valid_tab('DeMorgan 2')
-        self.valid_tab('DeMorgan 3')
-        self.valid_tab('DeMorgan 4')
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNT',
+        Negation = 'TNF',
+        Conjunction = 'FFFFNNFNT',
+        Disjunction = 'FNTNNTTTT',
+        MaterialConditional = 'TTTNNTFNT',
+        MaterialBiconditional = 'TNFNNNFNT',
+        Conditional = 'TTTNNTFNT',
+        Biconditional = 'TNFNNNFNT',
+    )
 
 class TestOperators(Base):
 

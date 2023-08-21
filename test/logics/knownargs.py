@@ -86,7 +86,10 @@ validities['K3W'] = validities[...] | [
     
 ]
 validities['K3WQ'] = validities[...] | [
-    
+    'Quantifier Interdefinability 1',
+    'Quantifier Interdefinability 2',
+    'Quantifier Interdefinability 3',
+    'Quantifier Interdefinability 4',
 ]
 validities['MH'] = validities[...] | [
     'Conditional Identity',
@@ -279,7 +282,7 @@ invalidities['D'] = invalidities['S4'] | [
     'Reflexive Inference 1',
     'S4 Conditional Inference 2',
 ]
-invalidities['K'] = invalidities['T'] | [
+invalidities['K'] = invalidities['T'] | invalidities['D'] | [
 
 ]
 invalidities['CFOL'] = invalidities['K'] | [
@@ -361,7 +364,7 @@ invalidities['K3W'] = invalidities['CFOL'] | [
     
 ]
 invalidities['K3WQ'] = invalidities['CFOL'] | [
-    
+
 ]
 invalidities['MH'] = invalidities['CFOL'] | [
    arg('UNbNa', ('NAaNa', 'Uab'), title='p_from_article'),

@@ -13,10 +13,14 @@ class TestArguments(Base, autoargs=True):
     def test_invalid_mat_bicon_from_bicond(self):
         self.invalid_tab('Eab', 'Bab')
 
-class TestTruthTables(Base):
-
-    def test_truth_table_conditional(self):
-        tbl = self.m().truth_table('Conditional')
-        self.assertEqual(tbl.outputs[3], 'N')
-        self.assertEqual(tbl.outputs[4], 'T')
-        self.assertEqual(tbl.outputs[6], 'F')
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNT',
+        Negation = 'TNF',
+        Conjunction = 'FFFFNNFNT',
+        Disjunction = 'FNTNNTTTT',
+        MaterialConditional = 'TTTNNTFNT',
+        MaterialBiconditional = 'TNFNNNFNT',
+        Conditional = 'TTTNTTFNT',
+        Biconditional = 'TNFNTNFNT',
+    )

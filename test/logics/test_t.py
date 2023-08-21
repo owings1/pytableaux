@@ -6,6 +6,18 @@ class Base(BaseCase):
 class TestRules(Base, autorules=True, bare=True): pass
 class TestAutoArgs(Base, autoargs=True): pass
 
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FT',
+        Negation = 'TF',
+        Conjunction = 'FFFT',
+        Disjunction = 'FTTT',
+        MaterialConditional = 'TTFT',
+        MaterialBiconditional = 'TFFT',
+        Conditional = 'TTFT',
+        Biconditional = 'TFFT',
+    )
+
 class TestT(Base):
 
     def test_valid_np_collapse_1(self):

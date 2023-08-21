@@ -157,10 +157,9 @@ class Model(LogicType.Model[ValueFDE]):
         is in the set of designated values, and the value of the conclusion
         is not in the set of designated values.
         """
-        for premise in a.premises:
-            if self.value_of(premise) not in self.designated_values:
-                return False
-        return self.value_of(a.conclusion) not in self.designated_values
+        return (
+            all(map(self.designated_values.__contains__, map(self.value_of, a.premises))) and
+            self.value_of(a.conclusion) not in self.designated_values)
 
     def get_data(self) -> dict[str, Any]:
         return dict(

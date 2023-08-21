@@ -6,6 +6,17 @@ class Base(BaseCase):
 class TestRules(Base, autorules=True): pass
 class TestArguments(Base, autoargs=True): pass
 
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNT',
+        Negation = 'TNF',
+        Conjunction = 'FFFFNNFNT',
+        Disjunction = 'FNTNFTTTT',
+        MaterialConditional = 'TTTNFTFNT',
+        MaterialBiconditional = 'TNFNFNFNT',
+        Conditional = 'TTTTTTFFT',
+        Biconditional = 'TTFTTFFFT',
+    )
 class TestBranchables(Base):
     exp = dict(
         AssertionDesignated=0,

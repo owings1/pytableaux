@@ -4,24 +4,23 @@ class Base(BaseCase):
     logic = 'K3WQ'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
 
-class TestArguments(Base):
-
-    def test_valid_quantifier_interdefinability_1(self):
-        self.valid_tab('Quantifier Interdefinability 1')
-
-    def test_valid_quantifier_interdefinability_2(self):
-        self.valid_tab('Quantifier Interdefinability 2')
-        
-    def test_valid_quantifier_interdefinability_3(self):
-        self.valid_tab('Quantifier Interdefinability 3')
-
-    def test_valid_quantifier_interdefinability_4(self):
-        self.valid_tab('Quantifier Interdefinability 4')
+class TestArguments(Base, autoargs=True):
 
     def test_valid_existential_to_if_a_then_a(self):
         self.valid_tab('CFmFm', 'SxFx')
+
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNT',
+        Negation = 'TNF',
+        Conjunction = 'FNFNNNFNT',
+        Disjunction = 'FNTNNNTNT',
+        MaterialConditional = 'TNTNNNFNT',
+        MaterialBiconditional = 'TNFNNNFNT',
+        Conditional = 'TNTNNNFNT',
+        Biconditional = 'TNFNNNFNT',
+    )
 
 class TestModels(Base):
 

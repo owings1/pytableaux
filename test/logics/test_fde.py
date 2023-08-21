@@ -12,18 +12,23 @@ class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base, autoargs=True): pass
 
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNBT',
+        Negation = 'TNBF',
+        Conjunction = 'FFFFFNNNFNBBFNBT',
+        Disjunction = 'FNBTNNBTBBBTTTTT',
+        MaterialConditional = 'TTTTNNBTBBBTFNBT',
+        MaterialBiconditional = 'TNBFNNBNBBBBFNBT',
+        Conditional = 'TTTTNNBTBBBTFNBT',
+        Biconditional = 'TNBFNNBNBBBBFNBT',
+    )
+
 class TestOperators(Base):
-
-
-    def test_Assertion(self):
-        # ¬ ○ A  ⊢  ¬ A
-        self.valid_tab('Na', 'NTa')
 
     def test_Conjunction(self):
         o = Operator.Conjunction
         rtnd = self.rule_eg(f'{o.name}NegatedDesignated')
-
-        self.invalid_tab('LNC')
 
         n = rtnd[1].history[0].target.node
         s: Operated = n['sentence']
@@ -38,9 +43,7 @@ class TestQuantifiers(Base):
         rtu = self.rule_eg(f'{q.name}Undesignated')
 
         b = rtu[1][0]
-        self.assertTrue(b.has(
-            {'sentence': Quantified.first(q), 'designated': False}))
-
+        self.assertTrue(b.has(sdnode(Quantified.first(q), False)))
 
     def test_invalid_existential_inside_univ_max_steps(self):
         tab = self.invalid_tab('b', 'VxUFxSyFy', max_steps=100, is_build_models=True)

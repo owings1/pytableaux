@@ -18,6 +18,17 @@ class TestArguments(Base, autoargs=True):
     def test_invalid_existential_inside_univ_max_steps(self):
         self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
 
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FT',
+        Negation = 'TF',
+        Conjunction = 'FFFT',
+        Disjunction = 'FTTT',
+        MaterialConditional = 'TTFT',
+        MaterialBiconditional = 'TFFT',
+        Conditional = 'TTFT',
+        Biconditional = 'TFFT',
+    )
 class TestRuleAttrs(Base):
 
     def test_rules_not_modal(self):

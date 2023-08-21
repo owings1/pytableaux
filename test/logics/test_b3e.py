@@ -13,20 +13,15 @@ class TestArguments(Base, autoargs=True):
         self.valid_tab('AANaTbNa', 'Na')
 
 
-class TestTruthTables(Base):
+class TestTruthTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FFT',
+        Negation = 'TNF',
+        Conjunction = 'FNFNNNFNT',
+        Disjunction = 'FNTNNNTNT',
+        MaterialConditional = 'TNTNNNFNT',
+        MaterialBiconditional = 'TNFNNNFNT',
+        Conditional = 'TTTTTTFFT',
+        Biconditional = 'TTFTTFFFT',
+    )
 
-    def test_truth_table_assertion(self):
-        tbl = self.m().truth_table('Assertion')
-        self.assertEqual(tbl.outputs, ('F', 'F', 'T'))
-
-    def test_truth_table_conditional(self):
-        tbl = self.m().truth_table('Conditional')
-        self.assertEqual(tbl.outputs[3], 'T')
-        self.assertEqual(tbl.outputs[4], 'T')
-        self.assertEqual(tbl.outputs[7], 'F')
-
-    def test_truth_table_biconditional(self):
-        tbl = self.m().truth_table('Biconditional')
-        self.assertEqual(tbl.outputs[2], 'F')
-        self.assertEqual(tbl.outputs[4], 'T')
-        self.assertEqual(tbl.outputs[7], 'F')

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Collection, Iterable, Mapping, NamedTuple, TypeVar
+from typing import Collection, Iterable, Mapping, NamedTuple, Sequence, TypeVar
 from unittest import TestCase
 
 from pytableaux import examples
@@ -265,9 +265,12 @@ class BaseCase(TestCase):
             m.read_branch(b)
         return m
 
-    def tttest(self, oper, exp: Mapping):
-        exp = {tuple(key): value for key, value in exp.items()}
+    def tttest(self, oper, exp: Mapping|Sequence):
         tbl = self.Model().truth_table(oper)
+        if isinstance(exp, Mapping):
+            exp = {tuple(key): value for key, value in exp.items()}
+        else:
+            exp = {tuple(map(str, key)): value for key, value in zip(tbl, exp)}
         res = {
             tuple(map(str, key)): str(value)
             for key, value in tbl.items()}

@@ -34,3 +34,15 @@ class TestArguments(Base, autoargs=True):
 
     def test_valid_not_a_dblarrow_b_thus_not_a_arrow_b_or_not_b_arrow_a(self):
         self.valid_tab('ANUabNUba', 'NBab')
+
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNT',
+        Negation = 'TFF',
+        Conjunction = 'FFFFNNFNT',
+        Disjunction = 'FNTNNTTTT',
+        MaterialConditional = 'TTTFNTFNT',
+        MaterialBiconditional = 'TFFFNNFNT',
+        Conditional = 'TTTFTTFNT',
+        Biconditional = 'TFFFTNFNT',
+    )
