@@ -856,8 +856,8 @@ invalidities['G3'] = invalidities['CFOL'] | [
     'Material Biconditional Identity',
     'Material Contraposition 2',
     'Material Identity',
-    # 'Material Pseudo Contraction',
-    # 'Material Pseudo Contraposition',
+    'Material Pseudo Contraction',
+    'Material Pseudo Contraposition',
     'Self Identity 1',
     'Self Identity 2',
 ]

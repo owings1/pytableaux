@@ -114,28 +114,6 @@ class Rules(LP.Rules):
                     sdnode( rhs, True),
                     sdnode(~rhs, True)))
 
-    class MaterialConditionalDesignated(FDE.OperatorNodeRule):
-        "This rule reduces to a disjunction."
-
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s.lhs | s.rhs, d)))
-
-    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
-        "This rule reduces to a negated disjunction."
-
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
-
-    class MaterialConditionalUndesignated(MaterialConditionalDesignated): pass
-    class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated): pass
-    class MaterialBiconditionalDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated): pass
-    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated): pass
-    class BiconditionalDesignated(FDE.ConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedDesignated(FDE.ConditionalConjunctsReducingRule): pass
-    class BiconditionalUndesignated(BiconditionalDesignated): pass
-    class BiconditionalNegatedUndesignated(BiconditionalNegatedDesignated): pass
 
     groups = (
         # Non-branching rules.
@@ -147,20 +125,20 @@ class Rules(LP.Rules):
             FDE.Rules.ConjunctionDesignated,
             FDE.Rules.DisjunctionUndesignated,
             FDE.Rules.DisjunctionNegatedDesignated,
-            MaterialConditionalDesignated,
-            MaterialConditionalNegatedDesignated,
-            MaterialConditionalUndesignated,
-            MaterialConditionalNegatedUndesignated,
-            MaterialBiconditionalDesignated,
-            MaterialBiconditionalNegatedDesignated,
-            MaterialBiconditionalUndesignated,
-            MaterialBiconditionalNegatedUndesignated,
+            MH.Rules.MaterialConditionalDesignated,
+            MH.Rules.MaterialConditionalNegatedDesignated,
+            MH.Rules.MaterialConditionalUndesignated,
+            MH.Rules.MaterialConditionalNegatedUndesignated,
+            MH.Rules.MaterialBiconditionalDesignated,
+            MH.Rules.MaterialBiconditionalNegatedDesignated,
+            MH.Rules.MaterialBiconditionalUndesignated,
+            MH.Rules.MaterialBiconditionalNegatedUndesignated,
             MH.Rules.ConditionalUndesignated,
             MH.Rules.ConditionalNegatedDesignated,
-            BiconditionalDesignated,
-            BiconditionalNegatedDesignated,
-            BiconditionalUndesignated,
-            BiconditionalNegatedUndesignated,
+            MH.Rules.BiconditionalDesignated,
+            MH.Rules.BiconditionalNegatedDesignated,
+            MH.Rules.BiconditionalUndesignated,
+            MH.Rules.BiconditionalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
             FDE.Rules.DoubleNegationUndesignated),
         # 1-branching rules.

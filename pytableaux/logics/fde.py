@@ -463,6 +463,15 @@ class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule, intermed
 class ConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
     conjoined = Operator.Conditional
 
+class MaterialConditionalReducingRule(OperatorNodeRule, intermediate=True):
+    "This rule reduces to a disjunction."
+
+    def _get_sd_targets(self, s, d, /):
+        sn = ~s.lhs | s.rhs
+        if self.negated:
+            sn = ~sn
+        yield adds(group(sdnode(sn, d)))
+
 class Rules(LogicType.Rules):
 
     class DesignationClosure(rules.FindClosingNodeRule):

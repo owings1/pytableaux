@@ -93,6 +93,24 @@ class Rules(K3.Rules):
     class BiconditionalUndesignated(FDE.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedUndesignated(FDE.ConditionalConjunctsReducingRule): pass
 
+    class MaterialConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
+        # "This rule reduces to a disjunction."
+
+        # def _get_sd_targets(self, s, d, /):
+        #     sn = ~s.lhs | s.rhs
+        #     if self.negated:
+        #         sn = ~sn
+        #     yield adds(group(sdnode(sn, d)))
+
+    class MaterialConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialBiconditionalDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+
+
     groups = (
         group(
             # non-branching rules
@@ -104,13 +122,6 @@ class Rules(K3.Rules):
             FDE.Rules.DisjunctionNegatedDesignated,
             FDE.Rules.DisjunctionUndesignated,
             FDE.Rules.DisjunctionNegatedUndesignated,
-            FDE.Rules.MaterialConditionalNegatedDesignated,
-            FDE.Rules.MaterialConditionalUndesignated,
-
-            BiconditionalDesignated,
-            BiconditionalNegatedUndesignated,
-            BiconditionalUndesignated,
-            BiconditionalNegatedDesignated,
 
             FDE.Rules.ExistentialNegatedDesignated,
             FDE.Rules.ExistentialNegatedUndesignated,
@@ -118,19 +129,26 @@ class Rules(K3.Rules):
             FDE.Rules.UniversalNegatedUndesignated,
 
             DoubleNegationDesignated,
-            DoubleNegationUndesignated),
+            DoubleNegationUndesignated,
+            # reduction rules
+            MaterialConditionalNegatedDesignated,
+            MaterialConditionalUndesignated,
+            MaterialConditionalDesignated,
+            MaterialConditionalNegatedUndesignated,
+            MaterialBiconditionalDesignated,
+            MaterialBiconditionalNegatedDesignated,
+            MaterialBiconditionalUndesignated,
+            MaterialBiconditionalNegatedUndesignated,
+            BiconditionalDesignated,
+            BiconditionalNegatedUndesignated,
+            BiconditionalUndesignated,
+            BiconditionalNegatedDesignated),
         group(
             # branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.ConjunctionUndesignated,
             FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionDesignated,
-            FDE.Rules.MaterialConditionalDesignated,
-            FDE.Rules.MaterialConditionalNegatedUndesignated,
-            FDE.Rules.MaterialBiconditionalDesignated,
-            FDE.Rules.MaterialBiconditionalNegatedDesignated,
-            FDE.Rules.MaterialBiconditionalUndesignated,
-            FDE.Rules.MaterialBiconditionalNegatedUndesignated,
 
             L3.Rules.ConditionalDesignated,
             L3.Rules.ConditionalUndesignated,

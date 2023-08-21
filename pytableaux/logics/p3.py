@@ -162,30 +162,10 @@ class Rules(K3.Rules):
                 group(sdnode(~lhs, not d)),
                 group(sdnode(~rhs, not d)))
 
-    class MaterialConditionalDesignated(FDE.OperatorNodeRule):
-        "This rule reduces to a disjunction."
-
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s.lhs | s.rhs, d)))
-
-    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
-        "This rule reduces to a disjunction."
-
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
-
-    class MaterialConditionalUndesignated(FDE.OperatorNodeRule):
-        "This rule reduces to a disjunction."
-
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s.lhs | s.rhs, d)))
-
-    class MaterialConditionalNegatedUndesignated(FDE.OperatorNodeRule):
-        "This rule reduces to a disjunction."
-
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
-
+    class MaterialConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
     class MaterialBiconditionalDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass

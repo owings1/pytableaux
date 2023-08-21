@@ -134,39 +134,22 @@ class Rules(K3.Rules):
                 group(sdnode(s.lhs, False), sdnode(~s.lhs, False)),
                 group(sdnode(s.rhs, False), sdnode(~s.rhs, False)))
 
-    class MaterialConditionalDesignated(FDE.OperatorNodeRule):
-        "This rule reduces to a disjunction."
-
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s.lhs | s.rhs, d)))
-
-    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
-        "This rule reduces to a negated disjunction."
-
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~(~s.lhs | s.rhs), d)))
-
-    class MaterialConditionalUndesignated(MaterialConditionalDesignated): pass
-    class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated): pass
-
-    class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
-        "This rule reduces to a conjunction of material conditionals."
-        conjoined = Operator.MaterialConditional
-
-    class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
-        "This rule reduces to a negated conjunction of material conditionals."
-        conjoined = Operator.MaterialConditional
-
-    class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated): pass
-    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalNegatedDesignated): pass
-    class ConditionalDesignated(MaterialConditionalDesignated): pass
-    class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated): pass
-    class ConditionalUndesignated(MaterialConditionalUndesignated): pass
+    class MaterialConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialBiconditionalDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class ConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
+    class ConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
+    class ConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated): pass
-    class BiconditionalDesignated(MaterialBiconditionalDesignated): pass
-    class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated): pass
-    class BiconditionalUndesignated(MaterialBiconditionalUndesignated): pass
-    class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated): pass
+    class BiconditionalDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class BiconditionalUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
 
     groups = (
         group(
