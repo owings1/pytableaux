@@ -68,16 +68,19 @@ class BaseCase(TestCase):
             validities = qset()
             invalidities = qset()
             if getattr(subcls, 'logic', None):
-                validities.update(knownargs.validities.get(subcls.logic.Meta.name, []))
-                invalidities.update(knownargs.invalidities.get(subcls.logic.Meta.name, []))
+                validities.update(knownargs.validities[subcls.logic.Meta.name])
+                invalidities.update(knownargs.invalidities[subcls.logic.Meta.name])
             for arg in validities:
                 if isinstance(arg, Argument):
                     title = arg.title or hash(arg)
                 else:
                     title = arg
                 name = f'test_valid_{inflect.slug(title)}'
-                def test(self: BaseCase, arg=arg):
+                old = getattr(subcls, name, None)
+                def test(self: BaseCase, arg=arg, old=old):
                     self.valid_tab(arg)
+                    if callable(old):
+                        old(self)
                 setattr(subcls, name, test)
             for arg in invalidities:
                 if isinstance(arg, Argument):
@@ -85,14 +88,20 @@ class BaseCase(TestCase):
                 else:
                     title = arg
                 name = f'test_invalid_{inflect.slug(title)}'
-                def test(self: BaseCase, arg=arg):
+                old = getattr(subcls, name, None)
+                def test(self: BaseCase, arg=arg, old=old):
                     self.invalid_tab(arg)
+                    if callable(old):
+                        old(self)
                 setattr(subcls, name, test)
         if autotables:
             for oper, exp in getattr(subcls, 'tables', {}).items():
                 name = f'test_truth_table_{oper}'
-                def test(self: BaseCase, oper=oper, exp=exp):
+                old = getattr(subcls, name, None)
+                def test(self: BaseCase, oper=oper, exp=exp, old=old):
                     self.tttest(oper, exp)
+                    if callable(old):
+                        old(self)
                 setattr(subcls, name, test)
             
     def valid_tab(self, *args, **kw):

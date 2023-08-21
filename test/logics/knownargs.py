@@ -1,15 +1,16 @@
 from pytableaux.lang import Parser
-from pytableaux.tools import qset, qsetf
+from pytableaux.tools import qsetf
 from pytableaux import examples
 arg = Parser('polish', examples.preds).argument
 
 validities = {}
-invalidities = {}
+
 validities[...] = qsetf([
     'Modal Platitude 1',
     'Modal Platitude 2',
     'Modal Platitude 3',
 ])
+
 validities['FDE'] = validities[...] | [
     'Addition',
     'Assertion Elimination 1',
@@ -26,12 +27,12 @@ validities['FDE'] = validities[...] | [
     'DeMorgan 6',
     'DeMorgan 7',
     'DeMorgan 8',
-
     'Material Contraction',
     # 'Self Identity 1',
     'Quantifier Interdefinability 4',
     'Simplification',
 ]
+
 validities['K3'] = validities['FDE'] | [
     'Biconditional Elimination 1',
     'Biconditional Elimination 2',
@@ -45,6 +46,7 @@ validities['K3'] = validities['FDE'] | [
     'Material Modus Ponens',
     'Material Modus Tollens',
 ]
+
 validities['LP'] = validities['FDE'] | [
     'Biconditional Identity',
     'Conditional Double Negation',
@@ -55,9 +57,14 @@ validities['LP'] = validities['FDE'] | [
 ]
 
 validities['RM3'] = validities[...] | [
+    'Addition',
+    'Assertion Elimination 1',
+    'Assertion Elimination 2',
+    'Conditional Contraction',
     'Conditional Identity',
     'Conditional Modus Ponens',
     'Biconditional Elimination 1',
+    'Biconditional Elimination 2',
     'Biconditional Introduction 3',
     'Biconditional Identity',
     'DeMorgan 1',
@@ -69,9 +76,13 @@ validities['RM3'] = validities[...] | [
     'DeMorgan 7',
     'DeMorgan 8',
     'Law of Excluded Middle',
-    
+    'Material Contraction',
+    'Simplification',
 ]
+
 validities['L3'] = validities[...] | [
+    'Assertion Elimination 1',
+    'Assertion Elimination 2',
     'Conditional Identity',
     'Conditional Modus Ponens',
     'Biconditional Elimination 1',
@@ -87,24 +98,30 @@ validities['L3'] = validities[...] | [
     'DeMorgan 7',
     'DeMorgan 8',
     'Law of Non-contradiction',
+    'Material Contraction',
+    'Simplification',
 ]
+
 validities['B3E'] = validities[...] | [
+    'Asserted Addition',
     'Biconditional Introduction 1',
     'Biconditional Elimination 3',
     'Biconditional Elimination 1',
     'Conditional Contraction',
-    arg('AaTb', ('a',), title='Asserted Addition'),
-    arg('AUabNUab', title='Conditional LEM')
+    'Conditional Law of Excluded Middle',
 ]
+
 validities['G3'] = validities[...] | [
     'Biconditional Identity',
     'DeMorgan 6',
 ]
+
 validities['GO'] = validities[...] | [
     'DeMorgan 3',
     'Quantifier Interdefinability 1',
     'Quantifier Interdefinability 3',
 ]
+
 validities['K3W'] = validities[...] | [
     'Conditional Contraction',
     'DeMorgan 1',
@@ -116,8 +133,8 @@ validities['K3W'] = validities[...] | [
     'DeMorgan 7',
     'DeMorgan 8',
     'Law of Non-contradiction',
-    
 ]
+
 validities['K3WQ'] = validities[...] | [
     'Conditional Contraction',
     'DeMorgan 1',
@@ -134,6 +151,7 @@ validities['K3WQ'] = validities[...] | [
     'Quantifier Interdefinability 3',
     'Quantifier Interdefinability 4',
 ]
+
 validities['MH'] = validities[...] | [
     'Conditional Identity',
     'Conditional Modus Ponens',
@@ -156,6 +174,7 @@ validities['MH'] = validities[...] | [
     arg('UKaANbNAbNbNUab', title='hmh_axiom16'),
     arg('BNAaNaNANaNNa', title='ifn'),
 ]
+
 validities['NH'] = validities[...] | [
     'DeMorgan 2',
     'Law of Excluded Middle',
@@ -176,12 +195,14 @@ validities['NH'] = validities[...] | [
     arg('UKNKaNaNaUab', title='hnh_axiom22'),
     arg('UKaKNKbNbNbNUab', title='hnh_axiom23'),
 ]
+
 validities['P3'] = validities[...] | [
     'DeMorgan 6',
 ]
 
 validities['CPL'] = validities[...] | [
     'Addition',
+    'Asserted Addition',
     'Assertion Elimination 1',
     'Assertion Elimination 2',
     'Biconditional Elimination 1',
@@ -276,6 +297,7 @@ validities['S5'] = validities['S4'] | [
 ]
 
 
+invalidities = {}
 
 invalidities[...] = qsetf([
     'Affirming a Disjunct 1',
@@ -291,19 +313,23 @@ invalidities[...] = qsetf([
     'Triviality 2',
     'Universal from Existential',
 ])
+
 invalidities['S5'] = invalidities[...] | [
 
 ]
+
 invalidities['S4'] = invalidities['S5'] | [
     'S5 Conditional Inference 1',
     'S5 Material Inference 1',
 ]
+
 invalidities['T'] = invalidities['S4'] | [
     'S4 Conditional Inference 1',
     'S4 Conditional Inference 2',
     'S4 Material Inference 1',
     'S4 Material Inference 2',
 ]
+
 invalidities['D'] = invalidities['T'] | [
     'Necessity Elimination',
     'NP Collapse 1',
@@ -312,9 +338,11 @@ invalidities['D'] = invalidities['T'] | [
     'Reflexive Inference 1',
     'S4 Conditional Inference 2',
 ]
+
 invalidities['K'] = invalidities['D'] | [
 
 ]
+
 invalidities['CFOL'] = invalidities['K'] | [
     'Modal Transformation 1',
     'Modal Transformation 2',
@@ -323,6 +351,7 @@ invalidities['CFOL'] = invalidities['K'] | [
     'Necessity Distribution 1',
     'Necessity Distribution 2',
 ]
+
 invalidities['CPL'] = invalidities['CFOL'] | [
     'Existential Syllogism',
     'Existential from Universal',
@@ -339,14 +368,12 @@ invalidities['CPL'] = invalidities['CFOL'] | [
 
 invalidities['K3'] = invalidities['CFOL'] | [
     'Conditional Double Negation',
-    'Law of Excluded Middle',
-    'Conditional Pseudo Contraction',
     'Conditional Law of Excluded Middle',
-
+    'Conditional Pseudo Contraction',
+    'Law of Excluded Middle',
 ]
+
 invalidities['LP'] = invalidities['CFOL'] | [
-    'Explosion',
-    'Law of Non-contradiction',
     'Biconditional Elimination 1',
     'Biconditional Elimination 2',
     'Biconditional Elimination 3',
@@ -354,18 +381,24 @@ invalidities['LP'] = invalidities['CFOL'] | [
     'Conditional Modus Tollens',
     'Disjunctive Syllogism 2',
     'Disjunctive Syllogism',
+    'Explosion',
+    'Law of Non-contradiction',
     'Material Biconditional Elimination 3',
     'Material Modus Ponens',
     'Material Modus Tollens',
-    
 ]
+
 invalidities['FDE'] = invalidities['K3'] | invalidities['LP'] | [
+
 ]
 
 invalidities['RM3'] = invalidities['CFOL'] | [
     'Biconditional Elimination 3',
+    'Biconditional Introduction 1',
+    'Biconditional Introduction 2',
     'Law of Non-contradiction',
 ]
+
 invalidities['L3'] = invalidities['CFOL'] | [
     'Conditional Contraction',
     'Conditional Law of Excluded Middle',
@@ -373,37 +406,44 @@ invalidities['L3'] = invalidities['CFOL'] | [
     'Law of Excluded Middle',
     'Material Identity',
 ]
+
 invalidities['B3E'] = invalidities['CFOL'] | [
     'Law of Excluded Middle',
 ]
+
 invalidities['G3'] = invalidities['CFOL'] | [
     'Conditional Double Negation',
     'DeMorgan 8',
     'Law of Excluded Middle',
 ]
+
 invalidities['GO'] = invalidities['CFOL'] | [
     'DeMorgan 1',
     'Law of Excluded Middle',
     'Quantifier Interdefinability 2',
     'Quantifier Interdefinability 4',
 ]
+
 invalidities['K3W'] = invalidities['CFOL'] | [
     'Addition',
     'Law of Excluded Middle',
 ]
+
 invalidities['K3WQ'] = invalidities['CFOL'] | [
     'Addition',
     'Law of Excluded Middle',
-
 ]
+
 invalidities['MH'] = invalidities['CFOL'] | [
     'Law of Excluded Middle',
    arg('UNbNa', ('NAaNa', 'Uab'), title='p_from_article'),
 ]
+
 invalidities['NH'] = invalidities['CFOL'] | [
     'Explosion',
     'Law of Non-contradiction',
 ]
+
 invalidities['P3'] = invalidities[...] | [
     'DeMorgan 1',
     'DeMorgan 2',

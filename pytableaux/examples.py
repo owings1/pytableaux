@@ -48,6 +48,7 @@ data = MapProxy({
     'Affirming a Disjunct 1'           : (('Aab', 'a'), 'b'),
     'Affirming a Disjunct 2'           : (('Aab', 'a'), 'Nb'),
     'Affirming the Consequent'         : (('Cab', 'b'), 'a'),
+    'Asserted Addition'                : (('a',), 'AaTb'),
     'Assertion Elimination 1'          : (('Ta',), 'a' ),
     'Assertion Elimination 2'          : (('NTa',), 'Na'),
     'Biconditional Elimination 1'      : (('Bab', 'a'), 'b'),
