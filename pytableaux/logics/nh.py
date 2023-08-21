@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified
+from ..lang import Quantified
 from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
@@ -26,6 +26,7 @@ from . import mh as MH
 class Meta(LP.Meta):
     name = 'NH'
     title = 'Paraconsistent Hybrid Logic'
+    quantified = False
     description = (
         'Three-valued logic (True, False, Both) with non-standard conjunction, '
         'and a classical-like conditional')
@@ -36,7 +37,7 @@ class Meta(LP.Meta):
         'non-modal')
     native_operators = MH.Meta.native_operators
 
-class Model(LP.Model):
+class Model(FDE.Model):
 
     def is_sentence_opaque(self, s,/):
         return type(s) is Quantified or super().is_sentence_opaque(s)
@@ -52,6 +53,8 @@ class Model(LP.Model):
             if a != self.values.F and b == self.values.F:
                 return self.values.F
             return self.values.T
+
+class System(FDE.System): pass
 
 class Rules(LP.Rules):
 
@@ -171,18 +174,3 @@ class Rules(LP.Rules):
         # 3-branching rules.
         group(
             ConjunctionNegatedDesignated))
-
-
-class System(LP.System):
-    branchables = {
-        Operator.Negation: (None, (0, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((1, 0), (1, 3)),
-        Operator.Disjunction: ((0, 1), (1, 0)),
-        # for now, reduce to negated disjunction
-        Operator.MaterialConditional: ((0, 0), (0, 0)),
-        # for now, reduce to conjunction
-        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-        Operator.Conditional: ((0, 1), (1, 0)),
-        # for now, reduce to conjunction
-        Operator.Biconditional: ((0, 0), (0, 0))}

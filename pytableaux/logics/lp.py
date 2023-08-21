@@ -37,8 +37,8 @@ class Meta(FDE.Meta):
         'non-modal',
         'first-order')
 
-class Model(FDE.Model):
-    pass
+class Model(FDE.Model): pass
+class System(FDE.System): pass
 
 class Rules(FDE.Rules):
 
@@ -57,6 +57,3 @@ class Rules(FDE.Rules):
             yield sdnode(~s, False)
 
     closure = group(GapClosure) + FDE.Rules.closure
-
-class System(FDE.System):
-    pass

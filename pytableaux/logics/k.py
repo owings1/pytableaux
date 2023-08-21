@@ -489,6 +489,46 @@ class Frames(dict[int, Frame]):
             return self[0]
         return self.setdefault(check.inst(key, int), Frame(key))
 
+class System(proof.System):
+
+    @classmethod
+    def build_trunk(cls, b, arg, /):
+        """
+        To build the trunk for an argument, add a node with each premise, with
+        world :m:`w0`, followed by a node with the negation of the conclusion
+        with world :m:`w0`.
+        """
+        w = 0 if cls.modal else None
+        b += (swnode(s, w) for s in arg.premises)
+        b += swnode(~arg.conclusion, w)
+
+    @classmethod
+    def branching_complexity(cls, node, rules, /) -> int:
+        try:
+            s = node['sentence']
+        except KeyError:
+            return 0
+        negated = False
+        result = 0
+        for oper in s.operators:
+            if not negated and oper is Operator.Negation:
+                negated = True
+                continue
+            if negated and oper is Operator.Negation:
+                name = 'DoubleNegation'
+            else:
+                name = oper.name
+                if negated:
+                    name += 'Negated'
+            rulecls = rules.get(name, None)
+            if rulecls:
+                result += rulecls.branching
+                negated = False
+        return result
+
+    @classmethod
+    def branching_complexity_hashable(cls, node, /):
+        return node.get('sentence')
 
 class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default K node rule with:
@@ -957,55 +997,3 @@ class Rules(LogicType.Rules):
         group(
             Existential,
             Universal))
-
-
-class System(proof.System):
-
-    neg_branchable = {
-        Operator.Conjunction,
-        Operator.MaterialBiconditional,
-        Operator.Biconditional}
-
-    pos_branchable = {
-        Operator.Disjunction,
-        Operator.MaterialConditional,
-        Operator.Conditional}
-
-    @classmethod
-    def build_trunk(cls, b, arg, /):
-        """
-        To build the trunk for an argument, add a node with each premise, with
-        world :m:`w0`, followed by a node with the negation of the conclusion
-        with world :m:`w0`.
-        """
-        w = 0 if cls.modal else None
-        b += (swnode(s, w) for s in arg.premises)
-        b += swnode(~arg.conclusion, w)
-
-    @classmethod
-    def branching_complexity(cls, node, /) -> int:
-        try:
-            s = node['sentence']
-        except KeyError:
-            return 0
-        last_is_negated = False
-        complexity = 0
-        for oper in s.operators:
-            if oper is Operator.Assertion:
-                continue
-            if oper is Operator.Negation:
-                if last_is_negated:
-                    last_is_negated = False
-                    continue
-                last_is_negated = True
-            elif last_is_negated:
-                if oper in cls.neg_branchable:
-                    complexity += 1
-                    last_is_negated = False
-            elif oper in cls.pos_branchable:
-                complexity += 1
-        return complexity
-
-    @classmethod
-    def branching_complexity_hashable(cls, node, /):
-        return node.get('sentence')

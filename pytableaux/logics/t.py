@@ -22,7 +22,6 @@ from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
 
-
 class Meta(K.Meta):
     name = 'T'
     title = 'Reflexive Normal Modal Logic'
@@ -35,6 +34,8 @@ class Model(K.Model):
         for w in self.frames:
             self.R[w].add(w)
         super().finish()
+
+class System(K.System): pass
 
 class Rules(K.Rules):
 
@@ -104,6 +105,3 @@ class Rules(K.Rules):
         group(
             K.Rules.Existential,
             K.Rules.Universal))
-
-class System(K.System):
-    pass

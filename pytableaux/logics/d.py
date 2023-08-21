@@ -45,6 +45,8 @@ class Model(K.Model):
             self.R.add((w2, w2))
         super().finish()
 
+class System(K.System): pass
+
 class Rules(K.Rules):
 
     class Serial(BaseSimpleRule):
@@ -155,6 +157,3 @@ class Rules(K.Rules):
     #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], Rules.Serial):
     #            return False
     #        return super(Rules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
-
-class System(K.System):
-    pass

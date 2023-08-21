@@ -33,7 +33,7 @@ class Meta(K3.Meta):
         Operator.Conditional,
         Operator.Biconditional)))
 
-class Model(K3.Model):
+class Model(FDE.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
@@ -41,6 +41,8 @@ class Model(K3.Model):
             if a == b:
                 return self.values.T
             return super().Conditional(a, b)
+
+class System(FDE.System): pass
 
 class Rules(K3.Rules):
 
@@ -188,10 +190,3 @@ class Rules(K3.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
-
-
-class System(K3.System):
-
-    branchables = K3.System.branchables | {
-        Operator.Conditional: ((1, 1), (1, 0)),
-        Operator.Biconditional: ((1, 1), (1, 1))}

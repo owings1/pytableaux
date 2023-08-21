@@ -49,7 +49,9 @@ class Model(T.Model):
             for w1, w2 in to_add:
                 R[w1].add(w2)
 
-class Rules(T.Rules):
+class System(K.System): pass
+
+class Rules(K.Rules):
 
     class Transitive(K.DefaultNodeRule):
         """
@@ -124,7 +126,3 @@ class Rules(T.Rules):
         group(
             K.Rules.Existential,
             K.Rules.Universal))
-
-
-class System(T.System):
-    pass

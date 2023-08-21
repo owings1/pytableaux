@@ -31,7 +31,7 @@ class Meta(K3.Meta):
     native_operators = tuple(
         sorted(FDE.Meta.native_operators + group(Operator.Assertion)))
 
-class Model(K3W.Model):
+class Model(FDE.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
@@ -48,7 +48,9 @@ class Model(K3W.Model):
                 self.Negation(self.Assertion(a)),
                 self.Assertion(b))
 
-class Rules(K3W.Rules):
+class System(FDE.System): pass
+
+class Rules(K3.Rules):
     """
     The closure rules for L{B3E} are the L{FDE} closure rule, and the {@K3} closure rule.
     The operator rules are mostly a mix of L{FDE} and {@K3W}
@@ -180,13 +182,3 @@ class Rules(K3W.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
-
-
-class System(K3.System):
-
-    # operator => negated => designated
-    branchables = K3W.System.branchables | {
-        # reduction
-        Operator.Conditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Biconditional: ((0, 0), (0, 0)),}

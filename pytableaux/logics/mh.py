@@ -25,6 +25,7 @@ from . import k3 as K3
 class Meta(K3.Meta):
     name = 'MH'
     title = 'Paracomplete Hybrid Logic'
+    quantified = False
     description = (
         'Three-valued logic (True, False, Neither) with non-standard disjunction, '
         'and a classical-like conditional')
@@ -37,7 +38,7 @@ class Meta(K3.Meta):
         Operator.Conditional,
         Operator.Biconditional)))
 
-class Model(K3.Model):
+class Model(FDE.Model):
 
     def is_sentence_opaque(self, s, /):
         return type(s) is Quantified or super().is_sentence_opaque(s)
@@ -53,6 +54,8 @@ class Model(K3.Model):
             if a == self.values.T and b != self.values.T:
                 return self.values.F
             return self.values.T
+
+class System(FDE.System): pass
 
 class Rules(K3.Rules):
 
@@ -211,20 +214,3 @@ class Rules(K3.Rules):
         # 3-branching rules.
         group(
             DisjunctionNegatedUndesignated))
-
-
-class System(K3.System):
-
-    # operator => negated => designated
-    branchables = {
-        Operator.Negation: (None, (0, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((1, 0), (0, 1)),
-        Operator.Disjunction: ((0, 1), (3, 1)),
-        # for now, reduce to negated disjunction
-        Operator.MaterialConditional: ((0, 0), (0, 0)),
-        # for now, reduce to conjunction
-        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-        Operator.Conditional: ((0, 1), (1, 0)),
-        # for now, reduce to conjunction
-        Operator.Biconditional: ((0, 0), (0, 0))}

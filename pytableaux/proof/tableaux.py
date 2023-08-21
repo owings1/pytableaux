@@ -977,7 +977,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         key = system.branching_complexity_hashable(node)
         cache = self._complexities
         if key not in cache:
-            cache[key] = system.branching_complexity(node)
+            cache[key] = system.branching_complexity(node, self.rules)
         return cache[key]
 
     def __bool__(self):

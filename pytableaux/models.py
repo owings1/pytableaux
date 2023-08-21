@@ -26,14 +26,14 @@ from collections.abc import Set
 from dataclasses import dataclass
 from itertools import product, repeat
 from types import MappingProxyType as MapProxy
-from typing import Any, Generic, Mapping, TypeVar
+from typing import Any, Generic, Iterable, Literal, Mapping, TypeVar
 
 from .errors import check
-from .lang import (Argument, Atomic, Constant, LexType, Operated, Operator,
-                   Predicated, Quantified, Sentence)
+from .lang import (Argument, Atomic, Constant, Operated, Operator, Predicated,
+                   Quantified, Sentence)
 from .logics import LogicType
 from .proof import Branch
-from .tools import abcs
+from .tools import EMPTY_MAP, abcs, maxceil, minfloor
 
 __all__ = (
     'BaseModel',
@@ -238,15 +238,27 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
     class TruthFunction(Generic[MvalT], abcs.Abc):
 
         values: type[MvalT]
+        maxval: MvalT
+        minval: MvalT
         values_sequence: tuple[MvalT, ...]
         values_indexes: Mapping[MvalT, int]
 
+        generalizing_operators: Mapping[Operator, Literal['min', 'max']] = EMPTY_MAP
+        generalized_orderings: Mapping[Literal['min', 'max'], tuple[MvalT, ...]] = EMPTY_MAP
+        generalized_indexes: Mapping[Literal['min', 'max'], Mapping[MvalT, int]] = EMPTY_MAP
+
         def __init__(self, values: type[MvalT]) -> None:
             self.values = values
+            self.maxval = max(values)
+            self.minval = min(values)
             self.values_sequence = tuple(self.values)
             self.values_indexes = MapProxy({
                 value: i
                 for i, value in enumerate(self.values_sequence)})
+            if self.generalized_orderings:
+                self.generalized_indexes = MapProxy({
+                    key: MapProxy(dict(map(reversed, enumerate(value))))
+                    for key, value in self.generalized_orderings.items()})
 
         def __call__(self, oper: Operator, *args: MvalT) -> MvalT:
             try:
@@ -290,6 +302,24 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
         @abstractmethod
         def MaterialBiconditional(self, a: MvalT, b: MvalT, /) -> MvalT:
             raise NotImplementedError
+
+        def generalize(self, oper: Operator, it: Iterable[MvalT], /) -> MvalT:
+            mode = self.generalizing_operators[oper]
+            try:
+                ordering = self.generalized_orderings[mode]
+            except KeyError:
+                if mode == 'max':
+                    return maxceil(self.maxval, it, self.minval)
+                if mode == 'min':
+                    return minfloor(self.minval, it, self.maxval)
+                raise NotImplementedError from ValueError(mode)
+            indexes = self.generalized_indexes[mode]
+            it = map(indexes.__getitem__, it)
+            if mode == 'max':
+                return ordering[maxceil(len(ordering) - 1, it, 0)]
+            if mode == 'min':
+                return ordering[minfloor(0, it, len(ordering) - 1)]
+            raise NotImplementedError from ValueError(mode)
 
 
     @classmethod

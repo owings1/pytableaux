@@ -363,6 +363,41 @@ class Model(LogicType.Model[ValueFDE]):
             predext.addpos(s.params)
             predext.addneg(s.params)
 
+class System(LogicType.System):
+
+    @classmethod
+    def build_trunk(cls, b, arg, /):
+        b += (sdnode(s, True) for s in arg.premises)
+        b += sdnode(arg.conclusion, False)
+
+    @classmethod
+    def branching_complexity(cls, node, rules, /):
+        negated = False
+        result = 0
+        for oper in node['sentence'].operators:
+            if not negated and oper is Operator.Negation:
+                negated = True
+                continue
+            if negated and oper is Operator.Negation:
+                name = 'DoubleNegation'
+            else:
+                name = oper.name
+                if negated:
+                    name += 'Negated'
+            if node['designated']:
+                name += 'Designated'
+            else:
+                name += 'Undesignated'
+            rulecls = rules.get(name, None)
+            if rulecls:
+                result += rulecls.branching
+                negated = False
+        return result
+
+    @classmethod
+    def branching_complexity_hashable(cls, node, /):
+        return node['sentence'], node['designated']
+
 class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default FDE node rule with:
     
@@ -693,39 +728,3 @@ class Rules(LogicType.Rules):
         group(
             UniversalDesignated,
             UniversalUndesignated))
-
-
-class System(LogicType.System):
-
-    # operator => negated => designated
-    branchables = {
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Negation: (None, (0, 0)),
-        Operator.Conjunction: ((1, 0), (0, 1)),
-        Operator.Disjunction: ((0, 1), (1, 0)),
-        Operator.MaterialConditional: ((0, 1), (1, 0)),
-        Operator.MaterialBiconditional: ((0, 1), (1, 0)),
-        Operator.Conditional: ((0, 1), (1, 0)),
-        Operator.Biconditional: ((1, 1), (1, 1))}
-
-    @classmethod
-    def build_trunk(cls, b, arg, /):
-        b.extend(sdnode(s, True) for s in arg.premises)
-        b.append(sdnode(arg.conclusion, False))
-
-    @classmethod
-    def branching_complexity(cls, node, /):
-        lastneg = False
-        result = 0
-        for oper in node['sentence'].operators:
-            if not lastneg and oper is Operator.Negation:
-                lastneg = True
-                continue
-            if oper in cls.branchables:
-                result += cls.branchables[oper][lastneg][node['designated']]
-                lastneg = False
-        return result
-
-    @classmethod
-    def branching_complexity_hashable(cls, node, /):
-        return node['sentence'], node['designated']

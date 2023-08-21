@@ -33,7 +33,7 @@ class Meta(LP.Meta):
         Operator.Conditional,
         Operator.Biconditional)))
 
-class Model(LP.Model):
+class Model(FDE.Model):
 
     class TruthFunction(LP.Model.TruthFunction):
 
@@ -41,6 +41,8 @@ class Model(LP.Model):
             if a > b:
                 return self.values.F
             return super().Conditional(a, b)
+
+class System(FDE.System): pass
 
 class Rules(LP.Rules):
 
@@ -185,11 +187,3 @@ class Rules(LP.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
-
-
-
-class System(LP.System):
-
-    branchables = LP.System.branchables | {
-        Operator.Conditional: ((1, 2), (1, 0)),
-        Operator.Biconditional: ((1, 2), (1, 1))}

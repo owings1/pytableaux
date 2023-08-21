@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator
 from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
@@ -31,7 +30,7 @@ class Meta(L3.Meta):
         'negation and conditional')
     category_order = 90
 
-class Model(L3.Model):
+class Model(FDE.Model):
 
     class TruthFunction(L3.Model.TruthFunction):
 
@@ -40,7 +39,9 @@ class Model(L3.Model):
                 return self.values.F
             return super().Negation(a)
 
-class Rules(L3.Rules):
+class System(FDE.System): pass
+
+class Rules(K3.Rules):
 
     class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """
@@ -145,10 +146,3 @@ class Rules(L3.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
-
-
-class System(K3.System):
-
-    branchables = FDE.System.branchables | {
-        Operator.Conditional: ((1, 1), (1, 1)),
-        Operator.Biconditional: ((0, 0), (0, 0))}

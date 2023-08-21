@@ -333,17 +333,17 @@ class Rules(K3.Rules):
 
 
 class System(K3.System):
-
-    branchables = {
-        Operator.Negation: (None, (1, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((3, 0), (2, 1)),
-        Operator.Disjunction: ((0, 1), (1, 0)),
-        # reduction
-        Operator.MaterialConditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Conditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Biconditional: ((0, 0), (0, 0))}
+    pass
+    # branchables = {
+    #     Operator.Negation: (None, (1, 0)),
+    #     Operator.Assertion: ((0, 0), (0, 0)),
+    #     Operator.Conjunction: ((3, 0), (2, 1)),
+    #     Operator.Disjunction: ((0, 1), (1, 0)),
+    #     # reduction
+    #     Operator.MaterialConditional: ((0, 0), (0, 0)),
+    #     # reduction
+    #     Operator.MaterialBiconditional: ((0, 0), (0, 0)),
+    #     # reduction
+    #     Operator.Conditional: ((0, 0), (0, 0)),
+    #     # reduction
+    #     Operator.Biconditional: ((0, 0), (0, 0))}

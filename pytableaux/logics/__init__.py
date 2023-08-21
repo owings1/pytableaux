@@ -444,6 +444,7 @@ class LogicType(metaclass=LogicTypeMeta):
     class Rules:
         closure: tuple[type[ClosingRule], ...]
         groups: tuple[tuple[type[Rule], ...], ...]
+        # namemap: Mapping[str, type[Rule]]
 
         @classmethod
         def all(cls):
@@ -451,6 +452,9 @@ class LogicType(metaclass=LogicTypeMeta):
             for group in cls.groups:
                 yield from group
 
+        # def __init_subclass__(cls):
+        #     super().__init_subclass__()
+        #     cls.namemap = MapProxy({rulecls.name: rulecls for rulecls in cls.all()})
 
 @closure
 def instancecheck():

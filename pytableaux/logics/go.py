@@ -35,14 +35,9 @@ class Meta(K3.Meta):
         Operator.Conditional,
         Operator.Biconditional)))
 
-class Model(K3.Model):
+class Model(FDE.Model):
 
-    class TruthFunction(K3.Model.TruthFunction):
-
-        gap = B3E.Model.TruthFunction.gap
-        crunch = B3E.Model.TruthFunction.crunch
-
-        Assertion = crunch
+    class TruthFunction(B3E.Model.TruthFunction):
 
         def Disjunction(self, *args):
             return max(map(self.crunch, args))
@@ -68,7 +63,9 @@ class Model(K3.Model):
             return minfloor(self.minval, it, self.maxval)
         raise TypeError(s.quantifier)
 
-class Rules(B3E.Rules):
+class System(FDE.System): pass
+
+class Rules(K3.Rules):
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -250,7 +247,7 @@ class Rules(B3E.Rules):
     class UniversalNegatedUndesignated(ExistentialNegatedUndesignated): pass
 
     groups = (
-        (
+        group(
             # non-branching rules
             FDE.Rules.AssertionDesignated,
             B3E.Rules.AssertionUndesignated,
@@ -281,7 +278,7 @@ class Rules(B3E.Rules):
             UniversalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
             FDE.Rules.DoubleNegationUndesignated),
-        (
+        group(
             # branching rules
             FDE.Rules.DisjunctionDesignated,
             ConjunctionNegatedDesignated,
@@ -292,20 +289,3 @@ class Rules(B3E.Rules):
             ConditionalNegatedDesignated,
             BiconditionalNegatedDesignated,
             UniversalNegatedDesignated))
-
-
-class System(K3.System):
-    """
-    GO's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
-    employing designation markers, and building the trunk in the same way.
-    """
-    # operator => negated => designated
-    branchables = {
-        Operator.Negation: (None, (0, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((0, 0), (0, 1)),
-        Operator.Disjunction: ((0, 1), (0, 0)),
-        Operator.MaterialConditional: ((0, 1), (0, 0)),
-        Operator.MaterialBiconditional: ((0, 1), (0, 1)),
-        Operator.Conditional: ((0, 1), (0, 1)),
-        Operator.Biconditional: ((0, 0), (0, 1))}

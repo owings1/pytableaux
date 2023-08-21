@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operated, Quantified, Sentence
+from ..tools import group
 from . import fde as FDE
 from . import k as K
 from . import LogicType
@@ -52,12 +53,14 @@ class Model(K.Model):
         del data['world']
         return data
 
+class System(K.System): pass
+
 class Rules(LogicType.Rules):
 
     closure = K.Rules.closure
 
     groups = (
-        (
+        group(
             # non-branching rules
             K.Rules.IdentityIndiscernability,
             K.Rules.Assertion,
@@ -67,7 +70,7 @@ class Rules(LogicType.Rules):
             K.Rules.MaterialConditionalNegated,
             K.Rules.ConditionalNegated,
             K.Rules.DoubleNegation),
-        (
+        group(
             # branching rules
             K.Rules.ConjunctionNegated,
             K.Rules.Disjunction,
@@ -78,5 +81,3 @@ class Rules(LogicType.Rules):
             K.Rules.Biconditional,
             K.Rules.BiconditionalNegated))
 
-class System(K.System):
-    pass

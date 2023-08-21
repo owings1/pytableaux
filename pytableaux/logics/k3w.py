@@ -28,7 +28,7 @@ class Meta(K3.Meta):
     description = 'Three-valued logic with values T, F, and N'
     category_order = 30
 
-class Model(K3.Model):
+class Model(FDE.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
@@ -46,6 +46,8 @@ class Model(K3.Model):
             if self.values.N in (a, b):
                 return self.values.N
             return super().Conditional(a, b)
+
+class System(FDE.System): pass
 
 class Rules(K3.Rules):
 
@@ -217,18 +219,3 @@ class Rules(K3.Rules):
             FDE.Rules.UniversalUndesignated))
 
 
-class System(K3.System):
-
-    branchables = {
-        Operator.Negation: (None, (0, 0)),
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Conjunction: ((1, 0), (2, 2)),
-        Operator.Disjunction: ((2, 2), (2, 0)),
-        # reduction
-        Operator.MaterialConditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Conditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Biconditional: ((0, 0), (0, 0))}

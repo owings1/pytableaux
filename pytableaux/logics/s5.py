@@ -47,7 +47,9 @@ class Model(S4.Model):
             for w1, w2 in to_add:
                 self.R[w1].add(w2)
 
-class Rules(S4.Rules):
+class System(K.System): pass
+
+class Rules(K.Rules):
     
     class Symmetric(K.DefaultNodeRule):
         """
@@ -82,8 +84,3 @@ class Rules(S4.Rules):
 # Some problematic arguments for S5:
 #
 #   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)
-
-
-
-class System(S4.System):
-    pass

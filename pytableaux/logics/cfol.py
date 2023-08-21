@@ -38,6 +38,8 @@ class Model(CPL.Model):
         "A sentence is opaque if its operator is either Necessity or Possibility."
         return type(s) is not Quantified and super().is_sentence_opaque(s)
 
+class System(K.System): pass
+
 class Rules(CPL.Rules):
 
     groups = (
@@ -47,6 +49,3 @@ class Rules(CPL.Rules):
         CPL.Rules.groups[1] + (
             K.Rules.Existential,
             K.Rules.Universal))
-
-class System(CPL.System):
-    pass

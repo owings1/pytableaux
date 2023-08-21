@@ -22,9 +22,10 @@ from ..lang import Quantified, Quantifier, Operator
 from ..proof import adds, sdnode
 from ..tools import group, maxceil, minfloor, EMPTY_MAP
 from . import fde as FDE
+from . import k3 as K3
 from . import k3w as K3W
 
-class Meta(K3W.Meta):
+class Meta(K3.Meta):
     name = 'K3WQ'
     title = 'Weak Kleene alt-Q Logic'
     description = (
@@ -32,44 +33,17 @@ class Meta(K3W.Meta):
         'with alternate quantification')
     category_order = 40
 
-class Model(K3W.Model):
+class Model(FDE.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
-        generalizing_operators: Mapping[Operator, Literal['min', 'max']] = MapProxy({
+        generalizing_operators = MapProxy({
             Operator.Disjunction: 'max',
             Operator.Conjunction: 'min'})
-
-        generalized_orderings: Mapping[Literal['min', 'max'], tuple[Meta.values, ...]] = EMPTY_MAP
-
-        generalized_indexes: Mapping[Literal['min', 'max'], Mapping[Meta.values, int]]
-
-        def __init__(self, values: Meta.values, *args, **kw) -> None:
-            v = values
-            self.generalized_orderings = MapProxy(dict(
-                max = (v.F, v.T, v.N),
-                min = (v.N, v.F, v.T)))
-            super().__init__(values, *args, **kw)
-            orderings = dict(self.generalized_orderings)
-            orderings.setdefault('min', tuple(values))
-            orderings.setdefault('max', tuple(reversed(orderings['min'])))
-            self.generalized_indexes = MapProxy({
-                key: MapProxy(dict(map(reversed, enumerate(value))))
-                for key, value in orderings.items()})
-            self.generalized_orderings = MapProxy(orderings)
-
-        def generalize(self, oper: Operator, it: Iterable[Meta.values], /) -> Meta.values:
-            mode = self.generalizing_operators[oper]
-            ordering = self.generalized_orderings[mode]
-            indexes = self.generalized_indexes[mode]
-            it = map(indexes.__getitem__, it)
-            if mode == 'max':
-                return ordering[maxceil(len(ordering) - 1, it, 0)]
-            if mode == 'min':
-                return ordering[minfloor(0, it, len(ordering) - 1)]
-            raise NotImplementedError from ValueError(mode)
-
-    truth_function: Model.TruthFunction
+        values = Meta.values
+        generalized_orderings = MapProxy(dict(
+            max = (values.F, values.T, values.N),
+            min = (values.N, values.F, values.T)))
 
     def value_of_quantified(self, s: Quantified, /):
         """
@@ -93,8 +67,9 @@ class Model(K3W.Model):
             raise TypeError(s.quantifier)        
         return self.truth_function.generalize(oper, self._unquantify_value_map(s))
 
+class System(FDE.System): pass
 
-class Rules(K3W.Rules):
+class Rules(K3.Rules):
 
     class ExistentialDesignated(FDE.QuantifierSkinnyRule):
         """
@@ -234,6 +209,3 @@ class Rules(K3W.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
-
-class System(K3W.System):
-    pass

@@ -242,12 +242,13 @@ class System(metaclass=SystemMeta):
         raise NotImplementedError
 
     @classmethod
-    def branching_complexity(cls, node: Node, /) -> int:
+    def branching_complexity(cls, node: Node, rules: RulesRoot, /) -> int:
         """Compute how many new branches would be added if a rule were to be
         applied to the node.
 
         Args:
             node (Node): The node instance.
+            rules (RulesRoot): The rules on the tableau.
 
         Returns:
             int: The number of new branches.

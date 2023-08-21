@@ -100,6 +100,6 @@ class TestGO(Base):
 
     def test_branching_complexity_inherits_branchables(self):
         sdn = self.sdnode
-        _, b = self.tabb(sdn('Kab', False))
+        tab, b = self.tabb(sdn('Kab', False))
         node = b[0]
-        self.assertEqual(self.logic.System.branching_complexity(node), 0)
+        self.assertEqual(self.logic.System.branching_complexity(node, tab.rules), 0)

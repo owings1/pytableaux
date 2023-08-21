@@ -38,6 +38,7 @@ class Meta(FDE.Meta):
         'first-order')
 
 class Model(FDE.Model): pass
+class System(FDE.System): pass
 
 class Rules(FDE.Rules):
 
@@ -57,5 +58,3 @@ class Rules(FDE.Rules):
 
     closure = group(GlutClosure) + FDE.Rules.closure
 
-
-class System(FDE.System): pass
