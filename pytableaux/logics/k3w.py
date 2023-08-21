@@ -30,7 +30,7 @@ class Meta(K3.Meta):
 
 class Model(FDE.Model):
 
-    class TruthFunction(K3.Model.TruthFunction):
+    class TruthFunction(FDE.Model.TruthFunction):
 
         def Conjunction(self, a, b, /):
             if self.values.N in (a, b):

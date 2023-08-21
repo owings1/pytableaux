@@ -17,13 +17,14 @@
 from __future__ import annotations
 
 from types import MappingProxyType as MapProxy
-from typing import Iterable, Literal, Mapping
-from ..lang import Quantified, Quantifier, Operator
+
+from ..lang import Operator, Quantified, Quantifier
 from ..proof import adds, sdnode
-from ..tools import group, maxceil, minfloor, EMPTY_MAP
+from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
+
 
 class Meta(K3.Meta):
     name = 'K3WQ'

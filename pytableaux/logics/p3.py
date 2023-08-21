@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from functools import reduce
 
-from ..lang import Operator, Quantified, Quantifier
+from ..lang import Quantified, Quantifier
 from ..proof import adds, sdnode
 from ..tools import group, maxceil
 from . import fde as FDE
@@ -33,7 +33,7 @@ class Meta(K3.Meta):
         'with mirror-image negation')
     category_order = 120
 
-class Model(K3.Model):
+class Model(FDE.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
@@ -46,18 +46,6 @@ class Model(K3.Model):
             return self.Negation(self.Disjunction(*map(self.Negation, (a, b))))
 
     def value_of_quantified(self, s: Quantified, /):
-        it = self._unquantify_value_map(s)
-        if s.quantifier is Quantifier.Existential:
-            return maxceil(self.maxval, it, self.minval)
-        if s.quantifier is Quantifier.Universal:
-            try:
-                initial = next(it)
-            except StopIteration:
-                return self.maxval
-            return reduce(self.truth_function.Conjunction, it, initial)
-        raise TypeError(s.quantifier)
-
-    # def value_of_universal(self, s: Quantified, /):
     #     """
     #     Take the set of values of the sentence resulting
     #     from the substitution of the variable with each constant. Then apply
@@ -66,14 +54,19 @@ class Model(K3.Model):
     #     function to that maximum value. The result is the value of the universal
     #     sentence.
     #     """
-    #     v = s.variable
-    #     sub = s.sentence.substitute
-    #     neg = self.truth_function.Negation
-    #     return neg(
-    #         maxceil(
-    #             self.values.T,
-    #             (neg(self.value_of(sub(c, v)))
-    #                 for c in self.constants)))
+        it = self._unquantify_value_map(s)
+        if s.quantifier is Quantifier.Existential:
+            return maxceil(self.maxval, it, self.unassigned_value)
+        if s.quantifier is Quantifier.Universal:
+            try:
+                initial = next(it)
+            except StopIteration:
+                return self.unassigned_value
+            return reduce(self.truth_function.Conjunction, it, initial)
+        raise TypeError(s.quantifier)
+
+
+class System(FDE.System): pass
 
 class Rules(K3.Rules):
 
@@ -330,20 +323,3 @@ class Rules(K3.Rules):
             FDE.Rules.ExistentialUndesignated,
             ExistentialNegatedDesignated,
             ExistentialNegatedUndesignated))
-
-
-class System(K3.System):
-    pass
-    # branchables = {
-    #     Operator.Negation: (None, (1, 0)),
-    #     Operator.Assertion: ((0, 0), (0, 0)),
-    #     Operator.Conjunction: ((3, 0), (2, 1)),
-    #     Operator.Disjunction: ((0, 1), (1, 0)),
-    #     # reduction
-    #     Operator.MaterialConditional: ((0, 0), (0, 0)),
-    #     # reduction
-    #     Operator.MaterialBiconditional: ((0, 0), (0, 0)),
-    #     # reduction
-    #     Operator.Conditional: ((0, 0), (0, 0)),
-    #     # reduction
-    #     Operator.Biconditional: ((0, 0), (0, 0))}

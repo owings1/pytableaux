@@ -35,7 +35,7 @@ class Meta(K3.Meta):
 
 class Model(FDE.Model):
 
-    class TruthFunction(K3.Model.TruthFunction):
+    class TruthFunction(FDE.Model.TruthFunction):
 
         def Conditional(self, a, b):
             if a == b:

@@ -365,13 +365,18 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         refid = refname
         domain = 'py'
         objtype = 'class'
+        nametext = inflect.snakespace(rulecls.name)
+        if rulecls.Meta.name != self.logic.Meta.name:
+            nametext += f' [{rulecls.Meta.name}]'
         return addnodes.desc('',
             addnodes.desc_signature('', '',
                 *inserts,
                 addnodes.desc_name(refname, '',
                     nodes.inline(
+                        # nametext,
                         rulecls.name,
-                        inflect.snakespace(rulecls.name),
+                        nametext,
+                        # inflect.snakespace(rulecls.name),
                         classes=['ruledoc', 'rule-sig']),
                     viewcode_anchor(
                         refdomain=domain,

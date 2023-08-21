@@ -354,14 +354,19 @@ class Model(LogicType.Model[ValueFDE]):
             if s.params in predext.pos:
                 raise Emsg.ConflictForExtension(value, s.params)
             predext.addneg(s.params)
-        elif value is self.values.N:
+        elif value == 'N':
+        # elif value is self.values.N:
             if s.params in predext.pos:
                 raise Emsg.ConflictForExtension(value, s.params)
             if s.params in predext.neg:
                 raise Emsg.ConflictForAntiExtension(value, s.params)
-        elif value is self.values.B:
+        # elif value is self.values.B:
+        elif value == 'B':
             predext.addpos(s.params)
             predext.addneg(s.params)
+        else:
+            raise Emsg.UnknownForSentence(value, s)
+
 
 class System(LogicType.System):
 
@@ -396,7 +401,10 @@ class System(LogicType.System):
 
     @classmethod
     def branching_complexity_hashable(cls, node, /):
-        return node['sentence'], node['designated']
+        try:
+            return node['sentence'].operators, node['designated']
+        except KeyError:
+            pass
 
 class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default FDE node rule with:

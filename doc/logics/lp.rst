@@ -124,18 +124,18 @@ Trunk
 Closure
 -------
 
-L{LP} includes the L{FDE} closure rule.
-
-.. tableau::
-  :rule: DesignationClosure
-  :legend:
-  :doc:
-
 L{LP} includes an additional `gap` closure rule. This means a branch closes
 when a sentence and its negation both appear as undesignated nodes on the branch.
 
 .. tableau::
   :rule: GapClosure
+  :legend:
+  :doc:
+
+L{LP} includes the L{FDE} closure rule.
+
+.. tableau::
+  :rule: DesignationClosure
   :legend:
   :doc:
 

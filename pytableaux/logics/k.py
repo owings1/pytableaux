@@ -528,7 +528,10 @@ class System(proof.System):
 
     @classmethod
     def branching_complexity_hashable(cls, node, /):
-        return node.get('sentence')
+        try:
+            return node['sentence'].operators
+        except KeyError:
+            pass
 
 class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default K node rule with:
@@ -799,7 +802,7 @@ class Rules(LogicType.Rules):
                 self[FilterHelper].release(node, branch)
                 if not self[QuitFlag].get(branch):
                     fnode = self[MaxWorlds].quit_flag(branch)
-                    yield adds(group(fnode), flag = fnode['flag'])
+                    yield adds(group(fnode), flag=fnode['flag'])
                 return
 
             si = self.sentence(node).lhs
@@ -807,7 +810,7 @@ class Rules(LogicType.Rules):
             w2 = branch.new_world()
             yield adds(
                 group(swnode(si, w2), anode(w1, w2)),
-                sentence = si)
+                sentence=si)
 
         def score_candidate(self, target, /) -> float:
             """

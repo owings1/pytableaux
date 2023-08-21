@@ -44,9 +44,8 @@ class Model(FDE.Model):
         Assertion = crunch
 
         def Conditional(self, a, b, /):
-            return self.Disjunction(
-                self.Negation(self.Assertion(a)),
-                self.Assertion(b))
+            a, b = map(self.Assertion, (a, b))
+            return self.Disjunction(self.Negation(a), b)
 
 class System(FDE.System): pass
 

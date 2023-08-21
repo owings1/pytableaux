@@ -52,11 +52,7 @@ class Rules(K3.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s, not d)))
 
-    class DoubleNegationUndesignated(DoubleNegationDesignated):
-        """
-        From an unticked, undesignated double-negation node `n` on a branch `b`,
-        add a designated node with the negatum of `n`. Then tick `n`.
-        """
+    class DoubleNegationUndesignated(DoubleNegationDesignated): pass
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """

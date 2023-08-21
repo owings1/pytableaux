@@ -35,7 +35,7 @@ class Meta(LP.Meta):
 
 class Model(FDE.Model):
 
-    class TruthFunction(LP.Model.TruthFunction):
+    class TruthFunction(FDE.Model.TruthFunction):
 
         def Conditional(self, a, b):
             if a > b:

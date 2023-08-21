@@ -192,9 +192,7 @@ def argument():
     return argument
 
 def arguments(*keys):
-    if not len(keys):
-        keys = titles
-    return tuple(map(argument, keys))
+    return map(argument, keys or titles)
 
 
 def tabiter(*logics, build = True, grouparg = False, registry = logics.registry, shuffle=False, **opts):
