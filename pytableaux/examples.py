@@ -33,7 +33,6 @@ from .proof import Tableau
 from .tools import closure
 
 __all__ = (
-    'aliases',
     'argument',
     'arguments',
     'data',
