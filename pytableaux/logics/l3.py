@@ -38,7 +38,7 @@ class Model(K3.Model):
     class TruthFunction(K3.Model.TruthFunction):
 
         def Conditional(self, a, b):
-            if a == self.values.N and b == self.values.N:
+            if a == b:
                 return self.values.T
             return super().Conditional(a, b)
 

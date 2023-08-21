@@ -16,11 +16,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified
+from functools import reduce
+
+from ..lang import Operator, Quantified, Quantifier
 from ..proof import adds, sdnode
 from ..tools import group, maxceil
 from . import fde as FDE
 from . import k3 as K3
+
 
 class Meta(K3.Meta):
     name = 'P3'
@@ -34,33 +37,43 @@ class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
-        def Negation(self, a):
-            return self.back_cycle(a)
+        def back_cycle(self, value, /):
+            return self.values_sequence[self.values_indexes[value] - 1]
 
-        def Conjunction(self, a, b):
+        Negation = back_cycle
+
+        def Conjunction(self, a, b, /):
             return self.Negation(self.Disjunction(*map(self.Negation, (a, b))))
 
-        def back_cycle(self, value):
-            seq = self.values._seq
-            return seq[seq.index(value) - 1]
+    def value_of_quantified(self, s: Quantified, /):
+        it = self._unquantify_value_map(s)
+        if s.quantifier is Quantifier.Existential:
+            return maxceil(self.maxval, it, self.minval)
+        if s.quantifier is Quantifier.Universal:
+            try:
+                initial = next(it)
+            except StopIteration:
+                return self.maxval
+            return reduce(self.truth_function.Conjunction, it, initial)
+        raise TypeError(s.quantifier)
 
-    def value_of_universal(self, s: Quantified, /, **kw):
-        """
-        Take the set of values of the sentence resulting
-        from the substitution of the variable with each constant. Then apply
-        the negation function to each of those values. Then take the maximum
-        of those values (the `generalized disjunction`), and apply the negation
-        function to that maximum value. The result is the value of the universal
-        sentence.
-        """
-        v = s.variable
-        sub = s.sentence.substitute
-        return self.truth_function(
-            Operator.Negation,
-            maxceil(
-                self.values.T,
-                (self.truth_function(Operator.Negation, self.value_of(sub(c, v), **kw))
-                    for c in self.constants)))
+    # def value_of_universal(self, s: Quantified, /):
+    #     """
+    #     Take the set of values of the sentence resulting
+    #     from the substitution of the variable with each constant. Then apply
+    #     the negation function to each of those values. Then take the maximum
+    #     of those values (the `generalized disjunction`), and apply the negation
+    #     function to that maximum value. The result is the value of the universal
+    #     sentence.
+    #     """
+    #     v = s.variable
+    #     sub = s.sentence.substitute
+    #     neg = self.truth_function.Negation
+    #     return neg(
+    #         maxceil(
+    #             self.values.T,
+    #             (neg(self.value_of(sub(c, v)))
+    #                 for c in self.constants)))
 
 
 class System(K3.System):

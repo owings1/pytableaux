@@ -57,10 +57,7 @@ class System(K.System):
 
 class Rules(LogicType.Rules):
 
-    closure = (
-        K.Rules.ContradictionClosure,
-        K.Rules.SelfIdentityClosure,
-        K.Rules.NonExistenceClosure)
+    closure = K.Rules.closure
 
     groups = (
         (

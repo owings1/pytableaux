@@ -175,9 +175,9 @@ class Emsg(Enum):
 class check:
 
     @staticmethod
-    def inst(obj, classinfo: type[_T]) -> _T:
+    def inst(obj, classinfo: type[_T], err=None) -> _T:
         if not isinstance(obj, classinfo):
-            raise Emsg.InstCheck(obj, classinfo)
+            raise Emsg.InstCheck(obj, classinfo) from err
         return obj
 
     @staticmethod

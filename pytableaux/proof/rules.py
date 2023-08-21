@@ -25,7 +25,8 @@ from abc import abstractmethod
 from collections import deque
 from typing import Generic, Iterable, TypeVar, final
 
-from ..lang import Constant, Operated, Predicated, Quantified, Sentence
+from ..lang import (Constant, Operated, Operator, Predicate, Predicated,
+                    Quantified, Quantifier, Sentence)
 from ..tools import EMPTY_SET, group
 from . import Branch, Node, Rule, Target, adds, filters
 
@@ -171,11 +172,11 @@ class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
 
     NodeFilters = group(filters.NodeSentence)
 
-    negated    = None
-    operator   = None
-    quantifier = None
-    predicate  = None
-    designation = None
+    negated: bool|None = None
+    operator: Operator|None = None
+    quantifier: Quantifier|None = None
+    predicate: Predicate|None = None
+    designation: bool|None = None
 
     def sentence(self, node: Node, /) -> _ST:
         'Delegates to ``filters.SentenceNode`` of ``FilterHelper``.'

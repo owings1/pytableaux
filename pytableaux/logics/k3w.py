@@ -42,25 +42,10 @@ class Model(K3.Model):
                 return self.values.N
             return super().Disjunction(a, b)
 
-        def MaterialConditional(self, a, b, /):
-            if self.values.N in (a, b):
-                return self.values.N
-            return super().MaterialConditional(a, b)
-
-        def MaterialBiconditional(self, a, b, /):
-            if self.values.N in (a, b):
-                return self.values.N
-            return super().MaterialBiconditional(a, b)
-
         def Conditional(self, a, b, /):
             if self.values.N in (a, b):
                 return self.values.N
             return super().Conditional(a, b)
-
-        def Biconditional(self, a, b, /):
-            if self.values.N in (a, b):
-                return self.values.N
-            return super().Biconditional(a, b)
 
 class System(K3.System):
 

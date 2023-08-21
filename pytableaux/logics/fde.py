@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from itertools import starmap
 from typing import Any
 
 from ..errors import Emsg, check
@@ -74,17 +75,12 @@ class Model(LogicType.Model[ValueFDE]):
             return self.Disjunction(self.Negation(a), b)
 
         def MaterialBiconditional(self, a, b, /):
-            return self.Conjunction(
-                self.MaterialConditional(a, b),
-                self.MaterialConditional(b, a))
+            return self.Conjunction(*starmap(self.MaterialConditional, ((a, b), (b, a))))
 
-        def Conditional(self, a, b, /):
-            return self.MaterialConditional(a, b)
+        Conditional = MaterialConditional
 
         def Biconditional(self, a, b, /):
-            return self.Conjunction(
-                self.Conditional(a, b),
-                self.Conditional(b, a))
+            return self.Conjunction(*starmap(self.Conditional, ((a, b), (b, a))))
 
     predicates: dict[Predicate, PredicateInterpretation]
     # extensions: dict[Predicate, set[tuple[Constant, ...]]]
@@ -133,6 +129,12 @@ class Model(LogicType.Model[ValueFDE]):
             return self.values.F
         return self.values.N
 
+    def _unquantify_value_map(self, s: Quantified, /):
+        try:
+            return map(self.value_of, map(s.unquantify, self.constants))
+        except AttributeError:
+            check.inst(s, Quantified)
+            raise
     def value_of_quantified(self, s: Quantified, /):
         """
         The value of a quantified sentence is determined from the values of
@@ -140,11 +142,7 @@ class Model(LogicType.Model[ValueFDE]):
         variable. For an existential quantifier, this is the max value, and
         for a universial quantifier, it is the min value.
         """
-        try:
-            it = map(self.value_of, map(s.unquantify, self.constants))
-        except AttributeError:
-            check.inst(s, Quantified)
-            raise
+        it = self._unquantify_value_map(s)
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
@@ -365,41 +363,6 @@ class Model(LogicType.Model[ValueFDE]):
             predext.addpos(s.params)
             predext.addneg(s.params)
 
-class System(LogicType.System):
-
-    # operator => negated => designated
-    branchables = {
-        Operator.Assertion: ((0, 0), (0, 0)),
-        Operator.Negation: (None, (0, 0)),
-        Operator.Conjunction: ((1, 0), (0, 1)),
-        Operator.Disjunction: ((0, 1), (1, 0)),
-        Operator.MaterialConditional: ((0, 1), (1, 0)),
-        Operator.MaterialBiconditional: ((0, 1), (1, 0)),
-        Operator.Conditional: ((0, 1), (1, 0)),
-        Operator.Biconditional: ((1, 1), (1, 1))}
-
-    @classmethod
-    def build_trunk(cls, b, arg, /):
-        b.extend(sdnode(s, True) for s in arg.premises)
-        b.append(sdnode(arg.conclusion, False))
-
-    @classmethod
-    def branching_complexity(cls, node, /):
-        lastneg = False
-        result = 0
-        for oper in node['sentence'].operators:
-            if not lastneg and oper is Operator.Negation:
-                lastneg = True
-                continue
-            if oper in cls.branchables:
-                result += cls.branchables[oper][lastneg][node['designated']]
-                lastneg = False
-        return result
-
-    @classmethod
-    def branching_complexity_hashable(cls, node, /):
-        return node['sentence'], node['designated']
-
 class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default FDE node rule with:
     
@@ -484,11 +447,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d)))
 
-    class DoubleNegationUndesignated(DoubleNegationDesignated):
-        """
-        From an unticked undesignated negated negation node *n* on a branch *b*, add an
-        undesignated node to *b* with the double-negatum of *n*, then tick *n*.
-        """
+    class DoubleNegationUndesignated(DoubleNegationDesignated): pass
 
     class AssertionDesignated(OperatorNodeRule):
         """
@@ -499,11 +458,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d)))
 
-    class AssertionUndesignated(AssertionDesignated):
-        """
-        From an unticked, undesignated, assertion node *n* on a branch *b*, add an undesignated
-        node to *b* with the operand of *n*, then tick *n*.
-        """
+    class AssertionUndesignated(AssertionDesignated): pass
 
     class AssertionNegatedDesignated(OperatorNodeRule):
         """
@@ -514,11 +469,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs, d)))
 
-    class AssertionNegatedUndesignated(AssertionNegatedDesignated):
-        """
-        From an unticked, undesignated, negated assertion node *n* on branch *b*, add an undesignated
-        node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
-        """
+    class AssertionNegatedUndesignated(AssertionNegatedDesignated): pass
 
     class ConjunctionDesignated(OperatorNodeRule):
         """
@@ -563,31 +514,10 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)))
 
-    class DisjunctionDesignated(ConjunctionUndesignated):
-        """
-        From an unticked designated disjunction node *n* on a branch *b*, for each disjunct
-        *d*, make a new branch *b'* from *b* and add a designated node with *d* to *b'*,
-        then tick *n*.
-        """
-
-    class DisjunctionNegatedDesignated(ConjunctionNegatedUndesignated):
-        """
-        From an unticked designated negated disjunction node *n* on a branch *b*, for each disjunct
-        *d*, add a designated node with the negation of *d* to *b*, then tick *n*.
-        """
-
-    class DisjunctionUndesignated(ConjunctionDesignated):
-        """
-        From an unticked undesignated disjunction node *n* on a branch *b*, for each disjunct
-        *d*, add an undesignated node with *d* to *b*, then tick *n*.
-        """
-
-    class DisjunctionNegatedUndesignated(ConjunctionNegatedDesignated):
-        """
-        From an unticked undesignated negated disjunction node *n* on a branch *b*, for each disjunct
-        *d*, make a new branch *b'* from *b* and add an undesignated node with the negation of *d* to
-        *b'*, then tick *n*.
-        """
+    class DisjunctionDesignated(ConjunctionUndesignated): pass
+    class DisjunctionNegatedDesignated(ConjunctionNegatedUndesignated): pass
+    class DisjunctionUndesignated(ConjunctionDesignated): pass
+    class DisjunctionNegatedUndesignated(ConjunctionNegatedDesignated): pass
 
     class MaterialConditionalDesignated(OperatorNodeRule):
         """
@@ -663,105 +593,16 @@ class Rules(LogicType.Rules):
                 group(sdnode( s.lhs, d), sdnode(~s.rhs, d)),
                 group(sdnode(~s.lhs, d), sdnode( s.rhs, d)))
 
-    class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
-        """
-        From an unticked undesignated material biconditional node *n* on a branch *b*, make
-        two new branches *b'* and *b''* from *b*, add an undesignated node with the negation
-        of the antecedent and an undesignated node with the consequent to *b'*, and add an
-        undesignated node with the antecedent and an undesignated node with the negation of
-        the consequent to *b''*, then tick *n*.
-        """
-
-    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalDesignated):
-        """
-        From an undesignated negated material biconditional node *n* on a branch *b*, make
-        two branches *b'* and *b''* from *b*, add an undesignated node with the negation of
-        the antecendent and an undesignated node with the negation of the consequent to *b'*,
-        and add an undesignated node with the antecedent and an undesignated node with the
-        consequent to *b''*, then tick *n*.
-        """
-
-    class ConditionalDesignated(MaterialConditionalDesignated):
-        """
-        This rule functions the same as the corresponding material conditional rule.
-
-        From an unticked designated conditional node *n* on a branch *b*, make two new
-        branches *b'* and *b''* from *b*, add a designated node with the negation of
-        the antecedent to *b'*, add a designated node with the consequent to *b''*,
-        then tick *n*.
-        """
-
-    class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
-        """
-        This rule functions the same as the corresponding material conditional rule.
-
-        From an unticked designated negated conditional node *n* on a branch *b*, add a
-        designated node with the antecedent, and a designated node with the negation of
-        the consequent to *b*, then tick *n*.
-        """
-
-    class ConditionalUndesignated(MaterialConditionalUndesignated):
-        """
-        This rule functions the same as the corresponding material conditional rule.
-
-        From an unticked undesignated conditional node *n* on a branch *b*, add an
-        undesignated node with the negation of the antecedent and an undesignated node
-        with the consequent to *b*, then tick *n*.
-        """
-
-    class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
-        """
-        This rule functions the same as the corresponding material conditional rule.
-
-        From an unticked undesignated negated conditional node *n* on a branch *b*, make two
-        new branches *b'* and *b''* from *b*, add an undesignated node with the antecedent to
-        *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
-        tick *n*.
-        """
-
-    class BiconditionalDesignated(MaterialBiconditionalDesignated):
-        """
-        This rule functions the same as the corresponding material biconditional rule.
-
-        From an unticked designated biconditional node *n* on a branch *b*, make two new
-        branches *b'* and *b''* from *b*, add a designated node with the negation of the
-        antecedent and a designated node with the negation of the consequent to *b'*,
-        and add a designated node with the antecedent and a designated node with the
-        consequent to *b''*, then tick *n*.
-        """
-
-    class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
-        """
-        This rule functions the same as the corresponding material biconditional rule.
-
-        From an unticked designated negated biconditional node *n* on a branch *b*, make two
-        branches *b'* and *b''* from *b*, add a designated node with the antecedent and a
-        designated node with the negation of the consequent to *b'*, and add a designated node
-        with the negation of the antecedent and a designated node with the consequent to *b''*,
-        then tick *n*.
-        """
-
-    class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
-        """
-        This rule functions the same as the corresponding material biconditional rule.
-
-        From an unticked undesignated material biconditional node *n* on a branch *b*, make
-        two new branches *b'* and *b''* from *b*, add an undesignated node with the negation
-        of the antecedent and an undesignated node with the consequent to *b'*, and add an
-        undesignated node with the antecedent and an undesignated node with the negation of
-        the consequent to *b''*, then tick *n*.
-        """
-
-    class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
-        """
-        This rule functions the same as the corresponding material biconditional rule.
-
-        From an undesignated negated biconditional node *n* on a branch *b*, make two
-        branches *b'* and *b''* from *b*, add an undesignated node with the negation of the
-        antecendent and an undesignated node with the negation of the consequent to *b'*,
-        and add an undesignated node with the antecedent and an undesignated node with the
-        consequent to *b''*, then tick *n*.
-        """
+    class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated): pass
+    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalDesignated): pass
+    class ConditionalDesignated(MaterialConditionalDesignated): pass
+    class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated): pass
+    class ConditionalUndesignated(MaterialConditionalUndesignated): pass
+    class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated): pass
+    class BiconditionalDesignated(MaterialBiconditionalDesignated): pass
+    class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated): pass
+    class BiconditionalUndesignated(MaterialBiconditionalUndesignated): pass
+    class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated): pass
 
     class ExistentialDesignated(rules.NarrowQuantifierRule, DefaultNodeRule):
         """
@@ -782,11 +623,10 @@ class Rules(LogicType.Rules):
         that universally quantifies over *v* into the negation of *s* (i.e. change
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
-        convert = Quantifier.Universal
 
         def _get_sd_targets(self, s, d, /):
             v, si = s[1:]
-            yield adds(group(sdnode(self.convert(v, ~si), d)))
+            yield adds(group(sdnode(self.quantifier.other(v, ~si), d)))
 
     class ExistentialUndesignated(QuantifierFatRule):
         """
@@ -800,47 +640,11 @@ class Rules(LogicType.Rules):
         def _get_constant_nodes(self, node, c, branch, /):
             yield sdnode(c >> self.sentence(node), self.designation)
 
-    class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
-        """
-        From an unticked undesignated negated existential node *n* on a branch *b*,
-        quantifying over variable *v* into sentence *s*, add an undesignated node to *b*
-        that universally quantifies over *v* into the negation of *s* (e.g. change
-        :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
-        """
-
-    class UniversalDesignated(ExistentialUndesignated):
-        """
-        From a designated universal node *n* on a branch *b*, for any constant *c* on *b*
-        such that the result *r* of substituting *c* for the variable bound by the sentence
-        of *n* does not appear on *b*, then add a designated node with *r* to *b*. If there
-        are no constants yet on *b*, then instantiate with a new constant. The node *n* is
-        never ticked.
-        """
-
-    class UniversalNegatedDesignated(ExistentialNegatedDesignated):
-        """
-        From an unticked designated negated universal node *n* on a branch *b*,
-        quantifying over variable *v* into sentence *s*, add a designated node to *b*
-        with the existential quantifier over *v* into the negation of *s* (e.g. change
-        :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
-        """
-        convert = Quantifier.Existential
-
-    class UniversalUndesignated(ExistentialDesignated):
-        """
-        From an unticked undesignated universal node *n* on a branch *b* quantifying over *v*
-        into sentence *s*, add an undesignated node to *b* with the result of substituting into
-        *s* a constant new to *b* for *v*, then tick *n*.
-        """
-
-    class UniversalNegatedUndesignated(ExistentialNegatedDesignated):
-        """
-        From an unticked undesignated negated universal node *n* on a branch *b*,
-        quantifying over variable *v* into sentence *s*, add an undesignated node to *b*
-        with the existential quantifier over *v* into the negation of *s* (e.g. change
-        :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
-        """
-        convert = Quantifier.Existential
+    class ExistentialNegatedUndesignated(ExistentialNegatedDesignated): pass
+    class UniversalDesignated(ExistentialUndesignated): pass
+    class UniversalNegatedDesignated(ExistentialNegatedDesignated): pass
+    class UniversalUndesignated(ExistentialDesignated): pass
+    class UniversalNegatedUndesignated(ExistentialNegatedDesignated): pass
 
     closure = group(DesignationClosure)
 
@@ -890,3 +694,38 @@ class Rules(LogicType.Rules):
             UniversalDesignated,
             UniversalUndesignated))
 
+
+class System(LogicType.System):
+
+    # operator => negated => designated
+    branchables = {
+        Operator.Assertion: ((0, 0), (0, 0)),
+        Operator.Negation: (None, (0, 0)),
+        Operator.Conjunction: ((1, 0), (0, 1)),
+        Operator.Disjunction: ((0, 1), (1, 0)),
+        Operator.MaterialConditional: ((0, 1), (1, 0)),
+        Operator.MaterialBiconditional: ((0, 1), (1, 0)),
+        Operator.Conditional: ((0, 1), (1, 0)),
+        Operator.Biconditional: ((1, 1), (1, 1))}
+
+    @classmethod
+    def build_trunk(cls, b, arg, /):
+        b.extend(sdnode(s, True) for s in arg.premises)
+        b.append(sdnode(arg.conclusion, False))
+
+    @classmethod
+    def branching_complexity(cls, node, /):
+        lastneg = False
+        result = 0
+        for oper in node['sentence'].operators:
+            if not lastneg and oper is Operator.Negation:
+                lastneg = True
+                continue
+            if oper in cls.branchables:
+                result += cls.branchables[oper][lastneg][node['designated']]
+                lastneg = False
+        return result
+
+    @classmethod
+    def branching_complexity_hashable(cls, node, /):
+        return node['sentence'], node['designated']

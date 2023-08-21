@@ -39,29 +39,31 @@ class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
-        def Assertion(self, a):
-            return self.crunch(a)
+        gap = B3E.Model.TruthFunction.gap
+        crunch = B3E.Model.TruthFunction.crunch
 
-        def Disjunction(self, a, b):
-            return max(map(self.crunch, (a, b)))
+        Assertion = crunch
+        # def Assertion(self, a):
+        #     return self.crunch(a)
 
-        def Conjunction(self, a, b):
-            return min(map(self.crunch, (a, b)))
+        def Disjunction(self, *args):
+            return max(map(self.crunch, args))
 
-        def Conditional(self, a, b):
+        def Conjunction(self, *args):
+            return min(map(self.crunch, args))
+
+        def Conditional(self, a, b, /):
             return self.crunch(
                 max(
                     self.values[1 - a],
                     b,
                     sum(map(self.gap, (a, b)))))
 
-        gap = B3E.Model.TruthFunction.gap
-        crunch = B3E.Model.TruthFunction.crunch
 
     truth_function: Model.TruthFunction
 
     def value_of_quantified(self, s: Quantified, /):
-        it = map(self.truth_function.crunch, map(self.value_of, map(s.unquantify, self.constants)))
+        it = map(self.truth_function.crunch, self._unquantify_value_map(s))
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:

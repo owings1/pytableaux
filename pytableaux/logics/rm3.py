@@ -38,7 +38,7 @@ class Model(LP.Model):
     class TruthFunction(LP.Model.TruthFunction):
 
         def Conditional(self, a, b):
-            if self.values[a] > self.values[b]:
+            if a > b:
                 return self.values.F
             return super().Conditional(a, b)
 

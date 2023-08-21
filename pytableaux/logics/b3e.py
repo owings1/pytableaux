@@ -35,33 +35,18 @@ class Model(K3W.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
-        def Assertion(self, a, /):
-            return self.crunch(self.values[a])
-
-        def Conditional(self, a, b, /):
-            return self.Disjunction(
-                self.Negation(self.Assertion(a)),
-                self.Assertion(b))
-
-        def Biconditional(self, a, b, /):
-            return self.Conjunction(
-                self.Conditional(a, b),
-                self.Conditional(b, a))
-
         def gap(self, v, /):
             return self.values[min(v, 1 - v)]
 
         def crunch(self, v, /):
             return self.values[v - self.gap(v)]
+        
+        Assertion = crunch
 
-class System(K3.System):
-
-    # operator => negated => designated
-    branchables = K3W.System.branchables | {
-        # reduction
-        Operator.Conditional: ((0, 0), (0, 0)),
-        # reduction
-        Operator.Biconditional: ((0, 0), (0, 0)),}
+        def Conditional(self, a, b, /):
+            return self.Disjunction(
+                self.Negation(self.Assertion(a)),
+                self.Assertion(b))
 
 class Rules(K3W.Rules):
     """
@@ -195,3 +180,13 @@ class Rules(K3W.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+
+class System(K3.System):
+
+    # operator => negated => designated
+    branchables = K3W.System.branchables | {
+        # reduction
+        Operator.Conditional: ((0, 0), (0, 0)),
+        # reduction
+        Operator.Biconditional: ((0, 0), (0, 0)),}

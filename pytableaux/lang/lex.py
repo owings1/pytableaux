@@ -138,6 +138,7 @@ class Lexical:
         >>> Constant.first() == Parameter.first()
         True
         >>> Operated.first()
+        <Sentence: ⚬A>
         >>> Lexical.first()
         <Predicate: F>
         >>> LexicalEnum.first()
@@ -240,11 +241,8 @@ class Lexical:
         try:
             it = zip_longest(lhs.sort_tuple, rhs.sort_tuple, fillvalue=0)
         except AttributeError:
-            try:
-                check.inst(lhs, __class__)
-                check.inst(rhs, __class__)
-            except TypeError as e:
-                raise e from None
+            check.inst(lhs, __class__)
+            check.inst(rhs, __class__)
             raise
         for cmp in filter(None, starmap(opr.sub, it)):
             return cmp
@@ -546,9 +544,21 @@ class Quantifier(LexicalEnum):
     Universal = 1
     "The :s:`L` Universal quantifier"
 
+    other: Quantifier
+
     def __call__(self, *spec):
         'Quantify a variable over a sentence.'
         return Quantified(self, *spec)
+
+    @classmethod
+    def _after_init(cls):
+        """``EbcMeta`` hook. Build :attr:`classes` list, and System Predicates."""
+        super()._after_init()
+        it = iter(cls)
+        for a in it:
+            b = next(it)
+            a.other = b
+            b.other = a
 
 class Operator(LexicalEnum):
     """Operator enum class.
@@ -567,7 +577,7 @@ class Operator(LexicalEnum):
       indicated by the `libname` column in the table below.
     
     >>> s = Atomic(0, 0)
-    >>> Conjunction(s, s) == s & s
+    >>> Operator.Conjunction(s, s) == s & s
     True
     >>> s.negate() == ~s
     True
@@ -589,6 +599,7 @@ class Operator(LexicalEnum):
 
     arity: int
     "The operator arity."
+    other: Operator
 
     libname: str|None
     """If the operator implements a Python arithmetic operator, this
@@ -607,10 +618,10 @@ class Operator(LexicalEnum):
     'The Disjunction (or) operator'
     MaterialConditional   = (50,  2)
     'The Material Conditional operator'
-    MaterialBiconditional = (60,  2)
-    'The Material Biconditional operator'
-    Conditional           = (70,  2)
+    Conditional           = (60,  2)
     'The Conditional operator'
+    MaterialBiconditional = (70,  2)
+    'The Material Biconditional operator'
     Biconditional         = (80,  2)
     'The Biconditional operator'
     Possibility           = (90,  1)
@@ -628,6 +639,16 @@ class Operator(LexicalEnum):
         self.libname = libname
         if libname is not None:
             self.strings |= {libname}
+
+    @classmethod
+    def _after_init(cls):
+        """``EbcMeta`` hook. Build :attr:`classes` list, and System Predicates."""
+        super()._after_init()
+        it = iter(cls)
+        for a in it:
+            b = next(it)
+            a.other = b
+            b.other = a
 
 #----------------------------------------------------------
 #

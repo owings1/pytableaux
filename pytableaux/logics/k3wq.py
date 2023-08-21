@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from types import MappingProxyType as MapProxy
 from ..lang import Quantified, Quantifier
 from ..proof import adds, sdnode
 from ..tools import group, maxceil, minfloor
@@ -34,69 +35,34 @@ class Model(K3W.Model):
 
     values = Meta.values
     # generalized conjunction
-    mc_nvals = {
-        values.F: 2,
-        values.N: 1,
-        values.T: 3,
-    }
-    mc_cvals = {
-        1: values.N,
-        2: values.F,
-        3: values.T,
-    }
-
+    mc_cvals = (values.N, values.F, values.T)
+    mc_nvals = MapProxy(dict(map(reversed, enumerate(mc_cvals))))
     # generalized disjunction
-    md_nvals = {
-        values.F: 1,
-        values.N: 3,
-        values.T: 2,
-    }
-    md_cvals = {
-        1: values.F,
-        2: values.T,
-        3: values.N,
-    }
+    md_cvals = (values.F, values.T, values.N)
+    md_nvals = MapProxy(dict(map(reversed, enumerate(md_cvals))))
 
     def value_of_quantified(self, s: Quantified, /):
-        if s.quantifier is Quantifier.Existential:
-            return self._value_of_existential(s)
-        if s.quantifier is Quantifier.Universal:
-            return self._value_of_universal(s)
-        raise TypeError(s.quantifier)
-
-    def _value_of_universal(self, s: Quantified, /):
-        """
-        A universal sentence is interpreted in terms of `generalized conjunction`.
-        If we order the values least to greatest as V{N}, V{F}, V{T}, then we
-        can define the value of a universal in terms of the `minimum` value of
-        the set of values for the substitution of each constant in the model for
-        the variable.
-        """
-        return self.values[
-            self.mc_cvals[
-                minfloor(1, (
-                    self.mc_nvals[self.value_of(c >> s)]
-                    for c in self.constants
-                ))
-            ].name
-        ]
-
-    def _value_of_existential(self, s: Quantified, /):
         """
         An existential sentence is interpreted in terms of `generalized disjunction`.
         If we order the values least to greatest as V{N}, V{T}, V{F}, then we
         can define the value of an existential in terms of the `maximum` value of
         the set of values for the substitution of each constant in the model for
         the variable.
+
+        A universal sentence is interpreted in terms of `generalized conjunction`.
+        If we order the values least to greatest as V{N}, V{F}, V{T}, then we
+        can define the value of a universal in terms of the `minimum` value of
+        the set of values for the substitution of each constant in the model for
+        the variable.
         """
-        return self.values[
-            self.md_cvals[
-                maxceil(3, (
-                    self.md_nvals[self.value_of(c >> s)]
-                    for c in self.constants
-                ))
-            ].name
-        ]
+        it = self._unquantify_value_map(s)
+        if s.quantifier is Quantifier.Existential:
+            it = map(self.md_nvals.__getitem__, it)
+            return self.md_cvals[maxceil(2, it)]
+        if s.quantifier is Quantifier.Universal:
+            it = map(self.mc_nvals.__getitem__, it)
+            return self.mc_cvals[minfloor(0, it)]
+        raise TypeError(s.quantifier)
 
 class System(K3W.System):
     pass

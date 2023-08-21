@@ -23,6 +23,7 @@ from . import k as K
 class Meta(CPL.Meta):
     name = 'CFOL'
     title = 'Classical First Order Logic'
+    quantified = True
     category = 'Bivalent'
     description = 'Standard bivalent logic with full first-order quantification'
     category_order = 2
@@ -37,36 +38,15 @@ class Model(CPL.Model):
         "A sentence is opaque if its operator is either Necessity or Possibility."
         return type(s) is not Quantified and super().is_sentence_opaque(s)
 
-class System(CPL.System):
-    pass
-
 class Rules(CPL.Rules):
 
     groups = (
-        (
-            # non-branching rules
-            K.Rules.IdentityIndiscernability,
-            K.Rules.DoubleNegation,
-            K.Rules.Assertion,
-            K.Rules.AssertionNegated,
-            K.Rules.Conjunction,
-            K.Rules.DisjunctionNegated,
-            K.Rules.MaterialConditionalNegated,
-            K.Rules.ConditionalNegated,
+        CPL.Rules.groups[0] + (
             K.Rules.ExistentialNegated,
             K.Rules.UniversalNegated),
-        (
-            # branching rules
-            K.Rules.ConjunctionNegated,
-            K.Rules.Disjunction,
-            K.Rules.MaterialConditional,
-            K.Rules.MaterialBiconditional,
-            K.Rules.MaterialBiconditionalNegated,
-            K.Rules.Conditional,
-            K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated,
-        #),
-        #(
+        CPL.Rules.groups[1] + (
             K.Rules.Existential,
             K.Rules.Universal))
 
+class System(CPL.System):
+    pass

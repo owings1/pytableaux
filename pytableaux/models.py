@@ -45,14 +45,11 @@ __all__ = (
 
 class Mval(abcs.Ebc):
 
-    __slots__ = 'name', 'label', 'num'
+    __slots__ = 'name', 'num'
 
-    label: str
-    num: float
 
-    def __init__(self, label: str, num: float, /):
-        self.label = label
-        self.num = num
+    def __init__(self, num: float, /):
+        self.num: float = num
 
     def __eq__(self, other):
         if self is other:
@@ -64,7 +61,9 @@ class Mval(abcs.Ebc):
         return NotImplemented
 
     def __hash__(self):
-        return hash(self.num)
+        # Since equal names can have unequal nums, we hash the name, so
+        # equal values have equal hashes.
+        return hash(self.name)
 
     def __le__(self, other):
         return self.num <= other
@@ -91,36 +90,36 @@ class Mval(abcs.Ebc):
 
     @classmethod
     def _member_keys(cls, member: Mval):
-        return super()._member_keys(member) | {member.label, member.num}
+        return super()._member_keys(member) | {member.num}
 
 
 class ValueFDE(Mval):
     "Model values for gappy + glutty 4-valued logics, like FDE."
 
-    F = 'False',   0.0
-    N = 'Neither', 0.25
-    B = 'Both',    0.75
-    T = 'True',    1.0
+    F = 0.0
+    N = 0.25
+    B = 0.75
+    T = 1.0
 
 class ValueK3(Mval):
     "Model values for gappy 3-valued logics, like K3 and others."
 
-    F = 'False',   0.0
-    N = 'Neither', 0.5
-    T = 'True',    1.0
+    F = 0.0
+    N = 0.5
+    T = 1.0
 
 class ValueLP(Mval):
     "Model values for glutty 3-valued logics, like LP and others."
 
-    F = 'False', 0.0
-    B = 'Both', 0.5
-    T = 'True', 1.0
+    F = 0.0
+    B = 0.5
+    T = 1.0
 
 class ValueCPL(Mval):
     'Model values for 2-valued "classical" logics.'
 
-    F = 'False', 0.0
-    T = 'True' , 1.0
+    F = 0.0
+    T = 1.0
 
 MvalT = TypeVar('MvalT', bound = Mval)
 MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
@@ -161,11 +160,9 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
             name = f'value_of_{type(s).__name__.lower()}'
             func = getattr(self, name)
         except AttributeError:
-            pass
-        else:
-            return func(s, **kw)
-        check.inst(s, Sentence)
-        raise NotImplementedError
+            check.inst(s, Sentence)
+            raise NotImplementedError
+        return func(s, **kw)
 
     @abstractmethod
     def value_of_opaque(self, s: Sentence, /) -> MvalT_co:
@@ -241,13 +238,23 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
     class TruthFunction(Generic[MvalT], abcs.Abc):
 
         values: type[MvalT]
+        values_sequence: tuple[MvalT, ...]
+        values_indexes: Mapping[MvalT, int]
 
         def __init__(self, values: type[MvalT]) -> None:
             self.values = values
+            self.values_sequence = tuple(self.values)
+            self.values_indexes = MapProxy({
+                value: i
+                for i, value in enumerate(self.values_sequence)})
 
         def __call__(self, oper: Operator, *args: MvalT) -> MvalT:
             try:
-                func = getattr(self, oper.name)
+                name = oper.name
+            except AttributeError:
+                name = Operator(oper).name
+            try:
+                func = getattr(self, name)
             except AttributeError:
                 raise ValueError(oper) from None
             return func(*args)

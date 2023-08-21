@@ -489,55 +489,6 @@ class Frames(dict[int, Frame]):
             return self[0]
         return self.setdefault(check.inst(key, int), Frame(key))
 
-class System(proof.System):
-
-    neg_branchable = {
-        Operator.Conjunction,
-        Operator.MaterialBiconditional,
-        Operator.Biconditional}
-
-    pos_branchable = {
-        Operator.Disjunction,
-        Operator.MaterialConditional,
-        Operator.Conditional}
-
-    @classmethod
-    def build_trunk(cls, b, arg, /):
-        """
-        To build the trunk for an argument, add a node with each premise, with
-        world :m:`w0`, followed by a node with the negation of the conclusion
-        with world :m:`w0`.
-        """
-        w = 0 if cls.modal else None
-        b.extend(swnode(s, w) for s in arg.premises)
-        b.append(swnode(~arg.conclusion, w))
-
-    @classmethod
-    def branching_complexity(cls, node, /) -> int:
-        s = node.get('sentence')
-        if s is None:
-            return 0
-        last_is_negated = False
-        complexity = 0
-        for oper in s.operators:
-            if oper is Operator.Assertion:
-                continue
-            if oper is Operator.Negation:
-                if last_is_negated:
-                    last_is_negated = False
-                    continue
-                last_is_negated = True
-            elif last_is_negated:
-                if oper in cls.neg_branchable:
-                    complexity += 1
-                    last_is_negated = False
-            elif oper in cls.pos_branchable:
-                complexity += 1
-        return complexity
-
-    @classmethod
-    def branching_complexity_hashable(cls, node, /):
-        return node.get('sentence')
 
 class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default K node rule with:
@@ -751,46 +702,10 @@ class Rules(LogicType.Rules):
                 group(swnode( s.lhs, w), swnode(~s.rhs, w)),
                 group(swnode(~s.lhs, w), swnode( s.rhs, w)))
 
-    class Conditional(MaterialConditional):
-        """
-        The rule functions the same as the corresponding material conditional rule.
-
-        From an unticked conditional node *n* with world *w* on a branch *b*, make two
-        new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
-        antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
-        *n*.
-        """
-
-    class ConditionalNegated(MaterialConditionalNegated):
-        """
-        The rule functions the same as the corresponding material conditional rule.
-
-        From an unticked negated conditional node *n* with world *w* on a branch *b*,
-        add two nodes with *w* to *b*, one with the antecedent and the other with the negation
-        of the consequent, then tick *n*.
-        """
-
-    class Biconditional(MaterialBiconditional):
-        """
-        The rule functions the same as the corresponding material biconditional rule.
-
-        From an unticked biconditional node *n* with world *w* on a branch *b*, make
-        two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
-        the negation of the antecedent and one with the negation of the consequent, and add two
-        nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
-        tick *n*.
-        """
-
-    class BiconditionalNegated(MaterialBiconditionalNegated):
-        """
-        The rule functions the same as the corresponding material biconditional rule.
-
-        From an unticked negated biconditional node *n* with world *w* on a branch *b*,
-        make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
-        the antecedent and the other with the negation of the consequent, and add two nodes with
-        *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
-        then tick *n*.
-        """
+    class Conditional(MaterialConditional): pass
+    class ConditionalNegated(MaterialConditionalNegated): pass
+    class Biconditional(MaterialBiconditional): pass
+    class BiconditionalNegated(MaterialBiconditionalNegated): pass
 
     class Existential(rules.NarrowQuantifierRule, DefaultNodeRule):
         """
@@ -810,12 +725,10 @@ class Rules(LogicType.Rules):
         quantifying over variable *v* into sentence *s*, add a universally quantified
         node to *b* with world *w* over *v* into the negation of *s*, then tick *n*.
         """
-        convert = Quantifier.Universal
 
         def _get_sw_targets(self, s, w, /):
             v, si = s[1:]
-            # Keep conversion neutral for inheritance below.
-            yield adds(group(swnode(self.convert(v, ~si), w)))
+            yield adds(group(swnode(self.quantifier.other(v, ~si), w)))
 
     class Universal(rules.ExtendedQuantifierRule, DefaultNodeRule):
         """
@@ -828,14 +741,7 @@ class Rules(LogicType.Rules):
         def _get_constant_nodes(self, node, c, branch, /):
             yield swnode(c >> self.sentence(node), node.get('world'))
 
-    class UniversalNegated(ExistentialNegated):
-        """
-        From an unticked negated universal node *n* with world *w* on a branch *b*,
-        quantifying over variable *v* into sentence *s*, add an existentially
-        quantified node to *b* with world *w* over *v* into the negation of *s*,
-        then tick *n*.
-        """
-        convert = Quantifier.Existential
+    class UniversalNegated(ExistentialNegated): pass
 
     class Possibility(OperatorNodeRule):
         """
@@ -891,11 +797,10 @@ class Rules(LogicType.Rules):
         necessity node to *b* with *w*, whose operand is the negation of the negated 
         possibilium of *n*, then tick *n*.
         """
-        convert = Operator.Necessity
         NodeType = SentenceWorldNode
 
         def _get_sw_targets(self, s, w, /):
-            yield adds(group(swnode(self.convert(~s.lhs), w)))
+            yield adds(group(swnode(self.operator.other(~s.lhs), w)))
 
     class Necessity(OperatorNodeRule):
         """
@@ -963,13 +868,7 @@ class Rules(LogicType.Rules):
             yield swnode(s, a.w1)
             yield a.tonode()
 
-    class NecessityNegated(PossibilityNegated):
-        """
-        From an unticked negated necessity node *n* with world *w* on a branch *b*, add a
-        possibility node whose operand is the negation of the negated necessitatum of *n*,
-        then tick *n*.
-        """
-        convert = Operator.Possibility
+    class NecessityNegated(PossibilityNegated): pass
 
     class IdentityIndiscernability(DefaultNodeRule, rules.PredicatedSentenceRule):
         """
@@ -1058,3 +957,55 @@ class Rules(LogicType.Rules):
         (
             Existential,
             Universal))
+
+
+class System(proof.System):
+
+    neg_branchable = {
+        Operator.Conjunction,
+        Operator.MaterialBiconditional,
+        Operator.Biconditional}
+
+    pos_branchable = {
+        Operator.Disjunction,
+        Operator.MaterialConditional,
+        Operator.Conditional}
+
+    @classmethod
+    def build_trunk(cls, b, arg, /):
+        """
+        To build the trunk for an argument, add a node with each premise, with
+        world :m:`w0`, followed by a node with the negation of the conclusion
+        with world :m:`w0`.
+        """
+        w = 0 if cls.modal else None
+        b += (swnode(s, w) for s in arg.premises)
+        b += swnode(~arg.conclusion, w)
+
+    @classmethod
+    def branching_complexity(cls, node, /) -> int:
+        try:
+            s = node['sentence']
+        except KeyError:
+            return 0
+        last_is_negated = False
+        complexity = 0
+        for oper in s.operators:
+            if oper is Operator.Assertion:
+                continue
+            if oper is Operator.Negation:
+                if last_is_negated:
+                    last_is_negated = False
+                    continue
+                last_is_negated = True
+            elif last_is_negated:
+                if oper in cls.neg_branchable:
+                    complexity += 1
+                    last_is_negated = False
+            elif oper in cls.pos_branchable:
+                complexity += 1
+        return complexity
+
+    @classmethod
+    def branching_complexity_hashable(cls, node, /):
+        return node.get('sentence')
