@@ -28,12 +28,16 @@ from . import k3 as K3
 class Meta(K3.Meta):
     name = 'P3'
     title = 'Post 3-valued Logic'
+    quantified = False
     description = (
         'Emil Post three-valued logic (T, F, and N) '
         'with mirror-image negation')
     category_order = 120
 
 class Model(FDE.Model):
+
+    def is_sentence_opaque(self, s, /):
+        return type(s) is Quantified or super().is_sentence_opaque(s)
 
     class TruthFunction(K3.Model.TruthFunction):
 
@@ -45,25 +49,25 @@ class Model(FDE.Model):
         def Conjunction(self, a, b, /):
             return self.Negation(self.Disjunction(*map(self.Negation, (a, b))))
 
-    def value_of_quantified(self, s: Quantified, /):
-    #     """
-    #     Take the set of values of the sentence resulting
-    #     from the substitution of the variable with each constant. Then apply
-    #     the negation function to each of those values. Then take the maximum
-    #     of those values (the `generalized disjunction`), and apply the negation
-    #     function to that maximum value. The result is the value of the universal
-    #     sentence.
-    #     """
-        it = self._unquantify_value_map(s)
-        if s.quantifier is Quantifier.Existential:
-            return maxceil(self.maxval, it, self.unassigned_value)
-        if s.quantifier is Quantifier.Universal:
-            try:
-                initial = next(it)
-            except StopIteration:
-                return self.unassigned_value
-            return reduce(self.truth_function.Conjunction, it, initial)
-        raise TypeError(s.quantifier)
+    # def value_of_quantified(self, s: Quantified, /):
+    # #     """
+    # #     Take the set of values of the sentence resulting
+    # #     from the substitution of the variable with each constant. Then apply
+    # #     the negation function to each of those values. Then take the maximum
+    # #     of those values (the `generalized disjunction`), and apply the negation
+    # #     function to that maximum value. The result is the value of the universal
+    # #     sentence.
+    # #     """
+    #     it = self._unquantify_value_map(s)
+    #     if s.quantifier is Quantifier.Existential:
+    #         return maxceil(self.maxval, it, self.unassigned_value)
+    #     if s.quantifier is Quantifier.Universal:
+    #         try:
+    #             initial = next(it)
+    #         except StopIteration:
+    #             return self.unassigned_value
+    #         return reduce(self.truth_function.Conjunction, it, initial)
+    #     raise TypeError(s.quantifier)
 
 
 class System(FDE.System): pass
@@ -179,79 +183,79 @@ class Rules(K3.Rules):
     class BiconditionalUndesignated(FDE.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedUndesignated(FDE.ConditionalConjunctsReducingRule): pass
 
-    class ExistentialNegatedDesignated(FDE.QuantifierFatRule):
-        """
-        From an unticked, designated, negated existential node `n` on a branch
-        `b`, for any constant `c` on `b`, let `r` be the result of substituting
-        `c` for the variable bound by the sentence of `n`. If the negation of `r`
-        does not appear on `b`, then add a designated node with the negation of
-        `r` to `b`. If there are no constants yet on `b`, use a new constant.
-        The node `n` is never ticked.
-        """
+    # class ExistentialNegatedDesignated(FDE.QuantifierFatRule):
+    #     """
+    #     From an unticked, designated, negated existential node `n` on a branch
+    #     `b`, for any constant `c` on `b`, let `r` be the result of substituting
+    #     `c` for the variable bound by the sentence of `n`. If the negation of `r`
+    #     does not appear on `b`, then add a designated node with the negation of
+    #     `r` to `b`. If there are no constants yet on `b`, use a new constant.
+    #     The node `n` is never ticked.
+    #     """
 
-        def _get_constant_nodes(self, node, c, branch, /):
-            yield sdnode(c >> self.sentence(node), self.designation)
+    #     def _get_constant_nodes(self, node, c, branch, /):
+    #         yield sdnode(c >> self.sentence(node), self.designation)
 
-    class ExistentialNegatedUndesignated(FDE.QuantifierFatRule):
-        """
-        From an unticked, undesignated, negated existential node `n` on a branch
-        `b`, for a new constant `c` for `b`, let `r` be the result of substituting
-        `c` for the variable bound by the sentence of `n`. If the negation of `r`
-        does not appear on `b`, then add an undesignated node with the negation
-        of `r` to `b`. If there are no constants yet on `b`, use a new constant.
-        The node `n` is never ticked.
-        """
+    # class ExistentialNegatedUndesignated(FDE.QuantifierFatRule):
+    #     """
+    #     From an unticked, undesignated, negated existential node `n` on a branch
+    #     `b`, for a new constant `c` for `b`, let `r` be the result of substituting
+    #     `c` for the variable bound by the sentence of `n`. If the negation of `r`
+    #     does not appear on `b`, then add an undesignated node with the negation
+    #     of `r` to `b`. If there are no constants yet on `b`, use a new constant.
+    #     The node `n` is never ticked.
+    #     """
 
-        def _get_constant_nodes(self, node, c, branch, /):
-            yield sdnode(~(c >> self.sentence(node)), not self.designation)
+    #     def _get_constant_nodes(self, node, c, branch, /):
+    #         yield sdnode(~(c >> self.sentence(node)), not self.designation)
 
-    class UniversalDesignated(FDE.QuantifierFatRule):
-        """
-        From a designated universal node `n` on a branch `b`, if there are no
-        constants on `b`, add two undesignated nodes to `b`, one with the
-        quantified sentence, substituting a new constant for the variable, and
-        the other with the negation of that sentence. If there are constants
-        already on `b`, then use any of those constants instead of a new one,
-        provided that the both the nodes to be added do not already appear on
-        `b`. The node is never ticked.
-        """
+    # class UniversalDesignated(FDE.QuantifierFatRule):
+    #     """
+    #     From a designated universal node `n` on a branch `b`, if there are no
+    #     constants on `b`, add two undesignated nodes to `b`, one with the
+    #     quantified sentence, substituting a new constant for the variable, and
+    #     the other with the negation of that sentence. If there are constants
+    #     already on `b`, then use any of those constants instead of a new one,
+    #     provided that the both the nodes to be added do not already appear on
+    #     `b`. The node is never ticked.
+    #     """
 
-        def _get_constant_nodes(self, node, c, branch, /):
-            r = c >> self.sentence(node)
-            d = self.designation
-            yield sdnode(r, not d)
-            yield sdnode(~r, not d)
+    #     def _get_constant_nodes(self, node, c, branch, /):
+    #         r = c >> self.sentence(node)
+    #         d = self.designation
+    #         yield sdnode(r, not d)
+    #         yield sdnode(~r, not d)
 
-    class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
-        """
-        From an unticked, negated universal node `n` on a branch `b`, add a
-        designated node to `b` with the quantified sentence, substituting a
-        constant new to `b` for the variable. Then tick `n`.
-        """
+    # class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
+    #     """
+    #     From an unticked, negated universal node `n` on a branch `b`, add a
+    #     designated node to `b` with the quantified sentence, substituting a
+    #     constant new to `b` for the variable. Then tick `n`.
+    #     """
 
-        def _get_node_targets(self, node, branch, /):
-            s = self.sentence(node)
-            yield adds(
-                # Keep designation neutral for UniversalUndesignated
-                group(sdnode(branch.new_constant() >> s, self.designation)))
+    #     def _get_node_targets(self, node, branch, /):
+    #         s = self.sentence(node)
+    #         yield adds(
+    #             # Keep designation neutral for UniversalUndesignated
+    #             group(sdnode(branch.new_constant() >> s, self.designation)))
 
-    class UniversalUndesignated(UniversalNegatedDesignated): pass
+    # class UniversalUndesignated(UniversalNegatedDesignated): pass
 
-    class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
-        """
-        From an unticked, undesignated, negated universal node `n` on a branch
-        `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
-        node with the negation of the quantified sentence, substituing a constant
-        new to `b` for the variable. On `b''` add a designated node with the
-        negatum of `n`. Then tick `n`.
-        """
+    # class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
+    #     """
+    #     From an unticked, undesignated, negated universal node `n` on a branch
+    #     `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
+    #     node with the negation of the quantified sentence, substituing a constant
+    #     new to `b` for the variable. On `b''` add a designated node with the
+    #     negatum of `n`. Then tick `n`.
+    #     """
 
-        def _get_node_targets(self, node, branch, /):
-            s = self.sentence(node)
-            d = self.designation
-            yield adds(
-                group(sdnode(branch.new_constant() >> s, not d)),
-                group(sdnode(s, not d)))
+    #     def _get_node_targets(self, node, branch, /):
+    #         s = self.sentence(node)
+    #         d = self.designation
+    #         yield adds(
+    #             group(sdnode(branch.new_constant() >> s, not d)),
+    #             group(sdnode(s, not d)))
 
     groups = (
         group(
@@ -293,13 +297,14 @@ class Rules(K3.Rules):
         group(
             # four-branching rules
             ConjunctionUndesignated),
-        group(
-            FDE.Rules.ExistentialDesignated,
-            UniversalUndesignated,
-            UniversalNegatedDesignated,
-            UniversalNegatedUndesignated),
-        group(
-            UniversalDesignated,
-            FDE.Rules.ExistentialUndesignated,
-            ExistentialNegatedDesignated,
-            ExistentialNegatedUndesignated))
+        # group(
+        #     FDE.Rules.ExistentialDesignated,
+        #     UniversalUndesignated,
+        #     UniversalNegatedDesignated,
+        #     UniversalNegatedUndesignated),
+        # group(
+        #     UniversalDesignated,
+        #     FDE.Rules.ExistentialUndesignated,
+        #     ExistentialNegatedDesignated,
+        #     ExistentialNegatedUndesignated)
+            )

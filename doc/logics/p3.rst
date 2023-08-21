@@ -84,26 +84,6 @@ Predication
 
 .. include:: include/k3/m.predication.rst
 
-.. _p3-quantification:
-
-Quantification
---------------
-
-.. rubric:: Existential
-
-.. include:: include/fde/m.existential.rst
-
-.. rubric:: Universal
-
-The :s:`L` quantifier is thought of like `generalized conjunction`.
-Given that :s:`A & B` is defined as :s:`~(~A V ~B)`, we interpret :s:`L`
-in the following way. Take the set of values of the sentence resulting
-from the substitution of the variable with each constant. Then apply
-the negation function to each of those values. Then take the maximum
-of those values (the `generalized disjunction`), and apply the negation
-function to that maximum value. The result is the value of the universal
-sentence.
-
 .. _p3-consequence:
 
 Consequence
@@ -155,10 +135,6 @@ Rules
   :docflags:
   :group: operator
   :exclude: non_native
-
-.. tableau-rules::
-  :docflags:
-  :group: quantifier
 
 .. tableau-rules::
   :docflags:
