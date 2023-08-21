@@ -245,7 +245,7 @@ class BaseCase(TestCase):
         rule = tab.rules.get(cls)
         return RuleTab(rule, tab)
 
-    def rule_eg(self, rule, step = True, **kw):
+    def rule_eg(self, rule, step = True, **kw) -> RuleTab:
         rule, tab = rt = self.rule_tab(rule, **kw)
         tab.branch().extend(rule.example_nodes())
         assert len(tab) == 1

@@ -25,14 +25,5 @@ class TestTables(Base, autotables=True):
         Biconditional = 'TNFNNNFNT',
     )
 
-class TestOperators(Base):
 
-    def test_Conjunction(self):
-        self.valid_tab('LNC')
-
-    def test_Disjunction(self):
-        self.invalid_tab('LEM')
-
-    def test_Biconditional(self):
-        self.valid_tab('Biconditional Elimination 1')
 

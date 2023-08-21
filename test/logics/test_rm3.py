@@ -4,29 +4,11 @@ class Base(BaseCase):
     logic = 'RM3'
 
 class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
 
-class TestArguments(Base):
-    def test_valid_cond_mp(self):
-        self.valid_tab('Conditional Modus Ponens')
-
-    def test_valid_demorgan_1(self):
-        self.valid_tab('DeMorgan 1')
-
-    def test_valid_demorgan_2(self):
-        self.valid_tab('DeMorgan 2')
-
-    def test_valid_demorgan_3(self):
-        self.valid_tab('DeMorgan 3')
-
-    def test_valid_demorgan_4(self):
-        self.valid_tab('DeMorgan 4')
+class TestArguments(Base, autoargs=True):
 
     def test_invalid_b_then_a_arrow_b(self):
         self.invalid_tab('Uab', 'b')
-
-    def test_valid_cond_modus_ponens(self):
-        self.valid_tab('Conditional Modus Ponens')
 
     def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_a_arrow_b(self):
         self.invalid_tab('NUab', 'a', 'UaNUbc')

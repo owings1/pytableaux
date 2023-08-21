@@ -6,8 +6,45 @@ from pytableaux.proof import *
 class Base(BaseCase):
     logic = 'K'
 
-class TestRules(Base, autorules=True): pass
-class TestAutoArgs(Base, autoargs=True): pass
+class TestRules(Base, autorules=True):
+
+    def test_Disjunction_node(self):
+        rule, tab = self.rule_eg('DisjunctionNegated', step = False)
+        s = tab[0][0]['sentence']
+        self.assertEqual(s.operator, Operator.Negation)
+
+    def test_Possibility_node_world_0(self):
+        rule, tab = self.rule_eg('Possibility', step = False)
+        node = tab[0][0]
+        self.assertEqual(node['world'], 0)
+
+    def test_Existential_node_quantifier(self):
+        rule, tab = self.rule_eg('Existential', step = False)
+        node = tab[0][0]
+        self.assertEqual(node['sentence'].quantifier, Quantifier.Existential)
+
+    def test_IdentityIndiscernability_not_target_after_apply(self):
+        rule, tab = self.rule_eg('IdentityIndiscernability')
+        b = tab.branch().extend((
+            {'sentence': self.p('Imm'), 'world': 0},
+            {'sentence': self.p('Fs'),  'world': 0},
+        ))
+        self.assertFalse(rule.target(b))
+
+    def test_rules_modal(self):
+        for rcls in self.logic.Rules.all():
+            self.assertIs(rcls.modal, True)
+
+class TestArgument(Base, autoargs=True):
+
+    def test_invalid_nested_diamond_within_box1(self):
+        self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
+
+    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
+        self.valid_tab('b', 'VxKFxKaNa')
+
+    def test_invalid_existential_inside_univ_max_steps(self):
+        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
 
 class TestTables(Base, autotables=True):
     tables = dict(
@@ -21,101 +58,7 @@ class TestTables(Base, autotables=True):
         Biconditional = 'TFFT',
     )
 
-class TestRuleAttrs(Base):
-    def test_rules_modal(self):
-        for rcls in self.logic.Rules.all():
-            self.assertIs(rcls.modal, True)
 
-class TestClosureRules(Base):
-
-    def test_ContradictionClosure(self):
-        self.valid_tab('EFQ')
-
-    def test_SelfIdentityClosure(self):
-        self.valid_tab('Self Identity 1')
-
-    def test_NonExistenceClosure(self):
-        self.valid_tab('b', 'NJm')
-
-class TestOperatorRules(Base):
-
-    def test_Assertion(self):
-        self.valid_tab('Assertion Elimination 1')
-        self.valid_tab('Assertion Elimination 2')
-
-    def test_Conjunction(self):
-        self.valid_tab('Conjunction Introduction')
-
-    def test_Disjunction(self):
-        rule, tab = self.rule_eg('DisjunctionNegated', step = False)
-        s = tab[0][0]['sentence']
-        self.assertEqual(s.operator, Operator.Negation)
-
-        self.valid_tab('Addition')
-        self.valid_tab('LEM')
-        self.valid_tab('Disjunctive Syllogism')
-        self.valid_tab('Disjunctive Syllogism 2')
-
-    def test_MaterialConditional(self):
-        self.valid_tab('MMP')
-        self.valid_tab('MMT')
-
-    def test_MaterialBiconditional(self):
-        self.valid_tab('Material Biconditional Elimination 1')
-        self.valid_tab('Material Biconditional Introduction 1')
-
-    def test_Conditional(self):
-        self.valid_tab('MP')
-        self.valid_tab('MT')
-        self.invalid_tab('Denying the Antecedent')
-
-class TestModalOperatorRules(Base):
-
-    def test_Necessity(self):
-        self.invalid_tab('Necessity Elimination')
-
-    def test_Possibility(self):
-        rule, tab = self.rule_eg('Possibility', step = False)
-        node = tab[0][0]
-        self.assertEqual(node['world'], 0)
-
-    def test_modal_transformation(self):
-        self.valid_tab('Modal Transformation 2')
-
-    def test_invalid_nested_diamond_within_box1(self):
-        self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
-
-    def test_Arguments_2(self):
-        self.valid_tab('Necessity Distribution 1')
-        self.invalid_tab('S4 Conditional Inference 2')
-
-class TestQuantifierRules(Base):
-
-    def test_Existential(self):
-        rule, tab = self.rule_eg('Existential', step = False)
-        node = tab[0][0]
-        self.assertEqual(node['sentence'].quantifier, Quantifier.Existential)
-
-    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        self.valid_tab('b', 'VxKFxKaNa')
-
-    def test_invalid_existential_inside_univ_max_steps(self):
-        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
-
-class TestIdentityRules(Base):
-
-    def test_regresion(self):
-        rule, tab = self.rule_eg('IdentityIndiscernability')
-        self.valid_tab('Identity Indiscernability 1')
-        self.valid_tab('Identity Indiscernability 2')
-
-    def test_IdentityIndiscernability(self):
-        rule, tab = self.rule_eg('IdentityIndiscernability')
-        b = tab.branch().extend((
-            {'sentence': self.p('Imm'), 'world': 0},
-            {'sentence': self.p('Fs'),  'world': 0},
-        ))
-        self.assertFalse(rule.target(b))
 
 class TestModelRefactorBugs(Base):
 

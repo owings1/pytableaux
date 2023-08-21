@@ -1,4 +1,3 @@
-from . import knownargs
 from ..utils import BaseCase
 from pytableaux.errors import *
 from pytableaux.lang import *
@@ -10,7 +9,15 @@ Fa = Predicated.first()
 class Base(BaseCase):
     logic = 'CPL'
 
-class TestRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True):
+
+    def test_IdentityIndiscernability_not_applies(self):
+        s1, s2 = self.pp('Fmn', 'Io1o2', Predicates({(0, 0, 2)}))
+        tab, b = self.tabb((
+            {'sentence': s1, 'world': 0},
+            {'sentence': s2, 'world': 0}))
+        rule = tab.rules.get('IdentityIndiscernability')
+        self.assertFalse(rule.target(b))
 
 class TestArguments(Base, autoargs=True):
 
@@ -29,16 +36,6 @@ class TestTables(Base, autotables=True):
         Conditional = 'TTFT',
         Biconditional = 'TFFT',
     )
-class TestIdentityRules(Base):
-
-    def test_IdentityIndiscernability_not_applies(self):
-        preds = Predicates({(0, 0, 2)})
-        s1, s2 = self.pp('Fmn', 'Io1o2', preds)
-        tab, b = self.tabb((
-            {'sentence': s1, 'world': 0},
-            {'sentence': s2, 'world': 0}))
-        rule = tab.rules.get('IdentityIndiscernability')
-        self.assertFalse(rule.target(b))
 
 class TestRuleOptimizations(Base):
 
@@ -83,7 +80,7 @@ class TestModels(Base):
         
     def test_set_literal_value_predicated1(self):
         model = self.m()
-        s = Predicated('Identity', tuple(Constant.gen(2)))
+        s = Predicated('Identity', Constant.gen(2))
         model.set_literal_value(s, 'T')
         res = model.value_of(s)
         self.assertEqual(res, 'T')

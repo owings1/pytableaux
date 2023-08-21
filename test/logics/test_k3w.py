@@ -6,46 +6,7 @@ from pytableaux.errors import *
 class Base(BaseCase):
     logic = 'K3W'
 
-class TestRules(Base, autorules=True): pass
-class TestArguments(Base, autoargs=True): pass
-class TestTables(Base, autotables=True):
-    tables = dict(
-        Assertion = 'FNT',
-        Negation = 'TNF',
-        Conjunction = 'FNFNNNFNT',
-        Disjunction = 'FNTNNNTNT',
-        MaterialConditional = 'TNTNNNFNT',
-        MaterialBiconditional = 'TNFNNNFNT',
-        Conditional = 'TNTNNNFNT',
-        Biconditional = 'TNFNNNFNT',
-    )
-
-class TestOperators(Base):
-
-    def test_Conjunction(self):
-        self.valid_tab('LNC')
-
-    def test_Disjunction(self):
-        self.invalid_tab('LEM')
-
-    def test_arguments(self):
-
-        self.valid_tab('Conditional Contraction')
-        self.invalid_tab('Addition')
-        self.invalid_tab('ANAabNa', 'Na')
-        self.invalid_tab('AaTb', 'a')
-        self.valid_tab('DeMorgan 1')
-        self.valid_tab('DeMorgan 2')
-        self.valid_tab('DeMorgan 3')
-        self.valid_tab('DeMorgan 4')
-        self.invalid_tab('AUabNUab')
-
-    def bt(self, *nitems):
-        tab = self.tab()
-        b = tab.branch()
-        b.extend({'sentence': self.p(s), 'designated': d}
-            for s,d in nitems)
-        return (tab, b)
+class TestRules(Base, autorules=True):
 
     def test_rule_MaterialBiconditionalDesignated_step(self):
         s1, s2 = self.pp('Eab', 'KCabCba')
@@ -62,15 +23,43 @@ class TestOperators(Base):
         self.assertTrue(b.has({'sentence': s2, 'designated': True}))
 
     def test_rule_ConjunctionNegatedUndesignated_step(self):
+        sdn = self.sdnode
         tab, b = self.bt(('NKab', False))
         tab.step()
         b1, b2, b3 = tab
-        self.assertTrue(b1.has({'sentence': self.p('a'), 'designated': False}))
-        self.assertTrue(b1.has({'sentence': self.p('Na'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('b'), 'designated': False}))
-        self.assertTrue(b2.has({'sentence': self.p('Nb'), 'designated': False}))
-        self.assertTrue(b3.has({'sentence': self.p('a'), 'designated': True}))
-        self.assertTrue(b3.has({'sentence': self.p('b'), 'designated': True}))
+        self.assertTrue(b1.has(sdn('a', False)))
+        self.assertTrue(b1.has(sdn('Na', False)))
+        self.assertTrue(b2.has(sdn('b', False)))
+        self.assertTrue(b2.has(sdn('Nb', False)))
+        self.assertTrue(b3.has(sdn('a', True)))
+        self.assertTrue(b3.has(sdn('b', True)))
+
+    def bt(self, *nitems):
+        tab = self.tab()
+        b = tab.branch()
+        b.extend({'sentence': self.p(s), 'designated': d}
+            for s,d in nitems)
+        return (tab, b)
+
+class TestArguments(Base, autoargs=True):
+
+    def test_arguments_various(self):
+        self.invalid_tab('ANAabNa', 'Na')
+        self.invalid_tab('AaTb', 'a')
+        self.invalid_tab('AUabNUab')
+
+class TestTables(Base, autotables=True):
+    tables = dict(
+        Assertion = 'FNT',
+        Negation = 'TNF',
+        Conjunction = 'FNFNNNFNT',
+        Disjunction = 'FNTNNNTNT',
+        MaterialConditional = 'TNTNNNFNT',
+        MaterialBiconditional = 'TNFNNNFNT',
+        Conditional = 'TNTNNNFNT',
+        Biconditional = 'TNFNNNFNT',
+    )
+
 
 class TestOptimizations(Base):
     def test_optimize1(self):
@@ -82,12 +71,6 @@ class TestOptimizations(Base):
         self.assertEqual(step.rule.name, 'DisjunctionNegatedUndesignated')
 
 class TestModels(Base):
-
-    def test_truth_table_conjunction(self):
-        tbl = self.m().truth_table(Operator.Conjunction)
-        self.assertEqual(tbl.outputs[0], 'F')
-        self.assertEqual(tbl.outputs[3], 'N')
-        self.assertEqual(tbl.outputs[8], 'T')
 
     def test_models_with_opaques_observed_fail(self):
         # this was because sorting of constants had not been implemented.

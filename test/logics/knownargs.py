@@ -55,6 +55,20 @@ validities['LP'] = validities['FDE'] | [
 ]
 
 validities['RM3'] = validities[...] | [
+    'Conditional Identity',
+    'Conditional Modus Ponens',
+    'Biconditional Elimination 1',
+    'Biconditional Introduction 3',
+    'Biconditional Identity',
+    'DeMorgan 1',
+    'DeMorgan 2',
+    'DeMorgan 3',
+    'DeMorgan 4',
+    'DeMorgan 5',
+    'DeMorgan 6',
+    'DeMorgan 7',
+    'DeMorgan 8',
+    'Law of Excluded Middle',
     
 ]
 validities['L3'] = validities[...] | [
@@ -64,6 +78,15 @@ validities['L3'] = validities[...] | [
     'Biconditional Elimination 3',
     'Biconditional Introduction 3',
     'Biconditional Identity',
+    'DeMorgan 1',
+    'DeMorgan 2',
+    'DeMorgan 3',
+    'DeMorgan 4',
+    'DeMorgan 5',
+    'DeMorgan 6',
+    'DeMorgan 7',
+    'DeMorgan 8',
+    'Law of Non-contradiction',
 ]
 validities['B3E'] = validities[...] | [
     'Biconditional Introduction 1',
@@ -83,9 +106,29 @@ validities['GO'] = validities[...] | [
     'Quantifier Interdefinability 3',
 ]
 validities['K3W'] = validities[...] | [
+    'Conditional Contraction',
+    'DeMorgan 1',
+    'DeMorgan 2',
+    'DeMorgan 3',
+    'DeMorgan 4',
+    'DeMorgan 5',
+    'DeMorgan 6',
+    'DeMorgan 7',
+    'DeMorgan 8',
+    'Law of Non-contradiction',
     
 ]
 validities['K3WQ'] = validities[...] | [
+    'Conditional Contraction',
+    'DeMorgan 1',
+    'DeMorgan 2',
+    'DeMorgan 3',
+    'DeMorgan 4',
+    'DeMorgan 5',
+    'DeMorgan 6',
+    'DeMorgan 7',
+    'DeMorgan 8',
+    'Law of Non-contradiction',
     'Quantifier Interdefinability 1',
     'Quantifier Interdefinability 2',
     'Quantifier Interdefinability 3',
@@ -134,7 +177,7 @@ validities['NH'] = validities[...] | [
     arg('UKaKNKbNbNbNUab', title='hnh_axiom23'),
 ]
 validities['P3'] = validities[...] | [
-    
+    'DeMorgan 6',
 ]
 
 validities['CPL'] = validities[...] | [
@@ -195,40 +238,23 @@ validities['CPL'] = validities[...] | [
 ]
 
 validities['CFOL'] = validities['K3'] | validities['LP'] | validities['L3'] | validities['RM3'] | validities['CPL'] | [
-    'Conditional Contraposition 1',
-    'Conditional Contraposition 2',
-    'Conditional Pseudo Contraction',
-    'Conditional Pseudo Contraposition',
-    'Conjunction Commutativity',
-    'Conjunction Elimination',
-    'Conjunction Introduction',
-    'Conjunction Pseudo Commutativity',
-    'Disjunction Commutativity',
-    'Disjunction Pseudo Commutativity',
-    'Identity Indiscernability 1',
-    'Identity Indiscernability 2',
-    'Material Biconditional Elimination 1',
-    'Material Biconditional Elimination 2',
-    'Material Biconditional Elimination 3',
-    'Material Biconditional Identity',
-    'Material Biconditional Introduction 1',
-    'Material Contraposition 1',
-    'Material Contraposition 2',
-
-    'Material Pseudo Contraction',
-    'Material Pseudo Contraposition',
-    'Self Identity 1',
-    'Existential Syllogism',
     'Existential from Universal',
+    'Existential Syllogism',
+    'Quantifier Interdefinability 1',
+    'Quantifier Interdefinability 2',
+    'Quantifier Interdefinability 3',
+    'Quantifier Interdefinability 4',
     'Self Identity 2',
     'Syllogism',
     'Universal Predicate Syllogism',
 ]
 validities['K'] = validities['CFOL'] | [
-    'Quantifier Interdefinability 1',
-    'Quantifier Interdefinability 2',
-    'Quantifier Interdefinability 3',
-    'Quantifier Interdefinability 4',
+    'Modal Transformation 1',
+    'Modal Transformation 2',
+    'Modal Transformation 3',
+    'Modal Transformation 4',
+    'Necessity Distribution 1',
+    'Necessity Distribution 2',
 ]
 validities['D'] = validities['K'] | [
     'Serial Inference 1',
@@ -252,9 +278,6 @@ validities['S5'] = validities['S4'] | [
 
 
 invalidities[...] = qsetf([
-
-])
-invalidities['S5'] = invalidities[...] | [
     'Affirming a Disjunct 1',
     'Affirming a Disjunct 2',
     'Affirming the Consequent',
@@ -267,6 +290,9 @@ invalidities['S5'] = invalidities[...] | [
     'Triviality 1',
     'Triviality 2',
     'Universal from Existential',
+])
+invalidities['S5'] = invalidities[...] | [
+
 ]
 invalidities['S4'] = invalidities['S5'] | [
     'S5 Conditional Inference 1',
@@ -278,34 +304,32 @@ invalidities['T'] = invalidities['S4'] | [
     'S4 Material Inference 1',
     'S4 Material Inference 2',
 ]
-invalidities['D'] = invalidities['S4'] | [
+invalidities['D'] = invalidities['T'] | [
+    'Necessity Elimination',
+    'NP Collapse 1',
+    'Possibility Addition',
+    'Possibility Distribution',
     'Reflexive Inference 1',
     'S4 Conditional Inference 2',
 ]
-invalidities['K'] = invalidities['T'] | invalidities['D'] | [
+invalidities['K'] = invalidities['D'] | [
 
 ]
 invalidities['CFOL'] = invalidities['K'] | [
-    'Possibility Addition',
-]
-invalidities['CPL'] = invalidities['CFOL'] | [
-    'Existential Syllogism',
-    'Existential from Universal',
     'Modal Transformation 1',
     'Modal Transformation 2',
     'Modal Transformation 3',
     'Modal Transformation 4',
-    'NP Collapse 1',
     'Necessity Distribution 1',
     'Necessity Distribution 2',
-    'Necessity Elimination',
-    'Possibility Addition',
-    'Possibility Distribution',
+]
+invalidities['CPL'] = invalidities['CFOL'] | [
+    'Existential Syllogism',
+    'Existential from Universal',
     'Quantifier Interdefinability 1',
     'Quantifier Interdefinability 2',
     'Quantifier Interdefinability 3',
     'Quantifier Interdefinability 4',
-    'Reflexive Inference 1',
     'Self Identity 2',
     'Serial Inference 1',
     'Serial Inference 2',
@@ -339,13 +363,15 @@ invalidities['FDE'] = invalidities['K3'] | invalidities['LP'] | [
 ]
 
 invalidities['RM3'] = invalidities['CFOL'] | [
-    
+    'Biconditional Elimination 3',
+    'Law of Non-contradiction',
 ]
 invalidities['L3'] = invalidities['CFOL'] | [
     'Conditional Contraction',
-    'Material Identity',
-    'Conditional Pseudo Contraction',
     'Conditional Law of Excluded Middle',
+    'Conditional Pseudo Contraction',
+    'Law of Excluded Middle',
+    'Material Identity',
 ]
 invalidities['B3E'] = invalidities['CFOL'] | [
     'Law of Excluded Middle',
@@ -357,22 +383,32 @@ invalidities['G3'] = invalidities['CFOL'] | [
 ]
 invalidities['GO'] = invalidities['CFOL'] | [
     'DeMorgan 1',
+    'Law of Excluded Middle',
     'Quantifier Interdefinability 2',
     'Quantifier Interdefinability 4',
 ]
 invalidities['K3W'] = invalidities['CFOL'] | [
-    
+    'Addition',
+    'Law of Excluded Middle',
 ]
 invalidities['K3WQ'] = invalidities['CFOL'] | [
+    'Addition',
+    'Law of Excluded Middle',
 
 ]
 invalidities['MH'] = invalidities['CFOL'] | [
+    'Law of Excluded Middle',
    arg('UNbNa', ('NAaNa', 'Uab'), title='p_from_article'),
 ]
 invalidities['NH'] = invalidities['CFOL'] | [
     'Explosion',
-    
+    'Law of Non-contradiction',
 ]
 invalidities['P3'] = invalidities[...] | [
-    
+    'DeMorgan 1',
+    'DeMorgan 2',
+    'DeMorgan 3',
+    'DeMorgan 4',
+    'DeMorgan 5',
+    'Law of Excluded Middle',
 ]

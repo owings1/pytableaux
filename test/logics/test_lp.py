@@ -34,8 +34,6 @@ class TestOperatorRules(Base):
         tab.build()
         self.assertTrue(tab.valid)
 
-
-
 class TestModels(Base):
 
     def test_regression_model_not_a_countermodel(self):
