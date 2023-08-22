@@ -630,7 +630,7 @@ class RuleGroupDirective(TableauDirective):
         if name in ('native', 'non_native'):
             base = self.logic.Meta.native_operators
         elif name in ('modal', 'non_modal'):
-            base = self.logic.Model.modal_operators
+            base = self.logic.Meta.modal_operators
         else:
             return
         if name.startswith('non_'):
@@ -671,7 +671,7 @@ class TruthTables(BaseDirective, RenderMixin, LogicOptionMixin):
         model = self.logic.Model()
         opers = opts.get('operators')
         if opers is None:
-            opers = sorted(model.truth_functional_operators)
+            opers = sorted(self.logic.Meta.truth_functional_operators)
         opers = self.filter_by_name(opers)
 
         wnotn = opts.get('wnotn', conf[ConfKey.wnotn])
