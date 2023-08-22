@@ -494,7 +494,7 @@ class Branch(SequenceSet[Node], EventEmitter, abcs.Copyable, metaclass=BranchMet
     def __contains__(self, node):
         return node in self._nodes
 
-    def __iadd__(self, other) -> Self:
+    def __iadd__(self, other: Mapping|Iterable[Mapping]) -> Self:
         if isinstance(other, Mapping):
             return self.append(other)
         return self.extend(other)

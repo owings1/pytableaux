@@ -46,7 +46,7 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class DoubleNegationDesignated(FDE.OperatorNodeRule):
+    class DoubleNegationDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated double-negation node `n` on a branch `b`,
         add an undesignated node with the negatum of `n`. Then tick `n`.
@@ -57,7 +57,7 @@ class Rules(LogicType.Rules):
 
     class DoubleNegationUndesignated(DoubleNegationDesignated): pass
 
-    class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
+    class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated conditional node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add two designated
@@ -78,7 +78,7 @@ class Rules(LogicType.Rules):
                     sdnode(~lhs, not d),
                     sdnode(~rhs, d)))
 
-    class ConditionalNegatedUndesignated(FDE.OperatorNodeRule):
+    class ConditionalNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conditional node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -91,19 +91,19 @@ class Rules(LogicType.Rules):
                 group(sdnode(~s.lhs, not d)),
                 group(sdnode(~s.rhs, d)))
 
-    class BiconditionalDesignated(FDE.ConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedDesignated(FDE.ConditionalConjunctsReducingRule): pass
-    class BiconditionalUndesignated(FDE.ConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedUndesignated(FDE.ConditionalConjunctsReducingRule): pass
+    class BiconditionalDesignated(System.ConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedDesignated(System.ConditionalConjunctsReducingRule): pass
+    class BiconditionalUndesignated(System.ConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedUndesignated(System.ConditionalConjunctsReducingRule): pass
 
-    class MaterialConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialBiconditionalDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialConditionalDesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedDesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialConditionalUndesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedUndesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialBiconditionalDesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedDesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
 
 
     groups = (

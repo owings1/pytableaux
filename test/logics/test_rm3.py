@@ -35,12 +35,14 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTTBBTFBT',
         MaterialBiconditional = 'TBFBBBFBT',
         Conditional = 'TTTFBTFFT',
-        Biconditional = 'TFFFBFFFT',
-    )
+        Biconditional = 'TFFFBFFFT')
+
 class TestModels(Base):
 
     def test_model_value_of_biconditional(self):
-        model = self.m()
-        model.set_literal_value(self.p('a'), 'B')
-        model.set_literal_value(self.p('b'), 'F')
-        self.assertEqual(model.value_of(self.p('Bab')), 'F')
+        s1, s2, s3 = self.pp('a', 'b', 'Bab')
+        m = self.m()
+        m.set_literal_value(s1, 'B')
+        m.set_literal_value(s2, 'F')
+        m.finish()
+        self.assertEqual(m.value_of(s3), 'F')

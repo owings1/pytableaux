@@ -17,9 +17,8 @@
 from __future__ import annotations
 
 from ..lang import Atomic, Marking
-from ..proof import Branch, Target, adds, anode, swnode
+from ..proof import Branch, Target, adds, anode, swnode, rules
 from ..proof.helpers import MaxWorlds, UnserialWorlds
-from ..proof.rules import BaseSimpleRule
 from ..tools import group
 from . import LogicType
 from . import k as K
@@ -34,16 +33,15 @@ class Meta(K.Meta):
 class Model(K.Model):
 
     def finish(self):
-        needs_world = set()
-        for world in self.frames:
-            if len(self.R[world]) == 0:
-                needs_world.add(world)
-        if len(needs_world) > 0:
+        self._check_not_finished()
+        R = self.R
+        needs_world = {w for w in self.frames if not R[w]}
+        if needs_world:
             # only add one extra world
             w2 = max(self.frames) + 1
             for w1 in needs_world:
-                self.R.add((w1, w2))
-            self.R.add((w2, w2))
+                R.add((w1, w2))
+            R.add((w2, w2))
         super().finish()
 
 class System(K.System): pass
@@ -52,12 +50,13 @@ class Rules(LogicType.Rules):
 
     closure = K.Rules.closure
 
-    class Serial(BaseSimpleRule):
+    class Serial(rules.BaseSimpleRule):
         """
         .. _serial-rule:
 
         The Serial rule applies to a an open branch *b* when there is a world *w*
         that appears on *b*, but there is no world *w'* such that *w* accesses *w'*.
+
         The exception to this is when the Serial rule was the last rule to apply to
         the branch. This prevents infinite repetition of the Serial rule for open
         branches that are otherwise finished. For this reason, the Serial rule is
@@ -83,13 +82,15 @@ class Rules(LogicType.Rules):
                     branch=branch))
 
         def _should_apply(self, branch: Branch,/):
-            # TODO: Shouldn't this check the history only relative to the branch?
-            #       Waiting to come up with a test case before fixing it.
-
-            # This tends to stop modal explosion better than the max worlds check,
-            # at least in its current form (all modal operators + worlds + 1).
-            if len(self.tableau.history) and next(reversed(self.tableau.history)).rule == self:
-                return False
+            try:
+                entry = next(reversed(self.tableau.history))
+            except StopIteration:
+                pass
+            else:
+                # This tends to stop modal explosion better than the max worlds check,
+                # at least in its current form (all modal operators + worlds + 1).
+                if entry.rule == self and entry.target.branch == branch:
+                    return False
             # As above, this is unnecessary
             if self[MaxWorlds].is_exceeded(branch):
                 return False

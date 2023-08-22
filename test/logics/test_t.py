@@ -38,5 +38,4 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTFT',
         MaterialBiconditional = 'TFFT',
         Conditional = 'TTFT',
-        Biconditional = 'TFFT',
-    )
+        Biconditional = 'TFFT')

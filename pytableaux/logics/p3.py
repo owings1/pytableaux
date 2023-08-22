@@ -73,7 +73,7 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class DoubleNegationDesignated(FDE.OperatorNodeRule):
+    class DoubleNegationDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, double-negation node `n` on a branch `b`,
         add two undesignated nodes to `b`, one with the double-negatum, and one
@@ -84,7 +84,7 @@ class Rules(LogicType.Rules):
             yield adds(
                 group(sdnode(~s.lhs, not d), sdnode(s.lhs, not d)))
 
-    class DoubleNegationUndesignated(FDE.OperatorNodeRule):
+    class DoubleNegationUndesignated(System.OperatorNodeRule):
         """
         From an unticked, undesignated, double-negation node `n` on a branch `b`,
         make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -97,7 +97,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(~s.lhs, not d)),
                 group(sdnode( s.lhs, not d)))
 
-    class ConjunctionDesignated(FDE.OperatorNodeRule):
+    class ConjunctionDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated conjunction node `n` on a branch `b`, add
         four undesignated nodes to `b`, one for each conjunct, and one for the
@@ -112,7 +112,7 @@ class Rules(LogicType.Rules):
                     sdnode(~s.rhs, not d),
                     sdnode( s.rhs, not d)))
 
-    class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
+    class ConjunctionNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated conjunction node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -127,7 +127,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(s.lhs, d), sdnode(~s.rhs, not d)),
                 group(sdnode(s.rhs, d), sdnode(~s.lhs, not d)))
 
-    class ConjunctionUndesignated(FDE.OperatorNodeRule):
+    class ConjunctionUndesignated(System.OperatorNodeRule):
         """
         From an unticked, undesignated conjunction node `n` on a branch `b`, make
         four branches `b'`, `b''`, `b'''`, and `b''''` from `b`. On `b'`, add a
@@ -144,7 +144,7 @@ class Rules(LogicType.Rules):
                 group(sdnode( s.rhs, not d)),
                 group(sdnode(~s.rhs, not d)))
 
-    class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
+    class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conjunction node `n` on a branch
         `b`, make three branches `b'`, `b''`, and `b'''` from `b`. On `b'`, add
@@ -165,24 +165,24 @@ class Rules(LogicType.Rules):
                 group(sdnode(~lhs, not d)),
                 group(sdnode(~rhs, not d)))
 
-    class MaterialConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialBiconditionalDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class ConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
-    class ConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
-    class ConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
-    class ConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
-    class BiconditionalDesignated(FDE.ConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedDesignated(FDE.ConditionalConjunctsReducingRule): pass
-    class BiconditionalUndesignated(FDE.ConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedUndesignated(FDE.ConditionalConjunctsReducingRule): pass
+    class MaterialConditionalDesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedDesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialConditionalUndesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedUndesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialBiconditionalDesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedDesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class ConditionalDesignated(System.MaterialConditionalReducingRule): pass
+    class ConditionalNegatedDesignated(System.MaterialConditionalReducingRule): pass
+    class ConditionalUndesignated(System.MaterialConditionalReducingRule): pass
+    class ConditionalNegatedUndesignated(System.MaterialConditionalReducingRule): pass
+    class BiconditionalDesignated(System.ConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedDesignated(System.ConditionalConjunctsReducingRule): pass
+    class BiconditionalUndesignated(System.ConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedUndesignated(System.ConditionalConjunctsReducingRule): pass
 
-    # class ExistentialNegatedDesignated(FDE.QuantifierFatRule):
+    # class ExistentialNegatedDesignated(System.QuantifierFatRule):
     #     """
     #     From an unticked, designated, negated existential node `n` on a branch
     #     `b`, for any constant `c` on `b`, let `r` be the result of substituting
@@ -195,7 +195,7 @@ class Rules(LogicType.Rules):
     #     def _get_constant_nodes(self, node, c, branch, /):
     #         yield sdnode(c >> self.sentence(node), self.designation)
 
-    # class ExistentialNegatedUndesignated(FDE.QuantifierFatRule):
+    # class ExistentialNegatedUndesignated(System.QuantifierFatRule):
     #     """
     #     From an unticked, undesignated, negated existential node `n` on a branch
     #     `b`, for a new constant `c` for `b`, let `r` be the result of substituting
@@ -208,7 +208,7 @@ class Rules(LogicType.Rules):
     #     def _get_constant_nodes(self, node, c, branch, /):
     #         yield sdnode(~(c >> self.sentence(node)), not self.designation)
 
-    # class UniversalDesignated(FDE.QuantifierFatRule):
+    # class UniversalDesignated(System.QuantifierFatRule):
     #     """
     #     From a designated universal node `n` on a branch `b`, if there are no
     #     constants on `b`, add two undesignated nodes to `b`, one with the
@@ -225,7 +225,7 @@ class Rules(LogicType.Rules):
     #         yield sdnode(r, not d)
     #         yield sdnode(~r, not d)
 
-    # class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
+    # class UniversalNegatedDesignated(System.QuantifierSkinnyRule):
     #     """
     #     From an unticked, negated universal node `n` on a branch `b`, add a
     #     designated node to `b` with the quantified sentence, substituting a
@@ -240,7 +240,7 @@ class Rules(LogicType.Rules):
 
     # class UniversalUndesignated(UniversalNegatedDesignated): pass
 
-    # class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
+    # class UniversalNegatedUndesignated(System.QuantifierSkinnyRule):
     #     """
     #     From an unticked, undesignated, negated universal node `n` on a branch
     #     `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated

@@ -32,9 +32,14 @@ class Meta(K.Meta):
 class Model(K.Model):
 
     def finish(self):
+        self._check_not_finished()
+        self._ensure_reflexive()
+        super().finish()
+
+    def _ensure_reflexive(self):
+        self._check_not_finished()
         for w in self.frames:
             self.R[w].add(w)
-        super().finish()
 
 class System(K.System): pass
 
@@ -42,7 +47,7 @@ class Rules(LogicType.Rules):
 
     closure = K.Rules.closure
 
-    class Reflexive(K.DefaultNodeRule):
+    class Reflexive(System.DefaultNodeRule):
         """
         .. _reflexive-rule:
 

@@ -15,8 +15,8 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTTNFTFNT',
         MaterialBiconditional = 'TNFNFNFNT',
         Conditional = 'TTTTTTFFT',
-        Biconditional = 'TTFTTFFFT',
-    )
+        Biconditional = 'TTFTTFFFT')
+
 class TestBranchables(Base):
     exp = dict(
         AssertionDesignated=0,

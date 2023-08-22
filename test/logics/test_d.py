@@ -1,5 +1,8 @@
-from ..utils import BaseCase
+from collections import defaultdict
+
 from pytableaux.lang import *
+
+from ..utils import BaseCase
 
 
 class Base(BaseCase):
@@ -26,14 +29,11 @@ class TestArguments(Base, autoargs=True):
         self.assertEqual(len(tab), 1)
         b = tab[0]
         # use internal properties just to be sure, since the bug was with the .find method
-        access = {}
+        # use a list to also make sure we don't have redundant nodes
+        access = defaultdict(list)
         for node in b:
             if 'world1' in node:
-                w1 = node['world1']
-                w2 = node['world2']
-                if w1 not in access:
-                    # use a list to also make sure we don't have redundant nodes
-                    access[w1] = list()
+                w1, w2 = node.worlds()
                 access[w1].append(w2)
         for w1 in access:
             self.assertEqual(len(access[w1]), 1)
@@ -50,5 +50,4 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTFT',
         MaterialBiconditional = 'TFFT',
         Conditional = 'TTFT',
-        Biconditional = 'TFFT',
-    )
+        Biconditional = 'TFFT')

@@ -49,7 +49,7 @@ class Rules(LogicType.Rules):
 
     closure = LP.Rules.closure
 
-    class ConditionalDesignated(FDE.OperatorNodeRule):
+    class ConditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add an undesignated
@@ -70,7 +70,7 @@ class Rules(LogicType.Rules):
                     sdnode( rhs, True),
                     sdnode(~rhs, True)))
 
-    class ConditionalUndesignated(FDE.OperatorNodeRule):
+    class ConditionalUndesignated(System.OperatorNodeRule):
         """
         From an unticked, undesignated, conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'*, add a designated node
@@ -88,7 +88,7 @@ class Rules(LogicType.Rules):
                     sdnode(~s.lhs, False),
                     sdnode(~s.rhs, True)))
 
-    class BiconditionalDesignated(FDE.OperatorNodeRule):
+    class BiconditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated
@@ -112,7 +112,7 @@ class Rules(LogicType.Rules):
                     sdnode( rhs, True),
                     sdnode(~rhs, True)))
 
-    class BiconditionalUndesignated(FDE.OperatorNodeRule):
+    class BiconditionalUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, add a
         conjunction undesignated node to *b*, with first conjunct being a conditional
@@ -126,7 +126,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(convert(s.lhs, s.rhs), False)),
                 group(sdnode(convert(s.rhs, s.lhs), False)))
 
-    class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
+    class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated negated biconditional node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'* add an undesignated node

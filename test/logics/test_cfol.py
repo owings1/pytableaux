@@ -9,7 +9,12 @@ from ..utils import BaseCase
 class Base(BaseCase):
     logic = 'CFOL'
 
-class TestRules(Base, autorules=True): pass
+class TestRules(Base, autorules=True):
+
+    def test_rules_not_modal(self):
+        for rule in self.tab().rules:
+            self.assertIs(rule.modal, False)
+
 class TestArguments(Base, autoargs=True):
 
     def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
@@ -27,13 +32,7 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTFT',
         MaterialBiconditional = 'TFFT',
         Conditional = 'TTFT',
-        Biconditional = 'TFFT',
-    )
-class TestRuleAttrs(Base):
-
-    def test_rules_not_modal(self):
-        for rule in self.tab().rules:
-            self.assertIs(rule.modal, False)
+        Biconditional = 'TFFT')
 
 class TestModels(Base):
 
@@ -48,18 +47,21 @@ class TestModels(Base):
         m = self.m()
         s1 = self.p('La')
         m.set_opaque_value(s1, 'F')
+        m.finish()
         self.assertEqual(m.value_of_operated(s1.negate()), 'T')
 
     def test_model_value_of_operated_opaque2(self):
         m = self.m()
         s1 = self.p('La')
         m.set_opaque_value(s1, 'T')
+        m.finish()
         self.assertEqual(m.value_of_operated(s1), 'T')
 
     def test_model_read_node_opaque(self):
         m = self.m()
         s1 = self.p('La')
-        m._read_node(Node.for_mapping({'sentence': s1}))
+        m._read_node(snode(s1))
+        m.finish()
         self.assertEqual(m.value_of(s1), 'T')
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
@@ -117,27 +119,10 @@ class TestModels(Base):
     def test_model_get_identicals_singleton_two_identical_constants(self):
         m = self.m()
         s1 = self.p('Imn')
-        c1, c2 = s1.params
+        c1, c2 = s1
         m.set_literal_value(s1, 'T')
         m.finish()
         identicals = m._get_identicals(c1)
         self.assertEqual(len(identicals), 1)
         self.assertIn(c2, identicals)
 
-    @skip(None)
-    def test_model_singleton_domain_two_identical_constants(self):
-        m = self.m()
-        s1 = self.p('Imn')
-        m.set_literal_value(s1, 'T')
-        m.finish()
-        d = m.frames[0].domain
-        self.assertEqual(len(d), 1)
-
-    @skip(None)
-    def test_model_same_denotum_two_identical_constants(self):
-        m = self.m()
-        s1 = self.p('Imn')
-        m.set_literal_value(s1, 'T')
-        m.finish()
-        d1, d2 = (m.get_denotum(c) for c in s1.params)
-        self.assertIs(d1, d2)

@@ -22,8 +22,7 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTTBBTFBT',
         MaterialBiconditional = 'TBFBBBFBT',
         Conditional = 'TTTBBTFBT',
-        Biconditional = 'TBFBBBFBT',
-    )
+        Biconditional = 'TBFBBBFBT')
 
 class TestOperatorRules(Base):
 
@@ -38,8 +37,10 @@ class TestModels(Base):
 
     def test_regression_model_not_a_countermodel(self):
         arg = self.parg('NBab', 'c', 'BcNUab')
-        model = self.m()
-        model.set_literal_value(self.p('a'), 'F')
-        model.set_literal_value(self.p('b'), 'T')
-        model.set_literal_value(self.p('c'), 'B')
-        self.assertEqual(model.value_of(arg.premises[1]), 'B')
+        s1, s2, s3 = self.pp(*'abc')
+        m = self.m()
+        m.set_literal_value(s1, 'F')
+        m.set_literal_value(s2, 'T')
+        m.set_literal_value(s3, 'B')
+        m.finish()
+        self.assertEqual(m.value_of(arg.premises[1]), 'B')

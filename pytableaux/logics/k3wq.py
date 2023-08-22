@@ -75,7 +75,7 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class ExistentialDesignated(FDE.QuantifierSkinnyRule):
+    class ExistentialDesignated(System.QuantifierSkinnyRule):
         """
         From an unticked, designated existential node `n` on a branch `b`, add
         two designated nodes to `b`. One node is the result of universally
@@ -93,7 +93,7 @@ class Rules(LogicType.Rules):
                     sdnode(self.quantifier.other(v, si | ~si), d),
                     sdnode(branch.new_constant() >> s, d)))
 
-    class ExistentialUndesignated(FDE.QuantifierSkinnyRule):
+    class ExistentialUndesignated(System.QuantifierSkinnyRule):
         """
         From an unticked, undesignated existential node `n` on a branch `b`, make
         two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,
@@ -113,7 +113,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(r, d), sdnode(~r, d)),
                 group(sdnode(self.quantifier.other(v, ~si), not d)))
 
-    class ExistentialNegatedUndesignated(FDE.QuantifierSkinnyRule):
+    class ExistentialNegatedUndesignated(System.QuantifierSkinnyRule):
         """"
         From an unticked, undesignated, negated existential node `n` on a branch
         `b`, add an undesignated node to `b` with the negation of the inner
@@ -126,7 +126,7 @@ class Rules(LogicType.Rules):
             yield adds(
                 group(sdnode(~(branch.new_constant() >> s), self.designation)))
 
-    class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
+    class UniversalNegatedDesignated(System.QuantifierSkinnyRule):
         """
         From an unticked, designated, negated universal node `n` on a branch `b`,
         add two designated nodes to `b`. The first node is a universally quantified
@@ -145,7 +145,7 @@ class Rules(LogicType.Rules):
                     sdnode(self.quantifier(v, si | ~si), d),
                     sdnode(~(branch.new_constant() >> s), d)))
 
-    class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
+    class UniversalNegatedUndesignated(System.QuantifierSkinnyRule):
         """
         From an unticked, undesignated, negated universal node `n` on a branch `b`,
         make two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,

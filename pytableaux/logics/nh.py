@@ -57,7 +57,7 @@ class Rules(LogicType.Rules):
 
     closure = LP.Rules.closure
 
-    class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
+    class ConjunctionNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, negated, designated conjunction node *n* on a branch *b*,
         make four new branches from *b*: *b'*, *b''*, *b'''*, *b''''*. On *b'*, add
@@ -93,7 +93,7 @@ class Rules(LogicType.Rules):
                     sdnode(~rhs, True),
                     sdnode(~lhs, False)))
 
-    class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
+    class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked, negated, undesignated conjunction node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'*, add two undesignated nodes,
@@ -113,7 +113,7 @@ class Rules(LogicType.Rules):
                     sdnode( rhs, True),
                     sdnode(~rhs, True)))
 
-    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
+    class MaterialConditionalNegatedDesignated(System.OperatorNodeRule):
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))

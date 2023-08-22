@@ -36,17 +36,19 @@ class Meta(S4.Meta):
 class Model(S4.Model):
 
     def finish(self):
+        self._check_not_finished()
         while True:
-            super().finish()
+            self._ensure_reflexive_transitive()
             to_add = set()
             for w1 in self.frames:
                 for w2 in self.R[w1]:
                     if w1 not in self.R[w2]:
                         to_add.add((w2, w1))
             if not to_add:
-                return
+                break
             for w1, w2 in to_add:
                 self.R[w1].add(w2)
+        super().finish()
 
 class System(K.System): pass
 
@@ -54,7 +56,7 @@ class Rules(LogicType.Rules):
 
     closure = K.Rules.closure
 
-    class Symmetric(K.DefaultNodeRule):
+    class Symmetric(System.DefaultNodeRule):
         """
         .. _symmetric-rule:
 

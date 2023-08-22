@@ -104,10 +104,10 @@ class Model(LogicType.Model[ValueFDE]):
         self.maxval = max(self.values)
         self.minval = min(self.values)
 
-    def value_of_atomic(self, s: Sentence, /) -> ValueFDE:
+    def value_of_atomic(self, s: Sentence, /):
         return self.atomics.get(s, self.unassigned_value)
 
-    def value_of_opaque(self, s: Sentence, /) -> ValueFDE:
+    def value_of_opaque(self, s: Sentence, /):
         return self.opaques.get(s, self.unassigned_value)
 
     def value_of_predicated(self, s: Predicated, /):
@@ -140,16 +140,6 @@ class Model(LogicType.Model[ValueFDE]):
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
         raise TypeError(s.quantifier)
-
-    def is_countermodel_to(self, a: Argument, /) -> bool:
-        """
-        A model is a countermodel to an argument iff the value of every premise
-        is in the set of designated values, and the value of the conclusion
-        is not in the set of designated values.
-        """
-        return (
-            all(map(self.designated_values.__contains__, map(self.value_of, a.premises))) and
-            self.value_of(a.conclusion) not in self.designated_values)
 
     def get_data(self) -> dict[str, Any]:
         return dict(
@@ -216,6 +206,7 @@ class Model(LogicType.Model[ValueFDE]):
         )
 
     def read_branch(self, branch, /):
+        self._check_not_finished()
         for node in branch:
             if not isinstance(node, SentenceNode):
                 continue
@@ -269,7 +260,7 @@ class Model(LogicType.Model[ValueFDE]):
                     self.set_opaque_value(s, value)
                 else:
                     self.set_literal_value(s, value)
-        self.finish()
+        super().read_branch(branch)
 
     def _collect_sentence(self, s: Sentence, /):
         for pred in s.predicates:
@@ -284,6 +275,7 @@ class Model(LogicType.Model[ValueFDE]):
         for s in self.all_atomics:
             if s not in self.atomics:
                 self.set_literal_value(s, self.unassigned_value)
+        super().finish()
 
     def set_literal_value(self, s: Sentence, value, /):
         try:
@@ -347,12 +339,10 @@ class Model(LogicType.Model[ValueFDE]):
                 raise Emsg.ConflictForExtension(value, s.params)
             predext.addneg(s.params)
         elif value == 'N':
-        # elif value is self.values.N:
             if s.params in predext.pos:
                 raise Emsg.ConflictForExtension(value, s.params)
             if s.params in predext.neg:
                 raise Emsg.ConflictForAntiExtension(value, s.params)
-        # elif value is self.values.B:
         elif value == 'B':
             predext.addpos(s.params)
             predext.addneg(s.params)
@@ -398,71 +388,72 @@ class System(LogicType.System):
         except KeyError:
             pass
 
-class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
-    """Default FDE node rule with:
-    
-    - BaseSimpleRule:
-        - `_apply()` delegates to AdzHelper's `_apply()`. ticking is default True
-        - `score_candidate()` delegates to AdzHelper's `closure_score()`
-    - BaseNodeRule:
-        - loads FilterHelper. ignore_ticked is default True
-        - `example_nodes()` delegates to FilterHelper.
-    - GetNodeTargetsRule:
-        - `_get_targets()` wrapped by FilterHelper, then delegates to
-          abstract `_get_node_targets()`.
-    - DefaultNodeRule (this rule):
-        - uses autoattrs to set attrs from the rule name.
-        - implements `_get_node_targets()` with optional `_get_sd_targers()`.
-            NB it is not marked as abstract but will throw NotImplementError.
-        - adds a NodeDesignation filter.
-    """
-    NodeFilters = group(filters.NodeDesignation)
-    autoattrs = True
+    class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
+        """Default FDE node rule with:
+        
+        - BaseSimpleRule:
+            - `_apply()` delegates to AdzHelper's `_apply()`. ticking is default True
+            - `score_candidate()` delegates to AdzHelper's `closure_score()`
+        - BaseNodeRule:
+            - loads FilterHelper. ignore_ticked is default True
+            - `example_nodes()` delegates to FilterHelper.
+        - GetNodeTargetsRule:
+            - `_get_targets()` wrapped by FilterHelper, then delegates to
+            abstract `_get_node_targets()`.
+        - DefaultNodeRule (this rule):
+            - uses autoattrs to set attrs from the rule name.
+            - implements `_get_node_targets()` with optional `_get_sd_targers()`.
+                NB it is not marked as abstract but will throw NotImplementError.
+            - adds a NodeDesignation filter.
+        """
+        NodeFilters = group(filters.NodeDesignation)
+        autoattrs = True
 
-    def _get_node_targets(self, node, branch, /):
-        return self._get_sd_targets(self.sentence(node), node['designated'])
+        def _get_node_targets(self, node, branch, /):
+            return self._get_sd_targets(self.sentence(node), node['designated'])
 
-    def _get_sd_targets(self, s: Operated, d: bool, /):
-        raise NotImplementedError
+        def _get_sd_targets(self, s: Operated, d: bool, /):
+            raise NotImplementedError
 
-class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule, intermediate=True):
-    'Mixin class for typical operator rules.'
-    pass
+    class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule, intermediate=True):
+        'Mixin class for typical operator rules.'
+        pass
 
-class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule, intermediate=True):
-    'Mixin class for "narrow" quantifier rules.'
-    pass
+    class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule, intermediate=True):
+        'Mixin class for "narrow" quantifier rules.'
+        pass
 
-class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule, intermediate=True):
-    'Mixin class for "extended" quantifier rules.'
-    pass
+    class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule, intermediate=True):
+        'Mixin class for "extended" quantifier rules.'
+        pass
 
-class ConjunctionReducingRule(OperatorNodeRule, intermediate=True):
+    class ConjunctionReducingRule(OperatorNodeRule, intermediate=True):
 
-    conjoined: Operator
+        conjoined: Operator
 
-    def _get_sd_targets(self, s, d, /):
-        oper = self.conjoined
-        lhs, rhs = s
-        s = oper(lhs, rhs) & oper(rhs, lhs)
-        if self.negated:
-            s = ~s
-        yield adds(group(sdnode(s, d)))
+        def _get_sd_targets(self, s, d, /):
+            oper = self.conjoined
+            lhs, rhs = s
+            s = oper(lhs, rhs) & oper(rhs, lhs)
+            if self.negated:
+                s = ~s
+            yield adds(group(sdnode(s, d)))
 
-class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
-    conjoined = Operator.MaterialConditional
+    class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
+        conjoined = Operator.MaterialConditional
 
-class ConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
-    conjoined = Operator.Conditional
+    class ConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
+        conjoined = Operator.Conditional
 
-class MaterialConditionalReducingRule(OperatorNodeRule, intermediate=True):
-    "This rule reduces to a disjunction."
+    class MaterialConditionalReducingRule(OperatorNodeRule, intermediate=True):
+        "This rule reduces to a disjunction."
 
-    def _get_sd_targets(self, s, d, /):
-        sn = ~s.lhs | s.rhs
-        if self.negated:
-            sn = ~sn
-        yield adds(group(sdnode(sn, d)))
+        def _get_sd_targets(self, s, d, /):
+            sn = ~s.lhs | s.rhs
+            if self.negated:
+                sn = ~sn
+            yield adds(group(sdnode(sn, d)))
+
 
 class Rules(LogicType.Rules):
 
@@ -482,7 +473,7 @@ class Rules(LogicType.Rules):
             yield sdnode(s, True)
             yield sdnode(s, False)
             
-    class DoubleNegationDesignated(OperatorNodeRule):
+    class DoubleNegationDesignated(System.OperatorNodeRule):
         """
         From an unticked designated negated negation node *n* on a branch *b*,
         add a designated node to *b* with the double-negatum of *n*, then tick *n*.
@@ -493,7 +484,7 @@ class Rules(LogicType.Rules):
 
     class DoubleNegationUndesignated(DoubleNegationDesignated): pass
 
-    class AssertionDesignated(OperatorNodeRule):
+    class AssertionDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, assertion node *n* on a branch *b*, add a designated
         node to *b* with the operand of *b*, then tick *n*.
@@ -504,7 +495,7 @@ class Rules(LogicType.Rules):
 
     class AssertionUndesignated(AssertionDesignated): pass
 
-    class AssertionNegatedDesignated(OperatorNodeRule):
+    class AssertionNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
@@ -515,7 +506,7 @@ class Rules(LogicType.Rules):
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated): pass
 
-    class ConjunctionDesignated(OperatorNodeRule):
+    class ConjunctionDesignated(System.OperatorNodeRule):
         """
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
@@ -524,7 +515,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d), sdnode(s.rhs, d)))
 
-    class ConjunctionNegatedDesignated(OperatorNodeRule):
+    class ConjunctionNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked designated negated conjunction node *n* on a branch *b*,
         for each conjunct *c*, make a new branch *b'* from *b* and add a designated
@@ -536,7 +527,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(~s.lhs, d)),
                 group(sdnode(~s.rhs, d)))
 
-    class ConjunctionUndesignated(OperatorNodeRule):
+    class ConjunctionUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated conjunction node *n* on a branch *b*,
         for each conjunct *c*, make a new branch *b'* from *b* and add an
@@ -548,7 +539,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(s.lhs, d)),
                 group(sdnode(s.rhs, d)))
 
-    class ConjunctionNegatedUndesignated(OperatorNodeRule):
+    class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated negated conjunction node *n* on a branch
         *b*, for each conjunct *c*, add an undesignated node with the negation
@@ -563,7 +554,7 @@ class Rules(LogicType.Rules):
     class DisjunctionUndesignated(ConjunctionDesignated): pass
     class DisjunctionNegatedUndesignated(ConjunctionNegatedDesignated): pass
 
-    class MaterialConditionalDesignated(OperatorNodeRule):
+    class MaterialConditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked designated material conditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add a designated node with the negation
@@ -576,7 +567,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(~s.lhs, d)),
                 group(sdnode( s.rhs, d)))
 
-    class MaterialConditionalNegatedDesignated(OperatorNodeRule):
+    class MaterialConditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked designated negated material conditional node *n* on a
         branch *b*, add a designated node with the antecedent, and a designated
@@ -586,7 +577,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
 
-    class MaterialConditionalUndesignated(OperatorNodeRule):
+    class MaterialConditionalUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated material conditional node *n* on a branch *b*, add
         an undesignated node with the negation of the antecedent and an undesignated node
@@ -596,7 +587,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s.lhs, d), sdnode(s.rhs, d)))
 
-    class MaterialConditionalNegatedUndesignated(OperatorNodeRule):
+    class MaterialConditionalNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated negated material conditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add an undesignated node with the antecedent to
@@ -609,7 +600,7 @@ class Rules(LogicType.Rules):
                 group(sdnode( s.lhs, d)),
                 group(sdnode(~s.rhs, d)))
 
-    class MaterialBiconditionalDesignated(OperatorNodeRule):
+    class MaterialBiconditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked designated material biconditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add a designated node with the negation
@@ -623,7 +614,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)),
                 group(sdnode( s.rhs, d), sdnode( s.lhs, d)))
 
-    class MaterialBiconditionalNegatedDesignated(OperatorNodeRule):
+    class MaterialBiconditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked designated negated material biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*, add a designated node with the antecedent and a
@@ -648,7 +639,7 @@ class Rules(LogicType.Rules):
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated): pass
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated): pass
 
-    class ExistentialDesignated(rules.NarrowQuantifierRule, DefaultNodeRule):
+    class ExistentialDesignated(System.DefaultNodeRule, rules.NarrowQuantifierRule):
         """
         From an unticked designated existential node *n* on a branch *b* quantifying over
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
@@ -660,7 +651,7 @@ class Rules(LogicType.Rules):
             yield adds(
                 group(sdnode(branch.new_constant() >> s, self.designation)))
 
-    class ExistentialNegatedDesignated(rules.QuantifiedSentenceRule, DefaultNodeRule):
+    class ExistentialNegatedDesignated(System.DefaultNodeRule, rules.QuantifiedSentenceRule):
         """
         From an unticked designated negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a designated node to *b*
@@ -672,7 +663,7 @@ class Rules(LogicType.Rules):
             v, si = s[1:]
             yield adds(group(sdnode(self.quantifier.other(v, ~si), d)))
 
-    class ExistentialUndesignated(QuantifierFatRule):
+    class ExistentialUndesignated(System.QuantifierFatRule):
         """
         From an undesignated existential node *n* on a branch *b*, for any constant *c* on
         *b* such that the result *r* of substituting *c* for the variable bound by the

@@ -3,7 +3,6 @@ from pytableaux.errors import *
 from pytableaux.lang import *
 from pytableaux.proof import *
 
-A = Atomic.first()
 Fa = Predicated.first()
 
 class Base(BaseCase):
@@ -47,95 +46,88 @@ class TestModels(Base):
 
     def test_branch_deny_antec(self):
         tab = self.tab('Denying the Antecedent')
+        s = Atomic.first()
         m = self.m()
         m.read_branch(tab.open[0])
-        self.assertEqual(m.value_of(A), 'F')
-        self.assertEqual(m.value_of(A.negate()), 'T')
+        self.assertEqual(m.value_of(s), 'F')
+        self.assertEqual(m.value_of(~s), 'T')
 
     def test_branch_extract_disj_2(self):
         tab = self.tab('Extracting a Disjunct 2')
+        s = Atomic.first()
         m = self.m()
         m.read_branch(tab.open[0])
-        self.assertEqual(m.value_of(A), 'T')
-        self.assertEqual(m.value_of(A.negate()), 'F')
+        self.assertEqual(m.value_of(s), 'T')
+        self.assertEqual(m.value_of(~s), 'F')
 
     def test_branch_no_proof_predicated(self):
         b = Branch()
-        b.append({'sentence': Fa})
+        s1 = self.p('Fm')
+        b += snode(s1)
         m = self.m()
         m.read_branch(b)
-        branch = Branch()
-        s1 = self.p('Fm')
-        branch.append({'sentence': s1})
-        model = self.m()
-        model.read_branch(branch)
-        self.assertEqual(model.value_of(s1), 'T')
+        self.assertEqual(m.value_of(s1), 'T')
 
     def test_value_of_operated_opaque(self):
         # coverage
-        model = self.m()
         s = self.p('La')
-        model.set_opaque_value(s, 'T')
-        self.assertEqual(model.value_of_operated(s), 'T')
+        with self.m() as m:
+            m.set_opaque_value(s, 'T')
+        self.assertEqual(m.value_of_operated(s), 'T')
         
     def test_set_literal_value_predicated1(self):
-        model = self.m()
-        s = Predicated('Identity', Constant.gen(2))
-        model.set_literal_value(s, 'T')
-        res = model.value_of(s)
-        self.assertEqual(res, 'T')
+        s = Predicate.Identity(Constant.gen(2))
+        with self.m() as m:
+            m.set_literal_value(s, 'T')
+        self.assertEqual(m.value_of(s), 'T')
 
     def test_opaque_necessity_branch_make_model(self):
         s = self.p('La')
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.append({'sentence': s})
-        model = self.m()
-        model.read_branch(branch)
-        self.assertEqual(model.value_of(s), 'T')
+        b = self.tab().branch()
+        b += snode(s)
+        m = self.m()
+        m.read_branch(b)
+        self.assertEqual(m.value_of(s), 'T')
 
     def test_opaque_neg_necessity_branch_make_model(self):
         s = self.p('La')
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.append({'sentence': s.negate()})
-        model = self.m()
-        model.read_branch(branch)
-        self.assertEqual(model.value_of(s), 'F')
+        b = self.tab().branch()
+        b += snode(~s)
+        with self.m() as m:
+            m.read_branch(b)
+        self.assertEqual(m.value_of(s), 'F')
 
     def test_get_data_triv(self):
         s = self.p('a')
-        model = self.m()
-        model.set_literal_value(s, 'T')
-        model.finish()
-        data = model.get_data()
+        with self.m() as m:
+            m.set_literal_value(s, 'T')
+        data = m.get_data()
         self.assertIn('Atomics', data)
 
     def test_value_of_operated_opaque1(self):
         s1 = self.p('La')
-        model = self.m()
-        model.set_opaque_value(s1, 'F')
-        res = model.value_of_operated(s1.negate())
-        self.assertEqual(res, 'T')
+        with self.m() as m:
+            m.set_opaque_value(s1, 'F')
+        self.assertEqual(m.value_of_operated(~s1), 'T')
 
     def test_value_of_opaque_unassigned(self):
         s = self.p('La')
-        model = self.m()
-        res = model.value_of(s)
-        self.assertEqual(res, model.unassigned_value)
+        m = self.m()
+        m.finish()
+        self.assertEqual(m.value_of(s), m.unassigned_value)
 
     def test_set_predicated_false_value_error_on_set_to_true(self):
         s = self.p('Fm')
-        model = self.m()
-        model.set_literal_value(s, 'F')
+        m = self.m()
+        m.set_literal_value(s, 'F')
         with self.assertRaises(ModelValueError):
-            model.set_literal_value(s, 'T')
+            m.set_literal_value(s, 'T')
 
     def test_get_anti_extension(self):
         # coverage
-        s: Predicated = Predicated.first()
-        model = self.m()
-        anti_extension = model.get_anti_extension(s.predicate)
+        s = Predicated.first()
+        m = self.m()
+        anti_extension = m.get_anti_extension(s.predicate)
         self.assertEqual(len(anti_extension), 0)
-        model.set_literal_value(s, 'F')
+        m.set_literal_value(s, 'F')
         self.assertIn(s.params, anti_extension)

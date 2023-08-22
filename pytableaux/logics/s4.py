@@ -36,9 +36,15 @@ class Meta(T.Meta):
 class Model(T.Model):
 
     def finish(self):
+        self._check_not_finished()
+        self._ensure_reflexive_transitive()
+        super().finish()
+
+    def _ensure_reflexive_transitive(self):
+        self._check_not_finished()
         R = self.R
         while True:
-            super().finish()
+            self._ensure_reflexive()
             to_add = set()
             for w1 in self.frames:
                 for w2 in R[w1]:
@@ -46,7 +52,7 @@ class Model(T.Model):
                         if w3 not in R[w1]:
                             to_add.add((w1, w3))
             if not to_add:
-                return
+                break
             for w1, w2 in to_add:
                 R[w1].add(w2)
 
@@ -56,7 +62,7 @@ class Rules(LogicType.Rules):
 
     closure = K.Rules.closure
 
-    class Transitive(K.DefaultNodeRule):
+    class Transitive(System.DefaultNodeRule):
         """
         .. _transitive-rule:
 

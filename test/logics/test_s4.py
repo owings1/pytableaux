@@ -52,14 +52,13 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTFT',
         MaterialBiconditional = 'TFFT',
         Conditional = 'TTFT',
-        Biconditional = 'TFFT',
-    )
+        Biconditional = 'TFFT')
 
 
 class TestModels(Base):
+
     def test_model_finish_transitity_visibles(self):
-        model = self.m()
-        model.R.add((0,1))
-        model.R.add((1,2))
-        model.finish()
-        self.assertIn(2, model.R[0])
+        with self.m() as m:
+            m.R.add((0,1))
+            m.R.add((1,2))
+        self.assertIn(2, m.R[0])

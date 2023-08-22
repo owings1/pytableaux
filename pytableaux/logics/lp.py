@@ -44,14 +44,14 @@ class Model(FDE.Model):
     def finish(self):
         super().finish()
         # Ensure anti-extension is populated for every param tuple
-        ptuples = defaultdict(set)
+        ntuples = defaultdict(set)
         for pred, interp in self.predicates.items():
-            ptuples[pred.arity].update(interp.pos)
-            ptuples[pred.arity].update(interp.neg)
+            ntuples[pred.arity].update(interp.pos)
+            ntuples[pred.arity].update(interp.neg)
         for pred, interp in self.predicates.items():
-            for ptuple in ptuples[pred.arity]:
-                if ptuple not in interp.pos:
-                    interp.addneg(ptuple)
+            for ntuple in ntuples[pred.arity]:
+                if ntuple not in interp.pos:
+                    interp.addneg(ntuple)
 
 class System(FDE.System): pass
 

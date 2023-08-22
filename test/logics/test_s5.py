@@ -48,16 +48,14 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTFT',
         MaterialBiconditional = 'TFFT',
         Conditional = 'TTFT',
-        Biconditional = 'TFFT',
-    )
+        Biconditional = 'TFFT')
 
 class TestModels(Base):
 
     def test_model_finish_symmetry_visibles(self):
-        model = self.m()
-        model.R.add((0,1))
-        model.finish()
-        self.assertIn(0, model.R[1])
+        with self.m() as m:
+            m.R.add((0,1))
+        self.assertIn(0, m.R[1])
         # model.add_access(0, 1)
         # model.finish()
         # assert 0 in model.visibles(1)

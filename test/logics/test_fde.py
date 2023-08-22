@@ -92,7 +92,7 @@ class TestModels(Base):
         b = Branch()
         for s, d in nitems:
             b.append(sdnode(self.p(s), d))
-        m = self.Model()
+        m = self.m()
         m.read_branch(b)
         return (m,b)
 
@@ -103,10 +103,10 @@ class TestModels(Base):
 
     def test_model_a_thus_b_is_countermodel_to_false(self):
         arg = self.parg('b', 'a')
-        model = self.m()
-        model.set_literal_value(arg.premises[0], 'F')
-        model.set_literal_value(arg.conclusion, 'F')
-        assert not model.is_countermodel_to(arg)
+        with self.m() as m:
+            m.set_literal_value(arg.premises[0], 'F')
+            m.set_literal_value(arg.conclusion, 'F')
+        assert not m.is_countermodel_to(arg)
 
     def test_model_b_value_atomic_branch(self):
         s1 = self.p('a')
@@ -115,113 +115,94 @@ class TestModels(Base):
 
     def test_model_univ_t_value_branch(self):
         s1, s2 = self.pp('Fm', 'VxFx')
-        m,b = self.mb((s1, True))
+        m, b = self.mb((s1, True))
         self.assertEqual(m.value_of(s2), 'T')
 
     def test_model_exist_b_value_branch(self):
         s1, s2, s3 = self.pp('Fm', 'Fn', 'SxFx')
-        m,b = self.mb(
+        m, b = self.mb(
             (s1, True),
-            (s1.negate(), True),
+            (~s1, True),
             (s2, False),
-            (s2.negate(), False))
+            (~s2, False))
         self.assertEqual(m.value_of(s3), 'B')
 
     def test_model_necessity_opaque_des_value_branch(self):
         s1 = self.p('La')
-        b = Branch().append({'sentence': s1, 'designated': True})
-        m = self.Model()
-        m.read_branch(b)
+        m, b = self.mb((s1, True))
         self.assertIn(m.value_of(s1), ('B', 'T'))
 
     def test_model_necessity_opaque_b_value_branch(self):
         s1 = self.p('La')
-        b = Branch().extend((
-            sdnode(s1, True),
-            sdnode(s1.negate(), True)))
-        m = self.Model()
-        m.read_branch(b)
+        m, b = self.mb((s1, True), (~s1, True))
         self.assertEqual(m.value_of(s1), 'B')
 
     def test_model_atomic_undes_value_branch(self):
         s1 = self.p('a')
-        b = Branch().append({'sentence': s1, 'designated': False})
-        m = self.Model()
-        m.read_branch(b)
+        m, b = self.mb((s1, False))
         self.assertIn(m.value_of(s1), ('F', 'N'))
 
     def test_model_atomic_t_value_branch(self):
-        branch = Branch()
         s = self.p('a')
-        branch.extend([
-            sdnode(s, True),
-            sdnode(s.negate(), False)])
-        m = self.Model()
-        m.read_branch(branch)
+        m, b = self.mb((s, True), (~s, False))
         self.assertEqual(m.value_of(s), 'T')
 
     def test_model_atomic_f_value_branch(self):
-        branch = Branch()
         s = self.p('a')
-        branch.extend([
-            sdnode(s, False),
-            sdnode(s.negate(), True)])
-        m = self.Model()
-        m.read_branch(branch)
+        m, b = self.mb((s, False), (~s, True))
         self.assertEqual(m.value_of(s), 'F')
 
     def test_model_get_data_various(self):
-        s1 = self.p('a')
-        s2 = self.p('Imn')
-        model = self.m()
-        model.set_literal_value(s1, 'B')
-        model.set_literal_value(s2, 'F')
-        res = model.get_data()
+        s1, s2 = self.pp('a', 'Imn')
+        with self.m() as m:
+            m.set_literal_value(s1, 'B')
+            m.set_literal_value(s2, 'F')
+        res = m.get_data()
         self.assertIn('Atomics', res)
 
     def test_model_value_of_atomic_unassigned(self):
         s = self.p('a')
-        model = self.m()
-        res = model.value_of(s)
-        self.assertEqual(res, model.unassigned_value)
+        m = self.m()
+        m.finish()
+        res = m.value_of(s)
+        self.assertEqual(res, m.unassigned_value)
 
     def test_model_value_of_opaque_unassigned(self):
         s = self.p('La')
-        model = self.m()
-        res = model.value_of(s)
-        self.assertEqual(res, model.unassigned_value)
+        m = self.m()
+        m.finish()
+        res = m.value_of(s)
+        self.assertEqual(res, m.unassigned_value)
 
     def test_model_value_error_various(self):
-        s1 = self.p('La')
-        s2 = self.p('a')
-        s3 = self.p('Imn')
-        model = self.m()
-        model.set_opaque_value(s1, 'T')
+        s1, s2, s3 = self.pp('La', 'a', 'Imn')
+        m = self.m()
+        m.set_opaque_value(s1, 'T')
         with self.assertRaises(ModelValueError):
-            model.set_opaque_value(s1, 'B')
-        model = self.m()
-        model.set_atomic_value(s2, 'T')
+            m.set_opaque_value(s1, 'B')
+        m = self.m()
+        m.set_atomic_value(s2, 'T')
         with self.assertRaises(ModelValueError):
-            model.set_atomic_value(s2, 'B')
-        model = self.m()
-        model.set_predicated_value(s3, 'T')
+            m.set_atomic_value(s2, 'B')
+        m = self.m()
+        m.set_predicated_value(s3, 'T')
         with self.assertRaises(ModelValueError):
-            model.set_predicated_value(s3, 'N')
-        model = self.m()
-        model.set_predicated_value(s3, 'B')
+            m.set_predicated_value(s3, 'N')
+        m = self.m()
+        m.set_predicated_value(s3, 'B')
         with self.assertRaises(ModelValueError):
-            model.set_predicated_value(s3, 'T')
-        model = self.m()
-        model.set_predicated_value(s3, 'B')
+            m.set_predicated_value(s3, 'T')
+        m = self.m()
+        m.set_predicated_value(s3, 'B')
         with self.assertRaises(ModelValueError):
-            model.set_predicated_value(s3, 'F')
-        model = self.m()
-        model.set_predicated_value(s3, 'F')
+            m.set_predicated_value(s3, 'F')
+        m = self.m()
+        m.set_predicated_value(s3, 'F')
         with self.assertRaises(ModelValueError):
-            model.set_predicated_value(s3, 'N')
-        model = self.m()
+            m.set_predicated_value(s3, 'N')
+        m = self.m()
         with self.assertRaises(ValueError):
-            model.truth_function('Foomunction', 'F')
+            m.truth_function('Foomunction', 'F')
 
     def test_error_various(self):
         s = self.p('Aab')
@@ -231,24 +212,23 @@ class TestModels(Base):
             self.m().value_of_quantified(s)
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
-        arg = self.parg('a', 'NLa', 'b')
-        proof = Tableau(self.logic, arg, is_build_models=True)
-        proof.build()
-        model = proof[0].model
-        self.assertEqual(model.value_of(self.p('a')), 'F')
-        self.assertEqual(model.value_of(self.p('La')), 'F')
-        self.assertEqual(model.value_of(self.p('NLa')), 'T')
-        self.assertTrue(model.is_countermodel_to(arg))
+        tab = self.tab('a', 'NLa', 'b')
+        m = tab[0].model
+        s1, s2, s3 = self.pp('a', 'La', 'NLa')
+        self.assertEqual(m.value_of(s1), 'F')
+        self.assertEqual(m.value_of(s2), 'F')
+        self.assertEqual(m.value_of(s3), 'T')
+        self.assertTrue(m.is_countermodel_to(tab.argument))
 
     def test_observed_value_of_universal_with_diamond_min_arg_is_an_empty_sequence(self):
         arg = self.parg('b', 'VxUFxSyMFy')
-        proof = Tableau(self.logic, arg, is_build_models=False, max_steps=100).build()
-        self.assertTrue(proof.invalid)
-        branch = proof[-1]
-        model = self.m()
-        model.read_branch(branch)
+        tab = self.tab(arg, is_build_models=False, max_steps=100)
+        self.assertTrue(tab.invalid)
+        b = tab[-1]
+        m = self.m()
+        m.read_branch(b)
         s1 = arg.premises[0]
-        self.assertIn(model.value_of(s1), model.designated_values)
+        self.assertIn(m.value_of(s1), m.designated_values)
 
     def test_observed_as_above_reconstruct1(self):
         # solution was to add all constants in set_opaque_value
@@ -260,14 +240,14 @@ class TestModels(Base):
             'SyMFy',        # designated
             'VxUFxSyMFy',   # designated
         )
-        model = self.m()
-        model.set_opaque_value(s1, 'T')
-        model.set_opaque_value(s2, 'T')
-        model.set_opaque_value(s3, 'T')
-        model.set_literal_value(s4, 'F')
-        self.assertEqual(model.value_of(s3), 'T')
-        self.assertIn(s3, model.opaques)
-        self.assertIn(model.value_of(s5), model.designated_values)
+        with self.m() as m:
+            m.set_opaque_value(s1, 'T')
+            m.set_opaque_value(s2, 'T')
+            m.set_opaque_value(s3, 'T')
+            m.set_literal_value(s4, 'F')
+        self.assertEqual(m.value_of(s3), 'T')
+        self.assertIn(s3, m.opaques)
+        self.assertIn(m.value_of(s5), m.designated_values)
 
 class TestBranchables(Base):
     exp = dict(

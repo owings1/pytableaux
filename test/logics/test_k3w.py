@@ -12,15 +12,15 @@ class TestRules(Base, autorules=True):
         s1, s2 = self.pp('Eab', 'KCabCba')
         tab, b = self.bt((s1, True))
         tab.step()
-        self.assertTrue(b.has({'sentence': s2, 'designated': True}))
+        self.assertTrue(b.has(sdnode(s2, True)))
 
     def test_rule_MaterialBiconditionalNegatedDesignated_step(self):
         s1, s2 = self.pp('NEab', 'NKCabCba')
         tab, b = self.bt((s1, True))
         tab.step()
-        rule = tab.history[0].rule
+        rule = next(iter(tab.history)).rule
         self.assertEqual(rule.name, 'MaterialBiconditionalNegatedDesignated')
-        self.assertTrue(b.has({'sentence': s2, 'designated': True}))
+        self.assertTrue(b.has(sdnode(s2, True)))
 
     def test_rule_ConjunctionNegatedUndesignated_step(self):
         sdn = self.sdnode
@@ -35,10 +35,9 @@ class TestRules(Base, autorules=True):
         self.assertTrue(b3.has(sdn('b', True)))
 
     def bt(self, *nitems):
-        tab = self.tab()
-        b = tab.branch()
-        b.extend({'sentence': self.p(s), 'designated': d}
-            for s,d in nitems)
+        sdn = self.sdnode
+        tab, b = self.tabb()
+        b += (sdn(s,d) for s,d in nitems)
         return (tab, b)
 
 class TestArguments(Base, autoargs=True):
@@ -57,16 +56,15 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TNTNNNFNT',
         MaterialBiconditional = 'TNFNNNFNT',
         Conditional = 'TNTNNNFNT',
-        Biconditional = 'TNFNNNFNT',
-    )
+        Biconditional = 'TNFNNNFNT')
 
 
 class TestOptimizations(Base):
     def test_optimize1(self):
-        tab = self.tab()
-        tab.branch().extend([
-            {'sentence': self.p('ANaUab'), 'designated': False},
-            {'sentence': self.p('NANaUab'), 'designated': False}])
+        sdn = self.sdnode
+        tab, b = self.tabb()
+        b += sdn('ANaUab', False)
+        b += sdn('NANaUab', False)
         step = tab.step()
         self.assertEqual(step.rule.name, 'DisjunctionNegatedUndesignated')
 
@@ -77,9 +75,8 @@ class TestModels(Base):
         # it was only observed when we were sorting predicated sentences
         # that ended up in the opaques of a model.
         arg = self.parg('VxMFx', 'VxUFxSyMFy', 'Fm')
-        proof = Tableau(self.logic, arg, is_build_models=True, max_steps=100)
-        proof.build()
-        self.assertTrue(proof.invalid)
-        for branch in proof.open:
-            model = branch.model
-            model.get_data()
+        tab = self.tab(arg, is_build_models=True, max_steps=100)
+        self.assertTrue(tab.invalid)
+        for b in tab.open:
+            m = b.model
+            m.get_data()

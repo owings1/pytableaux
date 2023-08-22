@@ -29,23 +29,17 @@ class Meta(K3.Meta):
     title = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 50
-    native_operators = FDE.Meta.native_operators | group(Operator.Assertion)
+    native_operators = FDE.Meta.native_operators | [Operator.Assertion]
 
 class Model(FDE.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
-        def gap(self, v, /):
-            return self.values[min(v, 1 - v)]
-
-        def crunch(self, v, /):
-            return self.values[v - self.gap(v)]
+        def Assertion(self, v, /):
+            return self.values[v // 1]
         
-        Assertion = crunch
-
         def Conditional(self, a, b, /):
-            a, b = map(self.Assertion, (a, b))
-            return self.Disjunction(self.Negation(a), b)
+            return super().Conditional(*map(self.Assertion, (a, b)))
 
 class System(FDE.System): pass
 
@@ -53,7 +47,7 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class AssertionNegatedDesignated(FDE.OperatorNodeRule):
+    class AssertionNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated assertion node *n* on a branch *b*,
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
@@ -65,7 +59,7 @@ class Rules(LogicType.Rules):
 
     class AssertionUndesignated(AssertionNegatedDesignated): pass
 
-    class AssertionNegatedUndesignated(FDE.OperatorNodeRule):
+    class AssertionNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
         a designated node to *b* with the assertion of *n*, then tick *n*.
@@ -74,7 +68,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, not d)))
 
-    class ConditionalDesignated(FDE.OperatorNodeRule):
+    class ConditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*,
         add a designated node to *b* with a disjunction, where the
@@ -90,7 +84,7 @@ class Rules(LogicType.Rules):
             # keep designation neutral for inheritance below
             yield adds(group(sdnode(sn, d)))
 
-    class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
+    class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated negated conditional node *n* on a branch *b*,
         add a designated node with the antecedent, and an undesigntated node
@@ -104,7 +98,7 @@ class Rules(LogicType.Rules):
     class ConditionalUndesignated(ConditionalNegatedDesignated): pass
     class ConditionalNegatedUndesignated(ConditionalDesignated): pass
 
-    class BiconditionalDesignated(FDE.OperatorNodeRule):
+    class BiconditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add
         two designated nodes to *b*, one with a disjunction, where the first

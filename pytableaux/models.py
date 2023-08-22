@@ -26,9 +26,9 @@ from collections.abc import Set
 from dataclasses import dataclass
 from itertools import product, repeat
 from types import MappingProxyType as MapProxy
-from typing import Any, Generic, Iterable, Literal, Mapping, TypeVar
+from typing import Any, Generic, Iterable, Literal, Mapping, Self, TypeVar
 
-from .errors import check
+from .errors import check, Emsg
 from .lang import (Argument, Atomic, Constant, Operated, Operator, Predicated,
                    Quantified, Sentence)
 from .logics import LogicType
@@ -81,6 +81,14 @@ class Mval(abcs.Ebc):
         return type(self)(self.num + other)
     def __radd__(self, other):
         return other + self.num
+    def __truediv__(self, other):
+        return type(self)(self.num / other)
+    def __rtruediv__(self, other):
+        return other / self.num
+    def __floordiv__(self, other):
+        return type(self)(self.num // other)
+    def __rfloordiv__(self, other):
+        return other // self.num
 
     def __float__(self):
         return self.num
@@ -143,6 +151,14 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
     def id(self) -> int:
         return id(self)
 
+    @property
+    def finished(self):
+        try:
+            return self._finished
+        except AttributeError:
+            self._finished = False
+            return False
+
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
         if not self.Meta.quantified and type(s) is Quantified:
             return True
@@ -158,6 +174,7 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
                 self.is_sentence_opaque(s.lhs)))
 
     def value_of(self, s: Sentence, /, **kw) -> MvalT_co:
+        self._check_finished()
         if self.is_sentence_opaque(s):
             return self.value_of_opaque(s, **kw)
         try:
@@ -170,21 +187,22 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
 
     @abstractmethod
     def value_of_opaque(self, s: Sentence, /) -> MvalT_co:
-        raise NotImplementedError
+        self._check_finished()
 
     @abstractmethod
     def value_of_atomic(self, s: Atomic, /) -> MvalT_co:
-        raise NotImplementedError
+        self._check_finished()
 
     @abstractmethod
     def value_of_predicated(self, s: Predicated, /) -> MvalT_co:
-        raise NotImplementedError
+        self._check_finished()
 
     @abstractmethod
     def value_of_quantified(self, s: Quantified, /) -> MvalT_co:
-        raise NotImplementedError
+        self._check_finished()
 
     def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
+        self._check_finished()
         if s.operator in self.truth_functional_operators:
             return self.truth_function(s.operator,
                 *map(lambda s: self.value_of(s, **kw), s))
@@ -193,51 +211,71 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
 
     @abstractmethod
     def set_literal_value(self, s: Sentence, value: MvalT_co, /):
-        raise NotImplementedError
+        self._check_not_finished()
 
     @abstractmethod
     def set_opaque_value(self, s: Sentence, value: MvalT_co, /):
-        raise NotImplementedError
+        self._check_not_finished()
 
     @abstractmethod
     def set_atomic_value(self, s: Atomic, value: MvalT_co, /):
-        raise NotImplementedError
+        self._check_not_finished()
 
     @abstractmethod
     def set_predicated_value(self, s: Predicated, value: MvalT_co, /):
-        raise NotImplementedError
+        self._check_not_finished()
 
-    @abstractmethod
     def is_countermodel_to(self, a: Argument, /) -> bool:
-        raise NotImplementedError
+        return (
+            all(map(self.designated_values.__contains__, map(self.value_of, a.premises))) and
+            self.value_of(a.conclusion) not in self.designated_values)
 
     @abstractmethod
     def read_branch(self, branch: Branch, /):
+        self._check_not_finished()
         self.finish()
 
+    def _check_finished(self):
+        if not self.finished:
+            raise Emsg.IllegalState('Model not yet finished')
+
+    def _check_not_finished(self):
+        if self.finished:
+            raise Emsg.IllegalState('Model already finished')
+
     def finish(self):
-        pass
+        self._check_not_finished()
+        self._finished = True
 
     @abstractmethod
     def get_data(self) -> Mapping[str, Any]:
         return {}
 
-    def truth_table(self, oper: Operator, / , *, reverse=False) -> TruthTable[MvalT_co]:
+    @classmethod
+    def truth_table(cls, oper: Operator, / , *, reverse=False) -> TruthTable[MvalT_co]:
         oper = Operator(oper)
         if reverse:
-            values = tuple(reversed(self.values))
+            values = tuple(reversed(cls.values))
         else:
-            values = self.values
+            values = cls.values
         inputs = tuple(product(*repeat(values, oper.arity)))
         outputs = tuple(
-            self.truth_function(oper, *values)
+            cls.truth_function(oper, *values)
             for values in inputs)
         return TruthTable(
             inputs = inputs,
             outputs = outputs,
             operator = oper,
-            Value = self.values,
+            Value = cls.values,
             mapping = MapProxy(dict(zip(inputs, outputs))))
+
+    def __enter__(self) -> Self:
+        self._check_not_finished()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if not self.finished:
+            self.finish()
 
     class TruthFunction(Generic[MvalT], abcs.Abc):
 
@@ -249,7 +287,7 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
 
         generalizing_operators: Mapping[Operator, Literal['min', 'max']] = EMPTY_MAP
         generalized_orderings: Mapping[Literal['min', 'max'], tuple[MvalT, ...]] = EMPTY_MAP
-        generalized_indexes: Mapping[Literal['min', 'max'], Mapping[MvalT, int]] = EMPTY_MAP
+        generalized_indexes: Mapping[Literal['min', 'max'], Mapping[MvalT, int]]
 
         def __init__(self, values: type[MvalT]) -> None:
             self.values = values
@@ -259,10 +297,9 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
             self.values_indexes = MapProxy({
                 value: i
                 for i, value in enumerate(self.values_sequence)})
-            if self.generalized_orderings:
-                self.generalized_indexes = MapProxy({
-                    key: MapProxy(dict(map(reversed, enumerate(value))))
-                    for key, value in self.generalized_orderings.items()})
+            self.generalized_indexes = MapProxy({
+                key: MapProxy(dict(map(reversed, enumerate(value))))
+                for key, value in self.generalized_orderings.items()})
 
         def __call__(self, oper: Operator, *args: MvalT) -> MvalT:
             try:
@@ -373,4 +410,9 @@ class PredicateInterpretation:
     def addneg(self, item: tuple[Constant,...]):
         self.constants.update(item)
         self.neg.add(item)
-
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, __class__):
+            return NotImplemented
+        return self.pos == other.pos and self.neg == other.neg

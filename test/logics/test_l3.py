@@ -22,5 +22,4 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTTNNTFNT',
         MaterialBiconditional = 'TNFNNNFNT',
         Conditional = 'TTTNTTFNT',
-        Biconditional = 'TNFNTNFNT',
-    )
+        Biconditional = 'TNFNTNFNT')

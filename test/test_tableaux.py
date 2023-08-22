@@ -4,7 +4,7 @@ import time
 from pytableaux import examples
 from pytableaux.errors import *
 from pytableaux.lang.lex import Atomic, Constant, Predicated
-from pytableaux.logics.k import DefaultNodeRule as DefaultKRule
+from pytableaux.logics import k as K
 from pytableaux.proof import System as TabSys
 from pytableaux.proof import filters
 from pytableaux.proof.common import Branch, Node, Target
@@ -403,7 +403,7 @@ class Test_K_DefaultNodeFilterRule(BaseCase):
         sgen.close()
 
     def case1(self, n = 10, **kw):
-        class Impl(DefaultKRule):
+        class Impl(K.System.DefaultNodeRule):
             def _get_node_targets(self, node, branch):
                 yield from ()
                 pass

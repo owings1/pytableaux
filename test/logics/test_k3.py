@@ -1,10 +1,9 @@
-from unittest import skip
-from ..utils import BaseCase
+from pytableaux.errors import *
 from pytableaux.lang import *
 from pytableaux.proof import *
-from pytableaux.errors import *
 
-A = Atomic.first()
+from ..utils import BaseCase
+
 
 class Base(BaseCase):
     logic = 'K3'
@@ -22,8 +21,4 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTTNNTFNT',
         MaterialBiconditional = 'TNFNNNFNT',
         Conditional = 'TTTNNTFNT',
-        Biconditional = 'TNFNNNFNT',
-    )
-
-
-
+        Biconditional = 'TNFNNNFNT')

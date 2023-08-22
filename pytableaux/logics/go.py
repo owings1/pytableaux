@@ -19,10 +19,11 @@ from __future__ import annotations
 from ..lang import Operator, Quantified, Quantifier
 from ..proof import adds, rules, sdnode
 from ..tools import group, maxceil, minfloor
+from . import LogicType
 from . import b3e as B3E
 from . import fde as FDE
 from . import k3 as K3
-from . import LogicType
+
 
 class Meta(K3.Meta):
     name = 'GO'
@@ -32,6 +33,7 @@ class Meta(K3.Meta):
         'classical-like binary operators')
     category_order = 60
     native_operators = FDE.Meta.native_operators | (
+        Operator.Assertion,
         Operator.Conditional,
         Operator.Biconditional)
 
@@ -40,23 +42,18 @@ class Model(FDE.Model):
     class TruthFunction(B3E.Model.TruthFunction):
 
         def Disjunction(self, *args):
-            return max(map(self.crunch, args))
+            return max(map(self.Assertion, args))
 
         def Conjunction(self, *args):
-            return min(map(self.crunch, args))
+            return min(map(self.Assertion, args))
 
         def Conditional(self, a, b, /):
-            return self.crunch(
-                max(
-                    self.values[1 - a],
-                    b,
-                    sum(map(self.gap, (a, b)))))
-
-
-    truth_function: Model.TruthFunction
+            if a == b:
+                return self.values.T
+            return self.MaterialConditional(a, b)
 
     def value_of_quantified(self, s: Quantified, /):
-        it = map(self.truth_function.crunch, self._unquantify_value_map(s))
+        it = map(self.truth_function.Assertion, self._unquantify_value_map(s))
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
@@ -69,7 +66,7 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
+    class ConjunctionNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add an undesignated node to
@@ -82,7 +79,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(s.lhs, not d)),
                 group(sdnode(s.rhs, not d)))
 
-    class ConjunctionUndesignated(FDE.OperatorNodeRule):
+    class ConjunctionUndesignated(System.OperatorNodeRule):
         """
         From an unticked, undesignated conjunction node *n* on a branch *b*, add a
         designated node to *b* with the negation of the conjunction, then tick *n*.
@@ -91,7 +88,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(~s, not d)))
 
-    class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
+    class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) conjuction, then tick *n*.
@@ -100,7 +97,7 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s, not d)))
         
-    class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
+    class DisjunctionNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated disjunction node *n* on a branch *b*,
         add an undesignated node to *b* for each disjunct, then tick *n*.
@@ -112,7 +109,7 @@ class Rules(LogicType.Rules):
     class DisjunctionUndesignated(ConjunctionUndesignated): pass
     class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
-    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
+    class MaterialConditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated material conditional node *n* on a branch
         *b*, add an undesignated node with the negation of the antecedent, and an
@@ -125,7 +122,7 @@ class Rules(LogicType.Rules):
     class MaterialConditionalUndesignated(ConjunctionUndesignated): pass
     class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
-    class MaterialBiconditionalNegatedDesignated(FDE.OperatorNodeRule):
+    class MaterialBiconditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated, material biconditional node *n* on a branch
         *b*, make two branches *b'* and *b''* from *b*. On *b'* add undesignated nodes for
@@ -141,7 +138,7 @@ class Rules(LogicType.Rules):
     class MaterialBiconditionalUndesignated(ConjunctionUndesignated): pass
     class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
-    class ConditionalDesignated(FDE.OperatorNodeRule):
+    class ConditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, conditional node *n* on a branch *b*, make two branches
         *b'* and *b''* from *b*. On *b'* add a designated node with a disjunction of the
@@ -160,7 +157,7 @@ class Rules(LogicType.Rules):
                     sdnode(~lhs, not d),
                     sdnode(~rhs, not d)))
 
-    class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
+    class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add a designated node with the
@@ -177,7 +174,7 @@ class Rules(LogicType.Rules):
     class ConditionalUndesignated(ConjunctionUndesignated): pass
     class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
-    class BiconditionalDesignated(FDE.OperatorNodeRule):
+    class BiconditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add two
         designated conditional nodes to *b*, one with the operands of the biconditional,
@@ -187,10 +184,10 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             convert = self.operator.other
             yield adds(group(
-                sdnode(convert(s.lhs, s.rhs), d),
-                sdnode(convert(s.rhs, s.lhs), d)))
+                sdnode(convert(s.operands), d),
+                sdnode(convert(reversed(s)), d)))
 
-    class BiconditionalNegatedDesignated(FDE.OperatorNodeRule):
+    class BiconditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add a designated negated conditional
@@ -201,13 +198,13 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             convert = self.operator.other
             yield adds(
-                group(sdnode(~convert(s.lhs, s.rhs), d)),
-                group(sdnode(~convert(s.rhs, s.lhs), d)))
+                group(sdnode(~convert(s.operands), d)),
+                group(sdnode(~convert(reversed(s)), d)))
 
     class BiconditionalUndesignated(ConjunctionUndesignated): pass
     class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
-    class ExistentialNegatedDesignated(FDE.DefaultNodeRule, rules.QuantifiedSentenceRule):
+    class ExistentialNegatedDesignated(System.DefaultNodeRule, rules.QuantifiedSentenceRule):
         """
         From an unticked, designated negated existential node *n* on a branch *b*,
         add a designated node *n'* to *b* with a universal sentence consisting of
@@ -225,7 +222,7 @@ class Rules(LogicType.Rules):
     class ExistentialUndesignated(ConjunctionUndesignated): pass
     class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated): pass
         
-    class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
+    class UniversalNegatedDesignated(System.QuantifierSkinnyRule):
         """
         From an unticked, designated universal existential node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'*, add a designtated node

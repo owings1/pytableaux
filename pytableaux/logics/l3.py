@@ -38,10 +38,10 @@ class Model(FDE.Model):
 
     class TruthFunction(FDE.Model.TruthFunction):
 
-        def Conditional(self, a, b):
+        def Conditional(self, a, b, /):
             if a == b:
                 return self.values.T
-            return super().Conditional(a, b)
+            return self.MaterialConditional(a, b)
 
 class System(FDE.System): pass
 
@@ -49,7 +49,7 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class ConditionalDesignated(FDE.OperatorNodeRule):
+    class ConditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked designated conditional node *n* on a branch *b*, make two
         new branches *b'* and *b''* from *b*. To *b'* add a designated disjunction
@@ -70,7 +70,7 @@ class Rules(LogicType.Rules):
                     sdnode( rhs, False),
                     sdnode(~rhs, False)))
 
-    class ConditionalUndesignated(FDE.OperatorNodeRule):
+    class ConditionalUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated conditional node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*. On *b'* add a designated node
@@ -90,7 +90,7 @@ class Rules(LogicType.Rules):
                     sdnode(~lhs, False),
                     sdnode(~rhs, True)))
 
-    class BiconditionalDesignated(FDE.OperatorNodeRule):
+    class BiconditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add a designated material
@@ -111,7 +111,7 @@ class Rules(LogicType.Rules):
                     sdnode( rhs, False),
                     sdnode(~rhs, False)))
 
-    class BiconditionalUndesignated(FDE.OperatorNodeRule):
+    class BiconditionalUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add an undesignated conditional
@@ -127,7 +127,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(self.convert(lhs, rhs), False)),
                 group(sdnode(self.convert(rhs, lhs), False)))
 
-    class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
+    class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add an undesignated negated material

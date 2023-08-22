@@ -4,6 +4,7 @@ class Base(BaseCase):
     logic = 'B3E'
 
 class TestRules(Base, autorules=True): pass
+
 class TestArguments(Base, autoargs=True):
 
     def test_invalid_prior_rule_defect(self):
@@ -22,6 +23,5 @@ class TestTruthTables(Base, autotables=True):
         MaterialConditional = 'TNTNNNFNT',
         MaterialBiconditional = 'TNFNNNFNT',
         Conditional = 'TTTTTTFFT',
-        Biconditional = 'TTFTTFFFT',
-    )
+        Biconditional = 'TTFTTFFFT')
 

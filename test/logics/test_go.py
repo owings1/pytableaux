@@ -5,8 +5,6 @@ from pytableaux.proof import *
 class Base(BaseCase):
     logic = 'GO'
 
-class TestRules(Base, autorules=True): pass
-
 class TestArguments(Base, autoargs=True):
 
     def test_valid_prior_b3e_rule_defect2(self):
@@ -21,11 +19,9 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTTFFTFFT',
         MaterialBiconditional = 'TFFFFFFFT',
         Conditional = 'TTTFTTFFT',
-        Biconditional = 'TFFFTFFFT',
-    )
+        Biconditional = 'TFFFTFFFT')
 
-class TestGO(Base):
-
+class TestRules(Base, autorules=True):
 
     def test_MaterialConditionalNegatedDesignated_step(self):
         sdn = self.sdnode

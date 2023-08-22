@@ -17,19 +17,18 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import cast
 
 from .. import proof
 from ..errors import DenotationError, ModelValueError, check
-from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
+from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
-from ..models import BaseModel, ValueCPL
+from ..models import BaseModel, PredicateInterpretation, ValueCPL
 from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
                      Target, WorldPair, adds, anode, filters, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
                              WorldIndex)
-from ..tools import EMPTY_SET, group, substitute, minfloor, maxceil
+from ..tools import EMPTY_SET, group, maxceil, minfloor, substitute
 from . import LogicType
 from . import fde as FDE
 
@@ -144,16 +143,6 @@ class Model(BaseModel[Meta.values]):
             raise NotImplementedError from ValueError(s.operator)
         return super().value_of_operated(s, world=world)
 
-    def is_countermodel_to(self, a, /) -> bool:
-        """
-        A model is a countermodel for an argument iff the value of each premise
-        is V{T} at `w0` and the value of the conclusion is V{F} at :m:`w0`.
-        """
-        for premise in a.premises:
-            if self.value_of(premise, world = 0) is not self.values.T:
-                return False
-        return self.value_of(a.conclusion, world = 0) is self.values.F
-
     def get_data(self) -> dict:
         return dict(
             Worlds = dict(
@@ -186,9 +175,10 @@ class Model(BaseModel[Meta.values]):
                     for frame in sorted(self.frames.values())]))
 
     def read_branch(self, branch: Branch, /):
+        self._check_not_finished()
         for _ in map(self._read_node, branch):
             pass
-        self.finish()
+        super().read_branch(branch)
 
     def _read_node(self, node: Node, /):
         if isinstance(node, SentenceNode):
@@ -205,14 +195,13 @@ class Model(BaseModel[Meta.values]):
             self.R.add(node.pair())
 
     def finish(self):
+        self._check_not_finished()
         # track all atomics and opaques
         atomics = set()
         opaques = set()
-
         # ensure frames for each world
         for w in self.R.worlds():
             self.frames[w]
-
         for w, frame in self.frames.items():
             atomics.update(frame.atomics)
             opaques.update(frame.opaques)
@@ -220,7 +209,6 @@ class Model(BaseModel[Meta.values]):
                 self._agument_extension_with_identicals(pred, w)
             self._ensure_self_identity(w)
             self._ensure_self_existence(w)
-
         # make sure each atomic and opaque is assigned a value in each frame
         for w, frame in self.frames.items():
             for s in atomics:
@@ -229,6 +217,7 @@ class Model(BaseModel[Meta.values]):
             for s in opaques:
                 if s not in frame.opaques:
                     self.set_opaque_value(s, self.unassigned_value, world = w)
+        super().finish()
 
     def _ensure_self_identity(self, w):
         ext = self.get_extension(Predicate.System.Identity, world = w)
@@ -324,22 +313,12 @@ class Model(BaseModel[Meta.values]):
             raise NotImplementedError from ValueError(value)
 
     def get_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
-        frame = self.frames[world]
         self.predicates.add(pred)
-        if pred not in frame.extensions:
-            frame.extensions[pred] = set()
-        if pred not in frame.anti_extensions:
-            frame.anti_extensions[pred] = set()
-        return frame.extensions[pred]
+        return self.frames[world].predicates[pred].pos
 
     def get_anti_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
-        frame = self.frames[world]
         self.predicates.add(pred)
-        if pred not in frame.extensions:
-            frame.extensions[pred] = set()
-        if pred not in frame.anti_extensions:
-            frame.anti_extensions[pred] = set()
-        return frame.anti_extensions[pred]
+        return self.frames[world].predicates[pred].neg
 
 class Frame:
     """
@@ -355,16 +334,19 @@ class Frame:
     opaques: dict[Sentence, ValueCPL]
     "An assignment of each opaque (un-interpreted) sentence to a value"
 
-    extensions: dict[Predicate, set[tuple[Constant, ...]]]
-    "A map of predicates to their extension."
+    # extensions: dict[Predicate, set[tuple[Constant, ...]]]
+    # "A map of predicates to their extension."
+
+    predicates: dict[Predicate, PredicateInterpretation]
 
     def __init__(self, world):
         self.world = world
         self.atomics = {}
         self.opaques = {}
-        self.extensions = {pred: set() for pred in Predicate.System}
+        # self.extensions = {pred: set() for pred in Predicate.System}
+        self.predicates = defaultdict(PredicateInterpretation)
         # Track the anti-extensions to ensure integrity
-        self.anti_extensions = {}
+        # self.anti_extensions = {}
 
     def get_data(self) -> dict:
         return dict(
@@ -427,11 +409,11 @@ class Frame:
                             values          = [
                                 dict(
                                     input  = pred,
-                                    output = self.extensions[pred],
+                                    output = self.predicates[pred].pos,
                                 )
                             ]
                         )
-                        for pred in sorted(self.extensions)
+                        for pred in sorted(self.predicates)
                     ]
                 )
             )
@@ -441,9 +423,16 @@ class Frame:
         if other is self:
             return True
         check.inst(other, __class__)
-        return (self.atomics == other.atomics and
-            self.opaques == other.opaques and
-            self.extensions == other.extensions)
+        if self.atomics != other.atomics or self.opaques != other.opaques:
+            return False
+        if len(self.predicates) != len(other.predicates):
+            return False
+        for pred, interp in self.predicates.items():
+            if pred not in other.predicates:
+                return False
+            if other.predicates[pred].pos != interp.pos:
+                return False
+        return True
 
     def __eq__(self, other):
         if other is self:
@@ -526,30 +515,30 @@ class System(proof.System):
         except KeyError:
             pass
 
-class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
-    """Default K node rule with:
-    
-    - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
-    - FilterHelper implements `example_nodes()` with its `example_node()` method.
-    - AdzHelper implements `_apply()` with its `_apply()` method.
-    - AdzHelper implements `score_candidate()` with its `closure_score()` method.
-    - Induce attributes from class name with autoattrs=True.
-    """
-    NodeFilters = group(filters.NodeType)
-    autoattrs = True
+    class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
+        """Default K node rule with:
+        
+        - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
+        - FilterHelper implements `example_nodes()` with its `example_node()` method.
+        - AdzHelper implements `_apply()` with its `_apply()` method.
+        - AdzHelper implements `score_candidate()` with its `closure_score()` method.
+        - Induce attributes from class name with autoattrs=True.
+        """
+        NodeFilters = group(filters.NodeType)
+        autoattrs = True
 
-    def _get_node_targets(self, node: Node, branch: Branch, /):
-        return self._get_sw_targets(self.sentence(node), node.get('world'))
+        def _get_node_targets(self, node: Node, branch: Branch, /):
+            return self._get_sw_targets(self.sentence(node), node.get('world'))
 
-    def _get_sw_targets(self, s: Sentence, w: int|None, /):
-        raise NotImplementedError
+        def _get_sw_targets(self, s: Sentence, w: int|None, /):
+            raise NotImplementedError
 
-class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule, intermediate=True):
-    'Convenience mixin class for most common rules.'
-    NodeType = SentenceNode
+    class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule, intermediate=True):
+        'Convenience mixin class for most common rules.'
+        NodeType = SentenceNode
 
-    def _get_sw_targets(self, s: Operated, w: int|None, /):
-        raise NotImplementedError
+        def _get_sw_targets(self, s: Operated, w: int|None, /):
+            raise NotImplementedError
 
 class Rules(LogicType.Rules):
 
@@ -616,7 +605,7 @@ class Rules(LogicType.Rules):
             w = 0 if self.modal else None
             yield swnode(s, w)
 
-    class DoubleNegation(OperatorNodeRule):
+    class DoubleNegation(System.OperatorNodeRule):
         """
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
@@ -625,7 +614,7 @@ class Rules(LogicType.Rules):
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(s.lhs, w)))
 
-    class Assertion(OperatorNodeRule):
+    class Assertion(System.OperatorNodeRule):
         """
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
@@ -634,7 +623,7 @@ class Rules(LogicType.Rules):
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(s.lhs, w)))
 
-    class AssertionNegated(OperatorNodeRule):
+    class AssertionNegated(System.OperatorNodeRule):
         """
         From an unticked, negated assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the negation of the assertion of *n* and world *w*,
@@ -644,7 +633,7 @@ class Rules(LogicType.Rules):
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(~s.lhs, w)))
 
-    class Conjunction(OperatorNodeRule):
+    class Conjunction(System.OperatorNodeRule):
         """
         From an unticked conjunction node *n* with world *w* on a branch *b*,
         for each conjunct, add a node with world *w* to *b* with the conjunct,
@@ -654,7 +643,7 @@ class Rules(LogicType.Rules):
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(s.lhs, w), swnode(s.rhs, w)))
 
-    class ConjunctionNegated(OperatorNodeRule):
+    class ConjunctionNegated(System.OperatorNodeRule):
         """
         From an unticked negated conjunction node *n* with world *w* on a branch *b*, for each
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
@@ -666,7 +655,7 @@ class Rules(LogicType.Rules):
                 group(swnode(~s.lhs, w)),
                 group(swnode(~s.rhs, w)))
 
-    class Disjunction(OperatorNodeRule):
+    class Disjunction(System.OperatorNodeRule):
         """
         From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
@@ -678,7 +667,7 @@ class Rules(LogicType.Rules):
                 group(swnode(s.lhs, w)),
                 group(swnode(s.rhs, w)))
 
-    class DisjunctionNegated(OperatorNodeRule):
+    class DisjunctionNegated(System.OperatorNodeRule):
         """
         From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
@@ -687,7 +676,7 @@ class Rules(LogicType.Rules):
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(~s.lhs, w), swnode(~s.rhs, w)))
 
-    class MaterialConditional(OperatorNodeRule):
+    class MaterialConditional(System.OperatorNodeRule):
         """
         From an unticked material conditional node *n* with world *w* on a branch *b*, make two
         new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
@@ -700,7 +689,7 @@ class Rules(LogicType.Rules):
                 group(swnode(~s.lhs, w)),
                 group(swnode( s.rhs, w)))
 
-    class MaterialConditionalNegated(OperatorNodeRule):
+    class MaterialConditionalNegated(System.OperatorNodeRule):
         """
         From an unticked negated material conditional node *n* with world *w* on a branch *b*,
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
@@ -710,7 +699,7 @@ class Rules(LogicType.Rules):
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(s.lhs, w), swnode(~s.rhs, w)))
 
-    class MaterialBiconditional(OperatorNodeRule):
+    class MaterialBiconditional(System.OperatorNodeRule):
         """
         From an unticked material biconditional node *n* with world *w* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
@@ -724,7 +713,7 @@ class Rules(LogicType.Rules):
                 group(swnode(~s.lhs, w), swnode(~s.rhs, w)),
                 group(swnode( s.rhs, w), swnode( s.lhs, w)))
 
-    class MaterialBiconditionalNegated(OperatorNodeRule):
+    class MaterialBiconditionalNegated(System.OperatorNodeRule):
         """
         From an unticked negated material biconditional node *n* with world *w* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
@@ -743,7 +732,7 @@ class Rules(LogicType.Rules):
     class Biconditional(MaterialBiconditional): pass
     class BiconditionalNegated(MaterialBiconditionalNegated): pass
 
-    class Existential(rules.NarrowQuantifierRule, DefaultNodeRule):
+    class Existential(rules.NarrowQuantifierRule, System.DefaultNodeRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -755,7 +744,7 @@ class Rules(LogicType.Rules):
             yield adds(
                 group(swnode(branch.new_constant() >> s, node.get('world'))))
 
-    class ExistentialNegated(rules.QuantifiedSentenceRule, DefaultNodeRule):
+    class ExistentialNegated(rules.QuantifiedSentenceRule, System.DefaultNodeRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
@@ -766,7 +755,7 @@ class Rules(LogicType.Rules):
             v, si = s[1:]
             yield adds(group(swnode(self.quantifier.other(v, ~si), w)))
 
-    class Universal(rules.ExtendedQuantifierRule, DefaultNodeRule):
+    class Universal(rules.ExtendedQuantifierRule, System.DefaultNodeRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -779,7 +768,7 @@ class Rules(LogicType.Rules):
 
     class UniversalNegated(ExistentialNegated): pass
 
-    class Possibility(OperatorNodeRule):
+    class Possibility(System.OperatorNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -827,7 +816,7 @@ class Rules(LogicType.Rules):
             si = s.lhs
             return -1.0 * self[AplSentCount][target.branch].get(si, 0)
 
-    class PossibilityNegated(OperatorNodeRule):
+    class PossibilityNegated(System.OperatorNodeRule):
         """
         From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
         necessity node to *b* with *w*, whose operand is the negation of the negated 
@@ -838,7 +827,7 @@ class Rules(LogicType.Rules):
         def _get_sw_targets(self, s, w, /):
             yield adds(group(swnode(self.operator.other(~s.lhs), w)))
 
-    class Necessity(OperatorNodeRule):
+    class Necessity(System.OperatorNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -906,7 +895,7 @@ class Rules(LogicType.Rules):
 
     class NecessityNegated(PossibilityNegated): pass
 
-    class IdentityIndiscernability(DefaultNodeRule, rules.PredicatedSentenceRule):
+    class IdentityIndiscernability(System.DefaultNodeRule, rules.PredicatedSentenceRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
