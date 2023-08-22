@@ -32,7 +32,7 @@ from .lang import (Argument, Atomic, Constant, Operated, Operator, Predicated,
                    Quantified, Sentence)
 from .logics import LogicType
 from .proof import Branch
-from .tools import EMPTY_MAP, abcs, maxceil, minfloor
+from .tools import EMPTY_MAP, EMPTY_SET, abcs, maxceil, minfloor
 
 __all__ = (
     'BaseModel',
@@ -132,8 +132,12 @@ class ValueCPL(Mval):
     F = 0.0
     T = 1.0
 
+class ModelsMeta(abcs.AbcMeta):
 
-class BaseModel(Generic[MvalT_co], abcs.Abc):
+    def __prepare__(clsname, bases, **kw):
+        return dict(__slots__=EMPTY_SET)
+
+class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
     Meta: type[LogicType.Meta]
 
     values: type[MvalT_co]
@@ -399,6 +403,26 @@ class PredicateInterpretation:
     def __init__(self) -> None:
         self.pos = set()
         self.neg = set()
+
+    def set_value(self, params: tuple[Constant, ...], value: MvalT, /):
+        if value == 'T':
+            if params in self.neg:
+                raise Emsg.ConflictForAntiExtension(value, params)
+            self.pos.add(params)
+        elif value == 'F':
+            if params in self.pos:
+                raise Emsg.ConflictForExtension(value, params)
+            self.neg.add(params)
+        elif value == 'N':
+            if params in self.pos:
+                raise Emsg.ConflictForExtension(value, params)
+            if params in self.neg:
+                raise Emsg.ConflictForAntiExtension(value, params)
+        elif value == 'B':
+            self.pos.add(params)
+            self.neg.add(params)
+        else:
+            raise NotImplementedError from ValueError(value)
 
     def __eq__(self, other):
         if self is other:

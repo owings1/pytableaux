@@ -35,13 +35,14 @@ class Model(K.Model):
     def finish(self):
         self._check_not_finished()
         R = self.R
+        add = R.add
         needs_world = {w for w in self.frames if not R[w]}
         if needs_world:
             # only add one extra world
             w2 = max(self.frames) + 1
             for w1 in needs_world:
-                R.add((w1, w2))
-            R.add((w2, w2))
+                add((w1, w2))
+            add((w2, w2))
         return super().finish()
 
 class System(K.System): pass

@@ -16,10 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, deque
+from typing import Mapping
 
 from .. import proof
-from ..errors import DenotationError, ModelValueError, check
+from ..errors import DenotationError, ModelValueError
 from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import BaseModel, PredicateInterpretation, ValueCPL
@@ -59,20 +60,22 @@ class AccessGraph(defaultdict[int, set[int]]):
     def __init__(self, *args, **kw):
         super().__init__(set, *args, **kw)
 
-    def has(self, access: tuple[int, int], /) -> bool:
-        w1, w2 = access
+    def has(self, pair: tuple[int, int], /) -> bool:
+        w1, w2 = pair
         return w1 in self and w2 in self[w1]
 
-    def add(self, access: tuple[int, int], /):
-        w1, w2 = access
+    def add(self, pair: tuple[int, int], /):
+        w1, w2 = pair
         self[w1].add(w2)
+        self[w2]
 
-    def worlds(self) -> set[int]:
-        worlds = set()
-        for w, sees in self.items():
-            worlds.add(w)
-            worlds.update(sees)
-        return worlds
+    def flat(self, *, w1s=None, sort=False):
+        if w1s is None:
+            w1s = sorted(self) if sort else self
+        for w1 in w1s:
+            w2s = sorted(self[w1]) if sort else self[w1]
+            for w2 in w2s:
+                yield w1, w2
 
 class Model(BaseModel[Meta.values]):
     """
@@ -82,7 +85,7 @@ class Model(BaseModel[Meta.values]):
 
     TruthFunction = FDE.Model.TruthFunction
 
-    frames: Frames
+    frames: Mapping[int, Frame]
     "A map from worlds to their frame"
 
     R: AccessGraph
@@ -91,14 +94,13 @@ class Model(BaseModel[Meta.values]):
     constants: set[Constant]
     "The fixed domain of constants, common to all worlds in the model"
 
-    __slots__ = ('frames', 'R', 'constants', 'predicates')
+    __slots__ = ('frames', 'R', 'constants')
 
     def __init__(self):
         super().__init__()
-        self.frames = Frames()
+        self.frames = defaultdict(Frame)
         self.R = AccessGraph()
         self.constants = set()
-        self.predicates: set[Predicate] = set(Predicate.System)
         # ensure there is a w0
         self.frames[0]
 
@@ -147,48 +149,28 @@ class Model(BaseModel[Meta.values]):
     def set_opaque_value(self, s: Sentence, value, /, world = 0):
         self._check_not_finished()
         value = self.values[value]
-        frame = self.frames[world]
-        if frame.opaques.get(s, value) is not value:
+        opaques = self.frames[world].opaques
+        if opaques.get(s, value) is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
-        frame.opaques[s] = value
+        opaques[s] = value
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants.
         self.constants.update(s.constants)
-        self.predicates.update(s.predicates)
 
     def set_atomic_value(self, s: Atomic, value, /, world = 0):
         self._check_not_finished()
         value = self.values[value]
-        frame = self.frames[world]
-        if frame.atomics.get(s, value) is not value:
+        atomics = self.frames[world].atomics
+        if atomics.get(s, value) is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
-        frame.atomics[s] = value
+        atomics[s] = value
 
     def set_predicated_value(self, s: Predicated, value, /, *, world=0):
         self._check_not_finished()
-        values = self.values
-        value = values[value]
-        pred = s.predicate
-        params = s.params
-        self.predicates.add(pred)
-        for param in s:
-            if type(param) is Constant:
-                self.constants.add(param)
-            else:
-                raise TypeError(f'free variables not allowed')
-        interp = self.frames[world].predicates[pred]
-        if value is values.F:
-            if params in interp.pos:
-                raise ModelValueError(f'Cannot set value {value} for tuple '
-                    f'{params} already in extension')
-            interp.neg.add(params)
-        elif value is values.T:
-            if params in interp.neg:
-                raise ModelValueError(f'Cannot set value {value} for tuple '
-                    f'{params} already in anti-extension')
-            interp.pos.add(params)
-        else:
-            raise NotImplementedError from ValueError(value)
+        if len(s.variables):
+            raise ValueError(f'Free variables not allowed')
+        self.frames[world].predicates[s.predicate].set_value(s.params, self.values[value])
+        self.constants.update(s.constants)
 
     def read_branch(self, branch: Branch, /):
         self._check_not_finished()
@@ -201,11 +183,11 @@ class Model(BaseModel[Meta.values]):
             w = node.get('world')
             if w is None:
                 w = 0
+            self.R[w]
             if self.is_sentence_opaque(s):
                 self.set_opaque_value(s, self.values.T, world = w)
             elif self.is_sentence_literal(s):
                 self.set_literal_value(s, self.values.T, world = w)
-            self.predicates.update(s.predicates)
         elif isinstance(node, AccessNode):
             self.R.add(node.pair())
 
@@ -215,23 +197,24 @@ class Model(BaseModel[Meta.values]):
         atomics = set()
         opaques = set()
         # ensure frames for each world
-        for w in self.R.worlds():
+        for w in self.R:
             self.frames[w]
         for w, frame in self.frames.items():
             atomics.update(frame.atomics)
             opaques.update(frame.opaques)
-            for pred in self.predicates:
+            for pred in deque(frame.predicates):
                 self._agument_extension_with_identicals(pred, w)
             self._ensure_self_identity(w)
             self._ensure_self_existence(w)
         # make sure each atomic and opaque is assigned a value in each frame
+        unass = self.Meta.unassigned_value
         for w, frame in self.frames.items():
             for s in atomics:
                 if s not in frame.atomics:
-                    self.set_literal_value(s, self.Meta.unassigned_value, world = w)
+                    frame.atomics[s] = unass
             for s in opaques:
                 if s not in frame.opaques:
-                    self.set_opaque_value(s, self.Meta.unassigned_value, world = w)
+                    frame.opaques[s] = unass
         return super().finish()
 
     def _ensure_self_identity(self, w):
@@ -262,13 +245,15 @@ class Model(BaseModel[Meta.values]):
     def _get_identicals(self, c: Constant, w=0) -> set[Constant]:
         interp = self.frames[w].predicates[Predicate.Identity]
         identicals = set()
+        update = identicals.update
         for params in interp.pos:
             if c in params:
-                identicals.update(params)
+                update(params)
         identicals.discard(c)
         return identicals
 
     def get_data(self) -> dict:
+        worlds = sorted(self.frames)
         return dict(
             Worlds = dict(
                 description     = 'set of worlds',
@@ -277,7 +262,7 @@ class Model(BaseModel[Meta.values]):
                 member_datatype = 'int',
                 member_typehint = 'world',
                 symbol          = 'W',
-                values          = sorted(self.frames)),
+                values          = worlds),
             Access = dict(
                 description     = 'access relation',
                 in_summary      = True,
@@ -286,8 +271,7 @@ class Model(BaseModel[Meta.values]):
                 member_datatype = 'tuple',
                 member_typehint = 'access',
                 symbol          = 'R',
-                values          = sorted((w1, w2) for w1, sees in self.R.items()
-                                    for w2 in sees)),
+                values          = list(self.R.flat(w1s=worlds, sort=True))),
             Frames = dict(
                 description     = 'world frames',
                 datatype        = 'list',
@@ -296,16 +280,24 @@ class Model(BaseModel[Meta.values]):
                 member_typehint = 'frame',
                 symbol          = 'F',
                 values          = [
-                    frame.get_data()
-                    for frame in sorted(self.frames.values())]))
+                    dict(
+                        description = f'frame at world {w}',
+                        datatype    = 'map',
+                        typehint    = 'frame',
+                        value       = dict(
+                            world   = dict(
+                                description = 'world',
+                                datatype    = 'int',
+                                typehint    = 'world', 
+                                value       = w,
+                                symbol      = 'w'),
+                            **self.frames[w].get_data()))
+                    for w in worlds]))
 
 class Frame:
     """
     A K-frame comprises the interpretation of sentences and predicates at a world.
     """
-
-    world: int
-    "The world of the frame"
 
     atomics: dict[Atomic, ValueCPL]
     "An assignment of each atomic sentence to a truth value"
@@ -315,84 +307,64 @@ class Frame:
 
     predicates: dict[Predicate, PredicateInterpretation]
 
-    __slots__ = ('world', 'atomics', 'opaques', 'predicates')
+    __slots__ = ('atomics', 'opaques', 'predicates')
 
-    def __init__(self, world):
-        self.world = world
+    def __init__(self):
         self.atomics = {}
         self.opaques = {}
         self.predicates = defaultdict(PredicateInterpretation)
 
     def get_data(self) -> dict:
         return dict(
-            description = f'frame at world {self.world}',
-            datatype    = 'map',
-            typehint    = 'frame',
-            value       = dict(
-                world   = dict(
-                    description = 'world',
-                    datatype    = 'int',
-                    typehint    = 'world', 
-                    value       = self.world,
-                    symbol      = 'w',
-                ),
-                Atomics = dict(
-                    description     = 'atomic values',
-                    datatype        = 'function',
-                    typehint        = 'truth_function',
-                    input_datatype  = 'sentence',
-                    output_datatype = 'string',
-                    output_typehint = 'truth_value',
-                    symbol          = 'v',
-                    values          = [
-                        dict(
-                            input  = sentence,
-                            output = self.atomics[sentence]
-                        )
-                        for sentence in sorted(self.atomics)
-                    ]
-                ),
-                Opaques = dict(
-                    description     = 'opaque values',
-                    datatype        = 'function',
-                    typehint        = 'truth_function',
-                    input_datatype  = 'sentence',
-                    output_datatype = 'string',
-                    output_typehint = 'truth_value',
-                    symbol          = 'v',
-                    values          = [
-                        dict(
-                            input  = sentence,
-                            output = self.opaques[sentence],
-                        )
-                        for sentence in sorted(self.opaques)
-                    ]
-                ),
-                Predicates = dict(
-                    description = 'predicate extensions',
-                    datatype    = 'list',
-                    values      = [
-                        dict(
-                            description     = f'predicate extension for {pred.name}',
-                            datatype        = 'function',
-                            typehint        = 'extension',
-                            input_datatype  = 'predicate',
-                            output_datatype = 'set',
-                            output_typehint = 'extension',
-                            symbol          = 'P',
-                            values          = [
-                                dict(
-                                    input  = pred,
-                                    output = self.predicates[pred].pos,
-                                )
-                            ]
-                        )
-                        for pred in sorted(self.predicates)])))
+            Atomics = dict(
+                description     = 'atomic values',
+                datatype        = 'function',
+                typehint        = 'truth_function',
+                input_datatype  = 'sentence',
+                output_datatype = 'string',
+                output_typehint = 'truth_value',
+                symbol          = 'v',
+                values          = [
+                    dict(
+                        input  = sentence,
+                        output = self.atomics[sentence])
+                    for sentence in sorted(self.atomics)]),
+            Opaques = dict(
+                description     = 'opaque values',
+                datatype        = 'function',
+                typehint        = 'truth_function',
+                input_datatype  = 'sentence',
+                output_datatype = 'string',
+                output_typehint = 'truth_value',
+                symbol          = 'v',
+                values          = [
+                    dict(
+                        input  = sentence,
+                        output = self.opaques[sentence])
+                    for sentence in sorted(self.opaques)]),
+            Predicates = dict(
+                description = 'predicate extensions',
+                datatype    = 'list',
+                values      = [
+                    dict(
+                        description     = f'predicate extension for {pred.name}',
+                        datatype        = 'function',
+                        typehint        = 'extension',
+                        input_datatype  = 'predicate',
+                        output_datatype = 'set',
+                        output_typehint = 'extension',
+                        symbol          = 'P',
+                        values          = [
+                            dict(
+                                input  = pred,
+                                output = sorted(self.predicates[pred].pos))])
+                    for pred in sorted(self.predicates)]))
 
-    def is_equivalent_to(self, other: Frame) -> bool:
+    def __eq__(self, other):
         if other is self:
             return True
-        check.inst(other, __class__)
+        if not isinstance(other, __class__):
+            return NotImplemented
         if self.atomics != other.atomics or self.opaques != other.opaques:
             return False
         if len(self.predicates) != len(other.predicates):
@@ -404,42 +376,6 @@ class Frame:
                 return False
         return True
 
-    def __eq__(self, other):
-        if other is self:
-            return True
-        if not isinstance(other, __class__):
-            return NotImplemented
-        return self.world == other.world and self.is_equivalent_to(other)
-
-    def __lt__(self, other):
-        if not isinstance(other, __class__):
-            return NotImplemented
-        return self.world < other.world
-
-    def __le__(self, other):
-        if not isinstance(other, __class__):
-            return NotImplemented
-        return self.world <= other.world
-
-    def __gt__(self, other):
-        if not isinstance(other, __class__):
-            return NotImplemented
-        return self.world > other.world
-
-    def __ge__(self, other):
-        if not isinstance(other, __class__):
-            return NotImplemented
-        return self.world >= other.world
-
-
-class Frames(dict[int, Frame]):
-
-    __slots__ = EMPTY_SET
-
-    def __missing__(self, key):
-        if key is None:
-            return self[0]
-        return self.setdefault(check.inst(key, int), Frame(key))
 
 class System(proof.System):
 

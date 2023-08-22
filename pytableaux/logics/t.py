@@ -38,8 +38,9 @@ class Model(K.Model):
 
     def _ensure_reflexive(self):
         self._check_not_finished()
+        add = self.R.add
         for w in self.frames:
-            self.R[w].add(w)
+            add((w, w))
 
 class System(K.System): pass
 

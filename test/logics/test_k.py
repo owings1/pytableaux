@@ -241,8 +241,8 @@ class TestFrame(Base):
             m.set_literal_value(self.p('b'), 'T', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertFalse(frame_a.is_equivalent_to(frame_b))
-        self.assertFalse(frame_b.is_equivalent_to(frame_a))
+        self.assertFalse(frame_a == frame_b)
+        self.assertFalse(frame_b == frame_a)
 
     def test_difference_atomic_values_diff(self):
         s1 = self.p('a')
@@ -251,8 +251,8 @@ class TestFrame(Base):
             m.set_literal_value(s1, 'F', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertFalse(frame_a.is_equivalent_to(frame_b))
-        self.assertFalse(frame_b.is_equivalent_to(frame_a))
+        self.assertFalse(frame_a == frame_b)
+        self.assertFalse(frame_b == frame_a)
 
     def test_difference_atomic_values_equiv(self):
         s1 = self.p('a')
@@ -261,8 +261,8 @@ class TestFrame(Base):
             m.set_literal_value(s1, 'T', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertTrue(frame_a.is_equivalent_to(frame_b))
-        self.assertTrue(frame_b.is_equivalent_to(frame_a))
+        self.assertTrue(frame_a == frame_b)
+        self.assertTrue(frame_b == frame_a)
 
     def test_difference_opaque_keys_diff(self):
         with self.m() as m:
@@ -270,8 +270,8 @@ class TestFrame(Base):
             m.set_opaque_value(self.p('Mb'), 'T', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertFalse(frame_a.is_equivalent_to(frame_b))
-        self.assertFalse(frame_b.is_equivalent_to(frame_a))
+        self.assertFalse(frame_a == frame_b)
+        self.assertFalse(frame_b == frame_a)
 
     def test_difference_opaque_values_diff(self):
         s1 = self.p('Ma')
@@ -280,8 +280,8 @@ class TestFrame(Base):
             m.set_opaque_value(s1, 'F', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertFalse(frame_a.is_equivalent_to(frame_b))
-        self.assertFalse(frame_b.is_equivalent_to(frame_a))
+        self.assertFalse(frame_a == frame_b)
+        self.assertFalse(frame_b == frame_a)
 
     def test_difference_opaque_values_equiv(self):
         with self.m() as m:
@@ -289,8 +289,8 @@ class TestFrame(Base):
             m.set_opaque_value(self.p('Ma'), 'T', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertTrue(frame_a.is_equivalent_to(frame_b))
-        self.assertTrue(frame_b.is_equivalent_to(frame_a))
+        self.assertTrue(frame_a == frame_b)
+        self.assertTrue(frame_b == frame_a)
 
     def test_difference_extension_keys_diff(self):
         preds = Predicates({(0, 0, 1), (1, 0, 2)})
@@ -300,8 +300,8 @@ class TestFrame(Base):
             m.set_predicated_value(s2, 'T', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertFalse(frame_a.is_equivalent_to(frame_b))
-        self.assertFalse(frame_b.is_equivalent_to(frame_a))
+        self.assertFalse(frame_a == frame_b)
+        self.assertFalse(frame_b == frame_a)
 
     def test_difference_extension_values_diff(self):
         s1 = self.p('Fm')
@@ -311,8 +311,8 @@ class TestFrame(Base):
             m.set_predicated_value(s2, 'T', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertFalse(frame_a.is_equivalent_to(frame_b))
-        self.assertFalse(frame_b.is_equivalent_to(frame_a))
+        self.assertFalse(frame_a == frame_b)
+        self.assertFalse(frame_b == frame_a)
 
     def test_difference_extension_values_equiv(self):
         s1 = self.p('Fm')
@@ -324,8 +324,8 @@ class TestFrame(Base):
             m.set_predicated_value(s2, 'F', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
-        self.assertTrue(frame_a.is_equivalent_to(frame_b))
-        self.assertTrue(frame_b.is_equivalent_to(frame_a))
+        self.assertTrue(frame_a == frame_b)
+        self.assertTrue(frame_b == frame_a)
 
     def test_not_equals(self):
         s = self.p('a')
@@ -346,18 +346,6 @@ class TestFrame(Base):
         f1 = m1.frames[0]
         f2 = m2.frames[0]
         self.assertEqual(f1, f2)
-
-    def test_ordering(self):
-        s = self.p('a')
-        with self.m() as m:
-            m.set_literal_value(s, 'T', world=0)
-            m.set_literal_value(s, 'F', world=1)
-        f1 = m.frames[0]
-        f2 = m.frames[1]
-        self.assertGreater(f2, f1)
-        self.assertLess(f1, f2)
-        self.assertGreaterEqual(f2, f1)
-        self.assertLessEqual(f1, f2)
 
     def test_data_has_identity_with_sentence(self):
         s = self.p('Imn')

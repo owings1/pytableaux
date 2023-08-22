@@ -46,15 +46,15 @@ class Model(T.Model):
         while True:
             self._ensure_reflexive()
             to_add = set()
+            add = to_add.add
             for w1 in self.frames:
                 for w2 in R[w1]:
                     for w3 in R[w2]:
                         if w3 not in R[w1]:
-                            to_add.add((w1, w3))
+                            add((w1, w3))
             if not to_add:
                 break
-            for w1, w2 in to_add:
-                R[w1].add(w2)
+            for _ in map(R.add, to_add): pass
 
 class System(K.System): pass
 

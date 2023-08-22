@@ -166,27 +166,9 @@ class Model(LogicType.Model[ValueFDE]):
         self._check_not_finished()
         value = self.values[value]
         if len(s.variables):
-            raise TypeError(f'free variables not allowed')
-        self.constants.update(s.params)
-        interp = self.predicates[s.predicate]
-        if value == 'T':
-            if s.params in interp.neg:
-                raise Emsg.ConflictForAntiExtension(value, s.params)
-            interp.pos.add(s.params)
-        elif value == 'F':
-            if s.params in interp.pos:
-                raise Emsg.ConflictForExtension(value, s.params)
-            interp.neg.add(s.params)
-        elif value == 'N':
-            if s.params in interp.pos:
-                raise Emsg.ConflictForExtension(value, s.params)
-            if s.params in interp.neg:
-                raise Emsg.ConflictForAntiExtension(value, s.params)
-        elif value == 'B':
-            interp.pos.add(s.params)
-            interp.neg.add(s.params)
-        else:
-            raise NotImplementedError from ValueError(value)
+            raise ValueError(f'Free variables not allowed')
+        self.predicates[s.predicate].set_value(s.params, self.values[value])
+        self.constants.update(s.constants)
 
     def read_branch(self, branch, /):
         self._check_not_finished()
@@ -305,7 +287,7 @@ class Model(LogicType.Model[ValueFDE]):
                             values = [
                                 dict(
                                     input  = predicate,
-                                    output = self.predicates[predicate].pos)]),
+                                    output = sorted(self.predicates[predicate].pos))]),
                         dict(
                             description     = 'predicate anti-extension',
                             datatype        = 'function',
@@ -317,7 +299,7 @@ class Model(LogicType.Model[ValueFDE]):
                             values = [
                                 dict(
                                     input  = predicate,
-                                    output = self.predicates[predicate].neg)])]]))
+                                    output = sorted(self.predicates[predicate].neg))])]]))
 
 
 class System(LogicType.System):

@@ -37,9 +37,7 @@ class Meta(K.Meta):
 class Model(K.Model):
 
     def get_data(self) -> dict:
-        data = self.frames[0].get_data()['value']
-        del data['world']
-        return data
+        return self.frames[0].get_data()
 
 class System(K.System): pass
 
