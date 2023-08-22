@@ -17,33 +17,51 @@
 from __future__ import annotations
 
 from . import LogicType
-from . import cpl as CPL
+from . import fde as FDE
 from . import k as K
+from ..tools import group
 
-
-class Meta(CPL.Meta):
+class Meta(K.Meta):
     name = 'CFOL'
     title = 'Classical First Order Logic'
-    quantified = True
+    modal = False
     category = 'Bivalent'
     description = 'Standard bivalent logic with full first-order quantification'
     category_order = 2
-    tags = (
-        'bivalent',
-        'non-modal',
-        'first-order')
+    native_operators = FDE.Meta.native_operators
 
-class Model(CPL.Model): pass
+class Model(K.Model):
+    def get_data(self) -> dict:
+        return self.frames[0].get_data()
 
 class System(K.System): pass
 
 class Rules(LogicType.Rules):
 
-    closure = CPL.Rules.closure
+    closure = K.Rules.closure
+
     groups = (
-        CPL.Rules.groups[0] + (
+        group(
+            # non-branching rules
+            K.Rules.IdentityIndiscernability,
+            K.Rules.Assertion,
+            K.Rules.AssertionNegated,
+            K.Rules.Conjunction,
+            K.Rules.DisjunctionNegated,
+            K.Rules.MaterialConditionalNegated,
+            K.Rules.ConditionalNegated,
+            K.Rules.DoubleNegation,
             K.Rules.ExistentialNegated,
             K.Rules.UniversalNegated),
-        CPL.Rules.groups[1] + (
+        group(
+            # branching rules
+            K.Rules.ConjunctionNegated,
+            K.Rules.Disjunction,
+            K.Rules.MaterialConditional,
+            K.Rules.MaterialBiconditional,
+            K.Rules.MaterialBiconditionalNegated,
+            K.Rules.Conditional,
+            K.Rules.Biconditional,
+            K.Rules.BiconditionalNegated,
             K.Rules.Existential,
             K.Rules.Universal))

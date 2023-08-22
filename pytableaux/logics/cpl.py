@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from ..tools import group
+from . import cfol as CFOL
 from . import fde as FDE
 from . import k as K
 from . import LogicType
@@ -29,15 +30,9 @@ class Meta(K.Meta):
     category = 'Bivalent'
     description = 'Standard bivalent logic with predication, without quantification'
     category_order = 1
-    tags = (
-        'bivalent',
-        'non-modal')
     native_operators = FDE.Meta.native_operators
 
-class Model(K.Model):
-
-    def get_data(self) -> dict:
-        return self.frames[0].get_data()
+class Model(CFOL.Model): pass
 
 class System(K.System): pass
 

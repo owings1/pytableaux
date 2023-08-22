@@ -37,6 +37,7 @@ from ..lang import (Argument, LexType, Notation, Operator, ParseTable,
                     Predicate, Quantifier)
 from ..logics import LogicType
 from ..proof import writers
+from ..tools import inflect
 from ..tools.events import EventEmitter
 from . import EnvConfig, StaticResource, Wevent, views
 from .util import cp_staticdir_conf, get_logger, tojson
@@ -90,6 +91,7 @@ class WebApp(EventEmitter):
 
     default_context: Mapping[str, Any] = MapProxy(dict(
         package = package,
+        inflect = inflect,
         LexType = LexType,
         Notation = Notation,
         Operator = Operator,
@@ -170,7 +172,9 @@ class WebApp(EventEmitter):
             for logic in logics.registry.values()})
         self.jsapp_data = self._build_jsapp_data()
         self.static_res = self._create_static_res()
+        self.helper = Helper(self)
         self.default_context = MapProxy(dict(self.default_context,
+            h = self.helper,
             config = self.config,
             is_debug = self.is_debug,
             logics = self.logics_map,
@@ -276,3 +280,10 @@ class WebApp(EventEmitter):
         self.logger.info(f'Starting metrics on port {metrics_host}:{metrics_port}')
         from prometheus_client import start_http_server
         start_http_server(metrics_port, metrics_host, self.metrics.registry)
+
+
+class Helper:
+    def __init__(self, app: WebApp):
+        self.app = app
+    def logic_doc_href(self, logic):
+        return f'/doc/logics/{logics.registry(logic).Meta.name.lower()}.html'

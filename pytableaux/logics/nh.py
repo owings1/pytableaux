@@ -31,10 +31,6 @@ class Meta(LP.Meta):
         'Three-valued logic (True, False, Both) with non-standard conjunction, '
         'and a classical-like conditional')
     category_order = 110
-    tags = ( # remove first-order
-        'many-valued',
-        'glutty',
-        'non-modal')
     native_operators = MH.Meta.native_operators
 
 class Model(LP.Model):

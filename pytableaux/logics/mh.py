@@ -31,10 +31,6 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with non-standard disjunction, '
         'and a classical-like conditional')
     category_order = 70
-    tags = ( # remove first-order
-        'many-valued',
-        'gappy',
-        'non-modal')
     native_operators = FDE.Meta.native_operators | (
         Operator.Conditional,
         Operator.Biconditional)

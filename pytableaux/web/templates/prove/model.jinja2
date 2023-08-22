@@ -1,7 +1,7 @@
 {% macro write_model(lw, branch) -%}
     {% set model = branch.model -%}
     {% set data = model.get_data() -%}
-    <div class="model" data-model-id="{{ model.id|e }}" data-branch-id="{{ branch.id|e }}">
+    <div id="model_{{ model.id|e }}" class="model" data-model-id="{{ model.id|e }}" data-branch-id="{{ branch.id|e }}">
         {# <ul class="details">
             <li>
                 <div class="prop">Is countermodel</div>
@@ -44,7 +44,7 @@
     {# <div class="map {{ 'non-empty' if data|length else 'empty'}}"> #}
         {% if data|length -%}
             <ul class="details map values {{- ' non-empty' if data|length else ' empty'}}">
-                {% for key, info in data.items() -%}
+                {% for key, info in data|items -%}
                     {%- if info.value or info.get('values', '')|length -%}
                         {%- if info.typehint == 'frames' -%}
                             {%- for frame in info['values'] -%}

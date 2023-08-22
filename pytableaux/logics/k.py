@@ -45,10 +45,6 @@ class Meta(LogicType.Meta):
     category = 'Bivalent Modal'
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
-    tags = (
-        'bivalent',
-        'modal',
-        'first-order')
     native_operators = FDE.Meta.native_operators | [
         Operator.Possibility,
         Operator.Necessity]
@@ -654,7 +650,7 @@ class Rules(LogicType.Rules):
             yield adds(
                 group(swnode(branch.new_constant() >> s, node.get('world'))))
 
-    class ExistentialNegated(rules.QuantifiedSentenceRule, System.DefaultNodeRule):
+    class ExistentialNegated(System.DefaultNodeRule, rules.QuantifiedSentenceRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified

@@ -40,12 +40,6 @@ class Meta(LogicType.Meta):
     category = 'Many-valued'
     description = 'Four-valued logic (True, False, Neither, Both)'
     category_order = 10
-    tags = (
-        'many-valued',
-        'gappy',
-        'glutty',
-        'non-modal',
-        'first-order')
     native_operators = (
         Operator.Negation,
         Operator.Conjunction,

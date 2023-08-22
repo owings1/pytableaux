@@ -35,6 +35,7 @@ from . import tools as tools
 
 
 from . import examples as examples
+from . import lang as lang
 from . import logics as logics
 from . import models as models
 from . import proof as proof
@@ -44,6 +45,7 @@ from . import proof as proof
 __all__ = (
     'errors',
     'examples',
+    'lang',
     'logics',
     'models',
     'package',

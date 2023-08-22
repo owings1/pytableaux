@@ -54,10 +54,10 @@
 <div class="select-logic panebox">
     <div class="heading" for="selected_logic">Logic</div>
     <select name="logic" id="selected_logic">
-        {% for category, group in logic_categories.items() -%}
+        {% for category, group in logic_categories|items -%}
             <optgroup label="{{ category|e }}">
                 {% for logic in group -%}
-                    {%- set namelc = logic.Meta.name.lower() -%}
+                    {%- set namelc = logic.Meta.name|lower -%}
                     <option value="{{ namelc|e }}" {{- helper.select_opt(form_data, 'logic', namelc) }}>
                         {{- logic.Meta.name|e -}}
                     </option>
@@ -65,13 +65,18 @@
             </optgroup>
         {% endfor %}
     </select>
-    {% for key, logic in logics.items() -%}
+    {% for key, logic in logics|items -%}
         <div class="hidden logic-details {{ key|e }}">
             <span class="value logic-title {{ key|e }}">
-                <a class="external" href="/doc/logics/{{ key|e }}.html" target="_blank" rel="noreferrer noopener">
+                <a class="external" href="{{ h.logic_doc_href(logic) }}" target="_blank" rel="noreferrer noopener">
                 {{ logic.Meta.title|e }}
                 </a>
             </span>
+            <div class="logic-tags">
+                {%- for name in logic.Meta.tags %}
+                <span class="tag {{ inflect.dashcase(name)|e }}">{{ name|e }}</span>
+                {%- endfor %}
+            </div>
         </div>
     {% endfor %}
 </div>

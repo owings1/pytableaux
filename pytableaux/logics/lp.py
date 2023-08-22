@@ -33,11 +33,6 @@ class Meta(FDE.Meta):
     unassigned_value = values.F
     description = 'Three-valued logic (T, F, B)'
     category_order = 100
-    tags = (
-        'many-valued',
-        'glutty',
-        'non-modal',
-        'first-order')
 
 class Model(FDE.Model):
 

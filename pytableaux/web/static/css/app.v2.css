@@ -108,6 +108,7 @@ body.pt-app,
 .pt-app a.bgicon::after {
   font-family: FontAwesome;
 }
+.pt-app .logic-tags .tag,
 .pt-app .footer {
   font-size: 0.8em;
 }
@@ -175,6 +176,7 @@ body.pt-app {
 .pt-app .footer a:hover {
   text-decoration: underline;
 }
+.pt-app .logic-tags .tag,
 .pt-app .proof-result-admon,
 .pt-app #argument_form input[type="submit"] {
   text-transform: uppercase;
@@ -288,6 +290,7 @@ body.pt-app {
 .pt-app.no-proof .footer-wrapper {
   background-color: #6ab0de;
 }
+.pt-app .logic-tags .tag,
 .pt-app a.button.disabled {
   background-color: #dddddd;
 }
@@ -345,6 +348,7 @@ body.pt-app {
 /* ---- border ---- */
 .pt-app .input label,
 .pt-app .debugs,
+.pt-app .logic-tags .tag,
 .pt-app #argument_form .panebox,
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
@@ -472,6 +476,7 @@ body.pt-app,
 .pt-app #argument_form input[type="submit"] {
   margin-top: 10px;
 }
+.pt-app .logic-tags,
 .pt-app ul.details li {
   margin-top: 22px;
 }
@@ -537,6 +542,7 @@ body.pt-app,
 .pt-app #input_feedback_content {
   padding: 0.375em;
 }
+.pt-app .logic-tags .tag,
 .pt-app .proof-result-admon {
   padding: 0.4em;
 }

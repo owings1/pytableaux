@@ -188,7 +188,20 @@ class PredicatedSentenceRule(BaseSentenceRule[Predicated]):
 class QuantifiedSentenceRule(BaseSentenceRule[Quantified]): pass
 class OperatedSentenceRule(BaseSentenceRule[Operated]): pass
 
-class NarrowQuantifierRule(QuantifiedSentenceRule):
+class GetNodeTargetsRule(BaseNodeRule):
+
+    @FilterHelper.node_targets
+    def _get_targets(self, node: Node, branch: Branch, /):
+        """Wrapped by ``@FilterHelper.node_targets`` and delegates to abstract method
+        ``_get_node_targets()``.
+        """
+        return self._get_node_targets(node, branch)
+
+    @abstractmethod
+    def _get_node_targets(self, node: Node, branch: Branch, /):
+        raise NotImplementedError
+
+class NarrowQuantifierRule(GetNodeTargetsRule, QuantifiedSentenceRule):
 
     Helpers = (FilterHelper, QuitFlag, MaxConsts)
 
@@ -204,10 +217,6 @@ class NarrowQuantifierRule(QuantifiedSentenceRule):
                     rule=self))
             return
         yield from self._get_node_targets(node, branch)
-
-    @abstractmethod
-    def _get_node_targets(self, node: Node, branch: Branch, /):
-        raise NotImplementedError
 
     def score_candidate(self, target: Target):
         return -1.0 * self.tableau.branching_complexity(target.node)
@@ -241,18 +250,4 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
             return 1.0
         node_apply_count = self[NodeCount][target.branch].get(target.node, 0)
         return 1 / (node_apply_count + 1)
-
-
-class GetNodeTargetsRule(BaseNodeRule):
-
-    @FilterHelper.node_targets
-    def _get_targets(self, node: Node, branch: Branch, /):
-        """Wrapped by ``@FilterHelper.node_targets`` and delegates to abstract method
-        ``_get_node_targets()``.
-        """
-        return self._get_node_targets(node, branch)
-
-    @abstractmethod
-    def _get_node_targets(self, node: Node, branch: Branch, /):
-        raise NotImplementedError
 

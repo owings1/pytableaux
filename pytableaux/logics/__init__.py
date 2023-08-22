@@ -417,9 +417,9 @@ class LogicType(metaclass=LogicTypeMeta):
         designated_values: Set[Mval]
         unassigned_value: Mval
         category: str
-        description: str
-        category_order: int
-        tags: tuple[str, ...] = ()
+        description: str = ''
+        category_order: int = 0
+        tags = SequenceSet[str]
         native_operators: SequenceSet[Operator] = qsetf()
         modal_operators: SequenceSet[Operator] = qsetf(sorted((
             Operator.Possibility,
@@ -438,6 +438,21 @@ class LogicType(metaclass=LogicTypeMeta):
             LogicTypeMeta.new_meta(cls)
             for name in ('native_operators', 'modal_operators', 'truth_functional_operators'):
                 setattr(cls, name, qsetf(sorted(getattr(cls, name))))
+            tags = []
+            if cls.modal:
+                tags.append('modal')
+            if cls.quantified:
+                tags.append('quantified')
+            if len(cls.values) == 2:
+                tags.append('bivalent')
+            else:
+                tags.append('many-valued')
+                if len(cls.values) - len(cls.designated_values):
+                    tags.append('gappy')
+                if len(cls.designated_values) > 1:
+                    tags.append('glutty')
+            cls.tags = qsetf(tags)
+
 
     if TYPE_CHECKING:
         from ..proof import System
