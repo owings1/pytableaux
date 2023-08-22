@@ -196,16 +196,21 @@ class Model(BaseModel[Meta.values]):
         # track all atomics and opaques
         atomics = set()
         opaques = set()
+        preds = set()
         # ensure frames for each world
         for w in self.R:
             self.frames[w]
         for w, frame in self.frames.items():
             atomics.update(frame.atomics)
             opaques.update(frame.opaques)
+            preds.update(frame.predicates)
             for pred in deque(frame.predicates):
                 self._agument_extension_with_identicals(pred, w)
             self._ensure_self_identity(w)
             self._ensure_self_existence(w)
+        for w in self.frames:
+            for pred in preds:
+                self.frames[w].predicates[pred]
         # make sure each atomic and opaque is assigned a value in each frame
         unass = self.Meta.unassigned_value
         for w, frame in self.frames.items():
@@ -218,18 +223,24 @@ class Model(BaseModel[Meta.values]):
         return super().finish()
 
     def _ensure_self_identity(self, w):
+        if not len(self.constants):
+            return
         add = self.frames[w].predicates[Predicate.Identity].pos.add
         for c in self.constants:
             # make sure each constant is self-identical
             add((c, c))
 
     def _ensure_self_existence(self, w):
+        if not len(self.constants):
+            return
         add = self.frames[w].predicates[Predicate.Existence].pos.add
         for c in self.constants:
             # make sure each constant exists
             add((c,))
 
     def _agument_extension_with_identicals(self, pred: Predicate, w):
+        if not len(self.constants):
+            return
         pos = self.frames[w].predicates[pred].pos
         add = pos.add
         for c in self.constants:
@@ -256,7 +267,7 @@ class Model(BaseModel[Meta.values]):
         worlds = sorted(self.frames)
         return dict(
             Worlds = dict(
-                description     = 'set of worlds',
+                # description     = 'set of worlds',
                 in_summary      = True,
                 datatype        = 'set',
                 member_datatype = 'int',
@@ -264,7 +275,7 @@ class Model(BaseModel[Meta.values]):
                 symbol          = 'W',
                 values          = worlds),
             Access = dict(
-                description     = 'access relation',
+                # description     = 'access relation',
                 in_summary      = True,
                 datatype        = 'set',
                 typehint        = 'access_relation',
@@ -273,7 +284,7 @@ class Model(BaseModel[Meta.values]):
                 symbol          = 'R',
                 values          = list(self.R.flat(w1s=worlds, sort=True))),
             Frames = dict(
-                description     = 'world frames',
+                # description     = 'world frames',
                 datatype        = 'list',
                 typehint        = 'frames',
                 member_datatype = 'map',
@@ -284,14 +295,7 @@ class Model(BaseModel[Meta.values]):
                         description = f'frame at world {w}',
                         datatype    = 'map',
                         typehint    = 'frame',
-                        value       = dict(
-                            world   = dict(
-                                description = 'world',
-                                datatype    = 'int',
-                                typehint    = 'world', 
-                                value       = w,
-                                symbol      = 'w'),
-                            **self.frames[w].get_data()))
+                        value       = dict(self.frames[w].get_data()))
                     for w in worlds]))
 
 class Frame:
@@ -317,7 +321,7 @@ class Frame:
     def get_data(self) -> dict:
         return dict(
             Atomics = dict(
-                description     = 'atomic values',
+                # description     = 'atomic values',
                 datatype        = 'function',
                 typehint        = 'truth_function',
                 input_datatype  = 'sentence',
@@ -330,7 +334,7 @@ class Frame:
                         output = self.atomics[sentence])
                     for sentence in sorted(self.atomics)]),
             Opaques = dict(
-                description     = 'opaque values',
+                # description     = 'opaque values',
                 datatype        = 'function',
                 typehint        = 'truth_function',
                 input_datatype  = 'sentence',
@@ -343,11 +347,11 @@ class Frame:
                         output = self.opaques[sentence])
                     for sentence in sorted(self.opaques)]),
             Predicates = dict(
-                description = 'predicate extensions',
+                # description = 'predicate extensions',
                 datatype    = 'list',
                 values      = [
                     dict(
-                        description     = f'predicate extension for {pred.name}',
+                        # description     = f'predicate extension for {pred.name}',
                         datatype        = 'function',
                         typehint        = 'extension',
                         input_datatype  = 'predicate',

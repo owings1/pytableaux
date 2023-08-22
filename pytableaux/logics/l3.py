@@ -122,10 +122,10 @@ class Rules(LogicType.Rules):
         convert = Operator.Conditional
 
         def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
+            convert = self.operator.other
             yield adds(
-                group(sdnode(self.convert(lhs, rhs), False)),
-                group(sdnode(self.convert(rhs, lhs), False)))
+                group(sdnode(convert(s.operands), False)),
+                group(sdnode(convert(reversed(s)), False)))
 
     class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
         """

@@ -114,7 +114,6 @@ class Rules(LogicType.Rules):
                     sdnode(rhs, d), sdnode(~rhs, d), sdnode(~lhs, not d)))
 
     class MaterialConditionalNegatedDesignated(System.OperatorNodeRule):
-
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
@@ -127,7 +126,19 @@ class Rules(LogicType.Rules):
                     sdnode(lhs, d),
                     sdnode(~rhs, d)))
 
-    class MaterialConditionalNegatedUndesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedUndesignated(System.OperatorNodeRule):
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(
+                    sdnode(~lhs, not d)),
+                group(
+                    sdnode(rhs, not d)),
+                group(
+                    sdnode(lhs, d), sdnode(~lhs, d), sdnode(~rhs, not d)),
+                group(
+                    sdnode(rhs, d), sdnode(~rhs, d), sdnode(lhs, not d)))
+
     class MaterialBiconditionalDesignated(System.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalNegatedDesignated(System.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
@@ -181,7 +192,6 @@ class Rules(LogicType.Rules):
             FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionUndesignated,
             FDE.Rules.MaterialConditionalUndesignated,
-            MaterialConditionalNegatedUndesignated,
             MaterialBiconditionalDesignated,
             MaterialBiconditionalNegatedDesignated,
             MaterialBiconditionalUndesignated,
@@ -206,6 +216,7 @@ class Rules(LogicType.Rules):
             ConditionalNegatedUndesignated),
         # 3-branching rules.
         group(
+            MaterialConditionalNegatedUndesignated,
             DisjunctionNegatedUndesignated))
 
     @classmethod
