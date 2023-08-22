@@ -48,6 +48,7 @@ from . import (BaseDirective, ConfKey, DirectiveHelper, LogicOptionMixin,
                optspecs)
 from .misc import EllipsisExampleHelper, rules_sorted
 from .nodez import block
+from .roles import refplus
 
 __all__ = (
     'CSVTable',
@@ -292,27 +293,24 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
 
         if self.mode == 'rule':
 
-            rule: Rule = tab.rules.get(opts['rule'])
-            rulecls = type(rule)
+            rulecls = type(tab.rules.get(opts['rule']))
 
             if 'doc' in opts:
+                tabwrapper += tabnode
+                content = addnodes.desc_content()
+                content += tabwrapper
+                inserts = []
                 if 'legend' in opts:
                     legend = nodes.inline(classes=['rule-legend'])
-                    legend += self.getnodes_rule_legend(rule)
-                    inserts = legend,
-                else:
-                    inserts = EMPTY_SET
-                docwrapper, container = self.getnodes_ruledoc_pair(rulecls, *inserts)
-                container += tabwrapper
-                tabwrapper += tabnode
-
-                if 'legend' in opts:
-                    docwrapper['classes'].append('with-legend')
-                return [docwrapper]
+                    legend += self.getnodes_rule_legend(rulecls)
+                    inserts.append(legend)
+                desc = self.getnode_ruledoc_desc(rulecls, *inserts)
+                desc += content
+                return [desc]
 
             if 'legend' in opts:
                 legend = nodes.container(classes=['rule-legend'])
-                legend += self.getnodes_rule_legend(rule)
+                legend += self.getnodes_rule_legend(rulecls)
                 tabwrapper += legend
 
             tabwrapper += tabnode
@@ -352,31 +350,39 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         tab.argument = self._trunk_argument
         return tab
 
-    def getnode_ruledoc_wrapper(self, rulecls: type[Rule], *inserts) -> addnodes.desc:
+    def getnode_ruledoc_desc(self, rulecls: type[Rule], *inserts) -> addnodes.desc:
         """Usage::
         
-            wrapper = self.getnode_ruledoc_wrapper(rulecls)
-            container = addnodes.desc_content()
-            wrapper += container
-            container += ...
+            desc = self.getnode_ruledoc_desc(rulecls, *inserts)
+            content = addnodes.desc_content()
+            desc += content
+            content += ...
         """
+        opts = self.options
+        domain = 'py'
+        objtype = 'class'
+        classes = [domain, objtype, 'ruledoc']
+        if 'legend' in opts:
+            classes.append('with-legend')
         refname = rulecls.__qualname__
         nodeid = f'{rulecls.__module__}.{refname}'
         refid = refname
-        domain = 'py'
-        objtype = 'class'
+        inserts = list(inserts)
         nametext = inflect.snakespace(rulecls.name)
-        if rulecls.Meta.name != self.logic.Meta.name:
-            nametext += f' [{rulecls.Meta.name}]'
+        if rulecls.Meta.name == self.logic.Meta.name:
+            classes.append('rule-native')
+        else:
+            classes.append('rule-non-native')
+            refp = refplus.logic_link_node(rulecls.Meta.name)
+            refp['classes'].append('rule-native-logic')
+            inserts.append(refp)
         return addnodes.desc('',
             addnodes.desc_signature('', '',
                 *inserts,
                 addnodes.desc_name(refname, '',
                     nodes.inline(
-                        # nametext,
                         rulecls.name,
                         nametext,
-                        # inflect.snakespace(rulecls.name),
                         classes=['ruledoc', 'rule-sig']),
                     viewcode_anchor(
                         refdomain=domain,
@@ -390,18 +396,13 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
                 classes=['ruledoc']),
             domain=domain,
             objtype=objtype,
-            classes=[domain, objtype, 'ruledoc'])
+            classes=classes,
+            **{'data-rule-native-logic': rulecls.Meta.name})
 
-    def getnodes_ruledoc_pair(self, rulecls: type[Rule], *inserts) -> tuple[addnodes.desc, addnodes.desc_content]:
-        wrapper = self.getnode_ruledoc_wrapper(rulecls, *inserts)
-        container = addnodes.desc_content()
-        wrapper += container
-        return wrapper, container
-
-    def getnodes_rule_legend(self, rule: Rule|type[Rule]):
+    def getnodes_rule_legend(self, rulecls: type[Rule]):
         lw = self.lwuni
         renderset = lw.renderset
-        for name, value in rule.legend:
+        for name, value in rulecls.legend:
             if lw.canwrite(value):
                 text = lw(value)
             else:
@@ -414,11 +415,12 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
                 except KeyError:
                     raise self.error(
                         f'Unwriteable legend item: {(name, value)}'
-                        f'for {rule}. Tried renderset.string with args {args}')
+                        f'for {rulecls}. Tried renderset.string with args {args}')
             yield nodes.inline(text, text, classes=['legend-item', name])
 
     def getnodes_trunk_prolog(self):
         # Plain docutils nodes, not raw html.
+        yield nodes.inline(text='For the argument ')
         notn = self.options['wnotn']
         argnode = nodes.inline(classes=['argument'], notn=notn)
         prem2 = nodez.sentence(sentence = Atomic(0,0), notn=notn)
@@ -429,10 +431,8 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             prem2,
             nodes.inline(text=' ∴ '),
             nodez.sentence(sentence=Atomic(1, 0), notn=notn))
-        return [
-            nodes.inline(text='For the argument '),
-            argnode,
-            nodes.inline(text=' write:')]
+        yield argnode
+        yield nodes.inline(text=' write:')
 
     @classmethod
     def get_trunk_renderset(cls, notn, charset):
@@ -511,7 +511,7 @@ class RuleGroupDirective(TableauDirective):
         legend   = optspecs.flag,
         captions = optspecs.flag,
         docflags = optspecs.flag,
-        docs     = optspecs.flag)
+        doc      = optspecs.flag)
 
     groupmode: Literal['group', 'subgroups']
     # Either group or subgroups will be set, but not both.
@@ -542,8 +542,6 @@ class RuleGroupDirective(TableauDirective):
         else:
             self.title = None
         self.groupid = inflect.dashcase(self.title or label)
-        if 'docs' in opts:
-            opts['doc'] = opts['docs']
         self.exclude = set(opts.get('exclude', EMPTY_SET))
         self.include = set(opts.get('include', EMPTY_SET))
         self.resolve_special_names()

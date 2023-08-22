@@ -136,7 +136,7 @@ Closure
   :group: closure
   :titles:
   :legend:
-  :docs:
+  :doc:
 
 Rules
 -----
@@ -196,4 +196,5 @@ References
 .. cssclass:: hidden
 
 .. autoclass:: Rules()
-    :members:
+  :members:
+  :undoc-members:

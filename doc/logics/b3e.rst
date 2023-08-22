@@ -156,7 +156,7 @@ Closure
   :group: closure
   :titles:
   :legend:
-  :docs:
+  :doc:
 
 .. _b3e-rules:
 
@@ -203,4 +203,5 @@ For further reading, see:
 .. cssclass:: hidden
 
 .. autoclass:: Rules()
-    :members:
+  :members:
+  :undoc-members:

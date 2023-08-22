@@ -110,7 +110,7 @@ Closure
   :group: closure
   :titles:
   :legend:
-  :docs:
+  :doc:
 
 .. _cfol-rules:
 
@@ -145,4 +145,5 @@ References
 .. cssclass:: hidden
 
 .. autoclass:: Rules()
-    :members:
+  :members:
+  :undoc-members:

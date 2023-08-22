@@ -95,6 +95,12 @@ class HTML5Translator(BaseTranslator):
             if stack and stack[-1][0] is node:
                 stack.pop()
 
+    def starttag(self, node, tagname, suffix='\n', empty=False, **attributes):
+        for name, value in getattr(node, 'attributes', {}).items():
+            if name.startswith('data-'):
+                attributes[name] = value
+        return super().starttag(node, tagname, suffix, empty, **attributes)
+
     def get_lwargs(self, node: Element):
         stacks = self.optstacks
         if (notn := node.get('notn')):

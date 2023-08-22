@@ -125,7 +125,7 @@ Closure
   :group: closure
   :titles:
   :legend:
-  :docs:
+  :doc:
 
 .. _k3wq-rules:
 
@@ -162,4 +162,5 @@ References
 .. cssclass:: hidden
 
 .. autoclass:: Rules()
-    :members:
+  :members:
+  :undoc-members:

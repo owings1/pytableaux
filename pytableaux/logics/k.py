@@ -45,9 +45,7 @@ class Meta(LogicType.Meta):
     category = 'Bivalent Modal'
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
-    native_operators = FDE.Meta.native_operators | [
-        Operator.Possibility,
-        Operator.Necessity]
+    native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
 
 class AccessGraph(defaultdict[int, set[int]]):
 
@@ -263,7 +261,6 @@ class Model(BaseModel[Meta.values]):
         worlds = sorted(self.frames)
         return dict(
             Worlds = dict(
-                # description     = 'set of worlds',
                 in_summary      = True,
                 datatype        = 'set',
                 member_datatype = 'int',
@@ -271,7 +268,6 @@ class Model(BaseModel[Meta.values]):
                 symbol          = 'W',
                 values          = worlds),
             Access = dict(
-                # description     = 'access relation',
                 in_summary      = True,
                 datatype        = 'set',
                 typehint        = 'access_relation',
@@ -280,7 +276,6 @@ class Model(BaseModel[Meta.values]):
                 symbol          = 'R',
                 values          = list(self.R.flat(w1s=worlds, sort=True))),
             Frames = dict(
-                # description     = 'world frames',
                 datatype        = 'list',
                 typehint        = 'frames',
                 member_datatype = 'map',
@@ -317,7 +312,6 @@ class Frame:
     def get_data(self) -> dict:
         return dict(
             Atomics = dict(
-                # description     = 'atomic values',
                 datatype        = 'function',
                 typehint        = 'truth_function',
                 input_datatype  = 'sentence',
@@ -330,7 +324,6 @@ class Frame:
                         output = self.atomics[sentence])
                     for sentence in sorted(self.atomics)]),
             Opaques = dict(
-                # description     = 'opaque values',
                 datatype        = 'function',
                 typehint        = 'truth_function',
                 input_datatype  = 'sentence',
@@ -343,11 +336,9 @@ class Frame:
                         output = self.opaques[sentence])
                     for sentence in sorted(self.opaques)]),
             Predicates = dict(
-                # description = 'predicate extensions',
                 datatype    = 'list',
                 values      = [
                     dict(
-                        # description     = f'predicate extension for {pred.name}',
                         datatype        = 'function',
                         typehint        = 'extension',
                         input_datatype  = 'predicate',
@@ -375,7 +366,6 @@ class Frame:
             if other.predicates[pred].pos != interp.pos:
                 return False
         return True
-
 
 class System(proof.System):
 

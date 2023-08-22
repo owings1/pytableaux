@@ -72,7 +72,7 @@ Closure
   :group: closure
   :titles:
   :legend:
-  :docs:
+  :doc:
 
 .. _s5-rules:
 
@@ -102,4 +102,5 @@ References
 .. cssclass:: hidden
 
 .. autoclass:: Rules()
-    :members:
+  :members:
+  :undoc-members:

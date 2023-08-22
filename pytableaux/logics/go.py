@@ -32,10 +32,10 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with '
         'classical-like binary operators')
     category_order = 60
-    native_operators = FDE.Meta.native_operators | (
+    native_operators = FDE.Meta.native_operators | [
         Operator.Assertion,
         Operator.Conditional,
-        Operator.Biconditional)
+        Operator.Biconditional]
 
 class Model(FDE.Model):
 

@@ -7,8 +7,8 @@ L{T} - Reflexive Normal Modal Logic
 L{T} is an extension of {@K}, with a *reflexive* access relation.
 
 .. contents::
-    :local:
-    :depth: 2
+  :local:
+  :depth: 2
 
 ------------------------
 
@@ -62,4 +62,5 @@ References
 .. cssclass:: hidden
 
 .. autoclass:: Rules()
-    :members:
+  :members:
+  :undoc-members:

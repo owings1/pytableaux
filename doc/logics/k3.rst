@@ -139,7 +139,7 @@ designated nodes on the branch.
   :group: closure
   :titles:
   :legend:
-  :docs:
+  :doc:
 
 
 .. _k3-rules:
@@ -185,4 +185,5 @@ References
 .. cssclass:: hidden
 
 .. autoclass:: Rules()
-    :members:
+  :members:
+  :undoc-members:

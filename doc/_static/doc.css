@@ -160,6 +160,7 @@ table.lex-eg-table tr > td:last-child {
 }
 
 /* float */
+.ruledoc .rule-native-logic,
 .sig .rule-legend,
 .truth-table-wrapper {
     float: left;
@@ -183,6 +184,9 @@ table.lex-eg-table tr > td:last-child {
 
 div[class^=highlight] .pre {
     margin: 0;
+}
+.ruledoc .rule-native-logic {
+    margin-left: 10px;
 }
 dl.ruledoc dd {
     margin-left: 0;

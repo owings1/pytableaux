@@ -238,7 +238,6 @@ class Model(LogicType.Model[ValueFDE]):
     def get_data(self) -> dict[str, Any]:
         return dict(
             Atomics = dict(
-                # description     = 'atomic values',
                 datatype        = 'function',
                 typehint        = 'truth_function',
                 input_datatype  = 'sentence',
@@ -251,7 +250,6 @@ class Model(LogicType.Model[ValueFDE]):
                         output = self.atomics[s])
                     for s in sorted(self.atomics)]),
             Opaques = dict(
-                # description     = 'opaque values',
                 datatype        = 'function',
                 typehint        = 'truth_function',
                 input_datatype  = 'sentence',
@@ -264,14 +262,12 @@ class Model(LogicType.Model[ValueFDE]):
                         output = self.opaques[s])
                     for s in sorted(self.opaques)]),
             Predicates = dict(
-                # description = 'predicate extensions/anti-extensions',
                 in_summary  = True,
                 datatype    = 'list',
                 values      = [
                     v for predicate in sorted(self.predicates) for v in
                     [
                         dict(
-                            # description     = 'predicate extension',
                             datatype        = 'function',
                             typehint        = 'extension',
                             input_datatype  = 'predicate',
@@ -283,7 +279,6 @@ class Model(LogicType.Model[ValueFDE]):
                                     input  = predicate,
                                     output = sorted(self.predicates[predicate].pos))]),
                         dict(
-                            # description     = 'predicate anti-extension',
                             datatype        = 'function',
                             typehint        = 'extension',
                             input_datatype  = 'predicate',
@@ -305,9 +300,13 @@ class System(LogicType.System):
 
     @classmethod
     def branching_complexity(cls, node, rules, /):
+        try:
+            s = node['sentence']
+        except KeyError:
+            return 0
         negated = False
         result = 0
-        for oper in node['sentence'].operators:
+        for oper in s.operators:
             if not negated and oper is Operator.Negation:
                 negated = True
                 continue
@@ -355,7 +354,7 @@ class System(LogicType.System):
         NodeFilters = group(filters.NodeDesignation)
         autoattrs = True
 
-        def _get_node_targets(self, node, branch, /):
+        def _get_node_targets(self, node: Node, branch: Branch, /):
             return self._get_sd_targets(self.sentence(node), node['designated'])
 
         def _get_sd_targets(self, s: Operated, d: bool, /):

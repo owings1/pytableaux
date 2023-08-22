@@ -121,7 +121,7 @@ and undesignated node.
   :group: closure
   :titles:
   :legend:
-  :docs:
+  :doc:
 
 This allows for both a sentence and its negation to appear as *designated*
 on an open branch (or both as *undesignated*).
@@ -195,4 +195,5 @@ For futher reading see:
 .. cssclass:: hidden
 
 .. autoclass:: Rules()
-    :members:
+  :members:
+  :undoc-members:

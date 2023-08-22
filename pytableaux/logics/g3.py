@@ -95,7 +95,6 @@ class Rules(LogicType.Rules):
     class BiconditionalNegatedDesignated(System.ConditionalConjunctsReducingRule): pass
     class BiconditionalUndesignated(System.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedUndesignated(System.ConditionalConjunctsReducingRule): pass
-
     class MaterialConditionalDesignated(System.MaterialConditionalReducingRule): pass
     class MaterialConditionalNegatedDesignated(System.MaterialConditionalReducingRule): pass
     class MaterialConditionalUndesignated(System.MaterialConditionalReducingRule): pass

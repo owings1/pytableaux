@@ -36,7 +36,7 @@ from pytableaux import logics
 from pytableaux.lang import LexType, Notation, Predicate
 from pytableaux.tools import qset, qsetf
 
-from . import BaseRole, ParserOptionMixin, nodez, optspecs
+from . import BaseRole, ParserOptionMixin, nodez, optspecs, role_instance
 
 _F = TypeVar('_F', bound=Callable)
 __all__ = ('lexdress', 'metadress', 'refplus', 'refpost',)
@@ -77,6 +77,18 @@ class refplus(ReferenceRole, BaseRole):
         # {'class': None}         
         self.options ={}
 
+    @classmethod
+    def logic_link_node(cls, logic):
+        logic = logics.registry(logic)
+
+        inliner = nodes.Element()
+        role: refplus = role_instance(cls)
+        text = '{@' + logic.Meta.name + '}'
+        rawtext = f':{role.name}:`{text}`'
+        nn, _ = role(role.name, rawtext, text, 0, inliner)
+        n, = nn
+        return n
+        # refp_nn, _ = role_instance('refp')('refp', f':refp:`{refp_text}`', refp_text, 0, inliner)
     @rolerun
     def run(self):
         self.classes = qset(self._classes)
