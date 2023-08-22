@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations as annotations
+from collections import defaultdict
 
 from ..lang import Atomic
 from ..models import ValueLP
@@ -38,7 +39,20 @@ class Meta(FDE.Meta):
         'non-modal',
         'first-order')
 
-class Model(FDE.Model): pass
+class Model(FDE.Model):
+
+    def finish(self):
+        super().finish()
+        # Ensure anti-extension is populated for every param tuple
+        ptuples = defaultdict(set)
+        for pred, interp in self.predicates.items():
+            ptuples[pred.arity].update(interp.pos)
+            ptuples[pred.arity].update(interp.neg)
+        for pred, interp in self.predicates.items():
+            for ptuple in ptuples[pred.arity]:
+                if ptuple not in interp.pos:
+                    interp.addneg(ptuple)
+
 class System(FDE.System): pass
 
 class Rules(LogicType.Rules):

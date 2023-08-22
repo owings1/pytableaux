@@ -34,7 +34,7 @@ class Meta(LP.Meta):
         Operator.Conditional,
         Operator.Biconditional)
 
-class Model(FDE.Model):
+class Model(LP.Model):
 
     class TruthFunction(FDE.Model.TruthFunction):
 

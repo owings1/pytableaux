@@ -37,7 +37,7 @@ class Meta(LP.Meta):
         'non-modal')
     native_operators = MH.Meta.native_operators
 
-class Model(FDE.Model):
+class Model(LP.Model):
 
     class TruthFunction(LP.Model.TruthFunction):
 

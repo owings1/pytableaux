@@ -783,7 +783,7 @@ invalidities['LP'] = invalidities['CFOL'] | [
     'Material Modus Tollens',
     'Self Identity 1',
     'Self Identity 2',
-    # 'Syllogism',
+    'Syllogism',
     'Universal Predicate Syllogism',
 ]
 
@@ -806,7 +806,7 @@ invalidities['RM3'] = invalidities['CFOL'] | [
     'Material Modus Tollens',
     'Self Identity 1',
     'Self Identity 2',
-    # 'Syllogism',
+    'Syllogism',
     'Universal Predicate Syllogism',
 ]
 
