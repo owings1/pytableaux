@@ -42,7 +42,7 @@ class Model(K.Model):
             for w1 in needs_world:
                 R.add((w1, w2))
             R.add((w2, w2))
-        super().finish()
+        return super().finish()
 
 class System(K.System): pass
 

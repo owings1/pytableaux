@@ -47,7 +47,6 @@ class Mval(abcs.Ebc):
 
     __slots__ = 'name', 'num'
 
-
     def __init__(self, num: float, /):
         self.num: float = num
 
@@ -57,7 +56,7 @@ class Mval(abcs.Ebc):
         if isinstance(other, (float, int)):
             return other == self.num
         if isinstance(other, str):
-            return other == self.name# or other.lower() == self.label.lower()
+            return other == self.name
         return NotImplemented
 
     def __hash__(self):
@@ -137,22 +136,17 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
 
     values: type[MvalT_co]
     "The values of the model"
-    designated_values: Set[MvalT_co]
-    "The set of designated values"
-    unassigned_value: MvalT_co
-    "The default 'unassigned' value"
-    truth_functional_operators: Set[Operator]
-    "The truth-functional operators"
-    modal_operators: Set[Operator] 
-    "The modal operators"
+
     truth_function: BaseModel.TruthFunction[MvalT_co]
+
+    __slots__ = ('_finished',)
 
     @property
     def id(self) -> int:
         return id(self)
 
     @property
-    def finished(self):
+    def finished(self) -> bool:
         try:
             return self._finished
         except AttributeError:
@@ -162,7 +156,7 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
         if not self.Meta.quantified and type(s) is Quantified:
             return True
-        if not self.Meta.modal and type(s) is Operated and s.operator in self.modal_operators:
+        if not self.Meta.modal and type(s) is Operated and s.operator in self.Meta.modal_operators:
             return True
         return False
 
@@ -203,7 +197,7 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
 
     def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
         self._check_finished()
-        if s.operator in self.truth_functional_operators:
+        if s.operator in self.Meta.truth_functional_operators:
             return self.truth_function(s.operator,
                 *map(lambda s: self.value_of(s, **kw), s))
         check.inst(s, Operated)
@@ -227,13 +221,14 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
 
     def is_countermodel_to(self, a: Argument, /) -> bool:
         return (
-            all(map(self.designated_values.__contains__, map(self.value_of, a.premises))) and
-            self.value_of(a.conclusion) not in self.designated_values)
+            all(map(self.Meta.designated_values.__contains__, map(self.value_of, a.premises))) and
+            self.value_of(a.conclusion) not in self.Meta.designated_values)
 
     @abstractmethod
-    def read_branch(self, branch: Branch, /):
+    def read_branch(self, branch: Branch, /) -> Self:
         self._check_not_finished()
         self.finish()
+        return self
 
     def _check_finished(self):
         if not self.finished:
@@ -243,9 +238,10 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
         if self.finished:
             raise Emsg.IllegalState('Model already finished')
 
-    def finish(self):
+    def finish(self) -> Self:
         self._check_not_finished()
         self._finished = True
+        return self
 
     @abstractmethod
     def get_data(self) -> Mapping[str, Any]:
@@ -362,7 +358,6 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
                 return ordering[minfloor(0, it, len(ordering) - 1)]
             raise NotImplementedError from ValueError(mode)
 
-
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
@@ -371,11 +366,9 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
             return
         cls.Meta = Meta
         cls.values = Meta.values
-        cls.designated_values = Meta.designated_values
-        cls.unassigned_value = Meta.unassigned_value
-        cls.modal_operators = Meta.modal_operators
-        cls.truth_functional_operators = Meta.truth_functional_operators
-        cls.truth_function = cls.TruthFunction(cls.values)
+        cls.minval = min(Meta.values)
+        cls.maxval = max(Meta.values)
+        cls.truth_function = cls.TruthFunction(Meta.values)
 
 @dataclass(kw_only = True)
 class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):

@@ -42,7 +42,6 @@ class Meta(FDE.Meta):
 class Model(FDE.Model):
 
     def finish(self):
-        super().finish()
         # Ensure anti-extension is populated for every param tuple
         ntuples = defaultdict(set)
         for pred, interp in self.predicates.items():
@@ -52,6 +51,7 @@ class Model(FDE.Model):
             for ntuple in ntuples[pred.arity]:
                 if ntuple not in interp.pos:
                     interp.addneg(ntuple)
+        return super().finish()
 
 class System(FDE.System): pass
 

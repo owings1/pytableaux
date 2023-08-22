@@ -38,7 +38,7 @@ class Model(T.Model):
     def finish(self):
         self._check_not_finished()
         self._ensure_reflexive_transitive()
-        super().finish()
+        return super().finish()
 
     def _ensure_reflexive_transitive(self):
         self._check_not_finished()

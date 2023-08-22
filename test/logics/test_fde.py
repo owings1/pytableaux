@@ -165,14 +165,14 @@ class TestModels(Base):
         m = self.m()
         m.finish()
         res = m.value_of(s)
-        self.assertEqual(res, m.unassigned_value)
+        self.assertEqual(res, m.Meta.unassigned_value)
 
     def test_model_value_of_opaque_unassigned(self):
         s = self.p('La')
         m = self.m()
         m.finish()
         res = m.value_of(s)
-        self.assertEqual(res, m.unassigned_value)
+        self.assertEqual(res, m.Meta.unassigned_value)
 
     def test_model_value_error_various(self):
         s1, s2, s3 = self.pp('La', 'a', 'Imn')
@@ -209,7 +209,7 @@ class TestModels(Base):
         with self.assertRaises(NotImplementedError):
             self.m().set_literal_value(s, 'T')
         with self.assertRaises(TypeError):
-            self.m().value_of_quantified(s)
+            self.m().finish().value_of_quantified(s)
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
         tab = self.tab('a', 'NLa', 'b')
@@ -228,7 +228,7 @@ class TestModels(Base):
         m = self.m()
         m.read_branch(b)
         s1 = arg.premises[0]
-        self.assertIn(m.value_of(s1), m.designated_values)
+        self.assertIn(m.value_of(s1), m.Meta.designated_values)
 
     def test_observed_as_above_reconstruct1(self):
         # solution was to add all constants in set_opaque_value
@@ -247,7 +247,7 @@ class TestModels(Base):
             m.set_literal_value(s4, 'F')
         self.assertEqual(m.value_of(s3), 'T')
         self.assertIn(s3, m.opaques)
-        self.assertIn(m.value_of(s5), m.designated_values)
+        self.assertIn(m.value_of(s5), m.Meta.designated_values)
 
 class TestBranchables(Base):
     exp = dict(

@@ -48,7 +48,7 @@ class Model(S4.Model):
                 break
             for w1, w2 in to_add:
                 self.R[w1].add(w2)
-        super().finish()
+        return super().finish()
 
 class System(K.System): pass
 

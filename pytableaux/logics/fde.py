@@ -21,7 +21,7 @@ from itertools import starmap
 from typing import Any
 
 from ..errors import Emsg, check
-from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
+from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import PredicateInterpretation, ValueFDE
 from ..proof import Branch, Node, SentenceNode, adds, filters, rules, sdnode
@@ -92,25 +92,26 @@ class Model(LogicType.Model[ValueFDE]):
     opaques: dict[Sentence, ValueFDE]
     "An assignment of each opaque (un-interpreted) sentence to a value."
 
+    __slots__ = ('predicates', 'atomics', 'opaques', 'constants')
+
     def __init__(self):
         super().__init__()
         self.predicates = defaultdict(PredicateInterpretation)
         self.atomics = {}
         self.opaques = {}
-        #: Track set of atomics for performance.
-        self.all_atomics: set[Atomic] = set()
         #: Track set of constants for performance.
         self.constants: set[Constant] = set()
-        self.maxval = max(self.values)
-        self.minval = min(self.values)
 
     def value_of_atomic(self, s: Sentence, /):
-        return self.atomics.get(s, self.unassigned_value)
+        self._check_finished()
+        return self.atomics.get(s, self.Meta.unassigned_value)
 
     def value_of_opaque(self, s: Sentence, /):
-        return self.opaques.get(s, self.unassigned_value)
+        self._check_finished()
+        return self.opaques.get(s, self.Meta.unassigned_value)
 
     def value_of_predicated(self, s: Predicated, /):
+        self._check_finished()
         interp = self.predicates[s.predicate]
         if s.params in interp.pos:
             if s.params in interp.neg:
@@ -134,6 +135,7 @@ class Model(LogicType.Model[ValueFDE]):
         variable. For an existential quantifier, this is the max value, and
         for a universial quantifier, it is the min value.
         """
+        self._check_finished()
         it = self._unquantify_value_map(s)
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
@@ -200,10 +202,7 @@ class Model(LogicType.Model[ValueFDE]):
                                 dict(
                                     input  = predicate,
                                     output = self.predicates[predicate].neg)])
-                    ]
-                ]
-            )
-        )
+                    ]]))
 
     def read_branch(self, branch, /):
         self._check_not_finished()
@@ -211,7 +210,7 @@ class Model(LogicType.Model[ValueFDE]):
             if not isinstance(node, SentenceNode):
                 continue
             s = node['sentence']
-            self._collect_sentence(s)
+            # self._collect_sentence(s)
             is_literal = self.is_sentence_literal(s)
             is_opaque = self.is_sentence_opaque(s)
             if is_literal or is_opaque:
@@ -260,24 +259,20 @@ class Model(LogicType.Model[ValueFDE]):
                     self.set_opaque_value(s, value)
                 else:
                     self.set_literal_value(s, value)
-        super().read_branch(branch)
+        return super().read_branch(branch)
 
-    def _collect_sentence(self, s: Sentence, /):
-        for pred in s.predicates:
-            self.predicates[pred]
-        # self.predicates.update(s.predicates)
-        self.all_atomics.update(s.atomics)
-        self.constants.update(s.constants)
 
     def finish(self):
         # TODO: consider augmenting the logic with Identity and Existence predicate
         #       restrictions. In that case, new tableaux rules need to be written.
-        for s in self.all_atomics:
-            if s not in self.atomics:
-                self.set_literal_value(s, self.unassigned_value)
-        super().finish()
+        for s in self.opaques:
+            for a in s.atomics:
+                if a not in self.atomics:
+                    self.atomics[a] = self.Meta.unassigned_value
+        return super().finish()
 
     def set_literal_value(self, s: Sentence, value, /):
+        self._check_not_finished()
         try:
             value = self.values[value]
         except KeyError:
@@ -295,9 +290,10 @@ class Model(LogicType.Model[ValueFDE]):
             elif stype is Predicated:
                 self.set_predicated_value(s, value)
             else:
-                raise NotImplementedError()
+                raise NotImplementedError from TypeError(stype)
 
     def set_opaque_value(self, s: Sentence, value, /):
+        self._check_not_finished()
         try:
             value = self.values[value]
         except KeyError:
@@ -305,12 +301,14 @@ class Model(LogicType.Model[ValueFDE]):
         if self.opaques.get(s) not in (value, None):
             raise Emsg.ConflictForSentence(value, s)
         # We might have a quantified opaque sentence, in which case we will need
-        # to still check every subsitution, so we want the constants, as well
-        # as other lexical items.
-        self._collect_sentence(s)
+        # to still check every subsitution, so we want the constants and predicates.
+        for pred in s.predicates:
+            self.predicates[pred]
+        self.constants.update(s.constants)
         self.opaques[s] = value
         
     def set_atomic_value(self, s: Atomic, value, /):
+        self._check_not_finished()
         try:
             value = self.values[value]
         except KeyError:
@@ -320,6 +318,7 @@ class Model(LogicType.Model[ValueFDE]):
         self.atomics[s] = value
 
     def set_predicated_value(self, s: Predicated, value, /):
+        self._check_not_finished()
         try:
             value = self.values[value]
         except KeyError:
@@ -329,23 +328,23 @@ class Model(LogicType.Model[ValueFDE]):
                 self.constants.add(param)
             else:
                 raise TypeError(f'free variables not allowed')
-        predext = self.predicates[s.predicate]
+        interp = self.predicates[s.predicate]
         if value is self.values.T:
-            if s.params in predext.neg:
+            if s.params in interp.neg:
                 raise Emsg.ConflictForAntiExtension(value, s.params)
-            predext.addpos(s.params)
+            interp.addpos(s.params)
         elif value is self.values.F:
-            if s.params in predext.pos:
+            if s.params in interp.pos:
                 raise Emsg.ConflictForExtension(value, s.params)
-            predext.addneg(s.params)
+            interp.addneg(s.params)
         elif value == 'N':
-            if s.params in predext.pos:
+            if s.params in interp.pos:
                 raise Emsg.ConflictForExtension(value, s.params)
-            if s.params in predext.neg:
+            if s.params in interp.neg:
                 raise Emsg.ConflictForAntiExtension(value, s.params)
         elif value == 'B':
-            predext.addpos(s.params)
-            predext.addneg(s.params)
+            interp.addpos(s.params)
+            interp.addneg(s.params)
         else:
             raise Emsg.UnknownForSentence(value, s)
 

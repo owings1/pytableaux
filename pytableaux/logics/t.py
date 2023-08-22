@@ -34,7 +34,7 @@ class Model(K.Model):
     def finish(self):
         self._check_not_finished()
         self._ensure_reflexive()
-        super().finish()
+        return super().finish()
 
     def _ensure_reflexive(self):
         self._check_not_finished()

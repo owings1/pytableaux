@@ -114,7 +114,7 @@ class TestModels(Base):
         s = self.p('La')
         m = self.m()
         m.finish()
-        self.assertEqual(m.value_of(s), m.unassigned_value)
+        self.assertEqual(m.value_of(s), m.Meta.unassigned_value)
 
     def test_set_predicated_false_value_error_on_set_to_true(self):
         s = self.p('Fm')
@@ -127,7 +127,7 @@ class TestModels(Base):
         # coverage
         s = Predicated.first()
         m = self.m()
-        anti_extension = m.get_anti_extension(s.predicate)
-        self.assertEqual(len(anti_extension), 0)
+        interp = m.frames[0].predicates[s.predicate]
+        self.assertEqual(len(interp.neg), 0)
         m.set_literal_value(s, 'F')
-        self.assertIn(s.params, anti_extension)
+        self.assertIn(s.params, interp.neg)

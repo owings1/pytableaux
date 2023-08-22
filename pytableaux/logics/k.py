@@ -91,41 +91,41 @@ class Model(BaseModel[Meta.values]):
     constants: set[Constant]
     "The fixed domain of constants, common to all worlds in the model"
 
+    __slots__ = ('frames', 'R', 'constants', 'predicates')
+
     def __init__(self):
-
         super().__init__()
-
         self.frames = Frames()
         self.R = AccessGraph()
         self.constants = set()
-
         self.predicates: set[Predicate] = set(Predicate.System)
-
         # ensure there is a w0
         self.frames[0]
-        self.maxval = max(self.values)
-        self.minval = min(self.values)
 
     def value_of_opaque(self, s: Sentence, /, *, world: int = 0):
-        return self.frames[world].opaques.get(s, self.unassigned_value)
+        self._check_finished()
+        return self.frames[world].opaques.get(s, self.Meta.unassigned_value)
 
     def value_of_atomic(self, s: Atomic, /, *, world: int = 0):
-        return self.frames[world].atomics.get(s, self.unassigned_value)
+        self._check_finished()
+        return self.frames[world].atomics.get(s, self.Meta.unassigned_value)
 
-    def value_of_predicated(self, s: Predicated, **kw):
+    def value_of_predicated(self, s: Predicated, /, *, world: int = 0):
         """
         A sentence for predicate `P` is true at :m:`w` iff the tuple of the parameters
         is in the extension of `P` at :m:`w`.
         """
+        self._check_finished()
         params = s.params
         for param in params:
             if param not in self.constants:
                 raise DenotationError(f'Parameter {param} is not in the constants')
-        if params in self.get_extension(s.predicate, **kw):
+        if params in self.frames[world].predicates[s.predicate].pos:
             return self.values.T
         return self.values.F
 
     def value_of_quantified(self, s: Quantified, /, *, world: int = 0):
+        self._check_finished()
         it = map(lambda s: self.value_of(s, world=world), map(s.unquantify, self.constants))
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
@@ -134,7 +134,8 @@ class Model(BaseModel[Meta.values]):
         raise NotImplementedError from ValueError(s.quantifier)
 
     def value_of_operated(self, s: Operated, /, *, world: int = 0):
-        if s.operator in self.modal_operators:
+        self._check_finished()
+        if s.operator in self.Meta.modal_operators:
             it = map(lambda w: self.value_of(s.lhs, world=w), self.R[world])
             if s.operator is Operator.Possibility:
                 return maxceil(self.maxval, it, self.minval)
@@ -176,9 +177,8 @@ class Model(BaseModel[Meta.values]):
 
     def read_branch(self, branch: Branch, /):
         self._check_not_finished()
-        for _ in map(self._read_node, branch):
-            pass
-        super().read_branch(branch)
+        for _ in map(self._read_node, branch): pass
+        return super().read_branch(branch)
 
     def _read_node(self, node: Node, /):
         if isinstance(node, SentenceNode):
@@ -213,46 +213,47 @@ class Model(BaseModel[Meta.values]):
         for w, frame in self.frames.items():
             for s in atomics:
                 if s not in frame.atomics:
-                    self.set_literal_value(s, self.unassigned_value, world = w)
+                    self.set_literal_value(s, self.Meta.unassigned_value, world = w)
             for s in opaques:
                 if s not in frame.opaques:
-                    self.set_opaque_value(s, self.unassigned_value, world = w)
-        super().finish()
+                    self.set_opaque_value(s, self.Meta.unassigned_value, world = w)
+        return super().finish()
 
     def _ensure_self_identity(self, w):
-        ext = self.get_extension(Predicate.System.Identity, world = w)
+        interp = self.frames[w].predicates[Predicate.Identity]
         for c in self.constants:
             # make sure each constant is self-identical
-            ext.add((c, c))
+            interp.addpos((c, c))
 
     def _ensure_self_existence(self, w):
-        ext = self.get_extension(Predicate.System.Existence, world = w)
+        interp = self.frames[w].predicates[Predicate.Existence]
         for c in self.constants:
             # make sure each constant exists
-            ext.add((c,))
+            interp.addpos((c,))
 
     def _agument_extension_with_identicals(self, pred: Predicate, w):
-        extension = self.get_extension(pred, world = w)
+        interp = self.frames[w].predicates[pred]
         for c in self.constants:
-            identicals = self._get_identicals(c, world = w)
+            identicals = self._get_identicals(c, w)
             to_add = set()
-            for params in extension:
+            for params in interp.pos:
                 if c in params:
                     for new_c in identicals:
-                        new_params = substitute(params, c, new_c)
-                        to_add.add(new_params)
-            extension.update(to_add)
+                        to_add.add(substitute(params, c, new_c))
+            for params in to_add:
+                interp.addpos(params)
 
-    def _get_identicals(self, c: Constant, **kw) -> set[Constant]:
-        ext = self.get_extension(Predicate.System.Identity, **kw)
+    def _get_identicals(self, c: Constant, w=0) -> set[Constant]:
+        interp = self.frames[w].predicates[Predicate.Identity]
         identicals = set()
-        for params in ext:
+        for params in interp.pos:
             if c in params:
                 identicals.update(params)
         identicals.discard(c)
         return identicals
 
     def set_literal_value(self, s: Sentence, value, /, **kw):
+        self._check_not_finished()
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value, **kw)
         elif (stype := type(s)) is Operated and s.operator is Operator.Negation:
@@ -263,22 +264,22 @@ class Model(BaseModel[Meta.values]):
         elif stype is Predicated:
             self.set_predicated_value(s, value, **kw)
         else:
-            raise NotImplementedError
+            raise NotImplementedError from TypeError(stype)
 
     def set_opaque_value(self, s: Sentence, value, /, world = 0):
+        self._check_not_finished()
         value = self.values[value]
         frame = self.frames[world]
         if frame.opaques.get(s, value) is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants.
-        # NB: in FDE we added the atomics to all_atomics, but we don't have that
-        #     here since we do frames -- will that be a problem?
         self.constants.update(s.constants)
         self.predicates.update(s.predicates)
         frame.opaques[s] = value
 
     def set_atomic_value(self, s: Atomic, value, /, world = 0):
+        self._check_not_finished()
         value = self.values[value]
         frame = self.frames[world]
         # if s in frame.atomics and frame.atomics[s] is not value:
@@ -286,7 +287,8 @@ class Model(BaseModel[Meta.values]):
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         frame.atomics[s] = value
 
-    def set_predicated_value(self, s: Predicated, value, /, **kw):
+    def set_predicated_value(self, s: Predicated, value, /, *, world=0):
+        self._check_not_finished()
         values = self.values
         value = values[value]
         pred = s.predicate
@@ -297,28 +299,19 @@ class Model(BaseModel[Meta.values]):
                 self.constants.add(param)
             else:
                 raise TypeError(f'free variables not allowed')
-        extension = self.get_extension(pred, **kw)
-        anti_extension = self.get_anti_extension(pred, **kw)
+        interp = self.frames[world].predicates[pred]
         if value is values.F:
-            if params in extension:
+            if params in interp.pos:
                 raise ModelValueError(f'Cannot set value {value} for tuple '
                     f'{params} already in extension')
-            anti_extension.add(params)
+            interp.addneg(params)
         elif value is values.T:
-            if params in anti_extension:
+            if params in interp.neg:
                 raise ModelValueError(f'Cannot set value {value} for tuple '
                     f'{params} already in anti-extension')
-            extension.add(params)
+            interp.addpos(params)
         else:
             raise NotImplementedError from ValueError(value)
-
-    def get_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
-        self.predicates.add(pred)
-        return self.frames[world].predicates[pred].pos
-
-    def get_anti_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
-        self.predicates.add(pred)
-        return self.frames[world].predicates[pred].neg
 
 class Frame:
     """
@@ -334,19 +327,15 @@ class Frame:
     opaques: dict[Sentence, ValueCPL]
     "An assignment of each opaque (un-interpreted) sentence to a value"
 
-    # extensions: dict[Predicate, set[tuple[Constant, ...]]]
-    # "A map of predicates to their extension."
-
     predicates: dict[Predicate, PredicateInterpretation]
+
+    __slots__ = ('world', 'atomics', 'opaques', 'predicates')
 
     def __init__(self, world):
         self.world = world
         self.atomics = {}
         self.opaques = {}
-        # self.extensions = {pred: set() for pred in Predicate.System}
         self.predicates = defaultdict(PredicateInterpretation)
-        # Track the anti-extensions to ensure integrity
-        # self.anti_extensions = {}
 
     def get_data(self) -> dict:
         return dict(
@@ -565,7 +554,7 @@ class Rules(LogicType.Rules):
         branch *at any world*.
         """
         negated = True
-        predicate = Predicate.System.Identity
+        predicate = Predicate.Identity
 
         def _branch_target_hook(self, node, branch, /):
             if self.node_will_close_branch(node, branch):
@@ -589,7 +578,7 @@ class Rules(LogicType.Rules):
         *at any world*.
         """
         negated = True
-        predicate = Predicate.System.Existence
+        predicate = Predicate.Existence
 
         def _branch_target_hook(self, node, branch, /):
             if self.node_will_close_branch(node, branch):
@@ -903,7 +892,7 @@ class Rules(LogicType.Rules):
         not appear on *b* at *w*, then add it.
         """
         ticking   = False
-        predicate = Predicate.System.Identity
+        predicate = Predicate.Identity
 
         def _get_node_targets(self, node, branch, /):
             pa, pb = self.sentence(node)

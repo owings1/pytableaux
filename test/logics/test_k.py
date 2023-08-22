@@ -76,7 +76,7 @@ class TestModelAtomics(Base):
         m.finish()
         s = Atomic(0, 0)
         res = m.value_of_atomic(s)
-        self.assertEqual(res, m.unassigned_value)
+        self.assertEqual(res, m.Meta.unassigned_value)
 
     def test_model_branch_no_proof_atomic(self):
         m = self.m()
@@ -115,21 +115,13 @@ class TestModelPredication(Base):
         res = m.value_of(s, world=0)
         self.assertEqual(res, 'T')
 
-    def test_get_extension_adds_predicate_to_predicates(self):
-        # coverage
-        s1 = self.p('Fm')
-        m = self.m()
-        res = m.get_extension(s1.predicate)
-        self.assertEqual(len(res), 0)
-        self.assertIn(s1.predicate, m.predicates)
-
     def test_model_identity_extension_non_empty_with_sentence(self):
         s = self.p('Imn')
         m = self.m()
         m.set_predicated_value(s, 'T', world=0)
-        extension = m.get_extension(Predicate.Identity, world=0)
-        self.assertGreater(len(extension), 0)
-        self.assertIn((Constant(0, 0), Constant(1, 0)), extension)
+        interp = m.frames[0].predicates[Predicate.Identity]
+        self.assertGreater(len(interp.pos), 0)
+        self.assertIn((Constant(0, 0), Constant(1, 0)), interp.pos)
 
 class TestModelModalAccess(Base):
 
@@ -181,10 +173,9 @@ class TestModelModalAccess(Base):
         self.assertEqual(res, 'F')
 
     def test_model_get_data_with_access_has_2_frames(self):
-        m = self.m()
-        m.set_literal_value(self.p('a'), 'T', world=0)
-        m.R.add((0,1))
-        m.finish()
+        with self.m() as m:
+            m.set_literal_value(self.p('a'), 'T', world=0)
+            m.R.add((0,1))
         data = m.get_data()
         self.assertEqual(len(data['Frames']['values']), 2)
 
@@ -194,9 +185,8 @@ class TestModelQuantification(Base):
         pred, x = Predicate.first(), Variable.first()
         s1, s2 = pred(Constant.first()), pred(x)
         s3 = Quantifier.Existential(x, s2)
-        m = self.m()
-        m.finish()
-        m.set_predicated_value(s1, 'T', world=0)
+        with self.m() as m:
+            m.set_predicated_value(s1, 'T', world=0)
         res = m.value_of(s3, world=0)
         self.assertEqual(res, 'T')
 
@@ -206,9 +196,7 @@ class TestModelQuantification(Base):
         x = Variable(0, 0)
         s1, s2 = pred(m), pred(x)
         s3 = Quantified('Existential', x, s2)
-
-        m = self.m()
-        m.finish()
+        m = self.m().finish()
         res = m.value_of(s3, world=0)
         self.assertEqual(res, 'F')
 
@@ -219,17 +207,15 @@ class TestModelQuantification(Base):
         s1, s2 = pred(m), pred(x)
         s3 = Quantified('Universal', x, s2)
 
-        m = self.m()
-        m.set_predicated_value(s1, 'T', world=0)
-        m.finish()
+        with self.m() as m:
+            m.set_predicated_value(s1, 'T', world=0)
         res = m.value_of(s3, world=0)
         self.assertEqual(res, 'T')
 
     def test_model_universal_false(self):
         s1, s2 = self.pp('VxFx', 'Fm')
-        m = self.m()
-        m.set_predicated_value(s2, 0, world=0)
-        m.finish()
+        with self.m() as m:
+            m.set_predicated_value(s2, 0, world=0)
         res = m.value_of(s1, world=0)
         self.assertEqual(res, 'F')
 
@@ -241,51 +227,47 @@ class TestModelQuantification(Base):
         s1, s2, s3 = (pred(p) for p in (m, x, n))
         s4 = Quantified('Universal', x, s2)
     
-        m = self.m()
-        m.set_predicated_value(s1, 'T', world=0)
-        m.set_predicated_value(s3, 'F', world=0)
-        m.finish()
+        with self.m() as m:
+            m.set_predicated_value(s1, 'T', world=0)
+            m.set_predicated_value(s3, 'F', world=0)
         res = m.value_of(s4, world=0)
         self.assertEqual(res, 'F')
 
 class TestFrame(Base):
 
     def test_difference_atomic_keys_diff(self):
-        model = self.m()
-        model.set_literal_value(self.p('a'), 'T', world=0)
-        model.set_literal_value(self.p('b'), 'T', world=1)
-        frame_a = model.frames[0]
-        frame_b = model.frames[1]
+        with self.m() as m:
+            m.set_literal_value(self.p('a'), 'T', world=0)
+            m.set_literal_value(self.p('b'), 'T', world=1)
+        frame_a = m.frames[0]
+        frame_b = m.frames[1]
         self.assertFalse(frame_a.is_equivalent_to(frame_b))
         self.assertFalse(frame_b.is_equivalent_to(frame_a))
 
     def test_difference_atomic_values_diff(self):
-        m = self.m()
         s1 = self.p('a')
-        m.set_literal_value(s1, 'T', world=0)
-        m.set_literal_value(s1, 'F', world=1)
-        m.finish()
+        with self.m() as m:
+            m.set_literal_value(s1, 'T', world=0)
+            m.set_literal_value(s1, 'F', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
         self.assertFalse(frame_a.is_equivalent_to(frame_b))
         self.assertFalse(frame_b.is_equivalent_to(frame_a))
 
     def test_difference_atomic_values_equiv(self):
-        m = self.m()
         s1 = self.p('a')
-        m.set_literal_value(s1, 'T', world=0)
-        m.set_literal_value(s1, 'T', world=1)
-        m.finish()
+        with self.m() as m:
+            m.set_literal_value(s1, 'T', world=0)
+            m.set_literal_value(s1, 'T', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
         self.assertTrue(frame_a.is_equivalent_to(frame_b))
         self.assertTrue(frame_b.is_equivalent_to(frame_a))
 
     def test_difference_opaque_keys_diff(self):
-        m = self.m()
-        m.set_opaque_value(self.p('Ma'), 'T', world=0)
-        m.set_opaque_value(self.p('Mb'), 'T', world=1)
-        m.finish()
+        with self.m() as m:
+            m.set_opaque_value(self.p('Ma'), 'T', world=0)
+            m.set_opaque_value(self.p('Mb'), 'T', world=1)
         frame_a = m.frames[0]
         frame_b = m.frames[1]
         self.assertFalse(frame_a.is_equivalent_to(frame_b))
