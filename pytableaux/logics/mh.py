@@ -16,11 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified
+from ..lang import Operator
 from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
+from . import LogicType
 
 class Meta(K3.Meta):
     name = 'MH'
@@ -34,14 +35,11 @@ class Meta(K3.Meta):
         'many-valued',
         'gappy',
         'non-modal')
-    native_operators = tuple(sorted(FDE.Meta.native_operators + (
+    native_operators = FDE.Meta.native_operators | (
         Operator.Conditional,
-        Operator.Biconditional)))
+        Operator.Biconditional)
 
 class Model(FDE.Model):
-
-    def is_sentence_opaque(self, s, /):
-        return type(s) is Quantified or super().is_sentence_opaque(s)
 
     class TruthFunction(K3.Model.TruthFunction):
 
@@ -57,7 +55,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(K3.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K3.Rules.closure
 
     class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -196,3 +196,9 @@ class Rules(K3.Rules):
         # 3-branching rules.
         group(
             DisjunctionNegatedUndesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip((0, 1, 3), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

@@ -21,6 +21,7 @@ from ..models import ValueLP
 from ..proof import rules, sdnode
 from ..tools import group
 from . import fde as FDE
+from . import LogicType
 
 
 class Meta(FDE.Meta):
@@ -40,7 +41,7 @@ class Meta(FDE.Meta):
 class Model(FDE.Model): pass
 class System(FDE.System): pass
 
-class Rules(FDE.Rules):
+class Rules(LogicType.Rules):
 
     class GapClosure(rules.FindClosingNodeRule):
         """
@@ -57,3 +58,4 @@ class Rules(FDE.Rules):
             yield sdnode(~s, False)
 
     closure = group(GapClosure) + FDE.Rules.closure
+    groups = FDE.Rules.groups

@@ -22,6 +22,7 @@ from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
 from . import s4 as S4
+from . import LogicType
 
 
 class Meta(S4.Meta):
@@ -49,8 +50,10 @@ class Model(S4.Model):
 
 class System(K.System): pass
 
-class Rules(K.Rules):
-    
+class Rules(LogicType.Rules):
+
+    closure = K.Rules.closure
+
     class Symmetric(K.DefaultNodeRule):
         """
         .. _symmetric-rule:

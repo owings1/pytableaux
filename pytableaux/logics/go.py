@@ -22,7 +22,7 @@ from ..tools import group, maxceil, minfloor
 from . import b3e as B3E
 from . import fde as FDE
 from . import k3 as K3
-
+from . import LogicType
 
 class Meta(K3.Meta):
     name = 'GO'
@@ -31,9 +31,9 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with '
         'classical-like binary operators')
     category_order = 60
-    native_operators = tuple(sorted(FDE.Meta.native_operators + (
+    native_operators = FDE.Meta.native_operators | (
         Operator.Conditional,
-        Operator.Biconditional)))
+        Operator.Biconditional)
 
 class Model(FDE.Model):
 
@@ -65,7 +65,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(K3.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K3.Rules.closure
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -289,3 +291,9 @@ class Rules(K3.Rules):
             ConditionalNegatedDesignated,
             BiconditionalNegatedDesignated,
             UniversalNegatedDesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in enumerate(cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

@@ -20,6 +20,7 @@ from ..lang import Marking
 from ..proof import AccessNode, adds, anode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
+from . import LogicType
 from . import k as K
 from . import t as T
 
@@ -51,7 +52,9 @@ class Model(T.Model):
 
 class System(K.System): pass
 
-class Rules(K.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K.Rules.closure
 
     class Transitive(K.DefaultNodeRule):
         """
@@ -126,3 +129,9 @@ class Rules(K.Rules):
         group(
             K.Rules.Existential,
             K.Rules.Universal))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, i in zip(range(2), (0, 4)):
+            for rulecls in cls.groups[i]:
+                assert rulecls.branching == branching, f'{rulecls}'

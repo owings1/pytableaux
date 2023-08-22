@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Any, Iterator, TypeVar
 
 from ..errors import Emsg, check
 from ..lang import Operator
-from ..tools import EMPTY_SET, abcs, closure, qset
+from ..tools import EMPTY_SET, abcs, closure, qset, qsetf, SequenceSet
 from ..tools.hybrids import QsetView
 
 if TYPE_CHECKING:
@@ -58,7 +58,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
     "The set of loaded module names."
 
     index: Mapping
-    """Mapping to ``module.__name__`` for each of its keys. See ``.get()``."""
+    """Mapping to ``module.__name__`` for each of its keys. See :meth:`get()`."""
 
     if TYPE_CHECKING:
         def add(self, logic):
@@ -113,7 +113,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
             self.remove(logic)
 
     def __call__(self, key: str|ModuleType, /) -> LogicType:
-        """Get a logic from the registry, importing if needed. See ``.get()``"""
+        """Get a logic from the registry, importing if needed. See :meth:`get()`"""
         try:
             modname = self.index[key]
         except KeyError:
@@ -162,7 +162,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
 
                 - Full ``module.__name__``
                 - local ID (lowercase last part of ``module.__name__``)
-                - The module's ``.name`` attribute
+                - The module's ``Meta.name`` attribute
                 - Module object
 
             default: A default value to suppress error.
@@ -182,11 +182,11 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
             return default
 
     def locate(self, ref, default = NOARG, /) -> LogicType:
-        """Like ``.get()`` but also searches the ``__module__`` attribute of
+        """Like :meth:`get()` but also searches the ``__module__`` attribute of
         classes, methods, and functions to locate the logic in which it was defined.
 
         Args:
-            ref: A ``key`` accepted by ``.get()``, or a class, method, or function
+            ref: A key accepted by :meth:`get()`, or a class, method, or function
                 defined in a logic module.
             default: A default value to suppress not found error.
         
@@ -218,10 +218,10 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         return self._package_all(self._check_package(package))
 
     def sync(self) -> set[str]:
-        """Sync all registry packages by calling ``.sync_package()``.
+        """Sync all registry packages by calling :meth:`sync_package()`.
 
         Returns:
-            Set of each package name to its ``sync_package()`` result.
+            Set of each package name to its :meth:`sync_package()` result.
         """
         added = set()
         for pkgname in self.packages:
@@ -234,7 +234,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         attributes.
 
         Args:
-            package: The package name or module. Must be in ``registry.packages``.
+            package: The package name or module. Must be in :attr:`packages`.
         
         Returns:
             The module names added to the registry.
@@ -251,7 +251,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         return added
 
     def import_all(self) -> None:
-        """Import all logics for all registry packages. See ``.import_package()``.
+        """Import all logics for all registry packages. See :meth:`import_package()`.
         """
         for _ in map(self.import_package, self.packages): pass
 
@@ -271,7 +271,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         """Group logics by category.
 
         Args:
-            keys: Iterable of keys accepted by ``.get()``.
+            keys: Iterable of keys accepted by :meth:`get()`.
             sort: Whether to sort each group. Default ``True``.
             key: The sort key for the groups. Default is ``.Meta.category_order``.
             reverse: Whether to reverse sort each group.
@@ -411,7 +411,8 @@ class LogicType(metaclass=LogicTypeMeta):
     "Stub class definition for a logic interface."
     class Meta:
         name: str
-        modal: bool|None = None
+        modal: bool = False
+        quantified: bool = False
         values: type[Mval]
         designated_values: Set[Mval]
         unassigned_value: Mval
@@ -419,11 +420,11 @@ class LogicType(metaclass=LogicTypeMeta):
         description: str
         category_order: int
         tags: tuple[str, ...] = ()
-        native_operators: tuple[Operator, ...] = ()
-        modal_operators: tuple[Operator, ...] = (
+        native_operators: SequenceSet[Operator] = qsetf()
+        modal_operators: SequenceSet[Operator] = qsetf(sorted((
             Operator.Possibility,
-            Operator.Necessity)
-        truth_functional_operators: tuple[Operator, ...] = (
+            Operator.Necessity)))
+        truth_functional_operators: SequenceSet[Operator] = qsetf(sorted((
             Operator.Assertion,
             Operator.Negation,
             Operator.Conjunction,
@@ -431,20 +432,20 @@ class LogicType(metaclass=LogicTypeMeta):
             Operator.MaterialConditional,
             Operator.MaterialBiconditional,
             Operator.Conditional,
-            Operator.Biconditional)
+            Operator.Biconditional)))
         def __init_subclass__(cls):
             super().__init_subclass__()
             LogicTypeMeta.new_meta(cls)
+            for name in ('native_operators', 'modal_operators', 'truth_functional_operators'):
+                setattr(cls, name, qsetf(sorted(getattr(cls, name))))
 
     if TYPE_CHECKING:
         from ..proof import System
         class Model(BaseModel[_T]): ...
-        # from ..models import BaseModel as Model
 
     class Rules:
         closure: tuple[type[ClosingRule], ...]
         groups: tuple[tuple[type[Rule], ...], ...]
-        # namemap: Mapping[str, type[Rule]]
 
         @classmethod
         def all(cls):
@@ -452,9 +453,9 @@ class LogicType(metaclass=LogicTypeMeta):
             for group in cls.groups:
                 yield from group
 
-        # def __init_subclass__(cls):
-        #     super().__init_subclass__()
-        #     cls.namemap = MapProxy({rulecls.name: rulecls for rulecls in cls.all()})
+        @classmethod
+        def _check_groups(cls):
+            pass
 
 @closure
 def instancecheck():

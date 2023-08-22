@@ -24,7 +24,7 @@ from ..errors import Emsg, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import PredicateInterpretation, ValueFDE
-from ..proof import Branch, Node, adds, filters, rules, sdnode
+from ..proof import Branch, Node, SentenceNode, adds, filters, rules, sdnode
 from ..tools import group, maxceil, minfloor
 from . import LogicType
 
@@ -33,6 +33,7 @@ class Meta(LogicType.Meta):
     name = 'FDE'
     title = 'First Degree Entailment'
     modal = False
+    quantified = True
     values = ValueFDE
     designated_values = frozenset({values.B, values.T})
     unassigned_value = values.N
@@ -83,11 +84,7 @@ class Model(LogicType.Model[ValueFDE]):
             return self.Conjunction(*starmap(self.Conditional, ((a, b), (b, a))))
 
     predicates: dict[Predicate, PredicateInterpretation]
-    # extensions: dict[Predicate, set[tuple[Constant, ...]]]
-    # """A mapping from each predicate to its extension.
-    
-    # :type: dict[Predicate, set[tuple[Constant, ...]]]
-    # """
+    "A mapping of each predicate to its interpretation."
 
     atomics: dict[Atomic, ValueFDE]
     "An assignment of each atomic sentence to a value."
@@ -106,12 +103,6 @@ class Model(LogicType.Model[ValueFDE]):
         self.constants: set[Constant] = set()
         self.maxval = max(self.values)
         self.minval = min(self.values)
-
-    def is_sentence_opaque(self, s: Sentence, /) -> bool:
-        """
-        A sentence is opaque if its operator is Necessity or Possibility
-        """
-        return type(s) is Operated and s.operator in self.modal_operators
 
     def value_of_atomic(self, s: Sentence, /) -> ValueFDE:
         return self.atomics.get(s, self.unassigned_value)
@@ -135,6 +126,7 @@ class Model(LogicType.Model[ValueFDE]):
         except AttributeError:
             check.inst(s, Quantified)
             raise
+
     def value_of_quantified(self, s: Quantified, /):
         """
         The value of a quantified sentence is determined from the values of
@@ -225,9 +217,9 @@ class Model(LogicType.Model[ValueFDE]):
 
     def read_branch(self, branch, /):
         for node in branch:
-            s = node.get('sentence')
-            if s is None:
+            if not isinstance(node, SentenceNode):
                 continue
+            s = node['sentence']
             self._collect_sentence(s)
             is_literal = self.is_sentence_literal(s)
             is_opaque = self.is_sentence_opaque(s)
@@ -708,9 +700,9 @@ class Rules(LogicType.Rules):
             AssertionNegatedDesignated,
             AssertionNegatedUndesignated,
             ConjunctionDesignated, 
+            ConjunctionNegatedUndesignated,
             DisjunctionNegatedDesignated,
             DisjunctionUndesignated,
-            DisjunctionNegatedUndesignated,
             MaterialConditionalNegatedDesignated,
             MaterialConditionalUndesignated,
             ConditionalUndesignated, 
@@ -725,8 +717,8 @@ class Rules(LogicType.Rules):
             # branching rules
             ConjunctionNegatedDesignated,
             ConjunctionUndesignated,
-            ConjunctionNegatedUndesignated,
             DisjunctionDesignated,
+            DisjunctionNegatedUndesignated,
             MaterialConditionalDesignated,
             MaterialConditionalNegatedUndesignated,
             MaterialBiconditionalDesignated,
@@ -745,3 +737,9 @@ class Rules(LogicType.Rules):
         group(
             UniversalDesignated,
             UniversalUndesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip(range(2), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

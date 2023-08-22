@@ -38,6 +38,7 @@ class Meta(LogicType.Meta):
     name = 'K'
     title = 'Kripke Normal Modal Logic'
     modal = True
+    quantified = True
     values: type[ValueCPL] = ValueCPL
     designated_values = frozenset({values.T})
     unassigned_value = values.F
@@ -106,10 +107,10 @@ class Model(BaseModel[Meta.values]):
         self.maxval = max(self.values)
         self.minval = min(self.values)
 
-    def value_of_opaque(self, s: Sentence, /, world: int = 0):
+    def value_of_opaque(self, s: Sentence, /, *, world: int = 0):
         return self.frames[world].opaques.get(s, self.unassigned_value)
 
-    def value_of_atomic(self, s: Atomic, /, world: int = 0):
+    def value_of_atomic(self, s: Atomic, /, *, world: int = 0):
         return self.frames[world].atomics.get(s, self.unassigned_value)
 
     def value_of_predicated(self, s: Predicated, **kw):
@@ -125,50 +126,33 @@ class Model(BaseModel[Meta.values]):
             return self.values.T
         return self.values.F
 
-    def value_of_quantified(self, s: Quantified, **kw):
-        it = map(lambda s: self.value_of(s, **kw), map(s.unquantify, self.constants))
+    def value_of_quantified(self, s: Quantified, /, *, world: int = 0):
+        it = map(lambda s: self.value_of(s, world=world), map(s.unquantify, self.constants))
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
-        raise TypeError(s.quantifier)
+        raise NotImplementedError from ValueError(s.quantifier)
 
-    def value_of_operated(self, s: Operated, **kw):
-        if s.operator is Operator.Possibility:
-            return self.value_of_possibility(s, **kw)
-        if s.operator is Operator.Necessity:
-            return self.value_of_necessity(s, **kw)
-        return super().value_of_operated(s, **kw)
+    def value_of_operated(self, s: Operated, /, *, world: int = 0):
+        if s.operator in self.modal_operators:
+            it = map(lambda w: self.value_of(s.lhs, world=w), self.R[world])
+            if s.operator is Operator.Possibility:
+                return maxceil(self.maxval, it, self.minval)
+            if s.operator is Operator.Necessity:
+                return minfloor(self.minval, it, self.maxval)
+            raise NotImplementedError from ValueError(s.operator)
+        return super().value_of_operated(s, world=world)
 
-    def value_of_possibility(self, s: Operated, /, world: int = 0, **kw):
-        """
-        A possibility sentence is true at :m:`w` iff its operand is true at :m:`w'` for
-        some :m:`w'` such that :m:`<w, w'>` in the access relation.
-        """
-        for w2 in self.R[world]:
-            if self.value_of(s.lhs, world=w2, **kw) is self.values.T:
-                return self.values.T
-        return self.values.F
-
-    def value_of_necessity(self, s: Operated, /, world: int = 0, **kw):
-        """
-        A necessity sentence is true at :m:`w` iff its operand is true at :m:`w'` for
-        each :m:`w'` such that :m:`<w, w'>` is in the access relation.
-        """
-        for w2 in self.R[world]:
-            if self.value_of(s.lhs, world=w2, **kw) is self.values.F:
-                return self.values.F
-        return self.values.T
-
-    def is_countermodel_to(self, arg: Argument, /) -> bool:
+    def is_countermodel_to(self, a, /) -> bool:
         """
         A model is a countermodel for an argument iff the value of each premise
         is V{T} at `w0` and the value of the conclusion is V{F} at :m:`w0`.
         """
-        for premise in arg.premises:
+        for premise in a.premises:
             if self.value_of(premise, world = 0) is not self.values.T:
                 return False
-        return self.value_of(arg.conclusion, world = 0) is self.values.F
+        return self.value_of(a.conclusion, world = 0) is self.values.F
 
     def get_data(self) -> dict:
         return dict(
@@ -207,8 +191,8 @@ class Model(BaseModel[Meta.values]):
         self.finish()
 
     def _read_node(self, node: Node, /):
-        s = node.get('sentence')
-        if s is not None:
+        if isinstance(node, SentenceNode):
+            s = node['sentence']
             w = node.get('world')
             if w is None:
                 w = 0
@@ -308,7 +292,8 @@ class Model(BaseModel[Meta.values]):
     def set_atomic_value(self, s: Atomic, value, /, world = 0):
         value = self.values[value]
         frame = self.frames[world]
-        if s in frame.atomics and frame.atomics[s] is not value:
+        # if s in frame.atomics and frame.atomics[s] is not value:
+        if frame.atomics.get(s, value) is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         frame.atomics[s] = value
 
@@ -321,6 +306,8 @@ class Model(BaseModel[Meta.values]):
         for param in s:
             if type(param) is Constant:
                 self.constants.add(param)
+            else:
+                raise TypeError(f'free variables not allowed')
         extension = self.get_extension(pred, **kw)
         anti_extension = self.get_anti_extension(pred, **kw)
         if value is values.F:
@@ -328,11 +315,13 @@ class Model(BaseModel[Meta.values]):
                 raise ModelValueError(f'Cannot set value {value} for tuple '
                     f'{params} already in extension')
             anti_extension.add(params)
-        if value is values.T:
+        elif value is values.T:
             if params in anti_extension:
                 raise ModelValueError(f'Cannot set value {value} for tuple '
                     f'{params} already in anti-extension')
             extension.add(params)
+        else:
+            raise NotImplementedError from ValueError(value)
 
     def get_extension(self, pred: Predicate, /, world = 0) -> set[tuple[Constant, ...]]:
         frame = self.frames[world]
@@ -449,33 +438,37 @@ class Frame:
         )
 
     def is_equivalent_to(self, other: Frame) -> bool:
-        check.inst(other, Frame)
+        if other is self:
+            return True
+        check.inst(other, __class__)
         return (self.atomics == other.atomics and
             self.opaques == other.opaques and
             self.extensions == other.extensions)
 
     def __eq__(self, other):
-        if not isinstance(other, Frame):
+        if other is self:
+            return True
+        if not isinstance(other, __class__):
             return NotImplemented
         return self.world == other.world and self.is_equivalent_to(other)
 
     def __lt__(self, other):
-        if not isinstance(other, Frame):
+        if not isinstance(other, __class__):
             return NotImplemented
         return self.world < other.world
 
     def __le__(self, other):
-        if not isinstance(other, Frame):
+        if not isinstance(other, __class__):
             return NotImplemented
         return self.world <= other.world
 
     def __gt__(self, other):
-        if not isinstance(other, Frame):
+        if not isinstance(other, __class__):
             return NotImplemented
         return self.world > other.world
 
     def __ge__(self, other):
-        if not isinstance(other, Frame):
+        if not isinstance(other, __class__):
             return NotImplemented
         return self.world >= other.world
 
@@ -536,11 +529,11 @@ class System(proof.System):
 class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
     """Default K node rule with:
     
-    - (removing...) filters.ModalNode with defaults: modal = `True`, access = `None`.
     - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
     - FilterHelper implements `example_nodes()` with its `example_node()` method.
     - AdzHelper implements `_apply()` with its `_apply()` method.
     - AdzHelper implements `score_candidate()` with its `closure_score()` method.
+    - Induce attributes from class name with autoattrs=True.
     """
     NodeFilters = group(filters.NodeType)
     autoattrs = True
@@ -928,13 +921,12 @@ class Rules(LogicType.Rules):
             if pa == pb:
                 # Substituting a param for itself would be silly.
                 return
-            pnodes = self[PredNodes][branch]
             w = node.get('world')
             # Find other nodes with one of the identicals.
-            for n in pnodes:
+            for n in self[PredNodes][branch]:
                 if n is node:
                     continue
-                s = cast(Predicated, n['sentence'])
+                s = self.sentence(n)
                 if pa in s.params:
                     p_old, p_new = pa, pb
                 elif pb in s.params:
@@ -957,8 +949,8 @@ class Rules(LogicType.Rules):
                 yield adds(group(n_new), nodes=(node, n))
 
         def example_nodes(self):
-            w = 0 if self.modal else None
             s1 = Predicated.first()
+            w = 0 if self.modal else None
             yield swnode(s1, w)
             s2 = self.predicate((s1[0], s1[0].next()))
             yield swnode(s2, w)
@@ -1000,3 +992,9 @@ class Rules(LogicType.Rules):
         group(
             Existential,
             Universal))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip(range(2), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

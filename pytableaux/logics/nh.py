@@ -16,12 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Quantified
 from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import lp as LP
 from . import mh as MH
+from . import LogicType
 
 class Meta(LP.Meta):
     name = 'NH'
@@ -39,9 +39,6 @@ class Meta(LP.Meta):
 
 class Model(FDE.Model):
 
-    def is_sentence_opaque(self, s,/):
-        return type(s) is Quantified or super().is_sentence_opaque(s)
-
     class TruthFunction(LP.Model.TruthFunction):
 
         def Conjunction(self, a, b):
@@ -56,7 +53,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(LP.Rules):
+class Rules(LogicType.Rules):
+
+    closure = LP.Rules.closure
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -152,3 +151,9 @@ class Rules(LP.Rules):
         # 3-branching rules.
         group(
             ConjunctionNegatedDesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip((0, 1, 3), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

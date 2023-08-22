@@ -64,6 +64,9 @@ class BaseCase(TestCase):
                     if callable(old):
                         old(self)
                 setattr(subcls, name, test)
+            def test_groups(self: BaseCase):
+                subcls.logic.Rules._check_groups()
+            setattr(subcls, 'test_rules_check_groups', test_groups)
         if autoargs:
             validities = qset()
             invalidities = qset()

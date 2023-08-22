@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operated, Quantified, Sentence
 from ..tools import group
 from . import fde as FDE
 from . import k as K
@@ -26,6 +25,7 @@ class Meta(K.Meta):
     name = 'CPL'
     title = 'Classical Predicate Logic'
     modal = False
+    quantified = False
     category = 'Bivalent'
     description = 'Standard bivalent logic with predication, without quantification'
     category_order = 1
@@ -35,18 +35,6 @@ class Meta(K.Meta):
     native_operators = FDE.Meta.native_operators
 
 class Model(K.Model):
-
-    def is_sentence_opaque(self, s: Sentence, /):
-        """
-        A sentence is opaque if it is a quantified sentence, or its operator is
-        either Necessity or Possibility.
-        """
-        stype = type(s)
-        if stype is Quantified:
-            return True
-        if stype is Operated and s.operator in self.modal_operators:
-            return True
-        return super().is_sentence_opaque(s)
 
     def get_data(self) -> dict:
         data = self.frames[0].get_data()['value']
@@ -81,3 +69,8 @@ class Rules(LogicType.Rules):
             K.Rules.Biconditional,
             K.Rules.BiconditionalNegated))
 
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in enumerate(cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

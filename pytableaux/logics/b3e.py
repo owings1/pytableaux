@@ -22,14 +22,14 @@ from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
+from . import LogicType
 
 class Meta(K3.Meta):
     name = 'B3E'
     title = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 50
-    native_operators = tuple(
-        sorted(FDE.Meta.native_operators + group(Operator.Assertion)))
+    native_operators = FDE.Meta.native_operators | group(Operator.Assertion)
 
 class Model(FDE.Model):
 
@@ -49,13 +49,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(K3.Rules):
-    """
-    The closure rules for L{B3E} are the L{FDE} closure rule, and the {@K3} closure rule.
-    The operator rules are mostly a mix of L{FDE} and {@K3W}
-    rules, but with different rules for the assertion, conditional and
-    biconditional operators.
-    """
+class Rules(LogicType.Rules):
+
+    closure = K3.Rules.closure
 
     class AssertionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -181,3 +177,9 @@ class Rules(K3.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip(range(3), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

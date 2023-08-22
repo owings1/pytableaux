@@ -21,6 +21,7 @@ from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
+from . import LogicType
 
 class Meta(K3.Meta):
     name = 'L3'
@@ -29,9 +30,9 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator')
     category_order = 80
-    native_operators = tuple(sorted(K3.Meta.native_operators + (
+    native_operators = FDE.Meta.native_operators | (
         Operator.Conditional,
-        Operator.Biconditional)))
+        Operator.Biconditional)
 
 class Model(FDE.Model):
 
@@ -44,7 +45,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(K3.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K3.Rules.closure
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -153,13 +156,12 @@ class Rules(K3.Rules):
             FDE.Rules.AssertionNegatedDesignated,
             FDE.Rules.AssertionNegatedUndesignated,
             FDE.Rules.ConjunctionDesignated,
+            FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionNegatedDesignated,
             FDE.Rules.DisjunctionUndesignated,
-            FDE.Rules.DisjunctionNegatedUndesignated,
             FDE.Rules.MaterialConditionalNegatedDesignated,
             FDE.Rules.MaterialConditionalUndesignated,
             FDE.Rules.ConditionalNegatedDesignated,
-            FDE.Rules.BiconditionalNegatedDesignated,
             FDE.Rules.ExistentialNegatedDesignated,
             FDE.Rules.ExistentialNegatedUndesignated,
             FDE.Rules.UniversalNegatedDesignated,
@@ -170,8 +172,8 @@ class Rules(K3.Rules):
             # branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.ConjunctionUndesignated,
-            FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionDesignated,
+            FDE.Rules.DisjunctionNegatedUndesignated,
             FDE.Rules.MaterialConditionalDesignated,
             FDE.Rules.MaterialConditionalNegatedUndesignated,
             FDE.Rules.MaterialBiconditionalDesignated,
@@ -182,6 +184,7 @@ class Rules(K3.Rules):
             ConditionalUndesignated,
             FDE.Rules.ConditionalNegatedUndesignated,
             BiconditionalDesignated,
+            FDE.Rules.BiconditionalNegatedDesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalUndesignated),
         group(
@@ -190,3 +193,9 @@ class Rules(K3.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip(range(2), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

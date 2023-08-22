@@ -21,6 +21,7 @@ from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 from . import l3 as L3
+from . import LogicType
 
 class Meta(L3.Meta):
     name = 'G3'
@@ -41,7 +42,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(K3.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K3.Rules.closure
 
     class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """
@@ -94,14 +97,6 @@ class Rules(K3.Rules):
     class BiconditionalNegatedUndesignated(FDE.ConditionalConjunctsReducingRule): pass
 
     class MaterialConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
-        # "This rule reduces to a disjunction."
-
-        # def _get_sd_targets(self, s, d, /):
-        #     sn = ~s.lhs | s.rhs
-        #     if self.negated:
-        #         sn = ~sn
-        #     yield adds(group(sdnode(sn, d)))
-
     class MaterialConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
     class MaterialConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
     class MaterialConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
@@ -119,9 +114,9 @@ class Rules(K3.Rules):
             FDE.Rules.AssertionNegatedDesignated,
             FDE.Rules.AssertionNegatedUndesignated,
             FDE.Rules.ConjunctionDesignated,
+            FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionNegatedDesignated,
             FDE.Rules.DisjunctionUndesignated,
-            FDE.Rules.DisjunctionNegatedUndesignated,
 
             FDE.Rules.ExistentialNegatedDesignated,
             FDE.Rules.ExistentialNegatedUndesignated,
@@ -147,8 +142,8 @@ class Rules(K3.Rules):
             # branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.ConjunctionUndesignated,
-            FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionDesignated,
+            FDE.Rules.DisjunctionNegatedUndesignated,
 
             L3.Rules.ConditionalDesignated,
             L3.Rules.ConditionalUndesignated,
@@ -160,3 +155,9 @@ class Rules(K3.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip(range(2), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

@@ -21,6 +21,7 @@ from ..proof import Branch, Target, adds, anode, swnode
 from ..proof.helpers import MaxWorlds, UnserialWorlds
 from ..proof.rules import BaseSimpleRule
 from ..tools import group
+from . import LogicType
 from . import k as K
 
 
@@ -47,7 +48,9 @@ class Model(K.Model):
 
 class System(K.System): pass
 
-class Rules(K.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K.Rules.closure
 
     class Serial(BaseSimpleRule):
         """
@@ -71,12 +74,9 @@ class Rules(K.Rules):
         marklegend = group((Marking.tableau, ('access', 'serial')))
 
         def _get_targets(self, branch: Branch, /):
-            unserials = self[UnserialWorlds][branch]
-            if not unserials:
-                return
             if not self._should_apply(branch):
                 return
-            for w in unserials:
+            for w in self[UnserialWorlds][branch]:
                 yield Target(adds(
                     group(anode(w, branch.new_world())),
                     world=w,
@@ -88,7 +88,7 @@ class Rules(K.Rules):
 
             # This tends to stop modal explosion better than the max worlds check,
             # at least in its current form (all modal operators + worlds + 1).
-            if len(self.tableau.history) and self.tableau.history[-1].rule == self:
+            if len(self.tableau.history) and next(reversed(self.tableau.history)).rule == self:
                 return False
             # As above, this is unnecessary
             if self[MaxWorlds].is_exceeded(branch):
@@ -138,6 +138,12 @@ class Rules(K.Rules):
             K.Rules.Universal),
             # special ordering of serial rule
         group(Serial))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, i in zip(range(2), (0, 2)):
+            for rulecls in cls.groups[i]:
+                assert rulecls.branching == branching, f'{rulecls}'
 
     # NB: Since we have redesigned the modal rules, it is not obvious that we need this
     #     alternate rule. So far I have not been able to think of a way to break it. I

@@ -16,11 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator
 from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
+from . import LogicType
 
 class Meta(K3.Meta):
     name = 'K3W'
@@ -49,7 +49,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(K3.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K3.Rules.closure
 
     class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -201,4 +203,8 @@ class Rules(K3.Rules):
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
 
-
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip(range(3), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

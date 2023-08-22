@@ -16,14 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from functools import reduce
-
-from ..lang import Quantified, Quantifier
 from ..proof import adds, sdnode
-from ..tools import group, maxceil
+from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
-
+from . import LogicType
 
 class Meta(K3.Meta):
     name = 'P3'
@@ -36,8 +33,8 @@ class Meta(K3.Meta):
 
 class Model(FDE.Model):
 
-    def is_sentence_opaque(self, s, /):
-        return type(s) is Quantified or super().is_sentence_opaque(s)
+    # def is_sentence_opaque(self, s, /):
+    #     return type(s) is Quantified or super().is_sentence_opaque(s)
 
     class TruthFunction(K3.Model.TruthFunction):
 
@@ -72,7 +69,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(K3.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K3.Rules.closure
 
     class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """
@@ -174,10 +173,10 @@ class Rules(K3.Rules):
     class MaterialBiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalNegatedUndesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
-    class ConditionalDesignated(MaterialConditionalDesignated): pass
-    class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated): pass
-    class ConditionalUndesignated(MaterialConditionalUndesignated): pass
-    class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated): pass
+    class ConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
+    class ConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
+    class ConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
+    class ConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
     class BiconditionalDesignated(FDE.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedDesignated(FDE.ConditionalConjunctsReducingRule): pass
     class BiconditionalUndesignated(FDE.ConditionalConjunctsReducingRule): pass
@@ -308,3 +307,9 @@ class Rules(K3.Rules):
         #     ExistentialNegatedDesignated,
         #     ExistentialNegatedUndesignated)
             )
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in enumerate(cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

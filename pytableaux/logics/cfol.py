@@ -16,9 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Quantified
+from . import LogicType
 from . import cpl as CPL
 from . import k as K
+
 
 class Meta(CPL.Meta):
     name = 'CFOL'
@@ -32,16 +33,13 @@ class Meta(CPL.Meta):
         'non-modal',
         'first-order')
 
-class Model(CPL.Model):
-
-    def is_sentence_opaque(self, s, /) -> bool:
-        "A sentence is opaque if its operator is either Necessity or Possibility."
-        return type(s) is not Quantified and super().is_sentence_opaque(s)
+class Model(CPL.Model): pass
 
 class System(K.System): pass
 
-class Rules(CPL.Rules):
+class Rules(LogicType.Rules):
 
+    closure = CPL.Rules.closure
     groups = (
         CPL.Rules.groups[0] + (
             K.Rules.ExistentialNegated,

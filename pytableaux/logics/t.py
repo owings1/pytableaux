@@ -21,6 +21,7 @@ from ..proof import WorldPair, adds, swnode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
+from . import LogicType
 
 class Meta(K.Meta):
     name = 'T'
@@ -37,7 +38,9 @@ class Model(K.Model):
 
 class System(K.System): pass
 
-class Rules(K.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K.Rules.closure
 
     class Reflexive(K.DefaultNodeRule):
         """
@@ -105,3 +108,9 @@ class Rules(K.Rules):
         group(
             K.Rules.Existential,
             K.Rules.Universal))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, i in zip(range(2), (0, 3)):
+            for rulecls in cls.groups[i]:
+                assert rulecls.branching == branching, f'{rulecls}'

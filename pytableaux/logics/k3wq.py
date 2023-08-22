@@ -24,6 +24,7 @@ from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
+from . import LogicType
 
 
 class Meta(K3.Meta):
@@ -70,7 +71,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(K3.Rules):
+class Rules(LogicType.Rules):
+
+    closure = K3.Rules.closure
 
     class ExistentialDesignated(FDE.QuantifierSkinnyRule):
         """
@@ -210,3 +213,9 @@ class Rules(K3.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip(range(3), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'

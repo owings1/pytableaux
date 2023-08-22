@@ -144,6 +144,10 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
         return id(self)
 
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
+        if not self.Meta.quantified and type(s) is Quantified:
+            return True
+        if not self.Meta.modal and type(s) is Operated and s.operator in self.modal_operators:
+            return True
         return False
 
     def is_sentence_literal(self, s: Sentence, /) -> bool:
@@ -161,7 +165,7 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
             func = getattr(self, name)
         except AttributeError:
             check.inst(s, Sentence)
-            raise NotImplementedError
+            raise NotImplementedError from ValueError(s)
         return func(s, **kw)
 
     @abstractmethod
@@ -177,7 +181,7 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
         raise NotImplementedError
 
     @abstractmethod
-    def value_of_quantified(self, s: Quantified, /, **kw) -> MvalT_co:
+    def value_of_quantified(self, s: Quantified, /) -> MvalT_co:
         raise NotImplementedError
 
     def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
@@ -185,7 +189,7 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
             return self.truth_function(s.operator,
                 *map(lambda s: self.value_of(s, **kw), s))
         check.inst(s, Operated)
-        raise NotImplementedError
+        raise NotImplementedError from ValueError(s.operator)
 
     @abstractmethod
     def set_literal_value(self, s: Sentence, value: MvalT_co, /):
@@ -268,7 +272,7 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
             try:
                 func = getattr(self, name)
             except AttributeError:
-                raise ValueError(oper) from None
+                raise NotImplementedError from ValueError(oper)
             return func(*args)
 
         @abstractmethod
@@ -326,14 +330,15 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
     def __init_subclass__(cls):
         super().__init_subclass__()
         Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
-        if Meta:
-            cls.Meta = Meta
-            cls.values = Meta.values
-            cls.designated_values = Meta.designated_values
-            cls.unassigned_value = Meta.unassigned_value
-            cls.modal_operators = frozenset(Meta.modal_operators)
-            cls.truth_functional_operators = frozenset(Meta.truth_functional_operators)
-            cls.truth_function = cls.TruthFunction(cls.values)
+        if not Meta:
+            return
+        cls.Meta = Meta
+        cls.values = Meta.values
+        cls.designated_values = Meta.designated_values
+        cls.unassigned_value = Meta.unassigned_value
+        cls.modal_operators = Meta.modal_operators
+        cls.truth_functional_operators = Meta.truth_functional_operators
+        cls.truth_function = cls.TruthFunction(cls.values)
 
 @dataclass(kw_only = True)
 class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):

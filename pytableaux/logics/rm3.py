@@ -21,6 +21,7 @@ from ..proof import adds, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import lp as LP
+from . import LogicType
 
 class Meta(LP.Meta):
     name = 'RM3'
@@ -29,9 +30,9 @@ class Meta(LP.Meta):
         'Three-valued logic (True, False, Both) with a primitive '
         'Conditional operator')
     category_order = 130
-    native_operators = tuple(sorted(FDE.Meta.native_operators + (
+    native_operators = FDE.Meta.native_operators | (
         Operator.Conditional,
-        Operator.Biconditional)))
+        Operator.Biconditional)
 
 class Model(FDE.Model):
 
@@ -44,7 +45,9 @@ class Model(FDE.Model):
 
 class System(FDE.System): pass
 
-class Rules(LP.Rules):
+class Rules(LogicType.Rules):
+
+    closure = LP.Rules.closure
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -148,13 +151,12 @@ class Rules(LP.Rules):
             FDE.Rules.AssertionNegatedDesignated,
             FDE.Rules.AssertionNegatedUndesignated,
             FDE.Rules.ConjunctionDesignated,
+            FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionNegatedDesignated,
             FDE.Rules.DisjunctionUndesignated,
-            FDE.Rules.DisjunctionNegatedUndesignated,
             FDE.Rules.MaterialConditionalNegatedDesignated,
             FDE.Rules.MaterialConditionalUndesignated,
             FDE.Rules.ConditionalNegatedDesignated,
-            ConditionalUndesignated,
             FDE.Rules.ExistentialNegatedDesignated,
             FDE.Rules.ExistentialNegatedUndesignated,
             FDE.Rules.UniversalNegatedDesignated,
@@ -165,14 +167,15 @@ class Rules(LP.Rules):
             # 2 branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.ConjunctionUndesignated,
-            FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionDesignated,
+            FDE.Rules.DisjunctionNegatedUndesignated,
             FDE.Rules.MaterialConditionalDesignated,
             FDE.Rules.MaterialConditionalNegatedUndesignated,
             FDE.Rules.MaterialBiconditionalDesignated,
             FDE.Rules.MaterialBiconditionalNegatedDesignated,
             FDE.Rules.MaterialBiconditionalUndesignated,
             FDE.Rules.MaterialBiconditionalNegatedUndesignated,
+            ConditionalUndesignated,
             FDE.Rules.ConditionalNegatedUndesignated,
             FDE.Rules.BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
@@ -187,3 +190,9 @@ class Rules(LP.Rules):
         group(
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
+
+    @classmethod
+    def _check_groups(cls):
+        for branching, group in zip(range(3), cls.groups):
+            for rulecls in group:
+                assert rulecls.branching == branching, f'{rulecls}'
