@@ -712,7 +712,8 @@ class Sentence(LexicalAbc):
         return Operator.Negation(self)
 
     def asserted(self):
-        """Apply the :obj:`Assertion` operator.
+        """Apply the :obj:`Assertion` operator. This can also be invoked using
+        the ``+`` operator.
         
         Returns:
             The new sentence.
@@ -745,7 +746,8 @@ class Sentence(LexicalAbc):
 
     def negative(self) -> Sentence:
         """Either negate this sentence, or, if this is already a negated
-        sentence return its negatum, i.e., "un-negate" the sentence.
+        sentence return its negatum, i.e., "un-negate" the sentence. This can
+        also be invoked using the ``-`` operator.
 
         >>> a = Atomic.first()
         >>> a.negate() == a.negative()

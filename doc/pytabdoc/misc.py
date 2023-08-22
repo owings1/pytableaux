@@ -29,12 +29,10 @@ from typing import Any, Collection
 
 from sphinx.ext.autodoc.importer import import_object
 
-from pytableaux.lang import LexType
+from pytableaux.lang import LexType, Operator, Predicate, Quantifier
 from pytableaux.logics import LogicType, registry
 from pytableaux.proof import (Branch, ClosingRule, ClosureNode, Node, Rule,
-                              Tableau)
-from pytableaux.proof import System as TabSys
-from pytableaux.proof import Target
+                              System, Tableau, Target)
 from pytableaux.proof.filters import CompareSentence
 from pytableaux.tools.abcs import isabstract
 
@@ -51,7 +49,7 @@ def is_concrete_rule(obj: Any, /) -> bool:
     return is_rule_class(obj) and obj and not isabstract(obj)
 
 def is_concrete_build_trunk(obj: Any, /,):
-    return TabSys.build_trunk in _methmro(obj) and not isabstract(obj)
+    return System.build_trunk in _methmro(obj) and not isabstract(obj)
 
 def is_transparent_rule(obj: Any) -> bool:
     """Whether a rule class:
@@ -109,25 +107,22 @@ def rules_grouped_legend_order(rules: Collection[type[Rule]], /) -> dict:
     groups['ungrouped'] = ungrouped
     return groups
 
-def rules_legend_subgroups(groups: dict[str, list[type[Rule]]]) -> dict:
+def rules_legend_subgroups(groups: dict[str, list[type[Rule]]]) -> dict[str, dict[Operator|Predicate|Quantifier, list[type[Rule]]]]:
     subgroups: dict[str, dict[Any, list]] = {
-        name: {}
+        name: defaultdict(list)
         for name in ('operator', 'quantifier', 'predicate')}
     for name, group in groups.items():
         if name in subgroups:
             subgroup = subgroups[name]
             for rule in group:
                 obj = getattr(rule, name)
-                if obj not in subgroup:
-                    subgroup[obj] = []
                 subgroup[obj].append(rule)
-    return subgroups
+    return {key: dict(value) for key, value in subgroups.items()}
 
 def rules_sorted_member_order(logic: LogicType, rules: Collection[type[Rule]], /) -> list[type[Rule]]:
-    RulesCls = logic.Rules
     native_members = []
     todo = set(rules)
-    for member in filter(is_rule_class, RulesCls.__dict__.values()):
+    for member in filter(is_rule_class, logic.Rules.__dict__.values()):
         if member in todo:
             native_members.append(member)
             todo.remove(member)
@@ -256,7 +251,7 @@ class EllipsisExampleHelper(Rule.Helper):
     istrunk: bool
     mynode = Node.PropMap.Ellipsis
 
-    __slots__ = ('__dict__',)
+    __slots__ = ('closenodes', 'applied', 'isclosure', 'istrunk')
 
     def __init__(self, rule: Rule,/):
         super().__init__(rule)
@@ -272,7 +267,7 @@ class EllipsisExampleHelper(Rule.Helper):
 
     def listen_on(self):
         super().listen_on()
-        self.rule.tableau.on({
+        self.tableau.on({
             Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
             Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
             Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,

@@ -456,7 +456,6 @@ class RuleNameAttrInducer:
             raise TypeError(
                 f'Direct __dict__ conflicts inducing autoattrs for '
                 f'{self.obj} : {self.conflicts}')
-            return
         for name in self.notfounds:
             if hasattr(self.obj, name):
                 self.attrs[name] = None

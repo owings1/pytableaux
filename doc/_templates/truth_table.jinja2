@@ -1,16 +1,14 @@
 {# assumes input values are properly ordered for binary operators #}
 {%- set oper = table.operator -%}
 {%- set arity = oper.arity -%}
-{%- set numvalues = table.Value|length -%}
+{%- set L = table.values|length -%}
+{%- set R = range(L) -%}
+{%- set ostr = lw(oper) if lw.charset == 'html' else lw(oper)|e %}
 <div class="truth-table-wrapper">
-    <table class="truth-table docutils operator-{{ oper.name.lower()|e }}">
+    <table class="truth-table docutils operator-{{ oper.name|lower|e }}">
         <thead>
             <tr>
-                {% if arity == 1 -%}
-                    <th class="operator-name" colspan="2">{{ oper.label|e }}</th>
-                {% elif arity == 2 -%}
-                    <th class="operator-name" colspan="{{ numvalues + 1 }}">{{ oper.label|e }}</th>
-                {% endif -%}
+                <th class="operator-name" colspan="{{ L + 1 }}">{{ oper.label|e }}</th>
             </tr>
         </thead>
         <tbody>
@@ -18,43 +16,35 @@
                 <tr>
                     <th class="blank"></th>
                     <th class="operator-symbol arity-1">
-                        {% if lw.charset == 'html' -%}
-                            {{- lw(oper) -}}
-                        {% else -%}
-                            {{- lw(oper)|e -}}
-                        {% endif -%}
+                        {{- ostr -}}
                     </th>
                 </tr>
             {% elif arity == 2 -%}
                 <tr>
                     <th class="operator-symbol arity-2">
-                        {% if lw.charset == 'html' -%}
-                            {{- lw(oper) -}}
-                        {% else -%}
-                            {{- lw(oper)|e -}}
-                        {% endif -%}
+                        {{- ostr -}}
                     </th>
-                    {% for x in range(numvalues) -%}
+                    {% for x in R -%}
                         <th class="value-header row">
                             {{- table.inputs[x][1]|e -}}
                         </th>
                     {% endfor -%}
                 </tr>
             {% endif -%}
-            {% for x in range(numvalues) -%}
+            {% for x in R -%}
                 <tr>
                     <th class="value-header column">
                         {% if arity == 1 -%}
                             {{ table.inputs[x][0]|e -}}
                         {% elif arity == 2 -%}
-                            {{ table.inputs[numvalues * x][0]|e -}}
+                            {{ table.inputs[L * x][0]|e -}}
                         {% endif -%}
                     </th>
                     {% if arity == 1 -%}
                         <td>{{ table.outputs[x]|e }}</td>
                     {% elif arity == 2 -%}
-                        {% for y in range(numvalues) -%}
-                            <td>{{ table.outputs[y + numvalues * x]|e }}</td>
+                        {% for y in R -%}
+                            <td>{{ table.outputs[y + L * x]|e }}</td>
                         {% endfor -%}
                     {% endif -%}
                 </tr>

@@ -22,13 +22,12 @@ pytableaux.models
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Set
 from dataclasses import dataclass
-from itertools import product, repeat
+from itertools import product, starmap
 from types import MappingProxyType as MapProxy
 from typing import Any, Generic, Iterable, Literal, Mapping, Self, TypeVar
 
-from .errors import check, Emsg
+from .errors import Emsg, check
 from .lang import (Argument, Atomic, Constant, Operated, Operator, Predicated,
                    Quantified, Sentence)
 from .logics import LogicType
@@ -38,10 +37,15 @@ from .tools import EMPTY_MAP, abcs, maxceil, minfloor
 __all__ = (
     'BaseModel',
     'Mval',
+    'PredicateInterpretation',
+    'TruthTable',
     'ValueFDE',
     'ValueK3',
     'ValueLP',
     'ValueCPL')
+
+MvalT = TypeVar('MvalT', bound='Mval')
+MvalT_co = TypeVar('MvalT_co', bound='Mval', covariant=True)
 
 class Mval(abcs.Ebc):
 
@@ -128,8 +132,6 @@ class ValueCPL(Mval):
     F = 0.0
     T = 1.0
 
-MvalT = TypeVar('MvalT', bound = Mval)
-MvalT_co = TypeVar('MvalT_co', bound = Mval, covariant = True)
 
 class BaseModel(Generic[MvalT_co], abcs.Abc):
     Meta: type[LogicType.Meta]
@@ -203,9 +205,19 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
         check.inst(s, Operated)
         raise NotImplementedError from ValueError(s.operator)
 
-    @abstractmethod
-    def set_literal_value(self, s: Sentence, value: MvalT_co, /):
+    def set_literal_value(self, s: Sentence, value: MvalT_co, /, **kw):
         self._check_not_finished()
+        value = self.values[value]
+        if self.is_sentence_opaque(s):
+            return self.set_opaque_value(s, value, **kw)
+        if type(s) is Operated and s.operator is Operator.Negation:
+            value = self.truth_function(s.operator, value)
+            return self.set_literal_value(s.lhs, value, **kw)
+        if type(s) is Atomic:
+            return self.set_atomic_value(s, value, **kw)
+        if type(s) is Predicated:
+            return self.set_predicated_value(s, value, **kw)
+        raise NotImplementedError from TypeError(type(s))
 
     @abstractmethod
     def set_opaque_value(self, s: Sentence, value: MvalT_co, /):
@@ -250,19 +262,16 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
     @classmethod
     def truth_table(cls, oper: Operator, / , *, reverse=False) -> TruthTable[MvalT_co]:
         oper = Operator(oper)
+        values = cls.values
         if reverse:
-            values = tuple(reversed(cls.values))
-        else:
-            values = cls.values
-        inputs = tuple(product(*repeat(values, oper.arity)))
-        outputs = tuple(
-            cls.truth_function(oper, *values)
-            for values in inputs)
+            values = tuple(reversed(values))
+        inputs = tuple(product(values, repeat=oper.arity))
+        outputs = tuple(starmap(getattr(cls.truth_function, oper.name), inputs))
         return TruthTable(
             inputs = inputs,
             outputs = outputs,
             operator = oper,
-            Value = cls.values,
+            values = cls.values,
             mapping = MapProxy(dict(zip(inputs, outputs))))
 
     def __enter__(self) -> Self:
@@ -371,38 +380,26 @@ class BaseModel(Generic[MvalT_co], abcs.Abc):
         cls.truth_function = cls.TruthFunction(Meta.values)
 
 @dataclass(kw_only = True)
-class TruthTable(Mapping[tuple[MvalT, ...], MvalT]):
+class TruthTable:
     'Truth table data class.'
 
     inputs: tuple[tuple[MvalT, ...], ...]
     outputs: tuple[MvalT, ...]
     operator: Operator
-    Value: type[MvalT]
+    values: type[MvalT]
     mapping: Mapping[tuple[MvalT, ...], MvalT]
 
-    def __getitem__(self, key):
-        return self.mapping[key]
-    def __iter__(self):
-        return iter(self.mapping)
-    def __reversed__(self):
-        return reversed(self.mapping)
-    def __len__(self):
-        return len(self.mapping)
-
 class PredicateInterpretation:
+
     pos: set[tuple[Constant, ...]]
     neg: set[tuple[Constant, ...]]
-    constants: set[Constant]
+
+    __slots__ = ('pos', 'neg')
+
     def __init__(self) -> None:
         self.pos = set()
         self.neg = set()
-        self.constants = set()
-    def addpos(self, item: tuple[Constant,...]):
-        self.constants.update(item)
-        self.pos.add(item)
-    def addneg(self, item: tuple[Constant,...]):
-        self.constants.update(item)
-        self.neg.add(item)
+
     def __eq__(self, other):
         if self is other:
             return True

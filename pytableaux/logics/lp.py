@@ -50,7 +50,7 @@ class Model(FDE.Model):
         for pred, interp in self.predicates.items():
             for ntuple in ntuples[pred.arity]:
                 if ntuple not in interp.pos:
-                    interp.addneg(ntuple)
+                    interp.neg.add(ntuple)
         return super().finish()
 
 class System(FDE.System): pass

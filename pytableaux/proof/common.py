@@ -21,7 +21,6 @@ pytableaux.proof.common
 """
 from __future__ import annotations
 
-import itertools
 from collections import defaultdict
 from collections.abc import Mapping, Set
 from types import MappingProxyType as MapProxy

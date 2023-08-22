@@ -33,39 +33,13 @@ class Meta(K3.Meta):
 
 class Model(FDE.Model):
 
-    # def is_sentence_opaque(self, s, /):
-    #     return type(s) is Quantified or super().is_sentence_opaque(s)
-
     class TruthFunction(K3.Model.TruthFunction):
 
-        def back_cycle(self, value, /):
+        def Negation(self, value, /):
             return self.values_sequence[self.values_indexes[value] - 1]
-
-        Negation = back_cycle
 
         def Conjunction(self, a, b, /):
             return self.Negation(self.Disjunction(*map(self.Negation, (a, b))))
-
-    # def value_of_quantified(self, s: Quantified, /):
-    # #     """
-    # #     Take the set of values of the sentence resulting
-    # #     from the substitution of the variable with each constant. Then apply
-    # #     the negation function to each of those values. Then take the maximum
-    # #     of those values (the `generalized disjunction`), and apply the negation
-    # #     function to that maximum value. The result is the value of the universal
-    # #     sentence.
-    # #     """
-    #     it = self._unquantify_value_map(s)
-    #     if s.quantifier is Quantifier.Existential:
-    #         return maxceil(self.maxval, it, self.unassigned_value)
-    #     if s.quantifier is Quantifier.Universal:
-    #         try:
-    #             initial = next(it)
-    #         except StopIteration:
-    #             return self.unassigned_value
-    #         return reduce(self.truth_function.Conjunction, it, initial)
-    #     raise TypeError(s.quantifier)
-
 
 class System(FDE.System): pass
 

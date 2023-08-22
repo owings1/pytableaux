@@ -143,6 +143,122 @@ class Model(LogicType.Model[ValueFDE]):
             return minfloor(self.minval, it, self.maxval)
         raise TypeError(s.quantifier)
 
+    def set_opaque_value(self, s: Sentence, value, /):
+        self._check_not_finished()
+        value = self.values[value]
+        if self.opaques.get(s) not in (value, None):
+            raise Emsg.ConflictForSentence(value, s)
+        self.opaques[s] = value
+        # We might have a quantified opaque sentence, in which case we will need
+        # to still check every subsitution, so we want the constants and predicates.
+        for pred in s.predicates:
+            self.predicates[pred]
+        self.constants.update(s.constants)
+        
+    def set_atomic_value(self, s: Atomic, value, /):
+        self._check_not_finished()
+        value = self.values[value]
+        if self.atomics.get(s) not in (value, None):
+            raise Emsg.ConflictForSentence(value, s)
+        self.atomics[s] = value
+
+    def set_predicated_value(self, s: Predicated, value, /):
+        self._check_not_finished()
+        value = self.values[value]
+        if len(s.variables):
+            raise TypeError(f'free variables not allowed')
+        self.constants.update(s.params)
+        interp = self.predicates[s.predicate]
+        if value == 'T':
+            if s.params in interp.neg:
+                raise Emsg.ConflictForAntiExtension(value, s.params)
+            interp.pos.add(s.params)
+        elif value == 'F':
+            if s.params in interp.pos:
+                raise Emsg.ConflictForExtension(value, s.params)
+            interp.neg.add(s.params)
+        elif value == 'N':
+            if s.params in interp.pos:
+                raise Emsg.ConflictForExtension(value, s.params)
+            if s.params in interp.neg:
+                raise Emsg.ConflictForAntiExtension(value, s.params)
+        elif value == 'B':
+            interp.pos.add(s.params)
+            interp.neg.add(s.params)
+        else:
+            raise NotImplementedError from ValueError(value)
+
+    def read_branch(self, branch, /):
+        self._check_not_finished()
+        for node in branch:
+            if not isinstance(node, SentenceNode):
+                continue
+            s = node['sentence']
+            is_literal = self.is_sentence_literal(s)
+            is_opaque = self.is_sentence_opaque(s)
+            if not is_literal and not is_opaque:
+                continue
+            d = node['designated']
+            s_negative = -s
+            has_negative = branch.has(sdnode(s_negative, d))
+            is_negated = type(s) is Operated and s.operator is Operator.Negation
+            if is_negated:
+                # If the sentence is negated, set the value of the negatum
+                s = s_negative
+                if d:
+                    if has_negative:
+                        # If the node is designated, and the negatum is
+                        # also designated on b, the value is B
+                        value = 'B'
+                    else:
+                        # If the node is designated, but the negatum is
+                        # not also designated on b, the value is F
+                        value = 'F'
+                else:
+                    if has_negative:
+                        # If the node is undesignated, and the negatum is
+                        # also undesignated on b, the value is N
+                        value = 'N'
+                    else:
+                        # If the node is undesignated, but the negatum is
+                        # not also undesignated on b, the value is T
+                        value = 'T'
+            else:
+                # If the sentence is unnegated, set the value of the sentence
+                if d:
+                    if has_negative:
+                        # If the node is designated, and its negation is
+                        # also designated on b, the value is B
+                        value = 'B'
+                    else:
+                        # If the node is designated, but the negation is
+                        # not also designated on b, the value is T
+                        value = 'T'
+                else:
+                    if has_negative:
+                        # If the node is undesignated, and its negation is
+                        # also undesignated on b, the value is N
+                        value = 'N'
+                    else:
+                        # If the node is undesginated, but the negation is
+                        # not also undesignated on b, the value is F
+                        value = 'F'
+            if is_opaque:
+                self.set_opaque_value(s, value)
+            else:
+                self.set_literal_value(s, value)
+        return super().read_branch(branch)
+
+
+    def finish(self):
+        # TODO: consider augmenting the logic with Identity and Existence predicate
+        #       restrictions. In that case, new tableaux rules need to be written.
+        for s in self.opaques:
+            for a in s.atomics:
+                if a not in self.atomics:
+                    self.atomics[a] = self.Meta.unassigned_value
+        return super().finish()
+
     def get_data(self) -> dict[str, Any]:
         return dict(
             Atomics = dict(
@@ -201,152 +317,7 @@ class Model(LogicType.Model[ValueFDE]):
                             values = [
                                 dict(
                                     input  = predicate,
-                                    output = self.predicates[predicate].neg)])
-                    ]]))
-
-    def read_branch(self, branch, /):
-        self._check_not_finished()
-        for node in branch:
-            if not isinstance(node, SentenceNode):
-                continue
-            s = node['sentence']
-            # self._collect_sentence(s)
-            is_literal = self.is_sentence_literal(s)
-            is_opaque = self.is_sentence_opaque(s)
-            if is_literal or is_opaque:
-                if type(s) is Operated and s.operator is Operator.Negation:
-                    # If the sentence is negated, set the value of the negatum
-                    s = s.lhs
-                    if node['designated']:
-                        if branch.has(sdnode(s, True)):
-                            # If the node is designated, and the negatum is
-                            # also designated on b, the value is B
-                            value = self.values.B
-                        else:
-                            # If the node is designated, but the negatum is
-                            # not also designated on b, the value is F
-                            value = self.values.F
-                    else:
-                        if branch.has(sdnode(s, False)):
-                            # If the node is undesignated, and the negatum is
-                            # also undesignated on b, the value is N
-                            value = self.values.N
-                        else:
-                            # If the node is undesignated, but the negatum is
-                            # not also undesignated on b, the value is T
-                            value = self.values.T
-                else:
-                    # If the sentence is unnegated, set the value of the sentence
-                    if node['designated']:
-                        if branch.has(sdnode(~s, True)):
-                            # If the node is designated, and its negation is
-                            # also designated on b, the value is B
-                            value = self.values.B
-                        else:
-                            # If the node is designated, but the negation is
-                            # not also designated on b, the value is T
-                            value = self.values.T
-                    else:
-                        if branch.has(sdnode(~s, False)):
-                            # If the node is undesignated, and its negation is
-                            # also undesignated on b, the value is N
-                            value = self.values.N
-                        else:
-                            # If the node is undesginated, but the negation is
-                            # not also undesignated on b, the value is F
-                            value = self.values.F
-                if is_opaque:
-                    self.set_opaque_value(s, value)
-                else:
-                    self.set_literal_value(s, value)
-        return super().read_branch(branch)
-
-
-    def finish(self):
-        # TODO: consider augmenting the logic with Identity and Existence predicate
-        #       restrictions. In that case, new tableaux rules need to be written.
-        for s in self.opaques:
-            for a in s.atomics:
-                if a not in self.atomics:
-                    self.atomics[a] = self.Meta.unassigned_value
-        return super().finish()
-
-    def set_literal_value(self, s: Sentence, value, /):
-        self._check_not_finished()
-        try:
-            value = self.values[value]
-        except KeyError:
-            raise Emsg.UnknownForSentence(value, s)
-        if self.is_sentence_opaque(s):
-            self.set_opaque_value(s, value)
-        else:
-            stype = type(s)
-            if stype is Operated and s.operator is Operator.Negation:
-                self.set_literal_value(
-                    s.lhs,
-                    self.truth_function(s.operator, value))
-            elif stype is Atomic:
-                self.set_atomic_value(s, value)
-            elif stype is Predicated:
-                self.set_predicated_value(s, value)
-            else:
-                raise NotImplementedError from TypeError(stype)
-
-    def set_opaque_value(self, s: Sentence, value, /):
-        self._check_not_finished()
-        try:
-            value = self.values[value]
-        except KeyError:
-            raise Emsg.UnknownForSentence(value, s)
-        if self.opaques.get(s) not in (value, None):
-            raise Emsg.ConflictForSentence(value, s)
-        # We might have a quantified opaque sentence, in which case we will need
-        # to still check every subsitution, so we want the constants and predicates.
-        for pred in s.predicates:
-            self.predicates[pred]
-        self.constants.update(s.constants)
-        self.opaques[s] = value
-        
-    def set_atomic_value(self, s: Atomic, value, /):
-        self._check_not_finished()
-        try:
-            value = self.values[value]
-        except KeyError:
-            raise Emsg.UnknownForSentence(value, s)
-        if self.atomics.get(s) not in (value, None):
-            raise Emsg.ConflictForSentence(value, s)
-        self.atomics[s] = value
-
-    def set_predicated_value(self, s: Predicated, value, /):
-        self._check_not_finished()
-        try:
-            value = self.values[value]
-        except KeyError:
-            raise Emsg.UnknownForSentence(value, s)
-        for param in s:
-            if type(param) is Constant:
-                self.constants.add(param)
-            else:
-                raise TypeError(f'free variables not allowed')
-        interp = self.predicates[s.predicate]
-        if value is self.values.T:
-            if s.params in interp.neg:
-                raise Emsg.ConflictForAntiExtension(value, s.params)
-            interp.addpos(s.params)
-        elif value is self.values.F:
-            if s.params in interp.pos:
-                raise Emsg.ConflictForExtension(value, s.params)
-            interp.addneg(s.params)
-        elif value == 'N':
-            if s.params in interp.pos:
-                raise Emsg.ConflictForExtension(value, s.params)
-            if s.params in interp.neg:
-                raise Emsg.ConflictForAntiExtension(value, s.params)
-        elif value == 'B':
-            interp.addpos(s.params)
-            interp.addneg(s.params)
-        else:
-            raise Emsg.UnknownForSentence(value, s)
+                                    output = self.predicates[predicate].neg)])]]))
 
 
 class System(LogicType.System):
@@ -414,17 +385,9 @@ class System(LogicType.System):
         def _get_sd_targets(self, s: Operated, d: bool, /):
             raise NotImplementedError
 
-    class OperatorNodeRule(rules.OperatedSentenceRule, DefaultNodeRule, intermediate=True):
-        'Mixin class for typical operator rules.'
-        pass
-
-    class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule, intermediate=True):
-        'Mixin class for "narrow" quantifier rules.'
-        pass
-
-    class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule, intermediate=True):
-        'Mixin class for "extended" quantifier rules.'
-        pass
+    class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule, intermediate=True): pass
+    class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule, intermediate=True): pass
+    class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule, intermediate=True): pass
 
     class ConjunctionReducingRule(OperatorNodeRule, intermediate=True):
 

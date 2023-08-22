@@ -282,10 +282,10 @@ class BaseCase(TestCase):
         if isinstance(exp, Mapping):
             exp = {tuple(key): value for key, value in exp.items()}
         else:
-            exp = {tuple(map(str, key)): value for key, value in zip(tbl, exp)}
+            exp = {tuple(map(str, key)): value for key, value in zip(tbl.mapping, exp)}
         res = {
             tuple(map(str, key)): str(value)
-            for key, value in tbl.items()}
+            for key, value in tbl.mapping.items()}
         self.assertEqual(res, exp)
 
     def sdnode(self, s, d):

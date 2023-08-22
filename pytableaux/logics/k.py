@@ -48,9 +48,9 @@ class Meta(LogicType.Meta):
         'bivalent',
         'modal',
         'first-order')
-    native_operators = FDE.Meta.native_operators + (
+    native_operators = FDE.Meta.native_operators | [
         Operator.Possibility,
-        Operator.Necessity)
+        Operator.Necessity]
 
 class AccessGraph(defaultdict[int, set[int]]):
 
@@ -144,36 +144,51 @@ class Model(BaseModel[Meta.values]):
             raise NotImplementedError from ValueError(s.operator)
         return super().value_of_operated(s, world=world)
 
-    def get_data(self) -> dict:
-        return dict(
-            Worlds = dict(
-                description     = 'set of worlds',
-                in_summary      = True,
-                datatype        = 'set',
-                member_datatype = 'int',
-                member_typehint = 'world',
-                symbol          = 'W',
-                values          = sorted(self.frames)),
-            Access = dict(
-                description     = 'access relation',
-                in_summary      = True,
-                datatype        = 'set',
-                typehint        = 'access_relation',
-                member_datatype = 'tuple',
-                member_typehint = 'access',
-                symbol          = 'R',
-                values          = sorted((w1, w2) for w1, sees in self.R.items()
-                                    for w2 in sees)),
-            Frames = dict(
-                description     = 'world frames',
-                datatype        = 'list',
-                typehint        = 'frames',
-                member_datatype = 'map',
-                member_typehint = 'frame',
-                symbol          = 'F',
-                values          = [
-                    frame.get_data()
-                    for frame in sorted(self.frames.values())]))
+    def set_opaque_value(self, s: Sentence, value, /, world = 0):
+        self._check_not_finished()
+        value = self.values[value]
+        frame = self.frames[world]
+        if frame.opaques.get(s, value) is not value:
+            raise ModelValueError(f'Inconsistent value for sentence {s}')
+        frame.opaques[s] = value
+        # We might have a quantified opaque sentence, in which case we will need
+        # to still check every subsitution, so we want the constants.
+        self.constants.update(s.constants)
+        self.predicates.update(s.predicates)
+
+    def set_atomic_value(self, s: Atomic, value, /, world = 0):
+        self._check_not_finished()
+        value = self.values[value]
+        frame = self.frames[world]
+        if frame.atomics.get(s, value) is not value:
+            raise ModelValueError(f'Inconsistent value for sentence {s}')
+        frame.atomics[s] = value
+
+    def set_predicated_value(self, s: Predicated, value, /, *, world=0):
+        self._check_not_finished()
+        values = self.values
+        value = values[value]
+        pred = s.predicate
+        params = s.params
+        self.predicates.add(pred)
+        for param in s:
+            if type(param) is Constant:
+                self.constants.add(param)
+            else:
+                raise TypeError(f'free variables not allowed')
+        interp = self.frames[world].predicates[pred]
+        if value is values.F:
+            if params in interp.pos:
+                raise ModelValueError(f'Cannot set value {value} for tuple '
+                    f'{params} already in extension')
+            interp.neg.add(params)
+        elif value is values.T:
+            if params in interp.neg:
+                raise ModelValueError(f'Cannot set value {value} for tuple '
+                    f'{params} already in anti-extension')
+            interp.pos.add(params)
+        else:
+            raise NotImplementedError from ValueError(value)
 
     def read_branch(self, branch: Branch, /):
         self._check_not_finished()
@@ -220,28 +235,29 @@ class Model(BaseModel[Meta.values]):
         return super().finish()
 
     def _ensure_self_identity(self, w):
-        interp = self.frames[w].predicates[Predicate.Identity]
+        add = self.frames[w].predicates[Predicate.Identity].pos.add
         for c in self.constants:
             # make sure each constant is self-identical
-            interp.addpos((c, c))
+            add((c, c))
 
     def _ensure_self_existence(self, w):
-        interp = self.frames[w].predicates[Predicate.Existence]
+        add = self.frames[w].predicates[Predicate.Existence].pos.add
         for c in self.constants:
             # make sure each constant exists
-            interp.addpos((c,))
+            add((c,))
 
     def _agument_extension_with_identicals(self, pred: Predicate, w):
-        interp = self.frames[w].predicates[pred]
+        pos = self.frames[w].predicates[pred].pos
+        add = pos.add
         for c in self.constants:
             identicals = self._get_identicals(c, w)
             to_add = set()
-            for params in interp.pos:
+            for params in pos:
                 if c in params:
                     for new_c in identicals:
                         to_add.add(substitute(params, c, new_c))
             for params in to_add:
-                interp.addpos(params)
+                add(params)
 
     def _get_identicals(self, c: Constant, w=0) -> set[Constant]:
         interp = self.frames[w].predicates[Predicate.Identity]
@@ -252,66 +268,36 @@ class Model(BaseModel[Meta.values]):
         identicals.discard(c)
         return identicals
 
-    def set_literal_value(self, s: Sentence, value, /, **kw):
-        self._check_not_finished()
-        if self.is_sentence_opaque(s):
-            self.set_opaque_value(s, value, **kw)
-        elif (stype := type(s)) is Operated and s.operator is Operator.Negation:
-            negval = self.truth_function(s.operator, value)
-            self.set_literal_value(s.lhs, negval, **kw)
-        elif stype is Atomic:
-            self.set_atomic_value(s, value, **kw)
-        elif stype is Predicated:
-            self.set_predicated_value(s, value, **kw)
-        else:
-            raise NotImplementedError from TypeError(stype)
-
-    def set_opaque_value(self, s: Sentence, value, /, world = 0):
-        self._check_not_finished()
-        value = self.values[value]
-        frame = self.frames[world]
-        if frame.opaques.get(s, value) is not value:
-            raise ModelValueError(f'Inconsistent value for sentence {s}')
-        # We might have a quantified opaque sentence, in which case we will need
-        # to still check every subsitution, so we want the constants.
-        self.constants.update(s.constants)
-        self.predicates.update(s.predicates)
-        frame.opaques[s] = value
-
-    def set_atomic_value(self, s: Atomic, value, /, world = 0):
-        self._check_not_finished()
-        value = self.values[value]
-        frame = self.frames[world]
-        # if s in frame.atomics and frame.atomics[s] is not value:
-        if frame.atomics.get(s, value) is not value:
-            raise ModelValueError(f'Inconsistent value for sentence {s}')
-        frame.atomics[s] = value
-
-    def set_predicated_value(self, s: Predicated, value, /, *, world=0):
-        self._check_not_finished()
-        values = self.values
-        value = values[value]
-        pred = s.predicate
-        params = s.params
-        self.predicates.add(pred)
-        for param in s:
-            if type(param) is Constant:
-                self.constants.add(param)
-            else:
-                raise TypeError(f'free variables not allowed')
-        interp = self.frames[world].predicates[pred]
-        if value is values.F:
-            if params in interp.pos:
-                raise ModelValueError(f'Cannot set value {value} for tuple '
-                    f'{params} already in extension')
-            interp.addneg(params)
-        elif value is values.T:
-            if params in interp.neg:
-                raise ModelValueError(f'Cannot set value {value} for tuple '
-                    f'{params} already in anti-extension')
-            interp.addpos(params)
-        else:
-            raise NotImplementedError from ValueError(value)
+    def get_data(self) -> dict:
+        return dict(
+            Worlds = dict(
+                description     = 'set of worlds',
+                in_summary      = True,
+                datatype        = 'set',
+                member_datatype = 'int',
+                member_typehint = 'world',
+                symbol          = 'W',
+                values          = sorted(self.frames)),
+            Access = dict(
+                description     = 'access relation',
+                in_summary      = True,
+                datatype        = 'set',
+                typehint        = 'access_relation',
+                member_datatype = 'tuple',
+                member_typehint = 'access',
+                symbol          = 'R',
+                values          = sorted((w1, w2) for w1, sees in self.R.items()
+                                    for w2 in sees)),
+            Frames = dict(
+                description     = 'world frames',
+                datatype        = 'list',
+                typehint        = 'frames',
+                member_datatype = 'map',
+                member_typehint = 'frame',
+                symbol          = 'F',
+                values          = [
+                    frame.get_data()
+                    for frame in sorted(self.frames.values())]))
 
 class Frame:
     """
@@ -382,7 +368,6 @@ class Frame:
                         for sentence in sorted(self.opaques)
                     ]
                 ),
-                # TODO: include (instead?) domain and property class data
                 Predicates = dict(
                     description = 'predicate extensions',
                     datatype    = 'list',
@@ -402,11 +387,7 @@ class Frame:
                                 )
                             ]
                         )
-                        for pred in sorted(self.predicates)
-                    ]
-                )
-            )
-        )
+                        for pred in sorted(self.predicates)])))
 
     def is_equivalent_to(self, other: Frame) -> bool:
         if other is self:
