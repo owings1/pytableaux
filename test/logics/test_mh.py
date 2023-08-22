@@ -47,8 +47,8 @@ class TestBranchables(Base):
         MaterialBiconditionalNegatedDesignated=0,
         MaterialBiconditionalNegatedUndesignated=0,
         MaterialBiconditionalUndesignated=0,
-        MaterialConditionalDesignated=0,
-        MaterialConditionalNegatedDesignated=0,
+        MaterialConditionalDesignated=1,
+        MaterialConditionalNegatedDesignated=1,
         MaterialConditionalNegatedUndesignated=0,
         MaterialConditionalUndesignated=0)
 

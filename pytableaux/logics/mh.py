@@ -113,9 +113,20 @@ class Rules(LogicType.Rules):
                 group(
                     sdnode(rhs, d), sdnode(~rhs, d), sdnode(~lhs, not d)))
 
-    class MaterialConditionalDesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialConditionalNegatedDesignated(FDE.MaterialConditionalReducingRule): pass
-    class MaterialConditionalUndesignated(FDE.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
+
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(
+                    sdnode( lhs, not d),
+                    sdnode(~lhs, not d),
+                    sdnode( rhs, not d),
+                    sdnode(~rhs, not d)),
+                group(
+                    sdnode(lhs, d),
+                    sdnode(~rhs, d)))
+
     class MaterialConditionalNegatedUndesignated(FDE.MaterialConditionalReducingRule): pass
     class MaterialBiconditionalDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalNegatedDesignated(FDE.MaterialConditionalConjunctsReducingRule): pass
@@ -169,9 +180,7 @@ class Rules(LogicType.Rules):
             FDE.Rules.ConjunctionDesignated,
             FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionUndesignated,
-            MaterialConditionalDesignated,
-            MaterialConditionalNegatedDesignated,
-            MaterialConditionalUndesignated,
+            FDE.Rules.MaterialConditionalUndesignated,
             MaterialConditionalNegatedUndesignated,
             MaterialBiconditionalDesignated,
             MaterialBiconditionalNegatedDesignated,
@@ -191,6 +200,8 @@ class Rules(LogicType.Rules):
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.DisjunctionDesignated,
             DisjunctionNegatedDesignated,
+            FDE.Rules.MaterialConditionalDesignated,
+            MaterialConditionalNegatedDesignated,
             ConditionalDesignated,
             ConditionalNegatedUndesignated),
         # 3-branching rules.

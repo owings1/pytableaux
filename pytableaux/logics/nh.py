@@ -113,6 +113,10 @@ class Rules(LogicType.Rules):
                     sdnode( rhs, True),
                     sdnode(~rhs, True)))
 
+    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
+
+        def _get_sd_targets(self, s, d, /):
+            yield adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
 
     groups = (
         # Non-branching rules.
@@ -124,9 +128,8 @@ class Rules(LogicType.Rules):
             FDE.Rules.ConjunctionDesignated,
             FDE.Rules.DisjunctionUndesignated,
             FDE.Rules.DisjunctionNegatedDesignated,
-            MH.Rules.MaterialConditionalDesignated,
-            MH.Rules.MaterialConditionalNegatedDesignated,
-            MH.Rules.MaterialConditionalUndesignated,
+            MaterialConditionalNegatedDesignated,
+            FDE.Rules.MaterialConditionalUndesignated,
             MH.Rules.MaterialConditionalNegatedUndesignated,
             MH.Rules.MaterialBiconditionalDesignated,
             MH.Rules.MaterialBiconditionalNegatedDesignated,
@@ -146,6 +149,7 @@ class Rules(LogicType.Rules):
             ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionDesignated,
             FDE.Rules.DisjunctionNegatedUndesignated,
+            FDE.Rules.MaterialConditionalDesignated,
             MH.Rules.ConditionalDesignated,
             MH.Rules.ConditionalNegatedUndesignated),
         # 3-branching rules.
