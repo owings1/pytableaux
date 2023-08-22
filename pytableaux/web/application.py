@@ -33,8 +33,8 @@ from cherrypy import HTTPError, NotFound, expose
 from cherrypy._cprequest import Request, Response
 
 from .. import examples, logics, package
-from ..lang import (LexType, Notation, Operator, ParseTable, Predicate,
-                    Quantifier)
+from ..lang import (Argument, LexType, Notation, Operator, ParseTable,
+                    Predicate, Quantifier)
 from ..logics import LogicType
 from ..proof import writers
 from ..tools.events import EventEmitter
@@ -100,6 +100,7 @@ class WebApp(EventEmitter):
     "Default template context."
 
     example_args: Mapping[str, Mapping[str, Mapping[str, Any]]]
+    example_args_rev: Mapping[Argument, str]
     logics_map: Mapping[str, LogicType]
     jsapp_data: Mapping[str, Any]
 
@@ -162,6 +163,7 @@ class WebApp(EventEmitter):
         self.jinja = jinja2.Environment(
             loader = jinja2.FileSystemLoader(self.config['templates_path']))
         self.example_args = self._build_example_args()
+        self.example_args_rev = MapProxy({arg: arg.title for arg in examples.arguments()})
         logics.registry.import_all()
         self.logics_map = MapProxy({
             logic.Meta.name.lower(): logic

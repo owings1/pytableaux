@@ -46,7 +46,7 @@
         <select id="example_argument">
             <option value="">Load example argument ...</option>
             {% for title in example_args -%}
-                <option value="{{ title|e }}">{{ title|e }}</option>
+                <option value="{{ title|e }}" {{- helper.select_opt(form_data, 'example_argument', title) }}>{{ title|e }}</option>
             {% endfor %}
         </select>
     </div>

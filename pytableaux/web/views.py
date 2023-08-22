@@ -560,6 +560,12 @@ class ProveView(FormView):
             self.errors['tableau'] = err
         if not self.is_proof:
             return
+        try:
+            argtitle = self.app.example_args_rev[self.tableau.argument]
+        except KeyError:
+            pass
+        else:
+            self.form_data['example_argument'] = argtitle
         if self.pw.format == 'html':
             self.is_controls = bool(self.kw.get('show_controls'))
             self.is_models = bool(
