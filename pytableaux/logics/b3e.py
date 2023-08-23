@@ -68,6 +68,26 @@ class Rules(LogicType.Rules):
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, not d)))
 
+    class MaterialBiconditionalUndesignated(System.OperatorNodeRule):
+
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(sdnode(lhs, d), sdnode(~lhs, d)),
+                group(sdnode(rhs, d), sdnode(~rhs, d)),
+                group(sdnode(lhs, not d), sdnode(~rhs, not d)),
+                group(sdnode(~lhs, not d), sdnode(rhs, not d)))
+
+    class MaterialBiconditionalNegatedUndesignated(System.OperatorNodeRule):
+
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(sdnode(lhs, d), sdnode(~lhs, d)),
+                group(sdnode(rhs, d), sdnode(~rhs, d)),
+                group(sdnode(~lhs, not d), sdnode(~rhs, not d)),
+                group(sdnode(lhs, not d), sdnode(rhs, not d)))
+
     class ConditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*,
@@ -121,32 +141,13 @@ class Rules(LogicType.Rules):
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
     class BiconditionalUndesignated(BiconditionalDesignated): pass
-    # class BiconditionalNegatedUndesignated(BiconditionalUndesignated): pass
+
     class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
                 group(sdnode(lhs, d), sdnode(rhs, d)),
-                group(sdnode(lhs, not d), sdnode(rhs, not d)))
-
-    class MaterialBiconditionalUndesignated(System.OperatorNodeRule):
-        def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
-            yield adds(
-                group(sdnode(lhs, d), sdnode(~lhs, d)),
-                group(sdnode(rhs, d), sdnode(~rhs, d)),
-                group(sdnode(lhs, not d), sdnode(~rhs, not d)),
-                group(sdnode(~lhs, not d), sdnode(rhs, not d)))
-
-    class MaterialBiconditionalNegatedUndesignated(System.OperatorNodeRule):
-
-        def _get_sd_targets(self, s, d, /):
-            lhs, rhs = s
-            yield adds(
-                group(sdnode(lhs, d), sdnode(~lhs, d)),
-                group(sdnode(rhs, d), sdnode(~rhs, d)),
-                group(sdnode(~lhs, not d), sdnode(~rhs, not d)),
                 group(sdnode(lhs, not d), sdnode(rhs, not d)))
 
     groups = (
@@ -173,18 +174,14 @@ class Rules(LogicType.Rules):
             ConditionalDesignated,
             ConditionalNegatedUndesignated,
             K3W.Rules.MaterialBiconditionalDesignated,
-            # K3W.Rules.MaterialBiconditionalUndesignated,
             K3W.Rules.MaterialBiconditionalNegatedDesignated,
-            # K3W.Rules.MaterialBiconditionalNegatedUndesignated,
             BiconditionalDesignated,
             BiconditionalUndesignated,
-            BiconditionalNegatedDesignated,
-            ),
+            BiconditionalNegatedDesignated),
         group(
             # two-branching rules
             FDE.Rules.ConjunctionUndesignated,
-            BiconditionalNegatedUndesignated,
-            ),
+            BiconditionalNegatedUndesignated),
         group(
             # three-branching rules
             K3W.Rules.DisjunctionDesignated,
