@@ -3,7 +3,7 @@
 {%- set arity = oper.arity -%}
 {%- set L = table.values|length -%}
 {%- set R = range(L) -%}
-{%- set ostr = lw(oper) if lw.charset == 'html' else lw(oper)|e %}
+{%- set ostr = lw(oper) if lw.format == 'html' else lw(oper)|e %}
 <div class="truth-table-wrapper">
     <table class="truth-table docutils operator-{{ oper.name|lower|e }}">
         <thead>

@@ -30,7 +30,6 @@ from types import MappingProxyType as MapProxy
 from typing import Any, Mapping, Sequence
 
 from ....errors import SkipDeparture
-from ....lang import Notation
 from ....tools import EMPTY_SET, inflect
 from ...tableaux import Tableau
 from . import DefaultNodeVisitor, DoctreeTabWriter, Translator, nodes
@@ -81,7 +80,7 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
 
     def visit_sentence(self, node: nodes.Element):
         rendered = self.lw(node.attributes.pop('data-sentence'))
-        if self.lw.charset != self.format:
+        if self.lw.format != self.format:
             rendered = self.escape(rendered)
         self.default_visitor(node)
         self.body.append(rendered)
@@ -192,7 +191,6 @@ class HtmlTabWriter(DoctreeTabWriter):
     format = 'html'
     translator_type = HtmlTranslator
     cssfile = f'{STATIC_BASE_DIR}/tableau.css'
-    default_charsets = MapProxy({notn: 'html' for notn in Notation})
     defaults = MapProxy(dict(DoctreeTabWriter.defaults,
         wrapper      = True,
         classes      = (),

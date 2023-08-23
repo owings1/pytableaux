@@ -73,7 +73,7 @@ class Rules(LogicType.Rules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         ticking = False
-        marklegend = group((Marking.tableau, ('access', 'transitive')))
+        marklegend = [(Marking.tableau, ('access', 'transitive'))]
 
         def _get_node_targets(self, node: AccessNode, branch, /):
             if self[MaxWorlds].is_reached(branch):

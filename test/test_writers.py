@@ -19,19 +19,16 @@
 # pytableaux - writers test cases
 from pytableaux import examples
 from pytableaux.errors import *
-from pytableaux.lang import Atomic, Predicate
-from pytableaux.lang.parsing import Parser
-from pytableaux.lang.writing import LexWriter
-from pytableaux.proof.tableaux import Tableau
-from pytableaux.proof.writers import TabWriter
+from pytableaux.lang import *
+from pytableaux.proof import *
 
 from .utils import BaseCase
 # Sentence Writers
 
 std = LexWriter('standard')
-stdasc = LexWriter('standard', charset = 'ascii')
-stduni = LexWriter('standard', charset = 'unicode')
-stdhtm = LexWriter('standard', charset = 'html')
+stdasc = LexWriter('standard', format = 'ascii')
+stduni = LexWriter('standard', format = 'unicode')
+stdhtm = LexWriter('standard', format = 'html')
 
 pol = LexWriter('polish')
 ppol = Parser('polish')
@@ -71,7 +68,7 @@ class TestStandard(BaseCase):
     def test_drop_parens_uni(self):
         s = ppol('Uab')
         lw = LexWriter('standard', 'unicode', drop_parens=True)
-        res = lw.write(s)
+        res = lw(s)
         self.assertNotIn('(', res)
         self.assertNotIn(')', res)
     def test_drop_parens_htm(self):

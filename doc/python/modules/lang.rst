@@ -143,7 +143,7 @@ Utility Classes
 
 .. autoclass:: ParseTable()
 
-.. autoclass:: RenderSet
+.. autoclass:: StringTable
     :members:
     :show-inheritance:
     :inherited-members: Mapping

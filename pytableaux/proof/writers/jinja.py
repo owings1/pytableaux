@@ -28,7 +28,7 @@ from typing import Sequence
 
 import jinja2
 
-from ...lang import Marking, Notation, RenderSet
+from ...lang import Marking, Notation, StringTable
 from ...tools import EMPTY_SET, qset
 from ..tableaux import Tableau
 from . import TabWriter, TabWriterRegistry
@@ -60,17 +60,18 @@ class JinjaTabWriter(TabWriter):
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        if self.lw.charset == self.format:
-            self.markerset = self.lw.renderset
+        if self.lw.format == self.format:
+            self.strings = self.lw.strings
         else:
-            self.markerset = RenderSet.fetch(self.lw.notation, self.format)
+            self.strings = StringTable.fetch(self.lw.notation, self.format)
+        strings = self.strings
         self.designation_markers = [
-            self.markerset.string(Marking.tableau, ('designation', False)),
-            self.markerset.string(Marking.tableau, ('designation', True))]
+            strings[Marking.tableau, 'designation', False],
+            strings[Marking.tableau, 'designation', True]]
         self.flag_markers = dict(
-            (flag, self.markerset.string(Marking.tableau, ('flag', 'closure')))
+            (flag, strings[Marking.tableau, 'flag', 'closure'])
             for flag in ('closure', 'quit'))
-        self.access_marker = self.markerset.string(Marking.tableau, 'access')
+        self.access_marker = strings[Marking.tableau, 'access']
 
     def __call__(self, tab: Tableau, **kw):
         return self.render(self.template_name, tab=tab, **kw)
@@ -97,7 +98,6 @@ class HtmlTabWriter(JinjaTabWriter):
     format = 'html'
     template_name = 'tableau.jinja2'
     css_template_name = 'static/tableau.css'
-    default_charsets = {notn: 'html' for notn in Notation}
     jinja = jinja(f'{TEMPLATES_BASE_DIR}/{format}')
     defaults = MapProxy(dict(
         wrapper      = True,

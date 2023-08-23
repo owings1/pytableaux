@@ -68,7 +68,7 @@ class Rules(LogicType.Rules):
         Helpers = (MaxWorlds, WorldIndex)
         NodeType = AccessNode
         ticking = False
-        marklegend = group((Marking.tableau, ('access', 'symmetric')))
+        marklegend = [(Marking.tableau, ('access', 'symmetric'))]
         _defaults = dict(is_rank_optim = False)
 
         def _get_node_targets(self, node: AccessNode, branch,/):

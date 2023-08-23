@@ -27,7 +27,7 @@ from collections import deque
 from types import MappingProxyType as MapProxy
 from typing import TypeVar, Callable
 
-from ....lang import LexWriter, Marking, RenderSet
+from ....lang import LexWriter, Marking, StringTable
 from ...tableaux import Tableau
 from ....tools import EMPTY_SET, abcs
 from .. import TabWriter, TabWriterRegistry
@@ -102,17 +102,18 @@ class Translator(abcs.Abc):
         self.body: deque[str] = deque()
         self.foot: deque[str] = deque()
         self.lw = lw
-        if self.lw.charset == self.format:
-            self.markerset = self.lw.renderset
+        if self.lw.format == self.format:
+            self.strings = self.lw.strings
         else:
-            self.markerset = RenderSet.fetch(self.lw.notation, self.format)
+            self.strings = StringTable.fetch(self.lw.notation, self.format)
+        strings = self.strings
         self.designation_markers = [
-            self.markerset.string(Marking.tableau, ('designation', False)),
-            self.markerset.string(Marking.tableau, ('designation', True))]
+            strings[Marking.tableau, 'designation', False],
+            strings[Marking.tableau, 'designation', True]]
         self.flag_markers = dict(
-            (flag, self.markerset.string(Marking.tableau, ('flag', 'closure')))
+            (flag, strings[Marking.tableau, 'flag', 'closure'])
             for flag in ('closure', 'quit'))
-        self.access_marker = self.markerset.string(Marking.tableau, 'access')
+        self.access_marker = strings[Marking.tableau, 'access']
         self.setup()
 
     def setup(self):

@@ -71,7 +71,7 @@ class Rules(LogicType.Rules):
         Helpers = (MaxWorlds, UnserialWorlds)
         ignore_ticked = False
         ticking = False
-        marklegend = group((Marking.tableau, ('access', 'serial')))
+        marklegend = [(Marking.tableau, ('access', 'serial'))]
 
         def _get_targets(self, branch: Branch, /):
             if not self._should_apply(branch):

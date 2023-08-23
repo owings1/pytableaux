@@ -22,10 +22,8 @@ pytableaux.proof.writers.doctree.latex
 from __future__ import annotations
 
 import logging
-from types import MappingProxyType as MapProxy
 
 from ....errors import SkipDeparture
-from ....lang import Notation
 from ....tools import EMPTY_SET, closure
 from . import DoctreeTabWriter, NodeVisitor, Translator
 
@@ -77,7 +75,7 @@ class LatexTranslator(Translator, NodeVisitor):
 
     def visit_sentence(self, node):
         rendered = self.lw(node['data-sentence'])
-        if self.lw.charset != self.format:
+        if self.lw.format != self.format:
             rendered = self.escape(rendered)
         self.body.append(rendered)
         raise SkipDeparture
@@ -149,7 +147,6 @@ class LatexTabWriter(DoctreeTabWriter):
 
     format = 'latex'
     translator_type = LatexTranslator
-    default_charsets = MapProxy({notn: 'latex' for notn in Notation})
 
     def build_doc(self, tab, /):
         return super().build_doc(tab)

@@ -244,8 +244,8 @@ class ApiParseView(ApiView):
             type = sentence.TYPE.name,
             rendered = {
                 notn.name: {
-                    charset: notn.DefaultWriter(charset)(sentence)
-                    for charset in notn.charsets}
+                    format: notn.DefaultWriter(format)(sentence)
+                    for format in notn.formats}
                 for notn in Notation})
 
 class ApiProveView(ApiView):
@@ -264,7 +264,6 @@ class ApiProveView(ApiView):
         output=MapProxy(dict(
             notation=Notation.polish.name,
             format='html',
-            charset=None,
             options=EMPTY_MAP))))
 
     def setup(self, *args, **kw):
@@ -291,7 +290,6 @@ class ApiProveView(ApiView):
                 "output": {
                     "format": "html",
                     "notation": "standard",
-                    "charset": "html",
                     "options": {}
                 },
                 "build_models": false,
@@ -317,7 +315,6 @@ class ApiProveView(ApiView):
                 },
                 "writer": {
                     "format": "html,
-                    "charset": "html",
                     "options": {}
                 },
             }
@@ -344,7 +341,6 @@ class ApiProveView(ApiView):
                 engine  = self.pw.engine,
                 format  = self.pw.format,
                 notation = self.pw.lw.notation.name,
-                charset = self.pw.lw.charset,
                 options = self.pw.opts))
 
     def build(self):
@@ -431,10 +427,9 @@ class ApiProveView(ApiView):
             errors['output:notation'] = f"Invalid notation: {err}"
             return
         try:
-            charset = payload['output:charset'] or WriterClass.default_charsets[notn]
-            lw = notn.DefaultWriter(charset)
+            lw = notn.DefaultWriter(payload['output:format'])
         except (KeyError, ValueError) as err:
-            errors['output:charset'] = f"Unsupported charset: {err}"
+            errors['output:format'] = f"Unsupported format: {err}"
             return
         return WriterClass(lw = lw, **payload['output:options'])
 
@@ -492,7 +487,6 @@ class ProveView(FormView):
         input_notation = Notation.standard.name,
         output_format = 'html',
         output_notation = Notation.standard.name,
-        output_charset = '',
         show_controls = True,
         build_models = True,
         color_open = True,
@@ -577,7 +571,7 @@ class ProveView(FormView):
             self.selected_tab = 'view'
         else:
             self.selected_tab = False # 'stats'
-        if self.lw.charset in ('html', 'ascii', 'unicode'):
+        if self.lw.format in ('html', 'ascii', 'unicode'):
             self.lw_for_argument = self.lw
         else:
             # For the argument display, so we don't end up writing latex sequences.

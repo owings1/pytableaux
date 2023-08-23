@@ -37,9 +37,9 @@ from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
 
 from pytableaux import examples, logics
-from pytableaux.lang import (Argument, Atomic, LexWriter, Marking, Notation,
-                             Operator, Predicate, Predicates, Quantifier,
-                             RenderSet)
+from pytableaux.lang import (Argument, Atomic, DefaultLexWriter, LexWriter,
+                             Marking, Notation, Operator, Predicate,
+                             Predicates, Quantifier)
 from pytableaux.proof import Rule, Tableau, TabWriter, writers
 from pytableaux.tools import EMPTY_SET, inflect, qset
 
@@ -226,39 +226,55 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
     _trunk_argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
     mode: str
-    charset: str
-    renderset: RenderSet
     writer: TabWriter
     lwuni: LexWriter
 
     _setup: bool = False
 
-    def setup(self, force = False):
+    class LexWriterWrapper(LexWriter):
 
+        __slots__ = {'__dict__'}
+
+        def __init__(self, lw: LexWriter):
+            self.lw = lw
+            self.notation = lw.notation
+            self.defaults = lw.defaults
+            self.strings = lw.strings
+
+        @property
+        def format(self):
+            return self.lw.format
+
+        def _write(self, item):
+            if type(item) is Atomic and item.subscript == 2:
+                s = Atomic(item.index, 0)
+                try:
+                    func = getattr(self.lw, '_write_subscript')
+                except AttributeError:
+                    substr = DefaultLexWriter._write_subscript(self.lw, 'n')
+                else:
+                    substr = func('n')
+                return self.lw._write(s) + substr
+            return self.lw._write(item)
+
+    def setup(self, force = False):
         if self._setup and not force:
             return
         self._setup = True
-
         self.mode = self._check_options_mode()
-
         opts = self.options
         opts['classes'] = self.set_classes()
         opts['wnotn'] = Notation[opts.get('wnotn', self.config[ConfKey.wnotn])]
         opts.setdefault('format', 'html')
-
         classes: qset[str] = opts['classes']
         classes.add(self.mode)
         if self.mode in ('rule', 'build-trunk'):
             classes.add('example')
-
-        self.charset = writers.registry[opts['format']].default_charsets[opts['wnotn']]
+        lw = LexWriter(opts['wnotn'], opts['format'])
         if self.mode == 'build-trunk':
-            self.renderset = self.get_trunk_renderset(opts['wnotn'], self.charset)
-        else:
-            self.renderset = RenderSet.fetch(opts['wnotn'], self.charset)
-
+            lw = self.LexWriterWrapper(lw)
         self.writer = TabWriter(opts['format'],
-            lw=LexWriter(opts['wnotn'], renderset=self.renderset),
+            lw=lw,
             classes=classes,
             wrapper=False)
         self.lwuni = LexWriter(opts['wnotn'], 'unicode')
@@ -406,21 +422,24 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
 
     def getnodes_rule_legend(self, rulecls: type[Rule]):
         lw = self.lwuni
-        renderset = lw.renderset
+        strings = lw.strings
         for name, value in rulecls.legend:
             if lw.canwrite(value):
                 text = lw(value)
             else:
-                if name == Marking.tableau:
-                    args = name, value
+                if isinstance(value, tuple):
+                    args = name, *value
                 else:
-                    args = Marking.tableau, (name, value)
+                    if name != Marking.tableau:
+                        args = Marking.tableau, name, value
+                    else:
+                        args = name, value
                 try:
-                    text = renderset.string(*args)
+                    text = strings[*args]
                 except KeyError:
                     raise self.error(
                         f'Unwriteable legend item: {(name, value)}'
-                        f'for {rulecls}. Tried renderset.string with args {args}')
+                        f'for {rulecls}. Tried strings[...] with args {args}')
             yield nodes.inline(text, text, classes=['legend-item', name])
 
     def getnodes_trunk_prolog(self):
@@ -438,24 +457,6 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             nodez.sentence(sentence=Atomic(1, 0), notn=notn))
         yield argnode
         yield nodes.inline(text=' write:')
-
-    @classmethod
-    def get_trunk_renderset(cls, notn, charset):
-        # Make a RenderSet that renders subscript 2 as 'n'.
-        rskey = f'{__name__}.{charset}.trunk'
-        try:
-            return RenderSet.fetch(notn, rskey)
-        except KeyError:
-            pass
-        prev = RenderSet.fetch(notn, charset)
-        def rendersub(sub):
-            if sub == 2:
-                sub = 'n'
-            return prev.string(Marking.subscript, sub)
-        data = dict(prev.data)
-        data.update(renders = dict(data['renders']) | {
-            Marking.subscript: rendersub})
-        return RenderSet.load(notn, rskey, data)
 
     def _check_options_mode(self) -> Literal['argument','rule','build-trunk']:
         opts = self.options
@@ -808,8 +809,8 @@ def setup(app: Sphinx):
     app.add_config_value(ConfKey.pnotn,'standard', 'env', [str, Notation])
     app.add_config_value(ConfKey.preds,
         ((0,0,1), (1,0,1), (2,0,1)), 'env', [tuple, Predicates])
-    app.add_config_value(ConfKey.charset, None, 'env', [str])
-    app.add_config_value(ConfKey.rset, None, 'env', [str])
+    app.add_config_value(ConfKey.wfmt, None, 'env', [str])
+    app.add_config_value(ConfKey.strings, None, 'env', [str])
     app.add_config_value(ConfKey.truth_table_template, 'truth_table.jinja2', 'env', [str])
     app.add_config_value(ConfKey.truth_table_reverse, True, 'env', [bool])
 

@@ -21,6 +21,7 @@ pytableaux.lang
 """
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Mapping
 from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar, Iterable, NamedTuple, Self
@@ -37,7 +38,7 @@ __all__ = (
     # 'LexicalAbcMeta',
     'Marking',
     'Notation',
-    'RenderSet',
+    'StringTable',
     # 'TableStore',
     # 'TriCoords',
 
@@ -120,20 +121,17 @@ class Notation(LangCommonEnum):
     default: ClassVar[Notation]
     "The default notation."
 
-    charsets: set[str]
-    "All render charsets for the notation's writer classes."
+    formats: dict[str, set[StringTable]]
+    "Mapping from format to set of string tables for the notation."
 
-    default_charset: str
-    "The render charset of the notation's default writer."
+    default_format: str
+    "The render format of the notation's default writer."
 
     writers: set[type[LexWriter]]
     "All writer classes for the notation."
 
     DefaultWriter: type[LexWriter]
     "The notations's default writer class."
-
-    rendersets: set[RenderSet]
-    "All RenderSets of the notation."
 
     Parser: type[Parser]
     "The notation's parser class."
@@ -147,31 +145,30 @@ class Notation(LangCommonEnum):
     "Standard notation."
 
     def __init__(self, name, /):
-        default_charset = 'unicode'
-        self.charsets = set((default_charset,))
-        self.default_charset = default_charset
+        default_format = 'ascii'
+        self.formats = defaultdict(set)
+        self.formats[default_format]
+        self.default_format = default_format
         self.writers = set()
         self.DefaultWriter = None
-        self.rendersets = set()
 
     __slots__ = (
-        'charsets',
-        'default_charset',
+        'formats',
+        'default_format',
         'DefaultWriter',
         'Parser',
-        'rendersets',
         'writers')
 
     @classmethod
-    def get_common_charsets(cls) -> list[str]:
-        "Get charsets common to all notations."
-        charsets: set[str] = set(
-            charset
+    def get_common_formats(cls) -> list[str]:
+        "Get formats common to all notations."
+        formats: set[str] = set(
+            format
             for notn in Notation
-                for charset in notn.charsets)
+                for format in notn.formats)
         for notn in Notation:
-            charsets.intersection_update(notn.charsets)
-        return sorted(charsets)
+            formats.intersection_update(notn.formats)
+        return sorted(formats)
 
     @closure
     def __setattr__():
@@ -216,6 +213,9 @@ class Marking(str, LangCommonEnum):
 
     tableau = 'tableau'
     "Tableau marking."
+
+    subscript_open = 'subscript_open'
+    subscript_close = 'subscript_close'
 
 #==========================+
 #  Aux classes             |
@@ -393,16 +393,10 @@ class TableStore(metaclass=LangCommonMeta):
                 cls.fetch(notn, key)
 
 
-class RenderSet(TableStore, Mapping):
-    'Lexical writer table data class.'
+class StringTable(TableStore, Mapping):
+    'Lexical writer strings table data class.'
 
     default_fetch_key = 'ascii'
-
-    notation: Notation
-    "The notation."
-
-    renders: Mapping
-    "Render functions."
 
     strings: Mapping
     "Fixed strings mapping."
@@ -411,47 +405,61 @@ class RenderSet(TableStore, Mapping):
     keypair: tuple
 
     @property
-    def charset(self) -> str:
-        "The charset name."
-        return self['charset']
+    def format(self) -> str:
+        "The format (html, latex, etc.)"
+        return self.data['format']
+
+    @property
+    def notation(self) -> Notation:
+        "The notation flavor."
+        return self.data['notation']
 
     @property
     def fetchkey(self) -> str:
         return self.keypair[1]
 
     __slots__ = (
-        '__getitem__',
         'data',
         'keypair',
-        'notation',
-        'renders',
-        'strings',
+        'flat',
         'hash')
 
     def __init__(self, data: Mapping, keypair: tuple, /):
         self.data = dxopy(data, True)
-        self.__getitem__ = self.data.__getitem__
+        self.flat = {}
         self.keypair = keypair
-        self.notation = Notation(self.data['notation'])
-        self.renders = self.data.get('renders', EMPTY_MAP)
-        self.strings = self.data.get('strings', EMPTY_MAP)
         self.hash = self._compute_hash()
-        self.notation.charsets.add(self.charset)
-        self.notation.rendersets.add(self)
+        self.notation.formats[self.format].add(self)
+        for key, value in self.data['strings'].items():
+            if isinstance(key, tuple):
+                path = key
+            else:
+                path = key,
+            if isinstance(value, tuple):
+                for i, value in enumerate(value):
+                    self.flat[*path, i] = value
+                continue
+            if isinstance(value, Mapping):
+                for key, value in value.items():
+                    if isinstance(key, tuple):
+                        keys = key
+                    else:
+                        keys = key,
+                    self.flat[*path, *keys] = value
+                continue
+            raise ValueError(value)
 
-    def string(self, ctype, value) -> str:
-        if ctype in self.renders:
-            return self.renders[ctype](value)
-        return self.strings[ctype][value]
+    def __getitem__(self, key):
+        return self.flat[key]
 
     def __len__(self):
-        return len(self.data)
+        return len(self.flat)
 
     def __iter__(self):
-        return iter(self.data)
+        return iter(self.flat)
 
     def __reversed__(self):
-        return reversed(self.data)
+        return reversed(self.flat)
 
     def __hash__(self):
         return self.hash
@@ -459,15 +467,13 @@ class RenderSet(TableStore, Mapping):
     def __eq__(self, other):
         if self is other:
             return True
-        return type(self) is type(other) and hash(self) == hash(other)
+        return (
+            type(self) is type(other) and
+            hash(self) == hash(other) and
+            self.format == other.format)
 
     def _compute_hash(self) -> int:
-        r, s = self.renders, self.strings
-        vv = *(*r.values(), *s.values()),
-        ktup = *(*r.keys(), *s.keys()),
-        vtup = *((*v.items(),) if isinstance(v, Mapping) else v for v in vv),
-        return hash((ktup, vtup))
-
+        return hash(tuple(sorted(self.items())))
 
 
 from .lex import Atomic, Constant
@@ -512,7 +518,7 @@ def init():
 
     from . import _symdata
 
-    RenderSet._initcache(Notation, _symdata.rendersets())
+    StringTable._initcache(Notation, _symdata.string_tables())
     ParseTable._initcache(Notation, _symdata.parsetables())
     LexWriter._sys = LexWriter('standard', 'unicode')
 

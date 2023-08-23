@@ -21,8 +21,8 @@ pytableaux.lang._symdata
 """
 from __future__ import annotations
 
-from types import MappingProxyType as MapProxy
 import re
+from types import MappingProxyType as MapProxy
 from typing import Any, Callable, Mapping
 
 from ..tools import closure
@@ -131,57 +131,38 @@ def parsetables():
     }
     return data
 
-def rendersets():
+def string_tables():
 
     from html import unescape as html_unescape
 
-    from . import (LexType, Marking, Notation, Operator,
-                                 Predicate, Quantifier)
     from ..tools import dmerged
+    from . import LexType, Marking, Notation, Operator, Predicate, Quantifier
 
     def dunesc(d: dict, inplace = False) -> None:
         return dtransform(html_unescape, d, typeinfo = str, inplace = inplace)
 
-    @closure
-    def unisub():
 
-        # Unicode subscript.
-
-        # The easy way -- supports digits only, else fails.
-
-        def unisub1(sub: int) -> str:
-            return ''.join(chr(0x2080 + int(d)) for d in str(sub))
-
-
-        # The other way -- supports some non-digits, else converts to string.
-
-        # Char mapping.
-        unisubs = MapProxy(dict((k, chr(v)) for k, v in (
-            item for it in (
-                zip('0123456789',    range(0x2080, 0x2089)),
-                zip('+_=()',         range(0x208A, 0x208E)),
-                zip('aeoxəhklmnpst', range(0x2090, 0x209c)),
-            ) for item in it))
-        )
-        getsub = unisubs.__getitem__
-        # Regex to check so that all or none will be converted.
-        nonsub = re.compile("[^%s]" % ''.join(unisubs)).search
-
-        def unisub2(sub):
-            if nonsub(src := str(sub)):
-                return src
-            return ''.join(map(getsub, src))
-
-        return unisub2
-
-    # subscript functions
-    subfunc = MapProxy(dict(
-        ascii = str,
-        html = '<sub>{}</sub>'.format,
-        latex = '_{%s}'.__mod__,
-        rst = ':sub:`{}`'.format,
-        unicode = unisub))
-
+    subsym = MapProxy(dict(
+        ascii = {
+            Marking.subscript_open: '',
+            Marking.subscript_close: '',
+        },
+        html = {
+            Marking.subscript_open: '<sub>',
+            Marking.subscript_close: '</sub>',
+        },
+        latex = {
+            Marking.subscript_open: '_{',
+            Marking.subscript_close: '}',
+        },
+        rst = {
+            Marking.subscript_open: ':sub:`',
+            Marking.subscript_close: '`',
+        },
+        unicode = {
+            Marking.subscript_open: '.[',
+            Marking.subscript_close: ']',
+        }))
     # meta chars
     metachar = MapProxy(dict(
         ascii = MapProxy(dict(
@@ -227,10 +208,10 @@ def rendersets():
             ('designation', False) : '\\varominus{}',
             ('flag', 'closure') : '\\varotimes{}',
             ('flag', 'quit') : '\\bowtie{}',
-            ('access', 'symmetric') : '\\mathcal{R}' + subfunc['latex']('sym'),
-            ('access', 'transitive') : '\\mathcal{R}' + subfunc['latex']('+'),
-            ('access', 'reflexive') : '\\mathcal{R}' + subfunc['latex']('\\leq{}'),
-            ('access', 'serial') : '\\mathcal{R}' + subfunc['latex']('ser'),
+            ('access', 'symmetric') : '\\mathcal{R}_{sym}',
+            ('access', 'transitive') : '\\mathcal{R}_{+}',
+            ('access', 'reflexive') : '\\mathcal{R}_{\\leq{}}',
+            ('access', 'serial') : '\\mathcal{R}_{ser}',
             'access': '\\mathcal{R}'})
 
     for key in tabsym:
@@ -247,8 +228,7 @@ def rendersets():
 
     data[Notation.polish]['html'] = prev = dict(
         notation = Notation.polish,
-        charset  = 'html',
-        renders  = {Marking.subscript: subfunc['html']},
+        format  = 'html',
         strings = {
             LexType.Atomic   : tuple('abcde'),
             LexType.Operator : {
@@ -280,30 +260,38 @@ def rendersets():
             Marking.whitespace  : (' ',),
             Marking.meta: metachar['html'],
             Marking.tableau: tabsym['html'],
+            Marking.subscript: subsym['html'],
         },
     )
 
     data[Notation.polish]['unicode'] = prev = dmerged(prev, dict(
-        charset  = 'unicode',
-        renders  = {Marking.subscript: subfunc['unicode']},
-        strings  = dunesc(prev['strings']),
+        format  = 'unicode',
+        strings  = dunesc(prev['strings']) | {
+            Marking.subscript: subsym['unicode']
+        },
     ))
 
-    data[Notation.polish]['unicode.rst'] = prev = dmerged(prev, dict(
-        charset  = 'unicode',
-        renders  = {Marking.subscript: subfunc['rst']},
+    data[Notation.polish]['rst'] = prev = dmerged(prev, dict(
+        format  = 'rst',
+        strings = {Marking.subscript: subsym['rst']}
     ))
 
     data[Notation.polish]['ascii'] = prev = dmerged(prev, dict(
-        charset  = 'ascii',
-        renders  = {Marking.subscript: subfunc['ascii']},
-        strings  = {Marking.meta: metachar['ascii'], Marking.tableau: tabsym['ascii']},
+        format  = 'ascii',
+        strings  = {
+            Marking.meta: metachar['ascii'],
+            Marking.tableau: tabsym['ascii'],
+            Marking.subscript: subsym['ascii'],
+        },
     ))
 
     data[Notation.polish]['latex'] = dmerged(prev, dict(
-        charset  = 'latex',
-        renders  = {Marking.subscript: subfunc['latex']},
-        strings  = {Marking.meta: metachar['latex'], Marking.tableau: tabsym['latex']}
+        format  = 'latex',
+        strings  = {
+            Marking.meta: metachar['latex'],
+            Marking.tableau: tabsym['latex'],
+            Marking.subscript: subsym['latex'],
+        }
     ))
 
     Notation.standard
@@ -311,8 +299,7 @@ def rendersets():
 
     data[Notation.standard]['html'] = prev = dict(
         notation = Notation.standard,
-        charset  = 'html',
-        renders  = {Marking.subscript: subfunc['html']},
+        format  = 'html',
         strings = {
             LexType.Atomic   : tuple('ABCDE'),
             LexType.Operator : {
@@ -344,23 +331,24 @@ def rendersets():
             Marking.whitespace   : (' ',),
             Marking.meta: metachar['html'],
             Marking.tableau: tabsym['html'],
+            Marking.subscript: subsym['html'],
         },
     )
 
     data[Notation.standard]['unicode'] = prev = dmerged(prev, dict(
-        charset  = 'unicode',
-        renders  = {Marking.subscript: subfunc['unicode']},
-        strings  = dunesc(prev['strings']),
+        format  = 'unicode',
+        strings  = dunesc(prev['strings'])| {
+            Marking.subscript: subsym['unicode']
+        },
     ))
 
-    data[Notation.standard]['unicode.rst'] = prev = dmerged(prev, dict(
-        charset  = 'unicode',
-        renders  = {Marking.subscript: subfunc['rst']},
+    data[Notation.standard]['rst'] = prev = dmerged(prev, dict(
+        format  = 'rst',
+        strings = {Marking.subscript: subsym['rst']}
     ))
 
     data[Notation.standard]['ascii'] = prev = dmerged(prev, dict(
-        charset  = 'ascii',
-        renders  = {Marking.subscript: subfunc['ascii']},
+        format  = 'ascii',
         strings = {
             LexType.Operator : {
                 Operator.Assertion              :  '*',
@@ -383,12 +371,12 @@ def rendersets():
             },
             Marking.meta: metachar['ascii'],
             Marking.tableau: tabsym['ascii'],
+            Marking.subscript: subsym['ascii'],
         },
     ))
 
     data[Notation.standard]['latex'] = dmerged(prev, dict(
-        charset  = 'latex',
-        renders  = {Marking.subscript: subfunc['latex']},
+        format  = 'latex',
         strings = {
             LexType.Operator : {
                 Operator.Assertion              :  '\\circ{}',
@@ -411,6 +399,7 @@ def rendersets():
             },
             Marking.meta: metachar['latex'],
             Marking.tableau: tabsym['latex'],
+            Marking.subscript: subsym['latex'],
         },
     ))
     return data

@@ -62,7 +62,7 @@ class Rules(LogicType.Rules):
         Helpers = (MaxWorlds, WorldIndex)
         ignore_ticked = False
         ticking = False
-        marklegend = group((Marking.tableau, ('access', 'reflexive')))
+        marklegend = [(Marking.tableau, ('access', 'reflexive'))]
 
         _defaults = dict(is_rank_optim = False)
 

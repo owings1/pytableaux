@@ -14,7 +14,7 @@
 <div class="input select">
     <label for="output_format">Output Format</label>
     <select id="output_format" name="output_format">
-        {% for format in writers.registry -%}
+        {% for format in output_formats -%}
             <option value="{{ format|e }}" {{- 
                 helper.select_opt(form_data, 'output_format', format) 
             }}>
@@ -31,19 +31,6 @@
                 helper.select_opt(form_data, 'output_notation', notn.name) 
             }}>
                 {{- notn.name|e -}}
-            </option>
-        {% endfor %}
-    </select>
-</div>
-<div class="input select">
-    <label for="output_charset">Output Charset</label>
-    <select id="output_charset" name="output_charset">
-        <option value="" {{- helper.select_opt(form_data, 'output_charset', '') }}>auto</option>
-        {% for charset in output_charsets -%}
-            <option value="{{ charset|e }}" {{- 
-                helper.select_opt(form_data, 'output_charset', charset) 
-            }}>
-                {{- charset|e -}}
             </option>
         {% endfor %}
     </select>

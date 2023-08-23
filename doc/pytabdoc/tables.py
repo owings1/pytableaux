@@ -29,7 +29,7 @@ from typing import Any, Callable, Sequence
 
 from sphinx.application import Sphinx
 
-from pytableaux.lang import LexType, LexWriter, Operator, ParseTable, RenderSet
+from pytableaux.lang import LexType, LexWriter, Operator, ParseTable, StringTable
 from pytableaux.tools import abcs, closure, qset
 
 from . import ConfKey, Tabler, directives
@@ -126,24 +126,23 @@ def oper_sym_table():
     sources = (
         ParseTable.fetch('polish'),
         ParseTable.fetch('standard'),
-        RenderSet.fetch('standard', 'unicode'),
-        RenderSet.fetch('standard', 'html'))
+        StringTable.fetch('standard', 'unicode'),
+        StringTable.fetch('standard', 'html'))
 
     def sources_info():
         for src in sources:
             if type(src) is ParseTable:
                 yield (src.notation, 'ascii', True)
             else:
-                yield (src.notation, src.charset, False)
+                yield (src.notation, src.format, False)
 
     def src_func(o):
         # Get the operator symbols for the tables.
         for src in sources:
             if type(src) is ParseTable:
-                func = src.char
+                yield src.char(o.TYPE, o)
             else:
-                func = src.string
-            yield func(o.TYPE, o)
+                yield src[o.TYPE, o]
 
     formats = [
         fmt_literal,
@@ -164,7 +163,7 @@ def oper_sym_table():
 
         ======================  =========  ======  ========  ========  ===============
         ..                      Notation   Polish  Standard  Standard  Standard
-        ..                      Charset    ascii   ascii     unicode   html
+        ..                      Format     ascii   ascii     unicode   html
         ..                      Can parse  Y       Y         N         N
         ..
         Operator
@@ -189,11 +188,11 @@ def oper_sym_table():
         head_cols = [
             blank[0:3],
 
-            [ 'Notation',             'Charset', 'Can parse',   ], *(
+            [ 'Notation',             'Format', 'Can parse',   ], *(
 
-            [ notn.name.capitalize(),  charset,  'NY'[canparse] ]
+            [ notn.name.capitalize(),  fmt,  'NY'[canparse] ]
 
-                for (notn, charset, canparse)
+                for (notn, fmt, canparse)
                 in sources_info()
             )
         ]
@@ -227,7 +226,7 @@ directives.table_generators['oper-sym-table'] = OperSymTable
 # ------------------------------------------------
 
 def lex_eg_table(columns: list[str], /, *, 
-    notn = 'standard', charset = 'unicode',):
+    notn = 'standard', format = 'unicode',):
     "lexical item attribute examples."
 
     """
@@ -247,7 +246,7 @@ def lex_eg_table(columns: list[str], /, *,
     │ Operated   │ ○A     │ (90, 50, 10, 60, 0, 0)             │
     ╘════════════╧════════╧════════════════════════════════════╛
     """
-    reprer = Reprer(lw = LexWriter(notn, charset))
+    reprer = Reprer(lw = LexWriter(notn, format))
 
     header = ['Type', 'Item', *columns]
     data = [

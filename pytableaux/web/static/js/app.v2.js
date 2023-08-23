@@ -96,7 +96,6 @@
         fieldInputNotn     : '#input_notation',
         fieldLogic         : '#selected_logic',
         fieldMaxSteps      : '#options_max_steps',
-        fieldOutputCharset : '#output_charset',
         fieldOutputFmt     : '#output_format',
         fieldOutputNotn    : '#output_notation',
         fieldWriterRegistry: '#writer_registry',
@@ -678,7 +677,6 @@
                 output: {
                     format   : outputFormat,
                     notation : $(Sel.fieldOutputNotn, $AppForm).val(),
-                    charset  : $(Sel.fieldOutputCharset, $AppForm).val(),
                     options  : {
                         classes : [],
                     }
@@ -721,9 +719,6 @@
             }
             if (!data.writer_registry) {
                 delete data.writer_registry
-            }
-            if (!data.output.charset) {
-                delete data.output.charset
             }
             if (!data.output.options.classes.length) {
                 delete data.output.options.classes

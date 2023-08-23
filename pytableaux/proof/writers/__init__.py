@@ -75,11 +75,11 @@ class TabWriter(metaclass = TabWriterMeta):
         # make an instance of the default writer class, with the default notation.
         writer = TabWriter()
 
-        # make an HtmlTabWriter, with the default notation and charset.
+        # make an HtmlTabWriter, with the default notation and format.
         writer = TabWriter('html')
 
-        # make an HtmlTabWriter, with standard notation and ASCII charset.
-        writer = TabWriter('html', 'standard', 'ascii')
+        # make an HtmlTabWriter, with standard notation.
+        writer = TabWriter('html', 'standard')
     """
 
     engine: str = 'unknown'
@@ -87,10 +87,6 @@ class TabWriter(metaclass = TabWriterMeta):
 
     format: str
     "The format registry identifier."
-
-    default_charsets = MapProxy({
-        notn: notn.default_charset for notn in Notation})
-    "Default ``LexWriter`` charset for each notation."
 
     defaults = EMPTY_MAP
     "Default options."
@@ -103,22 +99,22 @@ class TabWriter(metaclass = TabWriterMeta):
 
     __slots__ = ('lw', 'opts')
 
-    def __init__(self, notn = None, charset = None, *, lw: LexWriter = None, **opts):
+    def __init__(self, notn = None, format = None, *, lw: LexWriter = None, **opts):
         if lw is None:
             if notn is None:
                 notn = Notation.default
             else:
                 notn = Notation(notn)
-            if charset is None:
-                charset = self.default_charsets[notn]
-            lw = LexWriter(notn, charset, **opts)
+            if format is None:
+                format = notn.default_format
+            lw = LexWriter(notn, format, **opts)
         else:
             if notn is not None:
                 if Notation(notn) is not lw.notation:
                     raise Emsg.ValueConflict(notn, lw.notation)
-            if charset is not None:
-                if charset != lw.charset:
-                    raise Emsg.ValueConflict(charset, lw.charset)
+            if format is not None:
+                if format != lw.format:
+                    raise Emsg.ValueConflict(format, lw.format)
         self.lw = lw
         self.opts = dict(self.defaults) | opts
 

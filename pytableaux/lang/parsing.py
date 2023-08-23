@@ -63,24 +63,30 @@ class ParserMeta(LangCommonMeta):
 class Parser(metaclass = ParserMeta):
     """Parser interface and coordinator.
 
-    To create a parser for a notation::
+    To create a parser::
 
-        from pytableaux.lang import Parser
-
-        Parser('standard') # or 'polish'
+        >>> from pytableaux.lang import Parser
+        >>> Parser()
+        <PolishParser:(<Notation.polish>, 'default')>
+        >>> Parser('standard')
+        <StandardParser:(<Notation.standard>, 'default')>
     
     Or use the :class:`Notation` enum class::
 
-        Parser(Notation.standard)
-
-        Notation.standard.Parser()
+        >>> from pytableaux.lang import Parser
+        >>> Parser(Notation.standard)
+        <StandardParser:(<Notation.standard>, 'default')>
+        >>> Notation.polish.Parser()
+        <PolishParser:(<Notation.polish>, 'default')>
 
     To parse :class:`Predicated` sentences, the parser must know the predicate's
     `arity`. For this, pass a :class:`Predicates` object with the predicates::
 
-        preds = Predicates(((0, 0, 1), (1, 0, 2)))
-        parser = Parser('standard', preds)
-        parser('Fa & Gab')
+        >>> from pytableaux.lang import Predicates
+        >>> preds = Predicates(((0, 0, 1), (1, 0, 2)))
+        >>> parser = Parser('standard', preds)
+        >>> parser('Fa & Gab')
+        
     
     """
 
@@ -167,6 +173,9 @@ class Parser(metaclass = ParserMeta):
             self(conclusion),
             premises and map(self, premises),
             title=title)
+
+    def __repr__(self):
+        return f'<{type(self).__name__}:{self.table.keypair}>'
 
     def __init_subclass__(subcls, primary = False, **kw):
         'Merge ``_defaults``, set primary.'

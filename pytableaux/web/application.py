@@ -171,7 +171,7 @@ class WebApp(EventEmitter):
             is_debug = self.is_debug,
             logics = self.logics_map,
             example_args = self.example_args,
-            output_charsets = Notation.get_common_charsets(),
+            output_formats = sorted(set(Notation.get_common_formats()).intersection(writers.registry)),
             logic_categories = logics.registry.grouped(self.logics_map),
             lw_html_ref = Notation.standard.DefaultWriter('html'),
             toJson = self.tojson))

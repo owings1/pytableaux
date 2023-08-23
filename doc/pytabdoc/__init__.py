@@ -117,8 +117,8 @@ class ConfKey(str, Enum):
     auto_skip_enum_value = 'autodoc_skip_enum_value'
 
     wnotn   = 'write_notation'
-    charset =  'render_charset'
-    rset =  'renderset'
+    wfmt =  'write_format'
+    strings =  'strings_table'
     pnotn = 'parse_notation'
     preds = 'parse_predicates'
 

@@ -31,7 +31,7 @@ from ..errors import Emsg, check
 from ..tools import EMPTY_SET, abcs, closure
 from . import (Atomic, Constant, CoordsItem, LangCommonMeta, Lexical, LexType,
                Marking, Notation, Operated, Operator, Predicate, Predicated,
-               Quantified, RenderSet)
+               Quantified, StringTable)
 
 __all__ = (
     'LexWriter',
@@ -87,7 +87,7 @@ class LexWriterMeta(LangCommonMeta):
 class LexWriter(metaclass = LexWriterMeta):
     'LexWriter interface and coordinator.'
 
-    __slots__ = 'opts', 'renderset'
+    __slots__ = 'opts', 'strings'
 
     #******  Class Variables
 
@@ -98,21 +98,19 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #******  Instance Variables
 
-    renderset: RenderSet
+    strings: StringTable
     opts: dict
-    charset: str
+    format: str
 
     @property
-    def charset(self) -> str:
-        return self.renderset.charset
-
+    def format(self) -> str:
+        return self.strings.format
+    
     #******  External API
 
-    def write(self, item) -> str:
+    def __call__(self, item) -> str:
         'Write a lexical item.'
         return self._write(item)
-
-    __call__ = write
 
     @classmethod
     def canwrite(cls, obj: Any) -> bool:
@@ -124,16 +122,16 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #******  Instance Init
 
-    def __init__(self, charset: str|None = None, renderset: RenderSet|None = None, **opts):
-        if renderset is None:
+    def __init__(self, format: str|None = None, strings: StringTable|None = None, **opts):
+        if strings is None:
             notn = self.notation
-            if charset is None:
-                charset = notn.default_charset
-            renderset = RenderSet.fetch(notn, charset)
-        elif charset is not None and charset != renderset.charset:
-            raise Emsg.WrongValue(charset, renderset.charset)
+            if format is None:
+                format = notn.default_format
+            strings = StringTable.fetch(notn, format)
+        elif format is not None and format != strings.format:
+            raise Emsg.WrongValue(format, strings.format)
         self.opts = dict(self.defaults, **opts)
-        self.renderset = renderset
+        self.strings = strings
 
     #******  Internal API
 
@@ -166,7 +164,7 @@ class LexWriter(metaclass = LexWriterMeta):
             except AttributeError:
                 raise TypeError('Missing method', meth, subcls)
         notn = subcls.notation = Notation(subcls.notation)
-        type(cls).register(cls, subcls)
+        # type(cls).register(cls, subcls)
         notn.writers.add(subcls)
         if notn.DefaultWriter is None:
             notn.DefaultWriter = subcls
@@ -177,7 +175,6 @@ class LexWriter(metaclass = LexWriterMeta):
         super().__init_subclass__(**kw)
         abcs.merge_attr(
             subcls, '_methodmap', supcls = __class__, transform = MapProxy)
-        subcls.__call__ = subcls.write
 
 class DefaultLexWriter(LexWriter):
     "Common lexical writer abstract class."
@@ -198,20 +195,17 @@ class DefaultLexWriter(LexWriter):
     @abstractmethod
     def _write_operated(self, item: Operated) -> str: ...
 
-    def _strfor(self, *args, **kw) -> str:
-        return self.renderset.string(*args, **kw)
-
     def _write_plain(self, item: Lexical) -> str:
-        return self._strfor(item.TYPE, item)
+        return self.strings[item.TYPE, item]
 
     def _write_coordsitem(self, item: CoordsItem) -> str:
         return ''.join((
-            self._strfor(item.TYPE, item.index),
+            self.strings[item.TYPE, item.index],
             self._write_subscript(item.subscript)))
 
     def _write_predicate(self, item: Predicate) -> str:
         return ''.join((
-            self._strfor((LexType.Predicate, item.is_system), item.index),
+            self.strings[LexType.Predicate, item.is_system, item.index],
             self._write_subscript(item.subscript)))
 
     def _write_quantified(self, item: Quantified) -> str:
@@ -222,7 +216,10 @@ class DefaultLexWriter(LexWriter):
 
     def _write_subscript(self, s: int) -> str:
         if s == 0: return ''
-        return self._strfor(Marking.subscript, s)
+        return ''.join((
+            self.strings[Marking.subscript, Marking.subscript_open],
+            str(s),
+            self.strings[Marking.subscript, Marking.subscript_close]))
 
 @LexWriter.register
 class PolishLexWriter(DefaultLexWriter):
@@ -245,59 +242,65 @@ class StandardLexWriter(DefaultLexWriter):
     notation = Notation.standard
     defaults = dict(
         drop_parens=True,
-        max_infix=3)
+        identity_infix=True,
+        max_infix=0)
 
-    def write(self, item):
-        if self.opts['drop_parens'] and isinstance(item, Operated):
-            return self._write_operated(item, drop_parens = True)
-        return super().write(item)
+    def __call__(self, item):
+        if self.opts['drop_parens'] and type(item) is Operated:
+            return self._write_operated(item, drop_parens=True)
+        return super().__call__(item)
 
-    def _write_predicated(self, item: Predicated) -> str:
-        arity = len(item)
-        if arity < 2 or arity > self.opts['max_infix']:
-            return super()._write_predicated(item)
-        # Infix notation for predicates of arity > 1
-        pred = item.predicate
-        # For Identity, add spaces (a = b instead of a=b)
-        if pred == Predicate.System.Identity:
-            ws = self._strfor(Marking.whitespace, 0)
+    def _write_predicated(self, s: Predicated) -> str:
+        pred = s.predicate
+        arity = pred.arity
+        opts = self.opts
+        strings = self.strings
+        should_infix = (
+            arity > 1 and (
+                arity < opts['max_infix'] or
+                pred is Predicate.Identity and opts['identity_infix']))
+        if not should_infix:
+            return super()._write_predicated(s)
+        if pred is Predicate.Identity:
+            ws = strings[Marking.whitespace, 0]
         else:
             ws = ''
-        return ''.join((
-            self._write(item.params[0]),
-            ws,
+        return ws.join((
+            self._write(s[0]),
             self._write(pred),
-            ws,
-            ''.join(map(self._write, item.params[1:]))))
+            ''.join(map(self._write, s[1:]))))
 
-    def _write_operated(self, item: Operated, drop_parens = False) -> str:
-        oper = item.operator
+    def _write_operated(self, s: Operated,/, *, drop_parens = False) -> str:
+        oper = s.operator
         arity = oper.arity
+        strings = self.strings
+        ws = strings[Marking.whitespace, 0]
         if arity == 1:
-            s = item.lhs
-            if (
+            s = s.lhs
+            is_neg_identity = (
                 oper is Operator.Negation and
-                type(s) is Predicated and
-                s.predicate is Predicate.System.Identity
-            ):
-                return self._write_negated_identity(item)
-            else:
-                return self._write(oper) + self._write(s)
-        elif arity == 2:
-            lhs, rhs = item
-            return ''.join((
-                self._strfor(Marking.paren_open, 0) if not drop_parens else '',
-                self._strfor(Marking.whitespace, 0).join(map(self._write, (lhs, oper, rhs))),
-                self._strfor(Marking.paren_close, 0) if not drop_parens else ''))
-        raise NotImplementedError('arity %s' % arity)
-
-    def _write_negated_identity(self, item: Operated) -> str:
-        si: Predicated = item.lhs
-        params = si.params
-        return self._strfor(Marking.whitespace, 0).join((
-            self._write(params[0]),
-            self._strfor((LexType.Predicate, True), (item.operator, si.predicate)),
-            self._write(params[1])))
+                type(s) is Predicated
+                and s.predicate is Predicate.Identity)
+            if is_neg_identity and self.opts['identity_infix']:
+                symbol = strings[LexType.Predicate, True, Operator.Negation, Predicate.Identity]
+                return ws.join((
+                    self._write(s[0]),
+                    symbol,
+                    self._write(s[1])))
+            return self._write(oper) + self._write(s)
+        if arity != 2:
+            raise NotImplementedError from ValueError(oper)
+        lhs, rhs = s
+        if drop_parens:
+            paren_open = ''
+            paren_close = ''
+        else:
+            paren_open = strings[Marking.paren_open, 0]
+            paren_close = strings[Marking.paren_close, 0]
+        return ''.join((
+            paren_open,
+            ws.join(map(self._write, (lhs, oper, rhs))),
+            paren_close))
 
     def _test(self) -> list[str]:
         s1 = Predicate.System.Identity(Constant.gen(2)).negate()

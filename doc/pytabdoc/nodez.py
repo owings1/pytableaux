@@ -57,7 +57,7 @@ class HTML5Translator(BaseTranslator):
 
     class OptStacks(NamedTuple):
         notn: list
-        charset: list
+        format: list
 
     def __init__(self, document, builder):
         super().__init__(document, builder)
@@ -71,16 +71,16 @@ class HTML5Translator(BaseTranslator):
 
     def visit_sentence(self, node: Element):
         self.body.append(self.starttag(node, 'span', '', CLASS = 'sentence'))
-        notn, charset = self.get_lwargs(node)
+        notn, fmt = self.get_lwargs(node)
         if node.get('rendered'):
             return
         if (s := node.get('sentence')):
-            lw = LexWriter(notn, charset)
+            lw = LexWriter(notn, fmt)
             try:
                 content = lw(s)
                 node['rendered'] = content
                 node['escaped'] = content
-                if lw.charset != 'html':
+                if lw.format != 'html':
                     content = html.escape(content)
                     node['escaped'] = content
             except:
@@ -110,14 +110,14 @@ class HTML5Translator(BaseTranslator):
                 notn = stacks.notn[-1][1]
             else:
                 notn = self.config[ConfKey.wnotn]
-        if (charset := node.get('charset')):
-            stacks.charset.append((node, charset))
+        if (format := node.get('format')):
+            stacks.format.append((node, format))
         else:
-            if stacks.charset:
-                charset = stacks.charset[-1][1]
+            if stacks.format:
+                format = stacks.format[-1][1]
             else:
-                charset = self.builder.format
-        return notn, charset
+                format = self.builder.format
+        return notn, format
 
 
 class sentence(nodes.Inline, nodes.TextElement): pass
