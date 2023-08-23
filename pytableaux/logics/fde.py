@@ -86,7 +86,9 @@ class Model(LogicType.Model[ValueFDE]):
     opaques: dict[Sentence, ValueFDE]
     "An assignment of each opaque (un-interpreted) sentence to a value."
 
-    __slots__ = ('predicates', 'atomics', 'opaques', 'constants')
+    sentences: set[Sentence]
+
+    __slots__ = ('predicates', 'atomics', 'opaques', 'constants', 'sentences')
 
     def __init__(self):
         super().__init__()
@@ -95,6 +97,7 @@ class Model(LogicType.Model[ValueFDE]):
         self.opaques = {}
         #: Track set of constants for performance.
         self.constants: set[Constant] = set()
+        self.sentences = set()
 
     def value_of_atomic(self, s: Sentence, /):
         self._check_finished()
@@ -148,6 +151,7 @@ class Model(LogicType.Model[ValueFDE]):
         for pred in s.predicates:
             self.predicates[pred]
         self.constants.update(s.constants)
+        self.sentences.add(s)
         
     def set_atomic_value(self, s: Atomic, value, /):
         self._check_not_finished()
@@ -155,6 +159,7 @@ class Model(LogicType.Model[ValueFDE]):
         if self.atomics.get(s) not in (value, None):
             raise Emsg.ConflictForSentence(value, s)
         self.atomics[s] = value
+        self.sentences.add(s)
 
     def set_predicated_value(self, s: Predicated, value, /):
         self._check_not_finished()
@@ -163,6 +168,7 @@ class Model(LogicType.Model[ValueFDE]):
             raise ValueError(f'Free variables not allowed')
         self.predicates[s.predicate].set_value(s.params, self.values[value])
         self.constants.update(s.constants)
+        self.sentences.add(s)
 
     def read_branch(self, branch, /):
         self._check_not_finished()
@@ -170,6 +176,7 @@ class Model(LogicType.Model[ValueFDE]):
             if not isinstance(node, SentenceNode):
                 continue
             s = node['sentence']
+            self.sentences.add(s)
             is_literal = self.is_sentence_literal(s)
             is_opaque = self.is_sentence_opaque(s)
             if not is_literal and not is_opaque:
@@ -229,10 +236,13 @@ class Model(LogicType.Model[ValueFDE]):
     def finish(self):
         # TODO: consider augmenting the logic with Identity and Existence predicate
         #       restrictions. In that case, new tableaux rules need to be written.
-        for s in self.opaques:
-            for a in s.atomics:
-                if a not in self.atomics:
-                    self.atomics[a] = self.Meta.unassigned_value
+        atomics = set()
+        for s in self.sentences:
+            atomics.update(s.atomics)
+        unass = self.Meta.unassigned_value
+        for s in atomics:
+            if s not in self.atomics:
+                self.atomics[s] = unass
         return super().finish()
 
     def get_data(self) -> dict[str, Any]:

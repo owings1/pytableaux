@@ -88,13 +88,15 @@ class Model(BaseModel[Meta.values]):
     constants: set[Constant]
     "The fixed domain of constants, common to all worlds in the model"
 
-    __slots__ = ('frames', 'R', 'constants')
+    sentences: set[Sentence]
+    __slots__ = ('frames', 'R', 'constants', 'sentences')
 
     def __init__(self):
         super().__init__()
         self.frames = defaultdict(Frame)
         self.R = AccessGraph()
         self.constants = set()
+        self.sentences = set()
         # ensure there is a w0
         self.frames[0]
 
@@ -147,6 +149,7 @@ class Model(BaseModel[Meta.values]):
         if opaques.get(s, value) is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         opaques[s] = value
+        self.sentences.add(s)
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants.
         self.constants.update(s.constants)
@@ -158,12 +161,14 @@ class Model(BaseModel[Meta.values]):
         if atomics.get(s, value) is not value:
             raise ModelValueError(f'Inconsistent value for sentence {s}')
         atomics[s] = value
+        self.sentences.add(s)
 
     def set_predicated_value(self, s: Predicated, value, /, *, world=0):
         self._check_not_finished()
         if len(s.variables):
             raise ValueError(f'Free variables not allowed')
         self.frames[world].predicates[s.predicate].set_value(s.params, self.values[value])
+        self.sentences.add(s)
         self.constants.update(s.constants)
 
     def read_branch(self, branch: Branch, /):
@@ -174,6 +179,8 @@ class Model(BaseModel[Meta.values]):
     def _read_node(self, node: Node, /):
         if isinstance(node, SentenceNode):
             s = node['sentence']
+            self.sentences.add(s)
+            self.constants.update(s.constants)
             w = node.get('world')
             if w is None:
                 w = 0
@@ -191,6 +198,9 @@ class Model(BaseModel[Meta.values]):
         atomics = set()
         opaques = set()
         preds = set()
+        for s in self.sentences:
+            atomics.update(s.atomics)
+            preds.update(s.predicates)
         # ensure frames for each world
         for w in self.R:
             self.frames[w]
@@ -202,12 +212,10 @@ class Model(BaseModel[Meta.values]):
                 self._agument_extension_with_identicals(pred, w)
             self._ensure_self_identity(w)
             self._ensure_self_existence(w)
-        for w in self.frames:
-            for pred in preds:
-                self.frames[w].predicates[pred]
-        # make sure each atomic and opaque is assigned a value in each frame
         unass = self.Meta.unassigned_value
         for w, frame in self.frames.items():
+            for pred in preds:
+                frame.predicates[pred]
             for s in atomics:
                 if s not in frame.atomics:
                     frame.atomics[s] = unass
