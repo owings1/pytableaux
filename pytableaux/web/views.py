@@ -182,16 +182,16 @@ class ApiView(JsonView):
 
     def parse_preds(self, key: str = 'predicates') -> Predicates|None:
         specs = self.payload[key]
-        if not specs:
-            return
-        errors = self.errors
         preds = Predicates()
+        if not specs:
+            return preds
+        errors = self.errors
         for i, spec in enumerate(specs):
             try:
                 preds.add(TriCoords.make(spec))
             except Exception as err:
                 errors[f'{key}:{i}'] = err
-        if preds and not errors:
+        if not errors:
             return preds
 
 class ApiParseView(ApiView):
@@ -393,6 +393,8 @@ class ApiProveView(ApiView):
             errors['argument:notation'] = f"Invalid parser notation: {err}"
             return
         preds = self.parse_preds('argument:predicates')
+        if errors:
+            return
         parser = notn.Parser(preds)
         premises = deque()
         for i, premise in enumerate(payload['argument:premises']):

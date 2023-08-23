@@ -101,6 +101,7 @@ class WebApp(EventEmitter):
         writers = writers))
     "Default template context."
 
+    cp_config: Mapping[str, Any]
     example_args: Mapping[str, Mapping[str, Mapping[str, Any]]]
     example_args_rev: Mapping[Argument, str]
     logics_map: Mapping[str, LogicType]
@@ -113,15 +114,6 @@ class WebApp(EventEmitter):
     health = views.HealthView()
     feedback = views.FeedbackView()
 
-    cp_config = MapProxy({
-        '/': {
-            'tools.gzip.on': True,
-            'tools.gzip.mime_types': {
-                'text/html',
-                'text/plain',
-                'text/css',
-                'application/javascript',
-                'application/xml'}}})
 
     @expose
     def static(self, *args, **kw):
@@ -244,15 +236,37 @@ class WebApp(EventEmitter):
                 StaticResource('js/appdata.js', f';window.AppData={app_json};'))})
     
     def _build_jsapp_data(self):
+        stdtbl = ParseTable.fetch(Notation.standard)
+        stdlw = Notation.standard.DefaultWriter('unicode')
         return MapProxy(dict(
             example_args = self.example_args,
             example_preds = tuple(p.spec for p in examples.preds),
             nups = MapProxy({
                 notn.name: ParseTable.fetch(notn).chars[LexType.Predicate]
-                for notn in Notation})))
+                for notn in Notation}),
+            display_trans = MapProxy({
+                'standard': MapProxy({
+                    stdtbl.char(LexType.Operator, oper): stdlw(oper)
+                        for oper in Operator} | {
+                    stdtbl.char(LexType.Quantifier, quant): stdlw(quant)
+                        for quant in Quantifier})}),
+            parse_trans = MapProxy({
+                'standard': MapProxy({
+                    stdlw(oper): stdtbl.char(LexType.Operator, oper)
+                        for oper in Operator} | {
+                    stdlw(quant): stdtbl.char(LexType.Quantifier, quant)
+                        for quant in Quantifier})})))
 
     def _build_cp_config(self):
-        cp_config = dict(self.cp_config)
+        cp_config = {
+            '/': {
+                'tools.gzip.on': True,
+                'tools.gzip.mime_types': {
+                    'text/html',
+                    'text/plain',
+                    'text/css',
+                    'application/javascript',
+                    'application/xml'}}}
         cp_config['/']['request.dispatch'] = self.dispatcher
         cp_config.update({
             '/static': cp_staticdir_conf(self.config['static_dir'], index=None),

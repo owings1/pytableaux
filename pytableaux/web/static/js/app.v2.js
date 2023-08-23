@@ -148,10 +148,7 @@
     const TTIP_OPTS = {show: {delay: 1000}}
 
     $(document).ready(function() {
-
-        const AppData = window.AppData
-        delete window.AppData
-
+        const {AppData} = window
         const PageData = JSON.parse($(Sel.pageJson).html())
         const IS_DEBUG = Boolean(PageData.is_debug)
         const IS_PROOF = Boolean(PageData.is_proof)
@@ -160,12 +157,11 @@
             premise    : $(Sel.templatePrem).html(),
             predicate  : $(Sel.templatePred).html(),
         }
-
         const $AppBody = $(Sel.appBody)
         const $AppForm = $(Sel.appForm)
-
         const ParseCache = Object.create(null)
 
+        delete window.AppData
         if (IS_DEBUG) {
             window.AppDebug = {
                 AppData,
@@ -174,31 +170,29 @@
             }
         }
 
+        let CurrentInputNotation = $(Sel.fieldInputNotn, $AppForm).val()
+
         /**
          * Main initialization routine.
          * @return {void}
          */
         function init() {
-
             // Load event listeners.
             initHandlers()
-
             // Init UI plugins and config.
             initPlugins()
-
             // Debugs data contents init.
             if (IS_DEBUG) {
                 initDebug()
             }
-
-            setTimeout(function() {
+            setTimeout(() => {
                 refreshNotation()
                 refreshLogic()
                 if (IS_PROOF) {
                     const $tabins = $('<div/>').addClass(Cls.uitabInsert).html(
                         $(Sel.resultAdmon, $AppBody).get(0).outerHTML
                     )
-                    $tabins.insertBefore($(Sel.uitabStatsLink).parent())
+                    $tabins.insertBefore($(Sel.uitabStatsLink, $AppBody).parent())
                     refreshStatuses()
                 }
             })
@@ -207,6 +201,7 @@
         function initHandlers() {
             // Input form events.
             $AppForm
+                .on('submit', submitForm)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
                     if ($target.is(Sel.fieldArgExample)) {
@@ -238,11 +233,7 @@
                         addPremise()
                     } else if ($target.hasClass(Cls.predAdd)) {
                         // Add predicate.
-                        const spec = getNextPredCoords()
-                        const arity = 1
-                        addPredicate(spec[0], spec[1], arity)
-                            .find(':input')
-                            .focus() 
+                        addPredicate(...getNextPredCoords(), 1).find(':input').focus() 
                     } else if ($target.hasClass(Cls.premiseDel)) {
                         // Delete premise.
                         const $prem = $target.closest(Sel.inputPremise)
@@ -266,8 +257,20 @@
                         refreshStatuses()
                     }
                 })
-                .on('submit', function(e) {
-                    submitForm()
+                .on('keyup', Sel.fieldsSentence, function(e) {
+                    const {target} = e
+                    const start = target.selectionStart
+                    const end = target.selectionEnd
+                    if (start !== end) {
+                        return
+                    }
+                    const {value} = target
+                    const newValue = sentenceDisplayValue(value)
+                    if (value === newValue) {
+                        return
+                    }
+                    target.value = newValue
+                    target.setSelectionRange(start, end)
                 })
         }
 
@@ -286,7 +289,7 @@
                     ? false
                     : TabIndexes[PageData.selected_tab] || 0
             }
-            $(Sel.appUiTabs).tabs(tabOpts)
+            $(Sel.appUiTabs, $AppBody).tabs(tabOpts)
 
             // UI Button
             $('input:submit', $AppForm).button()
@@ -299,14 +302,18 @@
             // UI Tooltip - ui controls help
             $('.' + Cls.uiControls + ' a[title]', $AppBody).each(function() {
                 const $me = $(this)
-                const classNames = [Cls.tooltip, Cls.controls]
                 const shortkey = $me.attr(Atr.dataShortKey)
-                let html = '<span class="' + classNames.join(' ') + '">' + $me.attr('title')
+                const $wrap = $('<span/>')
+                    .addClass([Cls.tooltip, Cls.controls])
+                    .append($('<span/>').text($me.attr('title')))
                 if (shortkey) {
-                    html += '<hr>Shorcut key: <code class="' + Cls.shortkey + '">' + shortkey + '</code>'
+                    $wrap
+                        .append($('<hr/>'))
+                        .append($('<span/>').text('Shortcut key: '))
+                        .append($('<code/>').addClass(Cls.shortkey).text(shortkey))
                 }
-                html += '</span>'
-                $me.tooltip({content: html, show: {delay: 2000}})
+                const content = $wrap.get(0).outerHTML
+                $me.tooltip({content, show: {delay: 2000}})
             })
 
             // Init Tableau Plugin
@@ -367,28 +374,26 @@
          * @return {object} The jquery element of the created tr.
          */
         function addPredicate(index, subscript, arity) {
-            const notation = $(Sel.fieldInputNotn).val()
-            let html = ''
-            $.each(AppData.nups, function(notn, symbols) {
+            const notation = CurrentInputNotation
+            arity = arity || ''
+            let symbol_html = ''
+            $.each(AppData.nups, (notn, symbols) => {
                 const classes = [
                     Cls.predSymbol,
                     Cls.lexicon,
                     [Cls.notation, esc(notn)].join('-')
                 ]
-                if (notn !== notation)
+                if (notn !== notation) {
                     classes.push(Cls.hidden)
-                html += '<span class="' + classes.join(' ') + '">'
-                html += $('<div/>').text(symbols[index]).html()
-                if (subscript > 0)
-                    html += '<sub>' + esc(subscript) + '</sub>'
-                html += '</span>'
+                }
+                symbol_html += '<span class="' + classes.join(' ') + '">'
+                symbol_html += $('<div/>').text(symbols[index]).html()
+                if (subscript > 0) {
+                    symbol_html += '<sub>' + esc(subscript) + '</sub>'
+                }
+                symbol_html += '</span>'
             })
-            const vars = { 
-                index       : index,
-                subscript   : subscript,
-                arity       : arity || '',
-                symbol_html : html,
-            }
+            const vars = {index, subscript, arity, symbol_html}
             return $(render(Templates.predicate, vars)).appendTo(
                 $(Sel.predicates, $AppForm)
             )
@@ -399,11 +404,10 @@
          * @return {array}
          */
         function getNextPredCoords() {
-            const $symbols   = $(Sel.fieldsPredSymbol, $AppForm)
-            const numSymbols = $symbols.length
-            let index      = 0
-            let subscript  = 0
-            if (numSymbols > 0) {
+            const $symbols = $(Sel.fieldsPredSymbol, $AppForm)
+            let index = 0
+            let subscript = 0
+            if ($symbols.length > 0) {
                 const last = $symbols.last().val().split('.')
                 index = +last[0] + 1
                 subscript = +last[1]
@@ -428,10 +432,8 @@
          * @return {void}
          */
         function clearArgument() {
-            $(Sel.inputPremise, $AppForm).each(function() {
-                _removePrem($(this))
-            })
-            $(Sel.fieldConclusion).val('')
+            $(Sel.inputPremise, $AppForm).each(function() { _removePrem($(this)) })
+            $(Sel.fieldConclusion, $AppForm).val('')
             for (const key in ParseCache) {
                 delete ParseCache[key]
             }
@@ -442,7 +444,7 @@
          * @return {void}
          */
         function refreshLogic() {
-            const logicName = $(Sel.fieldLogic).val()
+            const logicName = $(Sel.fieldLogic, $AppForm).val()
             $('.' + Cls.logicDetails, $AppForm)
                 .hide()
                 .filter('.' + logicName)
@@ -456,7 +458,9 @@
          */
         function refreshNotation() {
 
-            const notation = $(Sel.fieldInputNotn).val()
+            CurrentInputNotation = $(Sel.fieldInputNotn, $AppForm).val()
+    
+            const notation = CurrentInputNotation
             const notnClass = [Cls.notation, notation].join('-')
 
             // Show/hide lexicons
@@ -470,19 +474,19 @@
             })
 
             // Use built-in input strings for example arguments.
-            if ($(Sel.fieldArgExample).val()) {
+            if ($(Sel.fieldArgExample, $AppForm).val()) {
                 refreshArgExample()
                 return
             }
 
             // Otherwise get translations from cached succesful api-parse responses.
             $(Sel.fieldsSentence, $AppForm).each(function() {
-                const value = $(this).val()
-                if (value && ParseCache[value]) {
-                    if (ParseCache[value][notation]) {
-                        $(this).val(ParseCache[value][notation].default)
-                    }
+                const value = sentenceInputValue($(this).val())
+                const cache = ParseCache[value]
+                if (!cache || !cache[notation]) {
+                    return
                 }
+                $(this).val(sentenceDisplayValue(cache[notation].default))
             })
         }
 
@@ -492,30 +496,27 @@
          * @return {void}
          */
         function refreshArgExample() {
-
-            const argName = $(Sel.fieldArgExample).val()
+            const argName = $(Sel.fieldArgExample, $AppForm).val()
             if (!argName) {
                 return
             }
-
             clearPredicates()
             clearArgument()
-
-            const notation = $(Sel.fieldInputNotn).val()
-            const arg = AppData.example_args[argName][notation]
-
-            $.each(arg.premises, function(i, value) {
-                addPremise(value)
-            })
-
-            $(Sel.fieldConclusion).val(arg.conclusion)
-
-            const preds = AppData.example_args[argName]['@Predicates']
-            $.each(preds, function(i, pred) {
+            const notation = CurrentInputNotation
+            const argBase = AppData.example_args[argName]
+            if (!argBase) {
+                debug('not found', {argBase})
+                return
+            }
+            const arg = argBase[notation]
+            // Set translated display values.
+            $.each(arg.premises, (i, value) => addPremise(  (value)))
+            $(Sel.fieldConclusion, $AppForm).val(sentenceDisplayValue(arg.conclusion))
+            $.each(argBase['@Predicates'], (i, pred) => {
                 if (!Array.isArray(pred)) {
                     pred = [pred.index, pred.subscript, pred.arity]
                 }
-                addPredicate(pred[0], pred[1], pred[2])
+                addPredicate(...pred)
             })
         }
 
@@ -526,81 +527,66 @@
          * @return {void}
          */
         function refreshStatuses(isForce) {
-
-            const notation = $(Sel.fieldInputNotn).val()
-            let preds // lazy fetch
-
+            let predicates // lazy fetch
+            const notation = CurrentInputNotation
             $(Sel.fieldsSentence, $AppForm).each(function() {
-
                 const $me = $(this)
-
                 const $status = $me
                     .closest(Sel.inputSentence)
                     .find('.' + Cls.status)
-                
-                const text = $(this).val()
-
-                if (!text) {
+                const input = sentenceInputValue($me.val())
+                if (!input) {
                     // Clear status.
                     $status
                         .removeClass([Cls.good, Cls.bad])
-                        .attr('title', '')
-                        .attr(Atr.dataHash, '')
+                        .attr({title: '', [Atr.dataHash]: ''})
                     return
                 }
-
+                // Set translated display value.
+                $me.val(sentenceDisplayValue(input))
                 // Check for change since last request against stored value.
-                const hash = [text, notation].join('.')
+                const hash = [input, notation].join('.')
                 const stored = $status.attr(Atr.dataHash)
                 if (!isForce && stored === hash) {
                     return
                 }
                 $status.attr(Atr.dataHash, hash)
-
-                if (!preds) {
-                    preds = getPredsData()
+                if (!predicates) {
+                    predicates = getPredicatesData()
                 }
+                const payload = {input, notation, predicates}
                 // Send api-parse request.
                 $.ajax({
                     url         : API_PARSE_URI,
                     method      : 'POST',
                     contentType : 'application/json',
                     dataType    : 'json',
-                    data        : JSON.stringify({
-                        input      : text,
-                        notation   : notation,
-                        predicates : preds,
-                    }),
-                    success: function(res) {
+                    data        : JSON.stringify(payload),
+                    success: res => {
                         $status
                             .removeClass(Cls.bad)
                             .addClass(Cls.good)
-                            .attr('title', res.result.type)
+                            .attr({title: res.result.type})
                             .tooltip()
-                        ParseCache[text] = res.result.rendered
+                        ParseCache[input] = res.result.rendered
                     },
-                    error: function(xhr, textStatus, errorThrown) {
-                        $status.removeClass(Cls.good).addClass(Cls.bad)
-                        let title
-                        if (xhr.status === 400) {
-                            const res = xhr.responseJSON
-                            if (res.errors) {
-                                if (res.errors.Sentence) {
-                                    title = res.errors.Sentence
-                                } else {
-                                    const errKey = Object.keys(res.errors)[0]
-                                    title = [errKey, res.errors[errKey]].join(': ')
-                                }
-                            } else {
-                                title = [res.error, res.message].join(': ')
-                            }
-                        } else {
-                            title = [textStatus, errorThrown].join(': ')
-                        }
-                        $status.attr('title', title).tooltip()
+                    error: (...args) => {
+                        $status
+                            .removeClass(Cls.good)
+                            .addClass(Cls.bad)
+                            .attr({title: _makeAjaxParseErrorMessage(...args)})
+                            .tooltip()
                     }
                 })
             })
+        }
+
+        function sentenceDisplayValue(str) {
+            return translate(str, AppData.display_trans[CurrentInputNotation])
+        }
+
+        function sentenceInputValue(str) {
+            return translate(str, AppData.parse_trans[CurrentInputNotation])
         }
 
         /**
@@ -609,16 +595,16 @@
          *
          * @return {object}
          */
-         function getApiData() {
-            const outputFormat = $(Sel.fieldOutputFmt).val()
+        function getApiData() {
+            const outputFormat = $(Sel.fieldOutputFmt, $AppForm).val()
             const isHtml = outputFormat === 'html'
             const data = {
-                logic    : $(Sel.fieldLogic).val(),
-                argument : getArgData(),
+                logic    : $(Sel.fieldLogic, $AppForm).val(),
+                argument : getArgumentData(),
                 output: {
                     format   : outputFormat,
-                    notation : $(Sel.fieldOutputNotn).val(),
-                    charset  : $(Sel.fieldOutputCharset).val(),
+                    notation : $(Sel.fieldOutputNotn, $AppForm).val(),
+                    charset  : $(Sel.fieldOutputCharset, $AppForm).val(),
                     options  : {
                         classes : [],
                     }
@@ -626,9 +612,8 @@
                 // debug/advanced options.
                 rank_optimizations  : true,
                 group_optimizations : true,
-                writer_registry     : $(Sel.fieldWriterRegistry).val(),
+                writer_registry     : $(Sel.fieldWriterRegistry, $AppForm).val(),
             }
-
             for (const key in CheckSels) {
                 if (!isHtml && CheckSelsHtmlOnly[key]) {
                     continue
@@ -638,7 +623,6 @@
                     data[key] = $check.is(':checked')
                 }
             }
-
             // TabWriter classes option.
             if (isHtml) {
                 const clsarr = data.output.options.classes
@@ -648,7 +632,6 @@
                     }
                 }
             }
-
             // Max steps.
             const maxStepsVal = $(Sel.fieldMaxSteps, $AppForm).val()
             if (maxStepsVal.length) {
@@ -660,9 +643,8 @@
                     data.max_steps = maxStepsIntVal
                 }
             } else {
-                data.max_steps = undefined
+                delete data.max_steps
             }
-
             if (!data.writer_registry) {
                 delete data.writer_registry
             }
@@ -681,31 +663,30 @@
             if (!data.argument.premises.length) {
                 delete data.argument.premises
             }
-
             return data
         }
 
         /**
          * Returns an object with the conclusion and premises
          * inputs, Empty premises are skipped. No other validation
-         * on the sentences. Includes predicates data from `getPredsData()`
+         * on the sentences. Includes predicates data from `getPredicatesData()`
          * and the selected notation.
          * 
          * @return {object}
          */
-        function getArgData() {
+        function getArgumentData() {
             const premises = []
             $(Sel.fieldsPremise, $AppForm).each(function() {
                 const val = $(this).val()
                 if (val) {
-                    premises.push(val)
+                    premises.push(sentenceInputValue(val))
                 }
             })
             return {
-                notation   : $(Sel.fieldInputNotn).val(),
-                conclusion : $(Sel.fieldConclusion).val(),
+                notation   : CurrentInputNotation,
+                conclusion : sentenceInputValue($(Sel.fieldConclusion, $AppForm).val()),
                 premises   : premises,
-                predicates : getPredsData(),
+                predicates : getPredicatesData(),
             }
         }
 
@@ -717,7 +698,7 @@
          * 
          * @return {array}
          */
-        function getPredsData() {
+        function getPredicatesData() {
             const preds = []
             $(Sel.inputPredicate, $AppForm).each(function() {
                 const $row = $(this)
@@ -749,11 +730,11 @@
          *
          * @return {void}
          */
-         function submitForm() {
-            $('input:submit', $AppForm).prop('disabled', true)
+        function submitForm(e) {
+            $('input:submit', $AppForm).prop({disabled: true})
             const data = getApiData()
             const json = JSON.stringify(data)
-            $(Sel.fieldApiJson).val(json)
+            $(Sel.fieldApiJson, $AppForm).val(json)
         }
 
         /**
@@ -764,11 +745,25 @@
          * @return {string} The rendered string.
          */
          function render(str, vars) {
-            if (vars) {
-                $.each(vars, function(name, val) {
-                    str = str.replace(new RegExp('{' + name + '}', 'g'), val)
-                })
+            if (!str || !vars) {
+                return str
             }
+            $.each(vars, (name, val) => str = str.replaceAll(`{${name}}`, val))
+            return str
+        }
+
+        /**
+         * Make simple string replacements.
+         *
+         * @param {string} str The input string.
+         * @param {object} vars The translations object.
+         * @return {string} The translated string.
+         */
+        function translate(str, translations) {
+            if (!str || !translations) {
+                return str
+            }
+            $.each(translations, (srch, repl) => str = str.replaceAll(srch, repl))
             return str
         }
 
@@ -786,6 +781,26 @@
             if (IS_DEBUG) {
                 console.debug(...args)
             }
+        }
+
+        function _makeAjaxParseErrorMessage(xhr, textStatus, errorThrown) {
+            let msg
+            if (xhr.status === 400) {
+                const res = xhr.responseJSON
+                if (res.errors) {
+                    if (res.errors.Sentence) {
+                        msg = res.errors.Sentence
+                    } else {
+                        const errKey = Object.keys(res.errors)[0]
+                        msg = [errKey, res.errors[errKey]].join(': ')
+                    }
+                } else {
+                    msg = [res.error, res.message].join(': ')
+                }
+            } else {
+                msg = [textStatus, errorThrown].join(': ')
+            }
+            return msg
         }
 
         function initDebug() {
