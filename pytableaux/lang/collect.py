@@ -25,19 +25,21 @@ from __future__ import annotations
 import operator as opr
 from collections.abc import Sequence
 from itertools import repeat, starmap
-from typing import Any, Iterable
+from typing import Any, Iterable, TYPE_CHECKING
 
 from .. import tools
 from ..errors import Emsg, check
 from ..tools import abcs, group, lazy, membr, qset, wraps
 from . import LangCommonMeta, Predicate, Sentence
 
+if TYPE_CHECKING:
+    from . import PolishLexWriter, PolishParser
+
 __all__ = (
     'Argument',
     'Predicates')
 
 NOARG = object()
-EMPTY_IT = iter(())
 
 class ArgumentMeta(LangCommonMeta):
     'Argument Metaclass.'
@@ -46,6 +48,37 @@ class ArgumentMeta(LangCommonMeta):
         if len(args) == 1 and not len(kw) and isinstance(args[0], cls):
             return args[0]
         return super().__call__(*args, **kw)
+
+    _keystr_lw: PolishLexWriter
+    _keystr_pclass: type[PolishParser]
+
+    def make_keystr(self, inst: Argument) -> str:
+        try:
+            lw = self._keystr_lw
+        except AttributeError:
+            from .writing import PolishLexWriter
+            type.__setattr__(self, '_keystr_lw', PolishLexWriter('ascii'))
+            lw = self._keystr_lw
+        preds = inst.predicates() - Predicate.System
+        preds.sort()
+        specstrs = ('.'.join(map(str, p.spec)) for p in preds)
+        return '|'.join(filter(None, (':'.join(map(lw, inst)), ','.join(specstrs))))
+
+    def from_keystr(self, keystr: str) -> Argument:
+        try:
+            pclass = self._keystr_pclass
+        except AttributeError:
+            from .parsing import PolishParser
+            type.__setattr__(self, '_keystr_pclass', PolishParser)
+            pclass = self._keystr_pclass
+        preds = Predicates()
+        parts = keystr.split('|')
+        conc, *prems = parts.pop(0).split(':')
+        if parts:
+            specsstr, = parts
+            for specstr in specsstr.split(','):
+                preds.add(tuple(map(int, specstr.split('.'))))
+        return pclass(preds).argument(conc, prems)
 
 class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=ArgumentMeta):
     """Argument class.
@@ -150,6 +183,9 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
             conclusion = self.conclusion,
             premises = self.premises)
 
+    def keystr(self):
+        return __class__.make_keystr(self)
+
     def __repr__(self):
         if self.title:
             desc = repr(self.title)
@@ -165,7 +201,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
     __delattr__ = Emsg.ReadOnly.razr
 
 
-class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dict(cast = Predicate)}):
+class Predicates(qset[Predicate], metaclass=LangCommonMeta, hooks={qset: dict(cast=Predicate)}):
     """Predicate store. A sequenced set with a multi-keyed lookup index.
 
     Predicates with the same symbol coordinates (index, subscript) may
@@ -176,8 +212,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dic
     _lookup: dict[Any, Predicate]
     __slots__ = group('_lookup')
 
-    def __init__(self, values = None, /, *,
-        sort: bool = False, key = None, reverse: bool = False):
+    def __init__(self, values=None, /, *, sort=False, key=None, reverse=False):
         """Create a new store from an iterable of predicate objects
         or specs
         
@@ -190,7 +225,7 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dic
         self._lookup = {}
         super().__init__(values)
         if sort:
-            self.sort(key = key, reverse = reverse)
+            self.sort(key=key, reverse=reverse)
 
     def get(self, ref, default = NOARG, /) -> Predicate:
         """Get a predicate by any reference. Also searches system predicates.

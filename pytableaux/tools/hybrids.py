@@ -24,11 +24,14 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import MutableSequence, MutableSet, Sequence, Set
 from itertools import chain, filterfalse
-from typing import (TYPE_CHECKING, Callable, Iterable, Iterator, Self,
+from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Self, TYPE_CHECKING,
                     SupportsIndex, TypeVar)
 
 from ..errors import DuplicateValueError, Emsg, check
 from . import EMPTY_SEQ, EMPTY_SET, abcs, slicerange
+
+if TYPE_CHECKING:
+    from typing import overload
 
 __all__ = (
     'EMPTY_QSET',
@@ -193,7 +196,7 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
 
     def __init__(self, values = None, /,):
         if values is not None:
-            self |= values
+            self.update(values)
 
     def copy(self):
         inst = object.__new__(type(self))
@@ -268,7 +271,7 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
         raise Emsg.InstCheck(key, (slice, SupportsIndex))
 
     @abcs.hookable('check', 'done')
-    def __setitem_index__(self, index, arriving, /, *, check = None, done = None):
+    def __setitem_index__(self, index: SupportsIndex, arriving, /, *, check = None, done = None):
         'Index setitem Implementation'
         leaving = self._seq_[index]
         if arriving in self and arriving != leaving:
@@ -287,7 +290,7 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
             done(self, (arriving,), (leaving,))
 
     @abcs.hookable('check', 'done')
-    def __setitem_slice__(self, slice_, arriving, /, *, check = None, done = None):
+    def __setitem_slice__(self, slice_: slice, arriving, /, *, check = None, done = None):
         'Slice setitem Implementation'
         # Check length and compute range. This will fail for some bad input,
         # and it is fast to compute.
@@ -310,3 +313,7 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
             self._set_ |= arriving
         if done is not None:
             done(self, arriving, leaving)
+
+    if TYPE_CHECKING:
+        @overload
+        def __sub__(self, other: Any) -> Self: ...

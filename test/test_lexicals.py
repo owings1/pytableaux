@@ -25,7 +25,7 @@ from copy import copy
 from itertools import product
 from typing import cast
 
-from pytableaux import errors
+from pytableaux import errors, examples
 from pytableaux.errors import *
 from pytableaux.lang import *
 from pytableaux.lang.lex import *
@@ -556,3 +556,12 @@ class TestIdentCreate(BaseCase):
 
     def test_operator_lexicalabc_from_ident(self):
         self.assertIs(LexicalAbc(('Operator', ('Conjunction',))), Operator.Conjunction)
+
+
+class TestArgumentsKeyStr(BaseCase):
+
+    def test_examples_restore(self):
+        for a1 in examples.arguments():
+            keystr = a1.keystr()
+            a2 = Argument.from_keystr(keystr)
+            self.assertEqual(a1, a2)
