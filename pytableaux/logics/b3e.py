@@ -121,7 +121,33 @@ class Rules(LogicType.Rules):
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
     class BiconditionalUndesignated(BiconditionalDesignated): pass
-    class BiconditionalNegatedUndesignated(BiconditionalUndesignated): pass
+    # class BiconditionalNegatedUndesignated(BiconditionalUndesignated): pass
+    class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
+
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(sdnode(lhs, d), sdnode(rhs, d)),
+                group(sdnode(lhs, not d), sdnode(rhs, not d)))
+
+    class MaterialBiconditionalUndesignated(System.OperatorNodeRule):
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(sdnode(lhs, d), sdnode(~lhs, d)),
+                group(sdnode(rhs, d), sdnode(~rhs, d)),
+                group(sdnode(lhs, not d), sdnode(~rhs, not d)),
+                group(sdnode(~lhs, not d), sdnode(rhs, not d)))
+
+    class MaterialBiconditionalNegatedUndesignated(System.OperatorNodeRule):
+
+        def _get_sd_targets(self, s, d, /):
+            lhs, rhs = s
+            yield adds(
+                group(sdnode(lhs, d), sdnode(~lhs, d)),
+                group(sdnode(rhs, d), sdnode(~rhs, d)),
+                group(sdnode(~lhs, not d), sdnode(~rhs, not d)),
+                group(sdnode(lhs, not d), sdnode(rhs, not d)))
 
     groups = (
         group(
@@ -147,16 +173,18 @@ class Rules(LogicType.Rules):
             ConditionalDesignated,
             ConditionalNegatedUndesignated,
             K3W.Rules.MaterialBiconditionalDesignated,
-            K3W.Rules.MaterialBiconditionalUndesignated,
+            # K3W.Rules.MaterialBiconditionalUndesignated,
             K3W.Rules.MaterialBiconditionalNegatedDesignated,
-            K3W.Rules.MaterialBiconditionalNegatedUndesignated,
+            # K3W.Rules.MaterialBiconditionalNegatedUndesignated,
             BiconditionalDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
-            BiconditionalNegatedUndesignated),
+            ),
         group(
             # two-branching rules
-            FDE.Rules.ConjunctionUndesignated),
+            FDE.Rules.ConjunctionUndesignated,
+            BiconditionalNegatedUndesignated,
+            ),
         group(
             # three-branching rules
             K3W.Rules.DisjunctionDesignated,
@@ -166,6 +194,9 @@ class Rules(LogicType.Rules):
             # (formerly) four-branching rules
             K3W.Rules.DisjunctionNegatedUndesignated),
         group(
+            MaterialBiconditionalUndesignated,
+            MaterialBiconditionalNegatedUndesignated),
+        group(
             FDE.Rules.ExistentialDesignated,
             FDE.Rules.ExistentialUndesignated),
         group(
@@ -174,6 +205,6 @@ class Rules(LogicType.Rules):
 
     @classmethod
     def _check_groups(cls):
-        for branching, group in zip(range(3), cls.groups):
+        for branching, group in zip(range(4), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

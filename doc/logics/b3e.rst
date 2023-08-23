@@ -153,10 +153,9 @@ Closure
 -------
 
 .. tableau-rules::
+  :docflags:
+  :title: -
   :group: closure
-  :titles:
-  :legend:
-  :doc:
 
 .. _b3e-rules:
 

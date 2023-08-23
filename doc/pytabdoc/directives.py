@@ -213,12 +213,13 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         rule = optspecs.string,
         legend = optspecs.flag,
         doc = optspecs.flag,
+        origin = optspecs.choice(['foreign'], default=None),
         # build-trunk mode
         **{'build-trunk': optspecs.flag,},
         prolog = optspecs.flag)
 
     modes = {
-        'rule'        : {'rule', 'legend', 'doc'},
+        'rule'        : {'rule', 'legend', 'doc', 'origin'},
         'build-trunk' : {'build-trunk', 'prolog'},
         'argument'    : {'argument', 'conclusion', 'premises', 'pnotn', 'preds'},
         ... : {'format', 'classes', 'wnotn', 'logic'}}
@@ -315,11 +316,12 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
 
             tabwrapper += tabnode
             return [tabwrapper]
-        
-        if 'prolog' in opts:
-            prolog = nodes.container(classes=['prolog'])
-            prolog += self.getnodes_trunk_prolog()
-            tabwrapper += prolog
+
+        if self.mode == 'build-trunk':
+            if 'prolog' in opts:
+                prolog = nodes.container(classes=['prolog'])
+                prolog += self.getnodes_trunk_prolog()
+                tabwrapper += prolog
 
         tabwrapper += tabnode
         return [tabwrapper]
@@ -369,13 +371,16 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         refid = refname
         inserts = list(inserts)
         nametext = inflect.snakespace(rulecls.name)
-        if rulecls.Meta.name == self.logic.Meta.name:
-            classes.append('rule-native')
+        is_local = rulecls.Meta.name == self.logic.Meta.name
+        if 'origin' in opts:
+            if not is_local or opts['origin'] != 'foreign':
+                refp = refplus.logic_link_node(rulecls.Meta.name)
+                refp['classes'].append('rule-origin-logic')
+                inserts.append(refp)
+        if is_local:
+            classes.append('rule-origin-local')
         else:
-            classes.append('rule-non-native')
-            refp = refplus.logic_link_node(rulecls.Meta.name)
-            refp['classes'].append('rule-native-logic')
-            inserts.append(refp)
+            classes.append('rule-origin-foreign')
         return addnodes.desc('',
             addnodes.desc_signature('', '',
                 *inserts,
@@ -397,7 +402,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             domain=domain,
             objtype=objtype,
             classes=classes,
-            **{'data-rule-native-logic': rulecls.Meta.name})
+            **{'data-rule-origin-logic': rulecls.Meta.name})
 
     def getnodes_rule_legend(self, rulecls: type[Rule]):
         lw = self.lwuni
@@ -420,7 +425,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
 
     def getnodes_trunk_prolog(self):
         # Plain docutils nodes, not raw html.
-        yield nodes.inline(text='For the argument ')
+        yield nodes.inline(text='To build the trunk for the argument ')
         notn = self.options['wnotn']
         argnode = nodes.inline(classes=['argument'], notn=notn)
         prem2 = nodez.sentence(sentence = Atomic(0,0), notn=notn)
@@ -536,8 +541,9 @@ class RuleGroupDirective(TableauDirective):
         if 'docflags' in opts:
             for name in self.default_docflags:
                 opts.setdefault(name, None)
+            opts.setdefault('origin', 'foreign')
         label = f"{opts['group'].capitalize()} Rules"
-        if 'title' in opts:
+        if 'title' in opts and opts['title'] != '-':
             self.title = opts['title'] or label
         else:
             self.title = None

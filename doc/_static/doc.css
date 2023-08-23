@@ -25,8 +25,6 @@ html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(
     font-family: inherit;
 }
 
-
-
 .sig .rule-legend {
     padding: 4px 10px;
     color: black;
@@ -37,16 +35,17 @@ html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(
 
 }
 
-
 .tableau-wrapper .rule-legend {
     position: absolute;
     border: 1px solid #ccc;
     padding: 0 8px;
 }
-
+.tableau-wrapper.build-trunk.example {
+    background-color: inherit;
+    padding: 0;
+}
 .sig .rule-legend {
     color: black;
-    
 }
 
 .ruledoc.rule-sig {
@@ -71,6 +70,9 @@ p.definition .lexitem,
 p.definition .metawrite,
 table.truth-table th.operator-symbol {
     font-size: 110%;
+}
+.logic_name.subsup > sub.down {
+    font-size: 60%;
 }
 .logic_name.subsup > .main {
     font-size: 115%;
@@ -160,7 +162,7 @@ table.lex-eg-table tr > td:last-child {
 }
 
 /* float */
-.ruledoc .rule-native-logic,
+.ruledoc .rule-origin-logic,
 .sig .rule-legend,
 .truth-table-wrapper {
     float: left;
@@ -173,7 +175,7 @@ table.lex-eg-table tr > td:last-child {
 
 /* position */
 .logic_name.subsup > sub.down {
-    bottom: -0.45em;
+    bottom: -0.3em;
 }
 .conseqq > sup {
     top: -0.6em;
@@ -185,7 +187,7 @@ table.lex-eg-table tr > td:last-child {
 div[class^=highlight] .pre {
     margin: 0;
 }
-.ruledoc .rule-native-logic {
+.ruledoc .rule-origin-logic {
     margin-left: 10px;
 }
 dl.ruledoc dd {
@@ -235,8 +237,9 @@ dl.ruledoc {
     padding-bottom: 0px;
 }
 .tableau-wrapper .prolog {
-    padding-left: 10px;
-    padding-top: 10px;
+    background-color: #e7f2fa;
+    border: 1px solid #cccccc;
+    padding: 10px;
 }
 table.truth-table td,
 .tableau-wrapper,
