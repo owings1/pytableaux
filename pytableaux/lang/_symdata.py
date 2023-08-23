@@ -404,6 +404,74 @@ def string_tables():
     ))
     return data
 
+def tdata():
+
+    from pytableaux.lang import Atomic, Constant, Variable, Operator, Predicate, Quantifier, Marking, Notation
+
+    strings={
+        Operator.Assertion: 'T',
+        Operator.Negation: 'N',
+        Operator.Conjunction: 'K',
+        Operator.Disjunction: 'A',
+        Operator.MaterialConditional: 'C',
+        Operator.MaterialBiconditional: 'E',
+        Operator.Conditional: 'U',
+        Operator.Biconditional: 'B',
+        Operator.Possibility: 'M',
+        Operator.Necessity: 'L',
+        Quantifier.Universal: 'V',
+        Quantifier.Existential: 'S',
+        Predicate.Identity: 'I',
+        Predicate.Existence: 'J',
+        (Operator.Negation, Predicate.Identity): NotImplemented,
+        (Atomic, 0) : 'a',
+        (Atomic, 1) : 'b',
+        (Atomic, 2) : 'c',
+        (Atomic, 3) : 'd',
+        (Atomic, 4) : 'e',
+        (Variable, 0) : 'x',
+        (Variable, 1) : 'y',
+        (Variable, 2) : 'z',
+        (Variable, 3) : 'v',
+        (Constant, 0) : 'm',
+        (Constant, 1) : 'n',
+        (Constant, 2) : 'o',
+        (Constant, 3) : 's',
+        (Predicate, 0): 'F',
+        (Predicate, 0): 'G',
+        (Predicate, 0): 'H',
+        (Predicate, 0): 'O',
+        (Marking.paren_open, 0)  : NotImplemented,
+        (Marking.paren_close, 0) : NotImplemented,
+        (Marking.whitespace, 0)  : ' ',
+        (Marking.subscript_open, 0): '<sub>',
+        (Marking.subscript_close, 0): '</sub>',
+        (Marking.tableau, 'designation', True) : '&oplus;',  # '\2295'
+        (Marking.tableau, 'designation', False): '&ominus;', # '\2296'
+        (Marking.tableau, 'flag', 'closure') : '&otimes;',   # '\2297'
+        (Marking.tableau, 'flag', 'quit'): '&#9872;',        # '⚐', '\U+2690'
+        (Marking.tableau, 'access', 'symmetric'): 'R&#9007;',# '⌯', '\U+232F'
+        (Marking.tableau, 'access', 'transitive'): 'R+',
+        (Marking.tableau, 'access', 'reflexive'): 'R&le;',
+        (Marking.tableau, 'access', 'serial'): 'Rser',
+        (Marking.tableau, 'access'): 'R',
+        (Marking.meta, 'conseq')    : '&vdash;',
+        (Marking.meta, 'nonconseq') : '&nvdash;',
+        (Marking.meta, 'therefore') : '&there4;',
+        (Marking.meta, 'ellipsis')  : '&hellip;'}
+    strings.setdefault(Marking.whitespace, strings[Marking.whitespace, 0])
+    strings.setdefault(Marking.subscript_open, strings[Marking.subscript_open, 0])
+    strings.setdefault(Marking.subscript_close, strings[Marking.subscript_close, 0])
+    strings.setdefault(Marking.paren_open, strings[Marking.paren_open, 0])
+    strings.setdefault(Marking.paren_close, strings[Marking.paren_close, 0])
+    strings.setdefault((Marking.tableau, 'closure', True), strings[Marking.tableau, 'flag', 'closure'])
+    tbl = dict(
+        format='html',
+        notation=Notation.polish,
+        strings=strings)
+    return tbl
+
+
 
 
 

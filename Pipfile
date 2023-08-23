@@ -24,3 +24,6 @@ sphinx-rtd-theme = "*"
 sphinx-toolbox = "*"
 # sphinx-sitemap = "*"
 tabulate = "*"
+
+[img-packages]
+pdf2image = "*"

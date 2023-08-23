@@ -22,11 +22,10 @@ pytableaux.proof.writers
 from __future__ import annotations
 
 from abc import abstractmethod
-from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Callable, MutableMapping, Self, TypeVar
 
 from ...errors import Emsg, check
-from ...lang import LexWriter, Notation
+from ...lang import LexWriter, Notation, StringTable
 from ...tools import EMPTY_MAP, MapCover, abcs
 from ..tableaux import Tableau
 
@@ -72,14 +71,14 @@ class TabWriter(metaclass = TabWriterMeta):
 
     Examples::
 
-        # make an instance of the default writer class, with the default notation.
-        writer = TabWriter()
+    >>> # make an instance of the default writer class, with the default notation.
+    >>> writer = TabWriter()
 
-        # make an HtmlTabWriter, with the default notation and format.
-        writer = TabWriter('html')
+    >>> # make an HtmlTabWriter, with the default notation.
+    >>> writer = TabWriter('html')
 
-        # make an HtmlTabWriter, with standard notation.
-        writer = TabWriter('html', 'standard')
+    >>> # make an HtmlTabWriter, with standard notation.
+    >>> writer = TabWriter('html', 'standard')
     """
 
     engine: str = 'unknown'
@@ -99,22 +98,15 @@ class TabWriter(metaclass = TabWriterMeta):
 
     __slots__ = ('lw', 'opts')
 
-    def __init__(self, notn = None, format = None, *, lw: LexWriter = None, **opts):
+    def __init__(self, notn = None, strings: StringTable|None = None, *, lw: LexWriter = None, **opts):
         if lw is None:
             if notn is None:
                 notn = Notation.default
             else:
                 notn = Notation(notn)
-            if format is None:
-                format = notn.default_format
-            lw = LexWriter(notn, format, **opts)
-        else:
-            if notn is not None:
-                if Notation(notn) is not lw.notation:
-                    raise Emsg.ValueConflict(notn, lw.notation)
-            if format is not None:
-                if format != lw.format:
-                    raise Emsg.ValueConflict(format, lw.format)
+            lw = LexWriter(notn, self.format, strings=strings, **opts)
+        if lw.format != self.format:
+            raise Emsg.ValueConflict(lw.format, self.format)
         self.lw = lw
         self.opts = dict(self.defaults) | opts
 

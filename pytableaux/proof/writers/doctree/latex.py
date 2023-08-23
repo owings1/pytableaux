@@ -38,8 +38,9 @@ class LatexTranslator(Translator, NodeVisitor):
     
     def visit_document(self, node):
         self.head.extend((
-            '\\documentclass[11pt]{minimal}\n',
+            '\\documentclass[10pt]{article}\n',
             '\\usepackage{latexsym, qtree, stmaryrd}\n',
+            '\\pagestyle{empty}',
             '\\begin{document}\n\n'))
 
     def depart_document(self, node):
