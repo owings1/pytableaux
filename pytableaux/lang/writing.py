@@ -118,8 +118,8 @@ class LexWriter(metaclass = LexWriterMeta):
     def canwrite(cls, obj: Any) -> bool:
         "Whether the object can be written."
         try:
-            return obj.TYPE in cls._methodmap
-        except AttributeError:
+            return cls._methodmap[obj.TYPE] is not NotImplemented
+        except (AttributeError, KeyError):
             return False
 
     #******  Instance Init

@@ -20,27 +20,129 @@ pytableaux
 
 """
 from __future__ import annotations
-# ----- package info
 
-from ._package_info import package as package
+import os.path
+import typing
+from dataclasses import dataclass
 
-__docformat__ = package.docformat
+__version__ = 2, 2, 5, 'dev'
+'Version tuple (major, minor, patch, release).'
 
-# del(_package_info)
+__year__ = 2023
+'Last updated year, for copyright end date.'
 
+class SemVer(typing.NamedTuple):
+    'Version tuple info.'
+
+    major: int
+    'Major version number.'
+
+    minor: int
+    'Minor version number.'
+
+    patch: int
+    'Patch version number.'
+
+    release: str
+    'Release tag'
+
+    @property
+    def short(self):
+        "Short version, e.g. ``'1.2'``"
+        return f'{self.major}.{self.minor}'
+
+    @property
+    def display(self):
+        "Display version, e.g. ``'1.2.3'``"
+        return f'{self.short}.{self.patch}'
+
+    @property
+    def full(self):
+        "Full version, e.g. ``'1.2.3-alpha'``"
+        return f'{self.display}-{self.release}'
+
+@dataclass(slots=True)
+class Author:
+    name: str
+    email: str
+
+@dataclass(slots=True)
+class License:
+    id: str
+    title: str
+    url: str
+
+@dataclass(slots=True)
+class Repository:
+    type: str
+    url: str
+
+@dataclass(slots=True)
+class Issues:
+    url: str
+
+@dataclass(slots=True)
+class Package:
+    'Package info.'
+    name: str
+    version: SemVer
+    author: Author
+    license: License
+    repository: Repository
+    issues: Issues
+    root: str
+    'Base package directory.'
+
+    @property
+    def year(self) -> int:
+        'Last updated year'
+        return __year__
+
+    @property
+    def docformat(self) -> str:
+        'The doc format.'
+        return __docformat__
+
+    @property
+    def copyright(self) -> str:
+        'Project copyright string.'
+        return (
+            f'2014-{self.year}, {self.author.name}. '
+            f'Released under the {self.license.title}')
+
+package = Package(
+    name = 'pytableaux',
+    version = SemVer(*__version__),
+    author = Author(
+        name = 'Doug Owings',
+        email = 'doug@dougowings.net'),
+    license = License(
+        id = 'AGPL-3.0-or-later',
+        title = 'GNU Affero General Public License v3.0 or later',
+        url = 'https://www.gnu.org/licenses/agpl-3.0.en.html'),
+    repository = Repository(
+        type = 'git',
+        url = 'https://github.com/owings1/pytableaux'),
+    issues = Issues(
+        url = 'https://github.com/owings1/pytableaux/issues'),
+    root = os.path.dirname(os.path.abspath(__file__)))
+'Package info.'
+
+
+__copyright__ = package.copyright
+__license__ = package.license.id
+__docformat__ = 'google'
 
 from . import errors as errors
 from . import tools as tools
 
+pass
 
-
-from . import examples as examples
 from . import lang as lang
 from . import logics as logics
-from . import models as models
 from . import proof as proof
-
-
+from . import models as models
+from . import examples as examples
 
 __all__ = (
     'errors',

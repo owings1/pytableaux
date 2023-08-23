@@ -27,12 +27,12 @@ from itertools import product, starmap
 from types import MappingProxyType as MapProxy
 from typing import Any, Generic, Iterable, Literal, Mapping, Self, TypeVar
 
-from .errors import Emsg, check
-from .lang import (Argument, Atomic, Constant, Operated, Operator, Predicated,
+from ..errors import Emsg, check
+from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicated,
                    Quantified, Sentence)
-from .logics import LogicType
-from .proof import Branch
-from .tools import EMPTY_MAP, EMPTY_SET, abcs, maxceil, minfloor
+from ..logics import LogicType
+from ..proof import Branch
+from ..tools import EMPTY_MAP, EMPTY_SET, abcs, maxceil, minfloor
 
 __all__ = (
     'BaseModel',
