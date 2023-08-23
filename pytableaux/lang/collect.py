@@ -217,21 +217,43 @@ class Predicates(qset[Predicate], metaclass = LangCommonMeta, hooks = {qset: dic
             return default
 
     @abcs.abcf.temp
+    @qset.hook('check')
+    def before_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
+        'Implement before change (check) hook. Check for conflicting predicates.'
+        # Is there a distinct predicate that matches any lookup keys,
+        # viz. BiCoords or name, that does not equal pred, e.g. arity
+        # mismatch.
+        get = self._lookup.get
+        conflicts: dict[Predicate, Predicate]|None = None
+        for pred in arriving:
+            for prior in filter(None, map(get, pred.refs)):
+                if prior != pred:
+                    if conflicts is None:
+                        conflicts = {}
+                    conflicts[prior] = pred
+        if conflicts:
+            for prior in leaving:
+                conflicts.pop(prior, None)
+                if not conflicts:
+                    break
+            else:
+                for prior, pred in conflicts.items():
+                    raise Emsg.ValueConflictFor(pred, pred.spec, prior.spec)
+
+    @abcs.abcf.temp
     @qset.hook('done')
     def after_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
         'Implement after change (done) hook. Update lookup index.'
-        for pred in leaving or EMPTY_IT:
-            self._lookup -= pred.refs
-            del(self._lookup[pred])
-        for pred in arriving or EMPTY_IT:
-            # Is there a distinct predicate that matches any lookup keys,
-            # viz. BiCoords or name, that does not equal pred, e.g. arity
-            # mismatch.
-            for other in filter(None, map(self._lookup.get, refs := pred.refs)):
-                if other != pred:
-                    raise Emsg.ValueConflictFor(pred, pred.spec, other.spec)
-            self._lookup |= zip(refs, repeat(pred))
-            self._lookup[pred] = pred
+        lookup = self._lookup
+        pop = lookup.pop
+        for pred in leaving:
+            for ref in pred.refs:
+                pop(ref, None)
+            pop(pred, None)
+        update = lookup.update
+        for pred in arriving:
+            update(zip(pred.refs, repeat(pred)))
+            lookup[pred] = pred
 
     #******  Override qset
 

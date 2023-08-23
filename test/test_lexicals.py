@@ -194,6 +194,42 @@ class TestPredicates(BaseCase):
         self.assertIn(p3, v1)
         self.assertNotIn(p3, v2)
 
+    def test_conflict_leaves_collection_as_is(self):
+        p1 = Predicate(0,0,1)
+        p2 = Predicate(0,0,2)
+        v = Predicates()
+        v.add(p1)
+        with self.assertRaises(ValueError):
+            v.add(p2)
+        self.assertIn(p1, v)
+        self.assertNotIn(p2, v)
+        self.assertNotIn(p2, v._set_)
+        self.assertNotIn(p2, v._seq_)
+        self.assertEqual(len(v), 1)
+
+    def test_deletion(self):
+        p1 = Predicate(0,0,1)
+        p2 = Predicate(0,0,2)
+        v = Predicates()
+        v.add(p1)
+        self.assertEqual(set(v), {p1})
+        v.remove(p1)
+        self.assertEqual(set(v), set())
+        v.discard(p1)
+        v.add(p2)
+        self.assertEqual(set(v), {p2})
+
+
+    def test_overwrite_with_conflicting_value(self):
+        p1 = Predicate(0,0,1)
+        p2 = Predicate(0,0,2)
+        v = Predicates()
+        v.append(p1)
+        self.assertEqual(v[0], p1)
+        v[0] = p2
+        self.assertEqual(v[0], p2)
+        self.assertEqual(len(v), 1)
+
 class TestSystem(BaseCase):
 
     def test_predicate_equality(self):
