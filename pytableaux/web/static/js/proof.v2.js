@@ -237,9 +237,6 @@
             ruleStep   : null,
             ruleTarget : null,
         },
-        ScrollTo : {
-            animate: false,
-        },
     }
 
     // cursor state
@@ -1280,8 +1277,7 @@
      * @param {object} $what The jQuery object to scroll to.
      * @return {void}
      */
-    function scrollTo($what, opts) {
-        opts = $.extend({}, FuncDefaults.ScrollTo, opts)
+    function scrollTo($what) {
         const pos = $what.position()
         const scrollLeft = pos.left - ($(window).width() / 2)
         const scrollTop = pos.top - ($(window).height() / 2)

@@ -17,7 +17,7 @@
  * 
  * pytableaux - web ui core
 */
-;(function($) {
+;($ => {
 
     const TabIndexes = {
         argument : 0,
@@ -171,6 +171,7 @@
         }
 
         let CurrentInputNotation = $(Sel.fieldInputNotn, $AppForm).val()
+        let LastActiveTab = null
 
         /**
          * Main initialization routine.
@@ -181,10 +182,6 @@
             initHandlers()
             // Init UI plugins and config.
             initPlugins()
-            // Debugs data contents init.
-            if (IS_DEBUG) {
-                initDebug()
-            }
             setTimeout(() => {
                 refreshNotation()
                 refreshLogic()
@@ -201,69 +198,18 @@
         function initHandlers() {
             // Input form events.
             $AppForm
-                .on('submit', submitForm)
-                .on('change selectmenuchange', function(e) {
-                    const $target = $(e.target)
-                    if ($target.is(Sel.fieldArgExample)) {
-                        // Change to selected exampleArg.
-                        if (!$target.val()) {
-                            return
-                        }
-                        refreshArgExample()
-                        refreshStatuses()
-                    } else if ($target.is(Sel.fieldInputNotn)) {
-                        // Change to selected parsing notation.
-                        refreshNotation()
-                        refreshStatuses()
-                    } else if ($target.is(Sel.fieldsSentence)) {
-                        // Change to a sentence input field.
-                        refreshStatuses()
-                    } else if ($target.hasClass(Cls.arity)) {
-                        // Change to a predicate arity field.
-                        refreshStatuses(true)
-                    } else if ($target.is(Sel.fieldLogic)) {
-                        // Change to the selected logic.
-                        refreshLogic()
-                    }
-                })
-                .on('click', function(e) {
-                    const $target = $(e.target)
-                    if ($target.hasClass(Cls.premiseAdd)) {
-                        // Add premise.
-                        addPremise()
-                    } else if ($target.hasClass(Cls.predAdd)) {
-                        // Add predicate.
-                        addPredicate(...getNextPredCoords(), 1).find(':input').focus() 
-                    } else if ($target.hasClass(Cls.premiseDel)) {
-                        // Delete premise.
-                        removePremise($target.closest(Sel.inputPremise))
-                        refreshStatuses()
-                    } else if ($target.hasClass(Cls.predDel)) {
-                        // Delete predicate.
-                        $target.closest(Sel.inputPredicate).remove()
-                        refreshStatuses()
-                    } else if ($target.is(Sel.clearArg)) {
-                        // Clear the argument.
-                        clearArgument()
-                        $(Sel.fieldArgExample).val('').selectmenu('refresh')
-                        refreshStatuses()
-                    }
-                })
-                .on('keyup', Sel.fieldsSentence, function(e) {
-                    const {target} = e
-                    const start = target.selectionStart
-                    const end = target.selectionEnd
-                    if (start !== end) {
-                        return
-                    }
-                    const {value} = target
-                    const newValue = sentenceDisplayValue(value)
-                    if (value === newValue) {
-                        return
-                    }
-                    target.value = newValue
-                    target.setSelectionRange(start, end)
-                })
+                .on('submit', handleFormSubmit)
+                .on('change selectmenuchange', handleFormChange)
+                .on('click', handleFormClick)
+                .on('keyup', Sel.fieldsSentence, handleFormSentenceKeyup)
+            // Tabs header click
+            $(Sel.appUiTabs, $AppBody)
+                .on('click', 'ul.ui-tabs-nav', handleTabsHeaderClick)
+            if (IS_DEBUG) {
+                // Debug click show/hide.
+                $(Sel.wrapDebugs, $AppBody)
+                    .on('click', [Sel.debugs, Sel.headerDebugs].join(), handleDebugsClick)
+            }
         }
 
         function initPlugins() {
@@ -273,24 +219,19 @@
                     'ui-selectmenu-menu': Cls.app
                 }
             })
-
             // UI Tabs
-            const tabOpts = {
+            $(Sel.appUiTabs, $AppBody).tabs({
                 collapsible: IS_PROOF,
                 active: PageData.selected_tab === false
                     ? false
                     : TabIndexes[PageData.selected_tab] || 0
-            }
-            $(Sel.appUiTabs, $AppBody).tabs(tabOpts)
-
+            })
             // UI Button
             $('input:submit', $AppForm).button()
             $(Sel.linksButton, $AppBody).button()
             $('.' + Cls.buttonGroup, $AppBody).controlgroup({button: 'a'})
-
             // UI Tooltip - form help
             $('.' + Cls.tooltip, $AppBody).tooltip(TTIP_OPTS)
-
             // UI Tooltip - ui controls help
             $('.' + Cls.uiControls + ' a[title]', $AppBody).each(function() {
                 const $me = $(this)
@@ -307,13 +248,147 @@
                 const content = $wrap.get(0).outerHTML
                 $me.tooltip({content, show: {delay: 2000}})
             })
-
             // Init Tableau Plugin
             if (IS_PROOF) {
-                $(Sel.tableaux).tableau({
+                $(Sel.tableaux, $AppBody).tableau({
                     // autoWidth: true,
                     // dragScroll: true,
                     scrollContainer: $(document)
+                })
+            }
+        }
+
+        /**
+         * Form submit handler.
+         *
+         * @return {void}
+         */
+        function handleFormSubmit(e) {
+            $('input:submit', $AppForm).prop({disabled: true})
+            const data = getApiData()
+            const json = JSON.stringify(data)
+            $(Sel.fieldApiJson, $AppForm).val(json)
+        }
+
+        function handleFormChange(e) {
+            const $target = $(e.target)
+            if ($target.is(Sel.fieldArgExample)) {
+                // Change to selected exampleArg.
+                if (!$target.val()) {
+                    return
+                }
+                refreshArgExample()
+                refreshStatuses()
+            } else if ($target.is(Sel.fieldInputNotn)) {
+                // Change to selected parsing notation.
+                refreshNotation()
+                refreshStatuses()
+            } else if ($target.is(Sel.fieldsSentence)) {
+                // Change to a sentence input field.
+                refreshStatuses()
+            } else if ($target.hasClass(Cls.arity)) {
+                // Change to a predicate arity field.
+                refreshStatuses(true)
+            } else if ($target.is(Sel.fieldLogic)) {
+                // Change to the selected logic.
+                refreshLogic()
+            }
+        }
+
+        function handleFormClick(e) {
+            const $target = $(e.target)
+            if ($target.hasClass(Cls.premiseAdd)) {
+                // Add premise.
+                addPremise()
+            } else if ($target.hasClass(Cls.predAdd)) {
+                // Add predicate.
+                addPredicate(...getNextPredCoords(), 1).find(':input').focus() 
+            } else if ($target.hasClass(Cls.premiseDel)) {
+                // Delete premise.
+                removePremise($target.closest(Sel.inputPremise))
+                refreshStatuses()
+            } else if ($target.hasClass(Cls.predDel)) {
+                // Delete predicate.
+                $target.closest(Sel.inputPredicate).remove()
+                refreshStatuses()
+            } else if ($target.is(Sel.clearArg)) {
+                // Clear the argument.
+                clearArgument()
+                $(Sel.fieldArgExample).val('').selectmenu('refresh')
+                refreshStatuses()
+            }
+        }
+
+        function handleFormSentenceKeyup(e) {
+            const {target} = e
+            const {selectionStart, selectionEnd, value} = target
+            if (selectionStart !== selectionEnd) {
+                return
+            }
+            const newValue = sentenceDisplayValue(value)
+            if (value === newValue) {
+                return
+            }
+            target.value = newValue
+            target.setSelectionRange(selectionStart, selectionEnd)
+        }
+
+        function handleTabsHeaderClick(e) {
+            // Collapse tabs when you click the header bar.
+            if (!IS_PROOF) {
+                return
+            }
+            const $target = $(e.target)
+            if ($target.is('a') || $target.hasClass(Cls.uitabInsert)) {
+                return
+            }
+            const $tabs = $(Sel.appUiTabs, $AppBody)
+            const active = $tabs.tabs('option', 'active')
+            if (Number.isInteger(active)) {
+                LastActiveTab = active
+                $tabs.tabs('option', 'active', false)
+            } else if (Number.isInteger(LastActiveTab)) {
+                $tabs.tabs('option', 'active', LastActiveTab)
+            }
+        }
+
+        function handleDebugsClick(e) {
+            const $target = $(e.target)
+            // Main Debug Header - toggle all and return.
+            if ($target.is(Sel.headerDebugs)) {
+                $target.next('.' + Cls.debugs).toggle()
+                return
+            }
+            // Single debug content - toggle and lazy-init jsonViewer.
+            let $content
+            if ($target.hasClass(Cls.debugHead)) {
+                // For header click, toggle debug content.
+                $content = $target.next('.' + Cls.debugContent)
+                const isHiding = $content.is(':visible')
+                $content.toggle()
+                // If we are hiding it, no need to init jsonViewer.
+                if (isHiding) {
+                    return
+                }
+            } else if ($target.hasClass(Cls.debugContent)) {
+                // For content click, check whether to init jsonViewer.
+                $content = $target
+            } else {
+                // No behavior defined.
+                return
+            }
+            // Init jsonViewer if this is a json dump and does not have
+            // class from plugin.
+            const shouldInit = (
+                $content.hasClass(Cls.jsonDump) &&
+                !$content.hasClass(Cls.jsonViewDoc)
+            )
+            if (shouldInit) {
+                const json = $content.text()
+                const data = JSON.parse(json)
+                $content.jsonViewer(data, {
+                    withLinks: true,
+                    withQuotes: true,
                 })
             }
         }
@@ -326,7 +401,7 @@
          * @param {string} message The status message.
          * @return {void}
          */
-         function addPremise(value, status, message) {
+        function addPremise(value, status, message) {
             const premiseNum = $(Sel.fieldsPremise, $AppForm).length + 1
             const vars = {
                 n       : premiseNum,
@@ -504,7 +579,7 @@
             const notation = CurrentInputNotation
             const argBase = AppData.example_args[argName]
             if (!argBase) {
-                debug('not found', {argBase})
+                console.log('not found', {argBase})
                 return
             }
             const arg = argBase[notation]
@@ -723,135 +798,62 @@
             })
             return preds
         }
-
-        /**
-         * Form submit handler.
-         *
-         * @return {void}
-         */
-        function submitForm(e) {
-            $('input:submit', $AppForm).prop({disabled: true})
-            const data = getApiData()
-            const json = JSON.stringify(data)
-            $(Sel.fieldApiJson, $AppForm).val(json)
-        }
-
-        /**
-         * Interpolate variable strings like {varname}.
-         *
-         * @param {string} str The template string.
-         * @param {object} vars The variables object.
-         * @return {string} The rendered string.
-         */
-         function render(str, vars) {
-            if (!str || !vars) {
-                return str
-            }
-            $.each(vars, (name, val) => str = str.replaceAll(`{${name}}`, val))
-            return str
-        }
-
-        /**
-         * Make simple string replacements.
-         *
-         * @param {string} str The input string.
-         * @param {object} vars The translations object.
-         * @return {string} The translated string.
-         */
-        function translate(str, translations) {
-            if (!str || !translations) {
-                return str
-            }
-            $.each(translations, (srch, repl) => str = str.replaceAll(srch, repl))
-            return str
-        }
-
-        /**
-         * Escape using encodeURIComponent.
-         * 
-         * @param {string} str The input string.
-         * @return {string} Escaped output.
-         */
-        function esc(str) {
-            return encodeURIComponent(str)
-        }
-
-        function debug(...args) {
-            if (IS_DEBUG) {
-                console.debug(...args)
-            }
-        }
-
-        function _makeAjaxParseErrorMessage(xhr, textStatus, errorThrown) {
-            let msg
-            if (xhr.status === 400) {
-                const res = xhr.responseJSON
-                if (res.errors) {
-                    if (res.errors.Sentence) {
-                        msg = res.errors.Sentence
-                    } else {
-                        const errKey = Object.keys(res.errors)[0]
-                        msg = [errKey, res.errors[errKey]].join(': ')
-                    }
-                } else {
-                    msg = [res.error, res.message].join(': ')
-                }
-            } else {
-                msg = [textStatus, errorThrown].join(': ')
-            }
-            return msg
-        }
-
-        function initDebug() {
-            const $debugs = $(Sel.wrapDebugs, $AppBody)
-            // Debug click show/hide.
-            $debugs.on('click', [Sel.debugs, Sel.headerDebugs].join(), function(e) {
-                const $target = $(e.target)
-
-                // Main Debug Header - toggle all and return.
-                if ($target.is(Sel.headerDebugs)) {
-                    $target.next('.' + Cls.debugs).toggle()
-                    return
-                }
-
-                // Single debug content - toggle and lazy-init jsonViewer.
-                let $content
-                if ($target.hasClass(Cls.debugHead)) {
-                    // For header click, toggle debug content.
-                    $content = $target.next('.' + Cls.debugContent)
-                    const isHiding = $content.is(':visible')
-                    $content.toggle()
-                    // If we are hiding it, no need to init jsonViewer.
-                    if (isHiding) {
-                        return
-                    }
-                } else if ($target.hasClass(Cls.debugContent)) {
-                    // For content click, check whether to init jsonViewer.
-                    $content = $target
-                } else {
-                    // No behavior defined.
-                    return
-                }
-
-                // Init jsonViewer if this is a json dump and does not have
-                // class from plugin.
-                const shouldInit = (
-                    $content.hasClass(Cls.jsonDump) &&
-                    !$content.hasClass(Cls.jsonViewDoc)
-                )
-                if (shouldInit) {
-                    const json = $content.text()
-                    const data = JSON.parse(json)
-                    $content.jsonViewer(data, {
-                        withLinks: true,
-                        withQuotes: true,
-                    })
-                }
-            })
-        }
-
         init()
-
     })
 
-})(jQuery);
+    /**
+     * Interpolate variable strings like {varname}.
+     *
+     * @param {string} str The template string.
+     * @param {object} vars The variables object.
+     * @return {string} The rendered string.
+     */
+    function render(str, vars) {
+        if (!str || !vars) {
+            return str
+        }
+        $.each(vars, (name, val) => str = str.replaceAll(`{${name}}`, val))
+        return str
+    }
+
+    /**
+     * Make simple string replacements.
+     *
+     * @param {string} str The input string.
+     * @param {object} vars The translations object.
+     * @return {string} The translated string.
+     */
+    function translate(str, translations) {
+        if (!str || !translations) {
+            return str
+        }
+        $.each(translations, (srch, repl) => str = str.replaceAll(srch, repl))
+        return str
+    }
+
+    /**
+     * Escape using encodeURIComponent.
+     * 
+     * @param {string} str The input string.
+     * @return {string} Escaped output.
+     */
+    function esc(str) {
+        return encodeURIComponent(str)
+    }
+
+    function _makeAjaxParseErrorMessage(xhr, textStatus, errorThrown) {
+        if (xhr.status !== 400) {
+            return [textStatus, errorThrown].join(': ')
+        }
+        const res = xhr.responseJSON
+        if (!res.errors) {
+            return [res.error, res.message].join(': ')
+        }
+        if (res.errors.Sentence) {
+            return res.errors.Sentence
+        }
+        const errKey = Object.keys(res.errors)[0]
+        return [errKey, res.errors[errKey]].join(': ')
+    }
+
+})(window.jQuery);

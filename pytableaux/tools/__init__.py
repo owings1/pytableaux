@@ -31,7 +31,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Mapping, Sequence, Set
 from enum import Enum
-from operator import gt, lt, truth
+from operator import gt, lt
 from types import DynamicClassAttribute, FunctionType
 from types import MappingProxyType as MapProxy
 from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Literal, Mapping,
@@ -332,11 +332,6 @@ def dmerged():
 
     return merger
 
-from . import abcs
-
-pass
-from ..errors import Emsg, check
-
 
 class BaseMember:
 
@@ -629,24 +624,7 @@ class NoSetAttr(BaseMember):
         setattr(owner, name, func)
 
 
-class SetView(Set, abcs.Copyable, immutcopy = True):
-    'Set cover.'
 
-    __slots__ = ('__contains__', '__iter__', '__len__')
-
-    def __new__(cls, set_, /,):
-        check.inst(set_, Set)
-        self = object.__new__(cls)
-        self.__len__ = set_.__len__
-        self.__iter__ = set_.__iter__
-        self.__contains__ = set_.__contains__
-        return self
-
-    def __repr__(self):
-        prefix = type(self).__name__
-        if len(self):
-            return f'{prefix}{set(self)}'
-        return f'{prefix}''{}'
 
 class SeqCover(Sequence):
     'Sequence cover.'
@@ -837,6 +815,30 @@ class ForObjectBuilder(Generic[_T]):
     @abstractmethod
     def get_obj_kwargs(cls, obj: _T, /) -> Iterable[tuple[str, Any]]:
         yield from EMPTY_SET
+
+from . import abcs
+
+pass
+from ..errors import Emsg, check
+
+class SetView(Set, abcs.Copyable, immutcopy = True):
+    'Set cover.'
+
+    __slots__ = ('__contains__', '__iter__', '__len__')
+
+    def __new__(cls, set_, /,):
+        check.inst(set_, Set)
+        self = object.__new__(cls)
+        self.__len__ = set_.__len__
+        self.__iter__ = set_.__iter__
+        self.__contains__ = set_.__contains__
+        return self
+
+    def __repr__(self):
+        prefix = type(self).__name__
+        if len(self):
+            return f'{prefix}{set(self)}'
+        return f'{prefix}''{}'
 
 from .hybrids import EMPTY_QSET as EMPTY_QSET
 from .hybrids import qset as qset

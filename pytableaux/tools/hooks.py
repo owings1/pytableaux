@@ -21,7 +21,6 @@ pytableaux.tools.hooks
 """
 from __future__ import annotations
 
-import functools
 import operator as opr
 from collections import defaultdict, deque
 from collections.abc import Mapping, Set
@@ -32,7 +31,7 @@ from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Callable, Collection, Literal, TypeVar
 
 from ..errors import Emsg, check
-from . import abcs, closure, dund
+from . import abcs, closure, dund, wraps
 
 if TYPE_CHECKING:
     from typing import overload
@@ -172,7 +171,7 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
             def f():
                 oper = getattr(opr, opername)
                 set_oper = set_opers.get(opername)
-                @functools.wraps(oper)
+                @wraps(oper)
                 def f(self, other):
                     if type(other) is not cls:
                         if set_oper is not None and isinstance(other, Set):
