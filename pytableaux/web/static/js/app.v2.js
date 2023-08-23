@@ -236,15 +236,7 @@
                         addPredicate(...getNextPredCoords(), 1).find(':input').focus() 
                     } else if ($target.hasClass(Cls.premiseDel)) {
                         // Delete premise.
-                        const $prem = $target.closest(Sel.inputPremise)
-                        $prem.nextAll(Sel.inputPremise).each(function() {
-                            // renumber later ones.
-                            const $me = $(this)
-                            const num = +$me.attr(Atr.dataPremNum) - 1
-                            $me.attr(Atr.dataPremNum, num)
-                            $('.' + Cls.premiseMark, $me).text('P' + num)
-                        })
-                        _removePrem($prem)
+                        removePremise($target.closest(Sel.inputPremise))
                         refreshStatuses()
                     } else if ($target.hasClass(Cls.predDel)) {
                         // Delete predicate.
@@ -352,7 +344,15 @@
          * @param {object} $prem The singelton premise row jQuery element.
          * @return {void}
          */
-        function _removePrem($prem) {
+        function removePremise($prem) {
+            $prem = $($prem)
+            $prem.nextAll(Sel.inputPremise).each(function() {
+                // renumber later ones.
+                const $me = $(this)
+                const num = +$me.attr(Atr.dataPremNum) - 1
+                $me.attr(Atr.dataPremNum, num)
+                $('.' + Cls.premiseMark, $me).text('P' + num)
+            })
             // Destroy tooltips.
             $('.' + Cls.status, $prem).add('.' + Cls.tooltip).each(function() {
                 const tooltip = $(this).tooltip('instance')
@@ -363,7 +363,6 @@
             // TODO: Prune ParseCache?
             $prem.remove()
         }
-
         /**
          * Add a user-defined predicate row. The first two parameters, index
          * and subscript, are required.
@@ -432,7 +431,7 @@
          * @return {void}
          */
         function clearArgument() {
-            $(Sel.inputPremise, $AppForm).each(function() { _removePrem($(this)) })
+            $(Sel.inputPremise, $AppForm).each(function() { removePremise(this) })
             $(Sel.fieldConclusion, $AppForm).val('')
             for (const key in ParseCache) {
                 delete ParseCache[key]
