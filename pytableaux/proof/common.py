@@ -604,7 +604,6 @@ class Target(dictattr):
 
     def __repr__(self):
         props = dict(map(self.__getitem__, self._names()))
-        # props = dict(itemsiter(self._names(), vget = self.get))
         return f'<{type(self).__name__} {props}>'
 
     def _names(self):

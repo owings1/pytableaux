@@ -170,9 +170,9 @@ class refplus(ReferenceRole, BaseRole):
 
 class _Ctype(frozenset, Enum):
     valued = {
-        LexType.Operator, LexType.Quantifier, Predicate.System}
+        LexType.Operator.cls, LexType.Quantifier.cls, Predicate.System}
     nosent = valued | {
-        LexType.Constant, LexType.Variable, LexType.Predicate}
+        LexType.Constant.cls, LexType.Variable.cls, LexType.Predicate.cls}
 
 _re_nosent = re.compile(r'^(.)([0-9]*)$')
 
@@ -213,7 +213,7 @@ class lexdress(BaseRole, ParserOptionMixin):
                     sub = 0
                 if ctype in _Ctype.valued:
                     item = table.value(char)
-                elif ctype is LexType.Predicate:
+                elif ctype is LexType.Predicate.cls:
                     item = preds.get((table.value(char), sub))
                 else:
                     item = ctype.cls(table.value(char), sub)

@@ -140,7 +140,7 @@ def oper_sym_table():
         # Get the operator symbols for the tables.
         for src in sources:
             if type(src) is ParseTable:
-                yield src.char(o.TYPE, o)
+                yield src.char(type(o), o)
             else:
                 yield src[o]
 

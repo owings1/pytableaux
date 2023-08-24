@@ -25,7 +25,7 @@ from __future__ import annotations
 import operator as opr
 from collections.abc import Sequence
 from itertools import repeat, starmap
-from typing import Any, Iterable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterable
 
 from .. import tools
 from ..errors import Emsg, check
@@ -91,7 +91,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
     title is not considered in equality.
     """
 
-    def __init__(self, conclusion, premises=None, *, title=None):
+    def __init__(self, conclusion: Sentence, premises: Iterable[Sentence|None] = None, *, title: str|None = None):
         """
         Args:
             conclusion: The conclusion.

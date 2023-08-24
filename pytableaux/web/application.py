@@ -242,19 +242,19 @@ class WebApp(EventEmitter):
             example_args = self.example_args,
             example_preds = tuple(p.spec for p in examples.preds),
             nups = MapProxy({
-                notn.name: ParseTable.fetch(notn).chars[LexType.Predicate]
+                notn.name: ParseTable.fetch(notn).chars[Predicate]
                 for notn in Notation}),
             display_trans = MapProxy({
                 'standard': MapProxy({
-                    stdtbl.char(LexType.Operator, oper): stdlw(oper)
+                    stdtbl.char(Operator, oper): stdlw(oper)
                         for oper in Operator} | {
-                    stdtbl.char(LexType.Quantifier, quant): stdlw(quant)
+                    stdtbl.char(Quantifier, quant): stdlw(quant)
                         for quant in Quantifier})}),
             parse_trans = MapProxy({
                 'standard': MapProxy({
-                    stdlw(oper): stdtbl.char(LexType.Operator, oper)
+                    stdlw(oper): stdtbl.char(Operator, oper)
                         for oper in Operator} | {
-                    stdlw(quant): stdtbl.char(LexType.Quantifier, quant)
+                    stdlw(quant): stdtbl.char(Quantifier, quant)
                         for quant in Quantifier})})))
 
     def _build_cp_config(self):

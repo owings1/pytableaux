@@ -98,14 +98,14 @@ class TabWriter(metaclass = TabWriterMeta):
 
     __slots__ = ('lw', 'opts')
 
-    def __init__(self, notn = None, strings: StringTable|None = None, *, lw: LexWriter = None, **opts):
+    def __init__(self, notation: Notation = None, strings: StringTable|None = None, *, lw: LexWriter = None, **opts):
         if lw is None:
-            if notn is None:
-                notn = Notation.default
+            if notation is None:
+                notation = LexWriter.DEFAULT_NOTATION
             else:
-                notn = Notation(notn)
-            lw = LexWriter(notn, self.format, strings=strings, **opts)
-        if lw.format != self.format:
+                notation = Notation(notation)
+            lw = LexWriter(notation=notation, format=self.format, strings=strings, **opts)
+        elif lw.format != self.format or strings is not None and strings.format != self.format:
             raise Emsg.ValueConflict(lw.format, self.format)
         self.lw = lw
         self.opts = dict(self.defaults) | opts

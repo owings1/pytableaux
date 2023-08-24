@@ -25,15 +25,15 @@ from abc import abstractmethod as abstract
 from collections import deque
 from enum import Enum
 from types import MappingProxyType as MapProxy
-from typing import ClassVar, Iterable, Mapping
+from typing import Any, ClassVar, Iterable, Mapping, Self
 
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
                       UnboundVariableError)
-from ..tools import (EMPTY_SET, MapCover, abcs, for_defaults, key0,
+from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, abcs, for_defaults, key0,
                      lazy, qset)
-from . import BiCoords, LangCommonMeta, LexType, Marking, Notation, TableStore
+from . import BiCoords, LangCommonMeta,  Marking, Notation
 from .collect import Argument, Predicates
-from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate,
+from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate, Quantifier,
                   Predicated, Quantified, Sentence, Variable)
 
 __all__ = (
@@ -50,17 +50,21 @@ NOARG = object()
 class ParserMeta(LangCommonMeta):
     'Parser Metaclass.'
 
+    DEFAULT_NOTATION = Notation.polish
+
     def __call__(cls, *args, **kw):
         if cls is Parser:
             if args:
                 notn = Notation(args[0])
                 args = args[1:]
+            elif 'notation' in kw:
+                notn = Notation(kw.pop('notation'))
             else:
-                notn = Notation.default
+                notn = Parser.DEFAULT_NOTATION
             return notn.Parser(*args, **kw)
         return super().__call__(*args, **kw)
 
-class Parser(metaclass = ParserMeta):
+class Parser(metaclass=ParserMeta):
     """Parser interface and coordinator.
 
     To create a parser::
@@ -86,23 +90,11 @@ class Parser(metaclass = ParserMeta):
         >>> preds = Predicates(((0, 0, 1), (1, 0, 2)))
         >>> parser = Parser('standard', preds)
         >>> parser('Fa & Gab')
-        
+
     
     """
 
-    """
-
-
-    Calling ``Parser()`` without any arguments returns an instance of the
-    default parser class of the default notation. Thus, these are equivalent::
-    
-        Parser()
-    
-        Notation.default.Parser()
-    
-    """
-
-    __slots__ = 'table', 'preds', 'opts'
+    __slots__ = ('table', 'preds', 'opts')
 
     notation: ClassVar[Notation]
     "The parser notation."
@@ -119,12 +111,12 @@ class Parser(metaclass = ParserMeta):
     opts: Mapping
     "The parser options."
 
-    def __init__(self, preds = Predicate.System, /, table = None, **opts):
+    def __init__(self, preds:Predicates|None=None, /, table = None, **opts):
         if table is None:
             self.table = ParseTable.fetch(self.notation)
         elif isinstance(table, str):
             self.table = ParseTable.fetch(self.notation, table)
-        self.preds = preds
+        self.preds = preds or EMPTY_MAP
         self.opts = for_defaults(self._defaults, opts)
 
     @abstract
@@ -142,7 +134,9 @@ class Parser(metaclass = ParserMeta):
         
         Examples::
 
-            parser('A V B')
+            >>> parser = Parser('standard')
+            >>> parser('A V B')
+            <Sentence: A ∨ B>
 
         """
         raise NotImplementedError
@@ -229,7 +223,7 @@ class ParseContext:
     def assert_current(self):
         """
         Returns:
-            Type of current char, e.g. ``LexType.Operator``, or ``None`` if
+            Type of current char, e.g. ``Operator``, or ``None`` if
             unknown type.
 
         Raises:
@@ -306,11 +300,11 @@ class ParseContext:
 
 class Ctype(frozenset, Enum):
 
-    pred = {LexType.Predicate, Predicate.System}
+    pred = {Predicate, Predicate.System}
 
-    base = pred | {LexType.Quantifier, LexType.Atomic, LexType.Operator}
+    base = pred | {Quantifier, Atomic, Operator}
 
-    param = {LexType.Constant, LexType.Variable}
+    param = {Constant, Variable}
 
 class DefaultParser(Parser):
     "Parser default implementation."
@@ -344,11 +338,11 @@ class DefaultParser(Parser):
             ParseError:
         """
         ctype = context.assert_current_in(Ctype.base)
-        if ctype is LexType.Operator:
+        if ctype is Operator:
             return self._read_operated(context)
-        if ctype is LexType.Atomic:
+        if ctype is Atomic:
             return self._read_atomic(context)
-        if ctype is LexType.Quantifier:
+        if ctype is Quantifier:
             return self._read_quantified(context)
         if ctype in Ctype.pred:
             return self._read_predicated(context)
@@ -373,14 +367,14 @@ class DefaultParser(Parser):
         context.advance()
         v = self._read_variable(context)
         if v in context.bound:
-            vchr = self.table.char(LexType.Variable, v.index)
+            vchr = self.table.char(Variable, v.index)
             raise BoundVariableError(
                 "Cannot rebind variable '{0}' ({1}) at position {2}.".format(
                     vchr, v.subscript, context.pos))
         context.bound.add(v)
         s = self._read(context)
         if v not in s.variables:
-            vchr = self.table.reversed[LexType.Variable, v.index]
+            vchr = self.table.reversed[Variable, v.index]
             raise BoundVariableError(
                 f"Unused bound variable '{vchr}' ({v.subscript}) "
                 f"at position {context.pos}")
@@ -409,12 +403,12 @@ class DefaultParser(Parser):
     def _read_parameter(self, context: ParseContext, /) -> Parameter:
         'Read a single parameter (constant or variable)'
         ctype = context.assert_current_in(Ctype.param)
-        if ctype is LexType.Constant:
+        if ctype is Constant:
             return self._read_constant(context)
         cpos = context.pos
         v = self._read_variable(context)
         if v not in context.bound:
-            vchr = self.table.reversed[LexType.Variable, v.index]
+            vchr = self.table.reversed[Variable, v.index]
             raise UnboundVariableError(
                 f"Unbound variable '{vchr}_{v.subscript}' at position {cpos}")
         return v
@@ -505,7 +499,7 @@ class StandardParser(DefaultParser, primary=True):
             return super()._read(context)
         if ctype is Marking.paren_open:
             return self._read_from_paren_open(context)
-        if ctype is LexType.Constant:
+        if ctype is Constant:
             return self._read_infix_predicated(context)
         raise ParseError(context._unexp_msg())
 
@@ -547,7 +541,7 @@ class StandardParser(DefaultParser, primary=True):
                 depth -= 1
             elif ptype is Marking.paren_open:
                 depth += 1
-            elif ptype is LexType.Operator:
+            elif ptype is Operator:
                 peek_oper: Operator = self.table.value(peek)
                 if peek_oper.arity == 2 and depth == 1:
                     oper_pos = context.pos + length
@@ -582,12 +576,46 @@ class StandardParser(DefaultParser, primary=True):
         context.advance()
         return Operated(oper, (lhs, rhs))
 
-class ParseTable(MapCover, TableStore):
+class ParseTable(MapCover[str, Any]):
     'Parser table data class.'
 
-    default_fetch_key = 'default'
 
-    __slots__ = ('chars', 'keypair', 'reversed')
+    __slots__ = ('chars', 'reversed', 'notation', 'dialect')
+    _instances: ClassVar[dict[Any, Self]] = {}
+
+    @classmethod
+    def load(cls, data: Mapping, /) -> Self:
+        """Create and store instance from data.
+
+        Args:
+            data: The data mapping
+
+        Raises:
+            Emsg.DuplicateKey: on duplicate key
+
+        Returns:
+            The instance
+        """
+        notn = Notation[data['notation']]
+        dialect = data.get('dialect', 'default')
+        key = notn, dialect
+        if key in cls._instances:
+            raise Emsg.DuplicateKey(key)
+        return cls._instances.setdefault(key, cls(data))
+
+    @classmethod
+    def fetch(cls, notation: Notation, dialect: str = None) -> Self:
+        """Get a loaded instance.
+
+        Args:
+            notation: The notation
+            dialect: The dialect if any.
+
+        Returns:
+            The instance
+        """
+        return cls._instances[Notation[notation], dialect or 'default']
+
 
     reversed: Mapping
     "Reversed mapping of item to symbol."
@@ -595,26 +623,16 @@ class ParseTable(MapCover, TableStore):
     chars: Mapping
     "Grouping of each symbol type to the the symbols."
 
-    keypair: tuple
-
-    @property
-    def notation(self):
-        return self.keypair[0]
-
-    @property
-    def fetchkey(self):
-        return self.keypair[1]
-
-    def __init__(self, data: Mapping, keypair, /):
+    def __init__(self, data: Mapping, /):
         """
         Args:
             data: The table data.
             keypair: The key pair identifier.
         """
-        self.keypair = keypair
-        super().__init__(dict(data))
-
-        vals = self.values()
+        self.notation = Notation[data['notation']]
+        self.dialect = data.get('dialect', 'default')
+        mapping = dict(data['mapping'])
+        vals = mapping.values()
 
         # list of types
         ctypes = qset(map(key0, vals))
@@ -628,16 +646,15 @@ class ParseTable(MapCover, TableStore):
             tvals[ctype].sort()
 
         # flipped table
-        self.reversed = MapProxy(dict(
-            # map(reversed, ItemsIterator(self))
-            # map(reversed, itemsiter(self))))
-            map(reversed, self.items())))
+        self.reversed = MapProxy(dict(map(reversed, mapping.items())))
 
         # chars for each type in value order, duplicates discarded
         self.chars = MapProxy({
             ctype: tuple(self.reversed[ctype, val]
                 for val in tvals[ctype])
                     for ctype in ctypes})
+
+        super().__init__(mapping)
 
     def type(self, char, default = NOARG, /):
         """Get the item type for the character.
@@ -678,7 +695,7 @@ class ParseTable(MapCover, TableStore):
         perform a reverse lookup.
 
         Args:
-            ctype: The symbol type, e.g. ``LexType.Variable``, or ``Marking.digit``.
+            ctype: The symbol type, e.g. ``Variable``, or ``Marking.digit``.
             value: The item value, e.g. ``1`` or ``Operator.Negation``.
         
         Returns:
@@ -695,8 +712,3 @@ class ParseTable(MapCover, TableStore):
         sa(self, name, value)
 
     __delattr__ = Emsg.ReadOnly.razr
-
-    @classmethod
-    def _from_mapping(cls, mapping):
-        keypair = (Notation.default, f'_mapping{id(mapping)}')
-        return cls(mapping, keypair)

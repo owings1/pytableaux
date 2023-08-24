@@ -138,9 +138,6 @@ Utility Classes
 .. autoclass:: LexType()
     :members:
 
-.. autoclass:: TableStore
-    :members:
-
 .. autoclass:: ParseTable()
 
 .. autoclass:: StringTable

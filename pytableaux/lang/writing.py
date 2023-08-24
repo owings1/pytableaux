@@ -21,14 +21,12 @@ pytableaux.lang.writing
 """
 from __future__ import annotations
 
-import itertools
 from abc import abstractmethod
-from types import DynamicClassAttribute as dynca
 from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar
 
-from ..errors import Emsg, check
-from ..tools import EMPTY_MAP, EMPTY_SET, abcs, closure
+from ..errors import Emsg
+from ..tools import EMPTY_MAP
 from . import (Atomic, Constant, CoordsItem, LangCommonMeta, Lexical, LexType,
                Marking, Notation, Operated, Operator, Predicate, Predicated,
                Quantified, Quantifier, StringTable, Variable)
@@ -41,64 +39,30 @@ __all__ = (
 
 class LexWriterMeta(LangCommonMeta):
     'LexWriter Metaclass.'
+
     DEFAULT_FORMAT = 'text'
+    DEFAULT_NOTATION = Notation.polish
 
     def __call__(cls, *args, **kw):
         if cls is LexWriter:
             if args:
                 notn = Notation(args[0])
                 args = args[1:]
+            elif 'notation' in kw:
+                notn = Notation(kw.pop('notation'))
             else:
-                notn = Notation.default
+                notn = LexWriter.DEFAULT_NOTATION
             return notn.DefaultWriter(*args, **kw)
         return super().__call__(*args, **kw)
 
-    @closure
-    def _sys():
-
-        def checkcls(cls):
-            try:
-                if cls is not LexWriter:
-                    raise AttributeError
-            except NameError:
-                raise AttributeError
-
-        syslws = dict(set = None, unset = None)
-
-        def fget(cls) -> LexWriter:
-            'The system instance for representing.'
-            checkcls(cls)
-            if syslws['set'] is not None:
-                return syslws['set']
-            if syslws['unset'] is None:
-                syslws['unset'] = LexWriter()
-            return syslws['unset']
-
-        def fset(cls, lw: LexWriter|None):
-            checkcls(cls)
-            if lw is not None:
-                check.inst(lw, LexWriter)
-            syslws['unset'] = None
-            syslws['set'] = lw
-
-        def fdel(cls):
-            syslws.pop('unset')
-
-        return dynca(fget, fset, fdel, doc = fget.__doc__)
 
 class LexWriter(metaclass = LexWriterMeta):
     'LexWriter interface and coordinator.'
 
-    __slots__ = 'opts', 'strings'
-
-    #******  Class Variables
+    __slots__ = ('opts', 'strings')
 
     notation: ClassVar[Notation]
-    defaults = {}
-    _methodmap = EMPTY_MAP
-    _sys: LexWriter
-
-    #******  Instance Variables
+    defaults = EMPTY_MAP
 
     strings: StringTable
     opts: dict
@@ -107,22 +71,20 @@ class LexWriter(metaclass = LexWriterMeta):
     @property
     def format(self) -> str:
         return self.strings.format
-    
-    #******  External API
 
+    @property
+    def dialect(self) -> str:
+        return self.strings.dialect
+    
     def __call__(self, item) -> str:
         'Write a lexical item.'
         return self._write(item)
 
     @classmethod
+    @abstractmethod
     def canwrite(cls, obj: Any) -> bool:
         "Whether the object can be written."
-        try:
-            return cls._methodmap[type(obj)] is not NotImplemented
-        except (AttributeError, KeyError):
-            return False
-
-    #******  Instance Init
+        return False
 
     def __init__(self, format: str|None = None, dialect: str = None, strings: StringTable|None = None, **opts):
         if strings is None:
@@ -136,53 +98,24 @@ class LexWriter(metaclass = LexWriterMeta):
         self.opts = dict(self.defaults, **opts)
         self.strings = strings
 
-    #******  Internal API
-
+    @abstractmethod
     def _write(self, item) -> str:
         'Wrapped internal write method.'
-        try:
-            method = self._methodmap[type(item)]
-        except AttributeError:
-            raise TypeError(type(item))
-        except KeyError:
-            raise NotImplementedError(type(item))
-        return getattr(self, method)(item)
 
     def _test(self):
         'Smoke test. Returns a rendered list of each lex type.'
         return list(map(self, (t.cls.first() for t in LexType)))
 
-    #******  Class Init
-
     @classmethod
     def register(cls, subcls: type[LexWriter]):
         'Update available writers.'
-        if not issubclass(subcls, __class__):
-            raise TypeError(subcls, __class__)
-        # for ltype, meth in subcls._methodmap.items():
-        #     try:
-        #         getattr(subcls, meth)
-        #     except TypeError:
-        #         raise TypeError(meth, ltype)
-        #     except AttributeError:
-        #         raise TypeError('Missing method', meth, subcls)
-        # notn = subcls.notation = Notation(subcls.notation)
-        # type(cls).register(cls, subcls)
         subcls.notation.writers.add(subcls)
         if subcls.notation.DefaultWriter is None:
             subcls.notation.DefaultWriter = subcls
         return subcls
 
-    # def __init_subclass__(subcls: type[LexWriter], **kw):
-    #     'Merge and freeze method map from mro. Sync ``__call__()``.'
-    #     super().__init_subclass__(**kw)
-    #     abcs.merge_attr(
-    #         subcls, '_methodmap', supcls = __class__, transform = MapProxy)
-
 class DefaultLexWriter(LexWriter):
     "Common lexical writer abstract class."
-
-    __slots__ = EMPTY_SET
 
     _methodmap = MapProxy({
         Operator   : '_write_plain',
@@ -194,6 +127,23 @@ class DefaultLexWriter(LexWriter):
         Predicated : '_write_predicated',
         Quantified : '_write_quantified',
         Operated   : '_write_operated'})
+
+    @classmethod
+    def canwrite(cls, obj: Any) -> bool:
+        "Whether the object can be written."
+        try:
+            return cls._methodmap[type(obj)] is not NotImplemented
+        except (AttributeError, KeyError):
+            return False
+
+    def _write(self, item) -> str:
+        try:
+            method = self._methodmap[type(item)]
+        except AttributeError:
+            raise TypeError(type(item))
+        except KeyError:
+            raise NotImplementedError(type(item))
+        return getattr(self, method)(item)
 
     @abstractmethod
     def _write_operated(self, item: Operated) -> str: ...
@@ -230,10 +180,7 @@ class DefaultLexWriter(LexWriter):
 class PolishLexWriter(DefaultLexWriter):
     "Polish notation lexical writer implementation."
 
-    __slots__ = EMPTY_SET
-
     notation = Notation.polish
-    defaults = {}
 
     def _write_operated(self, item: Operated) -> str:
         return ''.join(map(self._write, (item.operator, *item)))
@@ -242,13 +189,11 @@ class PolishLexWriter(DefaultLexWriter):
 class StandardLexWriter(DefaultLexWriter):
     "Standard notation lexical writer implementation."
 
-    __slots__ = EMPTY_SET
-
     notation = Notation.standard
-    defaults = dict(
+    defaults = MapProxy(dict(
         drop_parens=True,
         identity_infix=True,
-        max_infix=0)
+        max_infix=0))
 
     def __call__(self, item):
         if self.opts['drop_parens'] and type(item) is Operated:

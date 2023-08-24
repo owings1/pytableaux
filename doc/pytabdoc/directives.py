@@ -245,6 +245,9 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         def format(self):
             return self.lw.format
 
+        def canwrite(self, obj, /):
+            return self.lw.canwrite(obj)
+
         def _write(self, item):
             if type(item) is Atomic and item.subscript == 2:
                 s = Atomic(item.index, 0)
@@ -270,7 +273,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         classes.add(self.mode)
         if self.mode in ('rule', 'build-trunk'):
             classes.add('example')
-        lw = LexWriter(opts['wnotn'], opts['format'])
+        lw = LexWriter(notation=opts['wnotn'], format=opts['format'])
         if self.mode == 'build-trunk':
             lw = self.LexWriterWrapper(lw)
         self.writer = TabWriter(opts['format'],
