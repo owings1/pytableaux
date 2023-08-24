@@ -37,7 +37,7 @@ from sphinx.ext.viewcode import viewcode_anchor
 from sphinx.util import logging
 
 from pytableaux import examples, logics
-from pytableaux.lang import (Argument, Atomic, DefaultLexWriter, LexWriter,
+from pytableaux.lang import (Argument, Atomic, LexWriter,
                              Marking, Notation, Operator, Predicate,
                              Predicates, Quantifier)
 from pytableaux.proof import Rule, Tableau, TabWriter, writers, rules
@@ -248,13 +248,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         def _write(self, item):
             if type(item) is Atomic and item.subscript == 2:
                 s = Atomic(item.index, 0)
-                try:
-                    func = self.lw._write_subscript
-                except AttributeError:
-                    substr = DefaultLexWriter._write_subscript(self.lw, 'n')
-                else:
-                    substr = func('n')
-                return self.lw._write(s) + substr
+                return self.lw._write(s) + self.lw._write_subscript('n')
             return self.lw._write(item)
 
     class TrunkRuleStub(rules.NoopRule):

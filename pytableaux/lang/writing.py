@@ -59,10 +59,20 @@ class LexWriterMeta(LangCommonMeta):
 class LexWriter(metaclass = LexWriterMeta):
     'LexWriter interface and coordinator.'
 
-    __slots__ = ('opts', 'strings')
-
     notation: ClassVar[Notation]
     defaults = EMPTY_MAP
+    _methodmap = MapProxy({
+        Operator   : '_write_plain',
+        Quantifier : '_write_plain',
+        Predicate  : '_write_coordsitem',
+        Constant   : '_write_coordsitem',
+        Variable   : '_write_coordsitem',
+        Atomic     : '_write_coordsitem',
+        Predicated : '_write_predicated',
+        Quantified : '_write_quantified',
+        Operated   : '_write_operated'})
+
+    __slots__ = ('opts', 'strings')
 
     strings: StringTable
     opts: dict
@@ -75,68 +85,44 @@ class LexWriter(metaclass = LexWriterMeta):
     @property
     def dialect(self) -> str:
         return self.strings.dialect
-    
-    def __call__(self, item) -> str:
-        'Write a lexical item.'
-        return self._write(item)
-
-    @classmethod
-    @abstractmethod
-    def canwrite(cls, obj: Any) -> bool:
-        "Whether the object can be written."
-        return False
 
     def __init__(self, format: str|None = None, dialect: str = None, strings: StringTable|None = None, **opts):
         if strings is None:
             if format is None:
                 format = LexWriter.DEFAULT_FORMAT
-            strings = StringTable.fetch(format=format, notation=self.notation, dialect=dialect)
+            strings = StringTable.fetch(
+                format=format,
+                notation=self.notation,
+                dialect=dialect)
         elif (
             format is not None and format != strings.format or
             dialect is not None and dialect != strings.dialect):
             raise Emsg.WrongValue(format, strings.format)
         self.opts = dict(self.defaults, **opts)
         self.strings = strings
+    
+    def __call__(self, item) -> str:
+        'Write a lexical item.'
+        return self._write(item)
 
-    @abstractmethod
-    def _write(self, item) -> str:
-        'Wrapped internal write method.'
-
-    def _test(self):
-        'Smoke test. Returns a rendered list of each lex type.'
-        return list(map(self, (t.cls.first() for t in LexType)))
-
-    @classmethod
-    def register(cls, subcls: type[LexWriter]):
-        'Update available writers.'
-        subcls.notation.writers.add(subcls)
-        if subcls.notation.DefaultWriter is None:
-            subcls.notation.DefaultWriter = subcls
-        return subcls
-
-class DefaultLexWriter(LexWriter):
-    "Common lexical writer abstract class."
-
-    _methodmap = MapProxy({
-        Operator   : '_write_plain',
-        Quantifier : '_write_plain',
-        Predicate  : '_write_predicate',
-        Constant   : '_write_coordsitem',
-        Variable   : '_write_coordsitem',
-        Atomic     : '_write_coordsitem',
-        Predicated : '_write_predicated',
-        Quantified : '_write_quantified',
-        Operated   : '_write_operated'})
-
-    @classmethod
-    def canwrite(cls, obj: Any) -> bool:
+    def canwrite(self, obj: Any) -> bool:
         "Whether the object can be written."
         try:
-            return cls._methodmap[type(obj)] is not NotImplemented
+            if obj in self.strings:
+                return True
+        except TypeError:
+            pass
+        try:
+            return self._methodmap[type(obj)] is not NotImplemented
         except (AttributeError, KeyError):
             return False
 
     def _write(self, item) -> str:
+        'Wrapped internal write method.'
+        try:
+            return self.strings[item]
+        except KeyError:
+            pass
         try:
             method = self._methodmap[type(item)]
         except AttributeError:
@@ -156,13 +142,6 @@ class DefaultLexWriter(LexWriter):
             self.strings[type(item), item.index],
             self._write_subscript(item.subscript)))
 
-    def _write_predicate(self, item: Predicate) -> str:
-        try:
-            predstr = self.strings[item]
-        except KeyError:
-            predstr = self.strings[Predicate, item.index]
-        return ''.join((predstr, self._write_subscript(item.subscript)))
-
     def _write_quantified(self, item: Quantified) -> str:
         return ''.join(map(self._write, item.items))
 
@@ -176,8 +155,20 @@ class DefaultLexWriter(LexWriter):
             str(s),
             self.strings[Marking.subscript_close]))
 
+    def _test(self):
+        'Smoke test. Returns a rendered list of each lex type.'
+        return list(map(self, (t.cls.first() for t in LexType)))
+
+    @classmethod
+    def register(cls, subcls: type[LexWriter]):
+        'Update available writers.'
+        subcls.notation.writers.add(subcls)
+        if subcls.notation.DefaultWriter is None:
+            subcls.notation.DefaultWriter = subcls
+        return subcls
+
 @LexWriter.register
-class PolishLexWriter(DefaultLexWriter):
+class PolishLexWriter(LexWriter):
     "Polish notation lexical writer implementation."
 
     notation = Notation.polish
@@ -186,7 +177,7 @@ class PolishLexWriter(DefaultLexWriter):
         return ''.join(map(self._write, (item.operator, *item)))
 
 @LexWriter.register
-class StandardLexWriter(DefaultLexWriter):
+class StandardLexWriter(LexWriter):
     "Standard notation lexical writer implementation."
 
     notation = Notation.standard
@@ -253,7 +244,7 @@ class StandardLexWriter(DefaultLexWriter):
             paren_close))
 
     def _test(self) -> list[str]:
-        s1 = Predicate.System.Identity(Constant.gen(2)).negate()
+        s1 = ~Predicate.Identity(Constant.gen(2))
         s2 = Operator.Conjunction(Atomic.gen(2))
-        s3 = s2.disjoin(Atomic.first())
+        s3 = s2 | Atomic.first()
         return super()._test() + list(map(self, [s1, s2, s3]))

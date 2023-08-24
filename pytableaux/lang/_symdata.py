@@ -187,10 +187,10 @@ def string_tables():
             (Marking.tableau, 'access', 'reflexive') : '\\mathcal{R}_{\\leq{}}',
             (Marking.tableau, 'access', 'serial') : '\\mathcal{R}_{ser}',
             (Marking.tableau, 'access'): '\\mathcal{R}',
-            (Marking.meta, 'conseq')    : '\\Vdash',
-            (Marking.meta, 'nonconseq') : '\\nVdash',
-            (Marking.meta, 'therefore') : '\\therefore',
-            (Marking.meta, 'ellipsis')  : '\\ldots',
+            (Marking.meta, 'conseq')    : '\\Vdash{}',
+            (Marking.meta, 'nonconseq') : '\\nVdash{}',
+            (Marking.meta, 'therefore') : '\\therefore{}',
+            (Marking.meta, 'ellipsis')  : '\\ldots{}',
         })
     markings['unicode'] = dunesc(markings['html']) | {
         (Marking.subscript_open, 0): '.[',

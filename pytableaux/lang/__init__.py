@@ -419,7 +419,6 @@ from .collect import Argument as Argument
 from .collect import Predicates as Predicates
 
 pass
-from .writing import DefaultLexWriter as DefaultLexWriter
 from .writing import LexWriter as LexWriter
 from .writing import PolishLexWriter as PolishLexWriter
 from .writing import StandardLexWriter as StandardLexWriter

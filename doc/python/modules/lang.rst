@@ -124,9 +124,7 @@ Writer Classes
 ***************
 
 .. autoclass:: LexWriter
-    :members: __call__
-
-.. autoclass:: DefaultLexWriter()
+    :members: __call__, canwrite
 
 .. autoclass:: PolishLexWriter()
 
