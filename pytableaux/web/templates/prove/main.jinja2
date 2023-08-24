@@ -1,7 +1,7 @@
 {%- extends 'layout.jinja2' -%}
 {%- import 'prove/helper.jinja2' as helper -%}
 {%- block inline_css -%}
-    {% if is_proof and resp_data %}
+    {% if is_proof and resp_data and resp_data.attachments %}
         {{ resp_data.attachments.get('css') }}
     {% endif %}
 {%- endblock %}

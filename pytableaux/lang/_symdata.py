@@ -21,8 +21,6 @@ pytableaux.lang._symdata
 """
 from __future__ import annotations
 
-import re
-from types import MappingProxyType as MapProxy
 from typing import Any, Callable, Mapping
 
 from ..tools import closure
@@ -136,344 +134,246 @@ def string_tables():
     from html import unescape as html_unescape
 
     from ..tools import dmerged
-    from . import LexType, Marking, Notation, Operator, Predicate, Quantifier
+    from . import Marking, Notation, Operator, Predicate, Quantifier, Atomic, Variable, Constant
 
     def dunesc(d: dict, inplace = False) -> None:
         return dtransform(html_unescape, d, typeinfo = str, inplace = inplace)
-
-
-    subsym = MapProxy(dict(
-        ascii = {
-            Marking.subscript_open: '',
-            Marking.subscript_close: '',
-        },
-        html = {
-            Marking.subscript_open: '<sub>',
-            Marking.subscript_close: '</sub>',
-        },
-        latex = {
-            Marking.subscript_open: '_{',
-            Marking.subscript_close: '}',
-        },
-        rst = {
-            Marking.subscript_open: ':sub:`',
-            Marking.subscript_close: '`',
-        },
-        unicode = {
-            Marking.subscript_open: '.[',
-            Marking.subscript_close: ']',
-        }))
-    # meta chars
-    metachar = MapProxy(dict(
-        ascii = MapProxy(dict(
-            conseq    = '|-',
-            nonconseq = '|/-',
-            therefore = ':.',
-            ellipsis  = '...')),
-        html = MapProxy(dict(
-            conseq    = '&vdash;',
-            nonconseq = '&nvdash;',
-            therefore = '&there4;',
-            ellipsis  = '&hellip;')),
-        latex = MapProxy(dict(
-            conseq    = '\\Vdash',
-            nonconseq = '\\nVdash',
-            therefore = '\\therefore',
-            ellipsis  = '\\ldots'))))
     
     # tab symbols
-    tabsym = dict(
+    markings = dict(
         ascii = {
-            ('designation', True) :  '[+]',
-            ('designation', False):  '[-]',
-            ('flag', 'closure') : '(x)',
-            ('flag', 'quit') : '(q)',
-            ('access', 'symmetric') : 'R(sym)',
-            ('access', 'transitive') : 'R(+)',
-            ('access', 'reflexive'): 'R(<=)',
-            ('access', 'serial'): 'R(ser)',
-            'access': 'R'},
+            (Marking.subscript_open, 0): '',
+            (Marking.subscript_close, 0): '',
+            (Marking.tableau, 'designation', True) :  '[+]',
+            (Marking.tableau, 'designation', False):  '[-]',
+            (Marking.tableau, 'flag', 'closure') : '(x)',
+            (Marking.tableau, 'flag', 'quit') : '(q)',
+            (Marking.tableau, 'access', 'symmetric') : 'R(sym)',
+            (Marking.tableau, 'access', 'transitive') : 'R(+)',
+            (Marking.tableau, 'access', 'reflexive'): 'R(<=)',
+            (Marking.tableau, 'access', 'serial'): 'R(ser)',
+            (Marking.tableau, 'access'): 'R',
+            (Marking.meta, 'conseq')    : '|-',
+            (Marking.meta, 'nonconseq') : '|/-',
+            (Marking.meta, 'therefore') : ':.',
+            (Marking.meta, 'ellipsis')  : '...',
+        },
         html = {
-            ('designation', True) : '&oplus;',  # '\2295'
-            ('designation', False): '&ominus;', # '\2296'
-            ('flag', 'closure') : '&otimes;', # '\2297'
-            ('flag', 'quit'): '&#9872;', # '⚐', '\U+2690'
-            ('access', 'symmetric'): 'R&#9007;', # '⌯', '\U+232F'
-            ('access', 'transitive'): 'R+',
-            ('access', 'reflexive'): 'R&le;',
-            ('access', 'serial'): 'Rser',
-            'access': 'R'},
+            (Marking.subscript_open, 0): '<sub>',
+            (Marking.subscript_close, 0): '</sub>',
+            (Marking.tableau, 'designation', True) : '&oplus;',  # '\2295'
+            (Marking.tableau, 'designation', False): '&ominus;', # '\2296'
+            (Marking.tableau, 'flag', 'closure') : '&otimes;',   # '\2297'
+            (Marking.tableau, 'flag', 'quit'): '&#9872;',        # '⚐', '\U+2690'
+            (Marking.tableau, 'access', 'symmetric'): 'R&#9007;',# '⌯', '\U+232F'
+            (Marking.tableau, 'access', 'transitive'): 'R+',
+            (Marking.tableau, 'access', 'reflexive'): 'R&le;',
+            (Marking.tableau, 'access', 'serial'): 'Rser',
+            (Marking.tableau, 'access'): 'R',
+            (Marking.meta, 'conseq')    : '&vdash;',
+            (Marking.meta, 'nonconseq') : '&nvdash;',
+            (Marking.meta, 'therefore') : '&there4;',
+            (Marking.meta, 'ellipsis')  : '&hellip;',
+        },
         latex = {
-            ('designation', True) : '\\varoplus{}',
-            ('designation', False) : '\\varominus{}',
-            ('flag', 'closure') : '\\varotimes{}',
-            ('flag', 'quit') : '\\bowtie{}',
-            ('access', 'symmetric') : '\\mathcal{R}_{sym}',
-            ('access', 'transitive') : '\\mathcal{R}_{+}',
-            ('access', 'reflexive') : '\\mathcal{R}_{\\leq{}}',
-            ('access', 'serial') : '\\mathcal{R}_{ser}',
-            'access': '\\mathcal{R}'})
+            (Marking.subscript_open, 0): '_{',
+            (Marking.subscript_close, 0): '}',
+            (Marking.tableau, 'designation', True) : '\\varoplus{}',
+            (Marking.tableau, 'designation', False) : '\\varominus{}',
+            (Marking.tableau, 'flag', 'closure') : '\\varotimes{}',
+            (Marking.tableau, 'flag', 'quit') : '\\bowtie{}',
+            (Marking.tableau, 'access', 'symmetric') : '\\mathcal{R}_{sym}',
+            (Marking.tableau, 'access', 'transitive') : '\\mathcal{R}_{+}',
+            (Marking.tableau, 'access', 'reflexive') : '\\mathcal{R}_{\\leq{}}',
+            (Marking.tableau, 'access', 'serial') : '\\mathcal{R}_{ser}',
+            (Marking.tableau, 'access'): '\\mathcal{R}',
+            (Marking.meta, 'conseq')    : '\\Vdash',
+            (Marking.meta, 'nonconseq') : '\\nVdash',
+            (Marking.meta, 'therefore') : '\\therefore',
+            (Marking.meta, 'ellipsis')  : '\\ldots',
+        })
+    markings['unicode'] = dunesc(markings['html']) | {
+        (Marking.subscript_open, 0): '.[',
+        (Marking.subscript_close, 0): ']',
+    }
+    markings['rst'] = dict(markings['unicode']) | {
+        (Marking.subscript_open, 0): ':sub:`',
+        (Marking.subscript_close, 0): '`',
+    }
 
-    for key in tabsym:
-        # (flag, closure) is for generic tab node writing
-        # (closure, True) is for rule legend writing
-        tabsym[key]['closure', True] = tabsym[key]['flag', 'closure']
-
-    data = {notn: {} for notn in Notation}
+    data = {}
 
     Notation.polish
     '---------------'
 
     # Start with html, and most things can be unescaped.
 
-    data[Notation.polish]['html'] = prev = dict(
+    data[Notation.polish, 'html'] = prev = dict(
+        format = 'html',
+        dialect = 'html',
         notation = Notation.polish,
-        format  = 'html',
         strings = {
-            LexType.Atomic   : tuple('abcde'),
-            LexType.Operator : {
-                Operator.Assertion              : 'T',
-                Operator.Negation               : 'N',
-                Operator.Conjunction            : 'K',
-                Operator.Disjunction            : 'A',
-                Operator.MaterialConditional    : 'C',
-                Operator.MaterialBiconditional  : 'E',
-                Operator.Conditional            : 'U',
-                Operator.Biconditional          : 'B',
-                Operator.Possibility            : 'M',
-                Operator.Necessity              : 'L',
-            },
-            LexType.Variable   : tuple('xyzv'),
-            LexType.Constant   : tuple('mnos'),
-            LexType.Quantifier : {
-                Quantifier.Universal   : 'V',
-                Quantifier.Existential : 'S',
-            },
-            (LexType.Predicate, True) : {
-                Predicate.System.Identity.index  : 'I',
-                Predicate.System.Existence.index : 'J',
-                (Operator.Negation, Predicate.System.Identity): NotImplemented,
-            },
-            (LexType.Predicate, False) : tuple('FGHO'),
-            Marking.paren_open  : (NotImplemented,),
-            Marking.paren_close : (NotImplemented,),
-            Marking.whitespace  : (' ',),
-            Marking.meta: metachar['html'],
-            Marking.tableau: tabsym['html'],
-            Marking.subscript: subsym['html'],
-        },
-    )
+            Operator.Assertion: 'T',
+            Operator.Negation: 'N',
+            Operator.Conjunction: 'K',
+            Operator.Disjunction: 'A',
+            Operator.MaterialConditional: 'C',
+            Operator.MaterialBiconditional: 'E',
+            Operator.Conditional: 'U',
+            Operator.Biconditional: 'B',
+            Operator.Possibility: 'M',
+            Operator.Necessity: 'L',
+            Quantifier.Universal: 'V',
+            Quantifier.Existential: 'S',
+            Predicate.Identity: 'I',
+            Predicate.Existence: 'J',
+            (Operator.Negation, Predicate.Identity): NotImplemented,
+            (Atomic, 0) : 'a',
+            (Atomic, 1) : 'b',
+            (Atomic, 2) : 'c',
+            (Atomic, 3) : 'd',
+            (Atomic, 4) : 'e',
+            (Variable, 0) : 'x',
+            (Variable, 1) : 'y',
+            (Variable, 2) : 'z',
+            (Variable, 3) : 'v',
+            (Constant, 0) : 'm',
+            (Constant, 1) : 'n',
+            (Constant, 2) : 'o',
+            (Constant, 3) : 's',
+            (Predicate, 0): 'F',
+            (Predicate, 1): 'G',
+            (Predicate, 2): 'H',
+            (Predicate, 3): 'O',
+            (Marking.paren_open, 0)  : NotImplemented,
+            (Marking.paren_close, 0) : NotImplemented,
+            (Marking.whitespace, 0)  : ' ',
+            **markings['html']})
 
-    data[Notation.polish]['unicode'] = prev = dmerged(prev, dict(
-        format  = 'unicode',
-        strings  = dunesc(prev['strings']) | {
-            Marking.subscript: subsym['unicode']
-        },
+    data[Notation.polish, 'text', 'unicode'] = prev = dmerged(prev, dict(
+        format = 'text',
+        dialect = 'unicode',
+        strings = dunesc(prev['strings']) | markings['unicode'],
     ))
 
-    data[Notation.polish]['rst'] = prev = dmerged(prev, dict(
-        format  = 'rst',
-        strings = {Marking.subscript: subsym['rst']}
-    ))
-
-    data[Notation.polish]['ascii'] = prev = dmerged(prev, dict(
-        format  = 'ascii',
-        strings  = {
-            Marking.meta: metachar['ascii'],
-            Marking.tableau: tabsym['ascii'],
-            Marking.subscript: subsym['ascii'],
-        },
-    ))
-
-    data[Notation.polish]['latex'] = dmerged(prev, dict(
-        format  = 'latex',
-        strings  = {
-            Marking.meta: metachar['latex'],
-            Marking.tableau: tabsym['latex'],
-            Marking.subscript: subsym['latex'],
+    data[Notation.polish, 'rst'] = prev = dmerged(prev, dict(
+        format = 'rst',
+        dialect = 'rst',
+        strings = {
+            (Marking.subscript_open, 0): ':sub:`',
+            (Marking.subscript_close, 0): '`',
         }
+    ))
+
+    data[Notation.polish, 'text', 'ascii'] = prev = dmerged(prev, dict(
+        format = 'text',
+        dialect = 'ascii',
+        strings = {**markings['ascii']},
+    ))
+
+    data[Notation.polish, 'text', 'latex'] = dmerged(prev, dict(
+        format = 'latex',
+        dialect = 'latex',
+        strings  = {**markings['latex']},
     ))
 
     Notation.standard
     '---------------'
 
-    data[Notation.standard]['html'] = prev = dict(
+    data[Notation.standard, 'html'] = prev = dict(
         notation = Notation.standard,
         format  = 'html',
-        strings = {
-            LexType.Atomic   : tuple('ABCDE'),
-            LexType.Operator : {
-                Operator.Assertion             : '&#9900;' ,#'&#9675;' ,
-                Operator.Negation              : '&not;'   ,
-                Operator.Conjunction           : '&and;'   ,
-                Operator.Disjunction           : '&or;'    ,
-                Operator.MaterialConditional   : '&sup;'   ,
-                Operator.MaterialBiconditional : '&equiv;' ,
-                Operator.Conditional           : '&rarr;'  ,
-                Operator.Biconditional         : '&harr;'  ,
-                Operator.Possibility           : '&#9671;' ,
-                Operator.Necessity             : '&#9723;' ,
-            },
-            LexType.Variable   : tuple('xyzv'),
-            LexType.Constant   : tuple('abcd'),
-            LexType.Quantifier : {
-                Quantifier.Universal   : '&forall;' ,
-                Quantifier.Existential : '&exist;'  ,
-            },
-            (LexType.Predicate, True) : {
-                Predicate.System.Identity.index  : '=',
-                Predicate.System.Existence.index : 'E!',
-                (Operator.Negation, Predicate.System.Identity): '&ne;',
-            },
-            (LexType.Predicate, False) : tuple('FGHO'),
-            Marking.paren_open   : ('(',),
-            Marking.paren_close  : (')',),
-            Marking.whitespace   : (' ',),
-            Marking.meta: metachar['html'],
-            Marking.tableau: tabsym['html'],
-            Marking.subscript: subsym['html'],
+        dialect = 'html',
+        strings = data[Notation.polish, 'html']['strings'] | {
+            Operator.Assertion             : '&#9900;' ,#'&#9675;' ,
+            Operator.Negation              : '&not;'   ,
+            Operator.Conjunction           : '&and;'   ,
+            Operator.Disjunction           : '&or;'    ,
+            Operator.MaterialConditional   : '&sup;'   ,
+            Operator.MaterialBiconditional : '&equiv;' ,
+            Operator.Conditional           : '&rarr;'  ,
+            Operator.Biconditional         : '&harr;'  ,
+            Operator.Possibility           : '&#9671;' ,
+            Operator.Necessity             : '&#9723;' ,
+            Quantifier.Universal   : '&forall;' ,
+            Quantifier.Existential : '&exist;'  ,
+            Predicate.Identity: '=',
+            Predicate.Existence: 'E!',
+            (Operator.Negation, Predicate.Identity): '&ne;',
+            (Atomic, 0) : 'A',
+            (Atomic, 1) : 'B',
+            (Atomic, 2) : 'C',
+            (Atomic, 3) : 'D',
+            (Atomic, 4) : 'E',
+            (Constant, 0) : 'a',
+            (Constant, 1) : 'b',
+            (Constant, 2) : 'c',
+            (Constant, 3) : 'd',
+            (Marking.paren_open, 0)  : '(',
+            (Marking.paren_close, 0) : ')',
         },
     )
 
-    data[Notation.standard]['unicode'] = prev = dmerged(prev, dict(
-        format  = 'unicode',
-        strings  = dunesc(prev['strings'])| {
-            Marking.subscript: subsym['unicode']
+    data[Notation.standard, 'text', 'unicode'] = prev = dmerged(prev, dict(
+        format = 'text',
+        dialect = 'unicode',
+        strings = dunesc(prev['strings'])| {
+            (Marking.subscript_open, 0): '.[',
+            (Marking.subscript_close, 0): ']',
         },
     ))
 
-    data[Notation.standard]['rst'] = prev = dmerged(prev, dict(
-        format  = 'rst',
-        strings = {Marking.subscript: subsym['rst']}
+    data[Notation.standard, 'rst'] = prev = dmerged(prev, dict(
+        format = 'rst',
+        dialect = 'rst',
+        strings = {
+            (Marking.subscript_open, 0): ':sub:`',
+            (Marking.subscript_close, 0): '`',
+        }
     ))
 
-    data[Notation.standard]['ascii'] = prev = dmerged(prev, dict(
-        format  = 'ascii',
+    data[Notation.standard, 'text', 'ascii'] = prev = dmerged(prev, dict(
+        format = 'text',
+        dialect = 'ascii',
         strings = {
-            LexType.Operator : {
-                Operator.Assertion              :  '*',
-                Operator.Negation               :  '~',
-                Operator.Conjunction            :  '&',
-                Operator.Disjunction            :  'V',
-                Operator.MaterialConditional    :  '>',
-                Operator.MaterialBiconditional  :  '<',
-                Operator.Conditional            :  '$',
-                Operator.Biconditional          :  '%',
-                Operator.Possibility            :  'P',
-                Operator.Necessity              :  'N',
-            },
-            LexType.Quantifier : {
-                Quantifier.Universal   : 'L',
-                Quantifier.Existential : 'X',
-            },
-            (LexType.Predicate, True) : {
-                (Operator.Negation, Predicate.System.Identity): '!=',
-            },
-            Marking.meta: metachar['ascii'],
-            Marking.tableau: tabsym['ascii'],
-            Marking.subscript: subsym['ascii'],
+            Operator.Assertion              :  '*',
+            Operator.Negation               :  '~',
+            Operator.Conjunction            :  '&',
+            Operator.Disjunction            :  'V',
+            Operator.MaterialConditional    :  '>',
+            Operator.MaterialBiconditional  :  '<',
+            Operator.Conditional            :  '$',
+            Operator.Biconditional          :  '%',
+            Operator.Possibility            :  'P',
+            Operator.Necessity              :  'N',
+            Quantifier.Universal   : 'L',
+            Quantifier.Existential : 'X',
+            (Operator.Negation, Predicate.Identity): '!=',
+            **markings['ascii'],
         },
     ))
 
-    data[Notation.standard]['latex'] = dmerged(prev, dict(
-        format  = 'latex',
+    data[Notation.standard, 'latex'] = dmerged(prev, dict(
+        format = 'latex',
+        dialect = 'latex',
         strings = {
-            LexType.Operator : {
-                Operator.Assertion              :  '\\circ{}',
-                Operator.Negation               :  '\\neg{}',
-                Operator.Conjunction            :  '\\wedge{}',
-                Operator.Disjunction            :  '\\vee{}',
-                Operator.MaterialConditional    :  '\\supset{}',
-                Operator.MaterialBiconditional  :  '\\equiv{}',
-                Operator.Conditional            :  '\\rightarrow{}',
-                Operator.Biconditional          :  '\\leftrightarrow{}',
-                Operator.Possibility            :  '\\Diamond{}',
-                Operator.Necessity              :  '\\Box{}',
-            },
-            LexType.Quantifier : {
-                Quantifier.Universal   : '\\forall{}',
-                Quantifier.Existential : '\\exists{}',
-            },
-            (LexType.Predicate, True) : {
-                (Operator.Negation, Predicate.System.Identity): '\\neq{}',
-            },
-            Marking.meta: metachar['latex'],
-            Marking.tableau: tabsym['latex'],
-            Marking.subscript: subsym['latex'],
+            Operator.Assertion              :  '\\circ{}',
+            Operator.Negation               :  '\\neg{}',
+            Operator.Conjunction            :  '\\wedge{}',
+            Operator.Disjunction            :  '\\vee{}',
+            Operator.MaterialConditional    :  '\\supset{}',
+            Operator.MaterialBiconditional  :  '\\equiv{}',
+            Operator.Conditional            :  '\\rightarrow{}',
+            Operator.Biconditional          :  '\\leftrightarrow{}',
+            Operator.Possibility            :  '\\Diamond{}',
+            Operator.Necessity              :  '\\Box{}',
+            Quantifier.Universal   : '\\forall{}',
+            Quantifier.Existential : '\\exists{}',
+            (Operator.Negation, Predicate.Identity): '\\neq{}',
+            **markings['latex'],
         },
     ))
     return data
-
-def tdata():
-
-    from pytableaux.lang import Atomic, Constant, Variable, Operator, Predicate, Quantifier, Marking, Notation
-
-    strings={
-        Operator.Assertion: 'T',
-        Operator.Negation: 'N',
-        Operator.Conjunction: 'K',
-        Operator.Disjunction: 'A',
-        Operator.MaterialConditional: 'C',
-        Operator.MaterialBiconditional: 'E',
-        Operator.Conditional: 'U',
-        Operator.Biconditional: 'B',
-        Operator.Possibility: 'M',
-        Operator.Necessity: 'L',
-        Quantifier.Universal: 'V',
-        Quantifier.Existential: 'S',
-        Predicate.Identity: 'I',
-        Predicate.Existence: 'J',
-        (Operator.Negation, Predicate.Identity): NotImplemented,
-        (Atomic, 0) : 'a',
-        (Atomic, 1) : 'b',
-        (Atomic, 2) : 'c',
-        (Atomic, 3) : 'd',
-        (Atomic, 4) : 'e',
-        (Variable, 0) : 'x',
-        (Variable, 1) : 'y',
-        (Variable, 2) : 'z',
-        (Variable, 3) : 'v',
-        (Constant, 0) : 'm',
-        (Constant, 1) : 'n',
-        (Constant, 2) : 'o',
-        (Constant, 3) : 's',
-        (Predicate, 0): 'F',
-        (Predicate, 0): 'G',
-        (Predicate, 0): 'H',
-        (Predicate, 0): 'O',
-        (Marking.paren_open, 0)  : NotImplemented,
-        (Marking.paren_close, 0) : NotImplemented,
-        (Marking.whitespace, 0)  : ' ',
-        (Marking.subscript_open, 0): '<sub>',
-        (Marking.subscript_close, 0): '</sub>',
-        (Marking.tableau, 'designation', True) : '&oplus;',  # '\2295'
-        (Marking.tableau, 'designation', False): '&ominus;', # '\2296'
-        (Marking.tableau, 'flag', 'closure') : '&otimes;',   # '\2297'
-        (Marking.tableau, 'flag', 'quit'): '&#9872;',        # '⚐', '\U+2690'
-        (Marking.tableau, 'access', 'symmetric'): 'R&#9007;',# '⌯', '\U+232F'
-        (Marking.tableau, 'access', 'transitive'): 'R+',
-        (Marking.tableau, 'access', 'reflexive'): 'R&le;',
-        (Marking.tableau, 'access', 'serial'): 'Rser',
-        (Marking.tableau, 'access'): 'R',
-        (Marking.meta, 'conseq')    : '&vdash;',
-        (Marking.meta, 'nonconseq') : '&nvdash;',
-        (Marking.meta, 'therefore') : '&there4;',
-        (Marking.meta, 'ellipsis')  : '&hellip;'}
-    strings.setdefault(Marking.whitespace, strings[Marking.whitespace, 0])
-    strings.setdefault(Marking.subscript_open, strings[Marking.subscript_open, 0])
-    strings.setdefault(Marking.subscript_close, strings[Marking.subscript_close, 0])
-    strings.setdefault(Marking.paren_open, strings[Marking.paren_open, 0])
-    strings.setdefault(Marking.paren_close, strings[Marking.paren_close, 0])
-    strings.setdefault((Marking.tableau, 'closure', True), strings[Marking.tableau, 'flag', 'closure'])
-    tbl = dict(
-        format='html',
-        notation=Notation.polish,
-        strings=strings)
-    return tbl
-
-
-
-
 
 @closure
 def dtransform():

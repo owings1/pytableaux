@@ -220,7 +220,7 @@ class WebApp(EventEmitter):
                     premises = tuple(map(lw, arg.premises)),
                     conclusion = lw(arg.conclusion)))
                 for lw in (
-                    notn.DefaultWriter('ascii')
+                    notn.DefaultWriter(format='text', dialect='ascii')
                     for notn in Notation)} | {
                 '@Predicates': tuple(
                     p.spec for p in arg.predicates(sort=True)
@@ -237,7 +237,7 @@ class WebApp(EventEmitter):
     
     def _build_jsapp_data(self):
         stdtbl = ParseTable.fetch(Notation.standard)
-        stdlw = Notation.standard.DefaultWriter('unicode')
+        stdlw = Notation.standard.DefaultWriter(format='text', dialect='unicode')
         return MapProxy(dict(
             example_args = self.example_args,
             example_preds = tuple(p.spec for p in examples.preds),

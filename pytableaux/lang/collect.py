@@ -57,7 +57,7 @@ class ArgumentMeta(LangCommonMeta):
             lw = self._keystr_lw
         except AttributeError:
             from .writing import PolishLexWriter
-            type.__setattr__(self, '_keystr_lw', PolishLexWriter('ascii'))
+            type.__setattr__(self, '_keystr_lw', PolishLexWriter(format='text', dialect='ascii'))
             lw = self._keystr_lw
         preds = inst.predicates() - Predicate.System
         preds.sort()

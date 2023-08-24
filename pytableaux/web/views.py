@@ -244,7 +244,7 @@ class ApiParseView(ApiView):
             type = sentence.TYPE.name,
             rendered = {
                 notn.name: {
-                    format: notn.DefaultWriter(format)(sentence)
+                    format: notn.DefaultWriter(format=format)(sentence)
                     for format in notn.formats}
                 for notn in Notation})
 
@@ -264,6 +264,8 @@ class ApiProveView(ApiView):
         output=MapProxy(dict(
             notation=Notation.polish.name,
             format='html',
+            dialect=None,
+            attachments=False,
             options=EMPTY_MAP))))
 
     def setup(self, *args, **kw):
@@ -326,7 +328,7 @@ class ApiProveView(ApiView):
         if self.errors:
             return
         self.tableau = self.build()
-        return dict(
+        data = dict(
             tableau = dict(
                 logic = self.logic.Meta.name,
                 argument = dict(
@@ -336,12 +338,14 @@ class ApiProveView(ApiView):
                 body   = self.pw(self.tableau),
                 stats  = self.tableau.stats,
                 result = self.tableau.stats['result']),
-            attachments = self.pw.attachments(),
             writer = dict(
                 engine  = self.pw.engine,
                 format  = self.pw.format,
                 notation = self.pw.lw.notation.name,
                 options = self.pw.opts))
+        if self.payload['output:attachments']:
+            data['attachments'] = self.pw.attachments()
+        return data
 
     def build(self):
         metrics = self.app.metrics if self.config['metrics_enabled'] else None
@@ -427,7 +431,10 @@ class ApiProveView(ApiView):
             errors['output:notation'] = f"Invalid notation: {err}"
             return
         try:
-            lw = notn.DefaultWriter(payload['output:format'])
+
+            lw = notn.DefaultWriter(
+                format=payload['output:format'],
+                dialect=payload['output:dialect'])
         except (KeyError, ValueError) as err:
             errors['output:format'] = f"Unsupported format: {err}"
             return
@@ -547,6 +554,7 @@ class ProveView(FormView):
     def POST(self):
         if not self.validate():
             return
+        self.api_payload['output:attachments'] = True
         if self.api_payload.get('output:format') == 'latex':
             self.api_payload.setdefault('output:options:fulldoc', True)
         self.api.setup(self.api_payload)
@@ -571,7 +579,7 @@ class ProveView(FormView):
             self.selected_tab = 'view'
         else:
             self.selected_tab = False # 'stats'
-        if self.lw.format in ('html', 'ascii', 'unicode'):
+        if self.lw.format in ('html', 'text') and self.lw.strings.dialect in ('html', 'ascii', 'unicode'):
             self.lw_for_argument = self.lw
         else:
             # For the argument display, so we don't end up writing latex sequences.

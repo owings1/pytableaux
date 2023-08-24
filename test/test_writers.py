@@ -26,8 +26,8 @@ from .utils import BaseCase
 # Sentence Writers
 
 std = LexWriter('standard')
-stdasc = LexWriter('standard', format = 'ascii')
-stduni = LexWriter('standard', format = 'unicode')
+stdasc = LexWriter('standard', dialect = 'ascii')
+stduni = LexWriter('standard', dialect = 'unicode')
 stdhtm = LexWriter('standard', format = 'html')
 
 pol = LexWriter('polish')
@@ -61,13 +61,13 @@ class TestStandard(BaseCase):
         self.assertIn(')', res)
     def test_drop_parens_asc(self):
         s = ppol('Uab')
-        lw = LexWriter('standard', 'ascii', drop_parens=True)
+        lw = LexWriter('standard', dialect='ascii', drop_parens=True)
         res = lw(s)
         self.assertNotIn('(', res)
         self.assertNotIn(')', res)
     def test_drop_parens_uni(self):
         s = ppol('Uab')
-        lw = LexWriter('standard', 'unicode', drop_parens=True)
+        lw = LexWriter('standard', dialect='unicode', drop_parens=True)
         res = lw(s)
         self.assertNotIn('(', res)
         self.assertNotIn(')', res)

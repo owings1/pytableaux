@@ -33,8 +33,8 @@ from typing import (TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Self,
 
 from .. import errors
 from ..errors import Emsg, check
-from ..tools import (EMPTY_SEQ, EMPTY_SET, abcs, closure, dund, group, inflect,
-                     lazy, membr, qsetf, wraps)
+from ..tools import (EMPTY_SEQ, EMPTY_SET, abcs, closure, inflect, lazy, membr,
+                     qsetf, wraps)
 from . import (BiCoords, LangCommonEnum, LangCommonMeta, LexicalAbcMeta,
                TriCoords, nosetattr)
 

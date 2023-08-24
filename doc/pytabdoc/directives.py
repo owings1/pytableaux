@@ -277,7 +277,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             lw=lw,
             classes=classes,
             wrapper=False)
-        self.lwuni = LexWriter(opts['wnotn'], 'unicode')
+        self.lwuni = LexWriter(opts['wnotn'], dialect='unicode')
 
     def run(self):
 

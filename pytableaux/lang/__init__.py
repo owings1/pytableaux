@@ -27,7 +27,7 @@ from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar, Iterable, NamedTuple, Self
 
 from ..errors import Emsg
-from ..tools import EMPTY_MAP, EMPTY_SET, NoSetAttr, abcs, closure, dxopy
+from ..tools import EMPTY_MAP, EMPTY_SET, NoSetAttr, abcs, closure, dxopy, MapCover
 
 __all__ = (
     # Classes
@@ -121,11 +121,8 @@ class Notation(LangCommonEnum):
     default: ClassVar[Notation]
     "The default notation."
 
-    formats: dict[str, set[StringTable]]
-    "Mapping from format to set of string tables for the notation."
-
-    default_format: str
-    "The render format of the notation's default writer."
+    formats: dict[str, set[str]]
+    "Mapping from format to dialects."
 
     writers: set[type[LexWriter]]
     "All writer classes for the notation."
@@ -145,10 +142,7 @@ class Notation(LangCommonEnum):
     "Standard notation."
 
     def __init__(self, name, /):
-        default_format = 'ascii'
         self.formats = defaultdict(set)
-        self.formats[default_format]
-        self.default_format = default_format
         self.writers = set()
         self.DefaultWriter = None
 
@@ -393,88 +387,6 @@ class TableStore(metaclass=LangCommonMeta):
                 cls.fetch(notn, key)
 
 
-class StringTable(TableStore, Mapping):
-    'Lexical writer strings table data class.'
-
-    default_fetch_key = 'ascii'
-
-    strings: Mapping
-    "Fixed strings mapping."
-
-    data: Mapping
-    keypair: tuple
-
-    @property
-    def format(self) -> str:
-        "The format (html, latex, etc.)"
-        return self.data['format']
-
-    @property
-    def notation(self) -> Notation:
-        "The notation flavor."
-        return self.data['notation']
-
-    @property
-    def fetchkey(self) -> str:
-        return self.keypair[1]
-
-    __slots__ = (
-        'data',
-        'keypair',
-        'flat',
-        'hash')
-
-    def __init__(self, data: Mapping, keypair: tuple, /):
-        self.data = dxopy(data, True)
-        self.flat = {}
-        self.keypair = keypair
-        self.hash = self._compute_hash()
-        self.notation.formats[self.format].add(self)
-        for key, value in self.data['strings'].items():
-            if isinstance(key, tuple):
-                path = key
-            else:
-                path = key,
-            if isinstance(value, tuple):
-                for i, value in enumerate(value):
-                    self.flat[*path, i] = value
-                continue
-            if isinstance(value, Mapping):
-                for key, value in value.items():
-                    if isinstance(key, tuple):
-                        keys = key
-                    else:
-                        keys = key,
-                    self.flat[*path, *keys] = value
-                continue
-            raise ValueError(value)
-
-    def __getitem__(self, key):
-        return self.flat[key]
-
-    def __len__(self):
-        return len(self.flat)
-
-    def __iter__(self):
-        return iter(self.flat)
-
-    def __reversed__(self):
-        return reversed(self.flat)
-
-    def __hash__(self):
-        return self.hash
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-        return (
-            type(self) is type(other) and
-            hash(self) == hash(other) and
-            self.format == other.format)
-
-    def _compute_hash(self) -> int:
-        return hash(tuple(sorted(self.items())))
-
 
 from .lex import Atomic, Constant
 from .lex import CoordsItem as CoordsItem
@@ -494,6 +406,97 @@ from .lex import Quantified as Quantified
 from .lex import Quantifier as Quantifier
 from .lex import Sentence as Sentence
 from .lex import Variable as Variable
+
+class StringTable(MapCover[Any, str], metaclass=LangCommonMeta):
+    'Lexical writer strings table data class.'
+
+    _instances = {}
+
+    @classmethod
+    def load(cls, data: Mapping, /) -> Self:
+        """Create and store instance from data.
+
+        Args:
+            data: The data mapping
+
+        Raises:
+            Emsg.DuplicateKey: on duplicate key for notation
+
+        Returns:
+            The instance
+        """
+        format = data['format']
+        notn = Notation[data['notation']]
+        dialect = data.get('dialect', format)
+        key = format, notn, dialect
+        if key in cls._instances:
+            raise Emsg.DuplicateKey(key)
+        return cls._instances.setdefault(key, cls(data))
+
+    @classmethod
+    def fetch(cls, format: str, notation: Notation, dialect: str = None) -> Self:
+        """Get a loaded instance.
+
+        Args:
+            format: The format.
+            notation: The notation
+            dialect: The dialect if any.
+
+        Returns:
+            The instance
+        """
+        return cls._instances[format, Notation[notation], dialect or format]
+
+    format: str
+    "The format (html, latex, text, rst, etc.)"
+    dialect: str
+    "The specific dialect, if any. Defaults to the name of the format."
+    notation: Notation
+
+    __slots__ = (
+        'format',
+        'notation',
+        'dialect',
+        'hash')
+
+    def __init__(self, data: Mapping, /):
+        strings = dict(data['strings'])
+        for key, defaultkey in self._keydefaults.items():
+            strings.setdefault(key, strings[defaultkey])
+        super().__init__(strings)
+        self.format = data['format']
+        self.dialect = data.get('dialect', self.format)
+        self.notation = Notation[data['notation']]
+        self.notation.formats[self.format].add(self.dialect)
+        self.hash = self._compute_hash()
+
+    _keydefaults = {
+        (Predicate, Predicate.Identity.index): Predicate.Identity,
+        (Predicate, Predicate.Existence.index): Predicate.Existence,
+        Marking.whitespace: (Marking.whitespace, 0),
+        Marking.subscript_open: (Marking.subscript_open, 0),
+        Marking.subscript_close: (Marking.subscript_close, 0),
+        Marking.paren_open: (Marking.paren_open, 0),
+        Marking.paren_close: (Marking.paren_close, 0),
+        (Marking.tableau, 'closure', True): (Marking.tableau, 'flag', 'closure')}
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return (
+            type(self) is type(other) and
+            # hash(self) == hash(other) and
+            self.format == other.format and
+            self.notation == other.notation and
+            self.dialect == other.dialect and
+            dict(self) == dict(other))
+
+    def _compute_hash(self) -> int:
+        return hash((sum(map(hash, self)), hash(tuple(sorted(self.values(), key=str)))))
+
 
 pass
 from .parsing import Parser as Parser
@@ -518,9 +521,15 @@ def init():
 
     from . import _symdata
 
-    StringTable._initcache(Notation, _symdata.string_tables())
+    for _ in map(StringTable.load, _symdata.string_tables().values()): pass
+    for notn in Notation:
+        StringTable._instances.setdefault(
+            ('text', notn, 'text'),
+            StringTable._instances['text', notn, 'ascii']
+        )
+
     ParseTable._initcache(Notation, _symdata.parsetables())
-    LexWriter._sys = LexWriter('standard', 'unicode')
+    LexWriter._sys = Notation.standard.DefaultWriter(format='text', dialect='unicode')
 
     def tostr_item(item: LexicalAbc):
         return LexWriter._sys(item)

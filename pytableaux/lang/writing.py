@@ -28,18 +28,20 @@ from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar
 
 from ..errors import Emsg, check
-from ..tools import EMPTY_SET, abcs, closure
+from ..tools import EMPTY_MAP, EMPTY_SET, abcs, closure
 from . import (Atomic, Constant, CoordsItem, LangCommonMeta, Lexical, LexType,
                Marking, Notation, Operated, Operator, Predicate, Predicated,
-               Quantified, StringTable)
+               Quantified, Quantifier, StringTable, Variable)
 
 __all__ = (
     'LexWriter',
     'StandardLexWriter',
     'PolishLexWriter')
 
+
 class LexWriterMeta(LangCommonMeta):
     'LexWriter Metaclass.'
+    DEFAULT_FORMAT = 'text'
 
     def __call__(cls, *args, **kw):
         if cls is LexWriter:
@@ -93,7 +95,7 @@ class LexWriter(metaclass = LexWriterMeta):
 
     notation: ClassVar[Notation]
     defaults = {}
-    _methodmap = MapProxy(dict(zip(LexType, itertools.repeat(NotImplemented))))
+    _methodmap = EMPTY_MAP
     _sys: LexWriter
 
     #******  Instance Variables
@@ -116,19 +118,20 @@ class LexWriter(metaclass = LexWriterMeta):
     def canwrite(cls, obj: Any) -> bool:
         "Whether the object can be written."
         try:
-            return cls._methodmap[obj.TYPE] is not NotImplemented
+            return cls._methodmap[type(obj)] is not NotImplemented
         except (AttributeError, KeyError):
             return False
 
     #******  Instance Init
 
-    def __init__(self, format: str|None = None, strings: StringTable|None = None, **opts):
+    def __init__(self, format: str|None = None, dialect: str = None, strings: StringTable|None = None, **opts):
         if strings is None:
-            notn = self.notation
             if format is None:
-                format = notn.default_format
-            strings = StringTable.fetch(notn, format)
-        elif format is not None and format != strings.format:
+                format = LexWriter.DEFAULT_FORMAT
+            strings = StringTable.fetch(format=format, notation=self.notation, dialect=dialect)
+        elif (
+            format is not None and format != strings.format or
+            dialect is not None and dialect != strings.dialect):
             raise Emsg.WrongValue(format, strings.format)
         self.opts = dict(self.defaults, **opts)
         self.strings = strings
@@ -138,7 +141,7 @@ class LexWriter(metaclass = LexWriterMeta):
     def _write(self, item) -> str:
         'Wrapped internal write method.'
         try:
-            method = self._methodmap[item.TYPE]
+            method = self._methodmap[type(item)]
         except AttributeError:
             raise TypeError(type(item))
         except KeyError:
@@ -156,57 +159,59 @@ class LexWriter(metaclass = LexWriterMeta):
         'Update available writers.'
         if not issubclass(subcls, __class__):
             raise TypeError(subcls, __class__)
-        for ltype, meth in subcls._methodmap.items():
-            try:
-                getattr(subcls, meth)
-            except TypeError:
-                raise TypeError(meth, ltype)
-            except AttributeError:
-                raise TypeError('Missing method', meth, subcls)
-        notn = subcls.notation = Notation(subcls.notation)
+        # for ltype, meth in subcls._methodmap.items():
+        #     try:
+        #         getattr(subcls, meth)
+        #     except TypeError:
+        #         raise TypeError(meth, ltype)
+        #     except AttributeError:
+        #         raise TypeError('Missing method', meth, subcls)
+        # notn = subcls.notation = Notation(subcls.notation)
         # type(cls).register(cls, subcls)
-        notn.writers.add(subcls)
-        if notn.DefaultWriter is None:
-            notn.DefaultWriter = subcls
+        subcls.notation.writers.add(subcls)
+        if subcls.notation.DefaultWriter is None:
+            subcls.notation.DefaultWriter = subcls
         return subcls
 
-    def __init_subclass__(subcls: type[LexWriter], **kw):
-        'Merge and freeze method map from mro. Sync ``__call__()``.'
-        super().__init_subclass__(**kw)
-        abcs.merge_attr(
-            subcls, '_methodmap', supcls = __class__, transform = MapProxy)
+    # def __init_subclass__(subcls: type[LexWriter], **kw):
+    #     'Merge and freeze method map from mro. Sync ``__call__()``.'
+    #     super().__init_subclass__(**kw)
+    #     abcs.merge_attr(
+    #         subcls, '_methodmap', supcls = __class__, transform = MapProxy)
 
 class DefaultLexWriter(LexWriter):
     "Common lexical writer abstract class."
 
     __slots__ = EMPTY_SET
 
-    _methodmap = {
-        LexType.Operator   : '_write_plain',
-        LexType.Quantifier : '_write_plain',
-        LexType.Predicate  : '_write_predicate',
-        LexType.Constant   : '_write_coordsitem',
-        LexType.Variable   : '_write_coordsitem',
-        LexType.Atomic     : '_write_coordsitem',
-        LexType.Predicated : '_write_predicated',
-        LexType.Quantified : '_write_quantified',
-        LexType.Operated   : '_write_operated'}
+    _methodmap = MapProxy({
+        Operator   : '_write_plain',
+        Quantifier : '_write_plain',
+        Predicate  : '_write_predicate',
+        Constant   : '_write_coordsitem',
+        Variable   : '_write_coordsitem',
+        Atomic     : '_write_coordsitem',
+        Predicated : '_write_predicated',
+        Quantified : '_write_quantified',
+        Operated   : '_write_operated'})
 
     @abstractmethod
     def _write_operated(self, item: Operated) -> str: ...
 
     def _write_plain(self, item: Lexical) -> str:
-        return self.strings[item.TYPE, item]
+        return self.strings[item]
 
     def _write_coordsitem(self, item: CoordsItem) -> str:
         return ''.join((
-            self.strings[item.TYPE, item.index],
+            self.strings[type(item), item.index],
             self._write_subscript(item.subscript)))
 
     def _write_predicate(self, item: Predicate) -> str:
-        return ''.join((
-            self.strings[LexType.Predicate, item.is_system, item.index],
-            self._write_subscript(item.subscript)))
+        try:
+            predstr = self.strings[item]
+        except KeyError:
+            predstr = self.strings[Predicate, item.index]
+        return ''.join((predstr, self._write_subscript(item.subscript)))
 
     def _write_quantified(self, item: Quantified) -> str:
         return ''.join(map(self._write, item.items))
@@ -217,9 +222,9 @@ class DefaultLexWriter(LexWriter):
     def _write_subscript(self, s: int) -> str:
         if s == 0: return ''
         return ''.join((
-            self.strings[Marking.subscript, Marking.subscript_open],
+            self.strings[Marking.subscript_open],
             str(s),
-            self.strings[Marking.subscript, Marking.subscript_close]))
+            self.strings[Marking.subscript_close]))
 
 @LexWriter.register
 class PolishLexWriter(DefaultLexWriter):
@@ -262,7 +267,7 @@ class StandardLexWriter(DefaultLexWriter):
         if not should_infix:
             return super()._write_predicated(s)
         if pred is Predicate.Identity:
-            ws = strings[Marking.whitespace, 0]
+            ws = strings[Marking.whitespace]
         else:
             ws = ''
         return ws.join((
@@ -274,7 +279,7 @@ class StandardLexWriter(DefaultLexWriter):
         oper = s.operator
         arity = oper.arity
         strings = self.strings
-        ws = strings[Marking.whitespace, 0]
+        ws = strings[Marking.whitespace]
         if arity == 1:
             s = s.lhs
             is_neg_identity = (
@@ -282,7 +287,7 @@ class StandardLexWriter(DefaultLexWriter):
                 type(s) is Predicated
                 and s.predicate is Predicate.Identity)
             if is_neg_identity and self.opts['identity_infix']:
-                symbol = strings[LexType.Predicate, True, Operator.Negation, Predicate.Identity]
+                symbol = strings[Operator.Negation, Predicate.Identity]
                 return ws.join((
                     self._write(s[0]),
                     symbol,
@@ -295,8 +300,8 @@ class StandardLexWriter(DefaultLexWriter):
             paren_open = ''
             paren_close = ''
         else:
-            paren_open = strings[Marking.paren_open, 0]
-            paren_close = strings[Marking.paren_close, 0]
+            paren_open = strings[Marking.paren_open]
+            paren_close = strings[Marking.paren_close]
         return ''.join((
             paren_open,
             ws.join(map(self._write, (lhs, oper, rhs))),

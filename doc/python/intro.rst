@@ -66,6 +66,7 @@ The following is an example for building a proof in {@CPL} for Modus Ponens::
 The full API docs are available :doc:`here <index>`.
 
 .. latex -interaction=nonstopmode -halt-on-error -output-directory=log -output-format=pdf log/tab.tex
+
 Development
 ===========
 

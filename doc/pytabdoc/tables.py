@@ -126,8 +126,8 @@ def oper_sym_table():
     sources = (
         ParseTable.fetch('polish'),
         ParseTable.fetch('standard'),
-        StringTable.fetch('standard', 'unicode'),
-        StringTable.fetch('standard', 'html'))
+        StringTable.fetch(format='text', notation='standard', dialect='unicode'),
+        StringTable.fetch(notation='standard', format='html'))
 
     def sources_info():
         for src in sources:
@@ -142,7 +142,7 @@ def oper_sym_table():
             if type(src) is ParseTable:
                 yield src.char(o.TYPE, o)
             else:
-                yield src[o.TYPE, o]
+                yield src[o]
 
     formats = [
         fmt_literal,
@@ -226,7 +226,7 @@ directives.table_generators['oper-sym-table'] = OperSymTable
 # ------------------------------------------------
 
 def lex_eg_table(columns: list[str], /, *, 
-    notn = 'standard', format = 'unicode',):
+    notn = 'standard', format = 'text', dialect='unicode',):
     "lexical item attribute examples."
 
     """
@@ -246,7 +246,7 @@ def lex_eg_table(columns: list[str], /, *,
     │ Operated   │ ○A     │ (90, 50, 10, 60, 0, 0)             │
     ╘════════════╧════════╧════════════════════════════════════╛
     """
-    reprer = Reprer(lw = LexWriter(notn, format))
+    reprer = Reprer(lw = LexWriter(notn, format, dialect))
 
     header = ['Type', 'Item', *columns]
     data = [
