@@ -38,7 +38,7 @@ from sphinx.util import logging
 
 from pytableaux import examples, logics
 from pytableaux.lang import (Argument, Atomic, LexWriter,
-                             Marking, Notation, Operator, Predicate,
+                             Marking, Notation, Operated, Operator, Predicate,
                              Predicates, Quantifier)
 from pytableaux.proof import Rule, Tableau, TabWriter, writers, rules
 from pytableaux.tools import EMPTY_SET, inflect, qset
@@ -242,8 +242,8 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             self.strings = lw.strings
             self.format = lw.format
 
-        def canwrite(self, obj, /):
-            return self.lw.canwrite(obj)
+        def _write_operated(self, item: Operated) -> str:
+            return self.lw._write_operated(item)
 
         def _write(self, item):
             if type(item) is Atomic and item.subscript == 2:

@@ -430,14 +430,14 @@ def init():
     from ..tools import wraps
     from . import _symdata
 
-    for _ in map(StringTable.load, _symdata.string_tables().values()): pass
+    for _ in map(ParseTable.load, _symdata.parse_tables()): pass
+    for _ in map(StringTable.load, _symdata.string_tables()): pass
+
     for notn in Notation:
         StringTable._instances.setdefault(
             ('text', notn, 'text'),
             StringTable._instances['text', notn, 'ascii'])
     
-    for _ in map(ParseTable.load, _symdata.parsetables().values()): pass
-
     syslw = LexWriter(
         notation=Notation.standard,
         format='text',

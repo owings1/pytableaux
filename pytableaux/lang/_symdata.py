@@ -27,13 +27,12 @@ from ..tools import closure
 
 __all__ = ()
 
-def parsetables():
+def parse_tables():
     from . import Marking, Notation
     from .lex import (Atomic, Constant, Operator, Predicate, Quantifier,
                       Variable)
 
-    data = {}
-    data[Notation.standard, 'default'] = dict(
+    yield dict(
         notation = Notation.standard,
         mapping = {
             '*' : (Operator, Operator.Assertion),
@@ -80,7 +79,7 @@ def parsetables():
             '7' : (Marking.digit, 7),
             '8' : (Marking.digit, 8),
             '9' : (Marking.digit, 9)})
-    data[Notation.polish, 'default'] = dict(
+    yield dict(
         notation = Notation.polish,
         mapping = {
             'T' : (Operator, Operator.Assertion),
@@ -125,8 +124,6 @@ def parsetables():
             '7' : (Marking.digit, 7),
             '8' : (Marking.digit, 8),
             '9' : (Marking.digit, 9)})
-
-    return data
 
 def string_tables():
 
@@ -201,90 +198,74 @@ def string_tables():
         (Marking.subscript_close, 0): '`',
     }
 
-    data = {}
+    polish_ascii_strings = {
+        Operator.Assertion: 'T',
+        Operator.Negation: 'N',
+        Operator.Conjunction: 'K',
+        Operator.Disjunction: 'A',
+        Operator.MaterialConditional: 'C',
+        Operator.MaterialBiconditional: 'E',
+        Operator.Conditional: 'U',
+        Operator.Biconditional: 'B',
+        Operator.Possibility: 'M',
+        Operator.Necessity: 'L',
+        Quantifier.Universal: 'V',
+        Quantifier.Existential: 'S',
+        Predicate.Identity: 'I',
+        Predicate.Existence: 'J',
+        (Operator.Negation, Predicate.Identity): NotImplemented,
+        (Atomic, 0) : 'a',
+        (Atomic, 1) : 'b',
+        (Atomic, 2) : 'c',
+        (Atomic, 3) : 'd',
+        (Atomic, 4) : 'e',
+        (Variable, 0) : 'x',
+        (Variable, 1) : 'y',
+        (Variable, 2) : 'z',
+        (Variable, 3) : 'v',
+        (Constant, 0) : 'm',
+        (Constant, 1) : 'n',
+        (Constant, 2) : 'o',
+        (Constant, 3) : 's',
+        (Predicate, 0): 'F',
+        (Predicate, 1): 'G',
+        (Predicate, 2): 'H',
+        (Predicate, 3): 'O',
+        (Marking.paren_open, 0)  : NotImplemented,
+        (Marking.paren_close, 0) : NotImplemented,
+        (Marking.whitespace, 0)  : ' ',}
 
-    Notation.polish
-    '---------------'
-
-    # Start with html, and most things can be unescaped.
-
-    data[Notation.polish, 'html'] = prev = dict(
+    yield dict(
         format = 'html',
         dialect = 'html',
         notation = Notation.polish,
-        strings = {
-            Operator.Assertion: 'T',
-            Operator.Negation: 'N',
-            Operator.Conjunction: 'K',
-            Operator.Disjunction: 'A',
-            Operator.MaterialConditional: 'C',
-            Operator.MaterialBiconditional: 'E',
-            Operator.Conditional: 'U',
-            Operator.Biconditional: 'B',
-            Operator.Possibility: 'M',
-            Operator.Necessity: 'L',
-            Quantifier.Universal: 'V',
-            Quantifier.Existential: 'S',
-            Predicate.Identity: 'I',
-            Predicate.Existence: 'J',
-            (Operator.Negation, Predicate.Identity): NotImplemented,
-            (Atomic, 0) : 'a',
-            (Atomic, 1) : 'b',
-            (Atomic, 2) : 'c',
-            (Atomic, 3) : 'd',
-            (Atomic, 4) : 'e',
-            (Variable, 0) : 'x',
-            (Variable, 1) : 'y',
-            (Variable, 2) : 'z',
-            (Variable, 3) : 'v',
-            (Constant, 0) : 'm',
-            (Constant, 1) : 'n',
-            (Constant, 2) : 'o',
-            (Constant, 3) : 's',
-            (Predicate, 0): 'F',
-            (Predicate, 1): 'G',
-            (Predicate, 2): 'H',
-            (Predicate, 3): 'O',
-            (Marking.paren_open, 0)  : NotImplemented,
-            (Marking.paren_close, 0) : NotImplemented,
-            (Marking.whitespace, 0)  : ' ',
-            **markings['html']})
+        strings = polish_ascii_strings | markings['html'])
 
-    data[Notation.polish, 'text', 'unicode'] = prev = dmerged(prev, dict(
+    yield dict(
         format = 'text',
         dialect = 'unicode',
-        strings = dunesc(prev['strings']) | markings['unicode'],
-    ))
+        notation = Notation.polish,
+        strings = polish_ascii_strings | markings['unicode'])
 
-    data[Notation.polish, 'rst'] = prev = dmerged(prev, dict(
+    yield dict(
         format = 'rst',
         dialect = 'rst',
-        strings = {
-            (Marking.subscript_open, 0): ':sub:`',
-            (Marking.subscript_close, 0): '`',
-        }
-    ))
+        notation = Notation.polish,
+        strings = polish_ascii_strings | markings['rst'])
 
-    data[Notation.polish, 'text', 'ascii'] = prev = dmerged(prev, dict(
+    yield dict(
         format = 'text',
         dialect = 'ascii',
-        strings = {**markings['ascii']},
-    ))
+        notation = Notation.polish,
+        strings = polish_ascii_strings | markings['ascii'])
 
-    data[Notation.polish, 'text', 'latex'] = dmerged(prev, dict(
+    yield dict(
         format = 'latex',
         dialect = 'latex',
-        strings  = {**markings['latex']},
-    ))
+        notation = Notation.polish,
+        strings = polish_ascii_strings | markings['latex'])
 
-    Notation.standard
-    '---------------'
-
-    data[Notation.standard, 'html'] = prev = dict(
-        notation = Notation.standard,
-        format  = 'html',
-        dialect = 'html',
-        strings = data[Notation.polish, 'html']['strings'] | {
+    standard_html_strings = {
             Operator.Assertion             : '&#9900;' ,#'&#9675;' ,
             Operator.Negation              : '&not;'   ,
             Operator.Conjunction           : '&and;'   ,
@@ -305,37 +286,47 @@ def string_tables():
             (Atomic, 2) : 'C',
             (Atomic, 3) : 'D',
             (Atomic, 4) : 'E',
+            (Variable, 0) : 'x',
+            (Variable, 1) : 'y',
+            (Variable, 2) : 'z',
+            (Variable, 3) : 'v',
             (Constant, 0) : 'a',
             (Constant, 1) : 'b',
             (Constant, 2) : 'c',
             (Constant, 3) : 'd',
+            (Predicate, 0): 'F',
+            (Predicate, 1): 'G',
+            (Predicate, 2): 'H',
+            (Predicate, 3): 'O',
             (Marking.paren_open, 0)  : '(',
             (Marking.paren_close, 0) : ')',
-        },
-    )
+            (Marking.whitespace, 0)  : ' ',}
 
-    data[Notation.standard, 'text', 'unicode'] = prev = dmerged(prev, dict(
-        format = 'text',
+    standard_unicode_strings = dunesc(standard_html_strings)
+
+    yield dict(
+        format  = 'html',
+        dialect = 'html',
+        notation = Notation.standard,
+        strings = standard_html_strings | markings['html'])
+
+    yield dict(
+        format  = 'text',
         dialect = 'unicode',
-        strings = dunesc(prev['strings'])| {
-            (Marking.subscript_open, 0): '.[',
-            (Marking.subscript_close, 0): ']',
-        },
-    ))
+        notation = Notation.standard,
+        strings = standard_unicode_strings | markings['unicode'])
 
-    data[Notation.standard, 'rst'] = prev = dmerged(prev, dict(
-        format = 'rst',
+    yield dict(
+        format  = 'rst',
         dialect = 'rst',
-        strings = {
-            (Marking.subscript_open, 0): ':sub:`',
-            (Marking.subscript_close, 0): '`',
-        }
-    ))
+        notation = Notation.standard,
+        strings = standard_unicode_strings | markings['rst'])
 
-    data[Notation.standard, 'text', 'ascii'] = prev = dmerged(prev, dict(
-        format = 'text',
+    yield dict(
+        format  = 'text',
         dialect = 'ascii',
-        strings = {
+        notation = Notation.standard,
+        strings = standard_unicode_strings | markings['ascii'] | {
             Operator.Assertion              :  '*',
             Operator.Negation               :  '~',
             Operator.Conjunction            :  '&',
@@ -348,15 +339,13 @@ def string_tables():
             Operator.Necessity              :  'N',
             Quantifier.Universal   : 'L',
             Quantifier.Existential : 'X',
-            (Operator.Negation, Predicate.Identity): '!=',
-            **markings['ascii'],
-        },
-    ))
+            (Operator.Negation, Predicate.Identity): '!='})
 
-    data[Notation.standard, 'latex'] = dmerged(prev, dict(
+    yield dict(
         format = 'latex',
         dialect = 'latex',
-        strings = {
+        notation = Notation.standard,
+        strings = standard_unicode_strings | markings['latex'] | {
             Operator.Assertion              :  '\\circ{}',
             Operator.Negation               :  '\\neg{}',
             Operator.Conjunction            :  '\\wedge{}',
@@ -369,11 +358,8 @@ def string_tables():
             Operator.Necessity              :  '\\Box{}',
             Quantifier.Universal   : '\\forall{}',
             Quantifier.Existential : '\\exists{}',
-            (Operator.Negation, Predicate.Identity): '\\neq{}',
-            **markings['latex'],
-        },
-    ))
-    return data
+            (Operator.Negation, Predicate.Identity): '\\neq{}'})
+
 
 @closure
 def dtransform():
