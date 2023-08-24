@@ -21,16 +21,15 @@ pytableaux.lang._symdata
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping
-
-from ..tools import closure
+from html import unescape as html_unescape
+from typing import Mapping
 
 __all__ = ()
 
+
 def parse_tables():
-    from . import Marking, Notation
-    from .lex import (Atomic, Constant, Operator, Predicate, Quantifier,
-                      Variable)
+    from . import (Atomic, Constant, Marking, Notation, Operator, Predicate,
+                   Quantifier, Variable)
 
     yield dict(
         notation = Notation.standard,
@@ -127,14 +126,9 @@ def parse_tables():
 
 def string_tables():
 
-    from html import unescape as html_unescape
 
-    from ..tools import dmerged
     from . import (Atomic, Constant, Marking, Notation, Operator, Predicate,
                    Quantifier, Variable)
-
-    def dunesc(d: dict, inplace = False) -> None:
-        return dtransform(html_unescape, d, typeinfo = str, inplace = inplace)
     
     # tab symbols
     markings = dict(
@@ -189,83 +183,57 @@ def string_tables():
             (Marking.meta, 'therefore') : '\\therefore{}',
             (Marking.meta, 'ellipsis')  : '\\ldots{}',
         })
+
     markings['unicode'] = dunesc(markings['html']) | {
         (Marking.subscript_open, 0): '.[',
         (Marking.subscript_close, 0): ']',
     }
+
     markings['rst'] = dict(markings['unicode']) | {
         (Marking.subscript_open, 0): ':sub:`',
         (Marking.subscript_close, 0): '`',
     }
 
-    polish_ascii_strings = {
-        Operator.Assertion: 'T',
-        Operator.Negation: 'N',
-        Operator.Conjunction: 'K',
-        Operator.Disjunction: 'A',
-        Operator.MaterialConditional: 'C',
-        Operator.MaterialBiconditional: 'E',
-        Operator.Conditional: 'U',
-        Operator.Biconditional: 'B',
-        Operator.Possibility: 'M',
-        Operator.Necessity: 'L',
-        Quantifier.Universal: 'V',
-        Quantifier.Existential: 'S',
-        Predicate.Identity: 'I',
-        Predicate.Existence: 'J',
-        (Operator.Negation, Predicate.Identity): NotImplemented,
-        (Atomic, 0) : 'a',
-        (Atomic, 1) : 'b',
-        (Atomic, 2) : 'c',
-        (Atomic, 3) : 'd',
-        (Atomic, 4) : 'e',
-        (Variable, 0) : 'x',
-        (Variable, 1) : 'y',
-        (Variable, 2) : 'z',
-        (Variable, 3) : 'v',
-        (Constant, 0) : 'm',
-        (Constant, 1) : 'n',
-        (Constant, 2) : 'o',
-        (Constant, 3) : 's',
-        (Predicate, 0): 'F',
-        (Predicate, 1): 'G',
-        (Predicate, 2): 'H',
-        (Predicate, 3): 'O',
-        (Marking.paren_open, 0)  : NotImplemented,
-        (Marking.paren_close, 0) : NotImplemented,
-        (Marking.whitespace, 0)  : ' ',}
+    polish_strings = dict(
+        ascii = {
+            Operator.Assertion: 'T',
+            Operator.Negation: 'N',
+            Operator.Conjunction: 'K',
+            Operator.Disjunction: 'A',
+            Operator.MaterialConditional: 'C',
+            Operator.MaterialBiconditional: 'E',
+            Operator.Conditional: 'U',
+            Operator.Biconditional: 'B',
+            Operator.Possibility: 'M',
+            Operator.Necessity: 'L',
+            Quantifier.Universal: 'V',
+            Quantifier.Existential: 'S',
+            Predicate.Identity: 'I',
+            Predicate.Existence: 'J',
+            (Operator.Negation, Predicate.Identity): NotImplemented,
+            (Atomic, 0) : 'a',
+            (Atomic, 1) : 'b',
+            (Atomic, 2) : 'c',
+            (Atomic, 3) : 'd',
+            (Atomic, 4) : 'e',
+            (Variable, 0) : 'x',
+            (Variable, 1) : 'y',
+            (Variable, 2) : 'z',
+            (Variable, 3) : 'v',
+            (Constant, 0) : 'm',
+            (Constant, 1) : 'n',
+            (Constant, 2) : 'o',
+            (Constant, 3) : 's',
+            (Predicate, 0): 'F',
+            (Predicate, 1): 'G',
+            (Predicate, 2): 'H',
+            (Predicate, 3): 'O',
+            (Marking.paren_open, 0)  : NotImplemented,
+            (Marking.paren_close, 0) : NotImplemented,
+            (Marking.whitespace, 0)  : ' ',})
 
-    yield dict(
-        format = 'html',
-        dialect = 'html',
-        notation = Notation.polish,
-        strings = polish_ascii_strings | markings['html'])
-
-    yield dict(
-        format = 'text',
-        dialect = 'unicode',
-        notation = Notation.polish,
-        strings = polish_ascii_strings | markings['unicode'])
-
-    yield dict(
-        format = 'rst',
-        dialect = 'rst',
-        notation = Notation.polish,
-        strings = polish_ascii_strings | markings['rst'])
-
-    yield dict(
-        format = 'text',
-        dialect = 'ascii',
-        notation = Notation.polish,
-        strings = polish_ascii_strings | markings['ascii'])
-
-    yield dict(
-        format = 'latex',
-        dialect = 'latex',
-        notation = Notation.polish,
-        strings = polish_ascii_strings | markings['latex'])
-
-    standard_html_strings = {
+    standard_strings = dict(
+        html = {
             Operator.Assertion             : '&#9900;' ,#'&#9675;' ,
             Operator.Negation              : '&not;'   ,
             Operator.Conjunction           : '&and;'   ,
@@ -300,99 +268,100 @@ def string_tables():
             (Predicate, 3): 'O',
             (Marking.paren_open, 0)  : '(',
             (Marking.paren_close, 0) : ')',
-            (Marking.whitespace, 0)  : ' ',}
+            (Marking.whitespace, 0)  : ' ',})
 
-    standard_unicode_strings = dunesc(standard_html_strings)
+    standard_strings['unicode'] = dunesc(standard_strings['html'])
+
+    standard_strings['ascii'] = standard_strings['unicode'] | {
+        Operator.Assertion              :  '*',
+        Operator.Negation               :  '~',
+        Operator.Conjunction            :  '&',
+        Operator.Disjunction            :  'V',
+        Operator.MaterialConditional    :  '>',
+        Operator.MaterialBiconditional  :  '<',
+        Operator.Conditional            :  '$',
+        Operator.Biconditional          :  '%',
+        Operator.Possibility            :  'P',
+        Operator.Necessity              :  'N',
+        Quantifier.Universal   : 'L',
+        Quantifier.Existential : 'X',
+        (Operator.Negation, Predicate.Identity): '!='}
+
+    standard_strings['latex'] = standard_strings['unicode'] | {
+        Operator.Assertion              :  '\\circ{}',
+        Operator.Negation               :  '\\neg{}',
+        Operator.Conjunction            :  '\\wedge{}',
+        Operator.Disjunction            :  '\\vee{}',
+        Operator.MaterialConditional    :  '\\supset{}',
+        Operator.MaterialBiconditional  :  '\\equiv{}',
+        Operator.Conditional            :  '\\rightarrow{}',
+        Operator.Biconditional          :  '\\leftrightarrow{}',
+        Operator.Possibility            :  '\\Diamond{}',
+        Operator.Necessity              :  '\\Box{}',
+        Quantifier.Universal   : '\\forall{}',
+        Quantifier.Existential : '\\exists{}',
+        (Operator.Negation, Predicate.Identity): '\\neq{}'}
 
     yield dict(
-        format  = 'html',
-        dialect = 'html',
-        notation = Notation.standard,
-        strings = standard_html_strings | markings['html'])
+        format = 'text',
+        dialect = 'ascii',
+        notation = Notation.polish,
+        strings = polish_strings['ascii'] | markings['ascii'])
 
     yield dict(
-        format  = 'text',
+        format = 'text',
         dialect = 'unicode',
-        notation = Notation.standard,
-        strings = standard_unicode_strings | markings['unicode'])
+        notation = Notation.polish,
+        strings = polish_strings['ascii'] | markings['unicode'])
 
     yield dict(
-        format  = 'rst',
+        format = 'html',
+        dialect = 'html',
+        notation = Notation.polish,
+        strings = polish_strings['ascii'] | markings['html'])
+
+    yield dict(
+        format = 'rst',
         dialect = 'rst',
-        notation = Notation.standard,
-        strings = standard_unicode_strings | markings['rst'])
+        notation = Notation.polish,
+        strings = polish_strings['ascii'] | markings['rst'])
+
+    yield dict(
+        format = 'latex',
+        dialect = 'latex',
+        notation = Notation.polish,
+        strings = polish_strings['ascii'] | markings['latex'])
 
     yield dict(
         format  = 'text',
         dialect = 'ascii',
         notation = Notation.standard,
-        strings = standard_unicode_strings | markings['ascii'] | {
-            Operator.Assertion              :  '*',
-            Operator.Negation               :  '~',
-            Operator.Conjunction            :  '&',
-            Operator.Disjunction            :  'V',
-            Operator.MaterialConditional    :  '>',
-            Operator.MaterialBiconditional  :  '<',
-            Operator.Conditional            :  '$',
-            Operator.Biconditional          :  '%',
-            Operator.Possibility            :  'P',
-            Operator.Necessity              :  'N',
-            Quantifier.Universal   : 'L',
-            Quantifier.Existential : 'X',
-            (Operator.Negation, Predicate.Identity): '!='})
+        strings = standard_strings['ascii'] | markings['ascii'])
+
+    yield dict(
+        format  = 'text',
+        dialect = 'unicode',
+        notation = Notation.standard,
+        strings = standard_strings['unicode'] | markings['unicode'])
+
+    yield dict(
+        format  = 'html',
+        dialect = 'html',
+        notation = Notation.standard,
+        strings = standard_strings['html'] | markings['html'])
+
+    yield dict(
+        format  = 'rst',
+        dialect = 'rst',
+        notation = Notation.standard,
+        strings = standard_strings['unicode'] | markings['rst'])
 
     yield dict(
         format = 'latex',
         dialect = 'latex',
         notation = Notation.standard,
-        strings = standard_unicode_strings | markings['latex'] | {
-            Operator.Assertion              :  '\\circ{}',
-            Operator.Negation               :  '\\neg{}',
-            Operator.Conjunction            :  '\\wedge{}',
-            Operator.Disjunction            :  '\\vee{}',
-            Operator.MaterialConditional    :  '\\supset{}',
-            Operator.MaterialBiconditional  :  '\\equiv{}',
-            Operator.Conditional            :  '\\rightarrow{}',
-            Operator.Biconditional          :  '\\leftrightarrow{}',
-            Operator.Possibility            :  '\\Diamond{}',
-            Operator.Necessity              :  '\\Box{}',
-            Quantifier.Universal   : '\\forall{}',
-            Quantifier.Existential : '\\exists{}',
-            (Operator.Negation, Predicate.Identity): '\\neq{}'})
+        strings = standard_strings['latex'] | markings['latex'])
 
 
-@closure
-def dtransform():
-
-    def _true(_): True
-
-    def api(transformer: Callable[[Any], Any], a: Mapping, /,
-        typeinfo: type|tuple[type, ...] = dict,
-        inplace = False,
-    ) -> dict:
-
-        if typeinfo is None:
-            pred = _true
-        else:
-            pred = lambda v: isinstance(v, typeinfo)
-        res = runner(transformer, pred, inplace, a)
-        if not inplace:
-            return res
-
-    def runner(f, pred, inplace, a: Mapping):
-        if inplace:
-            b = a
-        else:
-            b = {}
-        for k, v in a.items():
-            if isinstance(v, Mapping):
-                b[k] = runner(f, pred, inplace, v)
-            elif pred(v):
-                b[k] = f(v)
-            else:
-                b[k] = v
-        return b
-
-    return api
-
-
+def dunesc(d: Mapping) -> None:
+    return {key: html_unescape(value) for key, value in d.items()}

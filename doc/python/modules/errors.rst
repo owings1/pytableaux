@@ -1,6 +1,6 @@
-================================
-:mod:`pytableaux.errors` package
-================================
+=========================
+:mod:`pytableaux.errors`
+=========================
 
 .. contents:: Contents
   :local:

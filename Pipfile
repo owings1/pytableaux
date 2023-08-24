@@ -9,21 +9,22 @@ python_version = '3.11'
 [packages]
 Jinja2 = "*"
 
-[dev-packages]
-coverage = "*"
-pytest = "*"
-
 [web-packages]
 CherryPy = "*"
+Jinja2 = "*"
 simplejson = "*"
 prometheus-client = "*"
 
 [doc-packages]
+Jinja2 = "*"
 Sphinx = "*"
 sphinx-rtd-theme = "*"
 sphinx-toolbox = "*"
-# sphinx-sitemap = "*"
 tabulate = "*"
+
+[dev-packages]
+coverage = "*"
+pytest = "*"
 
 [img-packages]
 pdf2image = "*"

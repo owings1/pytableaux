@@ -1,5 +1,5 @@
 ============================================
-:mod:`pytableaux.lang` package
+:mod:`pytableaux.lang`
 ============================================
 
 .. contents:: Contents

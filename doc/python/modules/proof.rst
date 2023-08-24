@@ -1,5 +1,5 @@
 ============================================
-:mod:`pytableaux.proof` package
+:mod:`pytableaux.proof`
 ============================================
 
 .. contents:: Contents

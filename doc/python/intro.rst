@@ -38,6 +38,7 @@ or later is required.
 
     3. Launch the web interface, for example::
 
+        pipenv install --categories="web-packages"
         python3 -m pytableaux.web
 
     4. Then access http://localhost:8080
@@ -51,7 +52,7 @@ The following is an example for building a proof in {@CPL} for Modus Ponens::
     from pytableaux.proof import Tableau, TabWriter
 
     # Create an argument
-    parser = Parser()
+    parser = Parser(notation='polish')
     argument = parser.argument('b', ('Uab', 'a'))
 
     # Build a tableau for the logic CPL
@@ -59,9 +60,9 @@ The following is an example for building a proof in {@CPL} for Modus Ponens::
     tableau.build()
 
     # Output the proof
-    writer = TabWriter()
-    text = writer(tableau)
-    print(text)
+    writer = TabWriter(format='latex', notation='standard')
+    content = writer(tableau)
+    print(content)
 
 The full API docs are available :doc:`here <index>`.
 
