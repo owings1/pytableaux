@@ -40,7 +40,7 @@ from pytableaux import examples, logics
 from pytableaux.lang import (Argument, Atomic, DefaultLexWriter, LexWriter,
                              Marking, Notation, Operator, Predicate,
                              Predicates, Quantifier)
-from pytableaux.proof import Rule, Tableau, TabWriter, writers
+from pytableaux.proof import Rule, Tableau, TabWriter, writers, rules
 from pytableaux.tools import EMPTY_SET, inflect, qset
 
 from . import (BaseDirective, ConfKey, DirectiveHelper, LogicOptionMixin,
@@ -234,16 +234,13 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
     class LexWriterWrapper(LexWriter):
 
         __slots__ = {'__dict__'}
+        format = None
 
         def __init__(self, lw: LexWriter):
             self.lw = lw
             self.notation = lw.notation
-            self.defaults = lw.defaults
             self.strings = lw.strings
-
-        @property
-        def format(self):
-            return self.lw.format
+            self.format = lw.format
 
         def canwrite(self, obj, /):
             return self.lw.canwrite(obj)
@@ -252,13 +249,16 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             if type(item) is Atomic and item.subscript == 2:
                 s = Atomic(item.index, 0)
                 try:
-                    func = getattr(self.lw, '_write_subscript')
+                    func = self.lw._write_subscript
                 except AttributeError:
                     substr = DefaultLexWriter._write_subscript(self.lw, 'n')
                 else:
                     substr = func('n')
                 return self.lw._write(s) + substr
             return self.lw._write(item)
+
+    class TrunkRuleStub(rules.NoopRule):
+        Helpers = EllipsisExampleHelper,
 
     def setup(self, force = False):
         if self._setup and not force:
@@ -362,13 +362,13 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         else:
             parser = self.parser_option()
             arg = parser.argument(opts['conclusion'], opts.get('premises'))
-        return Tableau(opts['logic'], arg)
+        return Tableau(self.logic, arg)
 
     def gettab_trunk(self):
-        tab = Tableau(self.logic)
-        rule = tab.rules.groups[1][0]
-        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
-        tab.argument = self._trunk_argument
+        tab = Tableau(self.logic, self._trunk_argument, auto_build_trunk=False)
+        tab.rules.clear()
+        tab.rules.append(self.TrunkRuleStub)
+        tab.build_trunk()
         return tab
 
     def getnode_ruledoc_desc(self, rulecls: type[Rule], *inserts) -> addnodes.desc:
