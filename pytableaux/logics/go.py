@@ -221,7 +221,7 @@ class Rules(LogicType.Rules):
 
     class ExistentialUndesignated(ConjunctionUndesignated): pass
     class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated): pass
-        
+
     class UniversalNegatedDesignated(System.QuantifierSkinnyRule):
         """
         From an unticked, designated universal existential node *n* on a branch *b*,

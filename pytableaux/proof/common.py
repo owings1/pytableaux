@@ -24,7 +24,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Mapping, Set
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Optional, Self
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Optional, Self, SupportsIndex
 
 from ..errors import Emsg, check
 from ..lang import Constant, Sentence
@@ -475,7 +475,7 @@ class Branch(SequenceSet[Node], EventEmitter, abcs.Copyable, metaclass=BranchMet
         """
         return self._nextworld
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: SupportsIndex|slice):
         return self._nodes[i]
 
     def __len__(self):

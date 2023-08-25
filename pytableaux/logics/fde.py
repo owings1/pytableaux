@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from abc import abstractmethod
 from collections import defaultdict
 from itertools import starmap
 from typing import Any
@@ -25,7 +26,7 @@ from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
 from ..models import PredicateInterpretation, ValueFDE
 from ..proof import Branch, Node, SentenceNode, adds, filters, rules, sdnode
-from ..tools import group, maxceil, minfloor
+from ..tools import group, maxceil, minfloor, wraps
 from . import LogicType
 
 
@@ -370,7 +371,18 @@ class System(LogicType.System):
         def _get_sd_targets(self, s: Operated, d: bool, /):
             raise NotImplementedError
 
-    class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule, intermediate=True): pass
+    class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule, intermediate=True):
+
+        def __init_subclass__(cls) -> None:
+            super().__init_subclass__()
+            if cls._get_node_targets is __class__._get_node_targets:
+                if cls._get_sd_targets is __class__._get_sd_targets:
+                    @abstractmethod
+                    @wraps(cls._get_sd_targets)
+                    def wrapped(self, s: Sentence, d: bool, /):
+                        raise NotImplementedError
+                    setattr(cls, '_get_sd_targets', wrapped)
+
     class QuantifierSkinnyRule(rules.NarrowQuantifierRule, DefaultNodeRule, intermediate=True): pass
     class QuantifierFatRule(rules.ExtendedQuantifierRule, DefaultNodeRule, intermediate=True): pass
 

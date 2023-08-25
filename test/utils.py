@@ -288,8 +288,12 @@ class BaseCase(TestCase):
             for key, value in tbl.mapping.items()}
         self.assertEqual(res, exp)
 
+    def snode(self, s):
+        return snode(self.p(s))
     def sdnode(self, s, d):
         return sdnode(self.p(s), d)
+    def swnode(self, s, w=0):
+        return swnode(self.p(s), w)
 
     @property
     def Model(self) -> type[BaseModel]:

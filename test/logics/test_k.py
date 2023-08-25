@@ -2,6 +2,9 @@ from ..utils import BaseCase
 from pytableaux.errors import *
 from pytableaux.lang import *
 from pytableaux.proof import *
+from pytableaux.proof import rules
+from pytableaux.proof.tableaux import *
+from pytableaux.logics.k import AccessGraph, System, Rules
 
 class Base(BaseCase):
     logic = 'K'
@@ -24,16 +27,58 @@ class TestRules(Base, autorules=True):
         self.assertEqual(node['sentence'].quantifier, Quantifier.Existential)
 
     def test_IdentityIndiscernability_not_target_after_apply(self):
+        swn = self.swnode
         rule, tab = self.rule_eg('IdentityIndiscernability')
-        b = tab.branch().extend((
-            {'sentence': self.p('Imm'), 'world': 0},
-            {'sentence': self.p('Fs'),  'world': 0},
-        ))
+        b = tab.branch()
+        b += map(swn, ['Imn', 'Fs'])
+        self.assertFalse(rule.target(b))
+
+    def test_IdentityIndiscernability_target_predicate_sentence(self):
+        swn = self.swnode
+        tab, b = self.tabb()
+        rule = tab.rules.get(Rules.IdentityIndiscernability)
+        b += map(swn, ['Imn', 'Fm'])
+        self.assertTrue(rule.target(b))
+
+    def test_IdentityIndiscernability_not_target_self_identity(self):
+        swn = self.swnode
+        tab, b = self.tabb()
+        rule = tab.rules.get(Rules.IdentityIndiscernability)
+        b += map(swn, ['Imn'])
+        self.assertFalse(rule.target(b))
+
+    def test_IdentityIndiscernability_not_target_duplicate(self):
+        swn = self.swnode
+        tab, b = self.tabb()
+        rule = tab.rules.get(Rules.IdentityIndiscernability)
+        b += map(swn, ['Imn', 'Fm', 'Fn'])
         self.assertFalse(rule.target(b))
 
     def test_rules_modal(self):
         for rcls in self.logic.Rules.all():
             self.assertIs(rcls.modal, True)
+
+    def test_Necessity_node_targets(self):
+        swn = self.swnode
+        tab, b = self.tabb()
+        b += [
+            swn('La', 0),
+            anode(0, 0)]
+        rule = tab.rules.get(Rules.Necessity)
+        targets = list(rule._get_node_targets(b[0], b))
+        self.assertEqual(len(targets), 1)
+
+    def test_Necessity_node_targets_does_not_duplicate_node(self):
+        swn = self.swnode
+        tab, b = self.tabb()
+        b += [
+            swn('a', 0),
+            swn('La', 0),
+            anode(0, 0)]
+        rule = tab.rules.get(Rules.Necessity)
+        targets = list(rule._get_node_targets(b[1], b))
+        self.assertEqual(len(targets), 0)
+
 
 class TestArgument(Base, autoargs=True):
 
@@ -122,6 +167,20 @@ class TestModelPredication(Base):
         interp = m.frames[0].predicates[Predicate.Identity]
         self.assertGreater(len(interp.pos), 0)
         self.assertIn((Constant(0, 0), Constant(1, 0)), interp.pos)
+
+class TestAccessGraph(Base):
+
+    def test_flat_unsorted(self):
+        g = AccessGraph()
+        g.add((1, 0))
+        g.add((0, 1))
+        self.assertEqual(list(g.flat()), [(1, 0), (0, 1)])
+
+    def test_flat_sorted(self):
+        g = AccessGraph()
+        g.add((1, 0))
+        g.add((0, 1))
+        self.assertEqual(list(g.flat(sort=True)), [(0, 1), (1, 0)])
 
 class TestModelModalAccess(Base):
 
@@ -327,7 +386,7 @@ class TestFrame(Base):
         self.assertTrue(frame_a == frame_b)
         self.assertTrue(frame_b == frame_a)
 
-    def test_not_equals(self):
+    def test_not_equals_atomics_differ(self):
         s = self.p('a')
         with self.m() as m1:
             m1.set_literal_value(s, 'T', world=0)
@@ -337,15 +396,56 @@ class TestFrame(Base):
         f2 = m2.frames[0]
         self.assertNotEqual(f1, f2)
 
-    def test_not_equals(self):
-        s = self.p('a')
+    def test_not_equals_atomics_predicates_differ(self):
+        s1 = self.p('Fm')
+        s2 = self.p('Gm')
         with self.m() as m1:
-            m1.set_literal_value(s, 'T', world=0)
+            m1.set_predicated_value(s1, 'T', world=0)
         with self.m() as m2:
-            m2.set_literal_value(s, 'T', world=0)
+            m2.set_predicated_value(s2, 'T', world=0)
         f1 = m1.frames[0]
         f2 = m2.frames[0]
-        self.assertEqual(f1, f2)
+        self.assertNotEqual(f1, f2)
+
+    def test_not_equals_atomics_predicates_differ2(self):
+        s1 = self.p('Fm')
+        s2 = self.p('Gm')
+        with self.m() as m1:
+            m1.set_predicated_value(s1, 'T', world=0)
+        with self.m() as m2:
+            m2.set_predicated_value(s1, 'T', world=0)
+            m2.set_predicated_value(s2, 'T', world=0)
+        f1 = m1.frames[0]
+        f2 = m2.frames[0]
+        self.assertNotEqual(f1, f2)
+
+    def test_not_equals_atomics_predicates_differ3(self):
+        s1 = self.p('Fm')
+        s2 = self.p('Gm')
+        s3 = self.p('Hm')
+        with self.m() as m1:
+            m1.set_predicated_value(s1, 'T', world=0)
+            m1.set_predicated_value(s2, 'T', world=0)
+        with self.m() as m2:
+            m2.set_predicated_value(s1, 'T', world=0)
+            m2.set_predicated_value(s3, 'T', world=0)
+        f1 = m1.frames[0]
+        f2 = m2.frames[0]
+        self.assertNotEqual(f1, f2)
+
+    def test_equals_self(self):
+        s = self.p('a')
+        with self.m() as m:
+            m.set_literal_value(s, 'T', world=0)
+        f = m.frames[0]
+        self.assertEqual(f, f)
+
+    def test_equals_not_impl_non_frame(self):
+        s = self.p('a')
+        with self.m() as m:
+            m.set_literal_value(s, 'T', world=0)
+        f = m.frames[0]
+        self.assertIs(NotImplemented, f.__eq__('asdf'))
 
     def test_data_has_identity_with_sentence(self):
         s = self.p('Imn')
@@ -390,6 +490,14 @@ class TestModelErrors(Base):
         with self.assertRaises(ModelValueError):
             m.set_predicated_value(s2, 'F')
 
+    def test_set_predicated_raises_free_variables(self):
+        m = self.m()
+        s1 = Predicated(Predicate(0,0,1), Constant(0,0))
+        m.set_predicated_value(s1, 'F')
+        s2 = Predicated(Predicate(0,0,1), Variable(0,0))
+        with self.assertRaises(ValueError):
+            m.set_predicated_value(s2, 'F')
+
 class TestBranchables(Base):
 
     exp = dict(
@@ -424,3 +532,37 @@ class TestBranchables(Base):
     def test_known_branchable_values(self):
         for rulecls in self.logic.Rules.all():
             self.assertEqual(rulecls.branching, self.exp[rulecls.name])
+
+class TestSystem(Base):
+
+    def test_branch_complexity_hashable_none_if_no_sentence(self):
+        n = Node({})
+        self.assertIs(None, System.branching_complexity_hashable(n))
+
+    def test_branch_complexity_0_if_no_sentence(self):
+        tab = Tableau(self.logic)
+        n = Node({})
+        self.assertEqual(0, System.branching_complexity(n, tab.rules))
+
+    def test_abstract_default_node_rule(self):
+        class Impl(System.DefaultNodeRule): pass
+        with self.assertRaises(TypeError):
+            Impl(Tableau())
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            Impl._get_sw_targets(rule, Node({}), Branch())
+
+    def test_abstract_operator_node_rule(self):
+        class Impl(System.OperatorNodeRule): pass
+        with self.assertRaises(TypeError):
+            Impl(Tableau())
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            Impl._get_sw_targets(rule, Node({}), Branch())
+
+    def test_notimpl_coverage(self):
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            System.DefaultNodeRule._get_sw_targets(rule, self.p('a'), 0)
+        with self.assertRaises(NotImplementedError):
+            System.OperatorNodeRule._get_sw_targets(rule, self.p('a'), 0)

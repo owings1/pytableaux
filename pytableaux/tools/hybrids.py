@@ -204,6 +204,16 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
         inst._seq_ = self._seq_.copy()
         return inst
 
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, index: SupportsIndex) -> _T: ...
+        @overload
+        def __getitem__(self, index: slice) -> Self: ...
+        @overload
+        def __iter__(self) -> Iterator[_T]: ...
+        @overload
+        def __reversed__(self) -> Iterator[_T]: ...
+
     __len__      = qsetf.__len__
     __contains__ = qsetf.__contains__
     __getitem__  = qsetf.__getitem__

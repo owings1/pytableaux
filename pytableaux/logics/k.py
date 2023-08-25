@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from abc import abstractmethod
 from collections import defaultdict, deque
 from typing import Mapping
 
@@ -29,7 +30,7 @@ from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
                              WorldIndex)
-from ..tools import EMPTY_SET, group, maxceil, minfloor, substitute
+from ..tools import EMPTY_SET, group, maxceil, minfloor, substitute, wraps
 from . import LogicType
 from . import fde as FDE
 
@@ -129,7 +130,7 @@ class Model(BaseModel[Meta.values]):
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
-        raise NotImplementedError from ValueError(s.quantifier)
+        raise NotImplementedError from ValueError(s.quantifier) # pragma: no cover
 
     def value_of_operated(self, s: Operated, /, *, world: int = 0):
         self._check_finished()
@@ -139,7 +140,7 @@ class Model(BaseModel[Meta.values]):
                 return maxceil(self.maxval, it, self.minval)
             if s.operator is Operator.Necessity:
                 return minfloor(self.minval, it, self.maxval)
-            raise NotImplementedError from ValueError(s.operator)
+            raise NotImplementedError from ValueError(s.operator) # pragma: no cover
         return super().value_of_operated(s, world=world)
 
     def set_opaque_value(self, s: Sentence, value, /, world = 0):
@@ -241,8 +242,6 @@ class Model(BaseModel[Meta.values]):
             add((c,))
 
     def _agument_extension_with_identicals(self, pred: Predicate, w):
-        if not len(self.constants):
-            return
         pos = self.frames[w].predicates[pred].pos
         add = pos.add
         for c in self.constants:
@@ -437,12 +436,33 @@ class System(proof.System):
         def _get_sw_targets(self, s: Sentence, w: int|None, /):
             raise NotImplementedError
 
+        def __init_subclass__(cls) -> None:
+            super().__init_subclass__()
+            if cls._get_node_targets is __class__._get_node_targets:
+                if cls._get_sw_targets is __class__._get_sw_targets:
+                    @abstractmethod
+                    @wraps(cls._get_sw_targets)
+                    def wrapped(self, s: Sentence, w: int|None, /):
+                        raise NotImplementedError
+                    setattr(cls, '_get_sw_targets', wrapped)
+
+
     class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule, intermediate=True):
         'Convenience mixin class for most common rules.'
         NodeType = SentenceNode
 
         def _get_sw_targets(self, s: Operated, w: int|None, /):
             raise NotImplementedError
+
+        def __init_subclass__(cls) -> None:
+            super().__init_subclass__()
+            if cls._get_node_targets is __class__._get_node_targets:
+                if cls._get_sw_targets is __class__._get_sw_targets:
+                    @abstractmethod
+                    @wraps(cls._get_sw_targets)
+                    def wrapped(self, s: Sentence, w: int|None, /):
+                        raise NotImplementedError
+                    setattr(cls, '_get_sw_targets', wrapped)
 
 class Rules(LogicType.Rules):
 
