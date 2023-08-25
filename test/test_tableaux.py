@@ -3,15 +3,13 @@ from __future__ import annotations
 import time
 from pytableaux import examples
 from pytableaux.errors import *
-from pytableaux.lang.lex import Atomic, Constant, Predicated
+from pytableaux.lang import Atomic, Constant, Predicated
 from pytableaux.logics import k as K
-from pytableaux.proof import System as TabSys
-from pytableaux.proof import filters
-from pytableaux.proof.common import Branch, Node, Target
+from pytableaux.proof import *
+from pytableaux.proof import rules
 from pytableaux.proof.filters import getkey
 from pytableaux.proof.helpers import *
-from pytableaux.proof.rules import ClosingRule, NoopRule, Rule
-from pytableaux.proof.tableaux import Tableau
+from pytableaux.proof.tableaux import *
 from types import MappingProxyType as MapProxy
 from pytest import raises
 from unittest import skip
@@ -20,7 +18,6 @@ from .utils import BaseCase
 
 
 exarg = examples.argument
-sen = 'sentence'
 
 
 class TestSystem(BaseCase):
@@ -28,7 +25,7 @@ class TestSystem(BaseCase):
     def test_build_trunk_base_not_impl(self):
         proof = Tableau()
         with self.assertRaises(NotImplementedError):
-            TabSys.build_trunk(proof, None)
+            System.build_trunk(proof, None)
 
 class TestTableau(BaseCase):
 
@@ -59,7 +56,7 @@ class TestTableau(BaseCase):
         self.assertEqual(Tableau().finish().stats['build_duration_ms'], 0)
 
     def test_add_closure_rule_instance_mock(self):
-        class MockRule(ClosingRule):
+        class MockRule(rules.ClosingRule):
             def _get_targets(self, branch: Branch):
                 return Target(branch = branch),
             def nodes_will_close_branch(self, nodes, branch):
@@ -81,16 +78,16 @@ class TestTableau(BaseCase):
 
     def test_after_branch_add_with_nodes_no_parent(self):
 
-        class MockRule(NoopRule):
+        class MockRule(rules.NoopRule):
 
-            __slots__ = '__dict__',
+            __slots__ = '_checkbranch', '_checkparent'
+
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
-                self.tableau.on(Tableau.Events.AFTER_BRANCH_ADD, self.__after_branch_add)
-
-            def __after_branch_add(self, branch: Branch):
-                self._checkbranch = branch
-                self._checkparent = branch.parent
+                def after_branch_add(branch: Branch):
+                    self._checkbranch = branch
+                    self._checkparent = branch.parent
+                self.tableau.on(Tableau.Events.AFTER_BRANCH_ADD, after_branch_add)
 
         b = Branch().append({'test': True})
         tab = Tableau()
@@ -102,13 +99,74 @@ class TestTableau(BaseCase):
         self.assertIs(rule._checkparent, None)
 
     def test_ticked_step_flag_refactored_from_node(self):
-        sen = 'sentence'
         tab, b = self.tabb([
-            {sen: s} for s in self.pp('NNa', 'Kab', 'Aab')
+            dict(sentence=s) for s in self.pp('NNa', 'Kab', 'Aab')
         ])
         step = tab.step()
         stat = tab.stat(b, step.target.node, Tableau.StatKey.FLAGS)
         self.assertIn(Tableau.Flag.TICKED, stat)
+
+    def test_raises_illegal_state_set_argument_started(self):
+        tab = self.tab('Addition')
+        with self.assertRaises(IllegalStateError):
+            tab.argument = self.parg('DeMorgan 1')
+
+    def test_raises_illegal_state_set_logic_started(self):
+        tab = self.tab('Addition')
+        with self.assertRaises(IllegalStateError):
+            tab.logic = 'K'
+
+    def test_auto_build_trunk_1(self):
+        tab = self.tab()
+        tab.argument = self.parg('Addition')
+        self.assertTrue(len(tab))
+
+    def test_auto_build_trunk_2(self):
+        tab = Tableau(None, self.parg('Addition'))
+        tab.logic = 'K'
+        self.assertTrue(len(tab))
+
+    def test_build_trunk_raises_no_arg(self):
+        tab = self.tab()
+        with self.assertRaises(IllegalStateError):
+            tab.build_trunk()
+
+    def test_build_trunk_raises_no_logic(self):
+        tab = Tableau(None, self.parg('Addition'))
+        with self.assertRaises(IllegalStateError):
+            tab.build_trunk()
+
+    def test_build_trunk_raises_already_built(self):
+        tab = self.tab('Addition', is_build=False, auto_build_trunk=False)
+        tab.build_trunk()
+        with self.assertRaises(IllegalStateError):
+            tab.build_trunk()
+
+    def test_build_trunk_raises_already_started(self):
+        tab = self.tab('Addition', is_build=False, auto_build_trunk=False)
+        b = tab.branch()
+        b += {'sentence': self.p('Kab')}
+        entry = tab.step()
+        self.assertTrue(entry)
+        with self.assertRaises(IllegalStateError):
+            tab.build_trunk()
+
+    def test_bool_true_empty(self):
+        tab = self.tab()
+        self.assertEqual(len(tab), 0)
+        self.assertTrue(tab)
+        self.assertIs(bool(tab), True)
+
+    def test_add_branch_duplicate_raises(self):
+        tab = self.tab()
+        b = tab.branch()
+        with self.assertRaises(ValueError):
+            tab.add(b)
+
+class TestBranchStat(BaseCase):
+    def test_view_coverage(self):
+        stat = Tableau.BranchStat()
+        stat.view()
 
 class TestBranch(BaseCase):
 
@@ -134,15 +192,15 @@ class TestBranch(BaseCase):
     def test_has_all_true_1(self):
         b = Branch()
         s1, s2, s3 = Atomic.gen(3)
-        b.extend([{sen: s1}, {sen: s2}, {sen: s3}])
-        check = [{sen: s1, sen: s2}]
+        b.extend([{'sentence': s1}, {'sentence': s2}, {'sentence': s3}])
+        check = [{'sentence': s1, 'sentence': s2}]
         self.assertTrue(b.all(check))
 
     def test_has_all_false_1(self):
         b = Branch()
         s1, s2, s3 = Atomic.gen(3)
-        b.extend([{sen: s1}, {sen: s3}])
-        check = [{sen: s1, sen: s2}]
+        b.extend([{'sentence': s1}, {'sentence': s3}])
+        check = [{'sentence': s1, 'sentence': s2}]
         self.assertFalse(b.all(check))
 
     def test_branch_has_world1(self):
@@ -153,7 +211,7 @@ class TestBranch(BaseCase):
 
     def test_regression_branch_has_works_with_newly_added_node_on_after_node_add(self):
 
-        class MyRule(NoopRule):
+        class MyRule(rules.NoopRule):
 
             __slots__ = 'should_be', 'shouldnt_be'
 
@@ -161,11 +219,10 @@ class TestBranch(BaseCase):
                 self.should_be = False
                 self.shouldnt_be = True
                 super().__init__(*args, **opts)
-                self.tableau.on(Tableau.Events.AFTER_NODE_ADD, self.__after_node_add)
-
-            def __after_node_add(self, node: Node, branch: Branch):
-                self.should_be = branch.has({'world1': 7})
-                self.shouldnt_be = branch.has({'world1': 6})
+                def after_node_add(node: Node, branch: Branch):
+                    self.should_be = branch.has({'world1': 7})
+                    self.shouldnt_be = branch.has({'world1': 6})
+                self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
         proof = Tableau()
         proof.rules.append(MyRule)
@@ -192,28 +249,10 @@ class TestBranch(BaseCase):
         self.assertEqual(set(base), {b[0]})
 
     def test_close_adds_flag_node(self):
-        branch = Branch()
-        branch.close()
-        self.assertTrue(branch.has({'is_flag': True, 'flag': 'closure'}))
-
-
-    # def test_constants_or_new_returns_pair_no_constants(self):
-    #     branch = Branch()
-    #     res = branch.constants_or_new()
-    #     self.assertEqual(len(res), 2)
-    #     constants, is_new = res
-    #     self.assertEqual(len(constants), 1)
-    #     assert is_new
-
-    # def test_constants_or_new_returns_pair_with_constants(self):
-    #     branch = Branch()
-    #     s1 = Predicated('Identity', [Constant(0, 0), Constant(1, 0)])
-    #     branch.append({sen: s1})
-    #     res = branch.constants_or_new()
-    #     self.assertEqual(len(res), 2)
-    #     constants, is_new = res
-    #     self.assertEqual(len(constants), 2)
-    #     assert not is_new
+        b = Branch()
+        b.close()
+        self.assertTrue(b.has({'is_flag': True, 'flag': 'closure'}))
+        self.assertEqual(len(b), 1)
 
     def nn1(self, n = 3):
         return tuple(Node({'i': i}) for i in range(n))
@@ -230,10 +269,10 @@ class TestBranch(BaseCase):
     def test_for_in_iter_nodes(self):
         b, nn = self.case1()
         npp = tuple(dict(n) for n in nn)
-        self.assertEqual(tuple(n for n in iter(b)), nn)
-        self.assertEqual(tuple(n for n in b), nn)
-        self.assertEqual(tuple(dict(n) for n in iter(b)), npp)
-        self.assertEqual(tuple(dict(n) for n in b), npp)
+        self.assertEqual(tuple(b), nn)
+        self.assertEqual(tuple(iter(b)), nn)
+        self.assertEqual(tuple(map(dict, b)), npp)
+        self.assertEqual(tuple(map(dict, iter(b))), npp)
 
     def gcase1(self, *a, **k):
         b, nn = self.case1(*a, *k)
@@ -319,8 +358,8 @@ class TestNode(BaseCase):
     def test_or_ror_operators(self):
         pa = dict(world = None, designated = None)
         pb = pa.copy()
-        pa.update({'a': 1, 'b': 3, 'C': 3, 'x': 1})
-        pb.update({'A': 1, 'b': 2, 'c': 4, 'y': 3})
+        pa.update(a=1,b=3,C=3,x=1)
+        pb.update(A=1,b=2,c=4,y=3)
         exp1 = pa | pb
         exp2 = pb | pa
         n1, n2 = map(Node, (pa, pb))
@@ -336,8 +375,178 @@ class TestNode(BaseCase):
 class TestRule(BaseCase):
 
     def test_base_not_impl_various(self):
-        with raises(TypeError):
+        with self.assertRaises(TypeError):
             Rule(Tableau())
+        tab = Tableau()
+        rule = rules.NoopRule(tab)
+        b = tab.branch()
+        t = Target(branch=b)
+        with self.assertRaises(NotImplementedError):
+            Rule._apply(rule, t)
+        self.assertEqual(list(Rule._get_targets(rule, b)), [])
+        self.assertEqual(list(Rule.example_nodes(rule)), [])
+
+    def test_lock_can_set_attr_if_not_locked(self):
+        tab = Tableau()
+        rule = rules.NoopRule(tab)
+        rule.helpers = {}
+
+    def test_lock_raises_if_already_locked(self):
+        tab = Tableau()
+        rule = rules.NoopRule(tab)
+        rule.lock()
+        with self.assertRaises(IllegalStateError):
+            rule.lock()
+
+    def test_lock_raises_set_attr_if_locked(self):
+        tab = Tableau()
+        rule = rules.NoopRule(tab)
+        rule.lock()
+        with self.assertRaises(AttributeError):
+            rule.helpers = {}
+
+    def test_test_passes_with_noassert(self):
+        rules.NoopRule.test(noassert=True)
+
+    def test_test_passes_with_target(self):
+        class RuleImpl(rules.NoopRule):
+            def _get_targets(self, branch: Branch):
+                yield Target(branch=branch)
+        RuleImpl.test()
+
+    def test_test_fails_with_assert(self):
+        with self.assertRaises(AssertionError):
+            rules.NoopRule.test()
+
+    def test_repr_is_string_coverage(self):
+        self.assertIs(type(repr(rules.NoopRule(Tableau()))), str)
+
+class TestRuleGroup(BaseCase):
+
+    def test_contains_name(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        group.append(rules.NoopRule)
+        self.assertIn('NoopRule', group)
+
+    def test_names_has_rule_name(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        group.append(rules.NoopRule)
+        self.assertIn('NoopRule', group.names())
+
+    def test_contains_class(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        group.append(rules.NoopRule)
+        self.assertIn(rules.NoopRule, group)
+
+    def test_contains_instance(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        group.append(rules.NoopRule)
+        self.assertIn(group[0], group)
+
+    def test_contains_type_error_for_int(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        with self.assertRaises(TypeError):
+            1 in group
+
+    def test_repr_coverage(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        self.assertIs(type(repr(group)), str)
+
+    def test_lock_can_clear_if_not_locked(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        group.append(rules.NoopRule)
+        self.assertEqual(len(group), 1)
+        group.clear()
+        self.assertEqual(len(group), 0)
+
+    def test_lock_raises_if_already_locked(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        group.lock()
+        with self.assertRaises(IllegalStateError):
+            group.lock()
+
+    def test_lock_raises_clear_if_locked(self):
+        group = RuleGroup(None, RulesRoot(Tableau()))
+        group.lock()
+        with self.assertRaises(IllegalStateError):
+            group.clear()
+
+class TestRuleGroups(BaseCase):
+
+    def test_append_iterable_rule_type(self):
+        groups = RuleGroups(RulesRoot(Tableau()))
+        groups.append(iter([rules.NoopRule]))
+        self.assertIn(groups[0], groups)
+        self.assertEqual(len(groups), 1)
+
+    def test_extend_iterable_iterable_rule_type(self):
+        groups = RuleGroups(RulesRoot(Tableau()))
+        groups.extend(iter([iter([rules.NoopRule])]))
+        self.assertIn(groups[0], groups)
+        self.assertEqual(len(groups), 1)
+
+    def test_get_raises_keyerror_no_default(self):
+        groups = RuleGroups(RulesRoot(Tableau()))
+        with self.assertRaises(KeyError):
+            groups.get(rules.NoopRule)
+
+    def test_names_has_group_name(self):
+        groups = RuleGroups(RulesRoot(Tableau()))
+        groups.append(iter([rules.NoopRule]), name='testname')
+        self.assertIn('testname', groups.names())
+
+    def test_lock_raises_if_already_locked(self):
+        groups = RuleGroups(RulesRoot(Tableau()))
+        groups.lock()
+        with self.assertRaises(IllegalStateError):
+            groups.lock()
+
+    def test_repr_is_string_coverage(self):
+        self.assertIs(type(repr(RuleGroups(RulesRoot(Tableau())))), str)
+
+class TestRulesRoot(BaseCase):
+
+    class Rule1(rules.NoopRule): pass
+    class Rule2(rules.NoopRule): pass
+    class Rule3(rules.NoopRule): pass
+
+    def test_len_0_then_1_then_2(self):
+        root = RulesRoot(Tableau())
+        self.assertEqual(len(root), 0)
+        root.append(self.Rule1)
+        self.assertEqual(len(root), 1)
+        root.append(self.Rule2)
+        self.assertEqual(len(root), 2)
+
+    def test_getitem(self):
+        root = RulesRoot(Tableau())
+        root.append(self.Rule1)
+        root.extend([self.Rule2, self.Rule3])
+        self.assertEqual(type(root[0]), self.Rule1)
+        self.assertEqual(type(root[1]), self.Rule2)
+        self.assertEqual(type(root[2]), self.Rule3)
+        self.assertEqual(type(root[-3]), self.Rule1)
+        self.assertEqual(type(root[-2]), self.Rule2)
+        self.assertEqual(type(root[-1]), self.Rule3)
+
+    def test_repr_is_string_coverage(self):
+        root = RulesRoot(Tableau())
+        self.assertIs(type(repr(root)), str)
+
+    def test_duplicate_key(self):
+        root = RulesRoot(Tableau())
+        root.append(self.Rule1)
+        class Rule1(rules.NoopRule): pass
+        with self.assertRaises(KeyError):
+            root.append(Rule1)
+
+    def test_reversed(self):
+        root = RulesRoot(Tableau())
+        root.append(self.Rule1)
+        root.groups.append([self.Rule2, self.Rule3])
+        exp = [self.Rule3, self.Rule2, self.Rule1]
+        res = list(map(type, reversed(root)))
+        self.assertEqual(res, exp)
 
 class TestClosureRule(BaseCase):
 
@@ -364,17 +573,11 @@ class TestEllispsisHelper(BaseCase):
     logic = 'FDE'
 
     def test_closing_rule_ellipsis(self):
-        import os.path
-        import sys
-        addpath = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '../doc'))
-        sys.path.append(addpath)
-        from pytabdoc.misc import EllipsisExampleHelper as Rcls # type: ignore
-        sys.path.pop()
+
         tab = self.tab()
         rule = tab.rules.get('DesignationClosure')
-        helper = Rcls(rule)
-        rule.helpers[Rcls] = helper
+        helper = helpers.EllipsisExampleHelper(rule)
+        rule.helpers[helpers.EllipsisExampleHelper] = helper
         b = tab.branch().extend(rule.example_nodes())
         tab.build()
         node = b.find(helper.mynode)
@@ -392,13 +595,13 @@ class Test_K_DefaultNodeFilterRule(BaseCase):
         for i in range(n):
             s = next(sgen)
             if i == 0:
-                n = {sen:s}
+                n = {'sentence':s}
             elif i % 3 == 0:
                 w1 = wn
                 w2 = wn = w1 + 1
                 n = {'world1':w1, 'world2':w2}
             else:
-                n = {sen:s, 'world':wn}
+                n = {'sentence':s, 'world':wn}
             yield Node.for_mapping(n)
         sgen.close()
 
@@ -421,7 +624,7 @@ class TestMaxConstantsTracker(BaseCase):
 
     def test_argument_trunk_two_qs_returns_3(self):
     
-        class FilterNodeRule(NoopRule):
+        class FilterNodeRule(rules.NoopRule):
             Helpers = FilterHelper,
             ignore_ticked = None
     
@@ -437,7 +640,7 @@ class TestMaxConstantsTracker(BaseCase):
 
     @skip(None)
     def xtest_compute_for_node_one_q_returns_1(self):
-        n = {sen: self.p('VxFx'), 'world': 0}
+        n = {'sentence': self.p('VxFx'), 'world': 0}
         node = Node.for_mapping(n)
         proof = Tableau()
         rule = Rule(proof)
@@ -450,8 +653,8 @@ class TestMaxConstantsTracker(BaseCase):
     def test_compute_for_branch_two_nodes_one_q_each_returns_3(self):
         s1 = self.p('LxFx')
         s2 = self.p('SxFx')
-        n1 = {sen: s1, 'world': 0}
-        n2 = {sen: s2, 'world': 0}
+        n1 = {'sentence': s1, 'world': 0}
+        n2 = {'sentence': s2, 'world': 0}
         proof = Tableau()
         rule = Rule(proof)
         branch = proof.branch()
@@ -460,17 +663,3 @@ class TestMaxConstantsTracker(BaseCase):
         self.assertEqual(res, 3)
 
 
-
-class TestKNewExistential(BaseCase):
-
-    logic = 'K'
-
-    def test_rule_applies(self):
-        rule, tab = self.rule_eg('Existential', bare = True)
-
-class TestKNewUniversal(BaseCase):
-
-    logic = 'K'
-
-    def test_rule_applies(self):
-        rule, tab = self.rule_eg('Universal', bare = True)

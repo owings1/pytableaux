@@ -157,7 +157,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     @abstractmethod
     def _get_targets(self, branch: Branch, /) -> Iterable[Target]:
         "Yield targets that the rule should apply to."
-        return None
+        yield from EMPTY_SET
 
     @abstractmethod
     def _apply(self, target: Target, /) -> None:
@@ -380,8 +380,16 @@ class RuleGroup(Sequence[Rule]):
         Raises:
           errors.IllegalStateError: If locked.
         """
+        if not isinstance(self._seq, list):
+            raise Emsg.IllegalState('locked')
         self._seq.clear()
         self._map.clear()
+
+    if TYPE_CHECKING:
+        @overload
+        def get(self, ref:type[_RT]) -> _RT: ...
+        @overload
+        def get(self, ref:Any, default=...) -> Rule:...
 
     def get(self, ref: type[_RT]|str, default = NOARG, /) -> _RT:
         """Get rule instance by name or type.
@@ -411,7 +419,10 @@ class RuleGroup(Sequence[Rule]):
         'Return all the rule names.'
         return self._map.keys()
 
+    @locking
     def lock(self):
+        if isinstance(self._map, MapProxy):
+            raise Emsg.IllegalState('locked')
         self._seq = SeqCover(self._seq)
         self._map = MapProxy(self._map)
 
@@ -460,6 +471,7 @@ class RuleGroups(Sequence[RuleGroup]):
             self._map[name] = group
         return group
 
+    @locking
     def append(self, classes: Iterable[type[Rule]], /, name: str|None = NOARG):
         'Create a new group with the given rules. Raise IllegalStateError if locked.'
         if name is NOARG:
@@ -490,8 +502,11 @@ class RuleGroups(Sequence[RuleGroup]):
         'List the named groups.'
         return self._map.keys()
 
+    @locking
     def lock(self):
         for _ in map(RuleGroup.lock, self): pass
+        if not isinstance(self._seq, list):
+            raise Emsg.IllegalState('locked')
         self._seq = SeqCover(self._seq)
 
     def __contains__(self, item):
@@ -550,10 +565,6 @@ class RulesRoot(Sequence[Rule]):
         'Clear all the rules. Raises IllegalStateError if tableau is started.'
         self.groups.clear()
         self._map.clear()
-
-    if TYPE_CHECKING:
-        @overload
-        def get(self, ref:Any, default=...) -> Rule:...
 
     get = RuleGroup.get
     names = RuleGroup.names
@@ -1226,13 +1237,11 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             Key.INDEX       : None,
             Key.PARENT      : None})
 
-        def __init__(self, mapping = None, /, **kw):
+        def __init__(self, mapping = None, /):
             super().__init__(self._defaults)
             self[self.Key.NODES] = {}
             if mapping is not None:
                 self.update(mapping)
-            if len(kw):
-                self.update(kw)
 
         def node(self, node, /):
             'Get the stat info for the node, and create if missing.'
@@ -1374,14 +1383,6 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             self.ticksteps = []
             self.children = []
             self.id = id(self)
-
-        @classmethod
-        def _from_iterable(cls, it):
-            inst = cls()
-            inst.update(it)
-            return inst
-
-        _from_mapping = _from_iterable
 
         @classmethod
         def make(cls, tab: Tableau):

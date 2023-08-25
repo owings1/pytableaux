@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import enum
 import re
-from collections import defaultdict, deque
+from collections import defaultdict
 from inspect import getsource
 from typing import Any, Collection
 
@@ -31,13 +31,11 @@ from sphinx.ext.autodoc.importer import import_object
 
 from pytableaux.lang import LexType, Operator, Predicate, Quantifier
 from pytableaux.logics import LogicType, registry
-from pytableaux.proof import (Branch, ClosingRule, ClosureNode, Node, Rule,
-                              System, Tableau, Target)
+from pytableaux.proof import ClosingRule, Rule, System
 from pytableaux.proof.filters import CompareSentence
 from pytableaux.tools.abcs import isabstract
 
 __all__ = (
-    'EllipsisExampleHelper',
     'get_logic_names',
     'is_concrete_build_trunk',
     'is_concrete_rule',
@@ -243,71 +241,7 @@ def _methmro(meth: Any) -> list[str]:
         return []
     return list(filter(None, it))
 
-class EllipsisExampleHelper(Rule.Helper):
 
-    closenodes: list[Node]
-    applied: set[Branch]
-    isclosure: bool
-    istrunk: bool
-    mynode = Node.PropMap.Ellipsis
-
-    __slots__ = ('closenodes', 'applied', 'isclosure', 'istrunk')
-
-    def __init__(self, rule: Rule,/):
-        super().__init__(rule)
-        self.applied = set()
-        self.isclosure = isinstance(rule, ClosingRule)
-        if self.isclosure:
-            self.closenodes = list(
-                dict(n)
-                for n in reversed(deque(rule.example_nodes())))
-        else:
-            self.closenodes = []
-        self.istrunk = False
-
-    def listen_on(self):
-        super().listen_on()
-        self.tableau.on({
-            Tableau.Events.BEFORE_TRUNK_BUILD : self.before_trunk_build,
-            Tableau.Events.AFTER_TRUNK_BUILD  : self.after_trunk_build,
-            Tableau.Events.AFTER_BRANCH_ADD   : self.after_branch_add,
-            Tableau.Events.AFTER_NODE_ADD     : self.after_node_add})
-        self.rule.on(Rule.Events.BEFORE_APPLY, self.before_apply)
-
-    def before_trunk_build(self, *_):
-        self.istrunk = True
-
-    def after_trunk_build(self, *_):
-        self.istrunk = False
-
-    def after_branch_add(self, branch: Branch):
-        if self.applied:
-            return
-        if len(self.closenodes) == 1:
-            self.add_node(branch)        
-
-    def after_node_add(self, node: Node, branch: Branch):
-        if self.applied:
-            return
-        if node.meets(self.mynode) or isinstance(node, ClosureNode):
-            return
-        if self.istrunk:
-            self.add_node(branch)
-        elif self.closenodes and node.meets(self.closenodes[-1]):
-            self.closenodes.pop()
-            if len(self.closenodes) == 1:
-                self.add_node(branch)
-
-    def before_apply(self, target: Target):
-        if self.applied:
-            return
-        if self.isclosure:
-            return
-        self.add_node(target.branch)
-
-    def add_node(self, branch: Branch):
-        self.applied.add(branch)
-        branch.append(self.mynode)
 
 # def rsttable(data, /, headers = (), **kw):
 #     from tabulate import tabulate

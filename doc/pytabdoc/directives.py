@@ -40,13 +40,13 @@ from pytableaux import examples, logics
 from pytableaux.lang import (Argument, Atomic, LexWriter,
                              Marking, Notation, Operated, Operator, Predicate,
                              Predicates, Quantifier)
-from pytableaux.proof import Rule, Tableau, TabWriter, writers, rules
+from pytableaux.proof import Rule, Tableau, TabWriter, writers, rules, helpers
 from pytableaux.tools import EMPTY_SET, inflect, qset
 
 from . import (BaseDirective, ConfKey, DirectiveHelper, LogicOptionMixin,
                ParserOptionMixin, RenderMixin, SphinxEvent, Tabler, nodez,
                optspecs)
-from .misc import EllipsisExampleHelper, rules_sorted
+from .misc import rules_sorted
 from .nodez import block
 from .roles import refplus
 
@@ -252,7 +252,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             return self.lw._write(item)
 
     class TrunkRuleStub(rules.NoopRule):
-        Helpers = EllipsisExampleHelper,
+        Helpers = helpers.EllipsisExampleHelper,
 
     def setup(self, force = False):
         if self._setup and not force:
@@ -345,7 +345,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         tab.rules.clear()
         tab.rules.append(rulecls)
         rule = tab.rules[0]
-        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
+        rule.helpers[helpers.EllipsisExampleHelper] = helpers.EllipsisExampleHelper(rule)
         tab.branch().extend(rule.example_nodes())
         return tab
 

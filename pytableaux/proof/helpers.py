@@ -21,7 +21,7 @@ pytableaux.proof.helpers
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections import defaultdict
+from collections import defaultdict, deque
 from copy import copy
 from functools import partial
 from itertools import filterfalse
@@ -34,12 +34,11 @@ from ..lang import Constant, Operator, Predicated, Sentence
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, minfloor, wraps
 from . import (AccessNode, Branch, Node, Rule, Tableau, Target, WorldPair,
                filters)
-from .common import QuitFlagNode
+from .common import QuitFlagNode, ClosureNode
 from .filters import CompareNode
 
 if TYPE_CHECKING:
     from ..tools import TypeInstMap
-    from .rules import ClosingRule
 
 _RT = TypeVar('_RT', bound=Rule)
 _KT = TypeVar('_KT')
@@ -799,3 +798,72 @@ class MaxWorlds(BranchDictCache[Branch, int]):
             return cls.Config(frozenset(rulecls.Meta.modal_operators).__contains__)
         except AttributeError as err:
             raise Emsg.MissingAttribute(str(err))
+
+class EllipsisExampleHelper(Rule.Helper):
+    "Documentation helper for inserting ellipsis"
+
+    closenodes: list[Node]
+    applied: set[Branch]
+    isclosure: bool
+    istrunk: bool
+    mynode = Node.PropMap.Ellipsis
+
+    __slots__ = ('closenodes', 'applied', 'isclosure', 'istrunk')
+
+    def __init__(self, rule: Rule,/):
+        super().__init__(rule)
+        self.applied = set()
+        self.isclosure = isinstance(rule, ClosingRule)
+        if self.isclosure:
+            self.closenodes = list(
+                dict(n)
+                for n in reversed(deque(rule.example_nodes())))
+        else:
+            self.closenodes = []
+        self.istrunk = False
+
+    def listen_on(self):
+        super().listen_on()
+
+        def before_trunk_build(*_):
+            self.istrunk = True
+
+        def after_trunk_build(*_):
+            self.istrunk = False
+
+        def after_branch_add(branch: Branch):
+            if self.applied:
+                return
+            if len(self.closenodes) == 1:
+                self.add_node(branch)        
+
+        def after_node_add(node: Node, branch: Branch):
+            if self.applied:
+                return
+            if node.meets(self.mynode) or isinstance(node, ClosureNode):
+                return
+            if self.istrunk:
+                self.add_node(branch)
+            elif self.closenodes and node.meets(self.closenodes[-1]):
+                self.closenodes.pop()
+                if len(self.closenodes) == 1:
+                    self.add_node(branch)
+
+        def before_apply(target: Target):
+            if self.applied:
+                return
+            if self.isclosure:
+                return
+            self.add_node(target.branch)
+        self.tableau.on({
+            Tableau.Events.BEFORE_TRUNK_BUILD : before_trunk_build,
+            Tableau.Events.AFTER_TRUNK_BUILD  : after_trunk_build,
+            Tableau.Events.AFTER_BRANCH_ADD   : after_branch_add,
+            Tableau.Events.AFTER_NODE_ADD     : after_node_add})
+        self.rule.on(Rule.Events.BEFORE_APPLY, before_apply)
+
+    def add_node(self, branch: Branch):
+        self.applied.add(branch)
+        branch.append(self.mynode)
+
+from .rules import ClosingRule
