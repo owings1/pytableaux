@@ -204,18 +204,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             self.emit(Rule.Events.AFTER_APPLY, target)
             self.tableau.emit(Tableau.Events.AFTER_RULE_APPLY, target)
 
-    def stats(self):
-        "Compute the rule stats."
-        return dict(
-            name    = self.name,
-            applied = len(self.history),
-            timers  = {
-                name: dict(
-                    duration_ms  = timer.elapsed_ms(),
-                    duration_avg = timer.elapsed_avg(),
-                    count        = timer.count)
-                for name, timer in self.timers.items()})
-
     def lock(self, *_):
         if self.locked:
             raise Emsg.IllegalState('Already locked')
@@ -601,7 +589,8 @@ class RulesRoot(Sequence[Rule]):
             if compare(inext, index):
                 return group[index - i]
             i = inext
-        raise TypeError # should never run.
+        # should never run.
+        raise TypeError # pragma: no cover
 
     def __repr__(self):
         logic = self.tableau.logic
@@ -1016,7 +1005,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
 
     def __listen_on(self, history: list, stat: Tableau.Stat, opens: linqset[Branch], branches: list[Branch]):
 
-        if len(self.events):
+        if len(self.events): # pragma: no cover
             raise Emsg.IllegalState('Listeners already initialized')
 
         add_event = object()
@@ -1185,7 +1174,6 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         if self.flag.HAS_TIME_LIMIT not in self.flag:
             return
         if self.timers.build.elapsed_ms() > self.opts['build_timeout']:
-            # self.timers.build.stop()
             self.flag |= self.flag.TIMED_OUT
             self.finish()
             raise Emsg.Timeout(self.opts['build_timeout'])

@@ -163,6 +163,15 @@ class TestTableau(BaseCase):
         with self.assertRaises(ValueError):
             tab.add(b)
 
+    def test_repr_premature(self):
+        tab = self.tab('DeMorgan 8', max_steps=1)
+        self.assertIn('premature', repr(tab))
+
+    def test_repr_invalid(self):
+        tab = self.tab('Triviality 1', max_steps=1)
+        self.assertIn('invalid', repr(tab))
+
+    
 class TestBranchStat(BaseCase):
     def test_view_coverage(self):
         stat = Tableau.BranchStat()
@@ -421,6 +430,7 @@ class TestRule(BaseCase):
     def test_repr_is_string_coverage(self):
         self.assertIs(type(repr(rules.NoopRule(Tableau()))), str)
 
+
 class TestRuleGroup(BaseCase):
 
     def test_contains_name(self):
@@ -547,6 +557,12 @@ class TestRulesRoot(BaseCase):
         exp = [self.Rule3, self.Rule2, self.Rule1]
         res = list(map(type, reversed(root)))
         self.assertEqual(res, exp)
+
+    def test_lock_raises_already_locked(self):
+        root = RulesRoot(Tableau())
+        root.lock()
+        with self.assertRaises(IllegalStateError):
+            root.lock()
 
 class TestClosureRule(BaseCase):
 
