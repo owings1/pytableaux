@@ -28,13 +28,12 @@ from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar, Iterable, Mapping, Self
 
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
-                      UnboundVariableError)
-from ..tools import (EMPTY_MAP, EMPTY_SET, MapCover, abcs, for_defaults, key0,
-                     lazy, qset)
-from . import BiCoords, LangCommonMeta,  Marking, Notation
+                      UnboundVariableError, check)
+from ..tools import EMPTY_MAP, EMPTY_SET, MapCover, abcs, for_defaults, lazy
+from . import BiCoords, LangCommonMeta, Marking, Notation
 from .collect import Argument, Predicates
-from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate, Quantifier,
-                  Predicated, Quantified, Sentence, Variable)
+from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate,
+                  Predicated, Quantified, Quantifier, Sentence, Variable)
 
 __all__ = (
     'Parser',
@@ -116,6 +115,8 @@ class Parser(metaclass=ParserMeta):
             self.table = ParseTable.fetch(self.notation)
         elif isinstance(table, str):
             self.table = ParseTable.fetch(self.notation, table)
+        else:
+            self.table = check.inst(table, ParseTable)
         self.preds = preds or EMPTY_MAP
         self.opts = for_defaults(self._defaults, opts)
 
@@ -169,7 +170,7 @@ class Parser(metaclass=ParserMeta):
             title=title)
 
     def __repr__(self):
-        return f'<{type(self).__name__}:{self.table.keypair}>'
+        return f'<{type(self).__name__}:{self.table.notation}.{self.table.dialect}>'
 
     def __init_subclass__(subcls, primary = False, **kw):
         'Merge ``_defaults``, set primary.'
@@ -367,7 +368,7 @@ class DefaultParser(Parser):
         context.advance()
         v = self._read_variable(context)
         if v in context.bound:
-            vchr = self.table.char(Variable, v.index)
+            vchr = self.table.reversed[Variable, v.index]
             raise BoundVariableError(
                 "Cannot rebind variable '{0}' ({1}) at position {2}.".format(
                     vchr, v.subscript, context.pos))
@@ -580,7 +581,7 @@ class ParseTable(MapCover[str, Any]):
     'Parser table data class.'
 
 
-    __slots__ = ('chars', 'reversed', 'notation', 'dialect')
+    __slots__ = ('reversed', 'notation', 'dialect')
     _instances: ClassVar[dict[Any, Self]] = {}
 
     @classmethod
@@ -620,9 +621,6 @@ class ParseTable(MapCover[str, Any]):
     reversed: Mapping
     "Reversed mapping of item to symbol."
 
-    chars: Mapping
-    "Grouping of each symbol type to the the symbols."
-
     def __init__(self, data: Mapping, /):
         """
         Args:
@@ -632,29 +630,18 @@ class ParseTable(MapCover[str, Any]):
         self.notation = Notation[data['notation']]
         self.dialect = data.get('dialect', 'default')
         mapping = dict(data['mapping'])
-        vals = mapping.values()
-
-        # list of types
-        ctypes = qset(map(key0, vals))
-
-        tvals:dict[str, qset] = {}
-        for ctype in ctypes:
-            tvals[ctype] = qset()
-        for ctype, value in vals:
-            tvals[ctype].add(value)
-        for ctype in ctypes:
-            tvals[ctype].sort()
-
-        # flipped table
-        self.reversed = MapProxy(dict(map(reversed, mapping.items())))
-
-        # chars for each type in value order, duplicates discarded
-        self.chars = MapProxy({
-            ctype: tuple(self.reversed[ctype, val]
-                for val in tvals[ctype])
-                    for ctype in ctypes})
-
+        rev = dict(map(reversed, mapping.items()))
+        for cls in (Operator, Quantifier, Predicate.System):
+            for item in cls:
+                rev.setdefault(item, rev[cls, item])
+        for key, defaultkey in self._keydefaults.items():
+            rev.setdefault(key, rev[defaultkey])
+        self.reversed = MapProxy(rev)
         super().__init__(mapping)
+
+    _keydefaults = {
+        
+    }
 
     def type(self, char, default = NOARG, /):
         """Get the item type for the character.
@@ -689,22 +676,6 @@ class ParseTable(MapCover[str, Any]):
             KeyError: if symbol not in table.
         """
         return self[char][1]
-
-    def char(self, ctype, value, /):
-        """Get the character symbol corresponding to the (ctype, value) item, i.e.
-        perform a reverse lookup.
-
-        Args:
-            ctype: The symbol type, e.g. ``Variable``, or ``Marking.digit``.
-            value: The item value, e.g. ``1`` or ``Operator.Negation``.
-        
-        Returns:
-            The character symbol.
-        
-        Raises:
-            KeyError: if item not in table.
-        """
-        return self.reversed[ctype, value]
 
     def __setattr__(self, name, value, /, *, sa = object.__setattr__):
         if getattr(self, name, NOARG) is not NOARG:

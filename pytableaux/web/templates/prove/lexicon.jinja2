@@ -8,7 +8,7 @@
                 <table class="operator-symbols">
                     {%- for oper in Operator -%}
                         <tr>
-                            <td><span class="operator-symbol">{{ table.char(LexType.Operator.cls, oper)|e }}</span></td>
+                            <td><span class="operator-symbol">{{ table.reversed[oper]|e }}</span></td>
                             <td class="html-ref-symbol">{{ lw_html_ref(oper) }}</td>
                             <td>{{ oper.label|e }}</td>
                         </tr>
@@ -22,35 +22,25 @@
         {%- for notn in Notation -%}
             {%- set table = ParseTable.fetch(notn) -%}
             <div class="lexicon hidden notation-{{ notn.name|e }}">
-                <span class="label">Atomics</span>
+                {%- for lextype in [LexType.Atomic, LexType.Constant, LexType.Variable] %}
+                <span class="label">{{ lextype.name|e }}s</span>
                 <ul class="item-symbols">
-                    {%- for char in table.chars[LexType.Atomic.cls] -%}
-                        <li>{{ char|e }}</li>
+                    {%- for i in range(lextype.maxi + 1) -%}
+                        <li>{{ table.reversed[lextype.cls, i]|e }}</li>
                     {%- endfor %}
                 </ul>
-                <span class="label">Constants</span>
-                <ul class="item-symbols">
-                    {%- for char in table.chars[LexType.Constant.cls] -%}
-                        <li>{{ char|e }}</li>
-                    {%- endfor %}
-                </ul>
-                <span class="label">Variables</span>
-                <ul class="item-symbols">
-                    {%- for char in table.chars[LexType.Variable.cls] -%}
-                        <li>{{ char|e }}</li>
-                    {%- endfor %}
-                </ul>
+                {%- endfor %}
                 <span class="label">Quantifiers</span>
                 <table class="operator-symbols quantifier-symbols">
                     {%- for quantifier in Quantifier -%}
                         <tr>
                             <td>
                                 <span class="operator-symbol quantifier-symbol">
-                                    {{- table.char(LexType.Quantifier.cls, quantifier)|e -}}
+                                    {{- table.reversed[quantifier]|e -}}
                                 </span>
                             </td>
                             <td class="html-ref-symbol">{{ lw_html_ref(quantifier) }}</td>
-                            <td>{{ quantifier.name|e }}</td>
+                            <td>{{ quantifier.label|e }}</td>
                         </tr>
                     {%- endfor %}
                 </table>
@@ -66,7 +56,7 @@
                 <tr class="system-predicate">
                     <td>
                         {%- for notn in Notation -%}
-                            {%- set symbol = ParseTable.fetch(notn).char(PredSys, pred) -%}
+                            {%- set symbol = ParseTable.fetch(notn).reversed[pred] -%}
                             {%- set subscript = pred.subscript -%}
                             <span class="lexicon predicate-symbol notation-{{ notn.name|e }} hidden">
                                 {{- symbol|e }}{% if pred.subscript > 0 %}<sub>{{ pred.subscript|e }}</sub>{% endif -%}
@@ -83,7 +73,7 @@
                 {%- call helper.predicate(index, subscript, arity) %}
                     {%- for notn in Notation -%}
                         {%- set table = ParseTable.fetch(notn) -%}
-                        {{- helper.predicate_symbol(notn.name, table.char(LexType.Predicate.cls, index), subscript) }}
+                        {{- helper.predicate_symbol(notn.name, table.reversed[Predicate, index], subscript) }}
                     {% endfor -%}
                 {%- endcall -%}
             {%- endfor -%}

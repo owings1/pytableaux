@@ -73,7 +73,7 @@ class TableGenerator(DirectiveHelper):
     def run(self):
         table = self.gentable()
         opts = self.options
-        opts.setdefault('header-rows', len(table.header))
+        opts.setdefault('header-rows', 1)
         return table
 
 table_generators: dict[str, TableGenerator] = {}

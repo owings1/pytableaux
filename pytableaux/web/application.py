@@ -238,23 +238,28 @@ class WebApp(EventEmitter):
     def _build_jsapp_data(self):
         stdtbl = ParseTable.fetch(Notation.standard)
         stdlw = Notation.standard.DefaultWriter(format='text', dialect='unicode')
+        nups = {}
+        for notn in Notation:
+            chars = []
+            table = ParseTable.fetch(notn)
+            for i in range(Predicate.TYPE.maxi + 1):
+                chars.append(table.reversed[Predicate, i])
+            nups[notn.name] = chars
         return MapProxy(dict(
             example_args = self.example_args,
             example_preds = tuple(p.spec for p in examples.preds),
-            nups = MapProxy({
-                notn.name: ParseTable.fetch(notn).chars[Predicate]
-                for notn in Notation}),
+            nups = MapProxy(nups),
             display_trans = MapProxy({
                 'standard': MapProxy({
-                    stdtbl.char(Operator, oper): stdlw(oper)
+                    stdtbl.reversed[oper]: stdlw(oper)
                         for oper in Operator} | {
-                    stdtbl.char(Quantifier, quant): stdlw(quant)
+                    stdtbl.reversed[quant]: stdlw(quant)
                         for quant in Quantifier})}),
             parse_trans = MapProxy({
                 'standard': MapProxy({
-                    stdlw(oper): stdtbl.char(Operator, oper)
+                    stdlw(oper): stdtbl.reversed[oper]
                         for oper in Operator} | {
-                    stdlw(quant): stdtbl.char(Quantifier, quant)
+                    stdlw(quant): stdtbl.reversed[quant]
                         for quant in Quantifier})})))
 
     def _build_cp_config(self):

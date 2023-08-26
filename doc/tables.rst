@@ -1,12 +1,18 @@
 .. include:: /_inc/note-doc-stub.rsti
 
 ***************
-Lexical Tables
+Tables
 ***************
 
 .. contents:: :local:
 
-.. _operators-table:
+
+Parser Symbols
+==============
+
+.. csv-table::
+    :widths: auto
+    :generator: parser-symbol-tables
 
 Symbols Sets
 ==============

@@ -48,7 +48,7 @@ Indices and tables
 .. toctree::
    :maxdepth: 1
 
-   symbols
+   tables
    glossary
 
 * :ref:`search`

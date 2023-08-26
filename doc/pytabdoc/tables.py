@@ -28,9 +28,10 @@ from types import MappingProxyType as MapProxy
 from typing import Any, Callable, Sequence
 
 from sphinx.application import Sphinx
+from doc.pytabdoc import Tabler
 
-from pytableaux.lang import LexType, LexWriter, Operator, ParseTable, StringTable
-from pytableaux.tools import abcs, closure, qset
+from pytableaux.lang import *
+from pytableaux.tools import abcs, closure, qset, inflect
 
 from . import ConfKey, Tabler, directives
 from .directives import TableGenerator
@@ -140,7 +141,7 @@ def oper_sym_table():
         # Get the operator symbols for the tables.
         for src in sources:
             if type(src) is ParseTable:
-                yield src.char(type(o), o)
+                yield src.reversed[o]
             else:
                 yield src[o]
 
@@ -221,6 +222,33 @@ class OperSymTable(TableGenerator):
         return oper_sym_table()
 
 directives.table_generators['oper-sym-table'] = OperSymTable
+
+class ParserSymbolTables(TableGenerator):
+
+    def gentable(self) -> Tabler:
+        sources = [
+            ParseTable.fetch('polish'),
+            ParseTable.fetch('standard'),
+        ]
+        header = [''] + [
+            f'{tbl.notation.name} ({tbl.dialect})'
+            for tbl in sources
+        ]
+        body = []
+        for cls in (Operator, Quantifier, Predicate.System):
+            for item in cls:
+                row = [inflect.snakespace(item.name)]
+                for tbl in sources:
+                    row.append('\\' + tbl.reversed[item])
+                body.append(row)
+        for cls in (Predicate, Constant, Variable, Atomic):
+            row = [f'{cls.TYPE.name}s']
+            for tbl in sources:
+                row.append(', '.join('\\' + tbl.reversed[cls, i] for i in range(cls.TYPE.maxi + 1)))
+            body.append(row)
+        return Tabler(body, header)
+
+directives.table_generators['parser-symbol-tables'] = ParserSymbolTables
 
 # ------------------------------------------------
 # ------------------------------------------------
