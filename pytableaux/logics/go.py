@@ -58,7 +58,7 @@ class Model(FDE.Model):
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
-        raise NotImplementedError from ValueError(s.quantifier) # pragma: no cover
+        raise NotImplementedError from ValueError(s.quantifier)
 
 class System(FDE.System): pass
 

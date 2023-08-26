@@ -861,7 +861,7 @@ class Predicate(CoordsItem):
                 len(spec := spec[0])
             except:
                 check.inst(spec, tuple)
-                raise
+                raise # pragma: no cover
         if spec:
             self = CoordsItem.__new__(cls, *spec[0:3])
         else:

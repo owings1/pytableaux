@@ -139,7 +139,7 @@ class Model(LogicType.Model[ValueFDE]):
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
-        raise NotImplementedError from ValueError(s.quantifier) # pragma: no cover
+        raise NotImplementedError from ValueError(s.quantifier)
 
     def set_opaque_value(self, s: Sentence, value, /):
         self._check_not_finished()

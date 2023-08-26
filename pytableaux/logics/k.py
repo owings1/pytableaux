@@ -133,7 +133,7 @@ class Model(BaseModel[Meta.values]):
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
-        raise NotImplementedError from ValueError(s.quantifier) # pragma: no cover
+        raise NotImplementedError from ValueError(s.quantifier)
 
     def value_of_operated(self, s: Operated, /, *, world: int = 0):
         self._check_finished()
@@ -143,7 +143,7 @@ class Model(BaseModel[Meta.values]):
                 return maxceil(self.maxval, it, self.minval)
             if s.operator is Operator.Necessity:
                 return minfloor(self.minval, it, self.maxval)
-            raise NotImplementedError from ValueError(s.operator) # pragma: no cover
+            raise NotImplementedError from ValueError(s.operator)
         return super().value_of_operated(s, world=world)
 
     def set_opaque_value(self, s: Sentence, value, /, world = 0):
