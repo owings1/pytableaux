@@ -580,8 +580,6 @@ class StandardParser(DefaultParser, primary=True):
 class ParseTable(MapCover[str, Any]):
     'Parser table data class.'
 
-
-    __slots__ = ('reversed', 'notation', 'dialect')
     _instances: ClassVar[dict[Any, Self]] = {}
 
     @classmethod
@@ -620,6 +618,8 @@ class ParseTable(MapCover[str, Any]):
 
     reversed: Mapping
     "Reversed mapping of item to symbol."
+
+    __slots__ = ('reversed', 'notation', 'dialect')
 
     def __init__(self, data: Mapping, /):
         """

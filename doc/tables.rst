@@ -7,20 +7,15 @@ Tables
 .. contents:: :local:
 
 
+Lexical Tables
+^^^^^^^^^^^^^^
+
 Parser Symbols
 ==============
 
 .. csv-table::
     :widths: auto
     :generator: parser-symbol-tables
-
-Symbols Sets
-==============
-
-.. csv-table::
-    :header-rows: 4
-    :widths: auto
-    :generator: oper-sym-table
 
 
 .. _lexical-item-specs-table:

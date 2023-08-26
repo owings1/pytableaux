@@ -31,7 +31,7 @@ from sphinx.application import Sphinx
 from doc.pytabdoc import Tabler
 
 from pytableaux.lang import *
-from pytableaux.tools import abcs, closure, qset, inflect
+from pytableaux.tools import abcs, qset, inflect
 
 from . import ConfKey, Tabler, directives
 from .directives import TableGenerator
@@ -120,108 +120,6 @@ class Reprer(reprlib.Repr, dict, metaclass = abcs.AbcMeta):
 # ------------------------------------------------
 # ------------------------------------------------
 
-@closure
-def oper_sym_table():
-
-    # Source tables
-    sources = (
-        ParseTable.fetch('polish'),
-        ParseTable.fetch('standard'),
-        StringTable.fetch(format='text', notation='standard', dialect='unicode'),
-        StringTable.fetch(notation='standard', format='html'))
-
-    def sources_info():
-        for src in sources:
-            if type(src) is ParseTable:
-                yield (src.notation, 'ascii', True)
-            else:
-                yield (src.notation, src.format, False)
-
-    def src_func(o):
-        # Get the operator symbols for the tables.
-        for src in sources:
-            if type(src) is ParseTable:
-                yield src.reversed[o]
-            else:
-                yield src[o]
-
-    formats = [
-        fmt_literal,
-        fmt_literal,
-        fmt_raw,
-        fmt_raw,#lambda s: f'{html.unescape(s)} / {html.escape(s)}',
-    ]
-
-    def datarow(o) -> list[str]:
-        return [
-            fmt(value) for fmt, value in
-            zip(formats, src_func(o))]
-
-    def build():
-        """Table data for the Operators symbols table.
-
-        Example:
-
-        ======================  =========  ======  ========  ========  ===============
-        ..                      Notation   Polish  Standard  Standard  Standard
-        ..                      Format     ascii   ascii     unicode   html
-        ..                      Can parse  Y       Y         N         N
-        ..
-        Operator
-        ..
-        Assertion                          ``T``   ``*``     ○         ○ / &amp;#9675;
-        Negation                           ``N``   ``~``     ¬         ¬ / &amp;not;
-        Conjunction                        ``K``   ``&``     ∧         ∧ / &amp;and;
-        Disjunction                        ``A``   ``V``     ∨         ∨ / &amp;or;
-        Material Conditional               ``C``   ``>``     ⊃         ⊃ / &amp;sup;
-        Material Biconditional             ``E``   ``<``     ≡         ≡ / &amp;equiv;
-        Conditional                        ``U``   ``$``     →         → / &amp;rarr;
-        Biconditional                      ``B``   ``%``     ↔         ↔ / &amp;harr;
-        Possibility                        ``M``   ``P``     ◇         ◇ / &amp;#9671;
-        Necessity                          ``L``   ``N``     ◻         ◻ / &amp;#9723;
-        ======================  =========  ======  ========  ========  ===============
-        """
-
-        width = 2 + len(sources)
-        blank = [''] * width
-
-        # header info / columns
-        head_cols = [
-            blank[0:3],
-
-            [ 'Notation',             'Format', 'Can parse',   ], *(
-
-            [ notn.name.capitalize(),  fmt,  'NY'[canparse] ]
-
-                for (notn, fmt, canparse)
-                in sources_info()
-            )
-        ]
-        heads = list(zip(*head_cols))
-
-        # Middle transition
-        middle = [
-            blank,
-            ['Operator', *blank[:-1] ],
-            blank,
-        ]
-
-        # main body rows
-        main = [ [o.label, ''] + datarow(o) for o in Operator ]
-
-        # Assemble
-        header = heads[0]
-        body = heads[1:] + middle + main
-        return Tabler(body, header)
-
-    return build
-
-class OperSymTable(TableGenerator):
-
-    def gentable(self):
-        return oper_sym_table()
-
-directives.table_generators['oper-sym-table'] = OperSymTable
 
 class ParserSymbolTables(TableGenerator):
 
@@ -369,7 +267,6 @@ def main():
 
     def callspec_it() -> Iterator[tuple[Callable[..., Tabler], Any]]:
         callspecs = [
-            (oper_sym_table,),
             (lex_eg_table, lexatrs[0:2]),
             *((lex_eg_table, [name]) for name in lexatrs),
             (member_table, Operator, [
