@@ -243,7 +243,7 @@ class Lexical:
         except AttributeError:
             check.inst(lhs, __class__)
             check.inst(rhs, __class__)
-            raise
+            raise # pragma: no cover
         for cmp in filter(None, starmap(opr.sub, it)):
             return cmp
         return 0
@@ -256,7 +256,7 @@ class Lexical:
             try:
                 return oper(Lexical.orderitems(self, other), 0)
             except TypeError:
-                if isinstance(other, Lexical):
+                if isinstance(other, Lexical): # pragma: no cover
                     raise
                 return NotImplemented
         return wrapped
@@ -493,12 +493,12 @@ class CoordsItem(LexicalAbc):
                 sa(self, field, value.__index__())
         except:
             check.inst(value, int)
-            raise
+            raise # pragma: no cover
         try:
             if spec.index > self.TYPE.maxi:
                 raise ValueError(f'{spec.index} > {self.TYPE.maxi}')
         except AttributeError:
-            raise TypeError(f'Abstract: {type(self)}') from None
+            raise TypeError(f'Abstract type {cls}') from None
         if spec.subscript < 0:
             raise ValueError(f'subscript {spec.subscript} < 0')
         sa(self, 'sort_tuple', (self.TYPE.rank, *spec.sorting()))
@@ -573,8 +573,7 @@ class Operator(LexicalEnum):
     >>> s2 == Operated(Operator.Conditional, (s1, s1))
     True
 
-    * Some operators map to Python operators, such as & or ~. This is
-      indicated by the `libname` column in the table below.
+    * Some operators map to Python operators, such as & or ~.
     
     >>> s = Atomic(0, 0)
     >>> Operator.Conjunction(s, s) == s & s
@@ -589,32 +588,22 @@ class Operator(LexicalEnum):
 
     .. csv-table::
         :generator: member-table
-        :generator-args: name arity libname
+        :generator-args: name arity
     """
 
-    # .. member-table:: pytableaux.lang.lex.Operator
-    #     :columns: order, label, arity, libname
-
-    __slots__ = ('arity', 'libname')
+    __slots__ = ('arity',)
 
     arity: int
     "The operator arity."
     other: Operator
 
-    libname: str|None
-    """If the operator implements a Python arithmetic operator, this
-    will be the special `"dunder"` name corresponding to Python's
-    built-in :obj:`operator` module. For example, for :attr:`Conjunction`,
-    which implements ``&``, the value is ``'__and__'``.
-    """
-
-    Assertion             = (10,  1, '__pos__')
+    Assertion             = (10,  1)
     'The Assertion operator'
-    Negation              = (20,  1, '__invert__')
+    Negation              = (20,  1)
     'The Negation (not) operator'
-    Conjunction           = (30,  2, '__and__')
+    Conjunction           = (30,  2)
     'The Conjunction (and) operator'
-    Disjunction           = (40,  2, '__or__')
+    Disjunction           = (40,  2)
     'The Disjunction (or) operator'
     MaterialConditional   = (50,  2)
     'The Material Conditional operator'
@@ -633,12 +622,9 @@ class Operator(LexicalEnum):
         'Apply the operator to make a new sentence.'
         return Operated(self, *args)
 
-    def __init__(self, order, arity, libname=None, /):
+    def __init__(self, order, arity, /):
         super().__init__(order)
         self.arity = arity
-        self.libname = libname
-        if libname is not None:
-            self.strings |= {libname}
 
     @classmethod
     def _after_init(cls):
@@ -828,6 +814,11 @@ class Predicate(CoordsItem):
     >>> p is Predicate.System.Identity
     True
 
+    System predicates are considered equal to their name.
+
+    >>> Predicate.Identity == 'Identity'
+    True
+
     Behaviors
     ---------
 
@@ -855,7 +846,7 @@ class Predicate(CoordsItem):
         if self.index < 0:
             if self.System:
                 raise ValueError('`index` must be >= 0')
-            if len(spec) != 4:
+            if len(spec) != 4: # pragma: no cover
                 raise TypeError(f'need 4 elements, got {len(spec)}')
             self.name = spec[3]
             self._value_ = self
@@ -939,6 +930,14 @@ class Predicate(CoordsItem):
             raise StopIteration
         return super().next()
 
+    def __eq__(self, other):
+        res = super().__eq__(other)
+        if res is NotImplemented and self.is_system and isinstance(other, str):
+            return self.name == other
+        return res
+
+    __hash__ = Lexical.__hash__
+
     if TYPE_CHECKING:
         class _SPT(type):
             def __iter__(self) -> Iterator[Predicate]: ...
@@ -949,6 +948,8 @@ class Predicate(CoordsItem):
             "The Existence predicate :sc:`!`"
             Identity: Predicate
             "The Identity predicate :sc:`=`"
+            @classmethod
+            def first(cls) -> Predicate: ...
         Existence: Predicate
         Identity: Predicate
     else:
@@ -1428,7 +1429,7 @@ class LexType(LangCommonEnum):
         name = type(self).__name__
         try:
             return f'<{name}.{self.cls.__name__}>'
-        except AttributeError:
+        except AttributeError: # pragma: no cover
             return f'<{name} ?ERR?>'
 
     def __hash__(self):
@@ -1495,7 +1496,7 @@ class LexType(LangCommonEnum):
                         member_names[key] = None
                     return
                 # In Python 3.10 _member_names is a list
-                member_names += members.keys()
+                member_names += members.keys() # pragma: no cover
 
         Predicate.System = SystemPredicate
 
@@ -1519,40 +1520,39 @@ def metacall():
 
     class DequeCache:
 
-        __slots__ = ('__getitem__', '__setitem__', 'queue')
+        __slots__ = ('queue', 'idx', 'rev')
 
         queue: deque[Lexical]
+        idx: dict[Any, Lexical]
+        "Mapping of called args/specs to lexical, including the lexical itself"
+        rev: dict[Lexical, set]
+        "Mapping of leixcal to index keys, to enable removing"
 
-        @property
-        def maxlen(self) -> int:
-            return self.queue.maxlen
 
-        def __len__(self):
-            return len(self.queue)
         def __init__(self, maxlen=int(os.getenv('ITEM_CACHE_SIZE', 1000) or 0)):
+            self.queue = deque(maxlen=maxlen)
+            self.idx = {}
+            self.rev = {}
 
-            idx: dict[Any, Lexical] = {}
-            "Mapping of called args/specs to lexical, including the lexical itself"
-            rev: dict[Lexical, set] = {}
-            "Mapping of leixcal to index keys, to enable removing"
-            queue = self.queue = deque(maxlen=maxlen)
+        def __getitem__(self, key):
+            return self.idx[key]
 
-            def setitem(key, value: Lexical):
-                if value in rev:
-                    value = idx[value]
-                else:
-                    if len(rev) >= queue.maxlen:
-                        old = queue.popleft()
-                        for k in rev.pop(old):
-                            del(idx[k])
-                    idx[value] = value
-                    rev[value] = {value}
-                    queue.append(value)
-                idx[key] = value
-                rev[value].add(key)
-            self.__setitem__ = setitem
-            self.__getitem__ = idx.__getitem__
-
+        def __setitem__(self, key, value):
+            rev = self.rev
+            idx = self.idx
+            queue = self.queue
+            if value in rev:
+                value = idx[value]
+            else:
+                if len(rev) >= queue.maxlen:
+                    old = queue.popleft()
+                    for k in rev.pop(old):
+                        del(idx[k])
+                idx[value] = value
+                rev[value] = {value}
+                queue.append(value)
+            idx[key] = value
+            rev[value].add(key)
 
     cache = DequeCache()
 
@@ -1581,7 +1581,7 @@ def metacall():
             return cache[clsname, spec]
         except KeyError:
             pass
-        
+
         try:
             # Construct
             inst: LexicalAbc = supercall(cls, *spec)

@@ -64,6 +64,9 @@ class AccessGraph(defaultdict[int, set[int]]):
         self[w1].add(w2)
         self[w2]
 
+    def addall(self, it):
+        for _ in map(self.add, it): pass
+
     def flat(self, *, w1s=None, sort=False):
         if w1s is None:
             w1s = sorted(self) if sort else self

@@ -8,7 +8,7 @@ from ..utils import BaseCase
 
 
 class Base(BaseCase):
-    logic = 'D'
+    logic = D
     def m(self, *args, **kw) -> D.Model:
         return super().m(*args, **kw)
 

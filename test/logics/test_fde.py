@@ -10,7 +10,7 @@ from pytableaux.logics.fde import System
 A = Atomic.first()
 
 class Base(BaseCase):
-    logic = 'FDE'
+    logic = FDE
     def m(self, *args, **kw) -> FDE.Model:
         return super().m(*args, **kw)
 

@@ -146,7 +146,6 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
             if a is b:
                 yield 0
                 return
-            yield bool(a.conclusion) - bool(b.conclusion)
             yield len(a) - len(b)
             yield from starmap(Sentence.orderitems, zip(a, b))
 

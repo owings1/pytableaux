@@ -1,3 +1,4 @@
 [report]
 exclude_also =
     if TYPE_CHECKING:
+    raise TypeError\(f'Abstract type \{cls\}'\).*

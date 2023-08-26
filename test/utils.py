@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from types import MappingProxyType as MapProxy
 from typing import Collection, Iterable, Mapping, NamedTuple, Sequence, TypeVar, Generic
 from unittest import TestCase
+import operator as opr
 
 from pytableaux import examples
 from pytableaux.lang import *
@@ -43,10 +45,6 @@ class ArgModels(NamedTuple):
     arg: Argument
     models: list[BaseModel]
 
-def maketest(method, *args, **kw):
-    def test(self):
-        getattr(self, method)(*args, **kw)
-    return test
 
 class BaseCase(TestCase):
 
@@ -55,40 +53,53 @@ class BaseCase(TestCase):
     notn = Notation.polish
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
 
-    def __init_subclass__(subcls, autorules=False, autoargs=False, autotables=False, **kw):
+    def __init_subclass__(cls, autorules=False, autoargs=False, autotables=False, **kw):
         if autorules:
             bare = bool(kw.pop('bare', None))
         super().__init_subclass__(**kw)
-        if getattr(subcls, 'logic', None):
-            subcls.logic = registry(subcls.logic)
+        if getattr(cls, 'logic', None):
+            cls.logic = registry(cls.logic)
+        ns = MapProxy(cls.__dict__)
+        gennames = *filter(lambda key: key.startswith('gentest'), ns),
+        for name in gennames:
+            for name, func in getattr(cls, name)():
+                name = inflect.slug('test_' + str(name).removeprefix('test_') + '_gen')
+                assert name not in ns
+                setattr(cls, name, func)
         if autorules:
-            for rulecls in subcls.logic.Rules.all():
+            for rulecls in cls.logic.Rules.all():
                 name = f'test_rule_{rulecls.name}_auto'
-                assert not hasattr(subcls, name)
-                setattr(subcls, name, maketest('rule_eg', rulecls, bare=bare))
+                assert not hasattr(cls, name)
+                setattr(cls, name, cls.maketest('rule_eg', rulecls, bare=bare))
             def test_groups(self: BaseCase):
-                subcls.logic.Rules._check_groups()
-            setattr(subcls, 'test_rules_check_groups', test_groups)
+                cls.logic.Rules._check_groups()
+            setattr(cls, 'test_rules_check_groups', test_groups)
         if autoargs:
             for category in ('valid', 'invalid'):
                 known = qset()
-                if getattr(subcls, 'logic', None):
-                    known.update(getattr(knownargs, f'{category}ities')[subcls.logic.Meta.name])
+                if getattr(cls, 'logic', None):
+                    known.update(getattr(knownargs, f'{category}ities')[cls.logic.Meta.name])
                 for arg in known:
                     if isinstance(arg, Argument):
                         title = arg.title or hash(arg)
                     else:
                         title = arg
                     name = f'test_{category}_{inflect.slug(title)}_auto'
-                    assert not hasattr(subcls, name)
-                    method = f'{category}_tab'
-                    setattr(subcls, name, maketest(f'{category}_tab', arg))
+                    assert not hasattr(cls, name)
+                    setattr(cls, name, cls.maketest(f'{category}_tab', arg))
         if autotables:
-            for oper, exp in getattr(subcls, 'tables', {}).items():
+            for oper, exp in getattr(cls, 'tables', {}).items():
                 name = f'test_truth_table_{oper}_auto'
-                assert not hasattr(subcls, name)
-                setattr(subcls, name, maketest('tttest', oper, exp))
-            
+                assert not hasattr(cls, name)
+                setattr(cls, name, cls.maketest('tttest', oper, exp))
+
+    @staticmethod
+    def maketest(method, *args, **kw):
+        caller = opr.methodcaller(method, *args, **kw)
+        def test(self):
+            caller(self)
+        return test
+
     def valid_tab(self, *args, **kw):
         tab = self.tab(*args, **kw)
         self.assertTrue(tab.valid)

@@ -182,7 +182,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             func = getattr(self, name)
         except AttributeError:
             check.inst(s, Sentence)
-            raise NotImplementedError from ValueError(s)
+            raise NotImplementedError from ValueError(s) # pragma: no cover
         return func(s, **kw)
 
     @abstractmethod
@@ -207,7 +207,16 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             return self.truth_function(s.operator,
                 *map(lambda s: self.value_of(s, **kw), s))
         check.inst(s, Operated)
-        raise NotImplementedError from ValueError(s.operator)
+        raise NotImplementedError from ValueError(s.operator) # pragma: no cover
+
+    def set_value(self, s: Sentence, value: MvalT_co, /, **kw):
+        self._check_not_finished()
+        value = self.values[value]
+        if self.is_sentence_opaque(s):
+            return self.set_opaque_value(s, value, **kw)
+        if self.is_sentence_literal(s):
+            return self.set_literal_value(s, value, **kw)
+        raise NotImplementedError from TypeError(type(s)) # pragma: no cover
 
     def set_literal_value(self, s: Sentence, value: MvalT_co, /, **kw):
         self._check_not_finished()
@@ -221,7 +230,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             return self.set_atomic_value(s, value, **kw)
         if type(s) is Predicated:
             return self.set_predicated_value(s, value, **kw)
-        raise NotImplementedError from TypeError(type(s))
+        raise NotImplementedError from TypeError(type(s)) # pragma: no cover
 
     @abstractmethod
     def set_opaque_value(self, s: Sentence, value: MvalT_co, /):

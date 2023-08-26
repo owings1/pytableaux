@@ -143,7 +143,6 @@ class Notation(LangCommonEnum):
 
     __slots__ = (
         'formats',
-        'default_format',
         'DefaultWriter',
         'Parser',
         'writers')
@@ -177,30 +176,24 @@ class Notation(LangCommonEnum):
 
 class Marking(str, LangCommonEnum):
     'Miscellaneous marking/punctuation enum.'
-
     paren_open = 'paren_open'
     "Open parenthesis marking."
-
     paren_close = 'paren_close'
     "Close parenthesis marking."
-
     whitespace = 'whitespace'
     "Whitespace marking."
-
     digit = 'digit'
     "Digit marking."
-
     meta = 'meta'
     "Meta marking."
-
     subscript = 'subscript'
     "Subscript marking."
-
+    subscript_open = 'subscript_open'
+    "Subscript open marking."
+    subscript_close = 'subscript_close'
+    "Subscript close marking."
     tableau = 'tableau'
     "Tableau marking."
-
-    subscript_open = 'subscript_open'
-    subscript_close = 'subscript_close'
 
 #==========================+
 #  Aux classes             |
@@ -238,19 +231,6 @@ class BiCoords(NamedTuple):
         if isinstance(it, Mapping):
             it = map(it.__getitem__, cls._fields)
         return cls._make(it)
-
-    @staticmethod
-    def min_unused(used, maxi):
-        # finds the mimimum available by searching for gaps.
-        if not used:
-            return BiCoords.first
-        index = 0
-        sub = 0
-        while (index, sub) in used:
-            index += 1
-            if index > maxi:
-                index, sub = 0, sub + 1
-        return BiCoords(index, sub)
 
 class TriCoords(NamedTuple):
     "An (`index`, `subscript`, `arity`) integer tuple."
@@ -456,7 +436,7 @@ def init():
         try:
             if pred.is_system:
                 return pred.name
-        except AttributeError:
+        except AttributeError: # pragma: no cover
             pass
         return tostr_item(pred)
 
@@ -464,7 +444,7 @@ def init():
     def repr_lex(obj: Lexical):
         try:
             return f'<{obj.TYPE.role.__name__}: {obj}>'
-        except AttributeError:
+        except AttributeError: # pragma: no cover
             return object.__repr__(obj)
 
     LexicalEnum.__str__ = tostr_enum

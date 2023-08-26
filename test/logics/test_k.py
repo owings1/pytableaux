@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ..utils import BaseCase
 from pytableaux.errors import *
 from pytableaux.lang import *
@@ -5,9 +6,13 @@ from pytableaux.proof import *
 from pytableaux.proof import rules
 from pytableaux.proof.tableaux import *
 from pytableaux.logics.k import AccessGraph, System, Rules
+from pytableaux.logics import k as K
 
 class Base(BaseCase):
-    logic = 'K'
+    logic = K
+    def m(self, *args, **kw) -> K.Model:
+        return super().m(*args, **kw)
+
 
 class TestRules(Base, autorules=True):
 
@@ -27,40 +32,35 @@ class TestRules(Base, autorules=True):
         self.assertEqual(node['sentence'].quantifier, Quantifier.Existential)
 
     def test_IdentityIndiscernability_not_target_after_apply(self):
-        swn = self.swnode
         rule, tab = self.rule_eg('IdentityIndiscernability')
         b = tab.branch()
-        b += map(swn, ['Imn', 'Fs'])
+        b += map(self.swnode, ['Imn', 'Fs'])
         self.assertFalse(rule.target(b))
 
     def test_IdentityIndiscernability_target_predicate_sentence(self):
-        swn = self.swnode
         tab, b = self.tabb()
         rule = tab.rules.get(Rules.IdentityIndiscernability)
-        b += map(swn, ['Imn', 'Fm'])
+        b += map(self.swnode, ['Imn', 'Fm'])
         self.assertTrue(rule.target(b))
 
     def test_IdentityIndiscernability_not_target_self_identity(self):
-        swn = self.swnode
         tab, b = self.tabb()
         rule = tab.rules.get(Rules.IdentityIndiscernability)
         # need 2 nodes to trigger test, since the rule skips the node if
         # it is the self-same node it is comparing to
-        b += map(swn, ['Imn', 'Imn'])
+        b += map(self.swnode, ['Imn', 'Imn'])
         self.assertFalse(rule.target(b))
 
     def test_IdentityIndiscernability_skip_self_identity_coverage(self):
-        swn = self.swnode
         tab, b = self.tabb()
         rule = tab.rules.get(Rules.IdentityIndiscernability)
-        b += swn('Imm')
+        b += self.swnode('Imm')
         self.assertFalse(rule.target(b))
 
     def test_IdentityIndiscernability_not_target_duplicate(self):
-        swn = self.swnode
         tab, b = self.tabb()
         rule = tab.rules.get(Rules.IdentityIndiscernability)
-        b += map(swn, ['Imn', 'Fm', 'Fn'])
+        b += map(self.swnode, ['Imn', 'Fm', 'Fn'])
         self.assertFalse(rule.target(b))
 
     def test_rules_modal(self):
@@ -68,17 +68,15 @@ class TestRules(Base, autorules=True):
             self.assertIs(rcls.modal, True)
 
     def test_Necessity_node_targets(self):
-        swn = self.swnode
         tab, b = self.tabb()
-        b += swn('La', 0), anode(0, 0)
+        b += self.swnode('La', 0), anode(0, 0)
         rule = tab.rules.get(Rules.Necessity)
         targets = list(rule._get_node_targets(b[0], b))
         self.assertEqual(len(targets), 1)
 
     def test_Necessity_node_targets_does_not_duplicate_node(self):
-        swn = self.swnode
         tab, b = self.tabb()
-        b += map(swn, ('a', 'La'))
+        b += map(self.swnode, ('a', 'La'))
         b += anode(0, 0)
         rule = tab.rules.get(Rules.Necessity)
         targets = list(rule._get_node_targets(b[1], b))
@@ -122,16 +120,15 @@ class TestModelRefactorBugs(Base):
 class TestModelAtomics(Base):
 
     def test_model_value_of_atomic_unassigned(self):
-        m = self.m()
-        m.finish()
         s = Atomic(0, 0)
-        res = m.value_of_atomic(s)
-        self.assertEqual(res, m.Meta.unassigned_value)
+        m = self.m().finish()
+        self.assertEqual(m.value_of(s), m.Meta.unassigned_value)
 
     def test_model_branch_no_proof_atomic(self):
+        s = Atomic(0, 0)
         m = self.m()
         b = Branch()
-        b.append({'sentence': Atomic(0, 0), 'world': 0})
+        b += swnode(s, 0)
         m.read_branch(b)
         self.assertEqual(m.value_of(Atomic(0, 0), world=0), 'T')
 
@@ -151,24 +148,24 @@ class TestModelOpaques(Base):
 class TestModelPredication(Base):
 
     def test_branch_no_proof_predicated(self):
+        s1 = self.p('Imn')
         m = self.m()
         b = Branch()
-        s1 = self.p('Imn')
-        b.append({'sentence': s1, 'world': 0})
+        b += swnode(s1, 0)
         m.read_branch(b)
         self.assertEqual(m.value_of(s1, world=0), 'T')
 
     def test_set_predicated_value1(self):
-        s = Predicate.System.Identity(tuple(Constant.gen(2)))
+        s = Predicate.Identity(Constant.gen(2))
         with self.m() as m:
-            m.set_predicated_value(s, 'T', world=0)
+            m.set_value(s, 'T', world=0)
         res = m.value_of(s, world=0)
         self.assertEqual(res, 'T')
 
     def test_model_identity_extension_non_empty_with_sentence(self):
         s = self.p('Imn')
-        m = self.m()
-        m.set_predicated_value(s, 'T', world=0)
+        with self.m() as m:
+            m.set_value(s, 'T', world=0)
         interp = m.frames[0].predicates[Predicate.Identity]
         self.assertGreater(len(interp.pos), 0)
         self.assertIn((Constant(0, 0), Constant(1, 0)), interp.pos)
@@ -176,7 +173,7 @@ class TestModelPredication(Base):
     def test_set_predicated_raises_free_variables(self):
         m = self.m()
         s1 = Predicated(Predicate(0,0,1), Constant(0,0))
-        m.set_predicated_value(s1, 'F')
+        m.set_value(s1, 'F')
         s2 = Predicated(Predicate(0,0,1), Variable(0,0))
         with self.assertRaises(ValueError):
             m.set_predicated_value(s2, 'F')
@@ -185,14 +182,12 @@ class TestAccessGraph(Base):
 
     def test_flat_unsorted(self):
         g = AccessGraph()
-        g.add((1, 0))
-        g.add((0, 1))
+        g.addall([(1,0), (0, 1)])
         self.assertEqual(list(g.flat()), [(1, 0), (0, 1)])
 
     def test_flat_sorted(self):
         g = AccessGraph()
-        g.add((1, 0))
-        g.add((0, 1))
+        g.addall([(1,0), (0, 1)])
         self.assertEqual(list(g.flat(sort=True)), [(0, 1), (1, 0)])
 
 class TestModelModalAccess(Base):
@@ -200,7 +195,7 @@ class TestModelModalAccess(Base):
     def test_model_branch_no_proof_access(self):
         m = self.m()
         b = Branch()
-        b.append({'world1': 0, 'world2': 1})
+        b += anode(0, 1)
         m.read_branch(b)
         self.assertIn(1, m.R[0])
 
@@ -210,43 +205,41 @@ class TestModelModalAccess(Base):
         self.assertTrue(m.R.has((0,0)))
 
     def test_model_possibly_a_with_access_true(self):
-        m = self.m()
-        a = Atomic(0, 0)
-        m.R.add((0,1))
-        m.set_atomic_value(a, 'T', world=1)
-        m.finish()
-        res = m.value_of(Operator.Possibility(a), world=0)
+        s1 = Atomic(0, 0)
+        s2 = Operator.Possibility(s1)
+        with self.m() as m:        
+            m.set_value(s1, 'T', world=1)
+            m.R.add((0,1))
+        res = m.value_of(s2, world=0)
         self.assertEqual(res, 'T')
 
     def test_model_possibly_a_no_access_false(self):
-        m = self.m()
-        a = Atomic(0, 0)
-        m.set_atomic_value(a, 'T', world=1)
-        m.finish()
-        res = m.value_of(Operated('Possibility', a), world=0)
-        self.assertEqual(res, 'F')
+        s1 = Atomic(0, 0)
+        s2 = Operator.Possibility(s1)
+        with self.m() as m:        
+            m.set_value(s1, 'T', world=1)
+        self.assertEqual(m.value_of(s2, world=0), 'F')
 
     def test_model_nec_a_no_access_true(self):
-        m = self.m()
-        m.finish()
-        a = Atomic(0, 0)
-        res = m.value_of(Operated('Necessity', a), world=0)
-        self.assertEqual(res, 'T')
+        s1 = Atomic(0, 0)
+        s2 = Operator.Necessity(s1)
+        m = self.m().finish()
+        self.assertEqual(m.value_of(s2, world=0), 'T')
 
     def test_model_nec_a_with_access_false(self):
-        m = self.m()
-        a = Atomic(0, 0)
-        m.set_atomic_value(a, 'T', world=0)
-        m.set_atomic_value(a, 'F', world=1)
-        m.R.add((0,1))
-        m.R.add((0,0))
-        m.finish()
-        res = m.value_of(Operated('Necessity', a), world=0)
-        self.assertEqual(res, 'F')
+        s1 = Atomic(0, 0)
+        s2 = Operator.Necessity(s1)
+        with self.m() as m:        
+            m.set_value(s1, 'T', world=0)
+            m.set_value(s1, 'F', world=1)
+            m.R.add((0,1))
+            m.R.add((0,0))
+        self.assertEqual(m.value_of(s2, world=0), 'F')
 
     def test_model_get_data_with_access_has_2_frames(self):
+        s1 = Atomic(0, 0)
         with self.m() as m:
-            m.set_literal_value(self.p('a'), 'T', world=0)
+            m.set_value(s1, 'T', world=0)
             m.R.add((0,1))
         data = m.get_data()
         self.assertEqual(len(data['Frames']['values']), 2)
@@ -258,7 +251,7 @@ class TestModelQuantification(Base):
         s1, s2 = pred(Constant.first()), pred(x)
         s3 = Quantifier.Existential(x, s2)
         with self.m() as m:
-            m.set_predicated_value(s1, 'T', world=0)
+            m.set_value(s1, 'T', world=0)
         res = m.value_of(s3, world=0)
         self.assertEqual(res, 'T')
 
@@ -280,14 +273,14 @@ class TestModelQuantification(Base):
         s3 = Quantified('Universal', x, s2)
 
         with self.m() as m:
-            m.set_predicated_value(s1, 'T', world=0)
+            m.set_value(s1, 'T', world=0)
         res = m.value_of(s3, world=0)
         self.assertEqual(res, 'T')
 
     def test_model_universal_false(self):
         s1, s2 = self.pp('VxFx', 'Fm')
         with self.m() as m:
-            m.set_predicated_value(s2, 0, world=0)
+            m.set_value(s2, 0, world=0)
         res = m.value_of(s1, world=0)
         self.assertEqual(res, 'F')
 
@@ -300,148 +293,134 @@ class TestModelQuantification(Base):
         s4 = Quantified('Universal', x, s2)
     
         with self.m() as m:
-            m.set_predicated_value(s1, 'T', world=0)
-            m.set_predicated_value(s3, 'F', world=0)
+            m.set_value(s1, 'T', world=0)
+            m.set_value(s3, 'F', world=0)
         res = m.value_of(s4, world=0)
         self.assertEqual(res, 'F')
 
 class TestFrame(Base):
 
     def test_difference_atomic_keys_diff(self):
+        s1, s2 = self.pp('a', 'b')
         with self.m() as m:
-            m.set_literal_value(self.p('a'), 'T', world=0)
-            m.set_literal_value(self.p('b'), 'T', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertFalse(frame_a == frame_b)
-        self.assertFalse(frame_b == frame_a)
+            m.set_value(s1, 'T', world=0)
+            m.set_value(s2, 'T', world=1)
+        f1, f2 = m.frames.values()
+        self.assertNotEqual(f1, f2)
+        self.assertNotEqual(f2, f1)
 
     def test_difference_atomic_values_diff(self):
         s1 = self.p('a')
         with self.m() as m:
-            m.set_literal_value(s1, 'T', world=0)
-            m.set_literal_value(s1, 'F', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertFalse(frame_a == frame_b)
-        self.assertFalse(frame_b == frame_a)
+            m.set_value(s1, 'T', world=0)
+            m.set_value(s1, 'F', world=1)
+        f1, f2 = m.frames.values()
+        self.assertNotEqual(f1, f2)
+        self.assertNotEqual(f2, f1)
 
     def test_difference_atomic_values_equiv(self):
         s1 = self.p('a')
         with self.m() as m:
-            m.set_literal_value(s1, 'T', world=0)
-            m.set_literal_value(s1, 'T', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertTrue(frame_a == frame_b)
-        self.assertTrue(frame_b == frame_a)
+            m.set_value(s1, 'T', world=0)
+            m.set_value(s1, 'T', world=1)
+        f1, f2 = m.frames.values()
+        self.assertEqual(f1, f2)
+        self.assertEqual(f2, f1)
 
     def test_difference_opaque_keys_diff(self):
         with self.m() as m:
             m.set_opaque_value(self.p('Ma'), 'T', world=0)
             m.set_opaque_value(self.p('Mb'), 'T', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertFalse(frame_a == frame_b)
-        self.assertFalse(frame_b == frame_a)
+        f1, f2 = m.frames.values()
+        self.assertNotEqual(f1, f2)
+        self.assertNotEqual(f2, f1)
 
     def test_difference_opaque_values_diff(self):
         s1 = self.p('Ma')
         with self.m() as m:
             m.set_opaque_value(s1, 'T', world=0)
             m.set_opaque_value(s1, 'F', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertFalse(frame_a == frame_b)
-        self.assertFalse(frame_b == frame_a)
+        f1, f2 = m.frames.values()
+        self.assertNotEqual(f1, f2)
+        self.assertNotEqual(f2, f1)
 
     def test_difference_opaque_values_equiv(self):
         with self.m() as m:
             m.set_opaque_value(self.p('Ma'), 'T', world=0)
             m.set_opaque_value(self.p('Ma'), 'T', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertTrue(frame_a == frame_b)
-        self.assertTrue(frame_b == frame_a)
+        f1, f2 = m.frames.values()
+        self.assertEqual(f1, f2)
+        self.assertEqual(f2, f1)
 
     def test_difference_extension_keys_diff(self):
         preds = Predicates({(0, 0, 1), (1, 0, 2)})
         s1, s2 = self.pp('Fm', 'Gmn', preds)
         with self.m() as m:
-            m.set_predicated_value(s1, 'T', world=0)
-            m.set_predicated_value(s2, 'T', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertFalse(frame_a == frame_b)
-        self.assertFalse(frame_b == frame_a)
+            m.set_value(s1, 'T', world=0)
+            m.set_value(s2, 'T', world=1)
+        f1, f2 = m.frames.values()
+        self.assertNotEqual(f1, f2)
+        self.assertNotEqual(f2, f1)
 
     def test_difference_extension_values_diff(self):
-        s1 = self.p('Fm')
-        s2 = self.p('Fn')
+        s1, s2 = self.pp('Fm', 'Fn')
         with self.m() as m:
-            m.set_predicated_value(s1, 'T', world=0)
-            m.set_predicated_value(s2, 'T', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertFalse(frame_a == frame_b)
-        self.assertFalse(frame_b == frame_a)
+            m.set_value(s1, 'T', world=0)
+            m.set_value(s2, 'T', world=1)
+        f1, f2 = m.frames.values()
+        self.assertNotEqual(f1, f2)
+        self.assertNotEqual(f2, f1)
 
     def test_difference_extension_values_equiv(self):
-        s1 = self.p('Fm')
-        s2 = self.p('Fn')
+        s1, s2 = self.pp('Fm', 'Fn')
         with self.m() as m:
-            m.set_predicated_value(s1, 'T', world=0)
-            m.set_predicated_value(s2, 'F', world=0)
-            m.set_predicated_value(s1, 'T', world=1)
-            m.set_predicated_value(s2, 'F', world=1)
-        frame_a = m.frames[0]
-        frame_b = m.frames[1]
-        self.assertTrue(frame_a == frame_b)
-        self.assertTrue(frame_b == frame_a)
+            m.set_value(s1, 'T', world=0)
+            m.set_value(s2, 'F', world=0)
+            m.set_value(s1, 'T', world=1)
+            m.set_value(s2, 'F', world=1)
+        f1, f2 = m.frames.values()
+        self.assertEqual(f1, f2)
+        self.assertEqual(f2, f1)
 
     def test_not_equals_atomics_differ(self):
         s = self.p('a')
         with self.m() as m1:
-            m1.set_literal_value(s, 'T', world=0)
+            m1.set_value(s, 'T', world=0)
         with self.m() as m2:
-            m2.set_literal_value(s, 'F', world=0)
+            m2.set_value(s, 'F', world=0)
         f1 = m1.frames[0]
         f2 = m2.frames[0]
         self.assertNotEqual(f1, f2)
 
     def test_not_equals_atomics_predicates_differ(self):
-        s1 = self.p('Fm')
-        s2 = self.p('Gm')
+        s1, s2 = self.pp('Fm', 'Gm')
         with self.m() as m1:
-            m1.set_predicated_value(s1, 'T', world=0)
+            m1.set_value(s1, 'T', world=0)
         with self.m() as m2:
-            m2.set_predicated_value(s2, 'T', world=0)
+            m2.set_value(s2, 'T', world=0)
         f1 = m1.frames[0]
         f2 = m2.frames[0]
         self.assertNotEqual(f1, f2)
 
     def test_not_equals_atomics_predicates_differ2(self):
-        s1 = self.p('Fm')
-        s2 = self.p('Gm')
+        s1, s2 = self.pp('Fm', 'Gm')
         with self.m() as m1:
-            m1.set_predicated_value(s1, 'T', world=0)
+            m1.set_value(s1, 'T', world=0)
         with self.m() as m2:
-            m2.set_predicated_value(s1, 'T', world=0)
-            m2.set_predicated_value(s2, 'T', world=0)
+            m2.set_value(s1, 'T', world=0)
+            m2.set_value(s2, 'T', world=0)
         f1 = m1.frames[0]
         f2 = m2.frames[0]
         self.assertNotEqual(f1, f2)
 
     def test_not_equals_atomics_predicates_differ3(self):
-        s1 = self.p('Fm')
-        s2 = self.p('Gm')
-        s3 = self.p('Hm')
+        s1, s2, s3 = self.pp('Fm', 'Gm', 'Hm')
         with self.m() as m1:
-            m1.set_predicated_value(s1, 'T', world=0)
-            m1.set_predicated_value(s2, 'T', world=0)
+            m1.set_value(s1, 'T', world=0)
+            m1.set_value(s2, 'T', world=0)
         with self.m() as m2:
-            m2.set_predicated_value(s1, 'T', world=0)
-            m2.set_predicated_value(s3, 'T', world=0)
+            m2.set_value(s1, 'T', world=0)
+            m2.set_value(s3, 'T', world=0)
         f1 = m1.frames[0]
         f2 = m2.frames[0]
         self.assertNotEqual(f1, f2)
@@ -456,14 +435,14 @@ class TestFrame(Base):
     def test_equals_not_impl_non_frame(self):
         s = self.p('a')
         with self.m() as m:
-            m.set_literal_value(s, 'T', world=0)
+            m.set_value(s, 'T', world=0)
         f = m.frames[0]
         self.assertIs(NotImplemented, f.__eq__('asdf'))
 
     def test_data_has_identity_with_sentence(self):
         s = self.p('Imn')
         with self.m() as m:
-            m.set_predicated_value(s, 'T', world=0)
+            m.set_value(s, 'T', world=0)
         data = m.get_data()
         self.assertEqual(len(data['Frames']['values']), 1)
         fdata = data['Frames']['values'][0]['value']
@@ -477,8 +456,8 @@ class TestCounterModel(Base):
         arg = self.parg('b', 'a')
         s1, = arg.premises
         with self.m() as m:
-            m.set_literal_value(s1, 'F')
-            m.set_literal_value(arg.conclusion, 'T')
+            m.set_value(s1, 'F')
+            m.set_value(arg.conclusion, 'T')
         self.assertFalse(m.is_countermodel_to(arg))
 
 class TestModelErrors(Base):
@@ -505,38 +484,22 @@ class TestModelErrors(Base):
 
 class TestBranchables(Base):
 
-    exp = dict(
-        Assertion=0,
-        AssertionNegated=0,
+    branchings = dict(
         Biconditional=1,
         BiconditionalNegated=1,
         Conditional=1,
-        ConditionalNegated=0,
-        Conjunction=0,
         ConjunctionNegated=1,
-        ContradictionClosure=0,
         Disjunction=1,
-        DisjunctionNegated=0,
-        DoubleNegation=0,
-        Existential=0,
-        ExistentialNegated=0,
-        IdentityIndiscernability=0,
         MaterialBiconditional=1,
         MaterialBiconditionalNegated=1,
-        MaterialConditional=1,
-        MaterialConditionalNegated=0,
-        Necessity=0,
-        NecessityNegated=0,
-        NonExistenceClosure=0,
-        Possibility=0,
-        PossibilityNegated=0,
-        SelfIdentityClosure=0,
-        Universal=0,
-        UniversalNegated=0)
+        MaterialConditional=1,)
 
-    def test_known_branchable_values(self):
-        for rulecls in self.logic.Rules.all():
-            self.assertEqual(rulecls.branching, self.exp[rulecls.name])
+    @classmethod
+    def gentest(cls):
+        for rulecls in cls.logic.Rules.all():
+            exp = cls.branchings.get(rulecls.name, 0)
+            name = f'test_{rulecls.name}_branching_is_{exp}'
+            yield name, cls.maketest('assertEqual', rulecls.branching, exp)
 
 class TestSystem(Base):
 

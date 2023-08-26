@@ -28,7 +28,9 @@ from typing import cast
 from pytableaux import errors, examples
 from pytableaux.errors import *
 from pytableaux.lang import *
+from pytableaux.lang import BiCoords
 from pytableaux.lang.lex import *
+from pytableaux.lang.lex import LexicalAbcMeta
 from pytableaux.tools import EMPTY_SET
 
 from .utils import BaseCase
@@ -36,21 +38,15 @@ from .utils import BaseCase
 Firsts = dict(
     (cls, cls.first()) for cls in LexType.classes)
 
-F, G, H = Predicate.gen(3)
 a, b, c = Constant.gen(3)
+F, G, H = Predicate.gen(3)
 x, y, z = Variable.gen(3)
 A, B, C = Atomic.gen(3)
-
-
-class TestAbstract(BaseCase):
-
-    def test_cannot_construct(self):
-        with self.assertRaises(TypeError):
-            Parameter(0, 0)
 
 class TestConstant(BaseCase):
 
     def test_sorting(self):
+        a, b = Constant.gen(2)
         res = sorted([b, a])
         self.assertEqual(res[0], a)
         self.assertEqual(res[1], b)
@@ -59,6 +55,19 @@ class TestConstant(BaseCase):
         with self.assertRaises(ValueError):
             Constant(Constant.TYPE.maxi + 1, 0)
 
+    def test_negative_subscript_raises(self):
+        with self.assertRaises(ValueError):
+            Constant(0, -1)
+
+    def test_rshift_quantified(self):
+        c = Constant.first()
+        s = Quantified.first()
+        self.assertEqual(c >> s, s.unquantify(c))
+
+    def test_rshift_not_impl_predicated(self):
+        c = Constant.first()
+        s = Predicate.Identity(c, c)
+        self.assertIs(c.__rshift__(s), NotImplemented)
 
 class TestVariable(BaseCase):
 
@@ -77,6 +86,9 @@ class TestPredicate(BaseCase):
             Predicate(0, None, 1)
         with self.assertRaises(ValueError):
             Predicate(0, -1, 1)
+        with self.assertRaises(StopIteration):
+            Predicate.Identity.next()
+
         # pickle problems
         # with self.assertRaises(AttributeError):
         #     F._value_ = F
@@ -91,6 +103,279 @@ class TestPredicate(BaseCase):
         self.assertEqual(p._name_, p.name)
         self.assertIs(p.__objclass__, Predicate.System)
         self.assertTrue(p.is_system)
+
+    def test_repr_coverage(self):
+        p = Predicate.first()
+        r = repr(p)
+        self.assertIs(type(r), str)
+        p = Predicate.Identity
+        r = repr(p)
+        self.assertIs(type(r), str)
+
+class TestSystemPredicates(BaseCase):
+
+    def test_predicate_equality(self):
+        self.assertEqual(Predicates().get('Identity').name, 'Identity')
+        self.assertEqual(Predicate.System['Identity'], Predicate.System.Identity)
+        self.assertEqual(Predicate.Identity, 'Identity')
+        self.assertEqual(Predicate.Existence, 'Existence')
+
+    def test_predicate_inequality(self):
+        self.assertNotEqual(Predicate.Identity, 'Existence')
+        self.assertNotEqual(Predicate.Existence, 'Identity')
+
+    def test_sys_preds_enum_value(self):
+        self.assertIs(Predicate.System.Identity, Predicate.System['Identity'])
+        self.assertEqual(sorted(Predicate.System), list(Predicate.System))
+
+    def test_gen_stop_non_raises_stop_iteration(self):
+        g = Predicate.gen(None, first=Predicate.Identity)
+        next(g)
+        with self.assertRaises(StopIteration):
+            next(g)
+
+    def test_first_is_existence(self):
+        self.assertIs(Predicate.System.first(), Predicate.Existence)
+
+class TestQuantifier(BaseCase):
+
+    def test_quantifier_equality(self):
+        self.assertEqual(Quantifier.Existential, 'Existential')
+        self.assertNotEqual(Quantifier.Existential, 'Universal')
+        self.assertEqual(Quantifier.Universal, 'Universal')
+        self.assertNotEqual(Quantifier.Universal, 'Existential')
+
+    def test_gen_none_stops_at_2(self):
+        g = Quantifier.gen(None)
+        next(g)
+        next(g)
+        with self.assertRaises(StopIteration):
+            next(g)
+
+    def test_gen_none_stops_at_1_with_universal_first(self):
+        g = Quantifier.gen(None, first=Quantifier.Universal)
+        next(g)
+        with self.assertRaises(StopIteration):
+            next(g)
+
+    def test_gen_stop_non_loop_continues(self):
+        g = Quantifier.gen(None, first=Quantifier.Universal, loop=True)
+        self.assertIs(next(g), Quantifier.Universal)
+        self.assertIs(next(g), Quantifier.Existential)
+        self.assertIs(next(g), Quantifier.Universal)
+
+
+class TestAtomic(BaseCase):
+
+    def test_errors(self):
+        with self.assertRaises(ValueError):
+            Atomic(Atomic.TYPE.maxi + 1, 0)
+        with self.assertRaises(TypeError):
+            Atomic('0', 0)
+
+    def test_setence_impl(self):
+        s = Atomic.first()
+        self.assertIs(s.TYPE, LexType.Atomic)
+        self.assertEqual(s.constants, EMPTY_SET)
+        self.assertEqual(s.variables, EMPTY_SET)
+        self.assertEqual(s.predicates, EMPTY_SET)
+        self.assertEqual(s.atomics, {s})
+        self.assertEqual(s.operators, tuple())
+        self.assertEqual(s.substitute(a, x), s)
+        self.assertEqual(s.negate(), self.p('Na'))
+        self.assertEqual(s.negative(), self.p('Na'))
+        self.assertEqual(s.asserted(), self.p('Ta'))
+        self.assertEqual(s.disjoin(B), self.p('Aab'))
+        self.assertEqual(s.conjoin(B), self.p('Kab'))
+
+    def test_next(self):
+        s = B
+        self.assertEqual(s.index, 1)
+        self.assertEqual(s.subscript, 0)
+        s = Atomic(Atomic.TYPE.maxi, 0).next()
+        self.assertEqual(s.index, 0)
+        self.assertEqual(s.subscript, 1)
+
+class TestPredicated(BaseCase):
+
+    def test_errors(self):
+        with self.assertRaises(ValueError):
+            Predicated('MyPredicate', (a, b))
+        with self.assertRaises(TypeError):
+            Predicated('Identity', (a,))
+
+    def test_setence_impl(self):
+        s = Predicated(F,(a,))
+        self.assertEqual(s.predicate, Predicate((0, 0, 1)))
+        self.assertIs(s.TYPE, LexType.Predicated)
+        self.assertEqual(s.constants, {a})
+        self.assertEqual(s.variables, EMPTY_SET)
+        self.assertEqual(s.predicates, {F})
+        self.assertEqual(s.atomics, EMPTY_SET)
+        self.assertEqual(s.operators, tuple())
+        self.assertEqual(s.substitute(a, x), s)
+        self.assertEqual(s.negate(), self.p('NFm'))
+        self.assertEqual(s.negative(), self.p('NFm'))
+        self.assertEqual(s.asserted(), self.p('TFm'))
+        self.assertEqual(s.disjoin(B), self.p('AFmb'))
+        self.assertEqual(s.conjoin(B), self.p('KFmb'))
+        # self.assertEqual(s.variable_occurs(x), False)
+        s = Predicated(F, (x,))
+        self.assertIs(s.TYPE, LexType.Predicated)
+        self.assertEqual(s.substitute(a, x), F((a,)))
+        self.assertEqual(s.variables, {x})
+        # self.assertEqual(s.variable_occurs(x), True)
+
+    def test_atomic_less_than_predicated(self):
+        s2 = Predicated.first()
+        self.assertLess(A, s2)
+        self.assertLessEqual(A, s2)
+        self.assertGreater(s2, A)
+        self.assertGreaterEqual(s2, A)
+
+    def test_sorting_predicated_sentences(self):
+        # Lexical items should be sortable for models.
+        ss = list(map(Predicate.first(), Constant.gen(2)))
+        s1, s2 = ss
+        ss.reverse()
+        self.assertEqual(ss, [s2, s1])
+        res = sorted(ss)
+        self.assertEqual(res, [s1, s2])
+
+    def test_predicated_substitute_a_for_x_identity(self):
+        s = Predicated('Identity', (x, b))
+        res = s.substitute(a, x)
+        self.assertEqual(res.params, (a, b))
+
+    def test_substitute_a_for_a_returns_self(self):
+        s = Predicated.first()
+        c = s[0]
+        self.assertIs(s.substitute(c, c), s)
+
+    def test_contains_constant_true(self):
+        s = Predicated.first()
+        c = s[0]
+        self.assertIn(c, s)
+
+class TestQuantified(BaseCase):
+
+    def test_quantified_substitute_inner_quantified(self):
+        q = Quantifier.Existential
+        s1 = Predicated('Identity', (x, y))
+        s2 = Quantified(q, x, s1)
+        s3 = Quantified(q, y, s2)
+        res = s3.sentence.substitute(a, y)
+        check = Quantified(
+            q,
+            Variable(0, 0),
+            Predicated(
+                'Identity', (Variable(0, 0), Constant(0, 0))
+            )
+        )
+        self.assertEqual(res, check)
+
+    def test_complex_quantified_substitution(self):
+        preds = Predicates({(0, 0, 2)})
+        s1 = cast(Quantified, self.p('SxMVyFxy', preds))
+        m = Constant(0, 0)
+        s2 = s1.sentence.substitute(m, s1.variable)
+        s3 = self.p('MVyFmy', preds)
+        self.assertEqual(s2, s3)
+
+    def test_substitute_a_for_a_returns_self(self):
+        s = Quantified.first()
+        p = s.sentence[0]
+        self.assertIs(s.substitute(p, p), s)
+
+    def test_contains_quantifier(self):
+        s = Quantified.first()
+        self.assertIn(s.quantifier, s)
+
+    def test_not_contains_quantifier_other(self):
+        s = Quantified.first()
+        self.assertNotIn(s.quantifier.other, s)
+
+    def test_count_is_0_quantifier_other(self):
+        s = Quantified.first()
+        self.assertEqual(s.count(s.quantifier.other), 0)
+
+    def test_count_is_1_quantifier(self):
+        s = Quantified.first()
+        self.assertEqual(s.count(s.quantifier), 1)
+
+    def test_length_is_3(self):
+        s = Quantified.first()
+        self.assertEqual(len(s), 3)
+
+class TestOperated(BaseCase):
+
+    def test_errors(self):
+        with self.assertRaises(ValueError):
+            Operated('Misjunction', (A, A))
+        with self.assertRaises(ValueError):
+            Operated(Operator.Negation, (A, A))
+        with self.assertRaises(ValueError):
+            Operated(Operator.Conjunction, ())
+        with self.assertRaises(ValueError):
+            Operated(Operator.Conjunction, (A,))
+
+    def test_operators(self):
+        self.assertEqual(self.p('KAMVxJxNbTNNImn').operators, (
+            Operator.Conjunction,
+            Operator.Disjunction,
+            Operator.Possibility,
+            Operator.Negation,
+            Operator.Assertion,
+            Operator.Negation,
+            Operator.Negation))
+
+    def test_substitute_a_for_a_returns_self(self):
+        s = Operated.first()
+        p = Constant.first()
+        self.assertIs(s.substitute(p, p), s)
+
+    def test_contains_operand(self):
+        s1 = Atomic.first()
+        s2 = ~s1
+        self.assertIn(s1, s2)
+
+    def test_not_contains_self(self):
+        s1 = Atomic.first()
+        s2 = ~s1
+        self.assertNotIn(s2, s2)
+
+class TestArgument(BaseCase):
+
+    def test_self_equality(self):
+        a = self.parg('Addition')
+        self.assertEqual(a, a)
+
+    def test_lt_sentence_not_implemented(self):
+        a = self.parg('Addition')
+        s = Atomic.first()
+        self.assertIs(a.__lt__(s), NotImplemented)
+        
+    def test_keystr_examples_restore(self):
+        for a1 in examples.arguments():
+            keystr = a1.keystr()
+            a2 = Argument.from_keystr(keystr)
+            self.assertEqual(a1, a2)
+
+    def test_for_json_has_keys_coverage(self):
+        a = self.parg('Addition')
+        res = a.for_json()
+        self.assertIn('premises', res)
+        self.assertIn('conclusion', res)
+
+    def test_repr_str_coverage(self):
+        a = self.parg('a')
+        r = repr(a)
+        self.assertIs(type(r), str)
+
+    def test_set_attr_locked(self):
+        a = self.parg('a')
+        with self.assertRaises(AttributeError):
+            a.premises = ()
 
 class TestPredicates(BaseCase):
 
@@ -219,7 +504,6 @@ class TestPredicates(BaseCase):
         v.add(p2)
         self.assertEqual(set(v), {p2})
 
-
     def test_overwrite_with_conflicting_value(self):
         p1 = Predicate(0,0,1)
         p2 = Predicate(0,0,2)
@@ -230,145 +514,50 @@ class TestPredicates(BaseCase):
         self.assertEqual(v[0], p2)
         self.assertEqual(len(v), 1)
 
-class TestSystem(BaseCase):
+    def test_get_returns_default(self):
+        v = Predicates()
+        o = object()
+        self.assertIs(v.get('', o), o)
 
-    def test_predicate_equality(self):
-        self.assertEqual(Predicates().get('Identity').name, 'Identity')
-        self.assertEqual(Predicate.System['Identity'], Predicate.System.Identity)
+    def test_clear_removes_lookup(self):
+        v = Predicates(Predicate.System)
+        self.assertIn('Identity', v)
+        v.clear()
+        self.assertEqual(len(v), 0)
+        self.assertNotIn('Identity', v)
 
-    def test_sys_preds_enum_value(self):
-        self.assertIs(Predicate.System.Identity, Predicate.System['Identity'])
-        self.assertEqual(sorted(Predicate.System), list(Predicate.System))
+class TestStringTable(BaseCase):
 
+    def test_equals_mapping_copy(self):
+        t1 = StringTable.fetch('text', 'polish', 'ascii')
+        data = dict(
+            format = 'text',
+            notation = 'polish',
+            dialect = 'ascii',
+            strings = dict(t1))
+        t2 = StringTable(data)
+        self.assertEqual(t1, t2)
+    def test_load_duplicate_key(self):
+        t1 = StringTable.fetch('text', 'polish', 'ascii')
+        data = dict(
+            format = 'text',
+            notation = 'polish',
+            dialect = 'ascii',
+            strings = dict(t1))
+        with self.assertRaises(KeyError):
+            StringTable.load(data)
 
-class TestAbstract(BaseCase):
-    def test_base_cannot_construct(self):
-        with self.assertRaises(TypeError):
-            Sentence()
+class TestBiCoords(BaseCase):
 
-class TestAtomic(BaseCase):
+    def test_make_from_mapping(self):
+        c1 = BiCoords(3, 5)
+        c2 = BiCoords.make(dict(index=3, subscript=5))
+        self.assertEqual(c1, c2)
 
-    def test_errors(self):
-        with self.assertRaises(ValueError):
-            Atomic(Atomic.TYPE.maxi + 1, 0)
-
-    def test_setence_impl(self):
-        s = A
-        self.assertIs(s.TYPE, LexType.Atomic)
-        self.assertEqual(s.constants, EMPTY_SET)
-        self.assertEqual(s.variables, EMPTY_SET)
-        self.assertEqual(s.predicates, EMPTY_SET)
-        self.assertEqual(s.atomics, {s})
-        self.assertEqual(s.operators, tuple())
-        self.assertEqual(s.substitute(a, x), s)
-        self.assertEqual(s.negate(), self.p('Na'))
-        self.assertEqual(s.negative(), self.p('Na'))
-        self.assertEqual(s.asserted(), self.p('Ta'))
-        self.assertEqual(s.disjoin(B), self.p('Aab'))
-        self.assertEqual(s.conjoin(B), self.p('Kab'))
-
-    def test_next(self):
-        s = A.next()
-        self.assertEqual(s.index, 1)
-        self.assertEqual(s.subscript, 0)
-        s = Atomic(Atomic.TYPE.maxi, 0).next()
-        self.assertEqual(s.index, 0)
-        self.assertEqual(s.subscript, 1)
-
-class TestPredicated(BaseCase):
-
-    def test_errors(self):
-        with self.assertRaises(ValueError):
-            Predicated('MyPredicate', (a, b))
-        with self.assertRaises(TypeError):
-            Predicated('Identity', (a,))
-
-    def test_setence_impl(self):
-        s = Predicated(F,(a,))
-        self.assertEqual(s.predicate, Predicate((0, 0, 1)))
-        self.assertIs(s.TYPE, LexType.Predicated)
-        self.assertEqual(s.constants, {a})
-        self.assertEqual(s.variables, EMPTY_SET)
-        self.assertEqual(s.predicates, {F})
-        self.assertEqual(s.atomics, EMPTY_SET)
-        self.assertEqual(s.operators, tuple())
-        self.assertEqual(s.substitute(a, x), s)
-        self.assertEqual(s.negate(), self.p('NFm'))
-        self.assertEqual(s.negative(), self.p('NFm'))
-        self.assertEqual(s.asserted(), self.p('TFm'))
-        self.assertEqual(s.disjoin(B), self.p('AFmb'))
-        self.assertEqual(s.conjoin(B), self.p('KFmb'))
-        # self.assertEqual(s.variable_occurs(x), False)
-        s = Predicated(F, (x,))
-        self.assertIs(s.TYPE, LexType.Predicated)
-        self.assertEqual(s.substitute(a, x), F((a,)))
-        self.assertEqual(s.variables, {x})
-        # self.assertEqual(s.variable_occurs(x), True)
-
-    def test_atomic_less_than_predicated(self):
-        s2 = Predicated.first()
-        self.assertLess(A, s2)
-        self.assertLessEqual(A, s2)
-        self.assertGreater(s2, A)
-        self.assertGreaterEqual(s2, A)
-
-    def test_sorting_predicated_sentences(self):
-        # Lexical items should be sortable for models.
-        ss = list(map(Predicate.first(), Constant.gen(2)))
-        s1, s2 = ss
-        ss.reverse()
-        self.assertEqual(ss, [s2, s1])
-        res = sorted(ss)
-        self.assertEqual(res, [s1, s2])
-
-    def test_predicated_substitute_a_for_x_identity(self):
-        s = Predicated('Identity', (x, b))
-        res = s.substitute(a, x)
-        self.assertEqual(res.params, (a, b))
-
-class TestQuantified(BaseCase):
-
-    def test_quantified_substitute_inner_quantified(self):
-        q = Quantifier.Existential
-        s1 = Predicated('Identity', (x, y))
-        s2 = Quantified(q, x, s1)
-        s3 = Quantified(q, y, s2)
-        res = s3.sentence.substitute(a, y)
-        check = Quantified(
-            q,
-            Variable(0, 0),
-            Predicated(
-                'Identity', (Variable(0, 0), Constant(0, 0))
-            )
-        )
-        self.assertEqual(res, check)
-
-    def test_complex_quantified_substitution(self):
-        preds = Predicates({(0, 0, 2)})
-        s1 = cast(Quantified, self.p('SxMVyFxy', preds))
-        m = Constant(0, 0)
-        s2 = s1.sentence.substitute(m, s1.variable)
-        s3 = self.p('MVyFmy', preds)
-        self.assertEqual(s2, s3)
-
-class TestOperated(BaseCase):
-
-    def test_errors(self):
-        with self.assertRaises(ValueError):
-            Operated('Misjunction', (A, A))
-        with self.assertRaises((ValueError, TypeError)):
-            Operated(Operator.Negation, (A, A))
-
-    def test_operators(self):
-        self.assertEqual(self.p('KAMVxJxNbTNNImn').operators, (
-            Operator.Conjunction,
-            Operator.Disjunction,
-            Operator.Possibility,
-            Operator.Negation,
-            Operator.Assertion,
-            Operator.Negation,
-            Operator.Negation))
-
+    def test_repr_coverage(self):
+        c = BiCoords(0, 0)
+        r = repr(c)
+        self.assertIs(type(r), str)
 
 class TestGenericApi(BaseCase):
 
@@ -437,9 +626,20 @@ class TestGenericApi(BaseCase):
             for i in itm.sort_tuple:
                 self.assertIs(type(i), int)
 
+    def test_for_json_is_tuple(self):
+        for itm in Firsts.values():
+            self.assertIsInstance(itm.for_json(), tuple)
 
+    def test_gen_stop_0_yields_empty(self):
+        for itm in Firsts.values():
+            self.assertEqual(list(itm.gen(0)), [])
 
-class TestCrossSorting(BaseCase):
+    def test_gen_stop_none_yields_first(self):
+        for cls, itm in Firsts.items():
+            other = next(cls.gen(None))
+            self.assertEqual(itm, other)
+
+class TestSorting(BaseCase):
 
     def test_le_lt_ge_gt_symmetry(self):
 
@@ -469,28 +669,6 @@ class TestCrossSorting(BaseCase):
         self.assertFalse(x < a)
         self.assertFalse(x <= a)
 
-class TestNotImplTypes(BaseCase):
-    def test_incompatible(self):
-        itms = Firsts.values()
-        itms = [Atomic.first()]
-        others = [
-            1, None, False, '', slice(None, None, None), [], set(), {}]
-        opers = (opr.lt, opr.le, opr.gt, opr.ge, opr.eq)
-        it = product(opers, itms, others)
-        for oper, itm, other in it:
-            # print(oper, itm, other)
-            meth = getattr(itm, '__%s__' % oper.__name__)
-            res = meth(other)
-            self.assertIs(res, NotImplemented)
-            if oper is not opr.eq:
-                with self.assertRaises(TypeError):
-                    oper(itm, other)
-            # self.assertEqual(meth(itm), 0)
-            # self.assertEqual(oper(itm, itm), 0)
-
-
-class TestSorting(BaseCase):
-
     def test_compare1(self):
         a1 = self.parg('Denying the Antecedent')
         a2 = self.parg('Biconditional Introduction 3')
@@ -512,8 +690,19 @@ class TestSorting(BaseCase):
             self.assertNotEqual(a1, a2)
             a1 = a2
 
-
 class TestClasses(BaseCase):
+
+    def test_base_cannot_construct(self):
+        with self.assertRaises(TypeError):
+            Sentence()
+
+    def test_cannot_construct_parameter(self):
+        with self.assertRaises(TypeError):
+            Parameter(0, 0)
+
+    def test_construct_from_spec(self):
+        for cls, itm in Firsts.items():
+            self.assertEqual(itm, cls(*itm.spec))
 
     def test_readonly(self):
         with self.assertRaises(AttributeError):
@@ -535,9 +724,7 @@ class TestClasses(BaseCase):
                 s = pickle.dumps(item)
                 item2 = pickle.loads(s)
                 self.assertEqual(item, item2)
-
-class TestIdentCreate(BaseCase):
-
+                    
     def test_atomic_sentence_from_ident(self):
         self.assertEqual(Sentence(('Atomic', (0, 0))), Atomic(0,0))
 
@@ -557,11 +744,68 @@ class TestIdentCreate(BaseCase):
     def test_operator_lexicalabc_from_ident(self):
         self.assertIs(LexicalAbc(('Operator', ('Conjunction',))), Operator.Conjunction)
 
+    def test_abstract_various(self):
+        s = Atomic.first()
+        with self.assertRaises(NotImplementedError):
+            Lexical.next(s)
 
-class TestArgumentsKeyStr(BaseCase):
+    @classmethod
+    def gentest_incompatibles(cls):
+        enums = list(filter(lambda item: isinstance(item, LexicalEnum), Firsts.values()))
+        abcs = list(filter(lambda item: isinstance(item, LexicalAbc), Firsts.values()))
+        enum_others = [
+            1, None, False, slice(None, None, None), [], set(), {}]
+        abc_others = enum_others + ['']
+        cmps = [
+            (enums, enum_others),
+            (abcs, abc_others)]
+        opers = (opr.lt, opr.le, opr.gt, opr.ge, opr.eq)
+        def maketest_raises(oper, itm, other):
+            def test(self: BaseCase):
+                with self.assertRaises(TypeError):
+                    oper(itm, other)
+            return test
+        for itms, others in cmps:
+            for oper, itm, other in product(opers, itms, others):
+                func = getattr(itm, '__%s__' % oper.__name__)
+                res = func(other)
+                name = f'test_{type(itm)}_{oper.__name__}_{type(other)}_is_notimplemented'
+                yield name, cls.maketest('assertIs', res, NotImplemented)
+                if oper is not opr.eq:
+                    name = f'test_{type(itm)}_{oper.__name__}_{type(other)}_raises_typeerror'
+                    yield name, maketest_raises(oper, itm, other)
 
-    def test_examples_restore(self):
-        for a1 in examples.arguments():
-            keystr = a1.keystr()
-            a2 = Argument.from_keystr(keystr)
-            self.assertEqual(a1, a2)
+class TestCache(BaseCase):
+
+    def test_cache_size_stays_at_1(self):
+        cache = LexicalAbcMeta.__call__._cache
+        old = cache.queue, cache.idx, cache.rev
+        try:
+            cache.__init__(maxlen=1)
+            s1 = Atomic.first()
+            self.assertEqual(len(cache.queue), 1)
+            s2 = ~s1
+            self.assertEqual(len(cache.queue), 1)
+            self.assertEqual(cache.queue[0], s2)
+        finally:
+            cache.queue, cache.idx, cache.rev = old
+
+class TestLexType(BaseCase):
+
+    def test_construct_from_spec(self):
+        for cls, itm in Firsts.items():
+            self.assertEqual(itm, LexType(cls)(*itm.spec))
+    
+    def test_sorted_is_enum_sequence(self):
+        self.assertEqual(list(LexType), sorted(LexType))
+
+    def test_repr_str_coverage(self):
+        r = repr(LexType.Operated)
+        self.assertIs(type(r), str)
+
+    def test_lt_string_not_implemented(self):
+        self.assertIs(NotImplemented, LexType.Quantifier.__lt__(''))
+
+    def test_eq_cls(self):
+        for cls in Firsts:
+            self.assertEqual(cls.TYPE, cls)

@@ -345,7 +345,7 @@ def main():
             (lex_eg_table, lexatrs[0:2]),
             *((lex_eg_table, [name]) for name in lexatrs),
             (member_table, Operator, [
-                'name','order', 'label', 'arity', 'libname']),
+                'name','order', 'label', 'arity']),
             (member_table, LexType, [
                 'name', 'rank', 'cls', 'role', 'maxi'])]
         shuffle(callspecs)
