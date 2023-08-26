@@ -1,12 +1,18 @@
+from __future__ import annotations
 from ..utils import BaseCase
 from pytableaux.lang import *
 from pytableaux.proof import *
+from pytableaux.proof import rules
 from pytableaux.errors import *
+from pytableaux.logics import fde as FDE
+from pytableaux.logics.fde import System
 
 A = Atomic.first()
 
 class Base(BaseCase):
     logic = 'FDE'
+    def m(self, *args, **kw) -> FDE.Model:
+        return super().m(*args, **kw)
 
 class TestRules(Base, autorules=True): pass
 
@@ -249,6 +255,22 @@ class TestModels(Base):
         self.assertIn(s3, m.opaques)
         self.assertIn(m.value_of(s5), m.Meta.designated_values)
 
+    def test_set_predicated_raises_free_variables(self):
+        m = self.m()
+        s1 = Predicated(Predicate(0,0,1), Constant(0,0))
+        m.set_predicated_value(s1, 'N')
+        s2 = Predicated(Predicate(0,0,1), Variable(0,0))
+        with self.assertRaises(ValueError):
+            m.set_predicated_value(s2, 'N')
+
+    def test_unquantify_value_map_raises_type_error_coverage(self):
+        m = self.m()
+        # check positive case
+        for _ in m._unquantify_value_map(Quantified.first()): _
+        s2 = Atomic.first()
+        with self.assertRaises(TypeError):
+            m._unquantify_value_map(s2)
+
 class TestBranchables(Base):
     exp = dict(
         AssertionDesignated=0,
@@ -299,3 +321,35 @@ class TestBranchables(Base):
             except KeyError:
                 raise
             self.assertEqual(rulecls.branching, value)
+
+
+
+class TestSystem(Base):
+
+    def test_branch_complexity_hashable_none_if_no_sentence(self):
+        n = Node({})
+        self.assertIs(None, System.branching_complexity_hashable(n))
+
+    def test_branch_complexity_0_if_no_sentence(self):
+        tab = Tableau(self.logic)
+        n = Node({})
+        self.assertEqual(0, System.branching_complexity(n, tab.rules))
+
+    def test_abstract_default_node_rule(self):
+        class Impl(System.DefaultNodeRule, intermediate=True): pass
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            Impl._get_sd_targets(rule, Node({}), Branch())
+
+    def test_abstract_operator_node_rule(self):
+        class Impl(System.OperatorNodeRule): pass
+        with self.assertRaises(TypeError):
+            Impl(Tableau())
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            Impl._get_sd_targets(rule, Node({}), Branch())
+
+    def test_notimpl_coverage(self):
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            System.OperatorNodeRule._get_sd_targets(rule, self.p('a'), False)

@@ -44,7 +44,16 @@ class TestRules(Base, autorules=True):
         swn = self.swnode
         tab, b = self.tabb()
         rule = tab.rules.get(Rules.IdentityIndiscernability)
-        b += map(swn, ['Imn'])
+        # need 2 nodes to trigger test, since the rule skips the node if
+        # it is the self-same node it is comparing to
+        b += map(swn, ['Imn', 'Imn'])
+        self.assertFalse(rule.target(b))
+
+    def test_IdentityIndiscernability_skip_self_identity_coverage(self):
+        swn = self.swnode
+        tab, b = self.tabb()
+        rule = tab.rules.get(Rules.IdentityIndiscernability)
+        b += swn('Imm')
         self.assertFalse(rule.target(b))
 
     def test_IdentityIndiscernability_not_target_duplicate(self):
@@ -61,9 +70,7 @@ class TestRules(Base, autorules=True):
     def test_Necessity_node_targets(self):
         swn = self.swnode
         tab, b = self.tabb()
-        b += [
-            swn('La', 0),
-            anode(0, 0)]
+        b += swn('La', 0), anode(0, 0)
         rule = tab.rules.get(Rules.Necessity)
         targets = list(rule._get_node_targets(b[0], b))
         self.assertEqual(len(targets), 1)
@@ -71,10 +78,8 @@ class TestRules(Base, autorules=True):
     def test_Necessity_node_targets_does_not_duplicate_node(self):
         swn = self.swnode
         tab, b = self.tabb()
-        b += [
-            swn('a', 0),
-            swn('La', 0),
-            anode(0, 0)]
+        b += map(swn, ('a', 'La'))
+        b += anode(0, 0)
         rule = tab.rules.get(Rules.Necessity)
         targets = list(rule._get_node_targets(b[1], b))
         self.assertEqual(len(targets), 0)
@@ -167,6 +172,14 @@ class TestModelPredication(Base):
         interp = m.frames[0].predicates[Predicate.Identity]
         self.assertGreater(len(interp.pos), 0)
         self.assertIn((Constant(0, 0), Constant(1, 0)), interp.pos)
+
+    def test_set_predicated_raises_free_variables(self):
+        m = self.m()
+        s1 = Predicated(Predicate(0,0,1), Constant(0,0))
+        m.set_predicated_value(s1, 'F')
+        s2 = Predicated(Predicate(0,0,1), Variable(0,0))
+        with self.assertRaises(ValueError):
+            m.set_predicated_value(s2, 'F')
 
 class TestAccessGraph(Base):
 
@@ -488,14 +501,6 @@ class TestModelErrors(Base):
             m.set_atomic_value(s1, 'F')
         m.set_predicated_value(s2, 'T')
         with self.assertRaises(ModelValueError):
-            m.set_predicated_value(s2, 'F')
-
-    def test_set_predicated_raises_free_variables(self):
-        m = self.m()
-        s1 = Predicated(Predicate(0,0,1), Constant(0,0))
-        m.set_predicated_value(s1, 'F')
-        s2 = Predicated(Predicate(0,0,1), Variable(0,0))
-        with self.assertRaises(ValueError):
             m.set_predicated_value(s2, 'F')
 
 class TestBranchables(Base):

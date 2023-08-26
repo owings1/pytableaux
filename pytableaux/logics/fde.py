@@ -124,7 +124,7 @@ class Model(LogicType.Model[ValueFDE]):
             return map(self.value_of, map(s.unquantify, self.constants))
         except AttributeError:
             check.inst(s, Quantified)
-            raise
+            raise # pragma: no cover
 
     def value_of_quantified(self, s: Quantified, /):
         """
@@ -139,7 +139,7 @@ class Model(LogicType.Model[ValueFDE]):
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
-        raise TypeError(s.quantifier)
+        raise NotImplementedError from ValueError(s.quantifier) # pragma: no cover
 
     def set_opaque_value(self, s: Sentence, value, /):
         self._check_not_finished()

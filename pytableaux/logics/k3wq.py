@@ -66,7 +66,7 @@ class Model(FDE.Model):
         elif s.quantifier is Quantifier.Universal:
             oper = Operator.Conjunction
         else:
-            raise TypeError(s.quantifier)        
+            raise NotImplementedError from ValueError(s.quantifier) # pragma: no cover
         return self.truth_function.generalize(oper, self._unquantify_value_map(s))
 
 class System(FDE.System): pass

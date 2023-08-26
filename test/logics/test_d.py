@@ -1,4 +1,6 @@
+from __future__ import annotations
 from collections import defaultdict
+from pytableaux.logics import d as D
 
 from pytableaux.lang import *
 
@@ -7,6 +9,8 @@ from ..utils import BaseCase
 
 class Base(BaseCase):
     logic = 'D'
+    def m(self, *args, **kw) -> D.Model:
+        return super().m(*args, **kw)
 
 class TestRules(Base, autorules=True):
 
@@ -51,3 +55,15 @@ class TestTables(Base, autotables=True):
         MaterialBiconditional = 'TFFT',
         Conditional = 'TTFT',
         Biconditional = 'TFFT')
+
+class TestModels(Base):
+
+    def test_serial_completeness(self):
+        m = self.m().finish()
+        self.assertIn((0,1), list(m.R.flat()))
+
+    def test_serial_does_not_add_if_already_serial(self):
+        m = self.m()
+        m.R.add((0,0))
+        m.finish()
+        self.assertEqual([(0,0)], list(m.R.flat()))

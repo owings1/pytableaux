@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Collection, Iterable, Mapping, NamedTuple, Sequence, TypeVar
+from typing import Collection, Iterable, Mapping, NamedTuple, Sequence, TypeVar, Generic
 from unittest import TestCase
 
 from pytableaux import examples
@@ -13,6 +13,8 @@ from pytableaux.tools import inflect, qset
 from .logics import knownargs
 
 _T = TypeVar('_T')
+_RT = TypeVar('_RT', bound=Rule)
+
 
 def loopgen(c: Collection[_T], n: int = None):
     if not len(c) and (n is None or n > 0):
@@ -41,6 +43,11 @@ class ArgModels(NamedTuple):
     arg: Argument
     models: list[BaseModel]
 
+def maketest(method, *args, **kw):
+    def test(self):
+        getattr(self, method)(*args, **kw)
+    return test
+
 class BaseCase(TestCase):
 
     logic: LogicType
@@ -56,56 +63,31 @@ class BaseCase(TestCase):
             subcls.logic = registry(subcls.logic)
         if autorules:
             for rulecls in subcls.logic.Rules.all():
-                name = f'test_rule_{rulecls.name}'
-                old = getattr(subcls, name, None)
-                def test(self: BaseCase, rulecls=rulecls, old=old):
-                    rt = self.rule_eg(rulecls, bare=bare)
-                    self.assertEqual(rt.rule.branching, len(rt.tab) - 1)
-                    if callable(old):
-                        old(self)
-                setattr(subcls, name, test)
+                name = f'test_rule_{rulecls.name}_auto'
+                assert not hasattr(subcls, name)
+                setattr(subcls, name, maketest('rule_eg', rulecls, bare=bare))
             def test_groups(self: BaseCase):
                 subcls.logic.Rules._check_groups()
             setattr(subcls, 'test_rules_check_groups', test_groups)
         if autoargs:
-            validities = qset()
-            invalidities = qset()
-            if getattr(subcls, 'logic', None):
-                validities.update(knownargs.validities[subcls.logic.Meta.name])
-                invalidities.update(knownargs.invalidities[subcls.logic.Meta.name])
-            for arg in validities:
-                if isinstance(arg, Argument):
-                    title = arg.title or hash(arg)
-                else:
-                    title = arg
-                name = f'test_valid_{inflect.slug(title)}'
-                old = getattr(subcls, name, None)
-                def test(self: BaseCase, arg=arg, old=old):
-                    self.valid_tab(arg)
-                    if callable(old):
-                        old(self)
-                setattr(subcls, name, test)
-            for arg in invalidities:
-                if isinstance(arg, Argument):
-                    title = arg.title or hash(arg)
-                else:
-                    title = arg
-                name = f'test_invalid_{inflect.slug(title)}'
-                old = getattr(subcls, name, None)
-                def test(self: BaseCase, arg=arg, old=old):
-                    self.invalid_tab(arg)
-                    if callable(old):
-                        old(self)
-                setattr(subcls, name, test)
+            for category in ('valid', 'invalid'):
+                known = qset()
+                if getattr(subcls, 'logic', None):
+                    known.update(getattr(knownargs, f'{category}ities')[subcls.logic.Meta.name])
+                for arg in known:
+                    if isinstance(arg, Argument):
+                        title = arg.title or hash(arg)
+                    else:
+                        title = arg
+                    name = f'test_{category}_{inflect.slug(title)}_auto'
+                    assert not hasattr(subcls, name)
+                    method = f'{category}_tab'
+                    setattr(subcls, name, maketest(f'{category}_tab', arg))
         if autotables:
             for oper, exp in getattr(subcls, 'tables', {}).items():
-                name = f'test_truth_table_{oper}'
-                old = getattr(subcls, name, None)
-                def test(self: BaseCase, oper=oper, exp=exp, old=old):
-                    self.tttest(oper, exp)
-                    if callable(old):
-                        old(self)
-                setattr(subcls, name, test)
+                name = f'test_truth_table_{oper}_auto'
+                assert not hasattr(subcls, name)
+                setattr(subcls, name, maketest('tttest', oper, exp))
             
     def valid_tab(self, *args, **kw):
         tab = self.tab(*args, **kw)
@@ -236,7 +218,7 @@ class BaseCase(TestCase):
         'Return one model.'
         return self.acmm(*args, **kw)[1][0]
 
-    def rule_tab(self, rule:str|type[_T], bare = False, **kw) -> tuple[_T, Tableau]|RuleTab:
+    def rule_tab(self, rule:str|type[_RT], bare = False, **kw) -> tuple[_T, Tableau]|RuleTab:
         'Return (rule, tab) pair.'
         manual = False
         t = self.tab()
@@ -269,6 +251,7 @@ class BaseCase(TestCase):
             assert len(tab.history) == 1
             if isinstance(rule, ClosingRule):
                 assert len(tab.open) == 0
+            self.assertEqual(rule.branching, len(tab) - 1)
         return rt
 
     def m(self, b: Branch = None):

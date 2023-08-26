@@ -845,9 +845,7 @@ class Rules(LogicType.Rules):
                 elif pb in s.params:
                     p_old, p_new = pb, pa
                 else:
-                    # This continue statement does not register as covered,
-                    # but it is by ``test_identity_indiscernability_not_applies()```
-                    continue # pragma: no cover
+                    continue
                 # Replace p with p1.
                 params = substitute(s.params, p_old, p_new)
                 # Since we have SelfIdentityClosure, we don't need a = a.

@@ -967,16 +967,15 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         Returns:
             int: The branching complexity.
         """
-        # TODO: Consider potential optimization using hash equivalence for nodes,
-        #       to avoid redundant calculations. Perhaps the System should
-        #       provide a special branch-complexity node hashing function.
         try:
             system = self.logic.System
         except AttributeError:
             return 0
         key = system.branching_complexity_hashable(node)
         cache = self._complexities
-        if key not in cache:
+        try:
+            return cache[key]
+        except KeyError:
             cache[key] = system.branching_complexity(node, self.rules)
         return cache[key]
 
