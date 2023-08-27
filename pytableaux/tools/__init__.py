@@ -32,9 +32,9 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence, Set
 from enum import Enum
 from operator import gt, lt
-from types import DynamicClassAttribute, FunctionType
+from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Literal, Mapping,
+from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Mapping,
                     MutableMapping, Self, TypeVar)
 
 __all__ = (
@@ -43,7 +43,6 @@ __all__ = (
     'dictattr',
     'dictns',
     'dund',
-    'dxopy',
     'EMPTY_MAP',
     'EMPTY_SEQ',
     'EMPTY_SET',
@@ -53,7 +52,6 @@ __all__ = (
     'isattrstr',
     'isdund',
     'isint',
-    'isstr',
     'key0',
     'lazy',
     'MapCover',
@@ -61,6 +59,7 @@ __all__ = (
     'membr',
     'minfloor',
     'NoSetAttr',
+    'PathedDict',
     'sbool',
     'select_fget',
     'SeqCover',
@@ -70,7 +69,6 @@ __all__ = (
     'substitute',
     'thru',
     'TransMmap',
-    'true',
     'undund',
     'wraps')
 
@@ -144,10 +142,6 @@ def thru(obj: _T) -> _T:
     'Return the argument.'
     return obj
 
-def true(_) -> Literal[True]:
-    'Always returns ``True``.'
-    return True
-
 def group(*items):
     """Tuple builder.
     
@@ -191,10 +185,6 @@ def isattrstr(obj) -> bool:
         isinstance(obj, str) and
         obj.isidentifier() and
         not keyword.iskeyword(obj))
-
-def isstr(obj) -> bool:
-    'Whether the argument is an :obj:`str` instance'
-    return isinstance(obj, str)
 
 re_boolyes = re.compile(r'^(true|yes|1)$', re.I)
 'Regex for string boolean `yes`.'
@@ -273,33 +263,9 @@ def _prevmodule(thisname = __name__, /):
         val = f.f_globals.get('__name__', '__main__')
         if val != thisname:
             return val
-@closure
-def dxopy():
-
-    def api(a, proxy = False, /, ):
-        """Deep map copy, recursive for mapping values.
-        Safe for circular reference. Second arg supports
-        deep proxy.
-        """
-        return runner(a, {}, MapProxy if proxy else thru)
-
-    def runner(a: Mapping, memo, wrap):
-        if (i := id(a)) in memo:
-            return a
-        memo[i] = True
-        m = wrap({
-            key: runner(value, memo, wrap)
-                if isinstance(value, Mapping)
-                else value
-            for key, value in a.items()})
-        memo[id(m)] = True
-        return m
-
-    return api
 
 @closure
 def dmerged():
-
 
     # TODO: memoize ...
 
@@ -526,17 +492,6 @@ class lazy:
         def __call__(self, method: Callable[[_Self], _T]) -> property[_Self, _T]:
             fget = super().__call__(method)
             return self.propclass(fget, doc = method.__doc__)
-
-    class dynca(prop):
-        """Return a DynamicClassAttribute with the getter. NB: a setter/deleter
-        should be sure to use the correct attribute.
-        """
-
-        @property
-        def propclass(self):
-            return DynamicClassAttribute
-
-        __slots__ = EMPTY_SET
 
 class NoSetAttr(BaseMember):
     'Lame thing that does a lame thing.'
@@ -768,6 +723,9 @@ class PathedDict(dict):
 
     __slots__ = EMPTY_SET
 
+    def __init__(self, *args, **kw):
+        self.update(*args, **kw)
+
     def __getitem__(self, key):
         try:
             return super().__getitem__(key)
@@ -795,6 +753,7 @@ class PathedDict(dict):
     get = MutableMapping.get
     pop = MutableMapping.pop
     setdefault = MutableMapping.setdefault
+    update = MutableMapping.update
 
 class ForObjectBuilder(Generic[_T]):
 
@@ -821,6 +780,7 @@ from . import abcs
 pass
 from ..errors import Emsg, check
 
+
 class SetView(Set, abcs.Copyable, immutcopy = True):
     'Set cover.'
 
@@ -841,6 +801,6 @@ class SetView(Set, abcs.Copyable, immutcopy = True):
         return f'{prefix}''{}'
 
 from .hybrids import EMPTY_QSET as EMPTY_QSET
+from .hybrids import SequenceSet as SequenceSet
 from .hybrids import qset as qset
 from .hybrids import qsetf as qsetf
-from .hybrids import SequenceSet as SequenceSet

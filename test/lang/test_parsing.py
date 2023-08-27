@@ -16,14 +16,12 @@
 #
 # ------------------
 #
-# pytableaux - parsing test cases
+# pytableaux.lang.parsing tests
 from pytest import raises
 
 from pytableaux.errors import ParseError
-from pytableaux.lang.lex import Predicate, LexType
-from pytableaux.lang.collect import Predicates
-from pytableaux.lang.parsing import Parser
-from .utils import BaseCase
+from pytableaux.lang import *
+from ..utils import BaseCase
 
 preds = Predicates(Predicate.gen(3))
 std = Parser('standard', preds)
@@ -128,6 +126,13 @@ class TestParsers(BaseCase):
     def test_unused_var_error(self):
         with raises(ParseError):
             std('LxFa')
+
+    def test_parse_errors_various_parens(self):
+        # coverage
+        with self.assertRaises(ParseError):
+            std('(A & &A)')
+        with self.assertRaises(ParseError):
+            std('(A & ())')
 
 class TestPolish(BaseCase):
 

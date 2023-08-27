@@ -196,7 +196,7 @@ class lexdress(BaseRole, ParserOptionMixin):
         classes.update(self.opt_defaults['classes'])
         opts = self.options
         parser = self.parser_option()
-        preds = parser.preds
+        preds = parser.predicates
         nodecls = opts.get('node', self.opt_defaults['node'])
         text = self.text
         item = None

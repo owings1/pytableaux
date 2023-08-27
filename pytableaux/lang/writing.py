@@ -23,13 +23,16 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TYPE_CHECKING
 
 from ..errors import Emsg
 from ..tools import EMPTY_MAP
 from . import (Atomic, Constant, CoordsItem, LangCommonMeta, Lexical, LexType,
                Marking, Notation, Operated, Operator, Predicate, Predicated,
                Quantified, Quantifier, StringTable, Variable)
+
+if TYPE_CHECKING:
+    from typing import overload
 
 __all__ = (
     'LexWriter',
@@ -100,7 +103,16 @@ class LexWriter(metaclass = LexWriterMeta):
             raise Emsg.WrongValue(format, strings.format)
         self.opts = dict(self.defaults, **opts)
         self.strings = strings
-    
+
+    if TYPE_CHECKING:
+        @overload
+        def __init__(self,
+            notation:str|Notation|None=...,
+            format:str|None=...,
+            dialect:str|None=...,
+            strings:StringTable|None=...,
+            **opts): ...
+
     def __call__(self, item) -> str:
         'Write a lexical item.'
         return self._write(item)
@@ -113,7 +125,7 @@ class LexWriter(metaclass = LexWriterMeta):
         except TypeError:
             pass
         try:
-            return self._methodmap[type(obj)] is not NotImplemented
+            return callable(self._methodmap[type(obj)])
         except (AttributeError, KeyError):
             return False
 
@@ -195,7 +207,6 @@ class StandardLexWriter(LexWriter):
         pred = s.predicate
         arity = pred.arity
         opts = self.opts
-        strings = self.strings
         should_infix = (
             arity > 1 and (
                 arity < opts['max_infix'] or
@@ -203,7 +214,7 @@ class StandardLexWriter(LexWriter):
         if not should_infix:
             return super()._write_predicated(s)
         if pred is Predicate.Identity:
-            ws = strings[Marking.whitespace]
+            ws = self.strings[Marking.whitespace]
         else:
             ws = ''
         return ws.join((
