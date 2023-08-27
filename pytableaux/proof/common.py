@@ -280,9 +280,9 @@ class Branch(SequenceSet[Node], EventEmitter, abcs.Copyable, metaclass=BranchMet
     def copy(self, *, parent:Branch|None=None, listeners=False) -> Self:
         """Copy of the branch.
         
-        Kwargs:
+        Args:
             parent (Optional[Branch]): The branch to set as the new branch's parent.
-                Defaults to None.
+              Defaults to None.
             listeners (bool): Whether to copy event listeners. Defaults to `False`.
         
         Returns:
