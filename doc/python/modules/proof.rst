@@ -12,10 +12,13 @@ Classes
 =======
 
 .. autoclass:: Branch
+    :members:
 
 .. autoclass:: Node
+    :members:
 
 .. autoclass:: Target
+    :members:
 
 .. autoclass:: Rule
     :members:

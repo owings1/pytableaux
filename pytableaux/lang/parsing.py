@@ -128,13 +128,13 @@ class Parser(metaclass=ParserMeta):
         """Parse a sentence from an input string.
 
         Args:
-            input: The input string.
+            input_: The input string.
         
         Returns:
             The parsed sentence.
 
         Raises:
-            ParseError: if input cannot be parsed.
+            ParseError
         
         Examples::
 
@@ -501,7 +501,11 @@ class PolishParser(DefaultParser, primary=True):
         return oper(self._read(context) for _ in range(oper.arity))
 
 class StandardParser(DefaultParser, primary=True):
-    "Standard notation parser."
+    """Standard notation parser.
+
+    Options:
+        drop_parens: Don't require parentheses on all binary sentences. Default ``True``.
+    """
 
     notation = Notation.standard
     defaults = dict(drop_parens=True)

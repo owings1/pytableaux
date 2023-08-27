@@ -114,7 +114,12 @@ class LangCommonEnum(abcs.Ebc, metaclass=LangCommonEnumMeta):
 #==========================+
 
 class Notation(LangCommonEnum):
-    'Notation (polish/standard) enum class.'
+    """Notation (polish/standard) enum class.
+
+    .. csv-table::
+        :generator: member-table
+        :generator-args: name
+    """
 
     formats: dict[str, set[str]]
     "Mapping from format to dialects."
@@ -175,7 +180,12 @@ class Notation(LangCommonEnum):
 
 
 class Marking(str, LangCommonEnum):
-    'Miscellaneous marking/punctuation enum.'
+    """Miscellaneous marking/punctuation enum.
+
+    .. csv-table::
+        :generator: member-table
+        :generator-args: name
+    """
     paren_open = 'paren_open'
     "Open parenthesis marking."
     paren_close = 'paren_close'
@@ -456,7 +466,7 @@ def init():
         notation=Notation.polish,
         format='text',
         dialect='ascii')
-    ArgumentMeta._keystr_pclass = PolishParser
+    ArgumentMeta._keystr_pclass = Notation.polish.Parser
 
     from ..errors import Emsg
     from . import lex

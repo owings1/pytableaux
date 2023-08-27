@@ -38,8 +38,8 @@ class TestArgument(BaseCase):
         
     def test_keystr_examples_restore(self):
         for a1 in examples.arguments():
-            keystr = a1.keystr()
-            a2 = Argument.from_keystr(keystr)
+            keystr = a1.argstr()
+            a2 = Argument.from_argstr(keystr)
             self.assertEqual(a1, a2)
 
     def test_for_json_has_keys_coverage(self):

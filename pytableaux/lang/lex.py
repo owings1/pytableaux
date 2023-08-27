@@ -157,7 +157,7 @@ class Lexical:
 
     @classmethod
     def gen(cls, stop: int|None, /, first: Self|None = None, **nextkw) -> Iterator[Self]:
-        """Generate items of the type, using :func:`first` and :func:`next` methods.
+        """Generate items of the type, using :meth:`first` and :meth:`next` methods.
 
         This is convenient for making sequential lexical items quickly, without
         going through parsing.
@@ -168,8 +168,8 @@ class Lexical:
         Args:
             stop: The number at which to stop generating. If ``None``,
                 never stop.
-            first: The first item. If ``None``, starts with :func:`first`.
-            **nextkw: Parameters to pass to each call to :func:`next`.
+            first: The first item. If ``None``, starts with :meth:`first`.
+            **nextkw: Parameters to pass to each call to :meth:`next`.
 
         Returns:
             The generator instance.

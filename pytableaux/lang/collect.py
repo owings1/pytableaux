@@ -71,9 +71,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         Args:
             conclusion: The conclusion.
             premises: The premises or None.
-        
-        Kwargs:
-            title: An optional title or None.
+            **title: An optional title.
         """
         self.seq = tuple(
             (Sentence(conclusion),) if premises is None
@@ -87,6 +85,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
 
     premises: tuple[Sentence, ...]
     "The argument's premises"
+
     title: str|None
     "Optional title"
 
@@ -97,7 +96,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
 
     @lazy.prop
     def hash(self) -> int:
-        "The argument's hash. Does not consider title."
+        "The argument's hash."
         return hash(self.seq)
 
     def predicates(self, **kw):
@@ -156,7 +155,10 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
             conclusion = self.conclusion,
             premises = self.premises)
 
-    def keystr(self) -> str:
+    def argstr(self) -> str:
+        """Get the canonical string representation for recreating with
+        :meth:`from_argstr()`.
+        """
         lw = __class__._keystr_lw
         preds = self.predicates(sort=True) - Predicate.System
         return '|'.join(
@@ -166,9 +168,12 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
                     '.'.join(map(str, p.spec)) for p in preds))))
 
     @staticmethod
-    def from_keystr(keystr: str, /) -> Argument:
+    def from_argstr(argstr: str, /) -> Argument:
+        """Construct an argument from the canonical string representation from
+        :meth:`argstr()`.
+        """
         pclass = __class__._keystr_pclass
-        parts = deque(keystr.split('|'))
+        parts = deque(argstr.split('|'))
         conc, *prems = parts.popleft().split(':')
         if parts:
             specsstr, = parts
@@ -243,9 +248,9 @@ class Predicates(PredicatesBase, qset[Predicate], hooks={qset: dict(cast=Predica
         
         Args:
             values: Iterable of predicates or specs.
-            sort: Whether to sort. Default is ``False``.
-            key: Optional sort key function.
-            reverse: Whether to reverse sort.
+            **sort: Whether to sort. Default is ``False``.
+            **key: Optional sort key function.
+            **reverse: Whether to reverse sort.
         """
         self._lookup = {}
         super().__init__(values)

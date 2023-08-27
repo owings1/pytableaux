@@ -204,7 +204,7 @@ class lexdress(BaseRole, ParserOptionMixin):
         if match is not None:
             char, sub = match.groups()
             table = parser.table
-            ctype = table.type(char)
+            ctype = table[char][0]
             if ctype in _Ctype.nosent:
                 # Non-sentence items.
                 if len(sub):
@@ -212,11 +212,11 @@ class lexdress(BaseRole, ParserOptionMixin):
                 else:
                     sub = 0
                 if ctype in _Ctype.valued:
-                    item = table.value(char)
+                    item = table[char][1]
                 elif ctype is LexType.Predicate.cls:
-                    item = preds.get((table.value(char), sub))
+                    item = preds.get((table[char][1], sub))
                 else:
-                    item = ctype.cls(table.value(char), sub)
+                    item = ctype(table[char][1], sub)
         if item is None:
             # Parse as sentence.
             item = parser(text)

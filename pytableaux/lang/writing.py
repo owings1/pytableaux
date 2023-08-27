@@ -59,7 +59,7 @@ class LexWriterMeta(LangCommonMeta):
         return super().__call__(*args, **kw)
 
 
-class LexWriter(metaclass = LexWriterMeta):
+class LexWriter(metaclass=LexWriterMeta):
     'LexWriter interface and coordinator.'
 
     notation: ClassVar[Notation]
