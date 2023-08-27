@@ -462,11 +462,13 @@ def init():
 
     from .collect import ArgumentMeta
 
-    ArgumentMeta._keystr_lw = LexWriter(
+    argstrlw = LexWriter(
         notation=Notation.polish,
         format='text',
         dialect='ascii')
-    ArgumentMeta._keystr_pclass = Notation.polish.Parser
+    ArgumentMeta._argstr_lw = argstrlw
+    ArgumentMeta._argstr_pclass = argstrlw.notation.Parser
+    ArgumentMeta._argstr_parser_empty = argstrlw.notation.Parser(predicates=Predicates.EMPTY)
 
     from ..errors import Emsg
     from . import lex

@@ -30,7 +30,7 @@ from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Iterable
 
 from .. import tools
-from ..errors import Emsg, check
+from ..errors import Emsg, ParseError, check
 from ..tools import SequenceSet, abcs, group, lazy, membr, qset, qsetf, wraps
 from . import LangCommonMeta, Lexical, Predicate, Sentence
 
@@ -51,8 +51,10 @@ class ArgumentMeta(LangCommonMeta):
             return args[0]
         return super().__call__(*args, **kw)
 
-    _keystr_lw: LexWriter
-    _keystr_pclass: type[Parser]
+    _argstr_lw: LexWriter
+    _argstr_pclass: type[Parser]
+    _argstr_parser_empty: Parser
+
 
 
 class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=ArgumentMeta):
@@ -110,6 +112,55 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         """
         return Predicates((p for s in self for p in s.predicates), **kw)
 
+    def argstr(self) -> str:
+        """Get the canonical string representation for recreating with
+        :meth:`from_argstr()`.
+        """
+        lw = __class__._argstr_lw
+        preds = self.predicates(sort=True) - Predicate.System
+        return '|'.join(
+            filter(None, (
+                ':'.join(map(lw, self)),
+                ','.join(
+                    '.'.join(map(str, p.spec)) for p in preds))))
+
+    @staticmethod
+    def from_argstr(argstr: str, /) -> Argument:
+        """Construct an argument from the canonical string representation from
+        :meth:`argstr()`.
+
+        Raises:
+            ParseError
+            TypeError
+        """
+        try:
+            parts = deque(argstr.split('|'))
+        except:
+            check.inst(argstr, str)
+            raise # pragma: no cover
+        try:
+            conc, *prems = parts.popleft().split(':')
+        except IndexError:
+            raise ParseError('Empty input')
+        if parts:
+            try:
+                specsstr, = parts
+            except ValueError:
+                raise ParseError('Too many parts')
+            try:
+                preds = Predicates(
+                    tuple(map(int, specstr.split('.')))
+                    for specstr in specsstr.split(','))
+            except Exception as err:
+                raise ParseError(f'Error parsing predicates: {err}')
+        else:
+            preds = Predicates.EMPTY
+        if len(preds):
+            parser = __class__._argstr_pclass(predicates=preds)
+        else:
+            parser = __class__._argstr_parser_empty
+        return parser.argument(conc, prems)
+
     #******  Equality & Ordering
 
     @abcs.abcf.temp
@@ -154,35 +205,6 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         return dict(
             conclusion = self.conclusion,
             premises = self.premises)
-
-    def argstr(self) -> str:
-        """Get the canonical string representation for recreating with
-        :meth:`from_argstr()`.
-        """
-        lw = __class__._keystr_lw
-        preds = self.predicates(sort=True) - Predicate.System
-        return '|'.join(
-            filter(None, (
-                ':'.join(map(lw, self)),
-                ','.join(
-                    '.'.join(map(str, p.spec)) for p in preds))))
-
-    @staticmethod
-    def from_argstr(argstr: str, /) -> Argument:
-        """Construct an argument from the canonical string representation from
-        :meth:`argstr()`.
-        """
-        pclass = __class__._keystr_pclass
-        parts = deque(argstr.split('|'))
-        conc, *prems = parts.popleft().split(':')
-        if parts:
-            specsstr, = parts
-            preds = Predicates(
-                tuple(map(int, specstr.split('.')))
-                for specstr in specsstr.split(','))
-        else:
-            preds = Predicates.EMPTY
-        return pclass(predicates=preds).argument(conc, prems)
 
     def __repr__(self):
         if self.title:

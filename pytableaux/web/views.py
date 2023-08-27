@@ -35,7 +35,7 @@ from cherrypy import HTTPError, NotFound
 from cherrypy._cprequest import Request, Response
 
 from .. import logics, package
-from ..errors import ProofTimeoutError
+from ..errors import ParseError, ProofTimeoutError
 from ..lang import Argument, LexWriter, Notation, Predicates, TriCoords
 from ..proof import Tableau, writers
 from ..tools import EMPTY_MAP, PathedDict, dmerged
@@ -138,6 +138,7 @@ class JsonView(View):
 
     def setup(self, payload=NOARG):
         super().setup()
+        self.status = 200
         if payload is NOARG:
             payload = getattr(self.request, 'json', None)
         if payload is None:
@@ -387,6 +388,12 @@ class ApiProveView(ApiView):
     def get_argument(self):
         errors = self.errors
         payload = self.payload
+        if isinstance(payload['argument'], str):
+            try:
+                return Argument.from_argstr(payload['argument'])
+            except ParseError as err:
+                errors['argument'] = f"Invalid argument string: {err}"
+                return
         try:
             notn = Notation[payload['argument:notation']]
         except KeyError as err:
@@ -431,8 +438,8 @@ class ApiProveView(ApiView):
             errors['output:notation'] = f"Invalid notation: {err}"
             return
         try:
-
-            lw = notn.DefaultWriter(
+            lw = LexWriter(
+                notation=notn,
                 format=payload['output:format'],
                 dialect=payload['output:dialect'])
         except (KeyError, ValueError) as err:

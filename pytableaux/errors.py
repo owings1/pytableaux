@@ -166,6 +166,8 @@ class Emsg(Enum):
     ConflictForAntiExtension = (ModelValueError,
         'Cannot set value {0} for tuple {1} already in anti-extension', (str, str))
 
+    ParseError = ParseError,
+
     if TYPE_CHECKING:
         @overload
         def razr(*args): ...
