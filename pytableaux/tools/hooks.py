@@ -30,8 +30,8 @@ from types import FunctionType
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Callable, Collection, Literal, TypeVar
 
-from ..errors import Emsg, check
 from . import abcs, closure, dund, wraps
+from .. import errors
 
 if TYPE_CHECKING:
     from typing import overload
@@ -63,7 +63,7 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
         try:
             mapping = cls.Providers[provider]
         except KeyError:
-            raise Emsg.MissingValue(provider)
+            raise errors.Emsg.MissingValue(provider)
         inst = super().__new__(cls)
         inst.provider = provider
         inst.mapping = mapping
@@ -120,7 +120,7 @@ class HookProvider(Mapping, metaclass = abcs.AbcMeta, skiphooks = True):
 
     def excluding(self, hooknames, /):
         'Return the mapping excluding the specified hooknames (__sub__).'
-        check.inst(hooknames, Set)
+        errors.check.inst(hooknames, Set)
         return {
             key: self[key]
             for key in filterfalse(hooknames.__contains__, self)}
@@ -252,10 +252,10 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
                     hooknames = getattr(member, ATTR, None)
                     if hooknames:
                         if kwdefs is None:
-                            raise TypeError from Emsg.MissingValue('__kwdefaults__')
+                            raise TypeError from errors.Emsg.MissingValue('__kwdefaults__')
                         for hookname in hooknames:
                             if hookname not in kwdefs:
-                                raise TypeError from Emsg.MissingKey(hookname)
+                                raise TypeError from errors.Emsg.MissingKey(hookname)
                             builder[hookname].add(attrname)
                         # Clean attribute.
                         delattr(member, ATTR)
@@ -314,9 +314,9 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
                         pinfo = HookProvider(provider)
                         for hookname in hooknames:
                             if hookname not in pinfo:
-                                raise TypeError from Emsg.MissingKey(hookname)
+                                raise TypeError from errors.Emsg.MissingKey(hookname)
                             if hookname in builder[provider]:
-                                raise TypeError from Emsg.DuplicateKey(hookname)
+                                raise TypeError from errors.Emsg.DuplicateKey(hookname)
                             builder[provider][hookname] = member
                     # Clean attribute.
                     delattr(member, ATTR)
@@ -390,7 +390,7 @@ class hookutil(metaclass = abcs.AbcMeta, skiphooks = True):
                 if value is callback:
                     return
                 # Protection until the behavior is defined.
-                raise TypeError from Emsg.ValueConflictFor(hookname, callback, value)
+                raise TypeError from errors.Emsg.ValueConflictFor(hookname, callback, value)
 
         def should_copy(userns: Mapping, provider:type, attrname, declared):
             if attrname not in userns:
@@ -464,4 +464,3 @@ class HookConn(Mapping):
 
     def __len__(self):
         return len(type(self).__dataclass_fields__)
-

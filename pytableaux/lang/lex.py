@@ -744,6 +744,8 @@ class Sentence(LexicalAbc):
         Returns:
             The new sentence.
         """
+        if type(self) is Operated and self.operator is Operator.Negation:
+            return self.lhs
         return Operator.Negation(self)
 
     def substitute(self, pnew: Parameter, pold: Parameter, /) -> Self:
@@ -1317,11 +1319,6 @@ class Operated(Sentence, Sequence[Sentence]):
             return self
         return self.operator(s.substitute(pnew, pold) for s in self)
 
-    def negative(self) -> Sentence:
-        if self.operator is Operator.Negation:
-            return self.lhs
-        return Operator.Negation(self)
-
     @classmethod
     def first(cls, oper=Operator.first(), /):
         oper = Operator(oper)
@@ -1469,7 +1466,6 @@ class LexType(LangCommonEnum):
         members = {
             name: (*value, name)
             for name, value in dict(Predicate.System).items()}
-        attrs = dict(__name__='System', __qualname__='Predicate.System')
 
         Predicate.System = None
 
@@ -1499,9 +1495,8 @@ class LexType(LangCommonEnum):
                 member_names += members.keys() # pragma: no cover
 
         Predicate.System = SystemPredicate
-
-        for name, value in attrs.items():
-            setattr(Predicate.System, name, value)
+        Predicate.System.__name__ = 'System'
+        Predicate.System.__qualname__ = 'Predicate.System'
         for pred in Predicate.System:
             setattr(Predicate, pred.name, pred)
 

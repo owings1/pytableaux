@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import MutableSequence, MutableSet, Sequence, Set
 from itertools import chain, filterfalse
-from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Self, TYPE_CHECKING,
+from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Self,
                     SupportsIndex, TypeVar)
 
 from ..errors import DuplicateValueError, Emsg, check
@@ -88,15 +88,13 @@ class qsetf(SequenceSet[_T], abcs.Copyable, immutcopy=True):
 
     __slots__ = ('_set_', '_seq_')
 
-    def __new__(cls, values: Iterable = None, /):
-        self = object.__new__(cls)
+    def __init__(self, values: Iterable = None, /):
         if values is None:
             self._seq_ = EMPTY_SEQ
             self._set_ = EMPTY_SET
         else:
             self._seq_ = tuple(dict.fromkeys(values))
             self._set_ = frozenset(self._seq_)
-        return self
 
     def __len__(self):
         return len(self._seq_)
@@ -136,7 +134,6 @@ class QsetView(SequenceSet[_T], abcs.Copyable, immutcopy=True):
         for name in __class__.__slots__:
             setattr(self, name, getattr(base, name))
         return self
-
 
     @classmethod
     def _from_iterable(cls, it):

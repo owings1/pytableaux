@@ -77,30 +77,11 @@ EMPTY_SET = frozenset()
 NOARG = object()
 WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
 _KT = TypeVar('_KT')
-_Self = TypeVar('_Self')
 _T = TypeVar('_T')
 _VT = TypeVar('_VT')
 
 if TYPE_CHECKING:
     from typing import overload
-    class property(builtins.property, Generic[_Self, _T]):
-        fget: Callable[[_Self], Any] | None
-        fset: Callable[[_Self, Any], None] | None
-        fdel: Callable[[_Self], None] | None
-        @overload
-        def __init__(
-            self,
-            fget: Callable[[_Self], _T] | None = ...,
-            fset: Callable[[_Self, Any], None] | None = ...,
-            fdel: Callable[[_Self], None] | None = ...,
-            doc: str | None = ...,
-        ) -> None: ...
-        def getter(self, __fget: Callable[[_Self], _T]) -> property[_Self, _T]: ...
-        def setter(self, __fset: Callable[[_Self, Any], None]) -> property[_Self, _T]: ...
-        def deleter(self, __fdel: Callable[[_Self], None]) -> property[_Self, _T]: ...
-        def __get__(self, __obj: _Self, __type: type | None = ...) -> _T: ...
-        def __set__(self, __obj: _Self, __value: Any) -> None: ...
-        def __delete__(self, __obj: _Self) -> None: ...
     class TypeInstMap(Mapping[type[_VT], _VT]):
         @overload
         def __getitem__(self, key: type[_T]) -> _T: ...
@@ -128,30 +109,6 @@ if TYPE_CHECKING:
         @overload
         def pop(self, key: type[_T]) -> type[_T]: ...
 
-def closure(func: Callable[..., _T]) -> _T:
-    """Closure decorator calls the argument and returns its return value.
-    If the return value is a function, updates its wrapper.
-    """
-    ret = func()
-    if type(ret) is FunctionType:
-        functools.update_wrapper(ret, func)
-    return ret
-
-def thru(obj: _T) -> _T:
-    'Return the argument.'
-    return obj
-
-def group(*items):
-    """Tuple builder.
-    
-    Args:
-        *items: members.
-
-    Returns:
-        The tuple of arguments.
-    """
-    return items
-
 def dund(name: str) -> str:
     "Convert name to dunder format."
     return name if isdund(name) else f'__{name}__'
@@ -169,6 +126,35 @@ def undund(name: str) -> str:
     if isdund(name):
         return name[2:-2]
     return name
+
+def getitem(obj, key, default = NOARG, /):
+    "Get by subscript similar to :func:`getattr`."
+    try:
+        return obj[key]
+    except (KeyError, IndexError):
+        if default is NOARG:
+            raise
+        return default
+
+def select_fget(obj):
+    if callable(getattr(obj, '__getitem__', None)):
+        return getitem
+    return getattr
+
+def thru(obj: _T) -> _T:
+    'Return the argument.'
+    return obj
+
+def group(*items):
+    """Tuple builder.
+    
+    Args:
+        *items: members.
+
+    Returns:
+        The tuple of arguments.
+    """
+    return items
 
 def isint(obj) -> bool:
     'Whether the argument is an :obj:`int` instance'
@@ -189,20 +175,6 @@ def sbool(arg: str, /) -> bool:
     "Cast string to boolean, leans toward ``False``."
     return bool(re_boolyes.match(arg))
 
-def getitem(obj, key, default = NOARG, /):
-    "Get by subscript similar to :func:`getattr`."
-    try:
-        return obj[key]
-    except (KeyError, IndexError):
-        if default is NOARG:
-            raise
-        return default
-
-def select_fget(obj):
-    if callable(getattr(obj, '__getitem__', None)):
-        return getitem
-    return getattr
-
 def minfloor(floor, it, default=None):
     return _limit_best(lt, floor, it, default, 'minfloor')
 
@@ -220,7 +192,7 @@ def _limit_best(better, limit, it, default, _name, /):
             raise ValueError(
                 f"{_name}() arg is an empty sequence") from None
     for val in it:
-        if val == limit:
+        if val == limit or better(val, limit):
             return val
         if better(val, best):
             best = val
@@ -233,6 +205,103 @@ def for_defaults(defaults: Mapping[_KT, _VT], override: Mapping, /) -> dict[_KT,
     if not override:
         return dict(defaults)
     return {key: override.get(key, defval) for key, defval in defaults.items()}
+
+def _prevmodule(thisname = __name__, /):
+    f = sys._getframe()
+    while (f := f.f_back) is not None:
+        val = f.f_globals.get('__name__', '__main__')
+        if val != thisname:
+            return val
+
+class wraps(dict):
+    'Replacement for :func:`functools.wraps`.'
+
+    __slots__ = ('only', 'wrapped')
+
+    def __init__(self, wrapped = None, /, *, only = WRASS_SET, exclude = EMPTY_SET, **kw):
+        'Initialize argument, initial input function that will be decorated.'
+        self.wrapped = wrapped
+        only = set(map(dund, only))
+        only.difference_update(map(dund, exclude))
+        only.intersection_update(WRASS_SET)
+        self.only = only
+        self.update(**kw)
+        if wrapped:
+            self.update(wrapped)
+            if (k := '__module__') in only and k not in self:
+                if (v := getattr(wrapped, '__objclass__', None)):
+                    self.setdefault(k, v)
+                else:
+                    self.setdefault(k, _prevmodule())
+
+    def __call__(self, wrapper):
+        'Decorate function. Receives the wrapper function and updates its attributes.'
+        self.update(wrapper)
+        if isinstance(wrapper, (classmethod, staticmethod)):
+            self.write(wrapper.__func__)
+        else:
+            self.write(wrapper)
+        return wrapper
+
+    def write(self, wrapper):
+        "Write wrapped attributes to a wrapper."
+        for attr in filter(self.__contains__, self.only):
+            setattr(wrapper, attr, self[attr])
+        if callable(self.wrapped):
+            wrapper.__wrapped__ = self.wrapped
+        return wrapper
+
+    def update(self, obj = None, /, **kw):
+        """Read from an object/mapping and update relevant values. Any attributes
+        already present are ignored. Returns self.
+        """
+        for o in obj, kw:
+            if o is not None:
+                for attr, val in self.read(o):
+                    if attr not in self:
+                        self[attr] = val
+        return self
+
+    def read(self, obj):
+        "Read relevant attributes from object/mapping."
+        get = select_fget(obj)
+        for name in self.only:
+            if (value := get(obj, name, None)):
+                yield name, value
+            elif (value := get(obj, undund(name), None)):
+                yield name, value
+
+    def setdefault(self, key, value):
+        "Override value if key is relevant and value is not empty."
+        if key in self.only:
+            if value:
+                self[key] = value
+                return value
+            return self[key]
+            
+    def __setitem__(self, key, value):
+        if key in self or key not in self.only:
+            raise KeyError(key)
+        super().__setitem__(key, value)
+
+    def __repr__(self):
+        return f'{type(self).__name__}({dict(self)})'
+
+
+pass
+
+
+def closure(func: Callable[..., _T]) -> _T:
+    """Closure decorator calls the argument and returns its return value.
+    If the return value is a function, updates its wrapper.
+    """
+    ret = func()
+    if type(ret) is FunctionType:
+        # return wraps
+        wraps(func).write(ret)
+        # functools.wraps
+        # functools.update_wrapper(ret, func)
+    return ret
 
 def absindex(seqlen: int, index: int, /, strict = True) -> int:
     'Normalize to positive/absolute index.'
@@ -252,12 +321,30 @@ def slicerange(seqlen: int, slice_: slice, values, /, strict = True) -> range:
             raise Emsg.MismatchExtSliceSize(values, range_)
     return range_
 
-def _prevmodule(thisname = __name__, /):
-    f = sys._getframe()
-    while (f := f.f_back) is not None:
-        val = f.f_globals.get('__name__', '__main__')
-        if val != thisname:
-            return val
+
+class BaseMember:
+
+    __slots__ = ('__name__', '__qualname__')
+
+    def __set_name__(self, owner, name):
+        self.__name__ = name
+        self.__qualname__ = f'{owner.__name__}.{name}'
+        self.sethook(owner, name)
+
+    @abstractmethod
+    def sethook(self, owner, name): pass
+
+    @property
+    def name(self) -> str:
+        try:
+            return self.__name__
+        except AttributeError:
+            return type(self).__name__
+
+    def __repr__(self) -> str:
+        if not hasattr(self, '__qualname__') or not callable(self):
+            return object.__repr__(self)
+        return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
 
 @closure
 def dmerged():
@@ -294,38 +381,6 @@ def dmerged():
     return merger
 
 
-class BaseMember:
-
-    __slots__ = ('__name__', '__qualname__', '__owner')
-
-    def __set_name__(self, owner, name):
-        self.__owner = owner
-        self.__name__ = name
-        self.__qualname__ = f'{owner.__name__}.{name}'
-        self.sethook(owner, name)
-
-    def sethook(self, owner, name):
-        pass
-
-    @property
-    def owner(self):
-        try:
-            return self.__owner
-        except AttributeError:
-            pass
-
-    @property
-    def name(self) -> str:
-        try:
-            return self.__name__
-        except AttributeError:
-            return type(self).__name__
-
-    def __repr__(self) -> str:
-        if not hasattr(self, '__qualname__') or not callable(self):
-            return object.__repr__(self)
-        return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
-
 class membr(BaseMember):
 
     __slots__ = ('callable', 'args', 'kwargs')
@@ -334,7 +389,7 @@ class membr(BaseMember):
     args: tuple
     kwargs: dict
 
-    def __init__(self, callable, *args, **kw):
+    def __init__(self, callable: Callable, *args, **kw):
         self.callable = callable
         self.args = args
         self.kwargs = kw
@@ -346,147 +401,11 @@ class membr(BaseMember):
         return self.callable(self, *self.args, **self.kwargs)
 
     @classmethod
-    def defer(cls, fdefer):
-        def fd(member, *args, **kw):
-            return fdefer(member, *args, **kw)
-        def f(*args, **kw):
-            return cls(fd, *args, **kw)
-        return f
-
-class wraps(dict):
-
-    __slots__ = ('only', 'original')
-
-    def __init__(self, original = None, /, only = WRASS_SET, exclude = EMPTY_SET, **kw):
-        'Initialize argument, initial input function that will be decorated.'
-        self.original = original
-        only = set(map(dund, only))
-        only.difference_update(map(dund, exclude))
-        only.intersection_update(WRASS_SET)
-        self.only = only
-        if kw:
-            self.update(kw)
-        if original:
-            self.update(original)
-            if (k := '__module__') in only and k not in self:
-                if (v := getattr(original, '__objclass__', None)):
-                    self.setdefault(k, v)
-                else:
-                    self.setdefault(k, _prevmodule())
-
-    def __call__(self, fout):
-        'Decorate function. Receives the wrapper function and updates its attributes.'
-        self.update(fout)
-        if isinstance(fout, (classmethod, staticmethod)):
-            self.write(fout.__func__)
-        else:
-            self.write(fout)
-        return fout
-
-    def read(self, obj):
-        "Read relevant attributes from object/mapping."
-        get = select_fget(obj)
-        for name in self.only:
-            if (value := get(obj, name, None)):
-                yield name, value
-            elif (value := get(obj, undund(name), None)):
-                yield name, value
-
-    def write(self, obj):
-        "Write wrapped attributes to a wrapper."
-        for attr, val in self.items():
-            setattr(obj, attr, val)
-        if callable(self.original):
-            obj.__wrapped__ = self.original
-        return obj
-
-    def update(self, obj = None, /, **kw):
-        """Read from an object/mapping and update relevant values. Any attributes
-        already present are ignored. Returns self.
-        """
-        for o in obj, kw:
-            if o is not None:
-                for attr, val in self.read(o):
-                    if attr not in self:
-                        self[attr] = val
-        return self
-
-    def setdefault(self, key, value):
-        "Override value if key is relevant and value is not empty."
-        if key in self.only:
-            if value:
-                self[key] = value
-                return value
-            return self[key]
-            
-    def __setitem__(self, key, value):
-        if key in self or key not in self.only:
-            raise KeyError(key)
-        super().__setitem__(key, value)
-
-    def __repr__(self):
-        return f'{type(self).__name__}({dict(self)})'
-
-class lazy:
-
-    __slots__ = EMPTY_SET
-
-    def __new__(cls, *args, **kw):
-        return cls.get(*args, **kw)
-
-    class get(BaseMember):
-
-        __slots__ = ('key', 'method')
-        format = '_{}'.format
-
-        def __new__(cls, key = None, /, method = None):
-            """If only argument to constructor is callable, construct and call the
-            instance. Otherwise create normally.
-            """
-            inst = object.__new__(cls)
-            inst.method = method
-            if not callable(key) or method is not None:
-                inst.key = check.inst(key, str)
-                if method is not None:
-                    check.callable(method)
-                return inst
-            inst.key = None
-            return inst(check.callable(key))
-
-        def __call__(self, method):
-            key = self.key or self.format(method.__name__)
-            @wraps(method)
-            def fget(self):
-                try:
-                    return getattr(self, key)
-                except AttributeError:
-                    pass
-                setattr(self, key, value := method(self))
-                return value
-            return fget
-
-        def sethook(self, owner, name):
-            if self.key is None:
-                self.key = self.format(name)
-            setattr(owner, name, self(self.method))
-
-    class prop(get):
-        """Return a property with the getter. NB: a setter/deleter should be
-        sure to use the correct attribute.
-        """
-
-        __slots__ = EMPTY_SET
-
-        @property
-        def propclass(self) -> type[property]:
-            return property
-
-        if TYPE_CHECKING:
-            def __new__(cls, func: Callable[[_Self], _T]) -> property[_Self, _T]: ...
-
-        def __call__(self, method: Callable[[_Self], _T]) -> property[_Self, _T]:
-            fget = super().__call__(method)
-            return self.propclass(fget, doc = method.__doc__)
+    def defer(cls, wrapped):
+        @wraps(wrapped)
+        def wrapper(*args, **kw):
+            return cls(wrapped, *args, **kw)
+        return wrapper
 
 class NoSetAttr(BaseMember):
     'Lame thing that does a lame thing.'
@@ -572,8 +491,6 @@ class NoSetAttr(BaseMember):
         func.__name__ = name
         func.__qualname__ = self.__qualname__
         setattr(owner, name, func)
-
-
 
 
 class SeqCover(Sequence):
@@ -799,3 +716,7 @@ from .hybrids import EMPTY_QSET as EMPTY_QSET
 from .hybrids import SequenceSet as SequenceSet
 from .hybrids import qset as qset
 from .hybrids import qsetf as qsetf
+
+pass
+
+from . import lazy as lazy
