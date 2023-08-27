@@ -303,7 +303,7 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
 
     def __new__(cls, clsname, bases, ns, intermediate=False, **kw):
         self: type[Rule] = super().__new__(cls, clsname, bases, ns, **kw)
-        abcs.merge_attr(self, '_defaults', mcls=cls,
+        abcs.merge_attr(self, 'defaults', mcls=cls,
             default={}, transform=MapProxy)
         abcs.merge_attr(self, 'timer_names', mcls=cls,
             default=EMPTY_QSET, transform=qsetf)

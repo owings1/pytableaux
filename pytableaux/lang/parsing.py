@@ -29,7 +29,7 @@ from typing import Any, ClassVar, Iterable, Mapping, Self
 
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
                       UnboundVariableError, check)
-from ..tools import EMPTY_MAP, EMPTY_SET, MapCover, abcs, for_defaults, lazy
+from ..tools import EMPTY_MAP, MapCover, abcs, for_defaults
 from . import BiCoords, LangCommonMeta, Marking, Notation
 from .collect import Argument, Predicates
 from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate,
@@ -38,7 +38,6 @@ from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate,
 __all__ = (
     'Parser',
     'ParseContext',
-    'ParserMeta',
     'ParseTable',
     'PolishParser',
     'StandardParser')
@@ -76,7 +75,7 @@ class Parser(metaclass=ParserMeta):
     
     Or use the :class:`Notation` enum class::
 
-        >>> from pytableaux.lang import Parser
+        >>> from pytableaux.lang import Notation
         >>> Parser(Notation.standard)
         <StandardParser:(<Notation.standard>, 'default')>
         >>> Notation.polish.Parser()
@@ -89,36 +88,35 @@ class Parser(metaclass=ParserMeta):
         >>> preds = Predicates(((0, 0, 1), (1, 0, 2)))
         >>> parser = Parser('standard', preds)
         >>> parser('Fa & Gab')
-
-    
+        <Sentence: Fa ∧ Gab>
     """
 
-    __slots__ = ('table', 'preds', 'opts')
+    __slots__ = ('table', 'predicates', 'opts')
 
     notation: ClassVar[Notation]
     "The parser notation."
 
-    _defaults: ClassVar[dict] = {}
+    defaults: ClassVar[dict] = {}
     "The default options."
 
     table: ParseTable
     "The parse table instance."
 
-    preds: Predicates
+    predicates: Predicates
     "The predicates store."
 
     opts: Mapping
     "The parser options."
 
-    def __init__(self, preds:Predicates|None=None, /, table = None, **opts):
+    def __init__(self, predicates:Predicates|None=None, table:ParseTable|str|None = None, **opts):
         if table is None:
             self.table = ParseTable.fetch(self.notation)
         elif isinstance(table, str):
             self.table = ParseTable.fetch(self.notation, table)
         else:
             self.table = check.inst(table, ParseTable)
-        self.preds = preds or EMPTY_MAP
-        self.opts = for_defaults(self._defaults, opts)
+        self.predicates = predicates or EMPTY_MAP
+        self.opts = for_defaults(self.defaults, opts)
 
     @abstract
     def __call__(self, input_: str, /) -> Sentence:
@@ -142,8 +140,7 @@ class Parser(metaclass=ParserMeta):
         """
         raise NotImplementedError
 
-
-    def argument(self, conclusion: str, premises: Iterable[str] = None, /, title: str|None = None) -> Argument:
+    def argument(self, conclusion: str, premises: Iterable[str] = None, *, title: str|None = None) -> Argument:
         """Parse the input strings and create an argument.
 
         Args:
@@ -175,25 +172,25 @@ class Parser(metaclass=ParserMeta):
     def __init_subclass__(subcls, primary = False, **kw):
         'Merge ``_defaults``, set primary.'
         super().__init_subclass__(**kw)
-        abcs.merge_attr(subcls, '_defaults', supcls=__class__)
+        abcs.merge_attr(subcls, 'defaults', supcls=__class__)
         if primary:
             subcls.notation.Parser = subcls
 
 class ParseContext:
     "Parse context."
 
-    __slots__ = 'input', 'type', 'preds', 'is_open', 'pos', 'bound'
+    __slots__ = 'input', 'type', 'predicates', 'is_open', 'pos', 'bound'
 
-    bound: set
+    bound: set[Variable]
     input: str
-    preds: Predicates
+    predicates: Predicates
     is_open: bool
     pos: int
 
-    def __init__(self, input_: str, table: ParseTable, preds: Predicates, /):
+    def __init__(self, input_: str, table: ParseTable, predicates: Predicates, /):
         self.input = input_
         self.type = table.type
-        self.preds = preds
+        self.predicates = predicates
         self.is_open = False
 
     def __enter__(self):
@@ -202,24 +199,26 @@ class ParseContext:
         self.is_open = True
         self.bound = set()
         self.pos = 0
+        self.chomp()
         return self
 
     def __exit__(self, typ, value, traceback):
-        pass
+        self.chomp()
+        self.assert_end()
 
     def current(self):
         'Return the current character, or ``None`` if after last.'
         try:
             return self.input[self.pos]
         except IndexError:
-            return None
+            pass
 
     def next(self, n: int = 1, /):
         'Get the nth character after the current, or ``None``.'
         try:
             return self.input[self.pos + n]
         except IndexError:
-            return None
+            pass
 
     def assert_current(self):
         """
@@ -234,10 +233,10 @@ class ParseContext:
             raise ParseError(f'Unexpected end of input at position {self.pos}.')
         return self.type(self.current(), None)
 
-    def assert_current_is(self, ctype, /):
+    def assert_current_is(self, ctype: Any, /):
         """
         Args:
-            ctype (str): Char type
+            ctype (Any): Char type
 
         Raises
             ParseError: if after last, unexpected type or unknown symbol.
@@ -300,27 +299,18 @@ class ParseContext:
         return f"{pfx} '{char}' at position {self.pos}"
 
 class Ctype(frozenset, Enum):
-
     pred = {Predicate, Predicate.System}
-
     base = pred | {Quantifier, Atomic, Operator}
-
     param = {Constant, Variable}
 
 class DefaultParser(Parser):
     "Parser default implementation."
 
-    __slots__ = EMPTY_SET
-
     def __call__(self, input_: str, /) -> Sentence:
         if isinstance(input_, Sentence):
             return input_
-        with ParseContext(input_, self.table, self.preds) as context:
-            context.chomp()
-            s = self._read(context)
-            context.chomp()
-            context.assert_end()
-            return s
+        with ParseContext(input_, self.table, self.predicates) as context:
+            return self._read(context)
 
     def _read(self, context: ParseContext, /) -> Sentence:
         """
@@ -360,7 +350,7 @@ class DefaultParser(Parser):
     def _read_predicated(self, context: ParseContext, /) -> Predicated:
         'Read a predicated sentence.'
         pred = self._read_predicate(context)
-        return Predicated(pred, self._read_params(context, pred.arity))
+        return pred(self._read_params(context, pred.arity))
 
     def _read_quantified(self, context: ParseContext, /) -> Quantified:
         'Read a quantified sentence.'
@@ -388,14 +378,17 @@ class DefaultParser(Parser):
         cpos = context.pos
         ctype = context.type(pchar)
         if ctype is Predicate.System:
-            pred: Predicate = self.table.value(pchar)
+            pred = Predicate(self.table.value(pchar))
             context.advance()
-            return pred
-        try:
-            return self.preds.get(self._read_coords(context))
-        except KeyError:
-            raise ParseError(
-                f"Undefined predicate symbol '{pchar}' at position {cpos}")
+        else:
+            try:
+                pred = self.predicates.get(self._read_coords(context))
+                if pred is None:
+                    raise KeyError
+            except KeyError:
+                raise ParseError(
+                    f"Undefined predicate symbol '{pchar}' at position {cpos}")
+        return pred
 
     def _read_params(self, context: ParseContext, num: int, /) -> tuple[Parameter, ...]:
         'Read the given number of parameters.'
@@ -458,41 +451,32 @@ class DefaultParser(Parser):
 class PolishParser(DefaultParser, primary=True):
     "Polish notation parser."
 
-    __slots__ = EMPTY_SET
-
     notation = Notation.polish
 
     def _read_operated(self, context: ParseContext, /) -> Operated:
-        oper: Operator = self.table.value(context.current())
+        oper = Operator(self.table.value(context.current()))
         context.advance()
-        return Operated(
-            oper,
-            tuple(self._read(context) for _ in range(oper.arity)))
+        return oper(self._read(context) for _ in range(oper.arity))
 
 class StandardParser(DefaultParser, primary=True):
     "Standard notation parser."
 
-    __slots__ = '_parens_rev_lazy',
-
     notation = Notation.standard
-    _defaults = dict(drop_parens=True)
+    defaults = dict(drop_parens=True)
 
     def __call__(self, input_: str, /) -> Sentence:
         try:
             return super().__call__(input_)
         except ParseError:
             if self.opts['drop_parens']:
-                popen, pclose = self._parens_rev
+                rev = self.table.reversed
+                popen = rev[Marking.paren_open]
+                pclose = rev[Marking.paren_close]
                 try:
                     return super().__call__(f'{popen}{input_}{pclose}')
                 except ParseError:
                     pass
             raise
-
-    @lazy.prop('_parens_rev_lazy')
-    def _parens_rev(self) -> str:
-        rev = self.table.reversed
-        return rev[Marking.paren_open, 0] + rev[Marking.paren_close, 0]
 
     def _read(self, context: ParseContext, /) -> Sentence:
         ctype = context.assert_current()
@@ -505,14 +489,14 @@ class StandardParser(DefaultParser, primary=True):
         raise ParseError(context._unexp_msg())
 
     def _read_operated(self, context: ParseContext, /) -> Operated:
-        oper: Operator = self.table.value(context.current())
+        oper = Operator(self.table.value(context.current()))
         # only unary operators can be prefix operators
         if oper.arity != 1:
             raise ParseError(
                 f"Unexpected non-prefix operator symbol '{context.current()}' "
                 f"at position {context.pos}")
         context.advance()
-        return Operated(oper, (self._read(context),))
+        return oper(self._read(context))
 
     def _read_infix_predicated(self, context: ParseContext, /) -> Predicated:
         lhp = self._read_parameter(context)
@@ -523,7 +507,7 @@ class StandardParser(DefaultParser, primary=True):
         if arity < 2:
             raise ParseError(
                 f"Unexpected infixed {arity}-ary predicate symbol at position {ppos}")
-        return Predicated(pred, (lhp, *self._read_params(context, arity - 1)))
+        return pred(lhp, *self._read_params(context, arity - 1))
 
     def _read_from_paren_open(self, context: ParseContext, /) -> Operated:
         # if we have an open parenthesis, then we demand a binary infix operator sentence.
@@ -543,7 +527,7 @@ class StandardParser(DefaultParser, primary=True):
             elif ptype is Marking.paren_open:
                 depth += 1
             elif ptype is Operator:
-                peek_oper: Operator = self.table.value(peek)
+                peek_oper = Operator(self.table.value(peek))
                 if peek_oper.arity == 2 and depth == 1:
                     oper_pos = context.pos + length
                     if oper is not None:
@@ -575,7 +559,7 @@ class StandardParser(DefaultParser, primary=True):
         context.assert_current_is(Marking.paren_close)
         # move past the close paren
         context.advance()
-        return Operated(oper, (lhs, rhs))
+        return oper(lhs, rhs)
 
 class ParseTable(MapCover[str, Any]):
     'Parser table data class.'
@@ -608,13 +592,12 @@ class ParseTable(MapCover[str, Any]):
 
         Args:
             notation: The notation
-            dialect: The dialect if any.
+            dialect: The dialect. Default is 'default'.
 
         Returns:
             The instance
         """
         return cls._instances[Notation[notation], dialect or 'default']
-
 
     reversed: Mapping
     "Reversed mapping of item to symbol."
@@ -625,7 +608,6 @@ class ParseTable(MapCover[str, Any]):
         """
         Args:
             data: The table data.
-            keypair: The key pair identifier.
         """
         self.notation = Notation[data['notation']]
         self.dialect = data.get('dialect', 'default')
@@ -635,15 +617,19 @@ class ParseTable(MapCover[str, Any]):
             for item in cls:
                 rev.setdefault(item, rev[cls, item])
         for key, defaultkey in self._keydefaults.items():
-            rev.setdefault(key, rev[defaultkey])
+            if defaultkey in rev:
+                rev.setdefault(key, rev[defaultkey])
         self.reversed = MapProxy(rev)
         super().__init__(mapping)
 
-    _keydefaults = {
-        
-    }
+    _keydefaults = MapProxy({
+        Marking.whitespace: (Marking.whitespace, 0),
+        Marking.paren_open: (Marking.paren_open, 0),
+        Marking.paren_close: (Marking.paren_close, 0),
+        (Predicate, Predicate.Existence): (Predicate.System, Predicate.Existence),
+        (Predicate, Predicate.Identity): (Predicate.System, Predicate.Identity)})
 
-    def type(self, char, default = NOARG, /):
+    def type(self, char: str, default = NOARG, /) -> Any:
         """Get the item type for the character.
 
         Args:
@@ -663,7 +649,7 @@ class ParseTable(MapCover[str, Any]):
                 raise
             return default
 
-    def value(self, char, /):
+    def value(self, char: str, /) -> Any:
         """Get the item value for the character.
 
         Args:

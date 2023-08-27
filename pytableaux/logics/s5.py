@@ -69,7 +69,7 @@ class Rules(LogicType.Rules):
         NodeType = AccessNode
         ticking = False
         marklegend = [(Marking.tableau, ('access', 'symmetric'))]
-        _defaults = dict(is_rank_optim = False)
+        defaults = dict(is_rank_optim = False)
 
         def _get_node_targets(self, node: AccessNode, branch,/):
             if self[MaxWorlds].is_exceeded(branch):

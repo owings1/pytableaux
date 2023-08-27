@@ -68,7 +68,7 @@ class ClosingRule(Rule):
     'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
 
     closure = True
-    _defaults = dict(is_rank_optim = False)
+    defaults = dict(is_rank_optim = False)
 
     @final
     def _apply(self, target: Target, /):

@@ -64,7 +64,7 @@ class Rules(LogicType.Rules):
         ticking = False
         marklegend = [(Marking.tableau, ('access', 'reflexive'))]
 
-        _defaults = dict(is_rank_optim = False)
+        defaults = dict(is_rank_optim = False)
 
         def _get_node_targets(self, node, branch, /):
             if self[MaxWorlds].is_exceeded(branch):

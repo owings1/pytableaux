@@ -49,3 +49,10 @@ class TestRegistry(Base):
         registry.import_all()
         for logic in registry.values():
             self.assertEqual(logic.Meta.name, logic.__name__.split('.')[-1].upper())
+
+    def test_get_logic_cpl_case_insensitive(self):
+        self.assertEqual(registry('cpl'), registry('CPL'))
+
+    def test_get_logic_none_bad_argument(self):
+        with self.assertRaises(TypeError):
+            registry(None)

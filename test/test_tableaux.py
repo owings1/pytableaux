@@ -31,7 +31,7 @@ class TestTableau(BaseCase):
 
     logic = 'CPL'
 
-    def test_step_returns_false_when_finished(self):
+    def test_step_returns_empty_when_finished(self):
         self.assertFalse(Tableau().finish().step())
 
     def test_repr_contains_finished(self):

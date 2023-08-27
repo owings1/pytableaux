@@ -68,7 +68,7 @@ NOGET = object()
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
 
-    _defaults = MapProxy(dict(
+    defaults = MapProxy(dict(
         is_rank_optim = True,
         nolock = False))
 
@@ -139,7 +139,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         self.state = Rule.State(0)
         super().__init__(*Rule.Events)
         self.tableau = tableau
-        self.opts = MapProxy(for_defaults(self._defaults, opts))
+        self.opts = MapProxy(for_defaults(self.defaults, opts))
         self.timers = {name: StopWatch() for name in self.timer_names}
         self.history = SeqCover(history := deque())
         self.on(Rule.Events.AFTER_APPLY, history.append)
@@ -272,7 +272,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         nodes = deque(rule.example_nodes())
         branch = tab.branch()
         branch.extend(nodes)
-        result = tab.step()
+        entry = tab.step()
         tab.finish()
         if not noassert:
             assert len(rule.history) > 0
@@ -282,7 +282,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             tableau = tab,
             branch  = branch,
             nodes   = nodes,
-            result  = result)
+            entry   = entry)
 # ----------------------------------------------
 
 def locking(method: _F) -> _F:
@@ -374,8 +374,6 @@ class RuleGroup(Sequence[Rule]):
         self._map.clear()
 
     if TYPE_CHECKING:
-        @overload
-        def get(self, ref:type[_RT]) -> _RT: ...
         @overload
         def get(self, ref:Any, default=...) -> Rule:...
 
@@ -642,7 +640,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
     flag: Tableau.Flag
     "The :class:`Tableau.Flag` value."
 
-    _defaults = MapProxy(dict(
+    defaults = MapProxy(dict(
         auto_build_trunk = True,
         is_group_optim  = True,
         is_build_models = False,
@@ -667,7 +665,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         '__getitem__',
         '__len__')
 
-    def __init__(self, logic=None, argument=None, /, **opts):
+    def __init__(self, logic=None, argument=None, **opts):
         """
         Args:
             logic: The logic name or module.
@@ -689,7 +687,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         self.__contains__ = stat.__contains__
         self.stat = stat.query
         self.history = SeqCover(history)
-        self.opts = self._defaults | opts
+        self.opts = self.defaults | opts
         self.timers = Tableau.Timers.create()
         self.rules = RulesRoot(self)
         self.open = SeqCover(opens)
@@ -814,7 +812,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         for _ in self.stepiter(): pass
         return self
 
-    def next(self) -> Optional[Tableau.StepEntry]:
+    def next(self) -> Tableau.StepEntry|None:
         """Choose the next rule step to perform. Returns the StepEntry or ``None``
         if no rule can be applied.
 
@@ -826,25 +824,21 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 if res:
                     return res
 
-    def step(self):
+    def step(self) -> Tableau.StepEntry|None:
         """Find, execute, and return the next rule application. If no rule can
         be applied, the ``finish()`` method is called, and ``None`` is returned.
-        If the tableau is already finished when this method is called, return
-        ``False``.
+        If the tableau is already finished then this is a no-op and``None`` is
+        returned.
 
         .. Internally, this calls the ``next()`` method to select the
         .. next step, and, if non-empty, applies the rule and appends the entry
         .. to the history.
 
-        Returns:
-            The history entry, or ``None`` if just finished, or ``False``
-            if previously finished.
-        
-        Raises:
-            errors.IllegalStateError: if the trunk is not built.
+        Returns (Tableau.StepEntry):
+            The history entry, or ``None``.
         """
         if self.flag.FINISHED in self.flag:
-            return False
+            return
         entry = None
         self._check_timeout()
         with self.timers.build:
@@ -860,7 +854,8 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                     self.finish()
         return entry
 
-    def stepiter(self):
+    def stepiter(self) -> Iterator[Tableau.StepEntry]:
+        """Returns an iterator that calls :meth:`step()` until ``None`` is returned."""
         while True:
             step = self.step()
             if not step:
@@ -1046,7 +1041,10 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 Tableau.StatKey.PARENT     : branch.parent})
             # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
             # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
-            nodes = deque(branch) if branch.parent is None else EMPTY_SET
+            if branch.parent is None:
+                nodes = deque(branch, maxlen=len(branch))
+            else:
+                nodes = EMPTY_SET
             # This means we need to start listening before we emit. There
             # could be the possibility of recursion.
             branch.on(branch_listeners)
@@ -1093,7 +1091,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             A (rule, target) pair, or ``None``.
         """
         is_group_optim = self.opts['is_group_optim']
-        results = deque(maxlen = len(group) if is_group_optim else 0)
+        results = deque(maxlen = len(group) * bool(is_group_optim))
         for rule in group:
             target = rule.target(branch)
             if target is not None:
@@ -1205,19 +1203,19 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         __slots__ = EMPTY_SET
         Flag = TableauMeta.Flag
         Key = TableauMeta.StatKey
-        _defaults = MapProxy({
+        defaults = MapProxy({
             Key.FLAGS       : Flag(0),
             Key.STEP_ADDED  : Flag(0),
             Key.STEP_TICKED : None})
 
         def __init__(self):
-            super().__init__(self._defaults)
+            super().__init__(self.defaults)
 
     class BranchStat(dict):
         __slots__ = EMPTY_SET
         Flag = TableauMeta.Flag
         Key = TableauMeta.StatKey
-        _defaults = MapProxy({
+        defaults = MapProxy({
             Key.FLAGS       : Flag(0),
             Key.STEP_ADDED  : Flag(0),
             Key.STEP_CLOSED : Flag(0),
@@ -1225,7 +1223,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
             Key.PARENT      : None})
 
         def __init__(self, mapping = None, /):
-            super().__init__(self._defaults)
+            super().__init__(self.defaults)
             self[self.Key.NODES] = {}
             if mapping is not None:
                 self.update(mapping)
@@ -1239,7 +1237,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 return self[self.Key.NODES].setdefault(node, Tableau.NodeStat())
 
         def view(self):
-            return {k: self[k] for k in self._defaults}
+            return {k: self[k] for k in self.defaults}
 
 
     class Stat(dict[Branch, BranchStat]):
@@ -1377,6 +1375,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
 
         @classmethod
         def _build(cls, tab: Tableau, branches: Sequence[Branch], depth=0, memo=None,/) -> Tableau.Tree:
+            StatKey = Tableau.StatKey
             tree = cls()
             if memo is None:
                 memo = dict(pos=1, depth=0, distinct_nodes=0, root=tree)
@@ -1397,7 +1396,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                     if specimen is None:
                         specimen = branch
                     nodes.add(branch[depth])
-                    if tab.flag.CLOSED in tab.stat(branch, Tableau.StatKey.FLAGS):
+                    if tab.flag.CLOSED in tab.stat(branch, StatKey.FLAGS):
                         tree.has_closed = True
                     else:
                         tree.has_open = True
@@ -1409,8 +1408,8 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 branch = specimen
                 node, = nodes
                 tree.nodes.append(node)
-                tree.ticksteps.append(tab.stat(branch, node, Tableau.StatKey.STEP_TICKED))
-                step_added = tab.stat(branch, node, Tableau.StatKey.STEP_ADDED)
+                tree.ticksteps.append(tab.stat(branch, node, StatKey.STEP_TICKED))
+                step_added = tab.stat(branch, node, StatKey.STEP_ADDED)
                 if tree.step is None or step_added < tree.step:
                     tree.step = step_added
                 depth += 1
@@ -1434,10 +1433,11 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         @classmethod
         def _build_leaf(cls, tab: Tableau, tree: Tableau.Tree, branch: Branch, memo: dict, /):
             'Finalize attributes for leaf structure.'
-            tree.closed = tab.flag.CLOSED in tab.stat(branch, Tableau.StatKey.FLAGS)
+            StatKey = Tableau.StatKey
+            tree.closed = tab.flag.CLOSED in tab.stat(branch, StatKey.FLAGS)
             tree.open = not tree.closed
             if tree.closed:
-                tree.closed_step = tab.stat(branch, Tableau.StatKey.STEP_CLOSED)
+                tree.closed_step = tab.stat(branch, StatKey.STEP_CLOSED)
                 tree.has_closed = True
             else:
                 tree.has_open = True

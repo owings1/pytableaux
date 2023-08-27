@@ -64,7 +64,7 @@ class TabWriterMeta(abcs.AbcMeta):
                 raise
         return reg[fmt](*args, **kw)
 
-class TabWriter(metaclass = TabWriterMeta):
+class TabWriter(metaclass=TabWriterMeta):
     """Tableau writer base class.
 
     Constructing a ``TabWriter``.
