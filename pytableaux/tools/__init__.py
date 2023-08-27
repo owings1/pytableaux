@@ -52,7 +52,6 @@ __all__ = (
     'isattrstr',
     'isdund',
     'isint',
-    'key0',
     'lazy',
     'MapCover',
     'maxceil',
@@ -152,10 +151,6 @@ def group(*items):
         The tuple of arguments.
     """
     return items
-
-def key0(obj):
-    'Get key/subscript ``0``.'
-    return obj[0]
 
 def dund(name: str) -> str:
     "Convert name to dunder format."
