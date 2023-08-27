@@ -402,7 +402,7 @@ class DefaultParser(Parser):
         'Read a quantified sentence.'
         q = context.value(context.current())
         context.advance()
-        v = self._read_variable(context)
+        v = Variable(self._read_coords(context))
         if v in context.bound:
             vchr = self.table.reversed[Variable, v.index]
             raise BoundVariableError(
@@ -438,22 +438,14 @@ class DefaultParser(Parser):
         'Read a single parameter (constant or variable)'
         ctype = context.assert_current_in(Ctype.param)
         if ctype is Constant:
-            return self._read_constant(context)
+            return Constant(self._read_coords(context))
         cpos = context.pos
-        v = self._read_variable(context)
+        v = Variable(self._read_coords(context))
         if v not in context.bound:
             vchr = self.table.reversed[Variable, v.index]
             raise UnboundVariableError(
                 f"Unbound variable '{vchr}_{v.subscript}' at position {cpos}")
         return v
-
-    def _read_variable(self, context: ParseContext, /) -> Variable:
-        'Read a variable.'
-        return Variable(self._read_coords(context))
-
-    def _read_constant(self, context: ParseContext, /) -> Constant:
-        'Read a constant.'
-        return Constant(self._read_coords(context))
 
     def _read_subscript(self, context: ParseContext, /) -> int:
         """Read the subscript starting from the current character. If the current
