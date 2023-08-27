@@ -313,9 +313,7 @@ class StringTable(MapCover[Any, str], metaclass=LangCommonMeta):
             The instance
         """
         format = data['format']
-        notn = Notation[data['notation']]
-        dialect = data.get('dialect', format)
-        key = format, notn, dialect
+        key = format, Notation[data['notation']], data.get('dialect', format)
         if key in cls._instances:
             raise Emsg.DuplicateKey(key)
         self = cls._instances.setdefault(key, cls(data))
@@ -451,6 +449,14 @@ def init():
     LexicalAbc.__str__ = tostr_item
     Predicate.__str__ = tostr_pred
     Lexical.__repr__ = repr_lex
+
+    from .collect import ArgumentMeta
+
+    ArgumentMeta._keystr_lw = LexWriter(
+        notation=Notation.polish,
+        format='text',
+        dialect='ascii')
+    ArgumentMeta._keystr_pclass = PolishParser
 
     from ..errors import Emsg
     from . import lex

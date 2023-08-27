@@ -29,9 +29,9 @@ from typing import Any, ClassVar, Iterable, Mapping, Self
 
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
                       UnboundVariableError, check)
-from ..tools import EMPTY_MAP, MapCover, abcs, for_defaults
+from ..tools import MapCover, abcs, for_defaults
 from . import BiCoords, LangCommonMeta, Marking, Notation
-from .collect import Argument, Predicates
+from .collect import Argument, Predicates, PredicatesBase
 from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate,
                   Predicated, Quantified, Quantifier, Sentence, Variable)
 
@@ -102,20 +102,25 @@ class Parser(metaclass=ParserMeta):
     table: ParseTable
     "The parse table instance."
 
-    predicates: Predicates
+    predicates: PredicatesBase
     "The predicates store."
 
     opts: Mapping
     "The parser options."
 
-    def __init__(self, predicates:Predicates|None=None, table:ParseTable|str|None = None, **opts):
+    def __init__(self, predicates:PredicatesBase|None=None, table:ParseTable|str|None = None, **opts):
         if table is None:
             self.table = ParseTable.fetch(self.notation)
         elif isinstance(table, str):
             self.table = ParseTable.fetch(self.notation, table)
         else:
             self.table = check.inst(table, ParseTable)
-        self.predicates = predicates or EMPTY_MAP
+        if predicates is None:
+            predicates = Predicates.EMPTY
+        else:
+            if not isinstance(predicates, PredicatesBase):
+                predicates = Predicates(predicates)
+        self.predicates = predicates
         self.opts = for_defaults(self.defaults, opts)
 
     @abstract
@@ -179,17 +184,24 @@ class Parser(metaclass=ParserMeta):
 class ParseContext:
     "Parse context."
 
-    __slots__ = 'input', 'type', 'predicates', 'is_open', 'pos', 'bound'
+    __slots__ = (
+        'bound',
+        'input',
+        'is_open',
+        'pos',
+        'predicates',
+        'table')
 
     bound: set[Variable]
     input: str
-    predicates: Predicates
     is_open: bool
     pos: int
+    predicates: PredicatesBase
+    table: ParseTable
 
-    def __init__(self, input_: str, table: ParseTable, predicates: Predicates, /):
+    def __init__(self, input_: str, table: ParseTable, predicates: PredicatesBase, /):
         self.input = input_
-        self.type = table.type
+        self.table = table
         self.predicates = predicates
         self.is_open = False
 
@@ -289,6 +301,40 @@ class ParseContext:
             pass
         return self
 
+    def type(self, char: str, default = NOARG, /) -> Any:
+        """Get the item type for the character.
+
+        Args:
+            char: The character symbol.
+            default: The value to return if missing.
+
+        Returns:
+            The symbol type, or ``default`` if provided.
+
+        Raises:
+            KeyError: if symbol not in table and no default passed.
+        """
+        try:
+            return self.table[char][0]
+        except KeyError:
+            if default is NOARG:
+                raise
+            return default
+
+    def value(self, char: str, /) -> Any:
+        """Get the item value for the character.
+
+        Args:
+            char: The character symbol.
+
+        Returns:
+            Table item value, e.g. ``1`` or ``Operator.Negation``.
+
+        Raises:
+            KeyError: if symbol not in table.
+        """
+        return self.table[char][1]
+
     def _unexp_msg(self) -> str:
         char = self.input[self.pos]
         ctype = self.type(char, None)
@@ -354,14 +400,14 @@ class DefaultParser(Parser):
 
     def _read_quantified(self, context: ParseContext, /) -> Quantified:
         'Read a quantified sentence.'
-        q = self.table.value(context.current())
+        q = context.value(context.current())
         context.advance()
         v = self._read_variable(context)
         if v in context.bound:
             vchr = self.table.reversed[Variable, v.index]
             raise BoundVariableError(
-                "Cannot rebind variable '{0}' ({1}) at position {2}.".format(
-                    vchr, v.subscript, context.pos))
+                f"Cannot rebind variable '{vchr}' ({v.subscript}) "
+                f"at position {context.pos}.")
         context.bound.add(v)
         s = self._read(context)
         if v not in s.variables:
@@ -375,20 +421,14 @@ class DefaultParser(Parser):
     def _read_predicate(self, context: ParseContext, /) -> Predicate:
         'Read a predicate.'
         pchar = context.current()
-        cpos = context.pos
-        ctype = context.type(pchar)
-        if ctype is Predicate.System:
-            pred = Predicate(self.table.value(pchar))
+        if context.type(pchar) is Predicate.System:
             context.advance()
-        else:
-            try:
-                pred = self.predicates.get(self._read_coords(context))
-                if pred is None:
-                    raise KeyError
-            except KeyError:
-                raise ParseError(
-                    f"Undefined predicate symbol '{pchar}' at position {cpos}")
-        return pred
+            return Predicate(context.value(pchar))
+        try:
+            return self.predicates.get(self._read_coords(context))
+        except KeyError:
+            raise ParseError(
+                f"Undefined predicate symbol '{pchar}' at position {context.pos}")
 
     def _read_params(self, context: ParseContext, num: int, /) -> tuple[Parameter, ...]:
         'Read the given number of parameters.'
@@ -424,7 +464,9 @@ class DefaultParser(Parser):
         """
         digits = deque()
         try:
-            while (cur := context.current()) is not None and context.type(cur) is Marking.digit:
+            while (cur := context.current()) is not None:
+                if context.type(cur) is not Marking.digit:
+                    break
                 digits.append(cur)
                 context.advance()
         except KeyError:
@@ -442,7 +484,7 @@ class DefaultParser(Parser):
         atomics, variables, constants, etc. Note, this will not work for
         system predicates, because they have string keys in the symbols set.
         """
-        index = self.table.value(context.current())
+        index = context.value(context.current())
         context.advance()
         return BiCoords(index, self._read_subscript(context))
 
@@ -454,7 +496,7 @@ class PolishParser(DefaultParser, primary=True):
     notation = Notation.polish
 
     def _read_operated(self, context: ParseContext, /) -> Operated:
-        oper = Operator(self.table.value(context.current()))
+        oper = Operator(context.value(context.current()))
         context.advance()
         return oper(self._read(context) for _ in range(oper.arity))
 
@@ -489,7 +531,7 @@ class StandardParser(DefaultParser, primary=True):
         raise ParseError(context._unexp_msg())
 
     def _read_operated(self, context: ParseContext, /) -> Operated:
-        oper = Operator(self.table.value(context.current()))
+        oper = Operator(context.value(context.current()))
         # only unary operators can be prefix operators
         if oper.arity != 1:
             raise ParseError(
@@ -527,7 +569,7 @@ class StandardParser(DefaultParser, primary=True):
             elif ptype is Marking.paren_open:
                 depth += 1
             elif ptype is Operator:
-                peek_oper = Operator(self.table.value(peek))
+                peek_oper = Operator(context.value(peek))
                 if peek_oper.arity == 2 and depth == 1:
                     oper_pos = context.pos + length
                     if oper is not None:
@@ -629,39 +671,6 @@ class ParseTable(MapCover[str, Any]):
         (Predicate, Predicate.Existence): (Predicate.System, Predicate.Existence),
         (Predicate, Predicate.Identity): (Predicate.System, Predicate.Identity)})
 
-    def type(self, char: str, default = NOARG, /) -> Any:
-        """Get the item type for the character.
-
-        Args:
-            char: The character symbol.
-            default: The value to return if missing.
-
-        Returns:
-            The symbol type, or ``default`` if provided.
-
-        Raises:
-            KeyError: if symbol not in table and no default passed.
-        """
-        try:
-            return self[char][0]
-        except KeyError:
-            if default is NOARG:
-                raise
-            return default
-
-    def value(self, char: str, /) -> Any:
-        """Get the item value for the character.
-
-        Args:
-            char: The character symbol.
-
-        Returns:
-            Table item value, e.g. ``1`` or ``Operator.Negation``.
-
-        Raises:
-            KeyError: if symbol not in table.
-        """
-        return self[char][1]
 
     def __setattr__(self, name, value, /, *, sa = object.__setattr__):
         if getattr(self, name, NOARG) is not NOARG:

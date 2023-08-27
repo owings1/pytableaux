@@ -23,17 +23,19 @@ Language collection classes.
 from __future__ import annotations
 
 import operator as opr
+from collections import deque
 from collections.abc import Sequence
 from itertools import repeat, starmap
+from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Iterable
 
 from .. import tools
 from ..errors import Emsg, check
-from ..tools import abcs, group, lazy, membr, qset, wraps
-from . import LangCommonMeta, Predicate, Sentence
+from ..tools import SequenceSet, abcs, group, lazy, membr, qset, qsetf, wraps
+from . import LangCommonMeta, Lexical, Predicate, Sentence
 
 if TYPE_CHECKING:
-    from . import PolishLexWriter, PolishParser
+    from . import LexWriter, Parser
 
 __all__ = (
     'Argument',
@@ -49,36 +51,9 @@ class ArgumentMeta(LangCommonMeta):
             return args[0]
         return super().__call__(*args, **kw)
 
-    _keystr_lw: PolishLexWriter
-    _keystr_pclass: type[PolishParser]
+    _keystr_lw: LexWriter
+    _keystr_pclass: type[Parser]
 
-    def make_keystr(self, inst: Argument) -> str:
-        try:
-            lw = self._keystr_lw
-        except AttributeError:
-            from .writing import PolishLexWriter
-            type.__setattr__(self, '_keystr_lw', PolishLexWriter(format='text', dialect='ascii'))
-            lw = self._keystr_lw
-        preds = inst.predicates() - Predicate.System
-        preds.sort()
-        specstrs = ('.'.join(map(str, p.spec)) for p in preds)
-        return '|'.join(filter(None, (':'.join(map(lw, inst)), ','.join(specstrs))))
-
-    def from_keystr(self, keystr: str) -> Argument:
-        try:
-            pclass = self._keystr_pclass
-        except AttributeError:
-            from .parsing import PolishParser
-            type.__setattr__(self, '_keystr_pclass', PolishParser)
-            pclass = self._keystr_pclass
-        preds = Predicates()
-        parts = keystr.split('|')
-        conc, *prems = parts.pop(0).split(':')
-        if parts:
-            specsstr, = parts
-            for specstr in specsstr.split(','):
-                preds.add(tuple(map(int, specstr.split('.'))))
-        return pclass(preds).argument(conc, prems)
 
 class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=ArgumentMeta):
     """Argument class.
@@ -143,16 +118,15 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
     def ordr():
 
         def cmpgen(a: Argument, b: Argument, /,):
-            if a is b:
-                yield 0
-                return
             yield len(a) - len(b)
-            yield from starmap(Sentence.orderitems, zip(a, b))
+            yield from starmap(Lexical.orderitems, zip(a, b))
 
         @membr.defer
         def wrapper(member: membr):
             @wraps(oper := getattr(opr, member.name))
             def wrapped(self: Argument, other: Any, /):
+                if self is other:
+                    return oper(0, 0)
                 if not isinstance(other, Argument):
                     return NotImplemented
                 for cmp in cmpgen(self, other):
@@ -182,8 +156,28 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
             conclusion = self.conclusion,
             premises = self.premises)
 
-    def keystr(self):
-        return __class__.make_keystr(self)
+    def keystr(self) -> str:
+        lw = __class__._keystr_lw
+        preds = self.predicates(sort=True) - Predicate.System
+        return '|'.join(
+            filter(None, (
+                ':'.join(map(lw, self)),
+                ','.join(
+                    '.'.join(map(str, p.spec)) for p in preds))))
+
+    @staticmethod
+    def from_keystr(keystr: str, /) -> Argument:
+        pclass = __class__._keystr_pclass
+        parts = deque(keystr.split('|'))
+        conc, *prems = parts.popleft().split(':')
+        if parts:
+            specsstr, = parts
+            preds = Predicates(
+                tuple(map(int, specstr.split('.')))
+                for specstr in specsstr.split(','))
+        else:
+            preds = Predicates.EMPTY
+        return pclass(predicates=preds).argument(conc, prems)
 
     def __repr__(self):
         if self.title:
@@ -200,33 +194,13 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
     __delattr__ = Emsg.ReadOnly.razr
 
 
-class Predicates(qset[Predicate], metaclass=LangCommonMeta, hooks={qset: dict(cast=Predicate)}):
-    """Predicate store. A sequenced set with a multi-keyed lookup index.
-
-    Predicates with the same symbol coordinates (index, subscript) may
-    have different arities. This class ensures that conflicting predicates are not
-    in the same set, which is necessary, for example, for determinate parsing.
-    """
+class PredicatesBase(SequenceSet[Predicate], metaclass=LangCommonMeta):
 
     _lookup: dict[Any, Predicate]
-    __slots__ = group('_lookup')
 
-    def __init__(self, values=None, /, *, sort=False, key=None, reverse=False):
-        """Create a new store from an iterable of predicate objects
-        or specs
-        
-        Args:
-            values: Iterable of predicates or specs.
-            sort: Whether to sort. Default is ``False``.
-            key: Optional sort key function.
-            reverse: Whether to reverse sort.
-        """
-        self._lookup = {}
-        super().__init__(values)
-        if sort:
-            self.sort(key=key, reverse=reverse)
+    EMPTY: Predicates.Frozen
 
-    def get(self, ref, default = NOARG, /) -> Predicate:
+    def get(self, ref, /, default = NOARG) -> Predicate:
         """Get a predicate by any reference. Also searches system predicates.
 
         Args:
@@ -249,6 +223,34 @@ class Predicates(qset[Predicate], metaclass=LangCommonMeta, hooks={qset: dict(ca
             if default is NOARG:
                 raise
             return default
+
+    def __contains__(self, ref, /):
+        return ref in self._lookup
+
+class Predicates(PredicatesBase, qset[Predicate], hooks={qset: dict(cast=Predicate)}):
+    """Predicate store. A sequenced set with a multi-keyed lookup index.
+
+    Predicates with the same symbol coordinates (index, subscript) may
+    have different arities. This class ensures that conflicting predicates are not
+    in the same set, which is necessary, for example, for determinate parsing.
+    """
+
+    __slots__ = group('_lookup')
+
+    def __init__(self, values=None, /, *, sort=False, key=None, reverse=False):
+        """Create a new store from an iterable of predicate objects
+        or specs
+        
+        Args:
+            values: Iterable of predicates or specs.
+            sort: Whether to sort. Default is ``False``.
+            key: Optional sort key function.
+            reverse: Whether to reverse sort.
+        """
+        self._lookup = {}
+        super().__init__(values)
+        if sort:
+            self.sort(key=key, reverse=reverse)
 
     @abcs.abcf.temp
     @qset.hook('check')
@@ -289,16 +291,28 @@ class Predicates(qset[Predicate], metaclass=LangCommonMeta, hooks={qset: dict(ca
             update(zip(pred.refs, repeat(pred)))
             lookup[pred] = pred
 
-    #******  Override qset
-
     def clear(self):
         super().clear()
         self._lookup.clear()
-
-    def __contains__(self, ref, /):
-        return ref in self._lookup
 
     def copy(self):
         inst = super().copy()
         inst._lookup = self._lookup.copy()
         return inst
+
+    def frozen(self):
+        return self.Frozen(self)
+
+    class Frozen(PredicatesBase, qsetf[Predicate]):
+        "Frozen :class:`Predicates` implentation."
+
+        __slots__ = group('_lookup')
+
+        def __init__(self, *args, **kw):
+            v = Predicates(*args, **kw)
+            super().__init__(v)
+            self._lookup = MapProxy(v._lookup)
+
+    wraps(__init__).write(Frozen.__init__)
+
+PredicatesBase.EMPTY = Predicates.Frozen()
