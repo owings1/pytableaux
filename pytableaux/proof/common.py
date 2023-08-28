@@ -603,7 +603,7 @@ class Target(dictattr):
         return list(self._names())
 
     def __repr__(self):
-        props = dict(map(self.__getitem__, self._names()))
+        props = {name: self[name] for name in self._names()}
         return f'<{type(self).__name__} {props}>'
 
     def _names(self):

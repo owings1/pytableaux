@@ -238,7 +238,10 @@ class LogicOptionMixin(RoleDirectiveMixin):
 
     @property
     def logic(self) -> logics.LogicType:
-        return self.options.get('logic', self.current_logic)
+        try:
+            return self.options['logic']
+        except KeyError:
+            return self.current_logic
 
     @logic.setter
     def logic(self, value):

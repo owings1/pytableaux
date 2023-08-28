@@ -42,7 +42,7 @@ from . import ConfKey
 if TYPE_CHECKING:
 
     class BaseTranslator(sphinx.writers.html5.HTML5Translator, docutils.writers._html_base.HTMLTranslator, nodes.NodeVisitor):
-        # body: list[str]
+        body: list[str]
         document: sphinx.addnodes.document
 
 __all__ = (

@@ -9,18 +9,19 @@
 from __future__ import annotations
 
 import os
-import sys
 
 def _():
-    thisdir = os.path.abspath(os.path.dirname(__file__))
-    rootdir = os.path.abspath(f'{thisdir}/..')
+    from os.path import abspath, dirname
+    import sys
+    thisdir = abspath(dirname(__file__))
+    rootdir = abspath(f'{thisdir}/..')
 
     for i, addpath in enumerate([rootdir, thisdir]):
         if addpath not in sys.path:
             sys.path.insert(i, addpath)
 
 _()
-
+del(_)
 
 from sphinx.application import Sphinx
 
@@ -201,7 +202,7 @@ intersphinx_mapping = dict(
     python = (
         'https://docs.python.org/3',
         # local cache of https://docs.python.org/3/objects.inv
-        os.environ.get('ISPX_PY3_OBJINV')))
+        os.getenv('ISPX_PY3_OBJINV')))
 
 
 

@@ -223,7 +223,6 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         'build-trunk' : {'build-trunk', 'prolog'},
         'argument'    : {'argument', 'conclusion', 'premises', 'pnotn', 'preds'},
         ... : {'format', 'classes', 'wnotn', 'logic'}}
-    _trunk_argument = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
 
     mode: str
     writer: TabWriter
@@ -359,7 +358,8 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         return Tableau(self.logic, arg)
 
     def gettab_trunk(self):
-        tab = Tableau(self.logic, self._trunk_argument, auto_build_trunk=False)
+        arg = Argument(Atomic(1, 0), map(Atomic, ((0, 1), (0, 2))))
+        tab = Tableau(self.logic, arg, auto_build_trunk=False)
         tab.rules.clear()
         tab.rules.append(self.TrunkRuleStub)
         tab.build_trunk()
@@ -528,6 +528,8 @@ class RuleGroupDirective(TableauDirective):
     include: set[str]
     groupid: str
 
+    ruleinfo_cache = {}
+
     def setup(self):
         """
         only options relevant for super are rule, title, doc
@@ -549,7 +551,10 @@ class RuleGroupDirective(TableauDirective):
         self.exclude = set(opts.get('exclude', EMPTY_SET))
         self.include = set(opts.get('include', EMPTY_SET))
         self.resolve_special_names()
-        ruleinfo = rules_sorted(self.logic)
+        try:
+            ruleinfo = self.ruleinfo_cache[self.logic]
+        except KeyError:
+            ruleinfo = self.ruleinfo_cache.setdefault(self.logic, rules_sorted(self.logic))
         group: list[type[Rule]] = ruleinfo['legend_groups'][opts['group']]
         subgroups = ruleinfo['legend_subgroups'].get(opts['group'])
         if not subgroups or 'flat' in opts or opts['group'] == 'ungrouped':
@@ -637,7 +642,7 @@ class RuleGroupDirective(TableauDirective):
             return
         if name.startswith('non_'):
             base = set(Operator).difference(base)
-        return (obj.name for obj in base)
+        yield from (obj.name for obj in base)
 
     def _check_options_mode(self) -> Literal['rule']:
         if 'group' not in self.options:
@@ -719,7 +724,7 @@ class TruthTables(BaseDirective, RenderMixin, LogicOptionMixin):
         base = self.logic.Meta.native_operators
         if name.startswith('non_'):
             base = set(Operator).difference(base)
-        return (obj.name for obj in base)
+        yield from (obj.name for obj in base)
 
 
 class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
@@ -734,17 +739,13 @@ class CSVTable(sphinx.directives.patches.CSVTable, BaseDirective):
     option_spec.pop('class', None)
 
     def run(self):
-
         classes = self.set_classes()
         opts = self.options
-
-        if (GenCls := opts.get('generator')) is None:
+        if (generator := opts.get('generator')) is None:
             self.generator = None
         else:
-            self.generator = GenCls(self, opts.get('generator-args'))
-
+            self.generator = generator(self, opts.get('generator-args'))
         res = super().run()
-
         res[0]['classes'].extend(classes)
         return res
 

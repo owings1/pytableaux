@@ -42,6 +42,7 @@ __all__ = (
     'SequenceSet')
 
 _T = TypeVar('_T')
+_T1 = TypeVar('_T1')
 
 class SequenceSet(Sequence[_T], Set[_T], metaclass=abcs.AbcMeta):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
@@ -70,7 +71,23 @@ class SequenceSet(Sequence[_T], Set[_T], metaclass=abcs.AbcMeta):
     def _from_iterable(cls, it, /):
         return cls(it)
 
-    def __add__(self, other):
+    if TYPE_CHECKING:
+        @overload
+        def __ior__(self, other: Any) -> Self: ...
+        @overload
+        def __or__(self, other: Any) -> Self: ...
+        @overload
+        def __iand__(self, other: Any) -> Self: ...
+        @overload
+        def __and__(self, other: Any) -> Self: ...
+        @overload
+        def __iadd__(self, other: Any) -> Self: ...
+        @overload
+        def __radd__(self, other: list[_T1]) -> list[_T1]: ...
+        @overload
+        def __radd__(self, other: set[_T1]) -> set[_T1]: ...
+
+    def __add__(self, other) -> Self:
         if isinstance(other, (Sequence, Set)):
             return self._from_iterable(chain(self, other))
         return NotImplemented
