@@ -21,21 +21,19 @@ pytableaux.tools
 """
 from __future__ import annotations
 
-import builtins
 import functools
-import itertools
 import keyword
 import re
 import sys
 from abc import abstractmethod
 from collections import defaultdict
-from collections.abc import Mapping, Sequence, Set
+from collections.abc import Mapping, MutableMapping, Sequence, Set
 from enum import Enum
 from operator import gt, lt
 from types import FunctionType
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Mapping,
-                    MutableMapping, Self, TypeVar)
+from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Self,
+                    TypeVar)
 
 __all__ = (
     'absindex',
@@ -52,6 +50,7 @@ __all__ = (
     'isattrstr',
     'isdund',
     'isint',
+    'ItemMapEnum',
     'lazy',
     'MapCover',
     'maxceil',
@@ -137,6 +136,9 @@ def getitem(obj, key, default = NOARG, /):
         return default
 
 def select_fget(obj):
+    """Return :func:`getitem()` if the object has a callable `__getitem__`
+    method, else return :func:`getattr()`.
+    """
     if callable(getattr(obj, '__getitem__', None)):
         return getitem
     return getattr
@@ -175,11 +177,28 @@ def sbool(arg: str, /) -> bool:
     "Cast string to boolean, leans toward ``False``."
     return bool(re_boolyes.match(arg))
 
-def minfloor(floor, it, default=None):
+def minfloor(floor: _T, it: Iterable[_T], default=None) -> _T:
+    """Return the minimum value of ``it``, stopping when a value less than or
+    equal to ``floor`` is reached.
+    """
     return _limit_best(lt, floor, it, default, 'minfloor')
 
-def maxceil(ceil, it, default=None):
+def maxceil(ceil: _T, it: Iterable[_T], default=None) -> _T:
+    """Return the maximum value of ``it``, stopping when a value greater than
+    or equal to ``ceil`` is reached.
+    """
     return _limit_best(gt, ceil, it, default, 'maxceil')
+
+def limit_best(better: Callable[[_T, _T], bool], limit: _T, it: Iterable[_T], default=None) -> _T:
+    """Generic form for :func:`minfloor()` and :func:`maxceil()`.
+
+    Args:
+        better: A pairwise comparison function, e.g. :func:`operator.lt`
+        limit: The limit, e.g. floor or ceil.
+        it: The iterable.
+        default: A default value for an empty iterable.
+    """
+    return _limit_best(better, limit, it, default, 'limit_best')
 
 def _limit_best(better, limit, it, default, _name, /):
     it = iter(it)
@@ -198,13 +217,41 @@ def _limit_best(better, limit, it, default, _name, /):
             best = val
     return best
 
-def substitute(coll: _T, old_value, new_value) -> _T:
-    return type(coll)(new_value if x == old_value else x for x in coll)
+def substitute(collection: _T, old, new) -> _T:
+    """Return a new instance of the collection type with ``new`` substituted
+    for ``old``.
+    """
+    return type(collection)(new if x == old else x for x in collection)
 
 def for_defaults(defaults: Mapping[_KT, _VT], override: Mapping, /) -> dict[_KT, _VT]:
+    """Return a dict with keys from ``defaults``, with values from ``override``,
+    or ``defaults`` if missing.
+    """
     if not override:
         return dict(defaults)
     return {key: override.get(key, defval) for key, defval in defaults.items()}
+
+def absindex(seqlen: int, index: int, /, strict = True) -> int:
+    'Normalize to positive/absolute index.'
+    if index < 0:
+        index = seqlen + index
+    if strict and (index >= seqlen or index < 0):
+        raise IndexError(f'Index out of range: {index}')
+    return index
+
+def slicerange(seqlen: int, slice_: slice, values, /, strict = True) -> range:
+    'Get a range of indexes from a slice and new values, and perform checks.'
+    range_ = range(*slice_.indices(seqlen))
+    if len(range_) != len(values):
+        if strict:
+            raise ValueError(
+                f'Attempt to assign sequence of size {len(values)} '
+                f'to slice of size {len(range_)}')
+        if abs(slice_.step or 1) != 1:
+            raise ValueError(
+                f'Attempt to assign sequence of size {len(values)} '
+                f'to extended slice of size {len(range_)}')
+    return range_
 
 def _prevmodule(thisname = __name__, /):
     f = sys._getframe()
@@ -288,40 +335,6 @@ class wraps(dict):
         return f'{type(self).__name__}({dict(self)})'
 
 
-pass
-
-
-def closure(func: Callable[..., _T]) -> _T:
-    """Closure decorator calls the argument and returns its return value.
-    If the return value is a function, updates its wrapper.
-    """
-    ret = func()
-    if type(ret) is FunctionType:
-        # return wraps
-        wraps(func).write(ret)
-        # functools.wraps
-        # functools.update_wrapper(ret, func)
-    return ret
-
-def absindex(seqlen: int, index: int, /, strict = True) -> int:
-    'Normalize to positive/absolute index.'
-    if index < 0:
-        index = seqlen + index
-    if strict and (index >= seqlen or index < 0):
-        raise Emsg.IndexOutOfRange(index)
-    return index
-
-def slicerange(seqlen: int, slice_: slice, values, /, strict = True) -> range:
-    'Get a range of indexes from a slice and new values, and perform checks.'
-    range_ = range(*slice_.indices(seqlen))
-    if len(range_) != len(values):
-        if strict:
-            raise Emsg.MismatchSliceSize(values, range_)
-        if abs(slice_.step or 1) != 1:
-            raise Emsg.MismatchExtSliceSize(values, range_)
-    return range_
-
-
 class BaseMember:
 
     __slots__ = ('__name__', '__qualname__')
@@ -345,6 +358,19 @@ class BaseMember:
         if not hasattr(self, '__qualname__') or not callable(self):
             return object.__repr__(self)
         return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
+
+pass
+
+def closure(func: Callable[..., _T]) -> _T:
+    """Closure decorator calls the argument and returns its return value.
+    If the return value is a function, updates its wrapper.
+    """
+    ret = func()
+    if type(ret) is FunctionType:
+        wraps(func).write(ret)
+    return ret
+
+pass
 
 @closure
 def dmerged():
@@ -493,6 +519,40 @@ class NoSetAttr(BaseMember):
         setattr(owner, name, func)
 
 
+class MapCover(Mapping[_KT, _VT]):
+    'Mapping reference.'
+
+    __slots__ = ('__getitem__', '_cov_mapping')
+    _cov_mapping: Mapping
+
+    def __init__(self, mapping: Mapping, /):
+        if type(mapping) is not MapProxy:
+            mapping = MapProxy(mapping)
+        self._cov_mapping = mapping
+        self.__getitem__ = mapping.__getitem__
+
+    def __reversed__(self):
+        return reversed(self._cov_mapping)
+
+    def __len__(self):
+        return len(self._cov_mapping)
+
+    def __iter__(self):
+        return iter(self._cov_mapping)
+
+    def __repr__(self):
+        return repr(self._asdict())
+
+    def __or__(self, other):
+        return dict(self) | other
+
+    def __ror__(self, other):
+        return other | dict(self)
+
+    def _asdict(self):
+        'Compatibility for JSON serialization.'
+        return dict(self)
+
 class SeqCover(Sequence):
     'Sequence cover.'
 
@@ -548,76 +608,38 @@ class KeySetAttr:
         if self._keyattr_ok(name) and name in self:
             super().__delitem__(name)
 
-    def update(self, it = None, /, **kw):
-        if it is None:
-            it = EMPTY_SET
-        elif isinstance(it, Mapping):
-            it = it.items()
-        if len(kw):
-            it = itertools.chain(it, kw.items())
-        for _ in itertools.starmap(self.__setitem__, it): pass
-
     @classmethod
     def _keyattr_ok(cls, name: str) -> bool:
         'Return whether it is ok to set the attribute name.'
         return not hasattr(cls, name)
 
-class MapCover(Mapping[_KT, _VT]):
-    'Mapping reference.'
-
-    __slots__ = ('__getitem__', '_cov_mapping')
-    _cov_mapping: Mapping
-
-    def __init__(self, mapping: Mapping, /):
-        if type(mapping) is not MapProxy:
-            mapping = MapProxy(mapping)
-        self._cov_mapping = mapping
-        self.__getitem__ = mapping.__getitem__
-
-    def __reversed__(self):
-        return reversed(self._cov_mapping)
-
-    def __len__(self):
-        return len(self._cov_mapping)
-
-    def __iter__(self):
-        return iter(self._cov_mapping)
-
-    def __repr__(self):
-        return repr(self._asdict())
-
-    def __or__(self, other):
-        return dict(self) | other
-
-    def __ror__(self, other):
-        return other | dict(self)
-
-    def _asdict(self):
-        'Compatibility for JSON serialization.'
-        return dict(self)
-
-class dictattr(KeySetAttr, dict):
+class dictattr(KeySetAttr, dict[_KT, _VT]):
     "Dict attr base class."
 
     __slots__ = EMPTY_SET
 
-    def __init__(self, it = None, /, **kw):
-        if it is not None:
-            self.update(it)
-        if len(kw):
-            self.update(kw)
+    def __init__(self, *args, **kw):
+        self.update(*args, **kw)
 
-class dictns(dictattr):
+    pop = MutableMapping.pop
+    popitem = MutableMapping.popitem
+    setdefault = MutableMapping.setdefault
+    update = MutableMapping.update
+
+class dictns(dictattr[_KT, _VT]):
     "Dict attr namespace with __dict__ slot and liberal key approval."
 
     @classmethod
     def _keyattr_ok(cls, name):
-        return len(name) and name[0] != '_'
+        return not name.startswith('_') and not hasattr(cls, name)
 
 class TransMmap(MutableMapping[_KT, _VT], MapCover[_KT, _VT]):
-    'Mutable mapping that with key/value translators'
+    'Mutable mapping with key/value translators'
 
-    __slots__ = ('__setitem__', '__delitem__')
+    __slots__ = (
+        '__delitem__',
+        '__getitem__',
+        '__setitem__')
 
     kget = kset = vget = vset = staticmethod(thru)
 
@@ -628,7 +650,8 @@ class TransMmap(MutableMapping[_KT, _VT], MapCover[_KT, _VT]):
         self.__delitem__ = lambda key: mapping.__delitem__(self.kset(key))
 
 
-class PathedDict(dict):
+class PathedDict(dict[str, _VT]):
+    "A nested dict that supports key path expressions like 'a:b:c'."
 
     separator: str = ':'
     default = dict
@@ -662,8 +685,22 @@ class PathedDict(dict):
                 obj = obj.setdefault(key, self.default())
         obj[last] = value
 
+    def __delitem__(self, key):
+        try:
+            super().__delitem__(key)
+        except KeyError:
+            if not isinstance(key, str) or self.separator not in key:
+                raise
+        path = key.split(self.separator)
+        last = path.pop()
+        obj = self
+        for key in path:
+            obj = obj[key]
+        del obj[last]
+
     get = MutableMapping.get
     pop = MutableMapping.pop
+    popitem = MutableMapping.popitem
     setdefault = MutableMapping.setdefault
     update = MutableMapping.update
 
@@ -687,19 +724,66 @@ class ForObjectBuilder(Generic[_T]):
     def get_obj_kwargs(cls, obj: _T, /) -> Iterable[tuple[str, Any]]:
         yield from EMPTY_SET
 
-from . import abcs
+class ItemMapEnum(Enum):
+    """Fixed mapping enum based on item tuples.
+
+    If a member value is defined as a mapping, the member's ``_value_`` attribute
+    is converted to a tuple of item tuples during ``__init__()``.
+
+    Implementations should always call ``super().__init__()`` if it is overridden.
+    """
+
+    __slots__ = (
+        '__iter__',
+        '__getitem__',
+        '__len__',
+        '__reversed__',
+        'name',
+        'value',
+        '_name_',
+        '_value_')
+
+    def __init__(self, *args):
+        if len(args) == 1 and isinstance(args[0], Mapping):
+            self._value_ = args = tuple(args[0].items())
+        m = dict(args)
+        self.__len__ = m.__len__
+        self.__iter__ = m.__iter__
+        self.__getitem__ = m.__getitem__
+        self.__reversed__ = m.__reversed__
+        self.name = self._name_
+        self.value = self._value_
+
+    keys = Mapping.keys
+    items = Mapping.items
+    values = Mapping.values
+    get = Mapping.get
+
+    def __or__(self, other):
+        return dict(self) | other
+
+    def __ror__(self, other):
+        return other | dict(self)
+
+    def _asdict(self):
+        'Compatibility for JSON serialization.'
+        return dict(self)
+
+
+
+from .abcs import Copyable
 
 pass
-from ..errors import Emsg, check
 
 
-class SetView(Set, abcs.Copyable, immutcopy = True):
+class SetView(Set, Copyable, immutcopy=True):
     'Set cover.'
 
     __slots__ = ('__contains__', '__iter__', '__len__')
 
     def __new__(cls, set_, /,):
-        check.inst(set_, Set)
+        if not isinstance(set_, Set):
+            raise TypeError(type(set_))
         self = object.__new__(cls)
         self.__len__ = set_.__len__
         self.__iter__ = set_.__iter__

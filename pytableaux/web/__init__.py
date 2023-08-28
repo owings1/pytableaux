@@ -28,7 +28,7 @@ from types import MappingProxyType as MapProxy
 from typing import Any, Mapping
 
 from .. import package, tools
-from ..tools.abcs import ItemMapEnum
+from ..tools import ItemMapEnum
 from .util import get_logger
 
 __all__ = ()

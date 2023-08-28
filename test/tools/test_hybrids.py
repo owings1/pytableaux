@@ -98,12 +98,28 @@ class TestQsetView(Base):
         self.assertEqual(v2, {1,2,3,4,5})
         self.assertIs(type(v2), QsetView)
 
+    def test_or_qsetf(self):
+        s1 = qsetf([1,2,3])
+        v1 = QsetView(s1)
+        v2 = v1 | qsetf([4,5])
+        self.assertEqual(v2, {1,2,3,4,5})
+        self.assertIs(type(v2), QsetView)
+
     def test_add_QsetView(self):
         s1 = qsetf([1,2,3])
         v1 = QsetView(s1)
         s2 = qsetf([4,5])
         v2 = QsetView(s2)
         v3 = v1 + v2
+        self.assertEqual(v3, {1,2,3,4,5})
+        self.assertIs(type(v3), QsetView)
+
+    def test_or_QsetView(self):
+        s1 = qsetf([1,2,3])
+        v1 = QsetView(s1)
+        s2 = qsetf([4,5])
+        v2 = QsetView(s2)
+        v3 = v1 | v2
         self.assertEqual(v3, {1,2,3,4,5})
         self.assertIs(type(v3), QsetView)
 
@@ -119,6 +135,14 @@ class TestQsetView(Base):
         s1 = qsetf([1,2,3])
         v1 = QsetView(s1)
         v2 = v1 + {3,4}
+        self.assertEqual(v2, {1,2,3,4})
+        self.assertEqual(len(v2), 4)
+        self.assertIs(type(v2), QsetView)
+
+    def test_or_set(self):
+        s1 = qsetf([1,2,3])
+        v1 = QsetView(s1)
+        v2 = v1 | {3,4}
         self.assertEqual(v2, {1,2,3,4})
         self.assertEqual(len(v2), 4)
         self.assertIs(type(v2), QsetView)
@@ -156,6 +180,11 @@ class TestQset(Base):
         x[2:4] = 'ab'
         s[2:4] = 'ab'
         self.assertEqual(list(s), list(x))
+
+    def test_setitem_index_duplicate_value(self):
+        s = qset([1,2])
+        with self.assertRaises(ValueError):
+            s[0] = 2
 
     def test_setitem_slice_duplicate_value(self):
         s = qset([1,2,3,4,5])

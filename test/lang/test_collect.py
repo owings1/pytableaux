@@ -206,3 +206,32 @@ class TestPredicates(BaseCase):
         v.clear()
         self.assertEqual(len(v), 0)
         self.assertNotIn('Identity', v)
+
+    def test_ior_cast(self):
+        v = Predicates()
+        v |= (0,0,1), (1,0,1)
+        p1 = Predicate(0,0,1)
+        p2 = Predicate(1,0,1)
+        self.assertIn(p1, v)
+        self.assertIn(p2, v)
+        self.assertEqual(len(v), 2)
+
+    def test_setitem_slice(self):
+        p1 = Predicate(0,0,1)
+        p2 = Predicate(1,0,1)
+        p3 = Predicate(0,0,2)
+        p4 = Predicate(1,0,2)
+        v = Predicates((p1,p2))
+        v[0:2] = p3, p4
+        self.assertEqual(p3, v[0])
+        self.assertEqual(p4, v[1])
+        self.assertEqual(len(v), 2)
+
+    def test_setitem_index_duplicate_value(self):
+        p1 = Predicate(0,0,1)
+        p2 = Predicate(1,0,1)
+        p3 = Predicate(0,0,2)
+        v = Predicates((p1,p2))
+        with self.assertRaises(ValueError):
+            v[1] = p3
+

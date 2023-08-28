@@ -137,10 +137,6 @@ class QsetView(SequenceSet[_T], abcs.Copyable, immutcopy=True):
 
     @classmethod
     def _from_iterable(cls, it):
-        if isinstance(it, cls):
-            return it
-        if isinstance(it, SequenceSet):
-            return cls(it)
         return cls(qsetf(it))
 
 class MutableSequenceSet(SequenceSet[_T], MutableSequence[_T], MutableSet[_T]):

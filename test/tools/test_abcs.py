@@ -18,26 +18,14 @@
 #
 # pytableaux.tools.abcs tests
 import operator as opr
-from itertools import filterfalse
-from typing import TypeVar
-
+import enum
+from copy import copy, deepcopy
 from pytableaux.tools import abcs, qset
 
 from ..utils import BaseCase as Base
 
-_T = TypeVar('_T')
 
-def subclasses(supcls: type[_T]) -> qset[type[_T]]:
-    classes = qset()
-    todo = [supcls]
-    while len(todo):
-        for child in filterfalse(classes.__contains__, todo.pop().__subclasses__()):
-            todo.append(child)
-            if not abcs.isabstract(child):
-                classes.append(child)
-    return classes
-
-class Test_abcm(Base):
+class Test_merged_attr(Base):
 
     def test_merged_mroattr(self):
         class A:
@@ -50,3 +38,90 @@ class Test_abcm(Base):
             pass
         res = abcs.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
         self.assertEqual(tuple(res), ('A', 'B1', 'B2'))
+
+
+class TestEbc(Base):
+
+    class X(abcs.Ebc):
+        a = 1
+        b = 2
+        c = 3
+
+    def test_enum_reserved_names_raises_type_error(self):
+
+        with self.assertRaises(TypeError):
+            class _(abcs.Ebc):
+                a = 1
+                _lookup = 2
+
+    def test_get_method(self):
+        X = self.X
+        self.assertIs(X.get('a'), X.a)
+        self.assertIs(X.get(1), X.a)
+        self.assertIs(X.get('b'), X.b)
+        self.assertIs(X.get(2), X.b)
+        self.assertIs(X.get('b'), X.b)
+        self.assertIs(X.get(3), X.c)
+        self.assertIs(X.get('d', None), None)
+        with self.assertRaises(KeyError):
+            X.get('d')
+    
+    def test_getitem_slice(self):
+        X = self.X
+        self.assertEqual(X[0:], (X.a, X.b, X.c))
+        self.assertEqual(X[0:2], (X.a, X.b))
+
+    def test_call_slice(self):
+        X = self.X
+        self.assertEqual(X(slice(0, None)), (X.a, X.b, X.c))
+        self.assertEqual(X(slice(0, 2)), (X.a, X.b))
+
+    def test_call_list_raises_type_error(self):
+        X = self.X
+        with self.assertRaises(TypeError):
+            X([])
+
+    def test_getitem_list_raises_type_error(self):
+        X = self.X
+        with self.assertRaises(TypeError):
+            X[[]]
+
+    def test_reversed(self):
+        X = self.X
+        self.assertEqual(list(reversed(X)), [X.c, X.b, X.a])
+
+    def test_dir(self):
+        self.assertEqual(dir(self.X), ['a', 'b', 'c'])
+
+    def test_copy_returns_self(self):
+        X = self.X
+        self.assertIs(copy(X.a), X.a)
+        self.assertIs(deepcopy(X.a), X.a)
+
+    def test_repr_coverage(self):
+        r = repr(self.X.a)
+        self.assertIs(type(r), str)
+        class Y(str, abcs.Ebc):
+            a = 'a'
+        self.assertIn(repr('a'), repr(Y.a))
+    
+    def test_functional_construct(self):
+        e = abcs.Ebc('Spam', ['a', 'b', 'c'])
+        self.assertTrue(issubclass(e, abcs.Ebc))
+        self.assertEqual(e.a.name, 'a')
+
+class TestCopyable(Base):
+
+    def test_is_copyable_with_copy_methods(self):
+        class X:
+            def copy(self): return self
+            __copy__ = copy
+
+        self.assertIsInstance(X(), abcs.Copyable)
+    
+    def test_object_is_not_copyable(self):
+        self.assertNotIsInstance(object(), abcs.Copyable)
+
+    def test_copy_abstract_coverage(self):
+        o = {}
+        self.assertEqual(abcs.Copyable.copy(o), o)

@@ -129,10 +129,6 @@ class Emsg(Enum):
         "Expected value of length {1} but got length {0}", (_len, _len))
     ArityMismatch = (ValueError,
         "{0} has arity {1} but received input of size {2}", (_thru, _len, _len))
-    MismatchSliceSize = (ValueError,
-        'Attempt to assign sequence of size {0} to slice of size {1}', (_len, _len))
-    MismatchExtSliceSize = (ValueError,
-        'Attempt to assign sequence of size {0} to extended slice of size {1}', (_len, _len))
     ValueConflict = ValueError, "Value conflict: '{0}' conflicts with '{1}'", 2
     ValueConflictFor = (ValueError,
         "Value conflict for '{0}': '{1}' conflicts with existing '{2}'", 3)

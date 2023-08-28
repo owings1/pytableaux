@@ -29,7 +29,7 @@ from typing import Any, Hashable, Iterable, NamedTuple, Sequence, TypeVar
 
 from ..lang import Argument, Operator, Predicate, Quantifier
 from ..logics import LogicType
-from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf
+from ..tools import EMPTY_QSET, EMPTY_SET, abcs, qsetf, ItemMapEnum
 from ..tools.timing import Counter, StopWatch
 
 _KT = TypeVar('_KT')
@@ -121,7 +121,7 @@ class NodeMeta(abcs.AbcMeta):
 
     WORLD_KEYS = (Key.world, Key.world1, Key.world2)
 
-    class PropMap(abcs.ItemMapEnum):
+    class PropMap(ItemMapEnum):
         Defaults = dict(
             designated = None,
             world = None)

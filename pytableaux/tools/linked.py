@@ -22,7 +22,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from enum import IntEnum
 from itertools import filterfalse
-from typing import (Any, Collection, Iterator, MutableSequence,
+from typing import (Any, Collection, Iterator, Literal, MutableSequence,
                     Optional, Sequence, SupportsIndex, TypeVar)
 
 from ..errors import Emsg
@@ -112,7 +112,7 @@ class HashLink(Link):
         return hash(self.value)
 
 
-def iter_links(origin, step = 1, count = -1, /):
+def iter_links(origin: Link, step: SupportsIndex = 1, count: SupportsIndex = -1, /):
     """Create an iterator over ``Link`` objects.
 
     Args:
@@ -138,7 +138,7 @@ def iter_links(origin, step = 1, count = -1, /):
                 i += 1
                 cur = cur[rel]
 
-def iter_links_sliced(seq: LinkSequence, slice_: slice, /):
+def iter_links_sliced(seq: LinkSequence, slice_: slice, /) -> Iterator[Link]:
     """Create an iterator over ``Link`` objects for a sequence slice.
 
     Args:
@@ -157,7 +157,7 @@ def iter_links_sliced(seq: LinkSequence, slice_: slice, /):
         origin = seq._link_at(start)
     return iter_links(origin, step, count)
 
-def iter_link_values(origin: Optional[Link], step = 1, count = -1, /):
+def iter_link_values(origin: Optional[Link], step: SupportsIndex = 1, count: SupportsIndex = -1, /):
     """Create an iterator over link values.
 
     Args:
@@ -171,7 +171,7 @@ def iter_link_values(origin: Optional[Link], step = 1, count = -1, /):
     for link in iter_links(origin, step, count):
         yield link.value
 
-def iter_link_values_sliced(seq: LinkSequence, slice_, /):
+def iter_link_values_sliced(seq: LinkSequence[_T], slice_: slice, /) -> Iterator[_T]:
     """Create an iterator over link values for a sequence slice.
 
     Args:
@@ -310,7 +310,10 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
         return self.__len
 
     @abcs.hookable('cast', 'check')
-    def insert(self, index, value, /, *, cast = None, check = None):
+    def insert(self, index: SupportsIndex, value, /, *, cast = None, check = None):
+        """insert(self, index: SupportsIndex, value,/)
+        Insert an item.
+        """
         length = len(self)
         index = absindex(length, index, False)
         if cast is not None:
@@ -355,8 +358,9 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
         raise Emsg.InstCheck(i, (SupportsIndex, slice))
 
     @abcs.hookable('cast', 'check')
-    def __setitem__(self, i, value, /, *, cast = None, check = None):
-        "Set value(s) by index/slice."
+    def __setitem__(self, i, value, /, *, cast = None, check = None) -> None:
+        """__setitem__(self, i, value)
+        Set value(s) by index/slice."""
 
         if isinstance(i, SupportsIndex):
             index = i
@@ -409,7 +413,7 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
 
     #******  Link update methods
 
-    def _seed(self, link, /):
+    def _seed(self, link: Link, /) -> None:
         """Add the link as the intial (only) member. This is called by ``__setitem__``,
         ``insert``, ``append``, etc., when the collection is empty.
         """
@@ -418,7 +422,7 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
         self.__link_first__ = self.__link_last__ = link
         self.__len += 1
 
-    def _spot(self, rel, neighbor, link, /):
+    def _spot(self, rel: Literal[-1, 1], neighbor: Link, link: Link, /) -> None:
         'Insert a Link before or after another Link already in the collection.'
         # Example:
         #  
@@ -447,7 +451,7 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
                 self.__link_last__ = link
         self.__len += 1
 
-    def _unlink(self, link: Link, /):
+    def _unlink(self, link: Link, /) -> None:
         """Remove a Link entry.
         
         NB: Implementations must not alter the direct `prev` or `next` attributes
@@ -501,8 +505,9 @@ class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo = HookProvider(links
             self.update(values)
 
     @abcs.hookable('cast')
-    def wedge(self, value, neighbor, rel, /, *, cast = None) -> None:
-        """Place a new value next to (before or after) another value.
+    def wedge(self, value: _T, neighbor: _T, rel: Literal[-1, 1], /, *, cast = None) -> None:
+        """wedge(self, value: _T, neighbor: _T, rel: Literal[-1, 1], /)
+        Place a new value next to (before or after) another value.
         
         This is the most performant way to insert a new value anywhere in the
         collection, with speed O(1).  Methods that add by index (__setitem__,
