@@ -149,18 +149,19 @@ def check_mrodict(mro, *names):
             return NotImplemented
     return True
 
-def merge_attr(obj, name, it = None, /, *, setter = setattr, **kw):
+def merge_attr(obj, name: str, it: Iterable|None = None, /, *, setter = setattr, **kw):
     """Merge an object's attribute, either from objects, or an mro.
 
     Args:
         obj: The object to update.
+        name: The attribute name.
+        it (Optional): Iterable of objects to check. Default is mro of obj.
     
     Keyword Args:
         setter (Callable): The function to set the attribute, default
             is :obj:`setattr`.
+        **kw: Additional arguments passed to :func:`merged_attr()`
         
-    .. note:: Additional arguments are passed to :attr:`merged_attr`.
-
     """
     if it is None:
         if not isinstance(obj, type):
@@ -170,7 +171,7 @@ def merge_attr(obj, name, it = None, /, *, setter = setattr, **kw):
     setter(obj, name, value)
     return value
 
-def merged_attr(name: str, it: Iterable = None, /, *,
+def merged_attr(name: str, it: Iterable|None = None, /, *,
     oper = opr.or_, initial = NOARG, default = NOARG, transform = thru,
     **iteropts):
     """Get merged attribute value, either from objects, or an mro.
@@ -316,7 +317,7 @@ class EnumLookup(Mapping):
 
     __slots__ = '__getitem__', '_mapping', 'build', 'pseudo'
 
-    def __init__(self, Owner, /, build = False):
+    def __init__(self, Owner, /):
 
         if hasattr(self, '_mapping'):
             raise TypeError
@@ -340,9 +341,6 @@ class EnumLookup(Mapping):
 
         sa(self, 'build', _build)
         sa(self, 'pseudo', _pseudo)
-
-        if build:
-            _build()
 
     def __iter__(self):
         return iter(self._mapping)
@@ -382,10 +380,8 @@ class EnumLookup(Mapping):
         # Alias names
         aliases = set(member_map).difference(canon_names)
         builder = cls._seqmap(member_seq, keyfuncs)
-        if len(pseudos):
-            builder |= cls._pseudomap(pseudos)
-        if len(aliases):
-            builder |= {alias: member_map[alias] for alias in aliases}
+        builder |= cls._pseudomap(pseudos)
+        builder |= {alias: member_map[alias] for alias in aliases}
         return builder
 
     @classmethod
@@ -419,7 +415,8 @@ class EnumLookup(Mapping):
         if check is not pseudo:
             raise TypeError from ValueError(
                 f"Value conflict: '{pseudo}' conflicts with '{check}'")
-        if pseudo._name_ is not None:
+        # Python 3.10 sets the name as None, 3.11 joins other names with |
+        if pseudo._name_ is not None and '|' not in pseudo._name_:
             raise TypeError from ValueError(
                 f"Value '{pseudo._name_}' does not match expected: None")
         return cls._pseudo_keys(pseudo)
@@ -572,11 +569,12 @@ class Ebc(Enum, metaclass=EbcMeta):
     name  : str
     value : object
 
+    # Python 3.11.5 includes __copy__ and __deepcopy__ methods.
+
     def __copy__(self):
         return self
 
     def __deepcopy__(self, memo):
-        memo[id(self)] = self
         return self
 
     @classmethod
@@ -618,25 +616,25 @@ class AbcMeta(_abc.ABCMeta):
     if TYPE_CHECKING:
         def __call__(cls: type[_T], *args, **kw) -> _T: ...
 
-    def __new__(cls, clsname, bases, ns, /, *,
+    def __new__(self, clsname, bases, ns, /, *,
         hooks = None, skiphooks = False, hookinfo = None, **kw):
         nsinit(ns, bases)
-        Class = super().__new__(cls, clsname, bases, ns, **kw)
+        cls = super().__new__(self, clsname, bases, ns, **kw)
         if not skiphooks:
-            hookutil.init_user(Class, hooks)
-        clsafter(Class, ns)
+            hookutil.init_user(cls, hooks)
+        clsafter(cls, ns)
         if not skiphooks:
-            hookutil.init_provider(Class, hookinfo)
-        return Class
+            hookutil.init_provider(cls, hookinfo)
+        return cls
 
-    def hook(cls, *hooks, attr = Astr.hookuser):
+    def hook(self, *hooks, attr = Astr.hookuser):
         'Decorator factory for tagging hook implementation (user).'
         def decorator(func):
             value = getattr(func, attr, None)
             if value is None:
                 value = {}
                 setattr(func, attr, value)
-            impl = value.setdefault(cls, {})
+            impl = value.setdefault(self, {})
             for name in hooks:
                 if name in impl:
                     raise TypeError from Emsg.DuplicateKey(name)
@@ -675,5 +673,7 @@ class Copyable(metaclass=AbcMeta, skiphooks=True):
             if '__deepcopy__' not in subcls.__dict__:
                 subcls.__deepcopy__ = Ebc.__deepcopy__
         subcls.__copy__ = subcls.copy
+
+pass
 
 from .hooks import hookutil

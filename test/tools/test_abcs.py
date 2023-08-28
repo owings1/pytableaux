@@ -21,9 +21,30 @@ import operator as opr
 import enum
 from copy import copy, deepcopy
 from pytableaux.tools import abcs, qset
-
+from collections.abc import Mapping
 from ..utils import BaseCase as Base
 
+
+class Test_merge_attr(Base):
+
+    def test_non_class_raises_type_error_coverage(self):
+        with self.assertRaises(TypeError):
+            abcs.merge_attr(object(), 'foo')
+
+class Test_check_mrodict(Base):
+
+    def test_empty_mro_coverage(self):
+        self.assertIs(NotImplemented, abcs.check_mrodict([], 'foo'))
+
+class Test_isabstract(Base):
+
+    def test_class(self):
+        self.assertTrue(abcs.isabstract(Mapping))
+        self.assertFalse(abcs.isabstract(qset))
+
+    def test_method(self):
+        self.assertTrue(abcs.isabstract(Mapping.__len__))
+        self.assertFalse(abcs.isabstract(Mapping.get))
 
 class Test_merged_attr(Base):
 
@@ -39,6 +60,62 @@ class Test_merged_attr(Base):
         res = abcs.merged_attr('x', cls = C, default = qset(), oper=opr.or_, supcls=A)
         self.assertEqual(tuple(res), ('A', 'B1', 'B2'))
 
+
+class TestEnumLookup(Base):
+
+    class X(abcs.Ebc):
+        a = 1
+        b = 2
+        c = 3
+
+    def test_iter(self):
+        X = self.X
+        v = list(iter(X._lookup))
+        self.assertIn(X.a, v)
+        self.assertIn('a', v)
+        self.assertIn(1, v)
+
+    def test_reversed(self):
+        X = self.X
+        v = list(reversed(X._lookup))
+        self.assertIn(X.a, v)
+        self.assertIn('a', v)
+        self.assertIn(1, v)
+
+    def test_asdict(self):
+        X = self.X
+        v = X._lookup._asdict()
+        self.assertIn(X.a, v)
+        self.assertIn('a', v)
+        self.assertIn(1, v)
+
+    def test_len(self):
+        self.assertGreater(len(self.X._lookup), 3)
+
+    def test_setattr(self):
+        with self.assertRaises(AttributeError):
+            self.X._lookup._mapping = {}
+
+    def test_delattr(self):
+        with self.assertRaises(AttributeError):
+            del(self.X._lookup._mapping)
+
+    def test_repr_coverage(self):
+        r = repr(self.X._lookup)
+        self.assertIs(type(r), str)
+
+    def test_psuedo_keys(self):
+        class X(enum.Flag, abcs.Ebc):
+            a = 1
+            b = 2
+            p = 4
+            q = 8
+        c = X.a | X.b
+        self.assertEqual(self.X._lookup._pseudo_keys(c), {c, 3})
+
+    def test_init_raises_type_error(self):
+        with self.assertRaises(TypeError):
+            self.X._lookup.__init__(self.X)
 
 class TestEbc(Base):
 
@@ -116,9 +193,14 @@ class TestCopyable(Base):
         class X:
             def copy(self): return self
             __copy__ = copy
-
         self.assertIsInstance(X(), abcs.Copyable)
-    
+
+    def test_is_not_copyable_with_method_none(self):
+        class X:
+            def copy(self): return self
+            __copy__ = None
+        self.assertNotIsInstance(X(), abcs.Copyable)
+
     def test_object_is_not_copyable(self):
         self.assertNotIsInstance(object(), abcs.Copyable)
 

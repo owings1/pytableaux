@@ -157,7 +157,7 @@ class Lexical:
 
     @classmethod
     def gen(cls, stop: int|None, /, first: Self|None = None, **nextkw) -> Iterator[Self]:
-        """Generate items of the type, using :meth:`first` and :meth:`next` methods.
+        """Generate items of the type, using :meth:`first()` and :meth:`next()` methods.
 
         This is convenient for making sequential lexical items quickly, without
         going through parsing.
@@ -168,8 +168,10 @@ class Lexical:
         Args:
             stop: The number at which to stop generating. If ``None``,
                 never stop.
-            first: The first item. If ``None``, starts with :meth:`first`.
-            **nextkw: Parameters to pass to each call to :meth:`next`.
+            first: The first item. If ``None``, starts with :meth:`first()`.
+
+        Keyword Args:
+            **nextkw: Parameters to pass to each call to :meth:`next()`.
 
         Returns:
             The generator instance.
@@ -225,8 +227,8 @@ class Lexical:
             rhs: The right-hand item.
 
         Returns:
-            The relative order of ``lhs`` and ``rhs``. The return value
-            will be either:
+            int: The relative order of ``lhs`` and ``rhs``. The return value
+              will be either:
 
                 * Less than ``0`` if ``lhs`` precedes ``rhs`` in order.
                 * Greater than ``0`` if ``rhs`` precedes ``lhs`` in order.
@@ -400,7 +402,7 @@ class LexicalEnum(Lexical, LangCommonEnum, lexcopy=True):
 
     def next(self, /, *, loop: bool = False) -> Self:
         """
-        Args:
+        Keyword Args:
             loop (bool): If ``True``, returns the first member after the last.
                 Default is ``False``.
        
@@ -1207,8 +1209,8 @@ class Quantified(Sentence, Sequence):
 
     def next(self, **sentkw):
         """
-        Args:
-            **sentkw: `Kwargs` for :func:`Sentence.next()` to create the inner sentence.
+        Keyword Args:
+            **sentkw: kwargs for :func:`Sentence.next()` to create the inner sentence.
         
         Raises:
             TypeError: if :func:`Sentence.next()` returns a sentence for which the
@@ -1218,7 +1220,7 @@ class Quantified(Sentence, Sequence):
         v = self.variable
         if v not in s.variables:
             raise TypeError(f'{v} no longer bound')
-        return Quantified(self.quantifier, v, s)
+        return self.quantifier(v, s)
 
     def __len__(self):
         return len(self.items)

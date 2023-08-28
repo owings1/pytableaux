@@ -29,7 +29,6 @@ from itertools import repeat, starmap
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Iterable
 
-from .. import tools
 from ..errors import Emsg, ParseError, check
 from ..tools import SequenceSet, abcs, group, lazy, membr, qset, qsetf, wraps
 from . import LangCommonMeta, Lexical, Predicate, Sentence
@@ -55,8 +54,6 @@ class ArgumentMeta(LangCommonMeta):
     _argstr_pclass: type[Parser]
     _argstr_parser_empty: Parser
 
-
-
 class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=ArgumentMeta):
     """Argument class.
     
@@ -73,7 +70,9 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         Args:
             conclusion: The conclusion.
             premises: The premises or None.
-            **title: An optional title.
+        
+        Keyword Args:
+            title: An optional title.
         """
         self.seq = tuple(
             (Sentence(conclusion),) if premises is None
@@ -85,26 +84,30 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
 
     __slots__ = ('_hash', 'premises', 'seq', 'title')
 
+    conclusion: Sentence
+    "The argument's conclusion."
+
     premises: tuple[Sentence, ...]
     "The argument's premises"
 
     title: str|None
     "Optional title"
 
+    hash: int
+    "The argument's hash."
+
     @property
     def conclusion(self) -> Sentence:
-        "The argument's conclusion."
         return self.seq[0]
 
     @lazy.prop
     def hash(self) -> int:
-        "The argument's hash."
         return hash(self.seq)
 
     def predicates(self, **kw):
         """Return the predicates occuring in the argument.
         
-        Args:
+        Keyword Args:
             **kw: sort keywords to pass to :class:`Predicates` constructor.
         
         Returns:
@@ -115,6 +118,9 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
     def argstr(self) -> str:
         """Get the canonical string representation for recreating with
         :meth:`from_argstr()`.
+
+        Returns:
+            str: The argument string.
         """
         lw = __class__._argstr_lw
         preds = self.predicates(sort=True) - Predicate.System
@@ -128,6 +134,12 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
     def from_argstr(argstr: str, /) -> Argument:
         """Construct an argument from the canonical string representation from
         :meth:`argstr()`.
+
+        Args:
+            argstr: The input string.
+
+        Returns:
+            Argument: The argument.
 
         Raises:
             ParseError
@@ -164,30 +176,24 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
     #******  Equality & Ordering
 
     @abcs.abcf.temp
-    @tools.closure
-    def ordr():
-
-        def cmpgen(a: Argument, b: Argument, /,):
-            yield len(a) - len(b)
-            yield from starmap(Lexical.orderitems, zip(a, b))
-
-        @membr.defer
-        def wrapper(member: membr):
-            @wraps(oper := getattr(opr, member.name))
-            def wrapped(self: Argument, other: Any, /):
-                if self is other:
-                    return oper(0, 0)
-                if not isinstance(other, Argument):
-                    return NotImplemented
-                for cmp in cmpgen(self, other):
-                    if cmp:
-                        break
+    @membr.defer
+    def wrapper(member: membr):
+        @wraps(oper := getattr(opr, member.name))
+        def wrapped(self: Argument, other: Any, /):
+            if self is other:
+                return oper(0, 0)
+            if not isinstance(other, Argument):
+                return NotImplemented
+            cmp = len(self) - len(other)
+            if cmp:
                 return oper(cmp, 0)
-            return wrapped
+            for cmp in starmap(Lexical.orderitems, zip(self, other)):
+                if cmp:
+                    break
+            return oper(cmp, 0)
+        return wrapped
 
-        return wrapper
-
-    __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr() # type: ignore
+    __lt__ = __le__ = __gt__ = __ge__ = __eq__ = wrapper() # type: ignore
 
     def __hash__(self):
         return self.hash
@@ -270,9 +276,11 @@ class Predicates(PredicatesBase, qset[Predicate], hooks={qset: dict(cast=Predica
         
         Args:
             values: Iterable of predicates or specs.
-            **sort: Whether to sort. Default is ``False``.
-            **key: Optional sort key function.
-            **reverse: Whether to reverse sort.
+
+        Keyword Args:
+            sort: Whether to sort. Default is ``False``.
+            key: Optional sort key function.
+            reverse: Whether to reverse sort.
         """
         self._lookup = {}
         super().__init__(values)

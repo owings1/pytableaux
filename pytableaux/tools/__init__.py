@@ -40,6 +40,7 @@ __all__ = (
     'closure',
     'dictattr',
     'dictns',
+    'dmerged',
     'dund',
     'EMPTY_MAP',
     'EMPTY_SEQ',
@@ -51,6 +52,7 @@ __all__ = (
     'isdund',
     'isint',
     'ItemMapEnum',
+    'KeySetAttr',
     'lazy',
     'MapCover',
     'maxceil',
@@ -75,6 +77,7 @@ EMPTY_SEQ = ()
 EMPTY_SET = frozenset()
 NOARG = object()
 WRASS_SET = frozenset(functools.WRAPPER_ASSIGNMENTS)
+_F = TypeVar('_F', bound=Callable)
 _KT = TypeVar('_KT')
 _T = TypeVar('_T')
 _VT = TypeVar('_VT')
@@ -323,8 +326,7 @@ class wraps(dict):
         if key in self.only:
             if value:
                 self[key] = value
-                return value
-            return self[key]
+        return self[key]
             
     def __setitem__(self, key, value):
         if key in self or key not in self.only:
@@ -335,30 +337,6 @@ class wraps(dict):
         return f'{type(self).__name__}({dict(self)})'
 
 
-class BaseMember:
-
-    __slots__ = ('__name__', '__qualname__')
-
-    def __set_name__(self, owner, name):
-        self.__name__ = name
-        self.__qualname__ = f'{owner.__name__}.{name}'
-        self.sethook(owner, name)
-
-    @abstractmethod
-    def sethook(self, owner, name): pass
-
-    @property
-    def name(self) -> str:
-        try:
-            return self.__name__
-        except AttributeError:
-            return type(self).__name__
-
-    def __repr__(self) -> str:
-        if not hasattr(self, '__qualname__') or not callable(self):
-            return object.__repr__(self)
-        return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
-
 pass
 
 def closure(func: Callable[..., _T]) -> _T:
@@ -366,7 +344,8 @@ def closure(func: Callable[..., _T]) -> _T:
     If the return value is a function, updates its wrapper.
     """
     ret = func()
-    if type(ret) is FunctionType:
+    if isinstance(ret, (classmethod, staticmethod, FunctionType)):
+    # if type(ret) is FunctionType:
         wraps(func).write(ret)
     return ret
 
@@ -407,92 +386,101 @@ def dmerged():
     return merger
 
 
-class membr(BaseMember):
+class membr:
 
-    __slots__ = ('callable', 'args', 'kwargs')
+    __slots__ = ('callable', 'args', 'kwargs', '__name__', '__qualname__')
 
     callable: Callable
     args: tuple
     kwargs: dict
+
+    @property
+    def name(self) -> str:
+        try:
+            return self.__name__
+        except AttributeError:
+            return type(self).__name__
 
     def __init__(self, callable: Callable, *args, **kw):
         self.callable = callable
         self.args = args
         self.kwargs = kw
 
-    def sethook(self, owner, name):
-        setattr(owner, name, self())
-
     def __call__(self):
         return self.callable(self, *self.args, **self.kwargs)
 
     @classmethod
-    def defer(cls, wrapped):
+    def defer(cls, wrapped: Callable[[membr], _F]):
         @wraps(wrapped)
         def wrapper(*args, **kw):
             return cls(wrapped, *args, **kw)
         return wrapper
 
-class NoSetAttr(BaseMember):
+    def __set_name__(self, owner, name):
+        self.__name__ = name
+        self.__qualname__ = f'{owner.__name__}.{name}'
+        setattr(owner, name, self())
+
+    def __repr__(self) -> str:
+        if not hasattr(self, '__qualname__') or not callable(self):
+            return object.__repr__(self)
+        return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
+
+class NoSetAttr:
     'Lame thing that does a lame thing.'
 
     enabled: bool
     "Whether raising is enabled."
 
-    _defaults = MapProxy(dict(
+    defaults = MapProxy(dict(
         efmt = (
             "Attribute '{0}' of '{1.__class__.__name__}' "
             "objects is readonly").format,
         # Control attribute name to check on the object,
         # e.g. '_readonly', in addition to this object's
         # `enabled` setting.
-        attr = None,
+        attr = '_readonly',
         # If `True`: Check `attr` on the object's class;
         # If set to a `type`, check the `attr` on that class;
         # If Falsy, only check for this object's `enabled` setting.
         cls = None))
 
-    __slots__ =  ('cache', 'defaults', 'enabled')
+    __slots__ =  ('cache', 'opts', 'enabled')
 
-    defaults: dict
+    opts: dict
     cache: dict[tuple, dict]
 
-    def __init__(self, /, *, enabled = True, **defaults):
+    def __init__(self, /, *, enabled = True, **opts):
         self.enabled = bool(enabled)
-        self.defaults = dict(self._defaults, **defaults)
+        self.opts = for_defaults(self.defaults, opts)
         self.cache = defaultdict(dict)
 
     def __call__(self, base: type, **opts):
-        return self._make(base.__setattr__, **(self.defaults | opts))
+        return self._make(base.__setattr__, **(self.opts | opts))
 
-    def _make(self, sa, /, efmt, attr, cls):
-        if attr:
-            if cls is True:
-                check = self._clschecker(attr)
-            elif cls:
-                check = self._fixedchecker(attr, cls)
-            else:
-                check = self._selfchecker(attr)
-            def f(obj, name, value, /):
-                if self.enabled and check(obj):
-                    raise AttributeError(efmt(name, obj))
-                sa(obj, name, value)
+    def _make(self, wrapped, /, efmt, attr, cls):
+        if cls is True:
+            check = self._clschecker(attr)
+        elif cls:
+            check = self._fixedchecker(attr, cls)
         else:
-            def f(obj, name, value, /):
-                if self.enabled:
-                    raise AttributeError(efmt(name, obj))
-                sa(obj, name, value)
-        return wraps(sa)(f)
+            check = self._selfchecker(attr)
+        @wraps(wrapped)
+        def wrapper(obj, name, value, /):
+            if self.enabled and check(obj):
+                raise AttributeError(efmt(name, obj))
+            wrapped(obj, name, value)
+        return wrapper
 
-    def cached(func):
-        @wraps(func)
-        def f(self: NoSetAttr, *args):
-            cache = self.cache[func]
+    def cached(wrapped: _F):
+        @wraps(wrapped)
+        def wrapper(self: NoSetAttr, *args):
+            cache = self.cache[wrapped]
             try:
                 return cache[args]
             except KeyError:
-                return cache.setdefault(args, func(self, *args))
-        return f
+                return cache.setdefault(args, wrapped(self, *args))
+        return wrapper
 
     @cached
     def _fixedchecker(self, attr, obj):
@@ -511,12 +499,6 @@ class NoSetAttr(BaseMember):
         return lambda obj: getattr(obj, attr, False)
 
     del(cached)
-
-    def sethook(self, owner, name):
-        func = self(owner.__bases__[0])
-        func.__name__ = name
-        func.__qualname__ = self.__qualname__
-        setattr(owner, name, func)
 
 
 class MapCover(Mapping[_KT, _VT]):
