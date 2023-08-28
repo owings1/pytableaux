@@ -23,6 +23,7 @@ from types import MappingProxyType as MapProxy
 
 from pytableaux.errors import IllegalStateError
 from pytableaux.lang import *
+from pytableaux.logics import registry
 from pytableaux.proof import *
 from pytableaux.proof import rules
 
@@ -152,6 +153,14 @@ class TestBranch(Base):
         del(b1._parent)
         with self.assertRaises(ValueError):
             b1.parent = b1
+
+    def test_set_model_twice_raises(self):
+        b = Branch()
+        m1 = registry('cpl').Model()
+        b.model = m1
+        m2 = registry('cpl').Model()
+        with self.assertRaises(AttributeError):
+            b.model = m2
 
     def test_next_world_returns_w0(self):
         self.assertEqual(Branch().new_world(), 0)
@@ -336,6 +345,10 @@ class TestTarget(Base):
         t = Target(branch=b, node=n1)
         self.assertEqual(t.type, 'Node')
 
+    def test_type_branch(self):
+        t = Target(branch=Branch())
+        self.assertEqual(t.type, 'Branch')
+
     def test_repr_coverage(self):
         r = repr(Target(branch=Branch()))
         self.assertIs(type(r), str)
@@ -343,3 +356,29 @@ class TestTarget(Base):
     def test_dir_names(self):
         t = Target(branch=Branch(), node=Node())
         self.assertEqual(dir(t), ['branch', 'node'])
+    
+    def test_setitem_conflict_raises(self):
+        t = Target(branch=Branch())
+        with self.assertRaises(ValueError):
+            t['branch'] = Branch()
+    
+    def test_setitem_no_conflict(self):
+        b = Branch()
+        t = Target(branch=b)
+        t['branch'] = b
+    
+    def test_setitem_reserved_raises(self):
+        t = Target(branch=Branch())
+        with self.assertRaises((AttributeError, KeyError)):
+            t['or'] = 1
+    
+    def test_setitem_non_str_raises(self):
+        t = Target(branch=Branch())
+        with self.assertRaises(TypeError):
+            t[0] = 1
+    
+    def test_type_raises_if_missing_branch(self):
+        t = Target(branch=Branch())
+        dict.__delitem__(t, 'branch')
+        with self.assertRaises(ValueError):
+            t.type

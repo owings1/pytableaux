@@ -132,7 +132,7 @@ class Emsg(Enum):
     ValueConflict = ValueError, "Value conflict: '{0}' conflicts with '{1}'", 2
     ValueConflictFor = (ValueError,
         "Value conflict for '{0}': '{1}' conflicts with existing '{2}'", 3)
-    BadAttrName = ValueError, "Invalid attribute identifier: '{}'", (str,)
+    BadAttrName = AttributeError, "Invalid attribute identifier: '{}'", (str,)
 
     NotLogicsPackage = ValueError, "{0} not a registered logics package", 1
     BadLogicModule = ValueError, "{0} not a value logic module", 1
