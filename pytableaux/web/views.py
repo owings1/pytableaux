@@ -36,7 +36,7 @@ from cherrypy._cprequest import Request, Response
 
 from .. import logics, package
 from ..errors import ParseError, ProofTimeoutError
-from ..lang import Argument, LexWriter, Notation, Predicates, TriCoords
+from ..lang import Argument, LexWriter, Notation, Predicates, TriCoords, Parser
 from ..proof import Tableau, writers
 from ..tools import EMPTY_MAP, PathedDict, dmerged
 from ..tools.timing import StopWatch
@@ -183,9 +183,9 @@ class ApiView(JsonView):
 
     def parse_preds(self, key: str = 'predicates') -> Predicates|None:
         specs = self.payload[key]
-        preds = Predicates()
         if not specs:
-            return preds
+            return Predicates.EMPTY
+        preds = Predicates()
         errors = self.errors
         for i, spec in enumerate(specs):
             try:
@@ -199,7 +199,7 @@ class ApiParseView(ApiView):
 
     payload_defaults: Mapping[str, Any] = MapProxy(dict(
         notation = Notation.polish.name,
-        predicates = EMPTY,
+        predicates = Predicates.EMPTY,
         input = ''))
 
     def POST(self):
@@ -235,7 +235,7 @@ class ApiParseView(ApiView):
         preds = self.parse_preds('predicates')
         if errors:
             return
-        parser = notn.Parser(preds)
+        parser = Parser(notation=notn, predicates=preds)
         try:
             sentence = parser(payload['input'])
         except Exception as err:
@@ -245,7 +245,7 @@ class ApiParseView(ApiView):
             type = sentence.TYPE.name,
             rendered = {
                 notn.name: {
-                    format: notn.DefaultWriter(format=format)(sentence)
+                    format: LexWriter(notation=notn, format=format)(sentence)
                     for format in notn.formats}
                 for notn in Notation})
 
@@ -402,7 +402,7 @@ class ApiProveView(ApiView):
         preds = self.parse_preds('argument:predicates')
         if errors:
             return
-        parser = notn.Parser(preds)
+        parser = Parser(notation=notn, predicates=preds)
         premises = deque()
         for i, premise in enumerate(payload['argument:premises']):
             try:

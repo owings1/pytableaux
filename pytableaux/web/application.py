@@ -33,7 +33,7 @@ from cherrypy import HTTPError, NotFound, expose
 from cherrypy._cprequest import Request, Response
 
 from .. import examples, logics, package
-from ..lang import (Argument, LexType, Notation, Operator, ParseTable,
+from ..lang import (Argument, LexType, Notation, Operator, ParseTable, LexWriter,
                     Predicate, Quantifier)
 from ..logics import LogicType
 from ..proof import writers
@@ -173,7 +173,7 @@ class WebApp(EventEmitter):
             example_args = self.example_args,
             output_formats = sorted(set(Notation.get_common_formats()).intersection(writers.registry)),
             logic_categories = logics.registry.grouped(self.logics_map),
-            lw_html_ref = Notation.standard.DefaultWriter('html'),
+            lw_html_ref = LexWriter(notation=Notation.standard, format='html'),
             toJson = self.tojson))
         self.on(Wevent.before_dispatch, self.before_dispatch)
 
@@ -220,7 +220,7 @@ class WebApp(EventEmitter):
                     premises = tuple(map(lw, arg.premises)),
                     conclusion = lw(arg.conclusion)))
                 for lw in (
-                    notn.DefaultWriter(format='text', dialect='ascii')
+                    LexWriter(notation=notn, format='text', dialect='ascii')
                     for notn in Notation)} | {
                 '@Predicates': tuple(
                     p.spec for p in arg.predicates(sort=True)
@@ -237,7 +237,7 @@ class WebApp(EventEmitter):
     
     def _build_jsapp_data(self):
         stdtbl = ParseTable.fetch(Notation.standard)
-        stdlw = Notation.standard.DefaultWriter(format='text', dialect='unicode')
+        stdlw = LexWriter(notation=Notation.standard, format='text', dialect='unicode')
         nups = {}
         for notn in Notation:
             chars = []
