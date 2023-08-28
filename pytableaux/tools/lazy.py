@@ -23,11 +23,12 @@ import builtins
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 from ..errors import check
-from . import EMPTY_SET, BaseMember, wraps
+from . import EMPTY_SET, wraps
 
 __all__ = ('get', 'prop')
 
 _T = TypeVar('_T')
+_F = TypeVar('_F', bound=Callable)
 _Self = TypeVar('_Self')
 
 NOARG = object()
@@ -54,7 +55,7 @@ if TYPE_CHECKING:
         def __delete__(self, __obj: _Self) -> None: ...
 
 
-class get(BaseMember):
+class get:
     """Return a lazy caching getter.
 
     Usage::
@@ -70,8 +71,10 @@ class get(BaseMember):
                return 'baked'
     """
 
+    attr: str|None
+    wrapped: Callable
+
     __slots__ = ('attr', 'wrapped')
-    format = '_{}'.format
 
     def __new__(cls, wrapped=NOARG, /, *, attr=None):
         """If only argument to constructor is callable, construct and call the
@@ -84,10 +87,9 @@ class get(BaseMember):
             return self
         return self(check.callable(wrapped))
 
-    def __call__(self, wrapped):
-        if self.attr is None:
-            self.attr = self.format(wrapped.__name__)
-        attr = self.attr
+    def __call__(self, wrapped: _F, /, *, name=None) -> _F:
+        name = name or wrapped.__name__
+        attr = (self.attr or '_{name}').format(name=name)
         @wraps(wrapped)
         def wrapper(self):
             try:
@@ -97,11 +99,6 @@ class get(BaseMember):
             setattr(self, attr, value := wrapped(self))
             return value
         return wrapper
-
-    def sethook(self, owner, name):
-        if self.attr is None:
-            self.attr = self.format(name)
-        setattr(owner, name, self(self.wrapped))
 
 class prop(get):
     """Return a property with the getter. NB: a setter/deleter should be
