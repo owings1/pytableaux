@@ -201,10 +201,10 @@ class LinkSequence(Sequence[_T], abcs.Copyable):
 
     @abstractmethod
     def __new__(cls, *args, **kw):
-        inst = super().__new__(cls)
-        inst.__link_first__ = None
-        inst.__link_last__ = None
-        return inst
+        self = super().__new__(cls)
+        self.__link_first__ = None
+        self.__link_last__ = None
+        return self
 
     def __iter__(self) -> Iterator[_T]:
         return iter_link_values(self.__link_first__, 1)
@@ -276,11 +276,9 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
     __len: int
 
     def __new__(cls, *args, **kw):
-        inst = object.__new__(cls)
-        inst.__link_first__ = None
-        inst.__link_last__ = None
-        inst.__len = 0
-        return inst
+        self = super().__new__(cls, *args, **kw)
+        self.__len = 0
+        return self
 
     def __init__(self, values = None, /):
         if values is not None:
@@ -380,6 +378,7 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
                 arrivals = tuple(map(cast, arrivals))
             else:
                 echeck.inst(arrivals, Collection)
+            # TODO: implement [0:0]
             range_ = slicerange(len(self), slice_, arrivals)
             if not len(range_):
                 return
@@ -480,7 +479,7 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
             link.next.prev = link.prev
         self.__len -= 1
 
-class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo = HookProvider(linkseq) - {'check'}):
+class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo=HookProvider(linkseq) - {'check'}):
     """Mutable ``linqseq`` implementation for hashable values, based on
     a dict index. Inserting and removing is fast (O(1)) no matter where
     in the list, *so long as positions are referenced by value*. Accessing
@@ -496,9 +495,9 @@ class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo = HookProvider(links
     __slots__ = '__table',
 
     def __new__(cls, *args, **kw):
-        inst: linqset = super().__new__(cls)
-        inst.__table = dict()
-        return inst
+        self: linqset = super().__new__(cls)
+        self.__table = dict()
+        return self
 
     def __init__(self, values = None, /):
         if values is not None:

@@ -18,10 +18,11 @@
 #
 # pytableaux.tools.linked tests
 from pytableaux.tools.linked import *
+from unittest import skip
 
 from ..utils import BaseCase as Base
 
-class TestLinkSet(Base):
+class Test_linqset(Base):
 
     def test_iter(self):
         x = linqset(range(10))
@@ -129,3 +130,49 @@ class TestLinkSet(Base):
         x.wedge('f', 'e', 1)
         self.assertEqual(list(x), list('abcdefg'))
 
+class Test_linqseq(Base):
+
+    def test_construct_with_values(self):
+        s = linkseq(range(3))
+        self.assertEqual(list(s), list(range(3)))
+    
+    def test_copy(self):
+        s1 = linqset(range(3))
+        s2 = s1.copy()
+        self.assertEqual(s1, s2)
+        self.assertIsNot(s1, s2)
+        s1.append(3)
+        self.assertNotEqual(s1, s2)
+
+    def test_setitem_slice(self):
+        s1 = linqset(range(5))
+        x = list(range(5))
+        s1[2:4] = 5,6
+        x[2:4] = 5,6
+        self.assertEqual(list(s1), x)
+
+    @skip('not implemented')
+    def test_setitem_empy_slice(self):
+        s1 = linqset()
+        x = list()
+        s1[0:0] = 1,
+        x[0:0] = 1,
+        self.assertEqual(list(s1), x)
+    
+    def test_setitem_raises_type_error(self):
+        s1 = linqset(range(4))
+        with self.assertRaises(TypeError):
+            s1[''] = 1
+
+
+    def test_delitem_slice(self):
+        s1 = linqset(range(5))
+        x = list(range(5))
+        del(s1[2:4])
+        del(x[2:4])
+        self.assertEqual(list(s1), x)
+    
+    def test_delitem_raises_type_error(self):
+        s1 = linqset(range(4))
+        with self.assertRaises(TypeError):
+            del(s1[''])
