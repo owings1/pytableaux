@@ -244,22 +244,17 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
         self._seq_.clear()
         self._set_.clear()
 
-    @abcs.hookable('cast', 'check', 'done')
-    def insert(self, index, value, /, *, cast = None, check = None, done = None):
+    def insert(self, index, value, /):
         'Insert a value before an index. Raises ``DuplicateValueError``.'
-        if cast is not None:
-            value = cast(value)
+        value = self._hook_cast(value)
         if value in self:
             raise DuplicateValueError(value)
-        if check is not None:
-            check(self, (value,), EMPTY_SET)
+        self._hook_check((value,), EMPTY_SET)
         self._seq_.insert(index, value)
         self._set_.add(value)
-        if done is not None:
-            done(self, (value,), EMPTY_SET)
+        self._hook_done((value,), EMPTY_SET)
 
-    @abcs.hookable('check', 'done')
-    def __delitem__(self, key, /, *, check = None, done = None):
+    def __delitem__(self, key):
         'Delete by index/slice.'
         if isinstance(key, SupportsIndex):
             setdelete = self._set_.remove
@@ -268,36 +263,29 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
         else:
             raise Emsg.InstCheck(key, (slice, SupportsIndex))
         leaving = self[key]
-        if check is not None:
-            check(self, EMPTY_SET, (leaving,))
+        self._hook_check(EMPTY_SET, (leaving,))
         del self._seq_[key]
         setdelete(leaving)
-        if done is not None:
-            done(self, EMPTY_SET, (leaving,))
+        self._hook_done(EMPTY_SET, (leaving,))
 
-    @abcs.hookable('cast')
-    def __setitem__(self, key, value, /, *, cast = None):
+    def __setitem__(self, key, value):
         'Set value by index/slice. Raises ``DuplicateValueError``.'
         if isinstance(key, SupportsIndex):
-            if cast is not None:
-                value = cast(value)
+            value = self._hook_cast(value)
             self.__setitem_index__(key, value)
             return
         if isinstance(key, slice):
-            if cast is not None:
-                value = tuple(map(cast, value))
+            value = tuple(map(self._hook_cast, value))
             self.__setitem_slice__(key, value)
             return
         raise Emsg.InstCheck(key, (slice, SupportsIndex))
 
-    @abcs.hookable('check', 'done')
-    def __setitem_index__(self, index: SupportsIndex, arriving, /, *, check = None, done = None):
+    def __setitem_index__(self, index: SupportsIndex, arriving, /):
         'Index setitem Implementation'
         leaving = self._seq_[index]
         if arriving in self and arriving != leaving:
             raise Emsg.DuplicateValue(arriving)
-        if check is not None:
-            check(self, (arriving,), (leaving,))
+        self._hook_check((arriving,), (leaving,))
         self._set_.remove(leaving)
         try:
             self._seq_[index] = arriving
@@ -306,11 +294,9 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
             raise
         else:
             self._set_.add(arriving)
-        if done is not None:
-            done(self, (arriving,), (leaving,))
+        self._hook_done((arriving,), (leaving,))
 
-    @abcs.hookable('check', 'done')
-    def __setitem_slice__(self, slice_: slice, arriving, /, *, check = None, done = None):
+    def __setitem_slice__(self, slice_: slice, arriving, /):
         'Slice setitem Implementation'
         # Check length and compute range. This will fail for some bad input,
         # and it is fast to compute.
@@ -321,8 +307,7 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
         # is a duplicate.
         for v in filterfalse(leaving.__contains__, filter(self.__contains__, arriving)):
             raise Emsg.DuplicateValue(v)
-        if check is not None:
-            check(self, arriving, leaving)
+        self._hook_check(arriving, leaving)
         self._set_ -= leaving
         try:
             self._seq_[slice_] = arriving
@@ -331,8 +316,16 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
             raise
         else:
             self._set_ |= arriving
-        if done is not None:
-            done(self, arriving, leaving)
+        self._hook_done(arriving, leaving)
+
+    def _hook_check(self, arriving, leaving):
+        pass
+    
+    def _hook_done(self, arriving, leaving):
+        pass
+
+    def _hook_cast(self, value):
+        return value
 
     if TYPE_CHECKING:
         @overload

@@ -260,7 +260,7 @@ class PredicatesBase(SequenceSet[Predicate], metaclass=LangCommonMeta):
     def __contains__(self, ref, /):
         return ref in self._lookup
 
-class Predicates(PredicatesBase, qset[Predicate], hooks={qset: dict(cast=Predicate)}):
+class Predicates(PredicatesBase, qset[Predicate]):
     """Predicate store. A sequenced set with a multi-keyed lookup index.
 
     Predicates with the same symbol coordinates (index, subscript) may
@@ -287,9 +287,7 @@ class Predicates(PredicatesBase, qset[Predicate], hooks={qset: dict(cast=Predica
         if sort:
             self.sort(key=key, reverse=reverse)
 
-    @abcs.abcf.temp
-    @qset.hook('check')
-    def before_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
+    def _hook_check(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
         'Implement before change (check) hook. Check for conflicting predicates.'
         # Is there a distinct predicate that matches any lookup keys,
         # viz. BiCoords or name, that does not equal pred, e.g. arity
@@ -311,9 +309,7 @@ class Predicates(PredicatesBase, qset[Predicate], hooks={qset: dict(cast=Predica
                 for prior, pred in conflicts.items():
                     raise Emsg.ValueConflictFor(pred, pred.spec, prior.spec)
 
-    @abcs.abcf.temp
-    @qset.hook('done')
-    def after_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
+    def _hook_done(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
         'Implement after change (done) hook. Update lookup index.'
         lookup = self._lookup
         pop = lookup.pop
@@ -325,6 +321,9 @@ class Predicates(PredicatesBase, qset[Predicate], hooks={qset: dict(cast=Predica
         for pred in arriving:
             update(zip(pred.refs, repeat(pred)))
             lookup[pred] = pred
+
+    def _hook_cast(self, value):
+        return Predicate(value)
 
     def clear(self):
         super().clear()

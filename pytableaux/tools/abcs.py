@@ -64,8 +64,6 @@ class Eset(frozenset, Enum):
 class Astr(str, Enum):
     "Attribute names for abc functionality."
     flag     = '_abc_flag'
-    hookuser = '_abc_hook_user'
-    hookinfo = '_abc_hook_info'
 
 def is_enumcls(obj):
     return isinstance(obj, type) and issubclass(obj, Enum)
@@ -234,17 +232,6 @@ def mroiter(cls:type[_T], *, supcls:type[_T1]=None, mcls:type[_T2]=None,
         it = filter(lambda c: issubclass(c, supcls), it)
     yield from it
 
-def hookable(*hooks: str, attr = Astr.hookinfo):
-    'Decorator factory for specifying available hooks (provider).'
-    def decorator(func):
-        value = getattr(func, attr, None)
-        if value is None:
-            value = set()
-            setattr(func, attr, value)
-        value.update(hooks)
-        return func
-    return decorator
-
 class abcf(Flag):
     'Enum flag for AbcMeta functionality.'
 
@@ -252,7 +239,6 @@ class abcf(Flag):
     temp   = 1 << 1
     after  = 1 << 2
     static = 1 << 3
-    inherit = 1 << 4
 
     _cleanable = before | temp | after
 
@@ -283,7 +269,7 @@ def nsinit(ns: dict, bases, /):
     # cast slots to a set
     slots = ns.get('__slots__')
     if isinstance(slots, str):
-        slots = frozenset({slots})
+        ns['__slots__'] = frozenset({slots})
     elif isinstance(slots, Iterable) and not isinstance(slots, Set):
         ns['__slots__'] = frozenset(slots)
 
@@ -616,38 +602,18 @@ class AbcMeta(_abc.ABCMeta):
     if TYPE_CHECKING:
         def __call__(cls: type[_T], *args, **kw) -> _T: ...
 
-    def __new__(self, clsname, bases, ns, /, *,
-        hooks = None, skiphooks = False, hookinfo = None, **kw):
+    def __new__(self, clsname, bases, ns, /, **kw):
         nsinit(ns, bases)
         cls = super().__new__(self, clsname, bases, ns, **kw)
-        if not skiphooks:
-            hookutil.init_user(cls, hooks)
         clsafter(cls, ns)
-        if not skiphooks:
-            hookutil.init_provider(cls, hookinfo)
         return cls
 
-    def hook(self, *hooks, attr = Astr.hookuser):
-        'Decorator factory for tagging hook implementation (user).'
-        def decorator(func):
-            value = getattr(func, attr, None)
-            if value is None:
-                value = {}
-                setattr(func, attr, value)
-            impl = value.setdefault(self, {})
-            for name in hooks:
-                if name in impl:
-                    raise TypeError from Emsg.DuplicateKey(name)
-                impl[name] = func
-            return func
-        return decorator
-
-class Abc(metaclass=AbcMeta, skiphooks=True):
+class Abc(metaclass=AbcMeta):
     'Convenience for using AbcMeta as metaclass.'
 
     __slots__ = EMPTY_SET
 
-class Copyable(metaclass=AbcMeta, skiphooks=True):
+class Copyable(metaclass=AbcMeta):
 
     __slots__ = EMPTY_SET
 
@@ -673,7 +639,3 @@ class Copyable(metaclass=AbcMeta, skiphooks=True):
             if '__deepcopy__' not in subcls.__dict__:
                 subcls.__deepcopy__ = Ebc.__deepcopy__
         subcls.__copy__ = subcls.copy
-
-pass
-
-from .hooks import hookutil

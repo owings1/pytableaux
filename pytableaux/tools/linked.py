@@ -28,7 +28,6 @@ from typing import (Any, Collection, Iterator, Literal, MutableSequence,
 from ..errors import Emsg
 from ..errors import check as echeck
 from . import EMPTY_SET, abcs, absindex, slicerange
-from .hooks import HookProvider
 from .hybrids import MutableSequenceSet
 
 __all__ = (
@@ -307,17 +306,13 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
     def __len__(self):
         return self.__len
 
-    @abcs.hookable('cast', 'check')
-    def insert(self, index: SupportsIndex, value, /, *, cast = None, check = None):
+    def insert(self, index: SupportsIndex, value, /):
         """insert(self, index: SupportsIndex, value,/)
         Insert an item.
         """
         length = len(self)
         index = absindex(length, index, False)
-        if cast is not None:
-            value = cast(value)
-        if check is not None:
-            check(self, (value,), EMPTY_SET)
+        self._hook_check((value,), EMPTY_SET)
         newlink = self._link_type_(value)
         if length == 0:
             # Seed.
@@ -355,38 +350,27 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
 
         raise Emsg.InstCheck(i, (SupportsIndex, slice))
 
-    @abcs.hookable('cast', 'check')
-    def __setitem__(self, i, value, /, *, cast = None, check = None) -> None:
+    def __setitem__(self, i, value) -> None:
         """__setitem__(self, i, value)
         Set value(s) by index/slice."""
 
         if isinstance(i, SupportsIndex):
             index = i
             arrival = value
-            if cast is not None:
-                arrival = cast(arrival)
             departure = self._link_at(index)
-            if check is not None:
-                check(self, (arrival,), (departure.value,))
+            self._hook_check((arrival,), (departure.value,))
             departure.value = arrival
             return
 
         if isinstance(i, slice):
             slice_ = i
             arrivals = value
-            if cast is not None:
-                arrivals = tuple(map(cast, arrivals))
-            else:
-                echeck.inst(arrivals, Collection)
+            echeck.inst(arrivals, Collection)
             # TODO: implement [0:0]
             range_ = slicerange(len(self), slice_, arrivals)
             if not len(range_):
                 return
-            if check is not None:
-                # TODO: optimize -- get first link only once, so we don't have
-                # to find it twice.
-                departures = self[slice_]
-                check(self, arrivals, departures)
+            self._hook_check(arrivals, self[slice_])
             link_it = iter_links_sliced(self, slice_)
             for link, arrival in zip(link_it, arrivals):
                 link.value = arrival
@@ -479,7 +463,10 @@ class linkseq(LinkSequence[_T], MutableSequence[_T]):
             link.next.prev = link.prev
         self.__len -= 1
 
-class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo=HookProvider(linkseq) - {'check'}):
+    def _hook_check(self, arriving, leaving):
+        pass
+
+class linqset(linkseq[_T], MutableSequenceSet[_T]):
     """Mutable ``linqseq`` implementation for hashable values, based on
     a dict index. Inserting and removing is fast (O(1)) no matter where
     in the list, *so long as positions are referenced by value*. Accessing
@@ -503,9 +490,8 @@ class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo=HookProvider(linkseq
         if values is not None:
             self.update(values)
 
-    @abcs.hookable('cast')
-    def wedge(self, value: _T, neighbor: _T, rel: Literal[-1, 1], /, *, cast = None) -> None:
-        """wedge(self, value: _T, neighbor: _T, rel: Literal[-1, 1], /)
+    def wedge(self, value: _T, neighbor: _T, rel: Literal[-1, 1], /) -> None:
+        """
         Place a new value next to (before or after) another value.
         
         This is the most performant way to insert a new value anywhere in the
@@ -525,8 +511,6 @@ class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo=HookProvider(linkseq
         if rel is LinkRel.self:
             raise ValueError(rel)
         neighbor = self._link_of(neighbor)
-        if cast is not None:
-            value = cast(value)
         if value in self:
             raise Emsg.DuplicateValue(value)
         newlink = self._link_type_(value)
@@ -577,15 +561,8 @@ class linqset(linkseq[_T], MutableSequenceSet[_T], hookinfo=HookProvider(linkseq
             table[link.value] = link
         return inst
 
-    #******  Duplicate check hook
-
-    @abcs.hookable('check')
-    @linkseq.hook('check')
-    def __check(self, arrivals, departures, /, *, check = None):
-
+    def _hook_check(self, arrivals, departures):
         for v in filterfalse(
             departures.__contains__,
             filter(self.__contains__, arrivals)):
             raise Emsg.DuplicateValue(v)
-        if check is not None:
-            check(self, arrivals, departures)
