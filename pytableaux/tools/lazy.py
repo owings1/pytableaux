@@ -107,14 +107,10 @@ class prop(get):
 
     __slots__ = EMPTY_SET
 
-    @property
-    def propclass(self) -> type[property]:
-        return property
-
     if TYPE_CHECKING:
         @overload
         def __new__(cls, func: Callable[[_Self], _T]) -> property[_Self, _T]: ...
 
     def __call__(self, method: Callable[[_Self], _T]) -> property[_Self, _T]:
         fget = super().__call__(method)
-        return self.propclass(fget, doc = method.__doc__)
+        return property(fget, doc = method.__doc__)
