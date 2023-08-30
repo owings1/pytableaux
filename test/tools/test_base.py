@@ -54,6 +54,12 @@ class Test_minfloor(BaseCase):
         with self.assertRaises(ValueError):
             minfloor(0, [])
 
+    def test_default_ignored_in_non_empty_collection(self):
+        it = [1, 2, 3]
+        floor = 2
+        default = 0
+        self.assertEqual(minfloor(floor, it, default), floor)
+
 class Test_maxceil(BaseCase):
 
     def test_simple(self):
@@ -61,6 +67,12 @@ class Test_maxceil(BaseCase):
         self.assertEqual(maxceil(5, [1,2,3,4]), 4)
         with self.assertRaises(ValueError):
             maxceil(0, [])
+
+    def test_default_ignored_in_non_empty_collection(self):
+        it = [1]
+        ceil = 2
+        default = 3
+        self.assertEqual(maxceil(ceil, it, default), 1)
 
 class Test_sbool(BaseCase):
 

@@ -205,14 +205,13 @@ def limit_best(better: Callable[[_T, _T], bool], limit: _T, it: Iterable[_T], de
 
 def _limit_best(better, limit, it, default, _name, /):
     it = iter(it)
-    if default is not None:
-        best = default
-    else:
-        try:
-            best = next(it)
-        except StopIteration:
-            raise ValueError(
-                f"{_name}() arg is an empty sequence") from None
+    try:
+        best = next(it)
+    except StopIteration:
+        if default is not None:
+            return default
+        raise ValueError(
+            f"{_name}() arg is an empty sequence") from None
     for val in it:
         if val == limit or better(val, limit):
             return val
