@@ -36,17 +36,20 @@ class Meta(FDE.Meta):
 
 class Model(FDE.Model):
 
-    def finish(self):
-        # Ensure anti-extension is populated for every param tuple
-        ntuples = defaultdict(set)
-        for pred, interp in self.predicates.items():
-            ntuples[pred.arity].update(interp.pos)
-            ntuples[pred.arity].update(interp.neg)
-        for pred, interp in self.predicates.items():
-            for ntuple in ntuples[pred.arity]:
-                if ntuple not in interp.pos:
-                    interp.neg.add(ntuple)
-        return super().finish()
+    pass
+    # def finish(self):
+    #     # Ensure anti-extension is populated for every param tuple
+    #     ntuples = defaultdict(set)
+    #     for frame in self.frames.values():
+    #         predicates = frame.predicates
+    #         for pred, interp in predicates.items():
+    #             ntuples[pred.arity].update(interp.pos)
+    #             ntuples[pred.arity].update(interp.neg)
+    #         for pred, interp in predicates.items():
+    #             for ntuple in ntuples[pred.arity]:
+    #                 if ntuple not in interp.pos:
+    #                     interp.neg.add(ntuple)
+    #     return super().finish()
 
 class System(FDE.System): pass
 

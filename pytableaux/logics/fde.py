@@ -17,14 +17,13 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections import defaultdict
-from itertools import starmap
+from itertools import filterfalse, starmap
 from typing import Any
 
-from ..errors import Emsg, check
-from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
-                    Predicated, Quantified, Quantifier, Sentence)
-from ..models import PredicateInterpretation, ValueFDE
+from ..errors import check
+from ..lang import (Atomic, Operated, Operator, Predicated, Quantified,
+                    Quantifier, Sentence)
+from ..models import ValueFDE
 from ..proof import Branch, Node, SentenceNode, adds, filters, rules, sdnode
 from ..tools import group, maxceil, minfloor, wraps
 from . import LogicType
@@ -50,6 +49,9 @@ class Meta(LogicType.Meta):
 
 class Model(LogicType.Model[ValueFDE]):
     'An FDE Model.'
+
+    class Frame(LogicType.Model.Frame):
+        anti_extensions = True
 
     class TruthFunction(LogicType.Model.TruthFunction[ValueFDE]):
 
@@ -78,55 +80,7 @@ class Model(LogicType.Model[ValueFDE]):
         def Biconditional(self, a, b, /):
             return self.Conjunction(*starmap(self.Conditional, ((a, b), (b, a))))
 
-    predicates: dict[Predicate, PredicateInterpretation]
-    "A mapping of each predicate to its interpretation."
-
-    atomics: dict[Atomic, ValueFDE]
-    "An assignment of each atomic sentence to a value."
-
-    opaques: dict[Sentence, ValueFDE]
-    "An assignment of each opaque (un-interpreted) sentence to a value."
-
-    sentences: set[Sentence]
-
-    __slots__ = ('predicates', 'atomics', 'opaques', 'constants', 'sentences')
-
-    def __init__(self):
-        super().__init__()
-        self.predicates = defaultdict(PredicateInterpretation)
-        self.atomics = {}
-        self.opaques = {}
-        #: Track set of constants for performance.
-        self.constants: set[Constant] = set()
-        self.sentences = set()
-
-    def value_of_atomic(self, s: Sentence, /):
-        self._check_finished()
-        return self.atomics.get(s, self.Meta.unassigned_value)
-
-    def value_of_opaque(self, s: Sentence, /):
-        self._check_finished()
-        return self.opaques.get(s, self.Meta.unassigned_value)
-
-    def value_of_predicated(self, s: Predicated, /):
-        self._check_finished()
-        interp = self.predicates[s.predicate]
-        if s.params in interp.pos:
-            if s.params in interp.neg:
-                return self.values.B
-            return self.values.T
-        if s.params in interp.neg:
-            return self.values.F
-        return self.values.N
-
-    def _unquantify_value_map(self, s: Quantified, /):
-        try:
-            return map(self.value_of, map(s.unquantify, self.constants))
-        except AttributeError:
-            check.inst(s, Quantified)
-            raise # pragma: no cover
-
-    def value_of_quantified(self, s: Quantified, /):
+    def value_of_quantified(self, s: Quantified, /, **kw):
         """
         The value of a quantified sentence is determined from the values of
         sentences that result from replacing each constant for the quantified
@@ -134,50 +88,24 @@ class Model(LogicType.Model[ValueFDE]):
         for a universial quantifier, it is the min value.
         """
         self._check_finished()
-        it = self._unquantify_value_map(s)
+        it = self._unquantify_values(s, **kw)
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:
             return minfloor(self.minval, it, self.maxval)
         raise NotImplementedError from ValueError(s.quantifier)
 
-    def set_opaque_value(self, s: Sentence, value, /):
-        self._check_not_finished()
-        value = self.values[value]
-        if self.opaques.get(s) not in (value, None):
-            raise Emsg.ConflictForSentence(value, s)
-        self.opaques[s] = value
-        # We might have a quantified opaque sentence, in which case we will need
-        # to still check every subsitution, so we want the constants and predicates.
-        for pred in s.predicates:
-            self.predicates[pred]
-        self.constants.update(s.constants)
-        self.sentences.add(s)
-        
-    def set_atomic_value(self, s: Atomic, value, /):
-        self._check_not_finished()
-        value = self.values[value]
-        if self.atomics.get(s) not in (value, None):
-            raise Emsg.ConflictForSentence(value, s)
-        self.atomics[s] = value
-        self.sentences.add(s)
-
-    def set_predicated_value(self, s: Predicated, value, /):
-        self._check_not_finished()
-        value = self.values[value]
-        if len(s.variables):
-            raise ValueError(f'Free variables not allowed')
-        self.predicates[s.predicate].set_value(s.params, self.values[value])
-        self.constants.update(s.constants)
-        self.sentences.add(s)
-
     def read_branch(self, branch, /):
         self._check_not_finished()
+        values = self.values
         for node in branch:
             if not isinstance(node, SentenceNode):
                 continue
             s = node['sentence']
             self.sentences.add(s)
+            w = node.get('world')
+            if w is None:
+                w = 0
             is_literal = self.is_sentence_literal(s)
             is_opaque = self.is_sentence_opaque(s)
             if not is_literal and not is_opaque:
@@ -227,79 +155,24 @@ class Model(LogicType.Model[ValueFDE]):
                         # If the node is undesginated, but the negation is
                         # not also undesignated on b, the value is F
                         value = 'F'
+            value = values[value]
             if is_opaque:
-                self.set_opaque_value(s, value)
+                self.set_opaque_value(s, value, world=w)
             else:
-                self.set_literal_value(s, value)
+                self.set_literal_value(s, value, world=w)
         return super().read_branch(branch)
 
-
-    def finish(self):
-        # TODO: consider augmenting the logic with Identity and Existence predicate
-        #       restrictions. In that case, new tableaux rules need to be written.
-        atomics = set()
-        for s in self.sentences:
-            atomics.update(s.atomics)
-        unass = self.Meta.unassigned_value
-        for s in atomics:
-            if s not in self.atomics:
-                self.atomics[s] = unass
-        return super().finish()
-
-    def get_data(self) -> dict[str, Any]:
-        return dict(
-            Atomics = dict(
-                datatype        = 'function',
-                typehint        = 'truth_function',
-                input_datatype  = 'sentence',
-                output_datatype = 'string',
-                output_typehint = 'truth_value',
-                symbol = 'v',
-                values = [
-                    dict(
-                        input  = s,
-                        output = self.atomics[s])
-                    for s in sorted(self.atomics)]),
-            Opaques = dict(
-                datatype        = 'function',
-                typehint        = 'truth_function',
-                input_datatype  = 'sentence',
-                output_datatype = 'string',
-                output_typehint = 'truth_value',
-                symbol = 'v',
-                values = [
-                    dict(
-                        input  = s,
-                        output = self.opaques[s])
-                    for s in sorted(self.opaques)]),
-            Predicates = dict(
-                in_summary  = True,
-                datatype    = 'list',
-                values      = [
-                    v for predicate in sorted(self.predicates) for v in
-                    [
-                        dict(
-                            datatype        = 'function',
-                            typehint        = 'extension',
-                            input_datatype  = 'predicate',
-                            output_datatype = 'set',
-                            output_typehint = 'extension',
-                            symbol = 'P+',
-                            values = [
-                                dict(
-                                    input  = predicate,
-                                    output = sorted(self.predicates[predicate].pos))]),
-                        dict(
-                            datatype        = 'function',
-                            typehint        = 'extension',
-                            input_datatype  = 'predicate',
-                            output_datatype = 'set',
-                            output_typehint = 'extension',
-                            symbol = 'P-',
-                            values = [
-                                dict(
-                                    input  = predicate,
-                                    output = sorted(self.predicates[predicate].neg))])]]))
+    # def finish(self):
+    #     # TODO: consider augmenting the logic with Identity and Existence predicate
+    #     #       restrictions. In that case, new tableaux rules need to be written.
+    #     atomics = set()
+    #     for s in self.sentences:
+    #         atomics.update(s.atomics)
+    #     unass = self.Meta.unassigned_value
+    #     known = self.frame.atomics
+    #     for s in filterfalse(known.__contains__, atomics):
+    #         known[s] = unass
+    #     return super().finish()
 
 
 class System(LogicType.System):

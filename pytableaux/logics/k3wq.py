@@ -42,12 +42,11 @@ class Model(FDE.Model):
         generalizing_operators = MapProxy({
             Operator.Disjunction: 'max',
             Operator.Conjunction: 'min'})
-        values = Meta.values
         generalized_orderings = MapProxy(dict(
-            max = (values.F, values.T, values.N),
-            min = (values.N, values.F, values.T)))
+            max = tuple(map(Meta.values, 'FTN')),
+            min = tuple(map(Meta.values, 'NFT'))))
 
-    def value_of_quantified(self, s: Quantified, /):
+    def value_of_quantified(self, s: Quantified, /, *, world: int = 0):
         """
         An existential sentence is interpreted in terms of `generalized disjunction`.
         If we order the values least to greatest as V{N}, V{T}, V{F}, then we
@@ -67,7 +66,7 @@ class Model(FDE.Model):
             oper = Operator.Conjunction
         else:
             raise NotImplementedError from ValueError(s.quantifier) # pragma: no cover
-        return self.truth_function.generalize(oper, self._unquantify_value_map(s))
+        return self.truth_function.generalize(oper, self._unquantify_values(s, world=world))
 
 class System(FDE.System): pass
 

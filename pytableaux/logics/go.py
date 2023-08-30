@@ -52,8 +52,8 @@ class Model(FDE.Model):
                 return self.values.T
             return self.MaterialConditional(a, b)
 
-    def value_of_quantified(self, s: Quantified, /):
-        it = map(self.truth_function.Assertion, self._unquantify_value_map(s))
+    def value_of_quantified(self, s: Quantified, /, *, world: int = 0):
+        it = map(self.truth_function.Assertion, self._unquantify_values(s, world=world))
         if s.quantifier is Quantifier.Existential:
             return maxceil(self.maxval, it, self.minval)
         if s.quantifier is Quantifier.Universal:

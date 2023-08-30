@@ -30,9 +30,7 @@ class Meta(K.Meta):
     category_order = 2
     native_operators = FDE.Meta.native_operators
 
-class Model(K.Model):
-    def get_data(self) -> dict:
-        return self.frames[0].get_data()
+class Model(K.Model): pass
 
 class System(K.System): pass
 

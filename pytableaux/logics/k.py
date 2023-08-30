@@ -19,12 +19,12 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections import defaultdict, deque
 from typing import Mapping
+from types import MappingProxyType as MapProxy
 
-from .. import proof
 from ..errors import DenotationError, ModelValueError
 from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Quantifier, Sentence)
-from ..models import BaseModel, PredicateInterpretation, ValueCPL
+from ..models import ValueCPL
 from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
                      Target, WorldPair, adds, anode, filters, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
@@ -48,34 +48,9 @@ class Meta(LogicType.Meta):
     category_order = 1
     native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
 
-class AccessGraph(defaultdict[int, set[int]]):
 
-    __slots__ = EMPTY_SET
 
-    def __init__(self, *args, **kw):
-        super().__init__(set, *args, **kw)
-
-    def has(self, pair: tuple[int, int], /) -> bool:
-        w1, w2 = pair
-        return w1 in self and w2 in self[w1]
-
-    def add(self, pair: tuple[int, int], /):
-        w1, w2 = pair
-        self[w1].add(w2)
-        self[w2]
-
-    def addall(self, it):
-        for _ in map(self.add, it): pass
-
-    def flat(self, *, w1s=None, sort=False):
-        if w1s is None:
-            w1s = sorted(self) if sort else self
-        for w1 in w1s:
-            w2s = sorted(self[w1]) if sort else self[w1]
-            for w2 in w2s:
-                yield w1, w2
-
-class Model(BaseModel[Meta.values]):
+class Model(LogicType.Model[Meta.values]):
     """
     A K model comprises a non-empty collection of K-frames, a world access
     relation, and a set of constants (the domain).
@@ -83,57 +58,10 @@ class Model(BaseModel[Meta.values]):
 
     TruthFunction = FDE.Model.TruthFunction
 
-    frames: Mapping[int, Frame]
-    "A map from worlds to their frame"
+    class Frame(LogicType.Model.Frame):
+        pass
 
-    R: AccessGraph
-    "The `access` relation"
-
-    constants: set[Constant]
-    "The fixed domain of constants, common to all worlds in the model"
-
-    sentences: set[Sentence]
-    __slots__ = ('frames', 'R', 'constants', 'sentences')
-
-    def __init__(self):
-        super().__init__()
-        self.frames = defaultdict(Frame)
-        self.R = AccessGraph()
-        self.constants = set()
-        self.sentences = set()
-        # ensure there is a w0
-        self.frames[0]
-
-    def value_of_opaque(self, s: Sentence, /, *, world: int = 0):
-        self._check_finished()
-        return self.frames[world].opaques.get(s, self.Meta.unassigned_value)
-
-    def value_of_atomic(self, s: Atomic, /, *, world: int = 0):
-        self._check_finished()
-        return self.frames[world].atomics.get(s, self.Meta.unassigned_value)
-
-    def value_of_predicated(self, s: Predicated, /, *, world: int = 0):
-        """
-        A sentence for predicate `P` is true at :m:`w` iff the tuple of the parameters
-        is in the extension of `P` at :m:`w`.
-        """
-        self._check_finished()
-        params = s.params
-        for param in params:
-            if param not in self.constants:
-                raise DenotationError(f'Parameter {param} is not in the constants')
-        if params in self.frames[world].predicates[s.predicate].pos:
-            return self.values.T
-        return self.values.F
-
-    def value_of_quantified(self, s: Quantified, /, *, world: int = 0):
-        self._check_finished()
-        it = map(lambda s: self.value_of(s, world=world), map(s.unquantify, self.constants))
-        if s.quantifier is Quantifier.Existential:
-            return maxceil(self.maxval, it, self.minval)
-        if s.quantifier is Quantifier.Universal:
-            return minfloor(self.minval, it, self.maxval)
-        raise NotImplementedError from ValueError(s.quantifier)
+    value_of_quantified = FDE.Model.value_of_quantified
 
     def value_of_operated(self, s: Operated, /, *, world: int = 0):
         self._check_finished()
@@ -145,35 +73,6 @@ class Model(BaseModel[Meta.values]):
                 return minfloor(self.minval, it, self.maxval)
             raise NotImplementedError from ValueError(s.operator)
         return super().value_of_operated(s, world=world)
-
-    def set_opaque_value(self, s: Sentence, value, /, world = 0):
-        self._check_not_finished()
-        value = self.values[value]
-        opaques = self.frames[world].opaques
-        if opaques.get(s, value) is not value:
-            raise ModelValueError(f'Inconsistent value for sentence {s}')
-        opaques[s] = value
-        self.sentences.add(s)
-        # We might have a quantified opaque sentence, in which case we will need
-        # to still check every subsitution, so we want the constants.
-        self.constants.update(s.constants)
-
-    def set_atomic_value(self, s: Atomic, value, /, world = 0):
-        self._check_not_finished()
-        value = self.values[value]
-        atomics = self.frames[world].atomics
-        if atomics.get(s, value) is not value:
-            raise ModelValueError(f'Inconsistent value for sentence {s}')
-        atomics[s] = value
-        self.sentences.add(s)
-
-    def set_predicated_value(self, s: Predicated, value, /, *, world=0):
-        self._check_not_finished()
-        if len(s.variables):
-            raise ValueError(f'Free variables not allowed')
-        self.frames[world].predicates[s.predicate].set_value(s.params, self.values[value])
-        self.sentences.add(s)
-        self.constants.update(s.constants)
 
     def read_branch(self, branch: Branch, /):
         self._check_not_finished()
@@ -198,34 +97,12 @@ class Model(BaseModel[Meta.values]):
 
     def finish(self):
         self._check_not_finished()
-        # track all atomics and opaques
-        atomics = set()
-        opaques = set()
-        preds = set()
-        for s in self.sentences:
-            atomics.update(s.atomics)
-            preds.update(s.predicates)
-        # ensure frames for each world
-        for w in self.R:
-            self.frames[w]
+        self._complete_frames()
         for w, frame in self.frames.items():
-            atomics.update(frame.atomics)
-            opaques.update(frame.opaques)
-            preds.update(frame.predicates)
             for pred in deque(frame.predicates):
                 self._agument_extension_with_identicals(pred, w)
             self._ensure_self_identity(w)
             self._ensure_self_existence(w)
-        unass = self.Meta.unassigned_value
-        for w, frame in self.frames.items():
-            for pred in preds:
-                frame.predicates[pred]
-            for s in atomics:
-                if s not in frame.atomics:
-                    frame.atomics[s] = unass
-            for s in opaques:
-                if s not in frame.opaques:
-                    frame.opaques[s] = unass
         return super().finish()
 
     def _ensure_self_identity(self, w):
@@ -267,117 +144,7 @@ class Model(BaseModel[Meta.values]):
         identicals.discard(c)
         return identicals
 
-    def get_data(self) -> dict:
-        worlds = sorted(self.frames)
-        return dict(
-            Worlds = dict(
-                in_summary      = True,
-                datatype        = 'set',
-                member_datatype = 'int',
-                member_typehint = 'world',
-                symbol          = 'W',
-                values          = worlds),
-            Access = dict(
-                in_summary      = True,
-                datatype        = 'set',
-                typehint        = 'access_relation',
-                member_datatype = 'tuple',
-                member_typehint = 'access',
-                symbol          = 'R',
-                values          = list(self.R.flat(w1s=worlds, sort=True))),
-            Frames = dict(
-                datatype        = 'list',
-                typehint        = 'frames',
-                member_datatype = 'map',
-                member_typehint = 'frame',
-                symbol          = 'F',
-                values          = [
-                    dict(
-                        description = f'frame at world {w}',
-                        datatype    = 'map',
-                        typehint    = 'frame',
-                        value       = dict(self.frames[w].get_data()))
-                    for w in worlds]))
-
-class Frame:
-    """
-    A K-frame comprises the interpretation of sentences and predicates at a world.
-    """
-
-    atomics: dict[Atomic, ValueCPL]
-    "An assignment of each atomic sentence to a truth value"
-
-    opaques: dict[Sentence, ValueCPL]
-    "An assignment of each opaque (un-interpreted) sentence to a value"
-
-    predicates: dict[Predicate, PredicateInterpretation]
-
-    __slots__ = ('atomics', 'opaques', 'predicates')
-
-    def __init__(self):
-        self.atomics = {}
-        self.opaques = {}
-        self.predicates = defaultdict(PredicateInterpretation)
-
-    def get_data(self) -> dict:
-        return dict(
-            Atomics = dict(
-                datatype        = 'function',
-                typehint        = 'truth_function',
-                input_datatype  = 'sentence',
-                output_datatype = 'string',
-                output_typehint = 'truth_value',
-                symbol          = 'v',
-                values          = [
-                    dict(
-                        input  = sentence,
-                        output = self.atomics[sentence])
-                    for sentence in sorted(self.atomics)]),
-            Opaques = dict(
-                datatype        = 'function',
-                typehint        = 'truth_function',
-                input_datatype  = 'sentence',
-                output_datatype = 'string',
-                output_typehint = 'truth_value',
-                symbol          = 'v',
-                values          = [
-                    dict(
-                        input  = sentence,
-                        output = self.opaques[sentence])
-                    for sentence in sorted(self.opaques)]),
-            Predicates = dict(
-                datatype    = 'list',
-                values      = [
-                    dict(
-                        datatype        = 'function',
-                        typehint        = 'extension',
-                        input_datatype  = 'predicate',
-                        output_datatype = 'set',
-                        output_typehint = 'extension',
-                        symbol          = 'P',
-                        values          = [
-                            dict(
-                                input  = pred,
-                                output = sorted(self.predicates[pred].pos))])
-                    for pred in sorted(self.predicates)]))
-
-    def __eq__(self, other):
-        if other is self:
-            return True
-        if not isinstance(other, __class__):
-            return NotImplemented
-        if self.atomics != other.atomics or self.opaques != other.opaques:
-            return False
-        if len(self.predicates) != len(other.predicates):
-            return False
-        for pred, interp in self.predicates.items():
-            if pred not in other.predicates:
-                return False
-            if other.predicates[pred].pos != interp.pos:
-                return False
-        return True
-
-class System(proof.System):
+class System(LogicType.System):
 
     @classmethod
     def build_trunk(cls, b, arg, /):

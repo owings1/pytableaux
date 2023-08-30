@@ -252,7 +252,7 @@ class TestModels(Base):
             m.set_opaque_value(s3, 'T')
             m.set_literal_value(s4, 'F')
         self.assertEqual(m.value_of(s3), 'T')
-        self.assertIn(s3, m.opaques)
+        self.assertIn(s3, m.frames[0].opaques)
         self.assertIn(m.value_of(s5), m.Meta.designated_values)
 
     def test_set_predicated_raises_free_variables(self):
@@ -266,10 +266,10 @@ class TestModels(Base):
     def test_unquantify_value_map_raises_type_error_coverage(self):
         m = self.m()
         # check positive case
-        for _ in m._unquantify_value_map(Quantified.first()): _
+        for _ in m._unquantify_values(Quantified.first()): _
         s2 = Atomic.first()
         with self.assertRaises(TypeError):
-            m._unquantify_value_map(s2)
+            m._unquantify_values(s2)
 
 class TestBranchables(Base):
     exp = dict(

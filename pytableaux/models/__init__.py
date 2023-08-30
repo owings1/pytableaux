@@ -22,14 +22,15 @@ pytableaux.models
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from itertools import product, starmap
 from types import MappingProxyType as MapProxy
-from typing import Any, Generic, Iterable, Literal, Mapping, Self, TypeVar
+from typing import Any, Generic, Iterable, Literal, Mapping, NamedTuple, Self, TypeVar
 
-from ..errors import Emsg, check
-from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicated,
-                   Quantified, Sentence)
+from ..errors import Emsg, check, ModelValueError, DenotationError
+from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
+                    Predicated, Quantified, Sentence)
 from ..logics import LogicType
 from ..proof import Branch
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, maxceil, minfloor
@@ -49,16 +50,13 @@ MvalT_co = TypeVar('MvalT_co', bound='Mval', covariant=True)
 
 class Mval(abcs.Ebc):
 
-    __slots__ = 'name', 'num'
-
-    def __init__(self, num: float, /):
-        self.num: float = num
+    __slots__ = ('name', 'value')
 
     def __eq__(self, other):
         if self is other:
             return True
         if isinstance(other, (float, int)):
-            return other == self.num
+            return other == self.value
         if isinstance(other, str):
             return other == self.name
         return NotImplemented
@@ -69,40 +67,33 @@ class Mval(abcs.Ebc):
         return hash(self.name)
 
     def __le__(self, other):
-        return self.num <= other
+        return self.value <= other
     def __lt__(self, other):
-        return self.num < other
+        return self.value < other
     def __ge__(self, other):
-        return self.num >= other
+        return self.value >= other
     def __gt__(self, other):
-        return self.num > other
+        return self.value > other
     def __sub__(self, other):
-        return type(self)(self.num - other)
+        return type(self)(self.value - other)
     def __rsub__(self, other):
-        return other - self.num
+        return other - self.value
     def __add__(self, other):
-        return type(self)(self.num + other)
+        return type(self)(self.value + other)
     def __radd__(self, other):
-        return other + self.num
+        return other + self.value
     def __truediv__(self, other):
-        return type(self)(self.num / other)
+        return type(self)(self.value / other)
     def __rtruediv__(self, other):
-        return other / self.num
+        return other / self.value
     def __floordiv__(self, other):
-        return type(self)(self.num // other)
+        return type(self)(self.value // other)
     def __rfloordiv__(self, other):
-        return other // self.num
-
+        return other // self.value
     def __float__(self):
-        return self.num
-
+        return self.value
     def __str__(self):
         return self.name
-
-    @classmethod
-    def _member_keys(cls, member: Mval):
-        return super()._member_keys(member) | {member.num}
-
 
 class ValueFDE(Mval):
     "Model values for gappy + glutty 4-valued logics, like FDE."
@@ -143,9 +134,25 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
     values: type[MvalT_co]
     "The values of the model"
 
-    truth_function: BaseModel.TruthFunction[MvalT_co]
+    truth_function: LogicType.Model.TruthFunction[MvalT_co]
 
-    __slots__ = ('_finished',)
+    frames: Mapping[int, LogicType.Model.Frame]
+    "A map from worlds to their frame"
+
+    constants: set[Constant]
+
+    sentences: set[Sentence]
+
+    R: AccessGraph
+    "The `access` relation"
+
+    __slots__ = (
+        '_finished',
+        '_is_frame_complete',
+        'constants',
+        'frames',
+        'R',
+        'sentences',)
 
     @property
     def id(self) -> int:
@@ -158,6 +165,17 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         except AttributeError:
             self._finished = False
             return False
+
+    def __init__(self):
+        self._is_frame_complete = False
+        if self.Meta.modal:
+            self.frames = defaultdict(self.Frame)
+        else:
+            self.frames = MapProxy({0: self.Frame()})
+        self.frames[0]
+        self.constants = set()
+        self.sentences = set()
+        self.R = AccessGraph()
 
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
         if not self.Meta.quantified and type(s) is Quantified:
@@ -185,21 +203,34 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             raise NotImplementedError from ValueError(s)
         return func(s, **kw)
 
-    @abstractmethod
-    def value_of_opaque(self, s: Sentence, /) -> MvalT_co:
+    def value_of_opaque(self, s: Sentence, /, *, world: int = 0):
         self._check_finished()
+        return self.frames[world].opaques.get(s, self.Meta.unassigned_value)
+
+    def value_of_atomic(self, s: Atomic, /, *, world: int = 0):
+        self._check_finished()
+        return self.frames[world].atomics.get(s, self.Meta.unassigned_value)
+
+    def value_of_predicated(self, s: Predicated, /, *, world: int = 0) -> MvalT_co:
+        self._check_finished()
+        params = s.params
+        for param in params:
+            if param not in self.constants:
+                raise DenotationError(f'Parameter {param} is not in the constants')
+        return self.frames[world].predicates[s.predicate].get_value(params, self.values)
 
     @abstractmethod
-    def value_of_atomic(self, s: Atomic, /) -> MvalT_co:
+    def value_of_quantified(self, s: Quantified, /, *, world: int = 0) -> MvalT_co:
         self._check_finished()
 
-    @abstractmethod
-    def value_of_predicated(self, s: Predicated, /) -> MvalT_co:
-        self._check_finished()
-
-    @abstractmethod
-    def value_of_quantified(self, s: Quantified, /) -> MvalT_co:
-        self._check_finished()
+    def _unquantify_values(self, s: Quantified, /, **kw):
+        try:
+            return map(
+                lambda s: self.value_of(s, **kw),
+                map(s.unquantify, self.constants))
+        except AttributeError:
+            check.inst(s, Quantified)
+            raise # pragma: no cover
 
     def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
         self._check_finished()
@@ -232,17 +263,39 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             return self.set_predicated_value(s, value, **kw)
         raise NotImplementedError from TypeError(type(s))
 
-    @abstractmethod
-    def set_opaque_value(self, s: Sentence, value: MvalT_co, /):
+    def set_opaque_value(self, s: Sentence, value: MvalT_co, /, world: int = 0):
         self._check_not_finished()
+        value = self.values[value]
+        frame = self.frames[world]
+        opaques = frame.opaques
+        if opaques.get(s, value) is not value:
+            raise ModelValueError(f'Inconsistent value for sentence {s}')
+        opaques[s] = value
+        self.sentences.add(s)
+        # We might have a quantified opaque sentence, in which case we will need
+        # to still check every subsitution, so we want the constants.
+        for pred in s.predicates:
+            frame.predicates[pred]
+        self.constants.update(s.constants)
 
-    @abstractmethod
-    def set_atomic_value(self, s: Atomic, value: MvalT_co, /):
+    def set_atomic_value(self, s: Atomic, value: MvalT_co, /, world: int = 0):
         self._check_not_finished()
+        value = self.values[value]
+        atomics = self.frames[world].atomics
+        if atomics.get(s, value) is not value:
+            raise ModelValueError(f'Inconsistent value for sentence {s}')
+        atomics[s] = value
+        self.sentences.add(s)
 
-    @abstractmethod
-    def set_predicated_value(self, s: Predicated, value: MvalT_co, /):
+    def set_predicated_value(self, s: Predicated, value, /, *, world: int = 0):
         self._check_not_finished()
+        value = self.values[value]
+        frame = self.frames[world]
+        if len(s.variables):
+            raise ValueError(f'Free variables not allowed')
+        frame.predicates[s.predicate].set_value(s.params, value)
+        self.constants.update(s.constants)
+        self.sentences.add(s)
 
     def is_countermodel_to(self, a: Argument, /) -> bool:
         return (
@@ -255,6 +308,84 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         self.finish()
         return self
 
+    def finish(self) -> Self:
+        self._check_not_finished()
+        self._complete_frames()
+        self._finished = True
+        return self
+
+    def get_data(self) -> dict:
+        if not self.Meta.modal:
+            return self.frames[0].get_data()
+        worlds = sorted(self.frames)
+        return dict(
+            Worlds = dict(
+                in_summary      = True,
+                datatype        = 'set',
+                member_datatype = 'int',
+                member_typehint = 'world',
+                symbol          = 'W',
+                values          = worlds),
+            Access = dict(
+                in_summary      = True,
+                datatype        = 'set',
+                typehint        = 'access_relation',
+                member_datatype = 'tuple',
+                member_typehint = 'access',
+                symbol          = 'R',
+                values          = list(self.R.flat(w1s=worlds, sort=True))),
+            Frames = dict(
+                datatype        = 'list',
+                typehint        = 'frames',
+                member_datatype = 'map',
+                member_typehint = 'frame',
+                symbol          = 'F',
+                values          = [
+                    dict(
+                        description = f'frame at world {w}',
+                        datatype    = 'map',
+                        typehint    = 'frame',
+                        value       = dict(self.frames[w].get_data()))
+                    for w in worlds]))
+
+    def __enter__(self) -> Self:
+        self._check_not_finished()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if not self.finished:
+            self.finish()
+
+    def _complete_frames(self):
+        self._check_not_finished()
+        if self._is_frame_complete:
+            return
+        # track all atomics and opaques
+        atomics = set()
+        opaques = set()
+        preds = set()
+        for s in self.sentences:
+            atomics.update(s.atomics)
+            preds.update(s.predicates)
+        # ensure frames for each world
+        for w in self.R:
+            self.frames[w]
+        for w, frame in self.frames.items():
+            atomics.update(frame.atomics)
+            opaques.update(frame.opaques)
+            preds.update(frame.predicates)
+        unass = self.Meta.unassigned_value
+        for w, frame in self.frames.items():
+            for pred in preds:
+                frame.predicates[pred]
+            for s in atomics:
+                if s not in frame.atomics:
+                    frame.atomics[s] = unass
+            for s in opaques:
+                if s not in frame.opaques:
+                    frame.opaques[s] = unass
+        self._is_frame_complete = True
+
     def _check_finished(self):
         if not self.finished:
             raise Emsg.IllegalState('Model not yet finished')
@@ -262,15 +393,6 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
     def _check_not_finished(self):
         if self.finished:
             raise Emsg.IllegalState('Model already finished')
-
-    def finish(self) -> Self:
-        self._check_not_finished()
-        self._finished = True
-        return self
-
-    @abstractmethod
-    def get_data(self) -> Mapping[str, Any]:
-        return {}
 
     @classmethod
     def truth_table(cls, oper: Operator, / , *, reverse=False) -> TruthTable[MvalT_co]:
@@ -287,15 +409,19 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             values = cls.values,
             mapping = MapProxy(dict(zip(inputs, outputs))))
 
-    def __enter__(self) -> Self:
-        self._check_not_finished()
-        return self
+    @classmethod
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+        Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
+        if not Meta:
+            return
+        cls.Meta = Meta
+        cls.values = Meta.values
+        cls.minval = min(Meta.values)
+        cls.maxval = max(Meta.values)
+        cls.truth_function = cls.TruthFunction(Meta.values)
 
-    def __exit__(self, type, value, traceback):
-        if not self.finished:
-            self.finish()
-
-    class TruthFunction(Generic[MvalT], abcs.Abc):
+    class TruthFunction(Generic[MvalT], metaclass=ModelsMeta):
 
         values: type[MvalT]
         maxval: MvalT
@@ -306,6 +432,14 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         generalizing_operators: Mapping[Operator, Literal['min', 'max']] = EMPTY_MAP
         generalized_orderings: Mapping[Literal['min', 'max'], tuple[MvalT, ...]] = EMPTY_MAP
         generalized_indexes: Mapping[Literal['min', 'max'], Mapping[MvalT, int]]
+
+        __slots__ = (
+            'generalized_indexes',
+            'maxval',
+            'minval',
+            'values_indexes',
+            'values_sequence',
+            'values')
 
         def __init__(self, values: type[MvalT]) -> None:
             self.values = values
@@ -380,17 +514,93 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                 return ordering[minfloor(0, it, len(ordering) - 1)]
             raise NotImplementedError from ValueError(mode)
 
-    @classmethod
-    def __init_subclass__(cls):
-        super().__init_subclass__()
-        Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
-        if not Meta:
-            return
-        cls.Meta = Meta
-        cls.values = Meta.values
-        cls.minval = min(Meta.values)
-        cls.maxval = max(Meta.values)
-        cls.truth_function = cls.TruthFunction(Meta.values)
+    class Frame(metaclass=ModelsMeta):
+        """
+        A Frame comprises the interpretation of sentences and predicates at a world.
+        """
+
+        anti_extensions = False
+
+        atomics: dict[Atomic, Mval]
+        "An assignment of each atomic sentence to a truth value"
+
+        opaques: dict[Sentence, Mval]
+        "An assignment of each opaque (un-interpreted) sentence to a value"
+
+        predicates: dict[Predicate, PredicateInterpretation]
+        "A mapping of predicates to their interpretation (extention/anti-extension)"
+
+        __slots__ = ('atomics', 'opaques', 'predicates')
+
+        def __init__(self):
+            self.atomics = {}
+            self.opaques = {}
+            self.predicates = defaultdict(PredicateInterpretation.blank)
+
+        def get_data(self) -> dict:
+            return dict(
+                Atomics = self._get_sentencemap_data(self.atomics),
+                Opaques = self._get_sentencemap_data(self.opaques),
+                Predicates = self._get_predicates_data())
+
+        def _get_sentencemap_data(self, base: Mapping[Sentence, Any]):
+            return dict(
+                datatype        = 'function',
+                typehint        = 'truth_function',
+                input_datatype  = 'sentence',
+                output_datatype = 'string',
+                output_typehint = 'truth_value',
+                symbol          = 'v',
+                values          = [
+                    dict(input=sentence, output=base[sentence])
+                    for sentence in sorted(base)])
+
+        def _get_predicates_data(self):
+            return dict(
+                in_summary  = True,
+                datatype    = 'list',
+                values      = [
+                    v for predicate in sorted(self.predicates)
+                        for v in self._get_predicate_data_values(predicate)])
+
+        def _get_predicate_data_values(self, predicate: Predicate):
+            data = self._get_predicate_data_part(predicate, self.predicates[predicate].pos)
+            if self.anti_extensions:
+                data['symbol'] += '+'       
+            yield data
+            if not self.anti_extensions:
+                return
+            data = self._get_predicate_data_part(predicate, self.predicates[predicate].neg)
+            data['symbol'] += '-'
+            yield data
+
+        def _get_predicate_data_part(self, predicate: Predicate, tuples: Iterable[tuple[Constant, ...]]):
+            return dict(
+                datatype        = 'function',
+                typehint        = 'extension',
+                input_datatype  = 'predicate',
+                output_datatype = 'set',
+                output_typehint = 'extension',
+                symbol = 'P',
+                values = [dict(input=predicate, output=sorted(tuples))])
+
+        def __eq__(self, other):
+            if other is self:
+                return True
+            if not isinstance(other, __class__):
+                return NotImplemented
+            if self.atomics != other.atomics or self.opaques != other.opaques:
+                return False
+            if len(self.predicates) != len(other.predicates):
+                return False
+            for pred, interp in self.predicates.items():
+                if pred not in other.predicates:
+                    return False
+                if other.predicates[pred].pos != interp.pos:
+                    return False
+                if self.anti_extensions and other.predicates[pred].neg != interp.neg:
+                    return False
+            return True
 
 @dataclass(kw_only = True)
 class TruthTable:
@@ -402,18 +612,12 @@ class TruthTable:
     values: type[MvalT]
     mapping: Mapping[tuple[MvalT, ...], MvalT]
 
-class PredicateInterpretation:
+class PredicateInterpretation(NamedTuple):
 
-    pos: set[tuple[Constant, ...]]
     neg: set[tuple[Constant, ...]]
+    pos: set[tuple[Constant, ...]]
 
-    __slots__ = ('pos', 'neg')
-
-    def __init__(self) -> None:
-        self.pos = set()
-        self.neg = set()
-
-    def set_value(self, params: tuple[Constant, ...], value: MvalT, /):
+    def set_value(self, params: tuple[Constant, ...], value: Mval|str, /):
         if value == 'T':
             if params in self.neg:
                 raise Emsg.ConflictForAntiExtension(value, params)
@@ -433,9 +637,48 @@ class PredicateInterpretation:
         else:
             raise NotImplementedError from ValueError(value)
 
-    def __eq__(self, other):
-        if self is other:
-            return True
-        if not isinstance(other, __class__):
-            return NotImplemented
-        return self.pos == other.pos and self.neg == other.neg
+    def get_value(self, params: tuple[Constant, ...], values, /):
+        if params in self.neg:
+            if params in self.pos:
+                value = 'B'
+            else:
+                value = 'F'
+        elif params in self.pos:
+            value = 'T'
+        else:
+            if 'N' in values:
+                value = 'N'
+            else:
+                value = 'F'
+        return values[value]
+
+    @classmethod
+    def blank(cls):
+        return cls(set(), set())
+
+class AccessGraph(defaultdict[int, set[int]]):
+
+    __slots__ = EMPTY_SET
+
+    def __init__(self, *args, **kw):
+        super().__init__(set, *args, **kw)
+
+    def has(self, pair: tuple[int, int], /) -> bool:
+        w1, w2 = pair
+        return w1 in self and w2 in self[w1]
+
+    def add(self, pair: tuple[int, int], /):
+        w1, w2 = pair
+        self[w1].add(w2)
+        self[w2]
+
+    def addall(self, it):
+        for _ in map(self.add, it): pass
+
+    def flat(self, *, w1s=None, sort=False):
+        if w1s is None:
+            w1s = sorted(self) if sort else self
+        for w1 in w1s:
+            w2s = sorted(self[w1]) if sort else self[w1]
+            for w2 in w2s:
+                yield w1, w2
