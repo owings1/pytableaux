@@ -180,7 +180,7 @@ class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
 
     def sentence(self, node: Node, /) -> _ST:
         'Delegates to ``filters.SentenceNode`` of ``FilterHelper``.'
-        return self[FilterHelper].filters[filters.NodeSentence].sentence(node)
+        return self[FilterHelper].config.filters[filters.NodeSentence].sentence(node)
 
 class PredicatedSentenceRule(BaseSentenceRule[Predicated]):
     Helpers = group(PredNodes)

@@ -502,7 +502,7 @@ class Rules(LogicType.Rules):
 
         def node_will_close_branch(self, node, branch, /) -> bool:
             return (
-                self[FilterHelper].pred(node) and
+                self[FilterHelper].config.pred(node) and
                 len(set(self.sentence(node))) == 1)
 
         def example_nodes(self):
@@ -788,11 +788,13 @@ class Rules(LogicType.Rules):
                 add = swnode(si, w2)
                 if branch.has(add):
                     continue
-                anode = self[WorldIndex].nodes[branch][w1, w2]
+                # accessnode = self[WorldIndex].nodes[branch][w1, w2]
+                # accessnode = branch.find(anode(w1, w2))
+                nodes = (node, branch.find(anode(w1, w2)))
                 yield adds(group(add),
                     sentence=si,
                     world=w2,
-                    nodes=(node, anode))
+                    nodes=nodes)
 
         def score_candidate(self, target, /) -> float:
             if target.get('flag'):

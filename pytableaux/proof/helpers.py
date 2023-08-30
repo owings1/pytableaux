@@ -22,20 +22,19 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections import defaultdict, deque
+from collections.abc import Set
 from copy import copy
 from functools import partial
 from itertools import filterfalse
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, Iterator, Mapping, NamedTuple,
-                    Sequence, TypeVar)
+from typing import (TYPE_CHECKING, Any, Callable, Iterator, Mapping,
+                    NamedTuple, Sequence, TypeVar)
 
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
-from ..tools import EMPTY_MAP, EMPTY_SET, abcs, minfloor, wraps
-from . import (AccessNode, Branch, Node, Rule, Tableau, Target, WorldPair,
-               filters)
-from .common import QuitFlagNode, ClosureNode
-from .filters import CompareNode
+from ..tools import EMPTY_SET, abcs, minfloor, wraps
+from . import AccessNode, Branch, Node, Rule, Tableau, Target, filters
+from .common import ClosureNode, QuitFlagNode, SentenceNode
 
 if TYPE_CHECKING:
     from ..tools import TypeInstMap
@@ -45,7 +44,6 @@ _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')
 
 __all__ = (
-    'AccessNodesIndex',
     'AdzHelper',
     'AplSentCount',
     'BranchTarget',
@@ -64,7 +62,7 @@ NOGET = object()
 
 class AdzHelper(Rule.Helper):
 
-    __slots__ = ('closure_rules',)
+    __slots__ = ('closure_rules')
 
     closure_rules: tuple[ClosingRule, ...]
 
@@ -105,7 +103,7 @@ class AdzHelper(Rule.Helper):
 class BranchCache(Rule.HelperDict[Branch, _VT]):
     "Base class for caching per branch."
 
-    _valuetype: type[_VT] = bool
+    valuetype: Callable[[], _VT] = bool
 
     def listen_on(self):
         super().listen_on()
@@ -113,7 +111,7 @@ class BranchCache(Rule.HelperDict[Branch, _VT]):
             if branch.parent:
                 self[branch] = copy(self[branch.parent])
             else:
-                self[branch] = self._empty_value(branch)
+                self[branch] = self.valuetype()
         self.tableau.on({
             Tableau.Events.AFTER_BRANCH_ADD: after_branch_add,
             Tableau.Events.AFTER_BRANCH_CLOSE: self.__delitem__})
@@ -126,14 +124,10 @@ class BranchCache(Rule.HelperDict[Branch, _VT]):
     def _reprdict(self):
         return dict(branches=len(self))
 
-    @classmethod
-    def _empty_value(cls, branch: Branch, /):
-        'Override, for example, if the value type takes arguments.'
-        return cls._valuetype()
-
 class BranchDictCache(BranchCache[dict[_KT, _VT]]):
     'Copies each K->V item for parent branch via copy(V).'
-    _valuetype = dict
+
+    valuetype = dict
 
     def listen_on(self):
         super().listen_on()
@@ -148,7 +142,7 @@ class QuitFlag(BranchCache[bool]):
     Track the application of a flag node by the rule for each branch. A branch
     is considered flagged when the target has a non-empty ``flag`` property.
     """
-    _valuetype = bool
+    valuetype = bool
 
     def listen_on(self):
         super().listen_on()
@@ -162,10 +156,10 @@ class BranchValueHook(BranchCache[_VT]):
 
     Calls the rule's ``_branch_value_hook(node, branch)`` when a node is added to
     a branch. Any truthy return value is cached for the branch. Once a value
-    is stored for a branch, no further nodes are check.
+    is stored for a branch, no further nodes are checked.
     """
-    __slots__ = ('hook',)
-    _valuetype = type(None)
+    __slots__ = ('hook')
+    valuetype = type(None)
     hook_method_name = '_branch_value_hook'
 
     def __init__(self, rule, /):
@@ -200,7 +194,7 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
     the `sentence` property of the rule's target. The target should also include
     the `branch` key.
     """
-    _valuetype = partial(defaultdict, int)
+    valuetype = partial(defaultdict, int)
 
     def listen_on(self):
         super().listen_on()
@@ -213,7 +207,7 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
 class NodeCount(BranchCache[dict[Node, int]]):
     "Track the number of rule applications to each node."
 
-    _valuetype = partial(defaultdict, int)
+    valuetype = partial(defaultdict, int)
 
     def listen_on(self):
         super().listen_on()
@@ -252,7 +246,7 @@ class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
     target must have `node`, and `world` attributes. The values of the cache
     are ``(node, world)`` pairs.
     """
-    _valuetype = set
+    valuetype = set
 
     def listen_on(self):
         super().listen_on()
@@ -266,7 +260,7 @@ class UnserialWorlds(BranchCache[set[int]]):
     "Track the unserial worlds on the branch."
 
     shareable = True
-    _valuetype = set
+    valuetype = set
 
     def listen_on(self):
         super().listen_on()
@@ -278,76 +272,64 @@ class UnserialWorlds(BranchCache[set[int]]):
                     self[branch].add(w)
         self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
-class AccessNodesIndex(BranchCache[dict[WorldPair, Node]]):
-
-    shareable = True
-    _valuetype = dict
-
-    def add(self, node: AccessNode, branch: Branch):
-        self[branch][node.pair()] = node
-
 class WorldIndex(BranchDictCache[int, set[int]]):
     'Index the visible worlds for each world on the branch.'
 
-    requires = {AccessNodesIndex}
     shareable = True
-    _valuetype = partial(defaultdict, set)
-
-    __slots__ = ('nodes',)
-
-    def __init__(self, rule, /):
-        super().__init__(rule)
-        self.nodes = AccessNodesIndex(rule)
+    valuetype = partial(defaultdict, set)
 
     def listen_on(self):
         super().listen_on()
-        # nodes = self.rule.helpers[AccessNodesIndex]
         def after_node_add(node: Node, branch: Branch):
             if not isinstance(node, AccessNode):
                 return
             w1, w2 = node.pair()
             self[branch][w1].add(w2)
-            self.nodes.add(node, branch)
         self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
 
-    def has(self, branch: Branch, pair: tuple[int, int]):
-        'Whether w1 sees w2 on the given branch.'
-        return pair[1] in self[branch].get(pair[0], EMPTY_SET)
-
-    def intransitives(self, branch: Branch, pair: tuple[int, int]) -> Iterator[int]:
-        """Yield all the worlds on the branch that are visible to w2, but are not
-        visible to w1.
+    def has(self, branch: Branch, pair: tuple[int, int]) -> bool:
+        """Whether w1 sees w2 on the given branch.
 
         Args:
             branch (Branch): The branch.
-            w1 (int): World 1.
-            w2 (int): World 2.
+            pair (tuple[int, int]): The world pair (w1, w2).
 
         Returns:
-            set[int]: The set of worlds.
+            bool: Whether the access pair exists in the index.
+        """
+        return pair[1] in self[branch][pair[0]]
+
+    def intransitives(self, branch: Branch, pair: tuple[int, int]) -> Iterator[int]:
+        """Yield all the worlds on the branch that are visible to w2, but are
+        not visible to w1.
+
+        Args:
+            branch (Branch): The branch.
+            pair (tuple[int, int]): The world pair (w1, w2).
+
+        Returns:
+            Iterator[int]: The set of worlds.
         """
         access = self[branch]
-        w1, w2 = pair
-        return filterfalse(access[w1].__contains__, access[w2])
+        return filterfalse(access[pair[0]].__contains__, access[pair[1]])
 
 class FilterNodeCache(BranchCache[set[Node]]):
     "Base class for caching nodes "
 
-    _valuetype = set
+    valuetype = set
 
-    __slots__ = ('ignore_ticked', '_garbage')
+    config: FilterNodeCache.Config
 
-    #: Copied from Rule.ignore_ticked - whether to discard nodes
-    #: after they are ticked.
-    ignore_ticked: bool
+    __slots__ = ('_garbage')
 
     @abstractmethod
     def __call__(self, node: Node, branch: Branch, /) -> bool:
         'Whether to add the node to the branch set.'
+        if self.config.ignore_ticked and branch.is_ticked(node):
+            return False
         return True
 
     def __init__(self, rule, /):
-        self.ignore_ticked = bool(rule.ignore_ticked)
         super().__init__(rule)
         self._garbage = set()
 
@@ -380,20 +362,17 @@ class FilterNodeCache(BranchCache[set[Node]]):
             if self(node, branch):
                 self[branch].add(node)
         self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
-        if self.ignore_ticked:
+        if self.config.ignore_ticked:
             def after_node_tick(node: Node, branch: Branch):
                 self[branch].discard(node)
             self.tableau.on(Tableau.Events.AFTER_NODE_TICK, after_node_tick)
 
     @classmethod
     def configure_rule(cls, rulecls, config):
-        "``Rule.Helper`` init hook. Verify `ignore_ticked` attribute."
+        ":class:`Rule.Helper` init hook. Verify `ignore_ticked` attribute."
         super().configure_rule(rulecls, config)
         if not abcs.isabstract(rulecls):
-            try:
-                rulecls.ignore_ticked
-            except AttributeError:
-                raise Emsg.MissingAttribute('ignore_ticked')
+            return __class__.Config(bool(rulecls.ignore_ticked))
 
     @classmethod
     def node_targets(cls, wrapped: Callable[[_RT, Node, Branch], Any], /):
@@ -414,45 +393,28 @@ class FilterNodeCache(BranchCache[set[Node]]):
                     yield target
         return wrapper
 
+    class Config(NamedTuple):
+        ignore_ticked: bool
+        """Whether to ignore and discard nodes after they are ticked."""
+
 
 class PredNodes(FilterNodeCache):
     'Track all predicated nodes on the branch.'
 
-    def __call__(self, node: Node, _):
-        return type(self.rule.sentence(node)) is Predicated
+    def __call__(self, node: Node, branch: Branch, /):
+        return (
+            super().__call__(node, branch) and
+            type(self.rule.sentence(node)) is Predicated)
 
 class FilterHelper(FilterNodeCache):
     """Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
-    class Config(NamedTuple):
-        filters: TypeInstMap[CompareNode]
-        pred: Callable[[Node], bool]
-
-    class PredTuple(tuple[Callable[[Node], bool]]):
-
-        __slots__ = EMPTY_SET
-
-        def __call__(self, node: Node, /) -> bool:
-            return all(func(node) for func in self)
-
-    __slots__ = ('filters', 'pred')
 
     config: FilterHelper.Config
+    "The helper config with filters and pre-built predicate."
 
-    filters: TypeInstMap[CompareNode]
-    "Mapping from ``NodeCompare`` class to instance."
-
-    pred: Callable[[Node], bool]
-    """A single predicate of all filters. To also check the `ignore_ticked`
-    setting, use :meth:`filter()`.
-    """
-
-    def __init__(self, rule, /):
-        super().__init__(rule)
-        self.filters, self.pred = self.config
-
-    def filter(self, node: Node, branch: Branch, /) -> bool:
+    def __call__(self, node: Node, branch: Branch, /) -> bool:
         """Whether the node passes the filter. If `ignore_ticked` is `True`,
         first checks whether the node is ticked, after which the combined
         filters predicate ``.pred()`` is checked.
@@ -465,11 +427,9 @@ class FilterHelper(FilterNodeCache):
             bool: Whether the node meets the filter conditions and
               `ignore_ticked` setting.
         """
-        if self.ignore_ticked and branch.is_ticked(node):
-            return False
-        return self.config.pred(node)
-
-    __call__ = filter
+        return (
+            super().__call__(node, branch) and
+            self.config.pred(node))
 
     def example_node(self) -> Node:
         """Construct an example node based on the filter conditions.
@@ -502,7 +462,7 @@ class FilterHelper(FilterNodeCache):
         * Verify `NodeFilters`.
         * For non-abstract classes, merge `NodeFilters` and create config.
         """
-        super().configure_rule(rulecls, config, **kw)
+        base_config = super().configure_rule(rulecls, config, **kw)
         configs = {}
         for relcls in abcs.mroiter(cls=rulecls, supcls=Rule, reverse=False):
             try:
@@ -521,32 +481,52 @@ class FilterHelper(FilterNodeCache):
             check.subcls(check.inst(filter_class, type), filters.CompareNode)
         if not abcs.isabstract(rulecls):
             rulecls.NodeFilters = configs
-            return cls._build_config(rulecls, configs)
+            return cls._build_config(rulecls, configs, base_config)
 
     @classmethod
-    def _build_config(cls, rulecls: type[Rule], configs: Mapping[type[filters.CompareNode], Any], /) -> FilterHelper.Config:
+    def _build_config(cls,
+        rulecls: type[Rule],
+        configs: Mapping[type[filters.CompareNode], Any],
+        base_config: FilterHelper.Config, /) -> FilterHelper.Config:
+        "Build the config"
         filter_classes = tuple(
             filter_class for filter_class, config in configs.items()
                 if config is not NotImplemented)
         funcs = cls.PredTuple(filter_class(rulecls) for filter_class in filter_classes)
-        return cls.Config(MapProxy(dict(zip(filter_classes, funcs))), funcs)
+        return cls.Config(MapProxy(dict(zip(filter_classes, funcs))), funcs, *base_config)
+
+    class Config(NamedTuple):
+        filters: TypeInstMap[filters.CompareNode]
+        "Mapping from ``NodeCompare`` class to instance."
+        pred: FilterHelper.PredTuple
+        "A single predicate of all filters."
+        ignore_ticked: bool
+        """Whether to ignore and discard nodes after they are ticked."""
+
+    class PredTuple(tuple[Callable[[Node], bool]], Callable[[Node], bool]):
+        "Callable tuple of predicate functions."
+
+        __slots__ = EMPTY_SET
+
+        def __call__(self, node: Node, /) -> bool:
+            return all(func(node) for func in self)
 
 
 class NodeConsts(BranchDictCache[Node, set[Constant]]):
     """Track the unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
 
-    Only nodes that are applicable according to the rule's ``NodeCompare`` helper.
+    Only nodes that are applicable according to the rule's ``NodeCompare`` helper
     method are tracked.
     """
 
-    class Consts(BranchCache[set[Constant]]):
-        _valuetype = set
+    valuetype = dict
+    requires = {FilterHelper}
 
-    _valuetype = dict
-    __slots__ = ('consts', 'filter')
-
+    filter: FilterHelper
     consts: NodeConsts.Consts
+
+    __slots__ = ('consts', 'filter')
 
     def __init__(self, rule, /):
         super().__init__(rule)
@@ -562,28 +542,31 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
             self[target.branch][target.node].discard(target.constant)
 
         def after_node_add(node: Node, branch: Branch):
-            if self.filter(node, branch):
-                if node not in self[branch]:
-                    # By tracking per node, we are tracking per world, a fortiori.
-                    self[branch][node] = self.consts[branch].copy()
-            s = node.get(Node.Key.sentence)
-            if s is None:
+            if self.filter(node, branch) and node not in self[branch]:
+                # By tracking per node, we are tracking per world, a fortiori.
+                self[branch][node] = self.consts[branch].copy()
+            try:
+                s = node['sentence']
+            except KeyError:
                 return
             consts = s.constants - self.consts[branch]
             if len(consts):
-                for node in self[branch]:
-                    self[branch][node].update(consts)
+                for node, base in self[branch].items():
+                    base.update(consts)
                 self.consts[branch].update(consts)
     
         self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
         self.tableau.on(Tableau.Events.AFTER_NODE_ADD, after_node_add)
+
+    class Consts(BranchCache[set[Constant]]):
+        valuetype = set
 
 class WorldConsts(BranchDictCache[int, set[Constant]]):
     """
     Track the constants appearing at each world.
     """
     shareable = True
-    _valuetype = partial(defaultdict, set)
+    valuetype = partial(defaultdict, set)
 
     def listen_on(self):
         super().listen_on()
@@ -607,13 +590,16 @@ class MaxConsts(Rule.HelperDict[Branch, int]):
     shareable = True
     requires = {WorldConsts}
 
-    __slots__ = ('wconsts',)
+    wconsts: WorldConsts
+
+    __slots__ = ('wconsts')
 
     def __init__(self, rule, /):
         super().__init__(rule)
         self.wconsts = WorldConsts(self.rule)
 
     def listen_on(self):
+        super().listen_on()
         def after_trunk_build(tableau: Tableau):
             for branch in tableau:
                 origin = branch.origin
@@ -694,39 +680,24 @@ class MaxConsts(Rule.HelperDict[Branch, int]):
         except KeyError:
             return 0
 
-class MaxWorlds(BranchDictCache[Branch, int]):
+class MaxWorlds(Rule.HelperDict[Branch, int]):
     """Project the maximum number of worlds required for each branch by examining
     the branches after the trunk is built.
     """
 
-    class Config(NamedTuple):
-        filter: Callable[[Operator], bool]
-
     shareable = True
 
-    __slots__ = ('modals',)
-
     config: MaxWorlds.Config
+    modals: MaxWorlds.ModalsCounts
 
-    class Modals(dict[Sentence, int]):
-        """
-        Compute and cache the modal complexity of a sentence by counting its
-        modal operators.
-        """
-
-        __slots__ = ('filter',)
-
-        def __init__(self, config: MaxWorlds.Config):
-            self.filter = config.filter
-
-        def __missing__(self, s: Sentence):
-            return self.setdefault(s, sum(map(self.filter, s.operators)))
+    __slots__ = ('modals')
 
     def __init__(self, rule: Rule,/):
         super().__init__(rule)
-        self.modals = self.Modals(self.config)
+        self.modals = self.ModalsCounts(self.config)
 
     def listen_on(self):
+        super().listen_on()
         def after_trunk_build(tableau: Tableau):
             for branch in tableau:
                 origin = branch.origin
@@ -736,7 +707,7 @@ class MaxWorlds(BranchDictCache[Branch, int]):
                 self[origin] = self._compute(branch)
         self.tableau.on(Tableau.Events.AFTER_TRUNK_BUILD, after_trunk_build)
 
-    def is_reached(self, branch: Branch, /):
+    def is_reached(self, branch: Branch, /) -> bool:
         """
         Whether we have already reached or exceeded the max number of worlds
         projected for the branch (origin).
@@ -750,7 +721,7 @@ class MaxWorlds(BranchDictCache[Branch, int]):
         origin = branch.origin
         return origin in self and len(branch.worlds) >= self[origin]
 
-    def is_exceeded(self, branch: Branch, /):
+    def is_exceeded(self, branch: Branch, /) -> bool:
         """
         Whether we have exceeded the max number of worlds projected for the
         branch (origin).
@@ -764,9 +735,12 @@ class MaxWorlds(BranchDictCache[Branch, int]):
         origin = branch.origin
         return origin in self and len(branch.worlds) > self[origin]
 
-    def quit_flag(self, branch: Branch, /) -> dict[str, Any]:
+    def quit_flag(self, branch: Branch, /) -> QuitFlagNode:
         """
         Generate a quit flag node for the branch.
+
+        Args:
+            branch (Branch): The branch
 
         Returns:
             QuitFlagNode: A QuitFlagNode with the following keys:
@@ -780,24 +754,43 @@ class MaxWorlds(BranchDictCache[Branch, int]):
             f'{self.rule.name}:{type(self).__name__}({self.get(branch.origin)})')})
 
     def _compute(self, branch: Branch, /) -> int:
-        # Project the maximum number of worlds for a branch (origin) as
-        # the number of worlds already on the branch + the number of modal
-        # operators + 1.
+        """Project the maximum number of worlds for a branch (origin) as
+        the number of worlds already on the branch + the number of modal
+        operators + 1.
+        """
         return 1 + len(branch.worlds) + sum(
             map(self.modals.__getitem__, (
-                node[Node.Key.sentence]
+                node['sentence']
                 for node in filterfalse(branch.is_ticked, branch)
-                    if Node.Key.sentence in node)))
-
+                    if isinstance(node, SentenceNode))))
 
     @classmethod
     def configure_rule(cls, rulecls, config):
         "``Rule.Helper`` init hook. Set the `modal_operators` attribute."
         super().configure_rule(rulecls, config)
         try:
-            return cls.Config(frozenset(rulecls.Meta.modal_operators).__contains__)
+            return cls.Config(rulecls.Meta.modal_operators)
         except AttributeError as err:
             raise Emsg.MissingAttribute(str(err))
+
+    class Config(NamedTuple):
+        operators: Set[Operator]
+
+    class ModalsCounts(dict[Sentence, int]):
+        """
+        Compute and cache the modal complexity of a sentence by counting its
+        modal operators.
+        """
+
+        filter: Callable[[Operator], bool]
+
+        __slots__ = ('filter')
+
+        def __init__(self, config: MaxWorlds.Config):
+            self.filter = config.operators.__contains__
+
+        def __missing__(self, s: Sentence):
+            return self.setdefault(s, sum(map(self.filter, s.operators)))
 
 class EllipsisExampleHelper(Rule.Helper):
     "Documentation helper for inserting ellipsis"

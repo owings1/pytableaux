@@ -388,14 +388,14 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
             pass
 
         @classmethod
-        def configure_rule(cls, rulecls: type[Rule], config: Any):
+        def configure_rule(cls, rulecls: type[Rule], config: Any) -> Any:
             """Hook for initializing & verifiying a ``Rule`` class.
             
             Args:
                 rulecls: The rule class using the helper class.
                 config: Config from the rule class, if any.
             """
-            pass
+            return config
 
     class Helper(AbstractHelper):
         "Rule helper basic base class."
