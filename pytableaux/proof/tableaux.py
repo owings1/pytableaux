@@ -65,7 +65,7 @@ NOARG = object()
 NOGET = object()
 # ----------------------------------------------
 
-class Rule(EventEmitter, metaclass = RuleMeta):
+class Rule(EventEmitter, metaclass=RuleMeta):
     'Base class for a Tableau rule.'
 
     defaults = MapProxy(dict(
@@ -122,9 +122,10 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     @property
     def Meta(self) -> type[LogicType.Meta]|None:
-        if self.tableau.logic:
+        try:
             return self.tableau.logic.Meta
-        return type(self).Meta
+        except AttributeError:
+            return type(self).Meta
 
     Meta: type[LogicType.Meta]|None
 
@@ -805,7 +806,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
 
     if TYPE_CHECKING:
         @overload
-        def stat(self, branch: Branch, /, *keys): ...
+        def stat(self, branch: Branch, *keys): ...
 
     def build(self):
         'Build the tableau. Returns self.'
@@ -1245,12 +1246,13 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
         __slots__ = EMPTY_SET
         Key = TableauMeta.StatKey
 
-        def query(self, branch: Branch, /, *keys):
+        def query(self, branch: Branch, *keys):
             # Lookup options:
             # - branch
             # - branch, key
             # - branch, node
             # - branch, node, key
+            Key = self.Key
             stat = self[branch]
             kit = iter(keys)
             try:
@@ -1260,9 +1262,9 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 return stat.view()
             if isinstance(key, Node):
                 # branch, node
-                stat = stat[self.Key.NODES][key]
+                stat = stat[Key.NODES][key]
                 try:
-                    key = self.Key(next(kit))
+                    key = Key(next(kit))
                 except StopIteration:
                     return MapProxy(stat)
                 else:
@@ -1274,20 +1276,20 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                         # literal value
                         return stat
                     raise ValueError('Too many keys to lookup')
-            key = self.Key(key)
+            key = Key(key)
             try:
                 # branch, key
                 stat = stat[key]
                 next(kit)
             except StopIteration:
-                if key is self.Key.NODES:
+                if key is Key.NODES:
                     raise NotImplementedError('Full nodes view not supported')
                 # literal value
                 return stat
             raise ValueError('Too many keys to lookup')
 
 
-    class Tree(dictns):
+    class Tree:
         'Recursive tree structure representation of a tableau.'
 
         root: bool = False
@@ -1382,9 +1384,8 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 tree.root = True
             else:
                 memo['pos'] += 1
-            tree.update(
-                depth = memo['depth'],
-                left  = memo['pos'])
+            tree.depth = memo['depth']
+            tree.left = memo['pos']
             while True:
                 # Each branch's node at depth.
                 nodes = qset()

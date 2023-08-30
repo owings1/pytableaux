@@ -507,7 +507,9 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
     def get_obj_classes(cls, obj, /):
         if obj.root:
             yield 'root'
-        yield from filter(obj.get, cls.flag_classnames)
+        for name in cls.flag_classnames:
+            if getattr(obj, name, None):
+                yield name
 
     @classmethod
     def get_obj_children(cls, obj, /):
