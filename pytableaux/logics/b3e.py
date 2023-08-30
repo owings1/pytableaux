@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator as Operator
-from ..proof import adds, sdnode
+from ..proof import adds, sdwnode
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -53,9 +53,9 @@ class Rules(LogicType.Rules):
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             # Keep designation fixed to False for inheritance below
-            yield adds(group(sdnode(s.lhs, False)))
+            yield adds(group(sdwnode(s.lhs, False, w)))
 
     class AssertionUndesignated(AssertionNegatedDesignated): pass
 
@@ -65,28 +65,28 @@ class Rules(LogicType.Rules):
         a designated node to *b* with the assertion of *n*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s.lhs, not d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(s.lhs, not d, w)))
 
     class MaterialBiconditionalUndesignated(System.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode(lhs, d), sdnode(~lhs, d)),
-                group(sdnode(rhs, d), sdnode(~rhs, d)),
-                group(sdnode(lhs, not d), sdnode(~rhs, not d)),
-                group(sdnode(~lhs, not d), sdnode(rhs, not d)))
+                group(sdwnode(lhs, d, w), sdwnode(~lhs, d, w)),
+                group(sdwnode(rhs, d, w), sdwnode(~rhs, d, w)),
+                group(sdwnode(lhs, not d, w), sdwnode(~rhs, not d, w)),
+                group(sdwnode(~lhs, not d, w), sdwnode(rhs, not d, w)))
 
     class MaterialBiconditionalNegatedUndesignated(System.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode(lhs, d), sdnode(~lhs, d)),
-                group(sdnode(rhs, d), sdnode(~rhs, d)),
-                group(sdnode(~lhs, not d), sdnode(~rhs, not d)),
-                group(sdnode(lhs, not d), sdnode(rhs, not d)))
+                group(sdwnode(lhs, d, w), sdwnode(~lhs, d, w)),
+                group(sdwnode(rhs, d, w), sdwnode(~rhs, d, w)),
+                group(sdwnode(~lhs, not d, w), sdwnode(~rhs, not d, w)),
+                group(sdwnode(lhs, not d, w), sdwnode(rhs, not d, w)))
 
     class ConditionalDesignated(System.OperatorNodeRule):
         """
@@ -96,13 +96,13 @@ class Rules(LogicType.Rules):
         and the second disjunct is the assertion of the consequent. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             sn = ~+s.lhs | +s.rhs
             # keep negated neutral for inheritance below
             if self.negated:
                 sn = ~sn
             # keep designation neutral for inheritance below
-            yield adds(group(sdnode(sn, d)))
+            yield adds(group(sdwnode(sn, d, w)))
 
     class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -111,9 +111,9 @@ class Rules(LogicType.Rules):
         with the consequent to *b*. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             # Keep designation fixed for inheritance below.
-            yield adds(group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
+            yield adds(group(sdwnode(s.lhs, True, w), sdwnode(s.rhs, False, w)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated): pass
     class ConditionalNegatedUndesignated(ConditionalDesignated): pass
@@ -127,7 +127,7 @@ class Rules(LogicType.Rules):
         inverted. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhsa = +s.lhs
             rhsa = +s.rhs
             sn1 = ~lhsa | rhsa
@@ -137,18 +137,18 @@ class Rules(LogicType.Rules):
                 sn1 = ~sn1
                 sn2 = ~sn2
             # Keep designation neutral for inheritance below.
-            yield adds(group(sdnode(sn1, d), sdnode(sn2, d)))
+            yield adds(group(sdwnode(sn1, d, w), sdwnode(sn2, d, w)))
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
     class BiconditionalUndesignated(BiconditionalDesignated): pass
 
     class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode(lhs, d), sdnode(rhs, d)),
-                group(sdnode(lhs, not d), sdnode(rhs, not d)))
+                group(sdwnode(lhs, d, w), sdwnode(rhs, d, w)),
+                group(sdwnode(lhs, not d, w), sdwnode(rhs, not d, w)))
 
     groups = (
         group(

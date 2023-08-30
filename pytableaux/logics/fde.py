@@ -17,14 +17,12 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from itertools import filterfalse, starmap
-from typing import Any
+from itertools import starmap
 
-from ..errors import check
-from ..lang import (Atomic, Operated, Operator, Predicated, Quantified,
-                    Quantifier, Sentence)
+from ..lang import Atomic, Operated, Operator, Quantified, Quantifier, Sentence
 from ..models import ValueFDE
-from ..proof import Branch, Node, SentenceNode, adds, filters, rules, sdnode
+from ..proof import (AccessNode, Branch, Node, SentenceNode, adds, filters,
+                     rules, sdwnode)
 from ..tools import group, maxceil, minfloor, wraps
 from . import LogicType
 
@@ -99,20 +97,19 @@ class Model(LogicType.Model[ValueFDE]):
         self._check_not_finished()
         values = self.values
         for node in branch:
+            if isinstance(node, AccessNode):
+                self.R.add(node.pair())
             if not isinstance(node, SentenceNode):
                 continue
             s = node['sentence']
             self.sentences.add(s)
-            w = node.get('world')
-            if w is None:
-                w = 0
             is_literal = self.is_sentence_literal(s)
             is_opaque = self.is_sentence_opaque(s)
             if not is_literal and not is_opaque:
                 continue
             d = node['designated']
             s_negative = -s
-            has_negative = branch.has(sdnode(s_negative, d))
+            has_negative = branch.has(sdwnode(s_negative, d, node.get('world')))
             is_negated = type(s) is Operated and s.operator is Operator.Negation
             if is_negated:
                 # If the sentence is negated, set the value of the negatum
@@ -156,31 +153,22 @@ class Model(LogicType.Model[ValueFDE]):
                         # not also undesignated on b, the value is F
                         value = 'F'
             value = values[value]
+            w = node.get('world')
+            if w is None:
+                w = 0
             if is_opaque:
                 self.set_opaque_value(s, value, world=w)
             else:
                 self.set_literal_value(s, value, world=w)
         return super().read_branch(branch)
 
-    # def finish(self):
-    #     # TODO: consider augmenting the logic with Identity and Existence predicate
-    #     #       restrictions. In that case, new tableaux rules need to be written.
-    #     atomics = set()
-    #     for s in self.sentences:
-    #         atomics.update(s.atomics)
-    #     unass = self.Meta.unassigned_value
-    #     known = self.frame.atomics
-    #     for s in filterfalse(known.__contains__, atomics):
-    #         known[s] = unass
-    #     return super().finish()
-
-
 class System(LogicType.System):
 
     @classmethod
     def build_trunk(cls, b, arg, /):
-        b += (sdnode(s, True) for s in arg.premises)
-        b += sdnode(arg.conclusion, False)
+        w = 0 if cls.modal else None
+        b += (sdwnode(s, True, w) for s in arg.premises)
+        b += sdwnode(arg.conclusion, False, w)
 
     @classmethod
     def branching_complexity(cls, node, rules, /):
@@ -239,7 +227,10 @@ class System(LogicType.System):
         autoattrs = True
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
-            return self._get_sd_targets(self.sentence(node), node['designated'])
+            return self._get_sdw_targets(self.sentence(node), node['designated'], node.get('world'))
+
+        def _get_sdw_targets(self, s: Operated, d: bool, w: int|None, /):
+            return self._get_sd_targets(s, d)
 
         def _get_sd_targets(self, s: Operated, d: bool, /):
             raise NotImplementedError
@@ -248,7 +239,7 @@ class System(LogicType.System):
 
         def __init_subclass__(cls) -> None:
             super().__init_subclass__()
-            if cls._get_node_targets is __class__._get_node_targets:
+            if cls._get_sdw_targets is __class__._get_sdw_targets:
                 if cls._get_sd_targets is __class__._get_sd_targets:
                     @abstractmethod
                     @wraps(cls._get_sd_targets)
@@ -263,13 +254,13 @@ class System(LogicType.System):
 
         conjoined: Operator
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             oper = self.conjoined
             lhs, rhs = s
             s = oper(lhs, rhs) & oper(rhs, lhs)
             if self.negated:
                 s = ~s
-            yield adds(group(sdnode(s, d)))
+            yield adds(group(sdwnode(s, d, w)))
 
     class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
         conjoined = Operator.MaterialConditional
@@ -280,11 +271,11 @@ class System(LogicType.System):
     class MaterialConditionalReducingRule(OperatorNodeRule, intermediate=True):
         "This rule reduces to a disjunction."
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             sn = ~s.lhs | s.rhs
             if self.negated:
                 sn = ~sn
-            yield adds(group(sdnode(sn, d)))
+            yield adds(group(sdwnode(sn, d, w)))
 
 
 class Rules(LogicType.Rules):
@@ -298,12 +289,13 @@ class Rules(LogicType.Rules):
         def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             if s is not None:
-                return branch.find(sdnode(s, not node['designated']))
+                return branch.find(sdwnode(s, not node['designated'], node.get('world')))
 
         def example_nodes(self):
             s = Atomic.first()
-            yield sdnode(s, True)
-            yield sdnode(s, False)
+            w = 0 if self.modal else None
+            yield sdwnode(s, True, w)
+            yield sdwnode(s, False, w)
             
     class DoubleNegationDesignated(System.OperatorNodeRule):
         """
@@ -311,8 +303,8 @@ class Rules(LogicType.Rules):
         add a designated node to *b* with the double-negatum of *n*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s.lhs, d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(s.lhs, d, w)))
 
     class DoubleNegationUndesignated(DoubleNegationDesignated): pass
 
@@ -322,8 +314,8 @@ class Rules(LogicType.Rules):
         node to *b* with the operand of *b*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s.lhs, d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(s.lhs, d, w)))
 
     class AssertionUndesignated(AssertionDesignated): pass
 
@@ -333,8 +325,8 @@ class Rules(LogicType.Rules):
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s.lhs, d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(~s.lhs, d, w)))
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated): pass
 
@@ -344,8 +336,8 @@ class Rules(LogicType.Rules):
         *c*, add a designated node with *c* to *b*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s.lhs, d), sdnode(s.rhs, d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(s.lhs, d, w), sdwnode(s.rhs, d, w)))
 
     class ConjunctionNegatedDesignated(System.OperatorNodeRule):
         """
@@ -354,10 +346,10 @@ class Rules(LogicType.Rules):
         node with the negation of *c* to *b'*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(~s.lhs, d)),
-                group(sdnode(~s.rhs, d)))
+                group(sdwnode(~s.lhs, d, w)),
+                group(sdwnode(~s.rhs, d, w)))
 
     class ConjunctionUndesignated(System.OperatorNodeRule):
         """
@@ -366,10 +358,10 @@ class Rules(LogicType.Rules):
         undesignated node with *c* to *b'*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(s.lhs, d)),
-                group(sdnode(s.rhs, d)))
+                group(sdwnode(s.lhs, d, w)),
+                group(sdwnode(s.rhs, d, w)))
 
     class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -378,8 +370,8 @@ class Rules(LogicType.Rules):
         of *c* to *b*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(~s.lhs, d, w), sdwnode(~s.rhs, d, w)))
 
     class DisjunctionDesignated(ConjunctionUndesignated): pass
     class DisjunctionNegatedDesignated(ConjunctionNegatedUndesignated): pass
@@ -394,10 +386,10 @@ class Rules(LogicType.Rules):
         then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(~s.lhs, d)),
-                group(sdnode( s.rhs, d)))
+                group(sdwnode(~s.lhs, d, w)),
+                group(sdwnode( s.rhs, d, w)))
 
     class MaterialConditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -406,8 +398,8 @@ class Rules(LogicType.Rules):
         node with the negation of the consequent to *b*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(s.lhs, d, w), sdwnode(~s.rhs, d, w)))
 
     class MaterialConditionalUndesignated(System.OperatorNodeRule):
         """
@@ -416,8 +408,8 @@ class Rules(LogicType.Rules):
         with the consequent to *b*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s.lhs, d), sdnode(s.rhs, d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(~s.lhs, d, w), sdwnode(s.rhs, d, w)))
 
     class MaterialConditionalNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -427,10 +419,10 @@ class Rules(LogicType.Rules):
         tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode( s.lhs, d)),
-                group(sdnode(~s.rhs, d)))
+                group(sdwnode( s.lhs, d, w)),
+                group(sdwnode(~s.rhs, d, w)))
 
     class MaterialBiconditionalDesignated(System.OperatorNodeRule):
         """
@@ -441,10 +433,10 @@ class Rules(LogicType.Rules):
         consequent to *b''*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)),
-                group(sdnode( s.rhs, d), sdnode( s.lhs, d)))
+                group(sdwnode(~s.lhs, d, w), sdwnode(~s.rhs, d, w)),
+                group(sdwnode( s.rhs, d, w), sdwnode( s.lhs, d, w)))
 
     class MaterialBiconditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -455,10 +447,10 @@ class Rules(LogicType.Rules):
         then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode( s.lhs, d), sdnode(~s.rhs, d)),
-                group(sdnode(~s.lhs, d), sdnode( s.rhs, d)))
+                group(sdwnode( s.lhs, d, w), sdwnode(~s.rhs, d, w)),
+                group(sdwnode(~s.lhs, d, w), sdwnode( s.rhs, d, w)))
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated): pass
     class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalDesignated): pass
@@ -481,7 +473,7 @@ class Rules(LogicType.Rules):
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             yield adds(
-                group(sdnode(branch.new_constant() >> s, self.designation)))
+                group(sdwnode(branch.new_constant() >> s, self.designation, node.get('world'))))
 
     class ExistentialNegatedDesignated(System.DefaultNodeRule, rules.QuantifiedSentenceRule):
         """
@@ -491,9 +483,9 @@ class Rules(LogicType.Rules):
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             v, si = s[1:]
-            yield adds(group(sdnode(self.quantifier.other(v, ~si), d)))
+            yield adds(group(sdwnode(self.quantifier.other(v, ~si), d, w)))
 
     class ExistentialUndesignated(System.QuantifierFatRule):
         """
@@ -505,7 +497,7 @@ class Rules(LogicType.Rules):
         """
 
         def _get_constant_nodes(self, node, c, branch, /):
-            yield sdnode(c >> self.sentence(node), self.designation)
+            yield sdwnode(c >> self.sentence(node), self.designation, node.get('world'))
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated): pass
     class UniversalDesignated(ExistentialUndesignated): pass

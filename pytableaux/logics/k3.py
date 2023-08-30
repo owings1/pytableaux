@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from ..lang import Atomic
 from ..models import ValueK3
-from ..proof import rules, sdnode
+from ..proof import rules, sdwnode
 from ..tools import group
 from . import fde as FDE
 from . import LogicType
@@ -45,12 +45,13 @@ class Rules(LogicType.Rules):
 
         def _find_closing_node(self, node, branch, /):
             if node['designated']:
-                return branch.find(sdnode(-node['sentence'], True))
+                return branch.find(sdwnode(-node['sentence'], True, node.get('world')))
 
         def example_nodes(self):
             a = Atomic.first()
-            yield sdnode(a, True)
-            yield sdnode(~a, True)
+            w = 0 if self.modal else None
+            yield sdwnode(a, True, w)
+            yield sdwnode(~a, True, w)
 
     closure = group(GlutClosure) + FDE.Rules.closure
     groups = FDE.Rules.groups

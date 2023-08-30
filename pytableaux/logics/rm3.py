@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..proof import adds, sdnode
+from ..proof import adds, sdwnode
 from ..tools import group
 from . import fde as FDE
 from . import lp as LP
@@ -59,16 +59,16 @@ class Rules(LogicType.Rules):
         respectively. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode( lhs, False)),
-                group(sdnode(~rhs, False)),
+                group(sdwnode( lhs, not d, w)),
+                group(sdwnode(~rhs, not d, w)),
                 group(
-                    sdnode( lhs, True),
-                    sdnode(~lhs, True),
-                    sdnode( rhs, True),
-                    sdnode(~rhs, True)))
+                    sdwnode( lhs, d, w),
+                    sdwnode(~lhs, d, w),
+                    sdwnode( rhs, d, w),
+                    sdwnode(~rhs, d, w)))
 
     class ConditionalUndesignated(System.OperatorNodeRule):
         """
@@ -79,14 +79,14 @@ class Rules(LogicType.Rules):
         and a designated node with the negation of the consequent. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
                 group(
-                    sdnode( s.lhs, True),
-                    sdnode( s.rhs, False)),
+                    sdwnode( s.lhs, not d, w),
+                    sdwnode( s.rhs, d, w)),
                 group(
-                    sdnode(~s.lhs, False),
-                    sdnode(~s.rhs, True)))
+                    sdwnode(~s.lhs, d, w),
+                    sdwnode(~s.rhs, not d, w)))
 
     class BiconditionalDesignated(System.OperatorNodeRule):
         """
@@ -97,20 +97,20 @@ class Rules(LogicType.Rules):
         with each operand, and one for the negation of each operand. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
                 group(
-                    sdnode( lhs, False),
-                    sdnode( rhs, False)),
+                    sdwnode( lhs, not d, w),
+                    sdwnode( rhs, not d, w)),
                 group(
-                    sdnode(~lhs, False),
-                    sdnode(~rhs, False)),
+                    sdwnode(~lhs, not d, w),
+                    sdwnode(~rhs, not d, w)),
                 group(
-                    sdnode( lhs, True),
-                    sdnode(~lhs, True),
-                    sdnode( rhs, True),
-                    sdnode(~rhs, True)))
+                    sdwnode( lhs, d, w),
+                    sdwnode(~lhs, d, w),
+                    sdwnode( rhs, d, w),
+                    sdwnode(~rhs, d, w)))
 
     class BiconditionalUndesignated(System.OperatorNodeRule):
         """
@@ -120,11 +120,11 @@ class Rules(LogicType.Rules):
         with the reversed operands of *n*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
             yield adds(
-                group(sdnode(convert(s.lhs, s.rhs), False)),
-                group(sdnode(convert(s.rhs, s.lhs), False)))
+                group(sdwnode(convert(s.lhs, s.rhs), d, w)),
+                group(sdwnode(convert(s.rhs, s.lhs), d, w)))
 
     class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -134,14 +134,14 @@ class Rules(LogicType.Rules):
         each operand. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
                 group(
-                    sdnode(s.lhs, False),
-                    sdnode(s.rhs, False)),
+                    sdwnode(s.lhs, d, w),
+                    sdwnode(s.rhs, d, w)),
                 group(
-                    sdnode(~s.lhs, False),
-                    sdnode(~s.rhs, False)))
+                    sdwnode(~s.lhs, d, w),
+                    sdwnode(~s.rhs, d, w)))
 
     groups = (
         group(

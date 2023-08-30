@@ -50,13 +50,6 @@ class TestModels(Base):
         m.finish()
         self.assertEqual(m.value_of_operated(s1.negate()), 'T')
 
-    def test_model_value_of_operated_opaque2(self):
-        m = self.m()
-        s1 = self.p('La')
-        m.set_opaque_value(s1, 'T')
-        m.finish()
-        self.assertEqual(m.value_of_operated(s1), 'T')
-
     def test_model_read_node_opaque(self):
         m = self.m()
         s1 = self.p('La')

@@ -15,14 +15,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations as annotations
-from collections import defaultdict
 
 from ..lang import Atomic
 from ..models import ValueLP
-from ..proof import rules, sdnode
+from ..proof import rules, sdwnode
 from ..tools import group
-from . import fde as FDE
 from . import LogicType
+from . import fde as FDE
 
 
 class Meta(FDE.Meta):
@@ -34,22 +33,7 @@ class Meta(FDE.Meta):
     description = 'Three-valued logic (T, F, B)'
     category_order = 100
 
-class Model(FDE.Model):
-
-    pass
-    # def finish(self):
-    #     # Ensure anti-extension is populated for every param tuple
-    #     ntuples = defaultdict(set)
-    #     for frame in self.frames.values():
-    #         predicates = frame.predicates
-    #         for pred, interp in predicates.items():
-    #             ntuples[pred.arity].update(interp.pos)
-    #             ntuples[pred.arity].update(interp.neg)
-    #         for pred, interp in predicates.items():
-    #             for ntuple in ntuples[pred.arity]:
-    #                 if ntuple not in interp.pos:
-    #                     interp.neg.add(ntuple)
-    #     return super().finish()
+class Model(FDE.Model): pass
 
 class System(FDE.System): pass
 
@@ -62,12 +46,13 @@ class Rules(LogicType.Rules):
 
         def _find_closing_node(self, node, branch, /):
             if node['designated'] is False:
-                return branch.find(sdnode(-self.sentence(node), False))
+                return branch.find(sdwnode(-self.sentence(node), False, node.get('world')))
 
         def example_nodes(self):
             s = Atomic.first()
-            yield sdnode(s, False)
-            yield sdnode(~s, False)
+            w = 0 if self.modal else None
+            yield sdwnode(s, False, w)
+            yield sdwnode(~s, False, w)
 
     closure = group(GapClosure) + FDE.Rules.closure
     groups = FDE.Rules.groups

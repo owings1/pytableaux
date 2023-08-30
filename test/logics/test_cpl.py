@@ -67,13 +67,6 @@ class TestModels(Base):
         m = self.m()
         m.read_branch(b)
         self.assertEqual(m.value_of(s1), 'T')
-
-    def test_value_of_operated_opaque(self):
-        # coverage
-        s = self.p('La')
-        with self.m() as m:
-            m.set_opaque_value(s, 'T')
-        self.assertEqual(m.value_of_operated(s), 'T')
         
     def test_set_literal_value_predicated1(self):
         s = Predicate.Identity(Constant.gen(2))

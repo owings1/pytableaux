@@ -121,7 +121,13 @@ class BuilderMixin(ForObjectBuilder[_T]):
     def get_obj_data_attributes(cls, obj: _T, /) -> Iterable[tuple[str, Any]]:
         yield from EMPTY_SET
 
-class Node:
+
+class NodesMeta(type):
+
+    def __prepare__(clsname, bases, **kw):
+        return dict(__slots__=EMPTY_SET)
+
+class Node(metaclass=NodesMeta):
 
     tagnames: ClassVar[Mapping[str, str]] = EMPTY_MAP
     tagname: ClassVar[str|None] = None
@@ -129,8 +135,6 @@ class Node:
 
     parent: Node|None
     children: Sequence[Node]
-
-    __slots__ = EMPTY_SET
 
     @property
     def document(self) -> document|None:
@@ -293,54 +297,36 @@ class Element(Node):
 
 class InlineElement(Element):
     tagnames = MapProxy(dict(html='span'))
-    __slots__ = EMPTY_SET
 
 class BlockElement(Element):
     tagnames = MapProxy(dict(html='div'))
-    __slots__ = EMPTY_SET
 
-class textnode(Text):
-    __slots__ = EMPTY_SET
-
-class rawtext(Text):
-    __slots__ = EMPTY_SET
+class textnode(Text): pass
+class rawtext(Text): pass
 
 class subscript(Element):
     tagnames = MapProxy(dict(html='sub'))
     default_classes = False
-    __slots__ = EMPTY_SET
 
 class style(Element):
     default_classes = False
-    __slots__ = EMPTY_SET
 
-class clear(BlockElement):
-    __slots__ = EMPTY_SET
-
-class ellipsis(InlineElement):
-    __slots__ = EMPTY_SET
+class clear(BlockElement): pass
+class ellipsis(InlineElement): pass
 
 class wrapper(BlockElement):
     default_classes = False
-    __slots__ = EMPTY_SET
 
-class separator(InlineElement):
-    __slots__ = EMPTY_SET
-
-class access(InlineElement):
-    __slots__ = EMPTY_SET
+class separator(InlineElement): pass
+class access(InlineElement): pass
 
 class vertical_line(BlockElement, BuilderMixin[int]):
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_data_attributes(cls, obj, /):
         yield 'step', obj
 
 class horizontal_line(BlockElement, BuilderMixin[Tableau.Tree]):
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_data_attributes(cls, obj, /):
@@ -356,8 +342,6 @@ class horizontal_line(BlockElement, BuilderMixin[Tableau.Tree]):
 
 class child_wrapper(BlockElement, BuilderMixin[tuple[Tableau.Tree, Tableau.Tree]]):
 
-    __slots__ = EMPTY_SET
-
     @classmethod
     def get_obj_attributes(cls, obj, /):
         tree, child = obj
@@ -367,8 +351,6 @@ class child_wrapper(BlockElement, BuilderMixin[tuple[Tableau.Tree, Tableau.Tree]
         yield 'style', dict(width = f'{width}%')
 
 class world(InlineElement, BuilderMixin[int]):
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_data_attributes(cls, obj, /):
@@ -381,8 +363,6 @@ class world(InlineElement, BuilderMixin[int]):
 
 class sentence(InlineElement, BuilderMixin[proof.SentenceNode]):
 
-    __slots__ = EMPTY_SET
-
     @classmethod
     def get_obj_data_attributes(cls, obj, /):
         yield from obj.items()
@@ -390,20 +370,18 @@ class sentence(InlineElement, BuilderMixin[proof.SentenceNode]):
     @classmethod
     def get_obj_children(cls, obj, /):
         types = cls.types
-        if isinstance(obj, proof.SentenceWorldNode):
-            yield types[separator](classes=['sentence-world'])
-            yield types[world].for_object(obj[proof.Node.Key.world])
-        elif isinstance(obj, proof.SentenceDesignationNode):
+        if isinstance(obj, proof.DesignationNode):
             yield types[separator](classes=['sentence-designation'])
             yield types[designation].for_object(obj[proof.Node.Key.designation])
+        if isinstance(obj, proof.WorldNode):
+            yield types[separator](classes=['sentence-world'])
+            yield types[world].for_object(obj[proof.Node.Key.world])
 
 class designation(InlineElement, BuilderMixin[bool]):
 
     designation_classnames = (
         'undesignated',
         'designated')
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_data_attributes(cls, obj, /):
@@ -415,8 +393,6 @@ class designation(InlineElement, BuilderMixin[bool]):
 
 class flag(InlineElement, BuilderMixin[proof.Node]):
 
-    __slots__ = EMPTY_SET
-
     @classmethod
     def get_obj_classes(cls, obj, /):
         yield obj[proof.Node.Key.flag]
@@ -426,8 +402,6 @@ class flag(InlineElement, BuilderMixin[proof.Node]):
         yield from obj.items()
 
 class node_props(InlineElement, BuilderMixin[proof.Node]):
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_classes(cls, obj, /):
@@ -449,8 +423,6 @@ class node_props(InlineElement, BuilderMixin[proof.Node]):
             yield types[flag].for_object(obj)
 
 class node(BlockElement, BuilderMixin[tuple[proof.Node, int]]):
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_attributes(cls, obj, /):
@@ -477,8 +449,6 @@ class node(BlockElement, BuilderMixin[tuple[proof.Node, int]]):
         yield cls.types[node_props].for_object(obj[0])
 
 class node_segment(BlockElement, BuilderMixin[Tableau.Tree]):
-
-    __slots__ = EMPTY_SET
 
     @classmethod
     def get_obj_data_attributes(cls, obj, /):
@@ -553,23 +523,22 @@ class tree(BlockElement, BuilderMixin[Tableau.Tree]):
 
 class tableau(BlockElement, BuilderMixin[Tableau]):
 
-    __slots__ = EMPTY_SET
-
     @classmethod
     def get_obj_attributes(cls, obj, /):
-        yield from {
-            'id': f'tableau_{obj.id}',
-            'data-step': len(obj.history),
-            'data-num-steps': len(obj.history),
-            'data-current-width-pct': 100}.items()
+        yield 'id', f'tableau_{obj.id}'
+
+    @classmethod
+    def get_obj_data_attributes(cls, obj, /):
+        length = len(obj.history)
+        yield 'step', length
+        yield 'num_steps', length
+        yield 'current_width_pct', 100
 
     @classmethod
     def get_obj_children(cls, obj, /):
         yield cls.types[tree].for_object(obj.tree)
 
 class document(Element):
-
-    __slots__ = EMPTY_SET
 
     @property
     def document(self):

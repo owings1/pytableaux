@@ -1,12 +1,14 @@
 from __future__ import annotations
-from ..utils import BaseCase
+
 from pytableaux.errors import *
 from pytableaux.lang import *
+from pytableaux.logics import k as K
 from pytableaux.proof import *
 from pytableaux.proof import rules
 from pytableaux.proof.tableaux import *
-from pytableaux.logics.k import AccessGraph, System, Rules
-from pytableaux.logics import k as K
+
+from ..utils import BaseCase
+
 
 class Base(BaseCase):
     logic = K
@@ -39,13 +41,13 @@ class TestRules(Base, autorules=True):
 
     def test_IdentityIndiscernability_target_predicate_sentence(self):
         tab, b = self.tabb()
-        rule = tab.rules.get(Rules.IdentityIndiscernability)
+        rule = tab.rules.get(K.Rules.IdentityIndiscernability)
         b += map(self.swnode, ['Imn', 'Fm'])
         self.assertTrue(rule.target(b))
 
     def test_IdentityIndiscernability_not_target_self_identity(self):
         tab, b = self.tabb()
-        rule = tab.rules.get(Rules.IdentityIndiscernability)
+        rule = tab.rules.get(K.Rules.IdentityIndiscernability)
         # need 2 nodes to trigger test, since the rule skips the node if
         # it is the self-same node it is comparing to
         b += map(self.swnode, ['Imn', 'Imn'])
@@ -53,13 +55,13 @@ class TestRules(Base, autorules=True):
 
     def test_IdentityIndiscernability_skip_self_identity_coverage(self):
         tab, b = self.tabb()
-        rule = tab.rules.get(Rules.IdentityIndiscernability)
+        rule = tab.rules.get(K.Rules.IdentityIndiscernability)
         b += self.swnode('Imm')
         self.assertFalse(rule.target(b))
 
     def test_IdentityIndiscernability_not_target_duplicate(self):
         tab, b = self.tabb()
-        rule = tab.rules.get(Rules.IdentityIndiscernability)
+        rule = tab.rules.get(K.Rules.IdentityIndiscernability)
         b += map(self.swnode, ['Imn', 'Fm', 'Fn'])
         self.assertFalse(rule.target(b))
 
@@ -70,7 +72,7 @@ class TestRules(Base, autorules=True):
     def test_Necessity_node_targets(self):
         tab, b = self.tabb()
         b += self.swnode('La', 0), anode(0, 0)
-        rule = tab.rules.get(Rules.Necessity)
+        rule = tab.rules.get(K.Rules.Necessity)
         targets = list(rule._get_node_targets(b[0], b))
         self.assertEqual(len(targets), 1)
 
@@ -78,7 +80,7 @@ class TestRules(Base, autorules=True):
         tab, b = self.tabb()
         b += map(self.swnode, ('a', 'La'))
         b += anode(0, 0)
-        rule = tab.rules.get(Rules.Necessity)
+        rule = tab.rules.get(K.Rules.Necessity)
         targets = list(rule._get_node_targets(b[1], b))
         self.assertEqual(len(targets), 0)
 
@@ -177,18 +179,6 @@ class TestModelPredication(Base):
         s2 = Predicated(Predicate(0,0,1), Variable(0,0))
         with self.assertRaises(ValueError):
             m.set_predicated_value(s2, 'F')
-
-class TestAccessGraph(Base):
-
-    def test_flat_unsorted(self):
-        g = AccessGraph()
-        g.addall([(1,0), (0, 1)])
-        self.assertEqual(list(g.flat()), [(1, 0), (0, 1)])
-
-    def test_flat_sorted(self):
-        g = AccessGraph()
-        g.addall([(1,0), (0, 1)])
-        self.assertEqual(list(g.flat(sort=True)), [(0, 1), (1, 0)])
 
 class TestModelModalAccess(Base):
 
@@ -505,15 +495,15 @@ class TestSystem(Base):
 
     def test_branch_complexity_hashable_none_if_no_sentence(self):
         n = Node({})
-        self.assertIs(None, System.branching_complexity_hashable(n))
+        self.assertIs(None, K.System.branching_complexity_hashable(n))
 
     def test_branch_complexity_0_if_no_sentence(self):
         tab = Tableau(self.logic)
         n = Node({})
-        self.assertEqual(0, System.branching_complexity(n, tab.rules))
+        self.assertEqual(0, K.System.branching_complexity(n, tab.rules))
 
     def test_abstract_default_node_rule(self):
-        class Impl(System.DefaultNodeRule): pass
+        class Impl(K.System.DefaultNodeRule): pass
         with self.assertRaises(TypeError):
             Impl(Tableau())
         rule = rules.NoopRule(Tableau())
@@ -521,7 +511,7 @@ class TestSystem(Base):
             Impl._get_sw_targets(rule, Node({}), Branch())
 
     def test_abstract_operator_node_rule(self):
-        class Impl(System.OperatorNodeRule): pass
+        class Impl(K.System.OperatorNodeRule): pass
         with self.assertRaises(TypeError):
             Impl(Tableau())
         rule = rules.NoopRule(Tableau())
@@ -531,6 +521,6 @@ class TestSystem(Base):
     def test_notimpl_coverage(self):
         rule = rules.NoopRule(Tableau())
         with self.assertRaises(NotImplementedError):
-            System.DefaultNodeRule._get_sw_targets(rule, self.p('a'), 0)
+            K.System.DefaultNodeRule._get_sw_targets(rule, self.p('a'), 0)
         with self.assertRaises(NotImplementedError):
-            System.OperatorNodeRule._get_sw_targets(rule, self.p('a'), 0)
+            K.System.OperatorNodeRule._get_sw_targets(rule, self.p('a'), 0)

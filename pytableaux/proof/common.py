@@ -24,7 +24,8 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Mapping, Set
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Optional, Self, SupportsIndex
+from typing import (TYPE_CHECKING, Any, Iterable, Iterator, Literal, Optional,
+                    Self, SupportsIndex)
 
 from ..errors import Emsg, check
 from ..lang import Constant, Sentence
@@ -35,6 +36,7 @@ from . import BranchMeta, NodeMeta, WorldPair
 
 if TYPE_CHECKING:
     from typing import overload
+
     from ..models import BaseModel
     from . import Rule, Tableau
 
@@ -139,10 +141,12 @@ class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
             if mapping.get(Node.Key.world2) is not None:
                 return AccessNode(mapping)
         if mapping.get(Node.Key.sentence) is not None:
+            if mapping.get(Node.Key.designation) is not None:
+                if mapping.get(Node.Key.world) is not None:
+                    return SentenceDesignationWorldNode(mapping)
+                return SentenceDesignationNode(mapping)
             if mapping.get(Node.Key.world) is not None:
                 return SentenceWorldNode(mapping)
-            if mapping.get(Node.Key.designation) is not None:
-                return SentenceDesignationNode(mapping)
             return SentenceNode(mapping)
         if mapping.get(Node.Key.designation) is not None:
             return DesignationNode(mapping)
@@ -626,3 +630,4 @@ class DesignationNode(Node, Designation): pass
 class SentenceNode(Node): pass
 class SentenceWorldNode(SentenceNode, WorldNode): pass
 class SentenceDesignationNode(SentenceNode, DesignationNode): pass
+class SentenceDesignationWorldNode(SentenceDesignationNode, SentenceWorldNode): pass

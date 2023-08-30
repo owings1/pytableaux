@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import adds, sdnode
+from ..proof import adds, sdwnode
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -52,8 +52,8 @@ class Rules(LogicType.Rules):
         add an undesignated node with the negatum of `n`. Then tick `n`.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s, not d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(s, not d, w)))
 
     class DoubleNegationUndesignated(DoubleNegationDesignated): pass
 
@@ -67,16 +67,16 @@ class Rules(LogicType.Rules):
         of the consequent. Then tick `n`.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
                 group(
-                    sdnode( lhs, d),
-                    sdnode(~rhs, d)),
+                    sdwnode( lhs, d, w),
+                    sdwnode(~rhs, d, w)),
                 group(
-                    sdnode( lhs, not d),
-                    sdnode(~lhs, not d),
-                    sdnode(~rhs, d)))
+                    sdwnode( lhs, not d, w),
+                    sdwnode(~lhs, not d, w),
+                    sdwnode(~rhs, d, w)))
 
     class ConditionalNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -86,10 +86,10 @@ class Rules(LogicType.Rules):
         node with the negation of the consequent. Then tick `n`.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(~s.lhs, not d)),
-                group(sdnode(~s.rhs, d)))
+                group(sdwnode(~s.lhs, not d, w)),
+                group(sdwnode(~s.rhs, d, w)))
 
     class BiconditionalDesignated(System.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedDesignated(System.ConditionalConjunctsReducingRule): pass

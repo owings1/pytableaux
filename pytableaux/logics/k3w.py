@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import adds, sdnode
+from ..proof import adds, sdwnode
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -59,12 +59,12 @@ class Rules(LogicType.Rules):
         designated nodes with the negation of each conjunct. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode( lhs, True), sdnode(~rhs, True)),
-                group(sdnode(~lhs, True), sdnode( rhs, True)),
-                group(sdnode(~lhs, True), sdnode(~rhs, True)))
+                group(sdwnode( lhs, True, w), sdwnode(~rhs, True, w)),
+                group(sdwnode(~lhs, True, w), sdwnode( rhs, True, w)),
+                group(sdwnode(~lhs, True, w), sdwnode(~rhs, True, w)))
 
     class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -75,12 +75,12 @@ class Rules(LogicType.Rules):
         Then tick *n*. 
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode(lhs, False), sdnode(~lhs, False)),
-                group(sdnode(rhs, False), sdnode(~rhs, False)),
-                group(sdnode(lhs, True),  sdnode( rhs, True)))
+                group(sdwnode(lhs, False, w), sdwnode(~lhs, False, w)),
+                group(sdwnode(rhs, False, w), sdwnode(~rhs, False, w)),
+                group(sdwnode(lhs, True, w),  sdwnode( rhs, True, w)))
 
     class DisjunctionDesignated(System.OperatorNodeRule):
         """
@@ -92,12 +92,12 @@ class Rules(LogicType.Rules):
         designated node with each disjunct. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode( lhs, True), sdnode(~rhs, True)),
-                group(sdnode(~lhs, True), sdnode( rhs, True)),
-                group(sdnode( lhs, True), sdnode( rhs, True)))
+                group(sdwnode( lhs, True, w), sdwnode(~rhs, True, w)),
+                group(sdwnode(~lhs, True, w), sdwnode( rhs, True, w)),
+                group(sdwnode( lhs, True, w), sdwnode( rhs, True, w)))
             
     class DisjunctionUndesignated(System.OperatorNodeRule):
         """
@@ -108,12 +108,12 @@ class Rules(LogicType.Rules):
         of each disjunct. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode( lhs, False), sdnode(~lhs, False)),
-                group(sdnode( rhs, False), sdnode(~rhs, False)),
-                group(sdnode(~lhs, True),  sdnode(~rhs, True)))
+                group(sdwnode( lhs, False, w), sdwnode(~lhs, False, w)),
+                group(sdwnode( rhs, False, w), sdwnode(~rhs, False, w)),
+                group(sdwnode(~lhs, True, w),  sdwnode(~rhs, True, w)))
 
     class DisjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -126,11 +126,11 @@ class Rules(LogicType.Rules):
         disjunct and its negation, respectively. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(s, True)),
-                group(sdnode(s.lhs, False), sdnode(~s.lhs, False)),
-                group(sdnode(s.rhs, False), sdnode(~s.rhs, False)))
+                group(sdwnode(s, True, w)),
+                group(sdwnode(s.lhs, False, w), sdwnode(~s.lhs, False, w)),
+                group(sdwnode(s.rhs, False, w), sdwnode(~s.rhs, False, w)))
 
     class MaterialConditionalDesignated(System.MaterialConditionalReducingRule): pass
     class MaterialConditionalNegatedDesignated(System.MaterialConditionalReducingRule): pass

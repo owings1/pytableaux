@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator, Quantified, Quantifier
-from ..proof import adds, rules, sdnode
+from ..proof import adds, rules, sdwnode
 from ..tools import group, maxceil, minfloor
 from . import LogicType
 from . import b3e as B3E
@@ -74,10 +74,10 @@ class Rules(LogicType.Rules):
         conjunct, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(s.lhs, not d)),
-                group(sdnode(s.rhs, not d)))
+                group(sdwnode(s.lhs, not d, w)),
+                group(sdwnode(s.rhs, not d, w)))
 
     class ConjunctionUndesignated(System.OperatorNodeRule):
         """
@@ -85,8 +85,8 @@ class Rules(LogicType.Rules):
         designated node to *b* with the negation of the conjunction, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s, not d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(~s, not d, w)))
 
     class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -94,8 +94,8 @@ class Rules(LogicType.Rules):
         add a designated node to *b* with the (un-negated) conjuction, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s, not d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(s, not d, w)))
         
     class DisjunctionNegatedDesignated(System.OperatorNodeRule):
         """
@@ -103,8 +103,8 @@ class Rules(LogicType.Rules):
         add an undesignated node to *b* for each disjunct, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s.lhs, not d), sdnode(s.rhs, not d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(s.lhs, not d, w), sdwnode(s.rhs, not d, w)))
 
     class DisjunctionUndesignated(ConjunctionUndesignated): pass
     class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -116,8 +116,8 @@ class Rules(LogicType.Rules):
         undesignated node with the consequent to *b*, then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(~s.lhs, not d), sdnode(s.rhs, not d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(group(sdwnode(~s.lhs, not d, w), sdwnode(s.rhs, not d, w)))
 
     class MaterialConditionalUndesignated(ConjunctionUndesignated): pass
     class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -130,10 +130,10 @@ class Rules(LogicType.Rules):
         nodes for the antecedent, and for the negation of the consequent. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(~s.lhs, not d), sdnode( s.rhs, not d)),
-                group(sdnode( s.lhs, not d), sdnode(~s.rhs, not d)))
+                group(sdwnode(~s.lhs, not d, w), sdwnode( s.rhs, not d, w)),
+                group(sdwnode( s.lhs, not d, w), sdwnode(~s.rhs, not d, w)))
 
     class MaterialBiconditionalUndesignated(ConjunctionUndesignated): pass
     class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -146,16 +146,16 @@ class Rules(LogicType.Rules):
         antecedent, consequent, and their negations. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
                 group(
-                    sdnode(~lhs | rhs, d)),
+                    sdwnode(~lhs | rhs, d, w)),
                 group(
-                    sdnode( lhs, not d),
-                    sdnode( rhs, not d),
-                    sdnode(~lhs, not d),
-                    sdnode(~rhs, not d)))
+                    sdwnode( lhs, not d, w),
+                    sdwnode( rhs, not d, w),
+                    sdwnode(~lhs, not d, w),
+                    sdwnode(~rhs, not d, w)))
 
     class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -166,10 +166,10 @@ class Rules(LogicType.Rules):
         with the negation of the consequent. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode( s.lhs,     d), sdnode( s.rhs, not d)),
-                group(sdnode(~s.lhs, not d), sdnode(~s.rhs,     d)))
+                group(sdwnode( s.lhs, d, w), sdwnode(s.rhs, not d, w)),
+                group(sdwnode(~s.lhs, not d, w), sdwnode(~s.rhs, d, w)))
 
     class ConditionalUndesignated(ConjunctionUndesignated): pass
     class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -181,11 +181,11 @@ class Rules(LogicType.Rules):
         and the other with the reversed operands. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
             yield adds(group(
-                sdnode(convert(s.operands), d),
-                sdnode(convert(reversed(s)), d)))
+                sdwnode(convert(s.operands), d, w),
+                sdwnode(convert(reversed(s)), d, w)))
 
     class BiconditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -195,11 +195,11 @@ class Rules(LogicType.Rules):
         conditional node with the reversed operands of the biconditional. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
             yield adds(
-                group(sdnode(~convert(s.operands), d)),
-                group(sdnode(~convert(reversed(s)), d)))
+                group(sdwnode(~convert(s.operands), d, w)),
+                group(sdwnode(~convert(reversed(s)), d, w)))
 
     class BiconditionalUndesignated(ConjunctionUndesignated): pass
     class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -214,10 +214,11 @@ class Rules(LogicType.Rules):
         of *d* is the negation of the inner sentence of *n*. Then tick *n*.
         """
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             v, si = s[1:]
+            sq = self.quantifier.other(v, ~si | ~(si | ~si))
             yield adds(
-                group(sdnode(self.quantifier.other(v, ~si | ~(si | ~si)), d)))
+                group(sdwnode(sq, d, w)))
 
     class ExistentialUndesignated(ConjunctionUndesignated): pass
     class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -238,9 +239,10 @@ class Rules(LogicType.Rules):
             si = s.sentence
             r = branch.new_constant() >> s
             d = self.designation
+            w = node.get('world')
             yield adds(
-                group(sdnode(self.quantifier.other(v, ~si), d)),
-                group(sdnode(r, not d), sdnode(~r, not d)))
+                group(sdwnode(self.quantifier.other(v, ~si), d, w)),
+                group(sdwnode(r, not d, w), sdwnode(~r, not d, w)))
 
     class UniversalUndesignated(ExistentialUndesignated): pass
     class UniversalNegatedUndesignated(ExistentialNegatedUndesignated): pass

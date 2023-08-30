@@ -53,8 +53,11 @@ __all__ = (
     'Rule',
     'sdnode',
     'SentenceDesignationNode',
+    'SentenceDesignationWorldNode',
     'SentenceNode',
     'SentenceWorldNode',
+    'sdnode',
+    'sdwnode',
     'snode',
     'swnode',
     'Tableau',
@@ -518,18 +521,29 @@ def snode(s):
     'Make a sentence node.'
     return SentenceNode({Node.Key.sentence: s})
 
-def sdnode(s, d):
-    'Make a sentence/designated node.'
-    return SentenceDesignationNode({
-        Node.Key.sentence: s,
-        Node.Key.designation: d})
-
 def swnode(s, w):
     'Make a sentence/world node. Excludes world if None.'
     if w is None:
         return SentenceNode({Node.Key.sentence: s})
     return SentenceWorldNode({
         Node.Key.sentence: s,
+        Node.Key.world: w})
+
+def sdnode(s, d):
+    'Make a sentence/designated node.'
+    return SentenceDesignationNode({
+        Node.Key.sentence: s,
+        Node.Key.designation: d})
+
+def sdwnode(s, d, w):
+    'Make a sentence/designated/world node. Excludes world if None.'
+    if w is None:
+        return SentenceDesignationNode({
+            Node.Key.sentence: s,
+            Node.Key.designation: d})
+    return SentenceDesignationWorldNode({
+        Node.Key.sentence: s,
+        Node.Key.designation: d,
         Node.Key.world: w})
 
 def anode(w1, w2):
@@ -549,6 +563,7 @@ from .common import Modal as Modal
 from .common import Node as Node
 from .common import QuitFlagNode as QuitFlagNode
 from .common import SentenceDesignationNode as SentenceDesignationNode
+from .common import SentenceDesignationWorldNode as SentenceDesignationWorldNode
 from .common import SentenceNode as SentenceNode
 from .common import SentenceWorldNode as SentenceWorldNode
 from .common import Target as Target

@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import cfol as CFOL
 from . import fde as FDE
 from . import k as K
 from . import LogicType
@@ -32,7 +31,7 @@ class Meta(K.Meta):
     category_order = 1
     native_operators = FDE.Meta.native_operators
 
-class Model(CFOL.Model): pass
+class Model(K.Model): pass
 
 class System(K.System): pass
 

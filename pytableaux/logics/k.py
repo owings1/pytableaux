@@ -17,13 +17,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections import defaultdict, deque
-from typing import Mapping
-from types import MappingProxyType as MapProxy
+from collections import deque
 
-from ..errors import DenotationError, ModelValueError
 from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
-                    Predicated, Quantified, Quantifier, Sentence)
+                    Predicated, Sentence)
 from ..models import ValueCPL
 from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
                      Target, WorldPair, adds, anode, filters, rules, swnode)
@@ -65,7 +62,7 @@ class Model(LogicType.Model[Meta.values]):
 
     def value_of_operated(self, s: Operated, /, *, world: int = 0):
         self._check_finished()
-        if s.operator in self.Meta.modal_operators:
+        if self.Meta.modal and s.operator in self.Meta.modal_operators:
             it = map(lambda w: self.value_of(s.lhs, world=w), self.R[world])
             if s.operator is Operator.Possibility:
                 return maxceil(self.maxval, it, self.minval)
@@ -572,7 +569,7 @@ class Rules(LogicType.Rules):
             if self[AdzHelper].closure_score(target) == 1:
                 return 1.0
             # Not applied to yet
-            apcount = self[NodeCount][target.branch].get(target.node, 0)
+            apcount = self[NodeCount][target.branch][target.node]
             if apcount == 0:
                 return 1.0
             # Pick the least branching complexity
