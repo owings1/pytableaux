@@ -26,7 +26,7 @@ import json
 from cherrypy.test import helper
 
 from pytableaux.errors import *
-from pytableaux.web.application import WebApp
+from pytableaux.web.app import App
 from pytableaux.web.util import fix_uri_req_data
 
 
@@ -56,7 +56,7 @@ class AppTest(helper.CPWebCase):
 
     @classmethod
     def setup_server(cls):
-        cls.app = WebApp(metrics_enabled=True, feedback_enabled=True)
+        cls.app = App(metrics_enabled=True, feedback_enabled=True)
         cherrypy.tree.mount(cls.app, '/', cls.app.cp_config)
 
     def test_index_get(self):

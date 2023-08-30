@@ -13,15 +13,12 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import annotations
-
 """
 pytableaux.web.mail
 -------------------
 
 """
-
-__all__ = ('Mailroom',)
+from __future__ import annotations
 
 import logging
 import smtplib
@@ -37,6 +34,7 @@ from ..errors import Emsg, check
 from . import get_logger
 from .util import is_valid_email
 
+__all__ = ('Mailroom',)
 
 class Mailroom:
 

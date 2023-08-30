@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.web.application
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+pytableaux.web.app
+^^^^^^^^^^^^^^^^^^
 
 """
 from __future__ import annotations
 
-__all__ = ('Api', 'WebApp')
+from . import views
 
 import logging
 from types import MappingProxyType as MapProxy
@@ -32,23 +32,29 @@ import jinja2
 from cherrypy import HTTPError, NotFound, expose
 from cherrypy._cprequest import Request, Response
 
-from .. import examples, logics, package
-from ..lang import (Argument, LexType, Notation, Operator, ParseTable, LexWriter,
+from ... import examples, logics, package
+from ...lang import (Argument, LexType, Notation, Operator, ParseTable, LexWriter,
                     Predicate, Quantifier)
-from ..logics import LogicType
-from ..proof import writers
-from ..tools import inflect
-from ..tools.events import EventEmitter
-from . import EnvConfig, StaticResource, Wevent, views
-from .util import cp_staticdir_conf, get_logger, tojson
+from ...logics import LogicType
+from ...proof import writers
+from ...tools import inflect
+from ...tools.events import EventEmitter
+from .. import EnvConfig, StaticResource, Wevent, api
+from . import views
+from ..util import cp_staticdir_conf, get_logger, tojson
 
 if TYPE_CHECKING:
-    from .metrics import AppMetrics
+    from ..metrics import AppMetrics
 
 EMPTY = ()
 NOARG = object()
 
-class AppDispatcher(cherrypy._cpdispatch.Dispatcher):
+all = (
+    'App',
+    'Dispatcher',
+    'Helper')
+
+class Dispatcher(cherrypy._cpdispatch.Dispatcher):
 
     def __call__(self, path_info: str):
         req: Request = cherrypy.request
@@ -60,16 +66,10 @@ class AppDispatcher(cherrypy._cpdispatch.Dispatcher):
             self.app.emit(Wevent.after_dispatch, path_info)
 
     @property
-    def app(self) -> WebApp:
+    def app(self) -> App:
         return cherrypy.serving.request.app.root
 
-class Api:
-    parse = views.ApiParseView()
-    prove = views.ApiProveView()
-    default = views.ApiView()
-
-
-class WebApp(EventEmitter):
+class App(EventEmitter):
 
     config: Mapping[str, Any]
     "Config."
@@ -107,9 +107,10 @@ class WebApp(EventEmitter):
     logics_map: Mapping[str, LogicType]
     jsapp_data: Mapping[str, Any]
 
-    dispatcher = AppDispatcher()
+    dispatcher = Dispatcher()
 
-    api = Api()
+    api = api.app
+
     index = views.ProveView()
     health = views.HealthView()
     feedback = views.FeedbackView()
@@ -146,12 +147,12 @@ class WebApp(EventEmitter):
         self.logger = get_logger(self, self.config)
         self.cp_config = self._build_cp_config()
         if self.config['feedback_enabled']:
-            from .mail import Mailroom
+            from ..mail import Mailroom
             self.mailroom = Mailroom(self.config)
         if self.config['metrics_enabled']:
             from prometheus_client import CollectorRegistry
 
-            from .metrics import AppMetrics
+            from ..metrics import AppMetrics
             self.metrics = AppMetrics(self.config, CollectorRegistry())
         self.template_cache = {}
         self.jinja = jinja2.Environment(
@@ -302,7 +303,7 @@ class WebApp(EventEmitter):
 
 
 class Helper:
-    def __init__(self, app: WebApp):
+    def __init__(self, app: App):
         self.app = app
     def logic_doc_href(self, logic):
         return f'/doc/logics/{logics.registry(logic).Meta.name.lower()}.html'

@@ -33,6 +33,8 @@ from .util import get_logger
 
 __all__ = ()
 
+NOARG = object()
+
 class Wevent(Enum):
     before_dispatch = auto()
     after_dispatch = auto()
@@ -205,5 +207,3 @@ class StaticResource:
         if modstr is None:
             return True
         return self.modtime > datetime.strptime(modstr, "%a, %d %b %Y %H:%M:%S %Z")
-
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2023 Doug Owings.
 # 
@@ -15,23 +14,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux web server
-^^^^^^^^^^^^^^^^^^^^^
+pytableaux.web.api
+^^^^^^^^^^^^^^^^^^
 
 """
-
 from __future__ import annotations
 
-__all__ = ()
+from . import views
 
-if  __name__ == '__main__':
+__all__ = (
+    'app',
+    'App')
 
-    if '.' not in __package__:
-        from os.path import abspath, dirname
-        import sys
-        addpath = abspath(f'{dirname(__file__)}/../..')
-        if addpath not in sys.path:
-            sys.path.insert(1, addpath)
+class App:
+    parse = views.ParseView()
+    prove = views.ProveView()
+    default = views.ApiView()
 
-    from .app import App
-    App().start()
+app = App()
