@@ -731,7 +731,7 @@ class Rules(LogicType.Rules):
             s = self.sentence(target.node)
             si = s.lhs
             # Don't bother checking for closure since we will always have a new world
-            track_count = self[AplSentCount][target.branch].get(si, 0)
+            track_count = self[AplSentCount][target.branch][si]
             if track_count == 0:
                 return 1.0
             return -1.0 * self[MaxWorlds].modals[s] * track_count
@@ -741,7 +741,7 @@ class Rules(LogicType.Rules):
                 return 1.0
             s = self.sentence(target.node)
             si = s.lhs
-            return -1.0 * self[AplSentCount][target.branch].get(si, 0)
+            return -1.0 * self[AplSentCount][target.branch][si]
 
     class PossibilityNegated(System.OperatorNodeRule):
         """
@@ -812,7 +812,7 @@ class Rules(LogicType.Rules):
         def group_score(self, target, /) -> float:
             if self.score_candidate(target) > 0:
                 return 1.0
-            return -1.0 * self[NodeCount][target.branch].get(target.node, 0)
+            return -1.0 * self[NodeCount][target.branch][target.node]
 
         def example_nodes(self):
             s = Operated.first(self.operator)

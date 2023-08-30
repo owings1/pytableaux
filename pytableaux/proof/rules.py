@@ -199,7 +199,7 @@ class GetNodeTargetsRule(BaseNodeRule):
 
     @abstractmethod
     def _get_node_targets(self, node: Node, branch: Branch, /):
-        raise NotImplementedError
+        yield from EMPTY_SET
 
 class NarrowQuantifierRule(GetNodeTargetsRule, QuantifiedSentenceRule):
 
@@ -241,13 +241,13 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
 
     @abstractmethod
     def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch, /) -> Iterable[Node]:
-        raise NotImplementedError
+        yield from EMPTY_SET
 
     def score_candidate(self, target: Target) -> float:
         if target.get(Node.Key.flag):
             return 1.0
         if self[AdzHelper].closure_score(target) == 1:
             return 1.0
-        node_apply_count = self[NodeCount][target.branch].get(target.node, 0)
+        node_apply_count = self[NodeCount][target.branch][target.node]
         return 1 / (node_apply_count + 1)
 

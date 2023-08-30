@@ -71,11 +71,11 @@ class Rules(LogicType.Rules):
                 self[FilterHelper].release(node, branch)
                 return
             for w in node.worlds():
-                access = WorldPair(w, w)
-                if self[WorldIndex].has(branch, access):
+                pair = WorldPair(w, w)
+                if self[WorldIndex].has(branch, pair):
                     self[FilterHelper].release(node, branch)
                     continue
-                yield adds(group(access.tonode()), world = w)
+                yield adds(group(pair.tonode()), world=w)
 
         def example_nodes(self):
             yield swnode(Atomic.first(), 0)

@@ -79,8 +79,8 @@ class Rules(LogicType.Rules):
             if self[MaxWorlds].is_reached(branch):
                 self[FilterHelper].release(node, branch)
                 return
-            w1, w2 = node.pair()
-            for w3 in self[WorldIndex].intransitives(branch, w1, w2):
+            w1, w2 = pair = node.pair()
+            for w3 in self[WorldIndex].intransitives(branch, pair):
                 nnode = anode(w1, w3)
                 yield adds(group(nnode),
                     nodes=(node, branch.find(anode(w2, w3))),
