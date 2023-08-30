@@ -694,6 +694,9 @@ body.pt-app,
   max-width: 420px;
 }
 /* ---- height ---- */
+.pt-app table .spacer td {
+  height: 5px;
+}
 .pt-app #input_feedback_content {
   height: 120px;
 }
