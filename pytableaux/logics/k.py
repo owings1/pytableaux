@@ -53,10 +53,6 @@ class Model(LogicType.Model[Meta.values]):
     """
 
     TruthFunction = FDE.Model.TruthFunction
-
-    class Frame(LogicType.Model.Frame):
-        pass
-
     value_of_quantified = FDE.Model.value_of_quantified
 
     def value_of_operated(self, s: Operated, /, *, world: int = 0):
@@ -97,10 +93,9 @@ class Model(LogicType.Model[Meta.values]):
     def _ensure_self_identity(self, w):
         if not len(self.constants):
             return
-        add = self.frames[w].predicates[Predicate.Identity].pos.add
-        for c in self.constants:
-            # make sure each constant is self-identical
-            add((c, c))
+        interp = self.frames[w].predicates[Predicate.Identity]
+        # make sure each constant is self-identical
+        interp.pos.update((c, c) for c in self.constants)
 
     def _ensure_self_existence(self, w):
         if not len(self.constants):

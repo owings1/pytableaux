@@ -48,9 +48,6 @@ class Meta(LogicType.Meta):
 class Model(LogicType.Model[ValueFDE]):
     'An FDE Model.'
 
-    class Frame(LogicType.Model.Frame):
-        anti_extensions = True
-
     class TruthFunction(LogicType.Model.TruthFunction[ValueFDE]):
 
         def Assertion(self, a, /):

@@ -24,6 +24,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
+from functools import partial
 from itertools import product, starmap
 from types import MappingProxyType as MapProxy
 from typing import Any, Generic, Iterable, Literal, Mapping, NamedTuple, Self, TypeVar
@@ -166,9 +167,9 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         self._finished = False
         self._is_frame_complete = False
         if self.Meta.modal:
-            self.frames = defaultdict(self.Frame)
+            self.frames = defaultdict(partial(self.Frame, self))
         else:
-            self.frames = MapProxy({0: self.Frame()})
+            self.frames = MapProxy({0: self.Frame(self)})
         self.constants = set()
         self.sentences = set()
         self.R = AccessGraph()
@@ -536,8 +537,6 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         A Frame comprises the interpretation of sentences and predicates at a world.
         """
 
-        anti_extensions = False
-
         atomics: dict[Atomic, Mval]
         "An assignment of each atomic sentence to a truth value"
 
@@ -547,9 +546,13 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         predicates: dict[Predicate, PredicateInterpretation]
         "A mapping of predicates to their interpretation (extention/anti-extension)"
 
-        __slots__ = ('atomics', 'opaques', 'predicates')
+        model: LogicType.Model
+        'Reference to the parent model'
 
-        def __init__(self):
+        __slots__ = ('atomics', 'opaques', 'predicates', 'model')
+
+        def __init__(self, model: LogicType.Model, /):
+            self.model = model
             self.atomics = {}
             self.opaques = {}
             self.predicates = defaultdict(PredicateInterpretation.blank)
@@ -582,10 +585,11 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
         def _get_predicate_data_values(self, predicate: Predicate):
             data = self._get_predicate_data_part(predicate, self.predicates[predicate].pos)
-            if self.anti_extensions:
+            many_valued = self.model.Meta.many_valued
+            if many_valued:
                 data['symbol'] += '+'       
             yield data
-            if not self.anti_extensions:
+            if not many_valued:
                 return
             data = self._get_predicate_data_part(predicate, self.predicates[predicate].neg)
             data['symbol'] += '-'
@@ -615,7 +619,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                     return False
                 if other.predicates[pred].pos != interp.pos:
                     return False
-                if self.anti_extensions and other.predicates[pred].neg != interp.neg:
+                if self.model.Meta.many_valued and other.predicates[pred].neg != interp.neg:
                     return False
             return True
 

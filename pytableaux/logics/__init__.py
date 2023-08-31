@@ -416,6 +416,7 @@ class LogicType(metaclass=LogicTypeMeta):
         values: type[Mval]
         designated_values: Set[Mval]
         unassigned_value: Mval
+        many_valued: bool
         category: str
         description: str = ''
         category_order: int = 0
@@ -444,8 +445,10 @@ class LogicType(metaclass=LogicTypeMeta):
             if cls.quantified:
                 tags.append('quantified')
             if len(cls.values) == 2:
+                cls.many_valued = False
                 tags.append('bivalent')
             else:
+                cls.many_valued = True
                 tags.append('many-valued')
                 if len(cls.values) - len(cls.designated_values):
                     tags.append('gappy')
