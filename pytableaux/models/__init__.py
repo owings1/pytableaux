@@ -32,7 +32,7 @@ from ..errors import Emsg, check, ModelValueError, DenotationError
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Sentence)
 from ..logics import LogicType
-from ..proof import Branch
+from ..proof import Branch, Node, AccessNode, SentenceNode, WorldNode
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, maxceil, minfloor
 
 __all__ = (
@@ -152,7 +152,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         'constants',
         'frames',
         'R',
-        'sentences',)
+        'sentences')
 
     @property
     def id(self) -> int:
@@ -160,22 +160,20 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
     @property
     def finished(self) -> bool:
-        try:
-            return self._finished
-        except AttributeError:
-            self._finished = False
-            return False
+        return self._finished
 
     def __init__(self):
+        self._finished = False
         self._is_frame_complete = False
         if self.Meta.modal:
             self.frames = defaultdict(self.Frame)
         else:
             self.frames = MapProxy({0: self.Frame()})
-        self.frames[0]
         self.constants = set()
         self.sentences = set()
         self.R = AccessGraph()
+        self.frames[0]
+        self.R[0]
 
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
         if not self.Meta.quantified and type(s) is Quantified:
@@ -302,11 +300,29 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             all(map(self.Meta.designated_values.__contains__, map(self.value_of, a.premises))) and
             self.value_of(a.conclusion) not in self.Meta.designated_values)
 
-    @abstractmethod
     def read_branch(self, branch: Branch, /) -> Self:
         self._check_not_finished()
+        read = self._read_node
+        for node in branch:
+            read(node, branch)
         self.finish()
         return self
+
+    @abstractmethod
+    def _read_node(self, node: Node, branch: Branch, /) -> Self:
+        self._check_not_finished()
+        if isinstance(node, AccessNode):
+            self.R.add(node.pair())
+            return
+        if isinstance(node, SentenceNode):
+            s = node['sentence']
+            self.sentences.add(s)
+            self.constants.update(s.constants)
+        if isinstance(node, WorldNode):
+            w = node['world']
+        else:
+            w = 0
+        self.R[w]
 
     def finish(self) -> Self:
         self._check_not_finished()
@@ -315,9 +331,10 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         return self
 
     def get_data(self) -> dict:
+        frames = self.frames
         if not self.Meta.modal:
-            return self.frames[0].get_data()
-        worlds = sorted(self.frames)
+            return frames[0].get_data()
+        worlds = sorted(frames)
         return dict(
             Worlds = dict(
                 in_summary      = True,
@@ -345,7 +362,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                         description = f'frame at world {w}',
                         datatype    = 'map',
                         typehint    = 'frame',
-                        value       = dict(self.frames[w].get_data()))
+                        value       = frames[w].get_data())
                     for w in worlds]))
 
     def __enter__(self) -> Self:

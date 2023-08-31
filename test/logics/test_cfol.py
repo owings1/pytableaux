@@ -53,7 +53,10 @@ class TestModels(Base):
     def test_model_read_node_opaque(self):
         m = self.m()
         s1 = self.p('La')
-        m._read_node(snode(s1))
+        n = snode(s1)
+        b = Branch()
+        b += n
+        m._read_node(n, b)
         m.finish()
         self.assertEqual(m.value_of(s1), 'T')
 

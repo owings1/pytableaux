@@ -21,7 +21,7 @@ from itertools import starmap
 
 from ..lang import Atomic, Operated, Operator, Quantified, Quantifier, Sentence
 from ..models import ValueFDE
-from ..proof import (AccessNode, Branch, Node, SentenceNode, adds, filters,
+from ..proof import (Branch, Node, SentenceNode, adds, filters, WorldNode,
                      rules, sdwnode)
 from ..tools import group, maxceil, minfloor, wraps
 from . import LogicType
@@ -93,74 +93,69 @@ class Model(LogicType.Model[ValueFDE]):
             return minfloor(self.minval, it, self.maxval)
         raise NotImplementedError from ValueError(s.quantifier)
 
-    def read_branch(self, branch, /):
-        self._check_not_finished()
-        values = self.values
-        for node in branch:
-            if isinstance(node, AccessNode):
-                self.R.add(node.pair())
-            if not isinstance(node, SentenceNode):
-                continue
-            s = node['sentence']
-            self.sentences.add(s)
-            is_literal = self.is_sentence_literal(s)
-            is_opaque = self.is_sentence_opaque(s)
-            if not is_literal and not is_opaque:
-                continue
-            d = node['designated']
-            s_negative = -s
-            has_negative = branch.has(sdwnode(s_negative, d, node.get('world')))
-            is_negated = type(s) is Operated and s.operator is Operator.Negation
-            if is_negated:
-                # If the sentence is negated, set the value of the negatum
-                s = s_negative
-                if d:
-                    if has_negative:
-                        # If the node is designated, and the negatum is
-                        # also designated on b, the value is B
-                        value = 'B'
-                    else:
-                        # If the node is designated, but the negatum is
-                        # not also designated on b, the value is F
-                        value = 'F'
+    def _read_node(self, node, branch, /):
+        super()._read_node(node, branch)
+        if not isinstance(node, SentenceNode):
+            return
+        s = node['sentence']
+        is_literal = self.is_sentence_literal(s)
+        is_opaque = self.is_sentence_opaque(s)
+        if not is_literal and not is_opaque:
+            return
+        d = node['designated']
+        s_negative = -s
+        has_negative = branch.has(sdwnode(s_negative, d, node.get('world')))
+        is_negated = type(s) is Operated and s.operator is Operator.Negation
+        if is_negated:
+            # If the sentence is negated, set the value of the negatum
+            s = s_negative
+            if d:
+                if has_negative:
+                    # If the node is designated, and the negatum is
+                    # also designated on b, the value is B
+                    value = 'B'
                 else:
-                    if has_negative:
-                        # If the node is undesignated, and the negatum is
-                        # also undesignated on b, the value is N
-                        value = 'N'
-                    else:
-                        # If the node is undesignated, but the negatum is
-                        # not also undesignated on b, the value is T
-                        value = 'T'
+                    # If the node is designated, but the negatum is
+                    # not also designated on b, the value is F
+                    value = 'F'
             else:
-                # If the sentence is unnegated, set the value of the sentence
-                if d:
-                    if has_negative:
-                        # If the node is designated, and its negation is
-                        # also designated on b, the value is B
-                        value = 'B'
-                    else:
-                        # If the node is designated, but the negation is
-                        # not also designated on b, the value is T
-                        value = 'T'
+                if has_negative:
+                    # If the node is undesignated, and the negatum is
+                    # also undesignated on b, the value is N
+                    value = 'N'
                 else:
-                    if has_negative:
-                        # If the node is undesignated, and its negation is
-                        # also undesignated on b, the value is N
-                        value = 'N'
-                    else:
-                        # If the node is undesginated, but the negation is
-                        # not also undesignated on b, the value is F
-                        value = 'F'
-            value = values[value]
-            w = node.get('world')
-            if w is None:
-                w = 0
-            if is_opaque:
-                self.set_opaque_value(s, value, world=w)
+                    # If the node is undesignated, but the negatum is
+                    # not also undesignated on b, the value is T
+                    value = 'T'
+        else:
+            # If the sentence is unnegated, set the value of the sentence
+            if d:
+                if has_negative:
+                    # If the node is designated, and its negation is
+                    # also designated on b, the value is B
+                    value = 'B'
+                else:
+                    # If the node is designated, but the negation is
+                    # not also designated on b, the value is T
+                    value = 'T'
             else:
-                self.set_literal_value(s, value, world=w)
-        return super().read_branch(branch)
+                if has_negative:
+                    # If the node is undesignated, and its negation is
+                    # also undesignated on b, the value is N
+                    value = 'N'
+                else:
+                    # If the node is undesginated, but the negation is
+                    # not also undesignated on b, the value is F
+                    value = 'F'
+        value = self.values[value]
+        if isinstance(node, WorldNode):
+            w = node['world']
+        else:
+            w = 0
+        if is_opaque:
+            self.set_opaque_value(s, value, world=w)
+        else:
+            self.set_literal_value(s, value, world=w)
 
 class System(LogicType.System):
 

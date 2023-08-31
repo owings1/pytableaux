@@ -22,7 +22,7 @@ from collections import deque
 from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Sentence)
 from ..models import ValueCPL
-from ..proof import (AccessNode, Branch, Node, SentenceNode, SentenceWorldNode,
+from ..proof import (Branch, Node, SentenceNode, SentenceWorldNode, WorldNode,
                      Target, WorldPair, adds, anode, filters, rules, swnode)
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, PredNodes, QuitFlag,
@@ -44,7 +44,6 @@ class Meta(LogicType.Meta):
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
     native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
-
 
 
 class Model(LogicType.Model[Meta.values]):
@@ -71,26 +70,19 @@ class Model(LogicType.Model[Meta.values]):
             raise NotImplementedError from ValueError(s.operator)
         return super().value_of_operated(s, world=world)
 
-    def read_branch(self, branch: Branch, /):
-        self._check_not_finished()
-        for _ in map(self._read_node, branch): pass
-        return super().read_branch(branch)
-
-    def _read_node(self, node: Node, /):
-        if isinstance(node, SentenceNode):
-            s = node['sentence']
-            self.sentences.add(s)
-            self.constants.update(s.constants)
-            w = node.get('world')
-            if w is None:
-                w = 0
-            self.R[w]
-            if self.is_sentence_opaque(s):
-                self.set_opaque_value(s, self.values.T, world = w)
-            elif self.is_sentence_literal(s):
-                self.set_literal_value(s, self.values.T, world = w)
-        elif isinstance(node, AccessNode):
-            self.R.add(node.pair())
+    def _read_node(self, node, branch, /):
+        super()._read_node(node, branch)
+        if not isinstance(node, SentenceNode):
+            return
+        s = node['sentence']
+        if isinstance(node, WorldNode):
+            w = node['world']
+        else:
+            w = 0
+        if self.is_sentence_opaque(s):
+            self.set_opaque_value(s, self.values.T, world = w)
+        elif self.is_sentence_literal(s):
+            self.set_literal_value(s, self.values.T, world = w)
 
     def finish(self):
         self._check_not_finished()
@@ -113,10 +105,9 @@ class Model(LogicType.Model[Meta.values]):
     def _ensure_self_existence(self, w):
         if not len(self.constants):
             return
-        add = self.frames[w].predicates[Predicate.Existence].pos.add
-        for c in self.constants:
-            # make sure each constant exists
-            add((c,))
+        interp = self.frames[w].predicates[Predicate.Existence]
+        # make sure each constant exists
+        interp.pos.update((c,) for c in self.constants)
 
     def _agument_extension_with_identicals(self, pred: Predicate, w):
         pos = self.frames[w].predicates[pred].pos

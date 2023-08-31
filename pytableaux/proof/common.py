@@ -120,6 +120,14 @@ class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
 
     __delattr__ = Emsg.Attribute.razr
 
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, key: Literal['sentence']) -> Sentence: ...
+        @overload
+        def __getitem__(self, key: Literal['world']) -> int: ...
+        @overload
+        def get(self, key: Literal['sentence']) -> Sentence|None: ...
+
     def __getitem__(self, key):
         try:
             return self._cov_mapping[key]
@@ -155,12 +163,6 @@ class Node(MapCover, abcs.Copyable, metaclass=NodeMeta):
         if mapping.get(Node.Key.ellipsis):
             return EllipsisNode(mapping)
         return UnknownNode(mapping)
-
-    if TYPE_CHECKING:
-        @overload
-        def __getitem__(self, key: Literal['sentence']) -> Sentence: ...
-        @overload
-        def get(self, key: Literal['sentence']) -> Sentence|None: ...
 
 class Branch(SequenceSet[Node], EventEmitter, abcs.Copyable, metaclass=BranchMeta):
     'A tableau branch.'
@@ -210,7 +212,10 @@ class Branch(SequenceSet[Node], EventEmitter, abcs.Copyable, metaclass=BranchMet
     @property
     def leaf(self) -> Optional[Node]:
         "The leaf node, if any."
-        return self[-1] if len(self) else None
+        try:
+            return self[-1]
+        except IndexError:
+            pass
 
     @property
     def model(self) -> Optional[BaseModel]:
