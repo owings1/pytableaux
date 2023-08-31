@@ -208,6 +208,7 @@ body.pt-app {
   display: inline;
 }
 .pt-app .input label,
+.pt-app .logic-tags .tag,
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol {
@@ -499,6 +500,7 @@ body.pt-app,
 .pt-app #clear_argument_wrapper {
   margin-right: 28px;
 }
+.pt-app .logic-tags .tag,
 .pt-app .select-logic .logic-title {
   margin-bottom: 6px;
 }

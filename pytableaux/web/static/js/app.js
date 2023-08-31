@@ -78,7 +78,7 @@
     }
 
     const Sel = {
-        appBody           : 'body.' + Cls.app,
+        appBody           : `body.${Cls.app}`,
         appForm           : '#argument_form',
         pageJson          : '#pt_page_data',
         appUiTabs         : '#uitabs_main',
@@ -100,19 +100,19 @@
         fieldOutputNotn    : '#output_notation',
         fieldWriterRegistry: '#writer_registry',
 
-        fieldsArity       : ['input', Cls.arity].join('.'),
-        fieldsPredSymbol  : ['input', Cls.predSymbol].join('.'),
-        fieldsPremise     : ['input', Cls.premise].join('.'),
-        fieldsSentence    : ['input', Cls.sentence].join('.'),
+        fieldsArity       : `input.${Cls.arity}`,
+        fieldsPredSymbol  : `input.${Cls.predSymbol}`,
+        fieldsPremise     : `input.${Cls.premise}`,
+        fieldsSentence    : `input.${Cls.sentence}`,
 
         headerDebugs      : '#pt_debugs_heading',
         wrapDebugs        : '#pt_debugs_wrapper',
         uitabStatsLink    : '#uitab_stats_link',
 
-        inputPredicate    : '.' + Cls.input + '.' + Cls.predicate,
-        inputPremise      : '.' + Cls.input + '.' + Cls.premise,
-        inputSentence     : '.' + Cls.input + '.' + Cls.sentence,
-        linksButton       : ['a', Cls.button].join('.'),
+        inputPredicate    : `.${Cls.input}.${Cls.predicate}`,
+        inputPremise      : `.${Cls.input}.${Cls.premise}`,
+        inputSentence     : `.${Cls.input}.${Cls.sentence}`,
+        linksButton       : `a.${Cls.button}`,
 
         debugs            : '.' + Cls.debug,
         predicates        : '.' + Cls.predicates,
@@ -141,6 +141,13 @@
         build_models  : Cls.withModels,
         show_controls : Cls.withControls,
         color_open    : Cls.colorOpen,
+    }
+    // mod key state
+    const ModKey = {
+        shift   : false,
+        ctrl    : false,
+        alt     : false,
+        ctrlalt : false,
     }
 
     const API_PARSE_URI = '/api/parse'
@@ -201,6 +208,8 @@
                 .on('change selectmenuchange', handleFormChange)
                 .on('click', handleFormClick)
                 .on('keyup', Sel.fieldsSentence, handleFormSentenceKeyup)
+            $(document)
+                .on('keyup keydown', handleKeyupKeydown)
             // Tabs header click
             $(Sel.appUiTabs, $AppBody)
                 .on('click', 'ul.ui-tabs-nav', handleTabsHeaderClick)
@@ -257,13 +266,22 @@
             }
         }
 
+        function handleKeyupKeydown(e) {
+            ModKey.shift   = e.shiftKey
+            ModKey.ctrl    = e.metaKey || e.ctrlKey
+            ModKey.alt     = e.altKey
+            ModKey.ctrlalt = ModKey.ctrl || ModKey.alt
+        }
+
         /**
          * Form submit handler.
          *
          * @return {void}
          */
         function handleFormSubmit(e) {
-            $('input:submit', $AppForm).prop({disabled: true})
+            if (!ModKey.shift && !ModKey.ctrlalt) {
+                $('input:submit', $AppForm).prop({disabled: true})
+            }
             const data = getApiData()
             const json = JSON.stringify(data)
             $(Sel.fieldApiJson, $AppForm).val(json)
