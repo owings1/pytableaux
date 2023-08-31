@@ -3,7 +3,7 @@
 .. module:: pytableaux.logics.kk3
 
 ***************************************
-L{} - K3 with K Modal
+L{} - L{K3} with K Modal
 ***************************************
 
 .. contents:: Contents
