@@ -17,8 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operated, Operator
-from ..proof import (SentenceDesignationWorldNode, WorldPair, adds, anode,
-                     sdwnode)
+from ..proof import WorldPair, adds, anode, sdwnode
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, QuitFlag, WorldIndex)
 from ..tools import EMPTY_SET, group, maxceil, minfloor
@@ -31,7 +30,8 @@ class Meta(FDE.Meta):
     title = 'FDE with K modal'
     modal = True
     description = 'Modal version of FDE based on K normal modal logic'
-    native_operators = FDE.Meta.native_operators | FDE.Meta.modal_operators
+    native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
+    extension_of = ('FDE')
 
 class Model(FDE.Model):
 
@@ -55,7 +55,6 @@ class Rules(LogicType.Rules):
 
     class PossibilityDesignated(System.OperatorNodeRule):
 
-        NodeType = SentenceDesignationWorldNode
         Helpers = (QuitFlag, MaxWorlds, AplSentCount)
 
         def _get_node_targets(self, node, branch, /):
@@ -100,15 +99,12 @@ class Rules(LogicType.Rules):
 
     class PossibilityNegatedDesignated(System.OperatorNodeRule):
 
-        NodeType = SentenceDesignationWorldNode
-
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(group(sdwnode(self.operator.other(~s.lhs), d, w)))
 
     class PossibilityUndesignated(System.OperatorNodeRule):
 
         ticking = False
-        NodeType = SentenceDesignationWorldNode
         Helpers = (QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex)
 
         def _get_node_targets(self, node, branch, /):
@@ -136,8 +132,6 @@ class Rules(LogicType.Rules):
                 add = sdwnode(si, d, w2)
                 if branch.has(add):
                     continue
-                # accessnode = self[WorldIndex].nodes[branch][w1, w2]
-                # accessnode = branch.find(anode(w1, w2))
                 nodes = (node, branch.find(anode(w1, w2)))
                 yield adds(group(add),
                     sentence=si,

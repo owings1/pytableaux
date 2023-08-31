@@ -19,10 +19,11 @@ from __future__ import annotations
 from abc import abstractmethod
 from itertools import starmap
 
-from ..lang import Atomic, Operated, Operator, Quantified, Quantifier, Sentence
+from ..lang import (Argument, Atomic, Operated, Operator, Quantified,
+                    Quantifier, Sentence)
 from ..models import ValueFDE
-from ..proof import (Branch, Node, SentenceNode, adds, filters, WorldNode,
-                     rules, sdwnode)
+from ..proof import (Branch, Node, RulesRoot, SentenceNode, WorldNode, adds,
+                     filters, rules, sdwnode)
 from ..tools import group, maxceil, minfloor, wraps
 from . import LogicType
 
@@ -156,13 +157,13 @@ class Model(LogicType.Model[ValueFDE]):
 class System(LogicType.System):
 
     @classmethod
-    def build_trunk(cls, b, arg, /):
+    def build_trunk(cls, b: Branch, arg: Argument, /):
         w = 0 if cls.modal else None
         b += (sdwnode(s, True, w) for s in arg.premises)
         b += sdwnode(arg.conclusion, False, w)
 
     @classmethod
-    def branching_complexity(cls, node, rules, /):
+    def branching_complexity(cls, node: Node, rules: RulesRoot, /):
         try:
             s = node['sentence']
         except KeyError:
@@ -190,7 +191,7 @@ class System(LogicType.System):
         return result
 
     @classmethod
-    def branching_complexity_hashable(cls, node, /):
+    def branching_complexity_hashable(cls, node: Node, /):
         try:
             return node['sentence'].operators, node['designated']
         except KeyError:
@@ -214,7 +215,7 @@ class System(LogicType.System):
                 NB it is not marked as abstract but will throw NotImplementError.
             - adds a NodeDesignation filter.
         """
-        NodeFilters = group(filters.NodeDesignation)
+        NodeFilters = group(filters.NodeDesignation, filters.NodeType)
         autoattrs = True
 
         def _get_node_targets(self, node: Node, branch: Branch, /):

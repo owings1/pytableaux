@@ -32,6 +32,7 @@ class Meta(FDE.Meta):
     unassigned_value = values.F
     description = 'Three-valued logic (T, F, B)'
     category_order = 100
+    extension_of = ('FDE')
 
 class Model(FDE.Model): pass
 

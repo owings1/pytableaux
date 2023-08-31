@@ -16,20 +16,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from abc import abstractmethod
 from collections import deque
 
-from ..lang import (Atomic, Constant, Operated, Operator, Predicate,
-                    Predicated, Sentence)
+from ..lang import Atomic, Constant, Operated, Operator, Predicate, Predicated
 from ..models import ValueCPL
-from ..proof import (Branch, Node, SentenceNode, SentenceWorldNode, WorldNode,
-                     Target, WorldPair, adds, anode, filters, rules, swnode)
-from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
-                             NodeCount, NodesWorlds, PredNodes, QuitFlag,
-                             WorldIndex)
-from ..tools import EMPTY_SET, group, maxceil, minfloor, substitute, wraps
+from ..proof import SentenceNode, Target, WorldNode, adds, rules, swnode
+from ..proof.helpers import FilterHelper, PredNodes
+from ..tools import group, maxceil, minfloor, substitute
 from . import LogicType
 from . import fde as FDE
+from . import kfde as KFDE
 
 
 class Meta(LogicType.Meta):
@@ -43,6 +39,7 @@ class Meta(LogicType.Meta):
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
     native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
+    extension_of = ('CFOL', 'KK3', 'KLP')
 
 
 class Model(LogicType.Model[Meta.values]):
@@ -126,7 +123,7 @@ class Model(LogicType.Model[Meta.values]):
         identicals.discard(c)
         return identicals
 
-class System(LogicType.System):
+class System(FDE.System):
 
     @classmethod
     def build_trunk(cls, b, arg, /):
@@ -169,52 +166,6 @@ class System(LogicType.System):
             return node['sentence'].operators
         except KeyError:
             pass
-
-    class DefaultNodeRule(rules.GetNodeTargetsRule, intermediate=True):
-        """Default K node rule with:
-        
-        - NodeFilter implements `_get_targets()` with abstract `_get_node_targets()`.
-        - FilterHelper implements `example_nodes()` with its `example_node()` method.
-        - AdzHelper implements `_apply()` with its `_apply()` method.
-        - AdzHelper implements `score_candidate()` with its `closure_score()` method.
-        - Induce attributes from class name with autoattrs=True.
-        """
-        NodeFilters = group(filters.NodeType)
-        autoattrs = True
-
-        def _get_node_targets(self, node: Node, branch: Branch, /):
-            return self._get_sw_targets(self.sentence(node), node.get('world'))
-
-        def _get_sw_targets(self, s: Sentence, w: int|None, /):
-            raise NotImplementedError
-
-        def __init_subclass__(cls) -> None:
-            super().__init_subclass__()
-            if cls._get_node_targets is __class__._get_node_targets:
-                if cls._get_sw_targets is __class__._get_sw_targets:
-                    @abstractmethod
-                    @wraps(cls._get_sw_targets)
-                    def wrapped(self, s: Sentence, w: int|None, /):
-                        raise NotImplementedError
-                    setattr(cls, '_get_sw_targets', wrapped)
-
-
-    class OperatorNodeRule(DefaultNodeRule, rules.OperatedSentenceRule, intermediate=True):
-        'Convenience mixin class for most common rules.'
-        NodeType = SentenceNode
-
-        def _get_sw_targets(self, s: Operated, w: int|None, /):
-            raise NotImplementedError
-
-        def __init_subclass__(cls) -> None:
-            super().__init_subclass__()
-            if cls._get_node_targets is __class__._get_node_targets:
-                if cls._get_sw_targets is __class__._get_sw_targets:
-                    @abstractmethod
-                    @wraps(cls._get_sw_targets)
-                    def wrapped(self, s: Sentence, w: int|None, /):
-                        raise NotImplementedError
-                    setattr(cls, '_get_sw_targets', wrapped)
 
 class Rules(LogicType.Rules):
 
@@ -281,296 +232,28 @@ class Rules(LogicType.Rules):
             w = 0 if self.modal else None
             yield swnode(s, w)
 
-    class DoubleNegation(System.OperatorNodeRule):
-        """
-        From an unticked double negation node *n* with world *w* on a branch *b*, add a
-        node to *b* with *w* and the double-negatum of *n*, then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(group(swnode(s.lhs, w)))
-
-    class Assertion(System.OperatorNodeRule):
-        """
-        From an unticked assertion node *n* with world *w* on a branch *b*,
-        add a node to *b* with the operand of *n* and world *w*, then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(group(swnode(s.lhs, w)))
-
-    class AssertionNegated(System.OperatorNodeRule):
-        """
-        From an unticked, negated assertion node *n* with world *w* on a branch *b*,
-        add a node to *b* with the negation of the assertion of *n* and world *w*,
-        then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(group(swnode(~s.lhs, w)))
-
-    class Conjunction(System.OperatorNodeRule):
-        """
-        From an unticked conjunction node *n* with world *w* on a branch *b*,
-        for each conjunct, add a node with world *w* to *b* with the conjunct,
-        then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(group(swnode(s.lhs, w), swnode(s.rhs, w)))
-
-    class ConjunctionNegated(System.OperatorNodeRule):
-        """
-        From an unticked negated conjunction node *n* with world *w* on a branch *b*, for each
-        conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
-        the conjunct to *b*, then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(
-                group(swnode(~s.lhs, w)),
-                group(swnode(~s.rhs, w)))
-
-    class Disjunction(System.OperatorNodeRule):
-        """
-        From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
-        make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
-        then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(
-                group(swnode(s.lhs, w)),
-                group(swnode(s.rhs, w)))
-
-    class DisjunctionNegated(System.OperatorNodeRule):
-        """
-        From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
-        disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(group(swnode(~s.lhs, w), swnode(~s.rhs, w)))
-
-    class MaterialConditional(System.OperatorNodeRule):
-        """
-        From an unticked material conditional node *n* with world *w* on a branch *b*, make two
-        new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
-        antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
-        *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(
-                group(swnode(~s.lhs, w)),
-                group(swnode( s.rhs, w)))
-
-    class MaterialConditionalNegated(System.OperatorNodeRule):
-        """
-        From an unticked negated material conditional node *n* with world *w* on a branch *b*,
-        add two nodes with *w* to *b*, one with the antecedent and the other with the negation
-        of the consequent, then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(group(swnode(s.lhs, w), swnode(~s.rhs, w)))
-
-    class MaterialBiconditional(System.OperatorNodeRule):
-        """
-        From an unticked material biconditional node *n* with world *w* on a branch *b*, make
-        two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
-        the negation of the antecedent and one with the negation of the consequent, and add two
-        nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
-        tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(
-                group(swnode(~s.lhs, w), swnode(~s.rhs, w)),
-                group(swnode( s.rhs, w), swnode( s.lhs, w)))
-
-    class MaterialBiconditionalNegated(System.OperatorNodeRule):
-        """
-        From an unticked negated material biconditional node *n* with world *w* on a branch *b*,
-        make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
-        the antecedent and the other with the negation of the consequent, and add two nodes with
-        *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
-        then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(
-                group(swnode( s.lhs, w), swnode(~s.rhs, w)),
-                group(swnode(~s.lhs, w), swnode( s.rhs, w)))
-
+    class DoubleNegation(FDE.Rules.DoubleNegationDesignated): pass
+    class Assertion(FDE.Rules.AssertionDesignated): pass
+    class AssertionNegated(FDE.Rules.AssertionNegatedDesignated): pass
+    class Conjunction(FDE.Rules.ConjunctionDesignated): pass
+    class ConjunctionNegated(FDE.Rules.ConjunctionNegatedDesignated): pass
+    class Disjunction(FDE.Rules.DisjunctionDesignated): pass
+    class DisjunctionNegated(FDE.Rules.DisjunctionNegatedDesignated): pass
+    class MaterialConditional(FDE.Rules.MaterialConditionalDesignated): pass
+    class MaterialConditionalNegated(FDE.Rules.MaterialConditionalNegatedDesignated): pass
+    class MaterialBiconditional(FDE.Rules.MaterialBiconditionalDesignated): pass
+    class MaterialBiconditionalNegated(FDE.Rules.MaterialBiconditionalNegatedDesignated): pass
     class Conditional(MaterialConditional): pass
     class ConditionalNegated(MaterialConditionalNegated): pass
     class Biconditional(MaterialBiconditional): pass
     class BiconditionalNegated(MaterialBiconditionalNegated): pass
-
-    class Existential(rules.NarrowQuantifierRule, System.DefaultNodeRule):
-        """
-        From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
-        variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
-        into *s* of *v* with a constant new to *b*, then tick *n*.
-        """
-
-        def _get_node_targets(self, node, branch, /):
-            s = self.sentence(node)
-            yield adds(
-                group(swnode(branch.new_constant() >> s, node.get('world'))))
-
-    class ExistentialNegated(System.DefaultNodeRule, rules.QuantifiedSentenceRule):
-        """
-        From an unticked negated existential node *n* with world *w* on a branch *b*,
-        quantifying over variable *v* into sentence *s*, add a universally quantified
-        node to *b* with world *w* over *v* into the negation of *s*, then tick *n*.
-        """
-
-        def _get_sw_targets(self, s, w, /):
-            v, si = s[1:]
-            yield adds(group(swnode(self.quantifier.other(v, ~si), w)))
-
-    class Universal(rules.ExtendedQuantifierRule, System.DefaultNodeRule):
-        """
-        From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
-        sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
-        exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
-        *b*. The node *n* is never ticked.
-        """
-
-        def _get_constant_nodes(self, node, c, branch, /):
-            yield swnode(c >> self.sentence(node), node.get('world'))
-
+    class Existential(FDE.Rules.ExistentialDesignated): pass
+    class ExistentialNegated(FDE.Rules.ExistentialNegatedDesignated): pass
+    class Universal(FDE.Rules.UniversalDesignated): pass
     class UniversalNegated(ExistentialNegated): pass
-
-    class Possibility(System.OperatorNodeRule):
-        """
-        From an unticked possibility node with world *w* on a branch *b*, add a node with a
-        world *w'* new to *b* with the operand of *n*, and add an access-type node with
-        world1 *w* and world2 *w'* to *b*, then tick *n*.
-        """
-        NodeType = SentenceWorldNode
-        Helpers = (QuitFlag, MaxWorlds, AplSentCount)
-
-        def _get_node_targets(self, node, branch, /):
-
-            # Check for max worlds reached
-            if self[MaxWorlds].is_exceeded(branch):
-                self[FilterHelper].release(node, branch)
-                if not self[QuitFlag].get(branch):
-                    fnode = self[MaxWorlds].quit_flag(branch)
-                    yield adds(group(fnode), flag=fnode['flag'])
-                return
-
-            si = self.sentence(node).lhs
-            w1 = node['world']
-            w2 = branch.new_world()
-            yield adds(
-                group(swnode(si, w2), anode(w1, w2)),
-                sentence=si)
-
-        def score_candidate(self, target, /) -> float:
-            """
-            Overrides `AdzHelper` closure score
-            """
-            if target.get('flag'):
-                return 1.0
-            # override
-            s = self.sentence(target.node)
-            si = s.lhs
-            # Don't bother checking for closure since we will always have a new world
-            track_count = self[AplSentCount][target.branch][si]
-            if track_count == 0:
-                return 1.0
-            return -1.0 * self[MaxWorlds].modals[s] * track_count
-
-        def group_score(self, target, /) -> float:
-            if target['candidate_score'] > 0:
-                return 1.0
-            s = self.sentence(target.node)
-            si = s.lhs
-            return -1.0 * self[AplSentCount][target.branch][si]
-
-    class PossibilityNegated(System.OperatorNodeRule):
-        """
-        From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
-        necessity node to *b* with *w*, whose operand is the negation of the negated 
-        possibilium of *n*, then tick *n*.
-        """
-        NodeType = SentenceWorldNode
-
-        def _get_sw_targets(self, s, w, /):
-            yield adds(group(swnode(self.operator.other(~s.lhs), w)))
-
-    class Necessity(System.OperatorNodeRule):
-        """
-        From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
-        world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
-        with *s* at *w2*, add it to *b*. The node *n* is never ticked.
-        """
-        ticking = False
-        NodeType = SentenceWorldNode
-        Helpers = (QuitFlag, MaxWorlds, NodeCount, NodesWorlds, WorldIndex)
-
-        def _get_node_targets(self, node, branch, /):
-
-            # Check for max worlds reached
-            if self[MaxWorlds].is_exceeded(branch):
-                self[FilterHelper].release(node, branch)
-                if not self[QuitFlag].get(branch):
-                    fnode = self[MaxWorlds].quit_flag(branch)
-                    yield adds(group(fnode), flag = fnode['flag'])
-                return
-
-            # Only count least-applied-to nodes
-            if not self[NodeCount].isleast(node, branch):
-                return
-
-            s = self.sentence(node)
-            si = s.lhs
-            w1 = node['world']
-
-            for w2 in self[WorldIndex][branch].get(w1, EMPTY_SET):
-                if (node, w2) in self[NodesWorlds][branch]:
-                    continue
-                add = swnode(si, w2)
-                if branch.has(add):
-                    continue
-                # accessnode = self[WorldIndex].nodes[branch][w1, w2]
-                # accessnode = branch.find(anode(w1, w2))
-                nodes = (node, branch.find(anode(w1, w2)))
-                yield adds(group(add),
-                    sentence=si,
-                    world=w2,
-                    nodes=nodes)
-
-        def score_candidate(self, target, /) -> float:
-            if target.get('flag'):
-                return 1.0
-            # We are already restricted to least-applied-to nodes by
-            # ``_get_node_targets()``
-            # Check for closure
-            if self[AdzHelper].closure_score(target) == 1:
-                return 1.0
-            # Not applied to yet
-            apcount = self[NodeCount][target.branch][target.node]
-            if apcount == 0:
-                return 1.0
-            # Pick the least branching complexity
-            return -1.0 * self.tableau.branching_complexity(target.node)
-
-        def group_score(self, target, /) -> float:
-            if self.score_candidate(target) > 0:
-                return 1.0
-            return -1.0 * self[NodeCount][target.branch][target.node]
-
-        def example_nodes(self):
-            s = Operated.first(self.operator)
-            a = WorldPair(0, 1)
-            yield swnode(s, a.w1)
-            yield a.tonode()
-
+    class Possibility(KFDE.Rules.PossibilityDesignated): pass
+    class PossibilityNegated(KFDE.Rules.PossibilityNegatedDesignated): pass
+    class Necessity(KFDE.Rules.NecessityDesignated): pass
     class NecessityNegated(PossibilityNegated): pass
 
     class IdentityIndiscernability(System.DefaultNodeRule, rules.PredicatedSentenceRule):

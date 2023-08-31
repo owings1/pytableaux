@@ -29,6 +29,7 @@ class Meta(K.Meta):
     title = 'Deontic Normal Modal Logic'
     description = 'Normal modal logic with a serial access relation'
     category_order = 2
+    extension_of = ('K')
 
 class Model(K.Model):
 

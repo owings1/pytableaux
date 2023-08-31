@@ -29,6 +29,7 @@ class Meta(KFDE.Meta):
     values = K3.Meta.values
     designated_values = K3.Meta.designated_values
     unassigned_value = K3.Meta.unassigned_value
+    extension_of = ('KFDE', 'K3')
 
 class Model(KFDE.Model): pass
 class System(FDE.System): pass

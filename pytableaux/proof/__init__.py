@@ -524,13 +524,15 @@ def snode(s):
 def swnode(s, w):
     'Make a sentence/world node. Excludes world if None.'
     if w is None:
-        return SentenceNode({Node.Key.sentence: s})
+        return snode(s)
     return SentenceWorldNode({
         Node.Key.sentence: s,
         Node.Key.world: w})
 
 def sdnode(s, d):
     'Make a sentence/designated node.'
+    if d is None:
+        return snode(s)
     return SentenceDesignationNode({
         Node.Key.sentence: s,
         Node.Key.designation: d})
@@ -538,9 +540,9 @@ def sdnode(s, d):
 def sdwnode(s, d, w):
     'Make a sentence/designated/world node. Excludes world if None.'
     if w is None:
-        return SentenceDesignationNode({
-            Node.Key.sentence: s,
-            Node.Key.designation: d})
+        return sdnode(s, d)
+    if d is None:
+        return swnode(s, w)
     return SentenceDesignationWorldNode({
         Node.Key.sentence: s,
         Node.Key.designation: d,

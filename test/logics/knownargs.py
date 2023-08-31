@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from pytableaux import examples
-from pytableaux.lang import Parser
+from pytableaux.lang import Argument, Parser
 from pytableaux.logics import registry
 from pytableaux.proof import Tableau
 from pytableaux.tools import qset, qsetf
@@ -56,7 +56,7 @@ validities['FDE'] = validities[...] | [
     'Simplification',
 ]
 
-validities['K3'] = validities['FDE'] | [
+validities['K3'] = (
     'Biconditional Elimination 1',
     'Biconditional Elimination 2',
     'Biconditional Elimination 3',
@@ -74,9 +74,9 @@ validities['K3'] = validities['FDE'] | [
     'Material Modus Tollens',
     'Syllogism',
     'Universal Predicate Syllogism',
-]
+)
 
-validities['LP'] = validities['FDE'] | [
+validities['LP'] = (
     'Biconditional Identity',
     'Conditional Double Negation',
     'Conditional Identity',
@@ -90,7 +90,7 @@ validities['LP'] = validities['FDE'] | [
     'Material Identity',
     'Material Pseudo Contraction',
     'Material Pseudo Contraposition',
-]
+)
 
 validities['RM3'] = validities[...] | [
     'Addition',
@@ -583,7 +583,7 @@ validities['P3'] = validities[...] | [
     'Material Modus Tollens',
 ]
 
-validities['CPL'] = validities[...] | [
+validities['CPL'] = (
     'Addition',
     'Asserted Addition',
     'Assertion Elimination 1',
@@ -641,7 +641,7 @@ validities['CPL'] = validities[...] | [
     'Material Pseudo Contraposition',
     'Self Identity 1',
     'Simplification',
-]
+)
 
 validities['CFOL'] = joinall(validities, 'K3', 'LP', 'L3', 'RM3', 'CPL') | [
     'Existential from Universal',
@@ -1074,10 +1074,26 @@ invalidities['P3'] = invalidities[...] | [
     'Universal Predicate Syllogism',
 ]
 
+_cache_validities = {}
+
+def get_validities(logic, /, *, _depth = 0):
+    logic = registry(logic)
+    try:
+        return _cache_validities[logic]
+    except KeyError:
+        pass
+    if _depth >= 20:
+        raise RuntimeError(f'max depth {_depth} reached {logic=}')
+    result = qset(validities[logic.Meta.name])
+    result.update(validities[...])
+    for other in logic.Meta.extension_of:
+        result.update(get_validities(other, _depth=_depth+1))
+    result.sort(key=lambda a: (a.title or a.argstr()) if isinstance(a, Argument) else a)
+    return _cache_validities.setdefault(logic, qsetf(result))
 
 def find_missing(logic):
     logic = registry(logic)
-    exists = invalidities[logic.Meta.name] | validities[logic.Meta.name]
+    exists = invalidities[logic.Meta.name] | get_validities(logic)
     exists = set(map(examples.argument, exists))
     missing = set(examples.arguments()) - exists
     results = defaultdict(set)

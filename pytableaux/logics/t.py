@@ -28,6 +28,7 @@ class Meta(K.Meta):
     title = 'Reflexive Normal Modal Logic'
     description = 'Normal modal logic with a reflexive access relation'
     category_order = 3
+    extension_of = ('D')
 
 class Model(K.Model):
 
@@ -63,7 +64,6 @@ class Rules(LogicType.Rules):
         ignore_ticked = False
         ticking = False
         marklegend = [(Marking.tableau, ('access', 'reflexive'))]
-
         defaults = dict(is_rank_optim = False)
 
         def _get_node_targets(self, node, branch, /):

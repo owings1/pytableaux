@@ -455,6 +455,8 @@ class LogicType(metaclass=LogicTypeMeta):
             Operator.MaterialBiconditional,
             Operator.Conditional,
             Operator.Biconditional)))
+        extension_of: Set[str] = EMPTY_SET
+
         def __init_subclass__(cls):
             super().__init_subclass__()
             LogicTypeMeta.new_meta(cls)
@@ -483,6 +485,10 @@ class LogicType(metaclass=LogicTypeMeta):
             if cls.modal:
                 category += ' Modal'
             cls.category = category
+            extension_of = cls.__dict__.get('extension_of', EMPTY_SET)
+            if isinstance(extension_of, str):
+                extension_of = extension_of,
+            cls.extension_of = qsetf(sorted(extension_of))
 
     if TYPE_CHECKING:
         from ..proof import System

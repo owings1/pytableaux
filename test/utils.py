@@ -78,7 +78,10 @@ class BaseCase(TestCase):
             for category in ('valid', 'invalid'):
                 known = qset()
                 if getattr(cls, 'logic', None):
-                    known.update(getattr(knownargs, f'{category}ities')[cls.logic.Meta.name])
+                    if category == 'valid':
+                        known.update(knownargs.get_validities(cls.logic))
+                    else:
+                        known.update(getattr(knownargs, f'{category}ities')[cls.logic.Meta.name])
                 for arg in known:
                     if isinstance(arg, Argument):
                         title = arg.title or hash(arg)
