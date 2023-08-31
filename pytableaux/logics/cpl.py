@@ -26,7 +26,6 @@ class Meta(K.Meta):
     title = 'Classical Predicate Logic'
     modal = False
     quantified = False
-    category = 'Bivalent'
     description = 'Standard bivalent logic with predication, without quantification'
     category_order = 1
     native_operators = FDE.Meta.native_operators

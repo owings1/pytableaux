@@ -25,7 +25,6 @@ class Meta(K.Meta):
     name = 'CFOL'
     title = 'Classical First Order Logic'
     modal = False
-    category = 'Bivalent'
     description = 'Standard bivalent logic with full first-order quantification'
     category_order = 2
     native_operators = FDE.Meta.native_operators

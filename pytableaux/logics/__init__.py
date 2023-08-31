@@ -455,7 +455,13 @@ class LogicType(metaclass=LogicTypeMeta):
                 if len(cls.designated_values) > 1:
                     tags.append('glutty')
             cls.tags = qsetf(tags)
-
+            if cls.many_valued:
+                category = 'Many-valued'
+            else:
+                category = 'Bivalent'
+            if cls.modal:
+                category += ' Modal'
+            cls.category = category
 
     if TYPE_CHECKING:
         from ..proof import System

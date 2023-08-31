@@ -35,7 +35,6 @@ class Meta(LogicType.Meta):
     values = ValueFDE
     designated_values = frozenset({values.B, values.T})
     unassigned_value = values.N
-    category = 'Many-valued'
     description = 'Four-valued logic (True, False, Neither, Both)'
     category_order = 10
     native_operators = (

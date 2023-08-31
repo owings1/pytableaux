@@ -40,7 +40,6 @@ class Meta(LogicType.Meta):
     values: type[ValueCPL] = ValueCPL
     designated_values = frozenset({values.T})
     unassigned_value = values.F
-    category = 'Bivalent Modal'
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
     native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
