@@ -230,8 +230,12 @@ class System(LogicType.System):
 
         def __init_subclass__(cls) -> None:
             super().__init_subclass__()
-            if cls._get_sdw_targets is __class__._get_sdw_targets:
-                if cls._get_sd_targets is __class__._get_sd_targets:
+            if all(
+                getattr(cls, name) is getattr(__class__, name)
+                for name in (
+                    '_get_node_targets',
+                    '_get_sdw_targets',
+                    '_get_sd_targets')):
                     @abstractmethod
                     @wraps(cls._get_sd_targets)
                     def wrapped(self, s: Sentence, d: bool, /):

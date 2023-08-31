@@ -42,3 +42,11 @@ Many-valued
     logics/nh
     logics/p3
     logics/rm3
+
+Many-valued Modal
+=================
+
+.. toctree::
+    :maxdepth: 1
+
+    logics/kfde

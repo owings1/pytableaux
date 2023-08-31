@@ -572,6 +572,14 @@ validities['P3'] = validities[...] | [
     'Material Modus Tollens',
 ]
 
+validities['KFDE'] = validities['FDE'] | [
+    'KFDE Distribution Inference 1',
+    'Modal Transformation 1',
+    'Modal Transformation 2',
+    'Modal Transformation 3',
+    'Modal Transformation 4',
+]
+
 validities['CPL'] = validities[...] | [
     'Addition',
     'Asserted Addition',
@@ -643,13 +651,10 @@ validities['CFOL'] = validities['K3'] | validities['LP'] | validities['L3'] | va
     'Syllogism',
     'Universal Predicate Syllogism',
 ]
-validities['K'] = validities['CFOL'] | [
-    'Modal Transformation 1',
-    'Modal Transformation 2',
-    'Modal Transformation 3',
-    'Modal Transformation 4',
+validities['K'] = validities['CFOL'] | validities['KFDE'] | [
     'Necessity Distribution 1',
     'Necessity Distribution 2',
+    'NP Conditional Modus Ponens',
 ]
 validities['D'] = validities['K'] | [
     'Serial Inference 1',
@@ -722,6 +727,10 @@ invalidities['K'] = invalidities['D'] | [
 
 ]
 
+invalidities['KFDE'] = invalidities['K'] | [
+    'NP Conditional Modus Ponens',
+]
+
 invalidities['CFOL'] = invalidities['K'] | [
     'Modal Transformation 1',
     'Modal Transformation 2',
@@ -729,6 +738,7 @@ invalidities['CFOL'] = invalidities['K'] | [
     'Modal Transformation 4',
     'Necessity Distribution 1',
     'Necessity Distribution 2',
+    'NP Conditional Modus Ponens',
 ]
 
 invalidities['CPL'] = invalidities['CFOL'] | [
@@ -933,7 +943,7 @@ invalidities['MH'] = invalidities['CFOL'] | [
     'Self Identity 2',
     'Syllogism',
     'Universal Predicate Syllogism',
-   arg('UNbNa', ('NAaNa', 'Uab'), title='p_from_article'),
+    arg('UNbNa', ('NAaNa', 'Uab'), title='p_from_article'),
 ]
 
 invalidities['NH'] = invalidities['CFOL'] | [
@@ -995,6 +1005,7 @@ invalidities['P3'] = invalidities[...] | [
     'Existential Syllogism',
     'Identity Indiscernability 1',
     'Identity Indiscernability 2',
+    'KFDE Distribution Inference 1',
     'Law of Excluded Middle',
     'Material Biconditional Elimination 3',
     'Material Biconditional Identity',
@@ -1012,6 +1023,7 @@ invalidities['P3'] = invalidities[...] | [
     'Necessity Distribution 2',
     'Necessity Elimination',
     'NP Collapse 1',
+    'NP Conditional Modus Ponens',
     'Possibility Addition',
     'Quantifier Interdefinability 1',
     'Quantifier Interdefinability 2',
@@ -1031,6 +1043,7 @@ invalidities['P3'] = invalidities[...] | [
     'Syllogism',
     'Universal Predicate Syllogism',
 ]
+
 
 def find_missing(logic):
     from collections import defaultdict

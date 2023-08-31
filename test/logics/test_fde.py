@@ -5,14 +5,11 @@ from pytableaux.proof import *
 from pytableaux.proof import rules
 from pytableaux.errors import *
 from pytableaux.logics import fde as FDE
-from pytableaux.logics.fde import System
 
 A = Atomic.first()
 
 class Base(BaseCase):
     logic = FDE
-    def m(self, *args, **kw) -> FDE.Model:
-        return super().m(*args, **kw)
 
 class TestRules(Base, autorules=True): pass
 
@@ -326,23 +323,25 @@ class TestBranchables(Base):
 
 class TestSystem(Base):
 
+    System: type[FDE.System] = Base.logic.System
+
     def test_branch_complexity_hashable_none_if_no_sentence(self):
         n = Node({})
-        self.assertIs(None, System.branching_complexity_hashable(n))
+        self.assertIs(None, self.System.branching_complexity_hashable(n))
 
     def test_branch_complexity_0_if_no_sentence(self):
         tab = Tableau(self.logic)
         n = Node({})
-        self.assertEqual(0, System.branching_complexity(n, tab.rules))
+        self.assertEqual(0, self.System.branching_complexity(n, tab.rules))
 
     def test_abstract_default_node_rule(self):
-        class Impl(System.DefaultNodeRule, intermediate=True): pass
+        class Impl(self.System.DefaultNodeRule, intermediate=True): pass
         rule = rules.NoopRule(Tableau())
         with self.assertRaises(NotImplementedError):
             Impl._get_sd_targets(rule, Node({}), Branch())
 
     def test_abstract_operator_node_rule(self):
-        class Impl(System.OperatorNodeRule): pass
+        class Impl(self.System.OperatorNodeRule): pass
         with self.assertRaises(TypeError):
             Impl(Tableau())
         rule = rules.NoopRule(Tableau())
@@ -352,4 +351,4 @@ class TestSystem(Base):
     def test_notimpl_coverage(self):
         rule = rules.NoopRule(Tableau())
         with self.assertRaises(NotImplementedError):
-            System.OperatorNodeRule._get_sd_targets(rule, self.p('a'), False)
+            self.System.OperatorNodeRule._get_sd_targets(rule, self.p('a'), False)
