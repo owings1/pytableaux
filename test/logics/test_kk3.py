@@ -16,19 +16,18 @@
 #
 # ------------------
 #
-# pytableaux.logics.kfde tests
+# pytableaux.logics.kk3 tests
 from __future__ import annotations
 
-from . import test_fde as FDESuite
+from . import test_k3 as K3Suite
 
 from ..utils import BaseCase
 
-
 class Base(BaseCase):
-    logic = 'KFDE'
+    logic = 'KK3'
 
 class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base, autoargs=True): pass
 
-class TestTables(Base, FDESuite.TestTables): pass
+class TestTables(Base, K3Suite.TestTables): pass

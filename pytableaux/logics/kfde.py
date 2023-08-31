@@ -31,7 +31,6 @@ class Meta(FDE.Meta):
     title = 'FDE with K modal'
     modal = True
     description = 'Modal version of FDE based on K normal modal logic'
-    category_order = 1
     native_operators = FDE.Meta.native_operators | FDE.Meta.modal_operators
 
 class Model(FDE.Model):

@@ -1,9 +1,9 @@
-.. _KFDE:
+.. _kk3:
 
-.. module:: pytableaux.logics.kfde
+.. module:: pytableaux.logics.kk3
 
 ***************************************
-L{} - FDE with K Modal
+L{} - K3 with K Modal
 ***************************************
 
 .. contents:: Contents
@@ -12,9 +12,9 @@ L{} - FDE with K Modal
 
 ------------------------
 
-.. _kfde-semantics:
-.. _kfde-model:
-.. _kfde-frame:
+.. _kk3-semantics:
+.. _kk3-model:
+.. _kk3-frame:
 
 Semantics
 =========
@@ -22,9 +22,9 @@ Semantics
 .. include:: include/k/models_blurb.rst
 
 The semantics for predication, quantification, and truth-functional operators are the
-same as {@FDE}.
+same as {@K3}.
 
-.. _kfde-modality:
+.. _kk3-modality:
 
 Modal Operators
 ---------------
@@ -37,17 +37,16 @@ Modal Operators
 
 .. include:: include/kfde/m.necessity.rst
 
-.. _kfde-consequence:
+.. _kk3-consequence:
 
 Consequence
 -----------
 
-**Logical Consequence** is defined similary as {@FDE}, except with
-reference to a world:
+**Logical Consequence** is defined just as in {@KFDE}.
 
 .. include:: include/kfde/m.consequence.rst
 
-.. _kfde-system:
+.. _kk3-system:
 
 Tableaux
 ========
@@ -69,17 +68,19 @@ Trunk
 Closure
 -------
 
+The closure rules are the same as {@K3}.
+
 .. tableau-rules::
   :docflags:
   :group: closure
   :title: -
 
-.. _kfde-rules:
+.. _kk3-rules:
 
 Rules
 --------
 
-Non-modal rules for L{} are exactly like their {@FDE} counterparts, with
+Non-modal rules for L{} are exactly like their {@K3} counterparts, with
 the addition of carrying over the world marker from the target node(s).
 
 .. include:: include/kfde/rule_groups.rst
@@ -87,12 +88,8 @@ the addition of carrying over the world marker from the target node(s).
 Notes
 =====
 
-* Like L{FDE}, there are no logical truths.
+* Like L{K3}, there are no logical truths.
 
-* The standard modal operator interdefinabilities hold: :s:`NA` |<=>| :s:`~P~A`
-  and :s:`~NA` |<=>| :s:`P~A`.
-
-* Modal forms of modus ponens fail, e.g. :s:`N(A $ B)`, :s:`PA` |!=>| :s:`PB`.
 
 References
 ==========

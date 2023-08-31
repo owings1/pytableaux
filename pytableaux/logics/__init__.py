@@ -43,9 +43,29 @@ if TYPE_CHECKING:
 _T = TypeVar('_T')
 
 __all__ = (
-    'b3e', 'cfol', 'cpl', 'd', 'fde', 'g3', 'go', 'k', 'k3', 'k3w', 'k3wq',
+    'b3e',
+    'cfol',
+    'cpl',
+    'd',
+    'fde',
+    'g3',
+    'go',
+    'k',
+    'k3',
+    'k3w',
+    'k3wq',
     'kfde',
-    'l3', 'lp', 'mh', 'nh', 'p3', 'rm3', 's4', 's5', 't')
+    'kk3',
+    'klp',
+    'l3',
+    'lp',
+    'mh',
+    'nh',
+    'p3',
+    'rm3',
+    's4',
+    's5',
+    't')
 
 NOARG = object()
         

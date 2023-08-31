@@ -1,7 +1,18 @@
-from pytableaux.lang import Parser
-from pytableaux.tools import qsetf
+from collections import defaultdict
+
 from pytableaux import examples
+from pytableaux.lang import Parser
+from pytableaux.logics import registry
+from pytableaux.proof import Tableau
+from pytableaux.tools import qset, qsetf
+
 arg = Parser('polish', examples.preds).argument
+
+def joinall(base, *keys):
+    joined = qset()
+    for key in keys:
+        joined |= base[key]
+    return qsetf(joined)
 
 validities = {}
 
@@ -572,14 +583,6 @@ validities['P3'] = validities[...] | [
     'Material Modus Tollens',
 ]
 
-validities['KFDE'] = validities['FDE'] | [
-    'KFDE Distribution Inference 1',
-    'Modal Transformation 1',
-    'Modal Transformation 2',
-    'Modal Transformation 3',
-    'Modal Transformation 4',
-]
-
 validities['CPL'] = validities[...] | [
     'Addition',
     'Asserted Addition',
@@ -640,7 +643,7 @@ validities['CPL'] = validities[...] | [
     'Simplification',
 ]
 
-validities['CFOL'] = validities['K3'] | validities['LP'] | validities['L3'] | validities['RM3'] | validities['CPL'] | [
+validities['CFOL'] = joinall(validities, 'K3', 'LP', 'L3', 'RM3', 'CPL') | [
     'Existential from Universal',
     'Existential Syllogism',
     'Quantifier Interdefinability 1',
@@ -651,11 +654,29 @@ validities['CFOL'] = validities['K3'] | validities['LP'] | validities['L3'] | va
     'Syllogism',
     'Universal Predicate Syllogism',
 ]
-validities['K'] = validities['CFOL'] | validities['KFDE'] | [
-    'Necessity Distribution 1',
+
+validities['KFDE'] = validities['FDE'] | [
+    'KFDE Distribution Inference 1',
+    'Modal Transformation 1',
+    'Modal Transformation 2',
+    'Modal Transformation 3',
+    'Modal Transformation 4',
     'Necessity Distribution 2',
+]
+
+validities['KK3'] = joinall(validities, 'KFDE', 'K3') | [
     'NP Conditional Modus Ponens',
 ]
+
+validities['KLP'] = joinall(validities, 'KFDE', 'LP') | [
+    'Necessity Distribution 1',
+
+]
+
+validities['K'] = joinall(validities, 'CFOL', 'KK3', 'KLP') | [
+
+]
+
 validities['D'] = validities['K'] | [
     'Serial Inference 1',
     'Serial Inference 2',
@@ -727,11 +748,58 @@ invalidities['K'] = invalidities['D'] | [
 
 ]
 
-invalidities['KFDE'] = invalidities['K'] | [
+invalidities['KK3'] = invalidities['K'] | [
+    'Biconditional Identity',
+    'Conditional Double Negation',
+    'Conditional Identity',
+    'Conditional Law of Excluded Middle',
+    'Conditional Pseudo Contraction',
+    'Conditional Pseudo Contraposition',
+    'Conjunction Pseudo Commutativity',
+    'Disjunction Pseudo Commutativity',
+    'Identity Indiscernability 1',
+    'Identity Indiscernability 2',
+    'Law of Excluded Middle',
+    'Material Biconditional Identity',
+    'Material Identity',
+    'Material Pseudo Contraction',
+    'Material Pseudo Contraposition',
+    'Necessity Distribution 1',
+    'Self Identity 1',
+    'Self Identity 2',
+]
+
+invalidities['KLP'] = invalidities['K'] | [
+    'Biconditional Elimination 1',
+    'Biconditional Elimination 2',
+    'Biconditional Elimination 3',
+    'Conditional Modus Ponens',
+    'Conditional Modus Tollens',
+    'Disjunctive Syllogism 2',
+    'Disjunctive Syllogism',
+    'Existential Syllogism',
+    'Explosion',
+    'Identity Indiscernability 1',
+    'Identity Indiscernability 2',
+    'Law of Non-contradiction',
+    'Material Biconditional Elimination 1',
+    'Material Biconditional Elimination 2',
+    'Material Biconditional Elimination 3',
+    'Material Modus Ponens',
+    'Material Modus Tollens',
+    'NP Conditional Modus Ponens',
+    'Self Identity 1',
+    'Self Identity 2',
+    'Syllogism',
+    'Universal Predicate Syllogism',
+]
+
+invalidities['KFDE'] = joinall(invalidities, 'K', 'KK3', 'KLP') | [
     'NP Conditional Modus Ponens',
 ]
 
 invalidities['CFOL'] = invalidities['K'] | [
+    'KFDE Distribution Inference 1',
     'Modal Transformation 1',
     'Modal Transformation 2',
     'Modal Transformation 3',
@@ -753,48 +821,10 @@ invalidities['CPL'] = invalidities['CFOL'] | [
     'Universal Predicate Syllogism',
 ]
 
-invalidities['K3'] = invalidities['CFOL'] | [
-    'Biconditional Identity',
-    'Conditional Double Negation',
-    'Conditional Identity',
-    'Conditional Law of Excluded Middle',
-    'Conditional Pseudo Contraction',
-    'Conditional Pseudo Contraposition',
-    'Conjunction Pseudo Commutativity',
-    'Disjunction Pseudo Commutativity',
-    'Identity Indiscernability 1',
-    'Identity Indiscernability 2',
-    'Law of Excluded Middle',
-    'Material Biconditional Identity',
-    'Material Identity',
-    'Material Pseudo Contraction',
-    'Material Pseudo Contraposition',
-    'Self Identity 1',
-    'Self Identity 2',
+invalidities['K3'] = joinall(invalidities, 'KK3', 'CFOL') | [
 ]
 
-invalidities['LP'] = invalidities['CFOL'] | [
-    'Biconditional Elimination 1',
-    'Biconditional Elimination 2',
-    'Biconditional Elimination 3',
-    'Conditional Modus Ponens',
-    'Conditional Modus Tollens',
-    'Disjunctive Syllogism 2',
-    'Disjunctive Syllogism',
-    'Existential Syllogism',
-    'Explosion',
-    'Identity Indiscernability 1',
-    'Identity Indiscernability 2',
-    'Law of Non-contradiction',
-    'Material Biconditional Elimination 1',
-    'Material Biconditional Elimination 2',
-    'Material Biconditional Elimination 3',
-    'Material Modus Ponens',
-    'Material Modus Tollens',
-    'Self Identity 1',
-    'Self Identity 2',
-    'Syllogism',
-    'Universal Predicate Syllogism',
+invalidities['LP'] = joinall(invalidities, 'KLP', 'CFOL') | [
 ]
 
 invalidities['FDE'] = invalidities['K3'] | invalidities['LP']
@@ -1046,9 +1076,6 @@ invalidities['P3'] = invalidities[...] | [
 
 
 def find_missing(logic):
-    from collections import defaultdict
-    from pytableaux.logics import registry
-    from pytableaux.proof import Tableau
     logic = registry(logic)
     exists = invalidities[logic.Meta.name] | validities[logic.Meta.name]
     exists = set(map(examples.argument, exists))
@@ -1058,3 +1085,9 @@ def find_missing(logic):
         results[Tableau(logic, arg).build().valid].add(arg.title)
     return {key: sorted(value) for key, value in results.items()}
 
+def find_missing_all():
+    registry.import_all()
+    for name in sorted(registry):
+        missing = find_missing(name)
+        if missing:
+            yield name, find_missing(name)

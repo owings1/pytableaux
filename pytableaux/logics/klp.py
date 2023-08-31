@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2023 Doug Owings.
 # 
@@ -13,22 +14,26 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux.logics.kfde tests
 from __future__ import annotations
 
-from . import test_fde as FDESuite
+from . import LogicType
+from . import fde as FDE
+from . import kfde as KFDE
+from . import lp as LP
 
-from ..utils import BaseCase
 
+class Meta(KFDE.Meta):
+    name = 'KLP'
+    title = 'LP with K modal'
+    description = 'Modal version of LP based on K normal modal logic'
+    values = LP.Meta.values
+    designated_values = LP.Meta.designated_values
+    unassigned_value = LP.Meta.unassigned_value
 
-class Base(BaseCase):
-    logic = 'KFDE'
+class Model(KFDE.Model): pass
+class System(FDE.System): pass
 
-class TestRules(Base, autorules=True): pass
+class Rules(LogicType.Rules):
+    closure = LP.Rules.closure
+    groups = KFDE.Rules.groups
 
-class TestArguments(Base, autoargs=True): pass
-
-class TestTables(Base, FDESuite.TestTables): pass

@@ -50,3 +50,5 @@ Many-valued Modal
     :maxdepth: 1
 
     logics/kfde
+    logics/kk3
+    logics/klp

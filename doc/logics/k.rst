@@ -22,9 +22,7 @@ modal operators :s:`N` and :s:`P` to L{CFOL}.
 Semantics
 =========
 
-A L{K} `frame` comprises the interpretation of sentences and predicates at a world.
-A L{K} `model` comprises a non-empty collection of L{K} frames, a world access
-relation :m:`R`, and a set of constants (the domain).
+.. include:: include/k/models_blurb.rst
 
 .. _k-truth-values:
 

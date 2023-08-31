@@ -55,6 +55,8 @@ Many-valued
 Many-valued Modal
 
 - **KFDE** - FDE with K modal
+- **KK3** - K3 with K modal
+- **KLP** - LP with K modal
 
 ## Dependencies
 
