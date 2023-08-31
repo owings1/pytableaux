@@ -1,7 +1,9 @@
 .. _B3E:
 
+.. module:: pytableaux.logics.b3e
+
 *************************************************
-L{B3E} - Bochvar 3-valued External Logic
+L{} - Bochvar 3-valued External Logic
 *************************************************
 
 .. figure:: /res/img/Dmitry_Anatolevich_Bochvar.jpg
@@ -12,7 +14,7 @@ L{B3E} - Bochvar 3-valued External Logic
 
     Dmitry Bochvar
 
-L{B3E} is a three-valued logic with values V{T}, V{F}, and V{N}. L{B3E}
+L{} is a three-valued logic with values V{T}, V{F}, and V{N}. L{}
 is similar to {@K3W}, but with a special Assertion operator that
 always results in a classical value (V{T} or V{F}).
 
@@ -21,8 +23,6 @@ always results in a classical value (V{T} or V{F}).
   :depth: 2
 
 ------------------------
-
-.. module:: pytableaux.logics.b3e
 
 .. _b3e-semantics:
 .. _b3e-model:
@@ -41,7 +41,7 @@ Common labels for the values include:
 
 .. rubric:: Designated Values
 
-The set of *designated values* for L{B3E} is the singleton: { V{T} }
+The set of *designated values* for L{} is the singleton: { V{T} }
 
 .. _b3e-truth-tables:
 
@@ -133,7 +133,7 @@ Consequence
 Tableaux
 ========
 
-L{B3E} tableaux are built similary to L{FDE}.
+L{} tableaux are built similary to L{FDE}.
 
 Nodes
 -----
@@ -175,12 +175,12 @@ Rules
 Notes
 =====
 
-* Unlike L{K3W}, L{B3E} has some logical truths. For example
+* Unlike L{K3W}, L{} has some logical truths. For example
   :s:`(A $ B) V ~(A $ B)`. This logical truth is an instance of the
   :term:`Law of Excluded Middle`.
 
 * The Assertion operator :s:`*` can express alternate versions of validities
-  that fail in L{K3W}. For example, :s:`A` !{conseq} :s:`A V *B` in L{B3E},
+  that fail in L{K3W}. For example, :s:`A` |=>| :s:`A V *B` in L{},
   which fails in L{K3W}.
 
 References

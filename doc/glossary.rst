@@ -9,13 +9,13 @@ Glossary
 .. glossary::
 
   addition
-    :s:`A` !{conseq} :s:`A V B`
+    :s:`A` |=>| :s:`A V B`
 
   conditional contraction
-    :s:`A $ (A $ B)` !{conseq} :s:`A $ B`
+    :s:`A $ (A $ B)` |=>| :s:`A $ B`
 
   conditional identity
-    :s:`B` !{|-} :s:`A $ A`
+    :s:`B` |=>| :s:`A $ A`
 
   DeMorgan laws
     . . .
@@ -34,10 +34,10 @@ Glossary
     :m:`L` is valid in :m:`L'`.
 
   law of excluded middle
-    :s:`B` !{conseq} :s:`A V ~A`
+    :s:`B` |=>| :s:`A V ~A`
 
   law of non-contradiction
-    :s:`A & ~A` !{|-} :s:`B`
+    :s:`A & ~A` |=>| :s:`B`
 
   logical consequence
     . . .
@@ -46,13 +46,13 @@ Glossary
     . . . 
 
   material identity
-    :s:`B` !{conseq} :s:`A > A`
+    :s:`B` |=>| :s:`A > A`
 
   modus ponens
-    :s:`A $ B`, :s:`A` !{|-} :s:`B`
+    :s:`A $ B`, :s:`A` |=>| :s:`B`
 
   modus tollens
-    :s:`A $ B`, :s:`~B` !{|-} :s:`A`
+    :s:`A $ B`, :s:`~B` |=>| :s:`A`
 
   truth-functional operator
     . . .

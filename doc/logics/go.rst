@@ -163,7 +163,7 @@ Notes
 
 - GO contains an additional conditional operator besides the material conditional,
   which is similar to L{L3}. However, this conditional is *non-primitive*,
-  unlike L{L3}, and it obeys contraction (:s:`A $ (A $ B)` !{conseq} :s:`A $ B`).
+  unlike L{L3}, and it obeys contraction (:s:`A $ (A $ B)` |=>| :s:`A $ B`).
 
 - Conjunctions and Disjunctions always have a classical value (V{T} or V{F}).
   This means that only atomic sentences (with zero or more negations) can have
@@ -175,7 +175,7 @@ Notes
   that obey all principles of classical logic. For example, although
   the :term:`Law of Excluded Middle` fails for atomic sentences :s:`A V ~A`,
   complex sentences -- those with at least one binary connective --
-  do obey the law: !{conseq} :s:`(A V A) V ~(A V A)`.
+  do obey the law: |=>| :s:`(A V A) V ~(A V A)`.
 
 References
 ==========

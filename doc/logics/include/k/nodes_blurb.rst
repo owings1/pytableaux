@@ -1,3 +1,5 @@
-Nodes consist of either a (sentence, world) pair, indicating a true sentence at
-that world, or a pair of worlds (:m:`w1`, :m:`w2`), indicating that the pair :m:`<w_1, w_2>`
-is in the access relation :m:`R`.
+Nodes for bivalent modal tableaux come in two types:
+
+- A sentence-world pair like :m:`A, w`, indicating that :m:`A` is true at :m:`w`.
+- An access node like :m:`w_1Rw_2`, indicating that the pair :m:`<w_1, w_2>`
+  is in the access relation :m:`R`.

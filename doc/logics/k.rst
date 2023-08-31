@@ -1,8 +1,8 @@
 .. _K:
 
-*****************************
-K - Kripke Normal Modal Logic
-*****************************
+******************************************
+L{K} - Kripke Normal Modal Logic
+******************************************
 
 L{K} is the foundation of so-called normal modal logics. It adds
 modal operators :s:`N` and :s:`P` to L{CFOL}.
@@ -23,7 +23,7 @@ Semantics
 =========
 
 A L{K} `frame` comprises the interpretation of sentences and predicates at a world.
-A L{K} `model` comprises a non-empty collection of K frames, a world access
+A L{K} `model` comprises a non-empty collection of L{K} frames, a world access
 relation :m:`R`, and a set of constants (the domain).
 
 .. _k-truth-values:
@@ -81,7 +81,7 @@ Quantification
 
 .. include:: include/cfol/m.universal.rst
 
-.. _k-consequence:
+.. _k-modality:
 
 Modal Operators
 ---------------
@@ -93,6 +93,8 @@ Modal Operators
 .. rubric:: Necessity
 
 .. include:: include/k/m.necessity.rst
+
+.. _k-consequence:
 
 Consequence
 -----------
@@ -126,9 +128,8 @@ Closure
 
 .. tableau-rules::
   :group: closure
-  :titles:
-  :legend:
-  :doc:
+  :docflags:
+  :title: -
 
 .. _k-rules:
 

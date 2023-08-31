@@ -58,7 +58,7 @@ from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
 from types import MappingProxyType as MapProxy
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TypeVar
 
 import jinja2
 import sphinx.directives
@@ -93,6 +93,8 @@ __all__ = (
     'RoleItem',
     'SphinxEvent',
     'Tabler')
+
+_T = TypeVar('_T')
 
 NOARG = object()
 
@@ -501,7 +503,7 @@ def role_entry(roleish):
             return None
     return RoleItem(name, inst)
 
-def role_instance(roleish):
+def role_instance(roleish: type[_T]|str) -> _T|BaseRole:
     'Get loaded role instance, by name, instance or type.'
     return role_entry(roleish).inst
 

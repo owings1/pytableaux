@@ -148,7 +148,7 @@ Rules
 Notes
 =====
 
-* With the Conditional operator :s:`$`, :term:`Modus Ponens` (:s:`A`, :s:`A $ B` !{conseq} :s:`B`) is
+* With the Conditional operator :s:`$`, :term:`Modus Ponens` (:s:`A`, :s:`A $ B` |=>| :s:`B`) is
   valid in L{RM3}, which fails in {@LP}.
 
 * The argument :s:`B`, therefore :s:`A $ B` is invalid in L{RM3}, which is valid in L{LP}.

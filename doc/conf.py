@@ -217,6 +217,9 @@ rst_epilog = """
 .. |[+]| unicode:: 0x2295
 .. |[-]| unicode:: 0x2296
 .. |(x)| unicode:: 0x2297
+.. |=>| unicode:: 0x22A2
+.. |!=>| unicode:: 0x22AC
+.. |<=>| unicode:: 0x27DB
 """
 
 

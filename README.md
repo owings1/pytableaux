@@ -28,6 +28,14 @@ Bivalent
 - **CPL** - Classical Predicate Logic
 - **CFOL** - Classical First-Order Logic
 
+Bivalent Modal
+
+- **K** - Kripke Normal Modal Logic
+- **D** - Deontic Normal Modal Logic
+- **T** - Reflexive Normal Modal Logic
+- **S4** - S4 Normal Modal Logic
+- **S5** - S5 Normal Modal Logic
+
 Many-valued
 
 - **FDE** - First Degree Entailment
@@ -44,13 +52,9 @@ Many-valued
 - **P3** - Emil Post 3-valued Logic
 - **RM3** - R-mingle 3
 
-Bivalent Modal
+Many-valued Modal
 
-- **K** - Kripke Normal Modal Logic
-- **D** - Deontic Normal Modal Logic
-- **T** - Reflexive Normal Modal Logic
-- **S4** - S4 Normal Modal Logic
-- **S5** - S5 Normal Modal Logic
+- **KFDE** - FDE with K modal
 
 ## Dependencies
 

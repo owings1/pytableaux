@@ -1,18 +1,18 @@
 .. _CFOL:
 
+.. module:: pytableaux.logics.cfol
+
 ********************************************
-L{CFOL} - Classical First-Order Logic
+L{} - Classical First-Order Logic
 ********************************************
 
-L{CFOL} adds quantification to {@CPL}.
+L{} adds quantification to {@CPL}.
 
 .. contents::
   :local:
   :depth: 2
 
 ------------------------
-
-.. module:: pytableaux.logics.cfol
 
 .. _cfol-semantics:
 .. _cfol-model:
@@ -47,7 +47,7 @@ Truth Tables
 
 .. rubric:: Compatibility Tables
 
-L{CFOL} does not have separate `Assertion` or `Conditional` operators,
+L{} does not have separate `Assertion` or `Conditional` operators,
 but we include tables and rules for them, for cross-compatibility.
 
 .. truth-tables::

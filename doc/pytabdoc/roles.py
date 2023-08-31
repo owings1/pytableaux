@@ -82,7 +82,7 @@ class refplus(ReferenceRole, BaseRole):
         logic = logics.registry(logic)
 
         inliner = nodes.Element()
-        role: refplus = role_instance(cls)
+        role = role_instance(cls)
         text = '{@' + logic.Meta.name + '}'
         rawtext = f':{role.name}:`{text}`'
         nn, _ = role(role.name, rawtext, text, 0, inliner)
@@ -95,7 +95,8 @@ class refplus(ReferenceRole, BaseRole):
         
         if self._logic_ref():
             self.classes |= 'logicref', 'internal'
-            mmnn = metadress.logicname_node(self.logicname)
+            mdrole = role_instance(metadress)
+            mmnn = mdrole.logicname_node(self.logicname)
             node = nodes.reference(self.rawtext, '',
                 refuri = self.refuri,
                 logicname = self.logicname,
@@ -262,14 +263,14 @@ class metadress(BaseRole):
                 rep = r'\1',
                 classes = ('big-l',),
                 nodecls = nodes.inline),
-            r'^(\|-|conseq|impl(ies)?)$': dict(
-                rep = '⊢',
-                classes = ('conseq',),
-                nodecls = nodes.inline),
-            r'^(\|(/|!)-|no(n|t)?-?(conseq|impl(ies)?))$': dict(
-                rep = '⊬',
-                classes = ('non-conseq',),
-                nodecls = nodes.inline),
+            # r'^(\|-|conseq|impl(ies)?)$': dict(
+            #     rep = '⊢',
+            #     classes = ('conseq',),
+            #     nodecls = nodes.inline),
+            # r'^(\|(/|!)-|no(n|t)?-?(conseq|impl(ies)?))$': dict(
+            #     rep = '⊬',
+            #     classes = ('non-conseq',),
+            #     nodecls = nodes.inline),
             r'^(\|\?-|(conseq|impl(ies)?)\?)$' : dict(
                 static = True,
                 nodes = [
@@ -367,9 +368,10 @@ class metadress(BaseRole):
         classes.append(mode)
         return nodecls(text = rend, classes = classes)
 
-    @classmethod
-    def logicname_node(cls, name: str):
-        moded = cls.modes['logic_name']
+    def logicname_node(self, name: str):
+        if not name:
+            name = self.current_logic.Meta.name
+        moded = self.modes['logic_name']
         classes = ['metawrite', 'logic_name']
         nodecls = moded['nodecls']
         for pat, addcls in moded['match_map'].items():

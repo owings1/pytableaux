@@ -147,7 +147,7 @@ Rules
 Notes
 =====
 
-* :term:`Conditional Identity` holds: !{conseq} :s:`A $ A`.
+* :term:`Conditional Identity` holds: |=>| :s:`A $ A`.
 
 References
 ==========

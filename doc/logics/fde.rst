@@ -162,7 +162,7 @@ Some notable features of L{FDE} include:
   and other Classical validities.
 
 * :term:`DeMorgan laws` are valid, as well as :term:`Conditional Contraction` (:s:`A $ (A $ B)`
-  !{conseq} :s:`A $ B`).
+  |=>| :s:`A $ B`).
 
 References
 ==========
