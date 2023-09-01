@@ -4,7 +4,45 @@ A multi-logic proof and semantic model generator.
 
 ## Web UI
 
-For the live site, [see here][site].
+For the live site, [see here][site]. For documentation, [see here][doc].
+
+## Implemented Logics
+
+### Bivalent
+
+- [**CPL** - Classical Predicate Logic][CPL]
+- [**CFOL** - Classical First-Order Logic][CFOL]
+
+### Bivalent Modal
+
+- [**K** - Kripke Normal Modal Logic][K]
+- [**D** - Deontic Normal Modal Logic][D]
+- [**T** - Reflexive Normal Modal Logic][T]
+- [**S4** - S4 Normal Modal Logic][S4]
+- [**S5** - S5 Normal Modal Logic][S5]
+
+### Many-valued
+
+- [**FDE** - First Degree Entailment][FDE]
+- [**K<sub>3</sub>** - Strong Kleene Logic][K3]
+- [**K<sup>3</sup><sub>W</sub>** - Weak Kleene Logic][K3W]
+- [**K<sup>3</sup><sub>WQ</sub>** - Weak Kleene with alternate quantification][K3WQ]
+- [**B<sup>3</sup><sub>E</sub>** - Bochvar 3-valued External Logic][B3E]
+- [**GO** - Gappy Object Logic][GO]
+- [**MH** - Paracomplete Hybrid Logic][MH]
+- [**L<sub>3</sub>** - Łukasiewicz 3-valued Logic][L3]
+- [**G<sub>3</sub>** - Gödel 3-valued Logic][G3]
+- [**LP** - Logic of Paradox][LP]
+- [**NH** - Paraconsistent Hybrid Logic][NH]
+- [**P<sub>3</sub>** - Emil Post 3-valued Logic][P3]
+- [**RM<sub>3</sub>** - R-mingle 3][RM3]
+
+### Many-valued Modal
+
+- [**KFDE** - FDE with K modal][KFDE]
+- [**KK<sub>3</sub>** - K<sub>3</sub> with K modal][KK3]
+- [**KL<sub>3</sub>** - L<sub>3</sub> with K modal][KL3]
+- [**KLP** - LP with K modal][KLP]
 
 ## Docker
 
@@ -20,44 +58,6 @@ The web UI will then be available on port 8080, e.g. `http://localhost:8080`.
 
 For the live documentation, [see here][doc]. If you deployed the docker container,
 the documentation is available at `/doc`, e.g. `http://localhost:8080/doc`.
-
-## Implemented Logics
-
-Bivalent
-
-- **CPL** - Classical Predicate Logic
-- **CFOL** - Classical First-Order Logic
-
-Bivalent Modal
-
-- **K** - Kripke Normal Modal Logic
-- **D** - Deontic Normal Modal Logic
-- **T** - Reflexive Normal Modal Logic
-- **S4** - S4 Normal Modal Logic
-- **S5** - S5 Normal Modal Logic
-
-Many-valued
-
-- **FDE** - First Degree Entailment
-- **K3** - Strong Kleene Logic
-- **K3W** - Weak Kleene Logic
-- **K3WQ** - Weak Kleene with alternate quantification
-- **B3E** - Bochvar 3-valued External Logic
-- **GO** - Gappy Object Logic
-- **MH** - Paracomplete Hybrid Logic
-- **L3** - Łukasiewicz 3-valued Logic
-- **G3** - Gödel 3-valued Logic
-- **LP** - Logic of Paradox
-- **NH** - Paraconsistent Hybrid Logic
-- **P3** - Emil Post 3-valued Logic
-- **RM3** - R-mingle 3
-
-Many-valued Modal
-
-- **KFDE** - FDE with K modal
-- **KK3** - K3 with K modal
-- **KL3** - L<sub>3</sub> with K modal
-- [**KLP** - LP with K modal][KLP]
 
 ## Dependencies
 
@@ -134,4 +134,30 @@ Copyright (C) 2014-2023 Doug Owings. Released under the [GNU Affero General Publ
 [mailto]: mailto:doug@dougowings.net
 <!-- [refs-end] -->
 
+[CPL]: http://logic.dougowings.net/doc/logics/cpl.html
+[CFOL]: http://logic.dougowings.net/doc/logics/cfol.html
+
+[K]: http://logic.dougowings.net/doc/logics/k.html
+[D]: http://logic.dougowings.net/doc/logics/d.html
+[T]: http://logic.dougowings.net/doc/logics/t.html
+[S4]: http://logic.dougowings.net/doc/logics/s4.html
+[S5]: http://logic.dougowings.net/doc/logics/s5.html
+
+[FDE]: http://logic.dougowings.net/doc/logics/fde.html
+[K3]: http://logic.dougowings.net/doc/logics/k3.html
+[K3W]: http://logic.dougowings.net/doc/logics/k3w.html
+[K3WQ]: http://logic.dougowings.net/doc/logics/k3wq.html
+[B3E]: http://logic.dougowings.net/doc/logics/b3e.html
+[GO]: http://logic.dougowings.net/doc/logics/go.html
+[MH]: http://logic.dougowings.net/doc/logics/mh.html
+[L3]: http://logic.dougowings.net/doc/logics/l3.html
+[G3]: http://logic.dougowings.net/doc/logics/g3.html
+[LP]: http://logic.dougowings.net/doc/logics/lp.html
+[NH]: http://logic.dougowings.net/doc/logics/nh.html
+[P3]: http://logic.dougowings.net/doc/logics/p3.html
+[RM3]: http://logic.dougowings.net/doc/logics/rm3.html
+
+[KFDE]: http://logic.dougowings.net/doc/logics/kfde.html
+[KK3]: http://logic.dougowings.net/doc/logics/kk3.html
+[KL3]: http://logic.dougowings.net/doc/logics/kl3.html
 [KLP]: http://logic.dougowings.net/doc/logics/klp.html
