@@ -56,6 +56,7 @@ __all__ = (
     'k3wq',
     'kfde',
     'kk3',
+    'kl3',
     'klp',
     'l3',
     'lp',
@@ -68,7 +69,7 @@ __all__ = (
     't')
 
 NOARG = object()
-        
+
 class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
     """Logic module registry."""
 

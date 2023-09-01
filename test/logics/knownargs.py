@@ -698,6 +698,7 @@ validities['S5'] = validities['S4'] | [
     'S5 Material Inference 1',
 ]
 
+validities['KL3'] = ()
 
 invalidities = {}
 
@@ -793,6 +794,20 @@ invalidities['KLP'] = invalidities['K'] | [
     'Syllogism',
     'Universal Predicate Syllogism',
 ]
+invalidities['KL3'] = invalidities['K'] | [
+    'Conditional Contraction',
+    'Conditional Law of Excluded Middle',
+    'Conditional Pseudo Contraction',
+    'Identity Indiscernability 1',
+    'Identity Indiscernability 2',
+    'Law of Excluded Middle',
+    'Material Biconditional Identity',
+    'Material Identity',
+    'Material Pseudo Contraction',
+    'Material Pseudo Contraposition',
+    'Self Identity 1',
+    'Self Identity 2',
+]
 
 invalidities['KFDE'] = joinall(invalidities, 'K', 'KK3', 'KLP') | [
     'NP Conditional Modus Ponens',
@@ -850,19 +865,7 @@ invalidities['RM3'] = invalidities['CFOL'] | [
     'Universal Predicate Syllogism',
 ]
 
-invalidities['L3'] = invalidities['CFOL'] | [
-    'Conditional Contraction',
-    'Conditional Law of Excluded Middle',
-    'Conditional Pseudo Contraction',
-    'Identity Indiscernability 1',
-    'Identity Indiscernability 2',
-    'Law of Excluded Middle',
-    'Material Biconditional Identity',
-    'Material Identity',
-    'Material Pseudo Contraction',
-    'Material Pseudo Contraposition',
-    'Self Identity 1',
-    'Self Identity 2',
+invalidities['L3'] = invalidities['CFOL'] | invalidities['KL3'] | [
 ]
 
 invalidities['B3E'] = invalidities['CFOL'] | [
