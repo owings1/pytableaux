@@ -39,7 +39,7 @@ class Meta(LogicType.Meta):
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
     native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
-    extension_of = ('CFOL', 'KK3', 'KLP')
+    extension_of = ('CFOL', 'KK3', 'KL3', 'KLP')
 
 
 class Model(LogicType.Model[Meta.values]):

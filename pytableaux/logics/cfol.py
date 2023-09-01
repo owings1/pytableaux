@@ -28,7 +28,19 @@ class Meta(K.Meta):
     description = 'Standard bivalent logic with full first-order quantification'
     category_order = 2
     native_operators = FDE.Meta.native_operators
-    extension_of = ('CPL', 'K3', 'LP', 'L3', 'RM3')
+    extension_of = (
+        'B3E',
+        'CPL',
+        'G3',
+        'GO',
+        'K3',
+        'K3W',
+        'K3WQ',
+        'LP',
+        'L3',
+        'MH',
+        'NH',
+        'RM3')
 
 class Model(K.Model): pass
 

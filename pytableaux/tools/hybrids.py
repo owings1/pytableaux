@@ -86,6 +86,10 @@ class SequenceSet(Sequence[_T], Set[_T], metaclass=abcs.AbcMeta):
         def __radd__(self, other: list[_T1]) -> list[_T1]: ...
         @overload
         def __radd__(self, other: set[_T1]) -> set[_T1]: ...
+        @overload
+        def __sub__(self, other: Any) -> Self: ...
+        @overload
+        def __isub__(self, other: Any) -> Self: ...
 
     def __add__(self, other) -> Self:
         if isinstance(other, (Sequence, Set)):
@@ -235,8 +239,10 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
         'Reverse in place.'
         self._seq_.reverse()
 
-    def sort(self, /, *, key=None, reverse=False):
+    def sort(self, /, *, key: Callable[[_T], Any]|None=None, reverse:bool=False):
         'Sort the list in place.'
+        if key is None:
+            key = self._default_sort_key
         self._seq_.sort(key=key, reverse=reverse)
 
     def clear(self):
@@ -244,29 +250,27 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
         self._seq_.clear()
         self._set_.clear()
 
-    def insert(self, index, value, /):
+    def insert(self, index: SupportsIndex, value: _T, /):
         'Insert a value before an index. Raises ``DuplicateValueError``.'
         value = self._hook_cast(value)
         if value in self:
             raise DuplicateValueError(value)
-        self._hook_check((value,), EMPTY_SET)
+        arriving = (value,)
+        self._hook_check(arriving, EMPTY_SEQ)
         self._seq_.insert(index, value)
         self._set_.add(value)
-        self._hook_done((value,), EMPTY_SET)
+        self._hook_done(arriving, EMPTY_SEQ)
 
     def __delitem__(self, key):
         'Delete by index/slice.'
         if isinstance(key, SupportsIndex):
-            setdelete = self._set_.remove
-        elif isinstance(key, slice):
-            setdelete = self._set_.difference_update
+            values = (self[key],)
         else:
-            raise Emsg.InstCheck(key, (slice, SupportsIndex))
-        leaving = self[key]
-        self._hook_check(EMPTY_SET, (leaving,))
+            values = self[key]
+        self._hook_check(EMPTY_SEQ, values)
         del self._seq_[key]
-        setdelete(leaving)
-        self._hook_done(EMPTY_SET, (leaving,))
+        self._set_.difference_update(values)
+        self._hook_done(EMPTY_SEQ, values)
 
     def __setitem__(self, key, value):
         'Set value by index/slice. Raises ``DuplicateValueError``.'
@@ -275,58 +279,59 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
             self.__setitem_index__(key, value)
             return
         if isinstance(key, slice):
-            value = tuple(map(self._hook_cast, value))
-            self.__setitem_slice__(key, value)
+            values = tuple(map(self._hook_cast, value))
+            self.__setitem_slice__(key, values)
             return
         raise Emsg.InstCheck(key, (slice, SupportsIndex))
 
-    def __setitem_index__(self, index: SupportsIndex, arriving, /):
+    def __setitem_index__(self, index: SupportsIndex, value, /):
         'Index setitem Implementation'
-        leaving = self._seq_[index]
-        if arriving in self and arriving != leaving:
-            raise Emsg.DuplicateValue(arriving)
-        self._hook_check((arriving,), (leaving,))
-        self._set_.remove(leaving)
+        old = self._seq_[index]
+        if value in self and value != old:
+            raise Emsg.DuplicateValue(value)
+        arriving = (value,)
+        leaving = (old,)
+        self._hook_check(arriving, leaving)
+        self._set_.remove(old)
         try:
-            self._seq_[index] = arriving
+            self._seq_[index] = value
         except:
-            self._set_.add(leaving)
+            self._set_.add(old)
             raise
         else:
-            self._set_.add(arriving)
-        self._hook_done((arriving,), (leaving,))
+            self._set_.add(value)
+        self._hook_done(arriving, leaving)
 
-    def __setitem_slice__(self, slice_: slice, arriving, /):
+    def __setitem_slice__(self, slice_: slice, values, /):
         'Slice setitem Implementation'
         # Check length and compute range. This will fail for some bad input,
         # and it is fast to compute.
-        _ = slicerange(len(self), slice_, arriving)
+        _ = slicerange(len(self), slice_, values)
         leaving = self[slice_]
         # Check for duplicates.
         # Any value that we already contain, and is not leaving with the others
         # is a duplicate.
-        for v in filterfalse(leaving.__contains__, filter(self.__contains__, arriving)):
+        for v in filterfalse(leaving.__contains__, filter(self.__contains__, values)):
             raise Emsg.DuplicateValue(v)
-        self._hook_check(arriving, leaving)
-        self._set_ -= leaving
+        self._hook_check(values, leaving)
+        self._set_.difference_update(leaving)
         try:
-            self._seq_[slice_] = arriving
+            self._seq_[slice_] = values
         except:
-            self._set_ |= leaving
+            self._set_.update(leaving)
             raise
         else:
-            self._set_ |= arriving
-        self._hook_done(arriving, leaving)
+            self._set_.update(values)
+        self._hook_done(values, leaving)
 
-    def _hook_check(self, arriving, leaving):
+    def _hook_check(self, arriving: Sequence[_T], leaving: Sequence[_T]) -> None:
         pass
     
-    def _hook_done(self, arriving, leaving):
+    def _hook_done(self, arriving: Sequence[_T], leaving: Sequence[_T]) -> None:
         pass
 
-    def _hook_cast(self, value):
+    def _hook_cast(self, value: Any) -> _T:
         return value
 
-    if TYPE_CHECKING:
-        @overload
-        def __sub__(self, other: Any) -> Self: ...
+    def _default_sort_key(self, value: _T) -> Any:
+        return value

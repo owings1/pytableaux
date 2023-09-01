@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 from types import MappingProxyType as MapProxy
-from typing import Collection, Iterable, Mapping, NamedTuple, Sequence, TypeVar, Generic
+from typing import Collection, Iterable, Mapping, NamedTuple, Sequence, TypeVar
 from unittest import TestCase
 import operator as opr
 
 from pytableaux import examples
 from pytableaux.lang import *
 from pytableaux.logics import registry, LogicType
-from pytableaux.models import BaseModel
 from pytableaux.proof import *
-from pytableaux.tools import inflect, qset
+from pytableaux.tools import inflect
 
 from .logics import knownargs
 
@@ -43,7 +42,7 @@ class TabBranch(NamedTuple):
 
 class ArgModels(NamedTuple):
     arg: Argument
-    models: list[BaseModel]
+    models: list[LogicType.Model]
 
 
 class BaseCase(TestCase):
@@ -63,37 +62,30 @@ class BaseCase(TestCase):
         gennames = *filter(lambda key: key.startswith('gentest'), ns),
         for name in gennames:
             for name, func in getattr(cls, name)():
-                name = inflect.slug('test_' + str(name).removeprefix('test_') + '_gen')
+                name = f'test_{inflect.slug(name)}_gen'
                 assert name not in ns
                 setattr(cls, name, func)
         if autorules:
             for rulecls in cls.logic.Rules.all():
                 name = f'test_rule_{rulecls.name}_auto'
-                assert not hasattr(cls, name)
                 setattr(cls, name, cls.maketest('rule_eg', rulecls, bare=bare))
-            def test_groups(self: BaseCase):
-                cls.logic.Rules._check_groups()
-            setattr(cls, 'test_rules_check_groups', test_groups)
+            name = 'test_rules_check_groups_auto'
+            def test(self: BaseCase):
+                self.logic.Rules._check_groups()
+            setattr(cls, name, test)
         if autoargs:
-            for category in ('valid', 'invalid'):
-                known = qset()
-                if getattr(cls, 'logic', None):
-                    if category == 'valid':
-                        known.update(knownargs.get_validities(cls.logic))
-                    else:
-                        known.update(getattr(knownargs, f'{category}ities')[cls.logic.Meta.name])
+            it = zip(knownargs.get_known(cls.logic), ('invalid', 'valid'), strict=True)
+            for known, category in it:
                 for arg in known:
                     if isinstance(arg, Argument):
-                        title = arg.title or hash(arg)
+                        title = arg.title or arg.argstr()
                     else:
                         title = arg
                     name = f'test_{category}_{inflect.slug(title)}_auto'
-                    assert not hasattr(cls, name)
                     setattr(cls, name, cls.maketest(f'{category}_tab', arg))
         if autotables:
             for oper, exp in getattr(cls, 'tables', {}).items():
-                name = f'test_truth_table_{oper}_auto'
-                assert not hasattr(cls, name)
+                name = f'test_truth_table_{inflect.slug(oper)}_auto'
                 setattr(cls, name, cls.maketest('tttest', oper, exp))
 
     @staticmethod
@@ -214,7 +206,7 @@ class BaseCase(TestCase):
             tab.branch()
         return TabBranch(tab, tab[0])
 
-    def acmm(self, *args, **kw) -> tuple[Argument, list[BaseModel]]:
+    def acmm(self, *args, **kw) -> tuple[Argument, list[LogicType.Model]]:
         'Return argument, models.'
         kw['is_build_models'] = True
         tab = self.invalid_tab(*args, **kw)
@@ -293,5 +285,9 @@ class BaseCase(TestCase):
         return swnode(self.p(s), w)
 
     @property
-    def Model(self) -> type[BaseModel]:
+    def Model(self) -> type[LogicType.Model]:
         return self.logic.Model
+
+    @property
+    def System(self) -> type[LogicType.System]:
+        return self.logic.System

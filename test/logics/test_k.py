@@ -86,7 +86,7 @@ class TestRules(Base, autorules=True):
         self.assertEqual(len(targets), 0)
 
 
-class TestArgument(Base, autoargs=True):
+class TestArguments(Base, autoargs=True):
 
     def test_invalid_nested_diamond_within_box1(self):
         self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
