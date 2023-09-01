@@ -231,46 +231,16 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
 
     def all(self):
         for package in self.packages:
-            yield from self._package_all(self._check_package(package))
+            yield from self.package_all(package)
 
     def package_all(self, package: str|ModuleType, /):
-        """List the package's declared logic modules from its ``__all__``
+        """Yield the package's declared logic modules from its ``__all__``
         attribute.
         """
-        return self._package_all(self._check_package(package))
-
-    def sync(self) -> set[str]:
-        """Sync all registry packages by calling :meth:`sync_package()`.
-
-        Returns:
-            Set of each package name to its :meth:`sync_package()` result.
-        """
-        added = set()
-        for pkgname in self.packages:
-            added.update(self.sync_package(pkgname))
-        return added
-
-    def sync_package(self, package: str|ModuleType, /) -> set[str]:
-        """Attempt to find and add any logics that are already loaded (imported)
-        but not in the registry. Tries the package's ``__all__`` and ``__dict__``
-        attributes.
-
-        Args:
-            package: The package name or module. Must be in :attr:`packages`.
-        
-        Returns:
-            The module names added to the registry.
-        
-        Raises:
-            ValueError: if package is not in the registry packages.
-        """
-        added = set()
-        for modname in self.package_all(package):
-            if modname not in self.modules:
-                logic = sys.modules.get(modname) or import_module(modname)
-                self.add(logic)
-                added.add(logic)
-        return added
+        package = self._check_package(package)
+        return map(
+            f'{package.__name__}.%s'.__mod__,
+            package.__all__)
 
     def import_all(self) -> None:
         """Import all logics for all registry packages. See :meth:`import_package()`.
@@ -282,10 +252,9 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         to list the logic names.
 
         Raises:
-            ValueError: if ``pkgname`` is not in the registry packages.
+            ValueError: if the package is not in the registry packages.
         """
-        package = self._check_package(package)
-        for modname in self._package_all(package):
+        for modname in self.package_all(package):
             if modname not in self.modules:
                 self.add(import_module(modname))
 
@@ -317,7 +286,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
             category: groups[category]
             for category in sorted(groups)}
 
-    def _check_package(self, pkgref: str|ModuleType, /):
+    def _check_package(self, pkgref: str|ModuleType, /) -> ModuleType:
         if pkgref in self.packages:
             return sys.modules.get(pkgref) or import_module(pkgref)
         if isinstance(pkgref, str):
