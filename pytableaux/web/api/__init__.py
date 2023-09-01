@@ -20,15 +20,70 @@ pytableaux.web.api
 """
 from __future__ import annotations
 
-from . import views
+from cherrypy import HTTPError
+
+from ...errors import ProofTimeoutError
+from ...lang import Predicates, TriCoords
+from ..views import JsonView
 
 __all__ = (
     'app',
     'App')
 
+class View(JsonView):
+
+    def get_reply(self, *args, **kw) -> dict:
+        reply = {}
+        try:
+            try:
+                result = super().get_reply(*args, **kw)
+                if result is None:
+                    raise HTTPError(400)
+                reply['message'] = 'OK'
+                reply['result'] = result
+            except ProofTimeoutError as err:
+                self.status = 408
+                raise
+            except HTTPError as err:
+                self.status = err.status
+                reply['message'] = err.reason
+                raise
+            except Exception as err:
+                self.status = 500
+                raise
+        except Exception as err:
+            reply['error'] = type(err).__name__
+            self.logger.error(err, exc_info=err)
+            if 'message' not in reply:
+                reply['message'] = str(err)
+        if self.errors:
+            reply['errors'] = self.errors
+        reply['status'] = self.status
+        return reply
+
+    def parse_preds(self, key: str = 'predicates') -> Predicates|None:
+        specs = self.payload[key]
+        if not specs:
+            return Predicates.EMPTY
+        preds = Predicates()
+        errors = self.errors
+        for i, spec in enumerate(specs):
+            try:
+                preds.add(TriCoords.make(spec))
+            except Exception as err:
+                errors[f'{key}:{i}'] = err
+        if not errors:
+            return preds
+
+
+
+
+from . import views
+
+
 class App:
     parse = views.ParseView()
     prove = views.ProveView()
-    default = views.ApiView()
+    default = View()
 
 app = App()

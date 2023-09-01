@@ -24,70 +24,22 @@ from collections import deque
 from types import MappingProxyType as MapProxy
 from typing import Any, Mapping
 
-from cherrypy import HTTPError
-
 from ... import logics
-from ...errors import ParseError, ProofTimeoutError
-from ...lang import (Argument, LexWriter, Notation, Parser, Predicates,
-                     TriCoords)
+from ...errors import ParseError
+from ...lang import Argument, LexWriter, Notation, Parser, Predicates
 from ...proof import Tableau, writers
 from ...tools import EMPTY_MAP
 from ...tools.timing import StopWatch
-from ..views import JsonView
+from . import View
 
 __all__ = (
-    'ApiView',
     'ParseView',
     'ProveView')
 
 EMPTY = ()
 
-class ApiView(JsonView):
 
-    def get_reply(self, *args, **kw) -> dict:
-        reply = {}
-        try:
-            try:
-                result = super().get_reply(*args, **kw)
-                if result is None:
-                    raise HTTPError(400)
-                reply['message'] = 'OK'
-                reply['result'] = result
-            except ProofTimeoutError as err:
-                self.status = 408
-                raise
-            except HTTPError as err:
-                self.status = err.status
-                reply['message'] = err.reason
-                raise
-            except Exception as err:
-                self.status = 500
-                raise
-        except Exception as err:
-            reply['error'] = type(err).__name__
-            self.logger.error(err, exc_info=err)
-            if 'message' not in reply:
-                reply['message'] = str(err)
-        if self.errors:
-            reply['errors'] = self.errors
-        reply['status'] = self.status
-        return reply
-
-    def parse_preds(self, key: str = 'predicates') -> Predicates|None:
-        specs = self.payload[key]
-        if not specs:
-            return Predicates.EMPTY
-        preds = Predicates()
-        errors = self.errors
-        for i, spec in enumerate(specs):
-            try:
-                preds.add(TriCoords.make(spec))
-            except Exception as err:
-                errors[f'{key}:{i}'] = err
-        if not errors:
-            return preds
-
-class ParseView(ApiView):
+class ParseView(View):
 
     payload_defaults: Mapping[str, Any] = MapProxy(dict(
         notation = Notation.polish.name,
@@ -141,7 +93,7 @@ class ParseView(ApiView):
                     for format in notn.formats}
                 for notn in Notation})
 
-class ProveView(ApiView):
+class ProveView(View):
 
     payload_defaults: Mapping[str, Any] = MapProxy(dict(
         logic=None,
