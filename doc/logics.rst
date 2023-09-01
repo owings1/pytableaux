@@ -51,4 +51,5 @@ Many-valued Modal
 
     logics/kfde
     logics/kk3
+    logics/kl3
     logics/klp

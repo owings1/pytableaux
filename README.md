@@ -56,7 +56,8 @@ Many-valued Modal
 
 - **KFDE** - FDE with K modal
 - **KK3** - K3 with K modal
-- **KLP** - LP with K modal
+- **KL3** - L<sub>3</sub> with K modal
+- [**KLP** - LP with K modal][KLP]
 
 ## Dependencies
 
@@ -132,3 +133,5 @@ Copyright (C) 2014-2023 Doug Owings. Released under the [GNU Affero General Publ
 [issues]: https://github.com/owings1/pytableaux/issues
 [mailto]: mailto:doug@dougowings.net
 <!-- [refs-end] -->
+
+[KLP]: http://logic.dougowings.net/doc/logics/klp.html
