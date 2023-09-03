@@ -10,6 +10,7 @@
 .vscode
 .vtest
 **/__pycache__
+**/.mypy_cache
 **/.pytest_cache
 **/*.pyc
 **/htmlcov
@@ -19,6 +20,6 @@ Dockerfile
 extras
 local
 log
-res
+samples
 scripts
 settings.json

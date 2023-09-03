@@ -14,21 +14,18 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Find and crop a greyscale image.
+
+Requires img-packages dependencies.
+"""
 from __future__ import annotations
 
-import sys
-import tempfile
 from itertools import product
 from typing import Iterator
 
-from pdf2image import convert_from_path
 from PIL import Image
 
-
-def readpdf(file: str) -> Image.Image:
-    with tempfile.TemporaryDirectory() as path:
-        image, = convert_from_path(file, output_folder=path, grayscale=True)
-    return image
 
 def autocrop(image: Image.Image, /, **kw) -> Image.Image:
     return image.crop(tuple(findbox(image, **kw)))
@@ -59,7 +56,3 @@ def findbox(image: Image.Image, /, *, margin: int = 1) -> Iterator[int]:
         if get((x, y)) != BLANK:
             yield min(y + margin, image.height - 1)
             break
-
-if __name__ == '__main__':
-    src, dest = sys.argv[1:]
-    autocrop(readpdf(src)).save(dest)

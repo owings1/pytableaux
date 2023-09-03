@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2023 Doug Owings.
 # 
@@ -14,24 +15,32 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-pytableaux.tools.inflect
-------------------------
+Generates LaTeX files for all example arguments and all logics.
 """
 from __future__ import annotations
 
-import re
+import sys
+from os import mkdir
+from os.path import abspath
 
-pat_dashcase1 = re.compile(r'([A-Z]+)')
-pat_dashcase2 = re.compile(r'[^A-Za-z0-9]+')
-pat_slug = re.compile(r'[^A-Za-z0-9]')
+from pytableaux import examples
+from pytableaux.proof import TabWriter
+from pytableaux.tools.inflect import slug
 
-def dashcase(s: str):
-    s = pat_dashcase1.sub(r'-\1', s)
-    s = pat_dashcase2.sub(r'-', s)
-    return s.lower().strip('-')
 
-def slug(s: str):
-    return pat_slug.sub('_', s)
+def main(outdir: str):
+    outdir = abspath(outdir)
+    try:
+        mkdir(outdir)
+    except FileExistsError:
+        pass
+    pw = TabWriter(format='latex', notation='standard')
+    for tab in examples.tabiter():
+        name = slug(f'{tab.logic.Meta.name}_{tab.argument.argstr()}')
+        outfile = abspath(f'{outdir}/{name}.{pw.format}')
+        print(f'writing {outfile}')
+        with open(outfile, 'w') as file:
+            file.write(pw(tab, fulldoc=True))
 
-def snakespace(s: str):
-    return dashcase(s).replace('-', ' ').title()
+if __name__ == '__main__':
+    main(*sys.argv[1:])
