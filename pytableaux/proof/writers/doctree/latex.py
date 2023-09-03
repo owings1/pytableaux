@@ -40,7 +40,7 @@ class LatexTranslator(Translator, NodeVisitor):
         self.head.extend((
             '\\documentclass[10pt]{article}\n',
             '\\usepackage{latexsym, qtree, stmaryrd}\n',
-            '\\pagestyle{empty}',
+            '\\pagestyle{empty}\n',
             '\\begin{document}\n\n'))
 
     def depart_document(self, node):

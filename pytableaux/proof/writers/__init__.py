@@ -51,9 +51,12 @@ class TabWriterMeta(abcs.AbcMeta):
             reg = registries['default']
         except KeyError:
             reg = registry
-        if not args:
+        if args:
+            fmt, *args = args
+        elif 'format' in kw:
+            fmt = kw.pop('format')
+        else:
             return reg.default(*args, **kw)
-        fmt, *args = args
         try:
             reg[fmt]
         except KeyError:
@@ -158,7 +161,7 @@ class TabWriterRegistry(MapCover[str, type[TabWriter]], MutableMapping[str, type
             Args:
                 cls: The writer class.
 
-            Kwargs:
+            Keyword Args:
                 key: An alternate key to store, default is the writer's format.
                 force: Replace format/key if exists, default False.
                 default: Set as default writer.
@@ -170,13 +173,13 @@ class TabWriterRegistry(MapCover[str, type[TabWriter]], MutableMapping[str, type
         def register(self, /, *, key:str=..., force:bool=..., default:bool|None=...) -> Callable[[type[_TWT]], type[_TWT]]:
             """Decorator factory for registering with options.
 
-            Kwargs:
+            Keyword Args:
                 key: An alternate key to store, default is the writer's format.
                 force: Replace format/key if exists.
                 default: Set as default writer.
             
             Returns:
-                Class decorator factory.
+                Class decorator.
             """
 
 registry = TabWriterRegistry(name='default')

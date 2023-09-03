@@ -29,6 +29,13 @@ from ..utils import BaseCase
 
 # Proof writers
 
+class TestTabWriter(BaseCase):
+
+    def test_construct_kwargs(self):
+        pw = TabWriter(format='html', notation='standard')
+        self.assertEqual(pw.format, 'html')
+        self.assertEqual(pw.lw.notation, Notation.standard)
+
 class TestHtml(BaseCase):
 
     def test_write_no_arg(self):
