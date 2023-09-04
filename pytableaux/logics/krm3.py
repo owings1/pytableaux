@@ -31,6 +31,7 @@ class Meta(KLP.Meta):
     description = 'Modal version of RM3 based on K normal modal logic'
     category_order = RM3.Meta.category_order
     native_operators = KFDE.Meta.native_operators | RM3.Meta.native_operators
+    category_order = 1300
     extension_of = ('RM3')
 
 class Model(KFDE.Model, RM3.Model): pass

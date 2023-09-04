@@ -388,6 +388,9 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         # ensure frames for each world
         for w in self.R:
             self.frames[w]
+        # ensure R has each world
+        # for w in self.frames:
+        #     self.R[w]
         for w, frame in self.frames.items():
             atomics.update(frame.atomics)
             opaques.update(frame.opaques)

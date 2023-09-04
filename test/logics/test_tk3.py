@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2023 Doug Owings.
 # 
@@ -14,35 +13,21 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux.logics.tk3 tests
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
-from . import s4fde as S4FDE
-from . import kfde as KFDE
-from . import s5 as S5
-from ..tools import group
+from . import test_k3 as K3Suite
 
+from ..utils import BaseCase
 
-class Meta(KFDE.Meta):
-    name = 'S5FDE'
-    title = 'FDE with S5 modal'
-    description = 'Modal version of FDE based on S5 normal modal logic'
-    category_order = 14
-    extension_of = ('S4FDE')
+class Base(BaseCase):
+    logic = 'TK3'
 
-class Model(S4FDE.Model):
+class TestRules(Base, autorules=True, bare=True): pass
 
-    _ensure_global_access = S5.Model._ensure_global_access
+class TestArguments(Base, autoargs=True): pass
 
-    def finish(self):
-        self._check_not_finished()
-        self._ensure_global_access()
-        return super().finish()
-
-class System(FDE.System): pass
-
-class Rules(LogicType.Rules):
-    closure = KFDE.Rules.closure
-    groups = S4FDE.Rules.groups + group(
-        group(S5.Rules.Symmetric))
+class TestTables(Base, K3Suite.TestTables): pass

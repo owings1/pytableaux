@@ -1058,6 +1058,24 @@ L('KK3',
         'Self Identity 2',
     ))
 
+L('TK3',
+    valid = (
+    ),
+    invalid = (
+    ))
+
+L('S4K3',
+    valid = (
+    ),
+    invalid = (
+    ))
+
+L('S5K3',
+    valid = (
+    ),
+    invalid = (
+    ))
+
 L('KL3',
     valid = (
         'KFDE Distribution Inference 1',

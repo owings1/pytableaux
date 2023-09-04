@@ -18,31 +18,22 @@ from __future__ import annotations
 
 from . import LogicType
 from . import fde as FDE
-from . import s4fde as S4FDE
-from . import kfde as KFDE
-from . import s5 as S5
-from ..tools import group
+from . import k3 as K3
+from . import kk3 as KK3
+from . import s5fde as S5FDE
 
 
-class Meta(KFDE.Meta):
-    name = 'S5FDE'
-    title = 'FDE with S5 modal'
-    description = 'Modal version of FDE based on S5 normal modal logic'
-    category_order = 14
-    extension_of = ('S4FDE')
+class Meta(KK3.Meta):
+    name = 'S5K3'
+    title = 'K3 with S5 modal'
+    description = 'Modal version of K3 based on S5 normal modal logic'
+    category_order = 24
+    extension_of = ('S4K3', 'S5FDE')
 
-class Model(S4FDE.Model):
-
-    _ensure_global_access = S5.Model._ensure_global_access
-
-    def finish(self):
-        self._check_not_finished()
-        self._ensure_global_access()
-        return super().finish()
-
+class Model(S5FDE.Model): pass
 class System(FDE.System): pass
 
 class Rules(LogicType.Rules):
-    closure = KFDE.Rules.closure
-    groups = S4FDE.Rules.groups + group(
-        group(S5.Rules.Symmetric))
+    closure = K3.Rules.closure
+    groups = S5FDE.Rules.groups
+

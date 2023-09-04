@@ -29,6 +29,7 @@ class Meta(KFDE.Meta):
     values = LP.Meta.values
     designated_values = LP.Meta.designated_values
     unassigned_value = LP.Meta.unassigned_value
+    category_order = 1000
     extension_of = ('KFDE', 'LP')
 
 class Model(KFDE.Model): pass

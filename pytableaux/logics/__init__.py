@@ -67,10 +67,14 @@ __all__ = (
     'rm3',
     's4',
     's4fde',
+    's4k3',
     's5',
     's5fde',
+    's5k3',
     't',
-    'tfde')
+    'tfde',
+    'tk3',
+    )
 
 NOARG = object()
 
