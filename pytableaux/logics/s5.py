@@ -32,12 +32,16 @@ class Meta(S4.Meta):
         'Normal modal logic with a reflexive, symmetric, and transitive '
         'access relation')
     category_order = 5
-    extension_of = ('S4')
+    extension_of = ('S4', 'S5FDE')
 
 class Model(S4.Model):
 
     def finish(self):
         self._check_not_finished()
+        self._ensure_global_access()
+        return super().finish()
+
+    def _ensure_global_access(self):
         R = self.R
         while True:
             self._ensure_reflexive_transitive()
@@ -50,7 +54,6 @@ class Model(S4.Model):
             if not to_add:
                 break
             for _ in map(R.add, to_add): pass
-        return super().finish()
 
 class System(K.System): pass
 

@@ -134,6 +134,7 @@ data = MapProxy({
     'S4 Material Inference 1'          : (EMPTY, 'CLaLLa', ('S4', 'S41', 'Transitive', 'RT', 'Transitivity')),
     'S4 Material Inference 2'          : (('LCaMNb', 'Ma'), 'MNb', ('S42',)),
     'S5 Conditional Inference 1'       : (EMPTY, 'UaLMa'),
+    'S5 Inference 1'                   : (('a',), 'LMa'),
     'S5 Material Inference 1'          : (EMPTY, 'CaLMa', ('S5', 'S51', 'RST')),
     'Self Identity 1'                  : (EMPTY, 'Imm'),
     'Self Identity 2'                  : (EMPTY, 'VxIxx'),

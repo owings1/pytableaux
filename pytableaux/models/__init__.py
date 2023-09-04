@@ -268,7 +268,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         frame = self.frames[world]
         opaques = frame.opaques
         if opaques.get(s, value) is not value:
-            raise ModelValueError(f'Inconsistent value for sentence {s}')
+            raise ModelValueError(f'Inconsistent value for sentence {s}: {value}')
         opaques[s] = value
         self.sentences.add(s)
         # We might have a quantified opaque sentence, in which case we will need
@@ -282,7 +282,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         value = self.values[value]
         atomics = self.frames[world].atomics
         if atomics.get(s, value) is not value:
-            raise ModelValueError(f'Inconsistent value for sentence {s}')
+            raise ModelValueError(f'Inconsistent value for sentence {s}: {value}')
         atomics[s] = value
         self.sentences.add(s)
 

@@ -188,6 +188,7 @@ L('S4',
     ),
     invalid = (
         'S5 Conditional Inference 1',
+        'S5 Inference 1',
         'S5 Material Inference 1',
     ))
 
@@ -1003,6 +1004,30 @@ L('KFDE',
         'Modal Transformation 3',
         'Modal Transformation 4',
         'Necessity Distribution 2',
+    ),
+    invalid = (
+
+    ))
+
+L('TFDE',
+    valid = (
+        'Necessity Elimination',
+        'NP Collapse 1',
+        'Possibility Addition',
+        'Serial Inference 2',
+    ),
+    invalid = (
+    ))
+
+L('S4FDE',
+    valid = (
+    ),
+    invalid = (
+    ))
+
+L('S5FDE',
+    valid = (
+        'S5 Inference 1',
     ),
     invalid = (
         'NP Conditional Modus Ponens',
