@@ -1,9 +1,9 @@
-.. _kl3:
+.. _krm3:
 
-.. module:: pytableaux.logics.kl3
+.. module:: pytableaux.logics.krm3
 
 ***************************************
-L{} - L{L3} with K Modal
+L{} - L{RM3} with K Modal
 ***************************************
 
 .. contents:: Contents
@@ -12,9 +12,9 @@ L{} - L{L3} with K Modal
 
 ------------------------
 
-.. _kl3-semantics:
-.. _kl3-model:
-.. _kl3-frame:
+.. _krm3-semantics:
+.. _krm3-model:
+.. _krm3-frame:
 
 Semantics
 =========
@@ -22,9 +22,9 @@ Semantics
 .. include:: include/k/models_blurb.rst
 
 The semantics for predication, quantification, and truth-functional operators are the
-same as {@L3}.
+same as {@RM3}.
 
-.. _kl3-modality:
+.. _krm3-modality:
 
 Modal Operators
 ---------------
@@ -37,7 +37,7 @@ Modal Operators
 
 .. include:: include/kfde/m.necessity.rst
 
-.. _kl3-consequence:
+.. _krm3-consequence:
 
 Consequence
 -----------
@@ -46,7 +46,7 @@ Consequence
 
 .. include:: include/kfde/m.consequence.rst
 
-.. _kl3-system:
+.. _krm3-system:
 
 Tableaux
 ========
@@ -68,19 +68,19 @@ Trunk
 Closure
 -------
 
-The closure rules are the same as {@L3}.
+The closure rules are the same as {@RM3}.
 
 .. tableau-rules::
   :docflags:
   :group: closure
   :title: -
 
-.. _kl3-rules:
+.. _krm3-rules:
 
 Rules
 --------
 
-Non-modal rules for L{} are exactly like their {@L3} counterparts, with
+Non-modal rules for L{} are exactly like their {@RM3} counterparts, with
 the addition of carrying over the world marker from the target node(s).
 
 .. include:: include/kfde/rule_groups.rst

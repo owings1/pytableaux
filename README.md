@@ -43,6 +43,7 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**KK<sub>3</sub>** - K<sub>3</sub> with K modal][KK3]
 - [**KL<sub>3</sub>** - L<sub>3</sub> with K modal][KL3]
 - [**KLP** - LP with K modal][KLP]
+- [**KRM<sub>3</sub>** - RM<sub>3</sub> with K modal][KRM3]
 
 ## Docker
 
@@ -161,3 +162,4 @@ Copyright (C) 2014-2023 Doug Owings. Released under the [GNU Affero General Publ
 [KK3]: http://logic.dougowings.net/doc/logics/kk3.html
 [KL3]: http://logic.dougowings.net/doc/logics/kl3.html
 [KLP]: http://logic.dougowings.net/doc/logics/klp.html
+[KRM3]: http://logic.dougowings.net/doc/logics/krm3.html

@@ -53,3 +53,4 @@ Many-valued Modal
     logics/kk3
     logics/kl3
     logics/klp
+    logics/krm3

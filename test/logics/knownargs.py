@@ -991,24 +991,6 @@ L('RM3',
         'Simplification',
     ),
     invalid = (
-        'Biconditional Elimination 3',
-        'Biconditional Introduction 1',
-        'Biconditional Introduction 2',
-        'Disjunctive Syllogism 2',
-        'Disjunctive Syllogism',
-        'Existential Syllogism',
-        'Identity Indiscernability 1',
-        'Identity Indiscernability 2',
-        'Law of Non-contradiction',
-        'Material Biconditional Elimination 1',
-        'Material Biconditional Elimination 2',
-        'Material Biconditional Elimination 3',
-        'Material Modus Ponens',
-        'Material Modus Tollens',
-        'Self Identity 1',
-        'Self Identity 2',
-        'Syllogism',
-        'Universal Predicate Syllogism',
     ))
 
 # ---------------------------------------------------------------------------
@@ -1108,6 +1090,37 @@ L('KLP',
         'Universal Predicate Syllogism',
     ))
 
+L('KRM3',
+    valid = (
+        'KFDE Distribution Inference 1',
+        'Modal Transformation 1',
+        'Modal Transformation 2',
+        'Modal Transformation 3',
+        'Modal Transformation 4',
+        'NP Conditional Modus Ponens',
+        'Necessity Distribution 1',
+        'Necessity Distribution 2',
+    ),
+    invalid = (
+        'Biconditional Elimination 3',
+        'Biconditional Introduction 1',
+        'Biconditional Introduction 2',
+        'Disjunctive Syllogism 2',
+        'Disjunctive Syllogism',
+        'Existential Syllogism',
+        'Identity Indiscernability 1',
+        'Identity Indiscernability 2',
+        'Law of Non-contradiction',
+        'Material Biconditional Elimination 1',
+        'Material Biconditional Elimination 2',
+        'Material Biconditional Elimination 3',
+        'Material Modus Ponens',
+        'Material Modus Tollens',
+        'Self Identity 1',
+        'Self Identity 2',
+        'Syllogism',
+        'Universal Predicate Syllogism',
+    ))
 
 class ArgSet(qset[Argument]):
 
