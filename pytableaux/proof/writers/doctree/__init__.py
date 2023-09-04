@@ -25,11 +25,11 @@ import itertools
 from abc import abstractmethod
 from collections import deque
 from types import MappingProxyType as MapProxy
-from typing import Any, Iterable, Self, TypeVar, Callable
+from typing import Any, Callable, Self, TypeVar
 
 from ....lang import LexWriter, StringTable
-from ...tableaux import Tableau
 from ....tools import EMPTY_SET, abcs
+from ...tableaux import Tableau
 from .. import TabWriter, TabWriterRegistry
 from . import nodes
 

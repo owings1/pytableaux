@@ -21,7 +21,6 @@ pytableaux.proof.writers.doctree.text
 WIP
 """
 from __future__ import annotations
-from collections import deque
 
 import logging
 from typing import Any, Self

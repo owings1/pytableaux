@@ -22,11 +22,11 @@ No Python dependencies. Designed to run in texlive docker image.
 from __future__ import annotations
 
 import argparse
-from collections import deque
 import logging
 import os
 import subprocess
 import sys
+from collections import deque
 from dataclasses import dataclass
 from os.path import abspath
 
