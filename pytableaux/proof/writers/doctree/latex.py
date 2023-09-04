@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 
 from ....errors import SkipDeparture
+from ....lang import Marking
 from ....tools import EMPTY_SET, closure
 from . import DoctreeTabWriter, NodeVisitor, Translator
 
@@ -47,38 +48,38 @@ class LatexTranslator(Translator, NodeVisitor):
         self.foot.append('\n\n\\end{document}')
 
     def visit_tableau(self, node):
-        self.body.append('\\Tree')
+        self += '\\Tree'
         raise SkipDeparture
 
     def visit_tree(self, node):
-        self.body.append(' [.')
+        self += ' [.'
 
     def depart_tree(self, node):
-        self.body.append(' ]')
+        self += ' ]'
     
     def visit_node_segment(self, node):
-        self.body.append('{')
+        self += '{'
 
     def depart_node_segment(self, node):
-        self.body.append('}')
+        self += '}'
     
     def visit_node(self, node):
         if node['data-segment-index'] > 0:
-            self.body.append(' \\\\ ')
+            self += ' \\\\ '
         if 'ticked' in node['classes']:
-            self.body.append('\\framebox{')
-        self.body.append('$')
+            self += '\\framebox{'
+        self += '$'
 
     def depart_node(self, node):
-        self.body.append('$')
+        self += '$'
         if 'ticked' in node['classes']:
-            self.body.append('}')
+            self += '}'
 
     def visit_sentence(self, node):
         rendered = self.lw(node['data-sentence'])
         if self.lw.format != self.format:
             rendered = self.escape(rendered)
-        self.body.append(rendered)
+        self += rendered
         raise SkipDeparture
 
     def visit_separator(self, node):
@@ -86,47 +87,46 @@ class LatexTranslator(Translator, NodeVisitor):
             sep = ', '
         else:
             sep = ' '
-        self.body.append(sep)
+        self += sep
         raise SkipDeparture
 
     def visit_world(self, node):
-        self.body.append('w')
+        self += 'w'
         raise SkipDeparture
 
     def visit_access(self, node):
-        self.body.append(self.access_marker)
+        self += self.strings[Marking.tableau, 'access']
         raise SkipDeparture
 
     def visit_textnode(self, node):
-        self.body.append(self.escape(node))
+        self += self.escape(node)
         raise SkipDeparture
     
     def visit_subscript(self, node):
-        self.body.append('_{')
+        self += '_{'
 
     def depart_subscript(self, node):
-        self.body.append('}')
+        self += '}'
 
     def visit_designation(self, node):
-        marker = self.designation_markers[node['data-designated']]
-        self.body.append(marker)
+        self += self.strings[Marking.tableau, 'designation', node['data-designated']]
         raise SkipDeparture
 
     def visit_ellipsis(self, node):
-        self.body.append('\\vdots{}')
+        self += '\\vdots{}'
         raise SkipDeparture
 
     def visit_flag(self, node):
         flag = node['data-flag']
         try:
-            marker = self.flag_markers[flag]
+            marker = self.strings[Marking.tableau, 'flag', flag]
         except KeyError:
             marker = self.escape(flag)
-        self.body.append(marker)
+        self += marker
         raise SkipDeparture
 
     def visit_clear(self, node):
-        self.body.append('\n\n')
+        self += '\n\n'
         raise SkipDeparture
 
     def noop(self, node):

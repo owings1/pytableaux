@@ -25,9 +25,9 @@ import itertools
 from abc import abstractmethod
 from collections import deque
 from types import MappingProxyType as MapProxy
-from typing import TypeVar, Callable
+from typing import Any, Iterable, Self, TypeVar, Callable
 
-from ....lang import LexWriter, Marking, StringTable
+from ....lang import LexWriter, StringTable
 from ...tableaux import Tableau
 from ....tools import EMPTY_SET, abcs
 from .. import TabWriter, TabWriterRegistry
@@ -96,24 +96,25 @@ class Translator(abcs.Abc):
 
     format = 'unknown'
 
+    doc: nodes.document
+    head: deque[str]
+    body: deque[str]
+    foot: deque[str]
+    lw: LexWriter
+    strings: StringTable
+
     def __init__(self, doc: nodes.document, lw: LexWriter, /):
         self.doc = doc
-        self.head: deque[str] = deque()
-        self.body: deque[str] = deque()
-        self.foot: deque[str] = deque()
+        self.head = deque()
+        self.body = deque()
+        self.foot = deque()
         self.lw = lw
         if self.lw.format == self.format:
             self.strings = self.lw.strings
         else:
-            self.strings = StringTable.fetch(self.lw.notation, self.format)
-        strings = self.strings
-        self.designation_markers = [
-            strings[Marking.tableau, 'designation', False],
-            strings[Marking.tableau, 'designation', True]]
-        self.flag_markers = dict(
-            (flag, strings[Marking.tableau, 'flag', 'closure'])
-            for flag in ('closure', 'quit'))
-        self.access_marker = strings[Marking.tableau, 'access']
+            self.strings = StringTable.fetch(
+                notation=self.lw.notation,
+                format=self.format)
         self.setup()
 
     def setup(self):
@@ -121,6 +122,13 @@ class Translator(abcs.Abc):
 
     def translate(self) -> None:
         self.doc.walkabout(self)
+
+    def __iadd__(self, item: Any) -> Self:
+        if isinstance(item, str):
+            self.body.append(item)
+        else:
+            self.body.extend(item)
+        return self
 
 class DoctreeTabWriter(TabWriter):
 
@@ -158,6 +166,7 @@ registry = TabWriterRegistry(name=DoctreeTabWriter.engine)
 
 from .html import HtmlTabWriter as HtmlTabWriter
 from .latex import LatexTabWriter as LatexTabWriter
+from .text import TextTabWriter as TextTabWriter
 
 registry.register(HtmlTabWriter)
 registry.register(LatexTabWriter)

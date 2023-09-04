@@ -30,6 +30,7 @@ from types import MappingProxyType as MapProxy
 from typing import Any, Mapping, Sequence
 
 from ....errors import SkipDeparture
+from ....lang import Marking
 from ....tools import EMPTY_SET, inflect
 from ...tableaux import Tableau
 from . import DefaultNodeVisitor, DoctreeTabWriter, Translator, nodes
@@ -42,19 +43,20 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
 
     format = 'html'
     logger = logging.getLogger(__name__)
-    escape = staticmethod(html.escape)
+
+    @staticmethod
+    def escape(s: str) -> str:
+        return html.escape(s)
 
     def default_visitor(self, node):
         if isinstance(node, nodes.BlockElement):
-            self.body.append('\n')
-        self.body.append(
-            self.get_opentag(
-                self.get_tagname(node),
-                self.get_attrs_map(node)))
+            self += '\n'
+        self += self.get_opentag(
+            self.get_tagname(node),
+            self.get_attrs_map(node))
 
     def default_departer(self, node):
-        self.body.append(
-            self.get_closetag(self.get_tagname(node)))
+        self += self.get_closetag(self.get_tagname(node))
 
     def visit_document(self, node):
         self.head.append('\n'.join((
@@ -71,11 +73,11 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
             self.get_closetag('html'))))
 
     def visit_textnode(self, node):
-        self.body.append(self.escape(node))
+        self += self.escape(node)
         raise SkipDeparture
 
     def visit_rawtext(self, node):
-        self.body.append(node)
+        self += node
         raise SkipDeparture
 
     def visit_sentence(self, node: nodes.Element):
@@ -83,30 +85,32 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
         if self.lw.format != self.format:
             rendered = self.escape(rendered)
         self.default_visitor(node)
-        self.body.append(rendered)
+        self += rendered
 
     def visit_world(self, node):
         self.default_visitor(node)
-        self.body.append('w')
+        self += 'w'
 
     def visit_access(self, node):
         self.default_visitor(node)
-        self.body.append(self.access_marker)
+        self += self.strings[Marking.tableau, 'access']
 
     def visit_designation(self, node):
         self.default_visitor(node)
-        marker = self.designation_markers[node['data-designated']]
-        self.body.append(marker)
+        self += self.strings[Marking.tableau, 'designation', node['data-designated']]
 
     def visit_flag(self, node):
         self.default_visitor(node)
         flag = node['data-flag']
-        if flag in self.flag_markers:
-            self.body.append(self.flag_markers[flag])
+        try:
+            marker = self.strings[Marking.tableau, 'flag', flag]
+        except KeyError:
+            marker = self.escape(flag)
+        self += marker
 
     def visit_ellipsis(self, node):
         self.default_visitor(node)
-        self.body.append('&vellip;')
+        self += '&vellip;'
 
     def visit_separator(self, node):
         self.default_visitor(node)
@@ -114,7 +118,7 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
             sep = ', '
         else:
             sep = ' '
-        self.body.append(sep)
+        self += sep
 
     def get_opentag(self, tagname: str, attrs: Mapping[str, Any]|None) -> str:
         parts = deque()

@@ -102,6 +102,18 @@ class TabWriter(metaclass=TabWriterMeta):
     __slots__ = ('lw', 'opts')
 
     def __init__(self, notation: Notation = None, strings: StringTable|None = None, *, lw: LexWriter = None, **opts):
+        """__init__(self, format: str|None = None, notation: Notation = None, strings: StringTable|None = None, *, lw: LexWriter = None, **opts)
+        Create a TabWriter
+
+        Args:
+            format (str): The format, e.g. 'html', 'latex'
+            notation (str|Notation): The notation
+            strings (StringTable): A specific string table to use
+        
+        Keyword Args:
+            lw (LexWriter): A specific LexWriter to use
+            **opts: Options to pass to the TabWriter
+        """
         if lw is None:
             if notation is None:
                 notation = LexWriter.DEFAULT_NOTATION
@@ -203,4 +215,3 @@ from . import doctree
 registries[doctree.registry.name] = doctree.registry
 registry.update(doctree.registry)
 registry.default = doctree.registry.default
-

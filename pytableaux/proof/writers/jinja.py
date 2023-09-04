@@ -34,7 +34,7 @@ from ..tableaux import Tableau
 from . import TabWriter, TabWriterRegistry
 
 __all__ = (
-    'HtmlTabWriter',
+    # 'HtmlTabWriter',
     'JinjaTabWriter',
     'registry',
     'TextTabWriter')
@@ -58,29 +58,31 @@ class JinjaTabWriter(TabWriter):
     template_name: str
     jinja: jinja2.Environment
 
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        if self.lw.format == self.format:
-            self.strings = self.lw.strings
-        else:
-            self.strings = StringTable.fetch(self.lw.notation, self.format)
-        strings = self.strings
-        self.designation_markers = [
-            strings[Marking.tableau, 'designation', False],
-            strings[Marking.tableau, 'designation', True]]
-        self.flag_markers = dict(
-            (flag, strings[Marking.tableau, 'flag', 'closure'])
-            for flag in ('closure', 'quit'))
-        self.access_marker = strings[Marking.tableau, 'access']
+    # def __init__(self, *args, **kw):
+    #     super().__init__(*args, **kw)
+    #     if self.lw.format == self.format:
+    #         self.strings = self.lw.strings
+    #     else:
+    #         self.strings = StringTable.fetch(
+    #             notation=self.lw.notation,
+    #             format=self.format)
+    #     strings = self.strings
+    #     self.designation_markers = [
+    #         strings[Marking.tableau, 'designation', False],
+    #         strings[Marking.tableau, 'designation', True]]
+    #     self.flag_markers = dict(
+    #         (flag, strings[Marking.tableau, 'flag', 'closure'])
+    #         for flag in ('closure', 'quit'))
+    #     self.access_marker = strings[Marking.tableau, 'access']
 
     def __call__(self, tab: Tableau, **kw):
         return self.render(self.template_name, tab=tab, **kw)
     
     def render(self, template: str, *args, **kw) -> str:
-        kw |= dict(
-            flag_markers=self.flag_markers,
-            designation_markers=self.designation_markers,
-            access_marker=self.access_marker)
+        # kw |= dict(
+        #     flag_markers=self.flag_markers,
+        #     designation_markers=self.designation_markers,
+        #     access_marker=self.access_marker)
         return self.get_template(template).render(*args, **kw)
 
     def get_template(self, name: str, *args, **kw):
@@ -90,46 +92,46 @@ class JinjaTabWriter(TabWriter):
 
 registry = TabWriterRegistry(name=JinjaTabWriter.engine)
 
-@registry.register
-class HtmlTabWriter(JinjaTabWriter):
-    """HTML tableau writer.
-    """
+# @registry.register
+# class HtmlTabWriter(JinjaTabWriter):
+#     """HTML tableau writer.
+#     """
 
-    format = 'html'
-    template_name = 'tableau.jinja2'
-    css_template_name = 'static/tableau.css'
-    jinja = jinja(f'{TEMPLATES_BASE_DIR}/{format}')
-    defaults = MapProxy(dict(
-        wrapper      = True,
-        classes      = (),
-        wrap_classes = (),
-        inline_css   = False))
+#     format = 'html'
+#     template_name = 'tableau.jinja2'
+#     css_template_name = 'static/tableau.css'
+#     jinja = jinja(f'{TEMPLATES_BASE_DIR}/{format}')
+#     defaults = MapProxy(dict(
+#         wrapper      = True,
+#         classes      = (),
+#         wrap_classes = (),
+#         inline_css   = False))
 
-    def __call__(self, tab: Tableau, *, classes = None, wrap_classes = None) -> str:
-        """"
-        Args:
-            tab: The tableaux instance.
-            classes: Additional classes for the main tableau element. Merged
-                with `classes` option.
-        """
-        tab_classes = qset(classes or EMPTY_SET)
-        tab_classes.update(self.opts['classes'])
-        tab_classes.add('tableau')
-        wrap_classes = qset(wrap_classes or EMPTY_SET)
-        wrap_classes.update(self.opts['wrap_classes'])
-        wrap_classes.add('tableau-wrapper')
-        return super().__call__(tab,
-            wrap_classes = wrap_classes,
-            tab_classes = tab_classes,
-            css_template_name = self.css_template_name)
+#     def __call__(self, tab: Tableau, *, classes = None, wrap_classes = None) -> str:
+#         """"
+#         Args:
+#             tab: The tableaux instance.
+#             classes: Additional classes for the main tableau element. Merged
+#                 with `classes` option.
+#         """
+#         tab_classes = qset(classes or EMPTY_SET)
+#         tab_classes.update(self.opts['classes'])
+#         tab_classes.add('tableau')
+#         wrap_classes = qset(wrap_classes or EMPTY_SET)
+#         wrap_classes.update(self.opts['wrap_classes'])
+#         wrap_classes.add('tableau-wrapper')
+#         return super().__call__(tab,
+#             wrap_classes = wrap_classes,
+#             tab_classes = tab_classes,
+#             css_template_name = self.css_template_name)
 
-    def attachments(self, /) -> dict[str, str]:
-        """
-        Returns:
-            A dict with:
-              - `css`: The static css.
-        """
-        return dict(css=self.render(self.css_template_name))
+#     def attachments(self, /) -> dict[str, str]:
+#         """
+#         Returns:
+#             A dict with:
+#               - `css`: The static css.
+#         """
+#         return dict(css=self.render(self.css_template_name))
 
 @registry.register(default=True)
 class TextTabWriter(JinjaTabWriter):
