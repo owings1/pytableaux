@@ -933,6 +933,7 @@ L('P3',
         'S4 Material Inference 1',
         'S4 Material Inference 2',
         'S5 Conditional Inference 1',
+        'S5 Inference 1',
         'S5 Material Inference 1',
         'Self Identity 1',
         'Self Identity 2',
@@ -1038,6 +1039,26 @@ L('KK3',
         'NP Conditional Modus Ponens',
     ),
     invalid = (
+    ))
+
+L('TK3',
+    valid = (
+    ),
+    invalid = (
+    ))
+
+L('S4K3',
+    valid = (
+        'S4 Conditional Inference 2',
+        'S4 Material Inference 2',
+    ),
+    invalid = (
+    ))
+
+L('S5K3',
+    valid = (
+    ),
+    invalid = (
         'Biconditional Identity',
         'Conditional Double Negation',
         'Conditional Identity',
@@ -1054,52 +1075,14 @@ L('KK3',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
         'Necessity Distribution 1',
+        'Reflexive Inference 1',
+        'S4 Conditional Inference 1',
+        'S4 Material Inference 1',
+        'S5 Conditional Inference 1',
+        'S5 Material Inference 1',
         'Self Identity 1',
         'Self Identity 2',
-    ))
-
-L('TK3',
-    valid = (
-    ),
-    invalid = (
-    ))
-
-L('S4K3',
-    valid = (
-    ),
-    invalid = (
-    ))
-
-L('S5K3',
-    valid = (
-    ),
-    invalid = (
-    ))
-
-L('KL3',
-    valid = (
-        'KFDE Distribution Inference 1',
-        'Modal Transformation 1',
-        'Modal Transformation 2',
-        'Modal Transformation 3',
-        'Modal Transformation 4',
-        'NP Conditional Modus Ponens',
-        'Necessity Distribution 1',
-        'Necessity Distribution 2',
-    ),
-    invalid = (
-        'Conditional Contraction',
-        'Conditional Law of Excluded Middle',
-        'Conditional Pseudo Contraction',
-        'Identity Indiscernability 1',
-        'Identity Indiscernability 2',
-        'Law of Excluded Middle',
-        'Material Biconditional Identity',
-        'Material Identity',
-        'Material Pseudo Contraction',
-        'Material Pseudo Contraposition',
-        'Self Identity 1',
-        'Self Identity 2',        
+        'Serial Inference 1',
     ))
 
 # -----------------
@@ -1107,6 +1090,30 @@ L('KL3',
 L('KLP',
     valid = (
         'Necessity Distribution 1',
+    ),
+    invalid = (
+    ))
+
+L('TLP',
+    valid = (
+        'Reflexive Inference 1',
+        'Serial Inference 1',
+    ),
+    invalid = (
+    ))
+
+L('S4LP',
+    valid = (
+        'S4 Conditional Inference 1',
+        'S4 Material Inference 1',
+    ),
+    invalid = (
+    ))
+
+L('S5LP',
+    valid = (
+        'S5 Conditional Inference 1',
+        'S5 Material Inference 1',
     ),
     invalid = (
         'Biconditional Elimination 1',
@@ -1127,11 +1134,15 @@ L('KLP',
         'Material Modus Ponens',
         'Material Modus Tollens',
         'NP Conditional Modus Ponens',
+        'S4 Conditional Inference 2',
+        'S4 Material Inference 2',
         'Self Identity 1',
         'Self Identity 2',
         'Syllogism',
         'Universal Predicate Syllogism',
     ))
+
+# -----------------
 
 L('KRM3',
     valid = (
@@ -1163,6 +1174,32 @@ L('KRM3',
         'Self Identity 2',
         'Syllogism',
         'Universal Predicate Syllogism',
+    ))
+
+L('KL3',
+    valid = (
+        'KFDE Distribution Inference 1',
+        'Modal Transformation 1',
+        'Modal Transformation 2',
+        'Modal Transformation 3',
+        'Modal Transformation 4',
+        'NP Conditional Modus Ponens',
+        'Necessity Distribution 1',
+        'Necessity Distribution 2',
+    ),
+    invalid = (
+        'Conditional Contraction',
+        'Conditional Law of Excluded Middle',
+        'Conditional Pseudo Contraction',
+        'Identity Indiscernability 1',
+        'Identity Indiscernability 2',
+        'Law of Excluded Middle',
+        'Material Biconditional Identity',
+        'Material Identity',
+        'Material Pseudo Contraction',
+        'Material Pseudo Contraposition',
+        'Self Identity 1',
+        'Self Identity 2',        
     ))
 
 class ArgSet(qset[Argument]):
