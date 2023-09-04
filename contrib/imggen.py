@@ -21,83 +21,111 @@ Requires img-packages dependencies.
 """
 from __future__ import annotations
 
+import argparse
+from collections import deque
+import enum
+import logging
 import os
-import re
 import sys
 import tempfile
-import threading
-import traceback
-from collections import deque
-from os.path import abspath, basename
-from typing import Callable, Iterable
+from dataclasses import dataclass
+from os.path import abspath
+from typing import Mapping
 
 from pdf2image import convert_from_path
 
-from . import autocrop
+from . import autocrop, make_queue_workers, resolve_srcfiles
 
 MAX_THREADS = max(1, int(os.cpu_count() // 1.2))
 
-pat_file = re.compile(r'.*\.pdf$')
+logger = logging.getLogger('pdfgen')
 
-def makeimg(srcfile: str, tmpdir: tempfile.TemporaryDirectory, outdir: str, ext: str):
-    outparts = basename(srcfile).split('.')
-    outparts.pop()
-    ext = ext.strip('.')
-    outname = '.'.join(outparts) + f'.{ext}'
-    outfile = abspath(f'{outdir}/{outname}')
-    images = convert_from_path(srcfile, output_folder=tmpdir, grayscale=True)
-    if len(images) != 1:
-        print(f'WARNING: Skipping {srcfile}: got {len(images)} pages, expecting 1')
-        return
-    image, = images
-    autocrop.autocrop(image).save(outfile)
+class ImageFormat(str, enum.Enum):
+    jpg = 'jpg'
+    png = 'png'
 
-def worker(queue: deque[str], func: Callable, *args, **kw):
-    while True:
-        try:
-            item = queue.popleft()
-        except IndexError:
-            break
-        print(f'processing {item}')
-        try:
-            func(item, *args, **kw)
-        except:
-            traceback.print_exc()
-            print(f'WARNING: failed to process: {item}')
+parser = argparse.ArgumentParser(
+    description='Generate image files from PDF files')
 
-def makeall(srcfiles: Iterable[str], outdir: str, ext: str, threads: int):
-    queue = deque(srcfiles)
-    threads = min(MAX_THREADS, max(1, threads), len(queue))
-    with tempfile.TemporaryDirectory() as tmpdir:
-        workers = tuple(
-            threading.Thread(
-                name=f'Worker-{i + 1}',
-                target=worker,
-                args=(queue, makeimg, tmpdir, outdir, ext))
-            for i in range(threads))
-        for thread in workers:
-            thread.start()
-        for thread in workers:
-            thread.join()
+arg = parser.add_argument
+arg(
+    '--srcdir', '-s',
+    type=abspath,
+    required=True,
+    help='The source directory')
+arg(
+    '--outdir', '-o',
+    type=abspath,
+    default=None,
+    help='The output directory, default is srcdir')
+arg(
+    '--format', '-f',
+    type=ImageFormat,
+    default=ImageFormat.jpg,
+    help=f'The image format, default jpg (options: {", ".join(f.value for f in ImageFormat)})')
+arg(
+    '--nocrop',
+    action='store_false',
+    dest='crop',
+    help='Do not crop files')
+arg(
+    '--incremental', '-i',
+    action='store_true',
+    help='Skip existing pdf files')
+arg(
+    '--threads', '-t',
+    type=lambda opt: min(MAX_THREADS, int(opt)),
+    default=1,
+    help=f'The number of threads to use, default is 1 (max {MAX_THREADS})')
 
-def main(srcdir: str, outdir: str|None=None):
-    srcdir = abspath(srcdir)
-    if outdir is None:
-        outdir = srcdir
+@dataclass(kw_only=True, slots=True)
+class Options:
+    srcdir: str
+    outdir: str|None
+    incremental: bool
+    threads: int
+    format: ImageFormat
+    crop: bool
+
+
+def main(*args):
+    opts = Options(**vars(parser.parse_args(args)))
+    logging.basicConfig(level=logging.INFO)
+    if opts.outdir is None:
+        opts.outdir = opts.srcdir
     else:
-        outdir = abspath(outdir)
         try:
-            os.mkdir(outdir)
+            os.mkdir(opts.outdir)
         except FileExistsError:
             pass
-    threads = int(os.getenv('THREADS') or 1)
-    srcfiles = sorted(filter(pat_file.match, os.listdir(srcdir)), key=str.lower)
-    srcfiles = list(map(abspath, (f'{srcdir}/{file}' for file in srcfiles)))
+    srcfiles = resolve_srcfiles(
+        srcdir=opts.srcdir,
+        srcext='pdf',
+        outdir=opts.outdir,
+        outext=opts.format.value,
+        incremental=opts.incremental)
     if not len(srcfiles):
-        print(f'No files to process')
+        logger.warning(f'No files to process')
         return
-    print(f'Processing {len(srcfiles)} files')
-    makeall(srcfiles=srcfiles, outdir=outdir, ext='jpg', threads=threads)
+    logger.info(f'Processing {len(srcfiles)} files')
+    queue = deque(srcfiles)
+    workers = make_queue_workers(queue, opts.threads, makeimg, srcfiles, opts)
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
+
+def makeimg(srcfile: str, srcfiles: Mapping[str, str], opts: Options):
+    outfile = srcfiles[srcfile]
+    with tempfile.TemporaryDirectory() as tmp:
+        images = convert_from_path(srcfile, output_folder=tmp, grayscale=True)
+    if len(images) != 1:
+        logger.warning(f'Skipping {srcfile}: got {len(images)} pages, expecting 1')
+        return
+    image, = images
+    if opts.crop:
+        image = autocrop(image)
+    image.save(outfile)
 
 if __name__ == '__main__':
     main(*sys.argv[1:])

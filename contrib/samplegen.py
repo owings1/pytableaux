@@ -15,32 +15,92 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Generates LaTeX files for all example arguments and all logics.
+Generate sample tableaux files from argument examples.
 """
 from __future__ import annotations
 
+import argparse
+import logging
 import sys
+from dataclasses import dataclass
 from os import mkdir
 from os.path import abspath
 
 from pytableaux import examples
+from pytableaux.lang import Notation
+from pytableaux.logics import LogicType, registry
 from pytableaux.proof import TabWriter
 from pytableaux.tools.inflect import slug
 
+logger = logging.getLogger('samplegen')
 
-def main(outdir: str):
-    outdir = abspath(outdir)
+parser = argparse.ArgumentParser(
+    description='Generate sample tableaux files')
+
+arg = parser.add_argument
+arg(
+    '--outdir', '-o',
+    type=abspath,
+    required=True,
+    help='The output directory')
+
+arg(
+    '--format', '-f',
+    type=str,
+    default='latex',
+    help='The output format, default is latex')
+
+arg(
+    '--notation', '-n',
+    type=Notation,
+    default=Notation.standard,
+    help='The output notation, default is standard')
+
+arg(
+    '--logic', '-l',
+    type=lambda opt: tuple(map(registry, filter(None, map(str.strip, opt.split(','))))),
+    default=(),
+    help='Comma-separated logics to generate, default is all')
+
+arg(
+    '--nodoc',
+    action='store_false',
+    dest='fulldoc',
+    help='Skip doc header/footer')
+
+arg(
+    '--inline-css',
+    action='store_true',
+    help='Include inline css (HTML only)')
+
+
+@dataclass(kw_only=True, slots=True)
+class Options:
+    outdir: str
+    format: str
+    notation: Notation
+    logic: tuple[LogicType, ...]
+    fulldoc: bool
+    inline_css: bool
+
+def main(*args):
+    opts = Options(**vars(parser.parse_args(args)))
+    logging.basicConfig(level=logging.INFO)
     try:
-        mkdir(outdir)
+        mkdir(opts.outdir)
     except FileExistsError:
         pass
-    pw = TabWriter(format='latex', notation='standard')
-    for tab in examples.tabiter():
+    pw = TabWriter(
+        format=opts.format,
+        notation=opts.notation,
+        fulldoc=opts.fulldoc,
+        inline_css=opts.inline_css)
+    for tab in examples.tabiter(*opts.logic):
         name = slug(f'{tab.logic.Meta.name}_{tab.argument.argstr()}')
-        outfile = abspath(f'{outdir}/{name}.{pw.format}')
-        print(f'writing {outfile}')
+        outfile = abspath(f'{opts.outdir}/{name}.{pw.format}')
+        logger.info(f'writing {outfile}')
         with open(outfile, 'w') as file:
-            file.write(pw(tab, fulldoc=True))
+            file.write(pw(tab))
 
 if __name__ == '__main__':
     main(*sys.argv[1:])

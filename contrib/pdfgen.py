@@ -21,74 +21,99 @@ No Python dependencies. Designed to run in texlive docker image.
 """
 from __future__ import annotations
 
+import argparse
+from collections import deque
+import logging
 import os
-import re
 import subprocess
 import sys
-import threading
-from collections import deque
+from dataclasses import dataclass
 from os.path import abspath
-from typing import Callable, Iterable
+
+from . import make_queue_workers, resolve_srcfiles
 
 MAX_THREADS = max(1, int(os.cpu_count() * 1.5))
 
-pat_file = re.compile(r'.*\.latex$')
+logger = logging.getLogger('pdfgen')
 
-def makepdf(srcfile: str, outdir: str):
+parser = argparse.ArgumentParser(
+    description='Generate sample tableaux files')
+
+arg = parser.add_argument
+arg(
+    '--srcdir', '-s',
+    type=abspath,
+    required=True,
+    help='The source directory')
+arg(
+    '--outdir', '-o',
+    type=abspath,
+    default=None,
+    help='The output directory, default is srcdir')
+arg(
+    '--incremental', '-i',
+    action='store_true',
+    help='Skip existing pdf files')
+arg(
+    '--threads', '-t',
+    type=lambda opt: min(MAX_THREADS, int(opt)),
+    default=1,
+    help=f'The number of threads to use, default is 1 (max {MAX_THREADS})')
+
+@dataclass(kw_only=True, slots=True)
+class Options:
+    srcdir: str
+    outdir: str|None
+    incremental: bool
+    threads: int
+
+def main(*args):
+    opts = Options(**vars(parser.parse_args(args)))
+    logging.basicConfig(level=logging.INFO)
+    if opts.outdir is None:
+        opts.outdir = opts.srcdir
+    else:
+        try:
+            os.mkdir(opts.outdir)
+        except FileExistsError:
+            pass
+    srcfiles = resolve_srcfiles(
+        srcdir=opts.srcdir,
+        srcext='latex',
+        outdir=opts.outdir,
+        outext='pdf',
+        incremental=opts.incremental)
+    if not len(srcfiles):
+        logger.warning(f'No files to process')
+        return
+    logger.info(f'Processing {len(srcfiles)} files')
+    queue = deque(srcfiles)
+    workers = make_queue_workers(queue, opts.threads, makepdf, opts)
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
+
+
+def makepdf(srcfile: str, opts: Options):
     args = (
         'latex',
         '-interaction=nonstopmode',
         '-halt-on-error',
         '-output-directory',
-        outdir,
+        opts.outdir,
         '-output-format=pdf',
         srcfile)
-    subprocess.run(args,
-        check=True,
-        stderr=sys.stderr,
-        stdout=sys.stdout,
+    proc: subprocess.CompletedProcess = subprocess.run(args,
+        capture_output=True,
+        text=True,
         timeout=60)
-
-def worker(queue: deque[str], func: Callable, *args, **kw):
-    while True:
-        try:
-            item = queue.popleft()
-        except IndexError:
-            break
-        func(item, *args, **kw)
-
-def makeall(srcfiles: Iterable[str], outdir: str, threads: int):
-    queue = deque(srcfiles)
-    threads = min(MAX_THREADS, max(1, threads), len(queue))
-    workers = tuple(
-        threading.Thread(
-            name=f'Worker-{i + 1}',
-            target=worker,
-            args=(queue, makepdf, outdir))
-        for i in range(threads))
-    for thread in workers:
-        thread.start()
-    for thread in workers:
-        thread.join()
-
-def main(srcdir: str, outdir: str|None=None):
-    srcdir = abspath(srcdir)
-    if outdir is None:
-        outdir = srcdir
-    else:
-        outdir = abspath(outdir)
-        try:
-            os.mkdir(outdir)
-        except FileExistsError:
-            pass
-    threads = int(os.getenv('THREADS') or 1)
-    srcfiles = sorted(filter(pat_file.match, os.listdir(srcdir)), key=str.lower)
-    srcfiles = list(map(abspath, (f'{srcdir}/{file}' for file in srcfiles)))
-    if not len(srcfiles):
-        print(f'No files to process')
-        return
-    print(f'Processing {len(srcfiles)} files')
-    makeall(srcfiles=srcfiles, outdir=outdir, threads=threads)
+    try:
+        proc.check_returncode()
+    except:
+        print(proc.stdout)
+        print(proc.stderr)
+        raise
 
 if __name__ == '__main__':
     main(*sys.argv[1:])
