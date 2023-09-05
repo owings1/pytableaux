@@ -288,7 +288,7 @@ html_domain_indices = False
 # 
 # https://sphinx-sitemap.readthedocs.io/en/latest/getting-started.html
 # 
-html_baseurl = os.getenv('DOC_BASEURL', 'https://logic.dougowings.net/doc/')
+html_baseurl = os.getenv('DOC_BASEURL', package.documentation.url.rstrip('/') + '/')
 sitemap_url_scheme = "{link}"
 
 # =================================================================================

@@ -78,7 +78,7 @@ class Repository:
     url: str
 
 @dataclass(slots=True)
-class Issues:
+class InfoUrl:
     url: str
 
 @dataclass(slots=True)
@@ -89,7 +89,9 @@ class Package:
     author: Author
     license: License
     repository: Repository
-    issues: Issues
+    issues: InfoUrl
+    documentation: InfoUrl
+    homepage: InfoUrl
     root: str
     'Base package directory.'
 
@@ -110,6 +112,12 @@ class Package:
             f'2014-{self.year}, {self.author.name}. '
             f'Released under the {self.license.title}')
 
+    @property
+    def copyright_markdown(self) -> str:
+        'Copyright markdown string.'
+        title = self.license.title
+        return self.copyright.replace(title, f'[{title}][license]')
+
 package = Package(
     name = 'pytableaux',
     version = SemVer(*__version__),
@@ -123,8 +131,12 @@ package = Package(
     repository = Repository(
         type = 'git',
         url = 'https://github.com/owings1/pytableaux'),
-    issues = Issues(
+    issues = InfoUrl(
         url = 'https://github.com/owings1/pytableaux/issues'),
+    homepage = InfoUrl(
+        url = 'https://logic.dougowings.net'),
+    documentation = InfoUrl(
+        url = 'https://logic.dougowings.net/doc'),
     root = os.path.dirname(os.path.abspath(__file__)))
 'Package info.'
 

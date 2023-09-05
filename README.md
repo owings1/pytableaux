@@ -123,6 +123,7 @@ docker build -t localhost/pytableaux:dev  .
 ```
 
 For other targets (doc, test, etc.), seel the [Dockerfile][dockerfile]
+
 ## Contributing
 
 You can file any issues on [github][issues], or contact me directly [via email][mailto].
@@ -130,54 +131,50 @@ You can file any issues on [github][issues], or contact me directly [via email][
 ## Copyright & License
 
 <!-- [copyright-begin] -->
-Copyright (C) 2014-2023 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
+Copyright (C) 2014-2023, Doug Owings. Released under the [GNU Affero General Public License v3.0 or later][license].
 <!-- [copyright-end] -->
 
-[site]: http://logic.dougowings.net
-[doc]: http://logic.dougowings.net/doc/
 [dockerhub]: https://hub.docker.com/r/owings1/pytableaux/
 [dockerfile]: Dockerfile
 
 <!-- [refs-begin] -->
+[site]: https://logic.dougowings.net
+[doc]: https://logic.dougowings.net/doc
 [license]: https://www.gnu.org/licenses/agpl-3.0.en.html
 [issues]: https://github.com/owings1/pytableaux/issues
 [mailto]: mailto:doug@dougowings.net
+[CPL]: https://logic.dougowings.net/doc/logics/cpl.html
+[CFOL]: https://logic.dougowings.net/doc/logics/cfol.html
+[K]: https://logic.dougowings.net/doc/logics/k.html
+[D]: https://logic.dougowings.net/doc/logics/d.html
+[T]: https://logic.dougowings.net/doc/logics/t.html
+[S4]: https://logic.dougowings.net/doc/logics/s4.html
+[S5]: https://logic.dougowings.net/doc/logics/s5.html
+[FDE]: https://logic.dougowings.net/doc/logics/fde.html
+[K3]: https://logic.dougowings.net/doc/logics/k3.html
+[LP]: https://logic.dougowings.net/doc/logics/lp.html
+[L3]: https://logic.dougowings.net/doc/logics/l3.html
+[RM3]: https://logic.dougowings.net/doc/logics/rm3.html
+[K3W]: https://logic.dougowings.net/doc/logics/k3w.html
+[K3WQ]: https://logic.dougowings.net/doc/logics/k3wq.html
+[B3E]: https://logic.dougowings.net/doc/logics/b3e.html
+[G3]: https://logic.dougowings.net/doc/logics/g3.html
+[MH]: https://logic.dougowings.net/doc/logics/mh.html
+[NH]: https://logic.dougowings.net/doc/logics/nh.html
+[GO]: https://logic.dougowings.net/doc/logics/go.html
+[P3]: https://logic.dougowings.net/doc/logics/p3.html
+[KFDE]: https://logic.dougowings.net/doc/logics/kfde.html
+[TFDE]: https://logic.dougowings.net/doc/logics/tfde.html
+[S4FDE]: https://logic.dougowings.net/doc/logics/s4fde.html
+[S5FDE]: https://logic.dougowings.net/doc/logics/s5fde.html
+[KK3]: https://logic.dougowings.net/doc/logics/kk3.html
+[TK3]: https://logic.dougowings.net/doc/logics/tk3.html
+[S4K3]: https://logic.dougowings.net/doc/logics/s4k3.html
+[S5K3]: https://logic.dougowings.net/doc/logics/s5k3.html
+[KLP]: https://logic.dougowings.net/doc/logics/klp.html
+[TLP]: https://logic.dougowings.net/doc/logics/tlp.html
+[S4LP]: https://logic.dougowings.net/doc/logics/s4lp.html
+[S5LP]: https://logic.dougowings.net/doc/logics/s5lp.html
+[KL3]: https://logic.dougowings.net/doc/logics/kl3.html
+[KRM3]: https://logic.dougowings.net/doc/logics/krm3.html
 <!-- [refs-end] -->
-
-[CPL]: http://logic.dougowings.net/doc/logics/cpl.html
-[CFOL]: http://logic.dougowings.net/doc/logics/cfol.html
-
-[K]: http://logic.dougowings.net/doc/logics/k.html
-[D]: http://logic.dougowings.net/doc/logics/d.html
-[T]: http://logic.dougowings.net/doc/logics/t.html
-[S4]: http://logic.dougowings.net/doc/logics/s4.html
-[S5]: http://logic.dougowings.net/doc/logics/s5.html
-
-[FDE]: http://logic.dougowings.net/doc/logics/fde.html
-[K3]: http://logic.dougowings.net/doc/logics/k3.html
-[K3W]: http://logic.dougowings.net/doc/logics/k3w.html
-[K3WQ]: http://logic.dougowings.net/doc/logics/k3wq.html
-[B3E]: http://logic.dougowings.net/doc/logics/b3e.html
-[GO]: http://logic.dougowings.net/doc/logics/go.html
-[MH]: http://logic.dougowings.net/doc/logics/mh.html
-[L3]: http://logic.dougowings.net/doc/logics/l3.html
-[G3]: http://logic.dougowings.net/doc/logics/g3.html
-[LP]: http://logic.dougowings.net/doc/logics/lp.html
-[NH]: http://logic.dougowings.net/doc/logics/nh.html
-[P3]: http://logic.dougowings.net/doc/logics/p3.html
-[RM3]: http://logic.dougowings.net/doc/logics/rm3.html
-
-[KFDE]: http://logic.dougowings.net/doc/logics/kfde.html
-[TFDE]: http://logic.dougowings.net/doc/logics/tfde.html
-[S4FDE]: http://logic.dougowings.net/doc/logics/s4fde.html
-[S5FDE]: http://logic.dougowings.net/doc/logics/s5fde.html
-[KK3]: http://logic.dougowings.net/doc/logics/kk3.html
-[TK3]: http://logic.dougowings.net/doc/logics/tk3.html
-[S4K3]: http://logic.dougowings.net/doc/logics/s4k3.html
-[S5K3]: http://logic.dougowings.net/doc/logics/s5k3.html
-[KL3]: http://logic.dougowings.net/doc/logics/kl3.html
-[KLP]: http://logic.dougowings.net/doc/logics/klp.html
-[TLP]: http://logic.dougowings.net/doc/logics/tlp.html
-[S4LP]: http://logic.dougowings.net/doc/logics/s4lp.html
-[S5LP]: http://logic.dougowings.net/doc/logics/s5lp.html
-[KRM3]: http://logic.dougowings.net/doc/logics/krm3.html
