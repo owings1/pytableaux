@@ -295,10 +295,40 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         if key is None:
             key = key_category_order
         for group in groups.values():
-            group.sort(key = key, reverse = reverse)
+            group.sort(key=key, reverse=reverse)
         return {
             category: groups[category]
-            for category in sorted(groups)}
+            for category in sorted(groups, reverse=reverse)}
+
+    def get_extends(self, logic) -> qsetf[LogicType]:
+        result = LogicSet(registry=self)
+        todo = LogicSet((logic,), registry=self)
+        while len(todo):
+            extends = LogicSet(registry=self)
+            for other in todo:
+                extends |= other.Meta.extension_of
+            extends -= result
+            todo.clear()
+            todo |= extends
+            result |= extends
+        result.discard(logic)
+        result.sort()
+        return qsetf(result)
+
+    def get_extensions(self, logic) -> qsetf[LogicType]:
+        self.import_all()
+        result = LogicSet((logic,), registry=self)
+        while True:
+            length = len(result)
+            for other in self.values():
+                extension_of = LogicSet(other.Meta.extension_of)
+                if len(result & extension_of):
+                    result.add(other)
+            if len(result) == length:
+                break
+        result.remove(logic)
+        result.sort()
+        return qsetf(result)
 
     def _check_package(self, pkgref: str|ModuleType, /) -> ModuleType:
         if pkgref in self.packages:
@@ -529,6 +559,20 @@ class LogicType(metaclass=LogicTypeMeta):
         @classmethod
         def _check_groups(cls):
             pass
+
+
+
+class LogicSet(qset[LogicType]):
+
+    __slots__ = ('_hook_cast')
+
+    def __init__(self, *args, registry:Registry=registry):
+        self._hook_cast = registry
+        super().__init__(*args)
+
+    def _default_sort_key(self, value):
+        return (value.Meta.category, value.Meta.category_order)
+        # return value.Meta.name
 
 @closure
 def instancecheck():

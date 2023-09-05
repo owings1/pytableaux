@@ -1209,13 +1209,6 @@ class ArgSet(qset[Argument]):
     def _default_sort_key(self, value):
         return value.title or value.argstr()
 
-class LogicSet(qset[LogicType]):
-
-    _hook_cast = staticmethod(registry)
-
-    def _default_sort_key(self, value):
-        return value.Meta.name
-
 def caching(wrapped: _F) -> _F:
     cache = {}
     @wraps(wrapped)
@@ -1226,6 +1219,14 @@ def caching(wrapped: _F) -> _F:
         except KeyError:
             return cache.setdefault(logic, wrapped(logic))
     return wrapper
+
+@caching
+def get_extends(logic) -> qsetf[LogicType]:
+    return registry.get_extends(logic)
+
+@caching
+def get_extensions(logic) -> qsetf[LogicType]:
+    return registry.get_extensions(logic)
 
 def known_getter(base: Mapping[str, Collection[str|Argument]]):
     if base is validities:
@@ -1248,46 +1249,14 @@ def known_getter(base: Mapping[str, Collection[str|Argument]]):
         return wrapper
     return decorator
 
-@caching
-def get_extends(logic) -> qsetf[LogicType]:
-    result = LogicSet()
-    todo = LogicSet((logic,))
-    while len(todo):
-        extends = LogicSet()
-        for other in todo:
-            extends |= other.Meta.extension_of
-        extends -= result
-        todo.clear()
-        todo |= extends
-        result |= extends
-    result.discard(logic)
-    result.sort()
-    return qsetf(result)
-
-@caching
-def get_extensions(logic) -> qsetf[LogicType]:
-    registry.import_all()
-    result = LogicSet((logic,))
-    while True:
-        length = len(result)
-        for other in registry.values():
-            extension_of = LogicSet(other.Meta.extension_of)
-            if len(result & extension_of):
-                result.add(other)
-        if len(result) == length:
-            break
-    result.remove(logic)
-    result.sort()
-    return qsetf(result)
-
-def get_known(logic):
-    return get_invalidities(logic), get_validities(logic)
-
 @known_getter(validities)
 def get_validities(logic): ...
 
 @known_getter(invalidities)
 def get_invalidities(logic): ...
+
+def get_known(logic):
+    return get_invalidities(logic), get_validities(logic)
 
 def find_missing(logic):
     logic = registry(logic)
