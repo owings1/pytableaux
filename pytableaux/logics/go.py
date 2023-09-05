@@ -27,7 +27,7 @@ from . import k3 as K3
 
 class Meta(K3.Meta):
     name = 'GO'
-    title = 'Gappy Object 3-valued Logic'
+    title = 'Gappy Object Logic'
     description = (
         'Three-valued logic (True, False, Neither) with '
         'classical-like binary operators')

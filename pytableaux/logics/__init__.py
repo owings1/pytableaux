@@ -423,6 +423,7 @@ class LogicType(metaclass=LogicTypeMeta):
         unassigned_value: Mval
         many_valued: bool
         category: LogicType.Meta.Category
+        title: str
         description: str = ''
         category_order: int = 0
         tags = SequenceSet[str]

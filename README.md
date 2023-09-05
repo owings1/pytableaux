@@ -8,10 +8,12 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 
 ## Implemented Logics
 
+<!-- [logics-begin] -->
+
 ### Bivalent
 
 - [**CPL** - Classical Predicate Logic][CPL]
-- [**CFOL** - Classical First-Order Logic][CFOL]
+- [**CFOL** - Classical First Order Logic][CFOL]
 
 ### Bivalent Modal
 
@@ -29,13 +31,13 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**L<sub>3</sub>** - Łukasiewicz 3-valued Logic][L3]
 - [**RM<sub>3</sub>** - R-mingle 3][RM3]
 - [**K<sup>3</sup><sub>W</sub>** - Weak Kleene Logic][K3W]
-- [**K<sup>3</sup><sub>WQ</sub>** - Weak Kleene with alternate quantification][K3WQ]
-- [**B<sup>3</sup><sub>E</sub>** - Bochvar 3-valued External Logic][B3E]
+- [**K<sup>3</sup><sub>WQ</sub>** - Weak Kleene alt-Q Logic][K3WQ]
+- [**B<sup>3</sup><sub>E</sub>** - Bochvar 3 External Logic][B3E]
 - [**G<sub>3</sub>** - Gödel 3-valued Logic][G3]
 - [**MH** - Paracomplete Hybrid Logic][MH]
 - [**NH** - Paraconsistent Hybrid Logic][NH]
-- [**GO** - Gappy Object Logic][GO]
-- [**P<sub>3</sub>** - Emil Post 3-valued Logic][P3]
+- [**GO** - Gappy Object 3-valued Logic][GO]
+- [**P<sub>3</sub>** - Post 3-valued Logic][P3]
 
 ### Many-valued Modal
 
@@ -53,6 +55,8 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**S5LP** - LP with S5 modal][S5LP]
 - [**KL<sub>3</sub>** - L<sub>3</sub> with K modal][KL3]
 - [**KRM<sub>3</sub>** - RM<sub>3</sub> with K modal][KRM3]
+
+<!-- [logics-end] -->
 
 ## Docker
 
