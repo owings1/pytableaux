@@ -216,10 +216,7 @@ def _rule_is_grouped(rulecls: type[Rule], logic) -> bool:
         logic = registry.locate(logic)
     except:
         return False
-    for other in logic.Rules.all():
-        if rulecls == other:
-            return True
-    return False
+    return any(map(rulecls.__eq__, logic.Rules.all()))
 
 def _rule_is_self_grouped(rule: type[Rule]) -> bool:
     'Whether the Rule class is grouped in the Rules of its own logic.'
