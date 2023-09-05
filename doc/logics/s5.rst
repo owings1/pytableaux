@@ -1,10 +1,12 @@
 .. _S5:
 
+.. module:: pytableaux.logics.s5
+
 **********************************
-L{S5} - S5 Normal Modal Logic
+L{} - S5 Normal Modal Logic
 **********************************
 
-L{S5} is an extension of {@K} with a reflexive, symmetric, and transitive
+L{} is an extension of {@K} with a reflexive, symmetric, and transitive
 access relation. The access relation provides `Universal Access`, meaning
 all worlds are visible to all worlds.
 
@@ -14,33 +16,31 @@ all worlds are visible to all worlds.
 
 ------------------------
 
-.. module:: pytableaux.logics.s5
-
 .. _s5-semantics:
 
 Semantics
 =========
 
-L{S5} semantics behave just like {@K semantics}.
+L{} semantics behave just like {@K semantics}.
 
 Reflexivity
 -----------
 
-L{S5} includes the *reflexivity* restriction of {@T}:
+L{} includes the *reflexivity* restriction of {@T}:
 
 .. include:: include/t/m.reflexivity.rst
 
 Transitivity
 ------------
 
-L{S5} includes the *transitivity* restriction of {@S4}:
+L{} includes the *transitivity* restriction of {@S4}:
 
 .. include:: include/s4/m.transitivity.rst
 
 Symmetry
 --------
 
-L{S5} adds an additional *symmetry* restriction:
+L{} adds an additional *symmetry* restriction:
 
 .. include:: include/s5/m.symmetry.rst
 
@@ -49,7 +49,7 @@ L{S5} adds an additional *symmetry* restriction:
 Tableaux
 ========
 
-L{S5} tableaux are constructed just like {@K system} tableaux.
+L{} tableaux are constructed just like {@K system} tableaux.
 
 Nodes
 -----
@@ -79,16 +79,10 @@ Closure
 Rules
 -----
 
-L{S5} contains all the {@K rules}, the {@T} Reflexive rule, the
+L{} contains all the {@K rules}, the {@T} Reflexive rule, the
 {@S4} Transitive rule, plus an additional Symmetric rule.
 
-
-.. tableau-rules::
-  :group: ungrouped
-  :docflags:
-  :title: Access Rules
-  :include: Reflexive, Transitive, Symmetric
-
+.. include:: include/s5/access_rules_group.rst
 
 .. include:: include/k/rule_groups.rst
 

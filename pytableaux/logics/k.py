@@ -50,17 +50,7 @@ class Model(LogicType.Model[Meta.values]):
 
     TruthFunction = FDE.Model.TruthFunction
     value_of_quantified = FDE.Model.value_of_quantified
-
-    def value_of_operated(self, s: Operated, /, *, world: int = 0):
-        self._check_finished()
-        if self.Meta.modal and s.operator in self.Meta.modal_operators:
-            it = map(lambda w: self.value_of(s.lhs, world=w), self.R[world])
-            if s.operator is Operator.Possibility:
-                return maxceil(self.maxval, it, self.minval)
-            if s.operator is Operator.Necessity:
-                return minfloor(self.minval, it, self.maxval)
-            raise NotImplementedError from ValueError(s.operator)
-        return super().value_of_operated(s, world=world)
+    value_of_operated = KFDE.Model.value_of_operated
 
     def _read_node(self, node, branch, /):
         super()._read_node(node, branch)

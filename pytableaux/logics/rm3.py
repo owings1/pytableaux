@@ -29,7 +29,7 @@ class Meta(LP.Meta):
     description = (
         'Three-valued logic (True, False, Both) with a primitive '
         'Conditional operator')
-    category_order = 130
+    category_order = 6
     native_operators = FDE.Meta.native_operators | (
         Operator.Conditional,
         Operator.Biconditional)

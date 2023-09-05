@@ -1,10 +1,12 @@
 .. _D:
 
-******************************
-D - Deontic Normal Modal Logic
-******************************
+.. module:: pytableaux.logics.d
 
-L{D}, also known as the Logic of Obligation, is an extension of {@K}, with
+****************************************
+L{} - Deontic Normal Modal Logic
+****************************************
+
+L{}, also known as the Logic of Obligation, is an extension of {@K}, with
 a *serial* access relation.
 
 .. contents::
@@ -13,20 +15,17 @@ a *serial* access relation.
 
 ------------------------
 
-.. module:: pytableaux.logics.d
-
 .. _d-semantics:
-
 
 Semantics
 =========
 
-L{D} semantics behave just like {@K semantics}.
+L{} semantics behave just like {@K semantics}.
 
 Seriality
 ---------
 
-L{D} adds a *serial* restriction on the access relation for models.
+L{} adds a *serial* restriction on the access relation for models.
 
 .. include:: include/d/m.seriality.rst
 
@@ -35,23 +34,40 @@ L{D} adds a *serial* restriction on the access relation for models.
 Tableaux
 ========
 
-L{D} tableaux are constructed just like {@K system} tableaux.
+L{} tableaux are constructed just like {@K system} tableaux.
+
+Nodes
+-----
+
+.. include:: include/k/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/k/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau-rules::
+  :group: closure
+  :docflags:
+  :title: -
 
 .. _d-rules:
 
 Rules
 -----
 
-L{D} contains all the {@K rules} plus an additional Serial rule.
+L{} contains all the {@K rules} plus an additional Serial rule.
 
-The Serial rule applies to a an open branch *b* when there is a world *w*
-that appears on *b*, but there is no world *w'* such that *w* accesses *w'*.
+.. include:: include/d/serial_rule_blurb.rst
 
-.. tableau-rules::
-  :group: ungrouped
-  :docflags:
-  :title: Access Rules
-  :include: Serial
+.. include:: include/d/access_rules_group.rst
 
 .. include:: include/k/rule_groups.rst
 

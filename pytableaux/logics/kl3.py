@@ -31,7 +31,7 @@ class Meta(KK3.Meta):
     description = 'Modal version of L3 based on K normal modal logic'
     category_order = L3.Meta.category_order
     native_operators = KFDE.Meta.native_operators | L3.Meta.native_operators
-    category_order = 800
+    category_order = 16
     extension_of = ('L3')
 
 class Model(KFDE.Model, L3.Model): pass

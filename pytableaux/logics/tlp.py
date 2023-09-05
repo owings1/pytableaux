@@ -27,7 +27,7 @@ class Meta(KLP.Meta):
     name = 'TLP'
     title = 'LP with T modal'
     description = 'Modal version of LP based on T normal modal logic'
-    category_order = 1002
+    category_order = 13
     extension_of = ('KLP', 'TFDE')
 
 class Model(TFDE.Model): pass

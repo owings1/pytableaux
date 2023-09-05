@@ -31,7 +31,7 @@ class Meta(FDE.Meta):
     modal = True
     description = 'Modal version of FDE based on K normal modal logic'
     native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
-    category_order = 10
+    category_order = 1
     extension_of = ('FDE')
 
 class Model(FDE.Model):
@@ -45,8 +45,11 @@ class Model(FDE.Model):
                 return maxceil(self.maxval, it, self.minval)
             if oper is Operator.Necessity:
                 return minfloor(self.minval, it, self.maxval)
-            raise NotImplementedError from ValueError(s.operator)
-        return super().value_of_operated(s, world=world)
+            raise NotImplementedError from ValueError(oper)
+        # Must call explicit parent function so K.Model can reuse this
+        # method by direct reference without inheritance
+        # return super().value_of_operated(s, world=world)
+        return LogicType.Model.value_of_operated(self, s, world=world)
 
 class System(FDE.System): pass
 

@@ -37,7 +37,7 @@ class Meta(LogicType.Meta):
     designated_values = frozenset({values.B, values.T})
     unassigned_value = values.N
     description = 'Four-valued logic (True, False, Neither, Both)'
-    category_order = 10
+    category_order = 1
     native_operators = (
         Operator.Negation,
         Operator.Conjunction,

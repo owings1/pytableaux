@@ -27,7 +27,7 @@ class Meta(KK3.Meta):
     name = 'S5K3'
     title = 'K3 with S5 modal'
     description = 'Modal version of K3 based on S5 normal modal logic'
-    category_order = 24
+    category_order = 10
     extension_of = ('S4K3', 'S5FDE')
 
 class Model(S5FDE.Model): pass

@@ -30,7 +30,7 @@ class Meta(K3.Meta):
     description = (
         'Three-valued logic (True, False, Neither) with non-standard disjunction, '
         'and a classical-like conditional')
-    category_order = 70
+    category_order = 11
     native_operators = FDE.Meta.native_operators | (
         Operator.Conditional,
         Operator.Biconditional)

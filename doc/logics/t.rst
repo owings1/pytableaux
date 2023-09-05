@@ -1,10 +1,12 @@
 .. _T:
 
+.. module:: pytableaux.logics.t
+
 ****************************************
-L{T} - Reflexive Normal Modal Logic
+L{} - Reflexive Normal Modal Logic
 ****************************************
 
-L{T} is an extension of {@K}, with a *reflexive* access relation.
+L{} is an extension of {@K}, with a *reflexive* access relation.
 
 .. contents::
   :local:
@@ -12,19 +14,17 @@ L{T} is an extension of {@K}, with a *reflexive* access relation.
 
 ------------------------
 
-.. module:: pytableaux.logics.t
-
 .. _t-semantics:
 
 Semantics
 =========
 
-L{T} semantics behave just like {@K semantics}.
+L{} semantics behave just like {@K semantics}.
 
 Reflexivity
 -----------
 
-L{T} adds a *reflexive* restriction on the access relation for models.
+L{} adds a *reflexive* restriction on the access relation for models.
 
 .. include:: include/t/m.reflexivity.rst
 
@@ -33,23 +33,40 @@ L{T} adds a *reflexive* restriction on the access relation for models.
 Tableaux
 ========
 
-L{T} tableaux are constructed just like {@K system} tableaux.
+L{} tableaux are constructed just like {@K system} tableaux.
+
+Nodes
+-----
+
+.. include:: include/k/nodes_blurb.rst
+
+Trunk
+-----
+
+.. include:: include/k/trunk_blurb.rst
+
+.. tableau::
+  :build-trunk:
+  :prolog:
+
+Closure
+-------
+
+.. tableau-rules::
+  :group: closure
+  :docflags:
+  :title: -
 
 .. _t-rules:
 
 Rules
 -----
 
-L{T} contains all the {@K rules} plus an additional Reflexive rule.
+L{} contains all the {@K rules} plus an additional Reflexive rule.
 
-The Reflexive rule applies to an open branch *b* when there is a node *n*
-on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
+.. include:: include/t/reflexive_rule_blurb.rst
 
-.. tableau-rules::
-  :group: ungrouped
-  :docflags:
-  :title: Access Rules
-  :include: Reflexive
+.. include:: include/t/access_rules_group.rst
 
 .. include:: include/k/rule_groups.rst
 

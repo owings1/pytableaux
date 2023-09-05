@@ -25,24 +25,33 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 
 - [**FDE** - First Degree Entailment][FDE]
 - [**K<sub>3</sub>** - Strong Kleene Logic][K3]
+- [**LP** - Logic of Paradox][LP]
+- [**L<sub>3</sub>** - Łukasiewicz 3-valued Logic][L3]
+- [**RM<sub>3</sub>** - R-mingle 3][RM3]
 - [**K<sup>3</sup><sub>W</sub>** - Weak Kleene Logic][K3W]
 - [**K<sup>3</sup><sub>WQ</sub>** - Weak Kleene with alternate quantification][K3WQ]
 - [**B<sup>3</sup><sub>E</sub>** - Bochvar 3-valued External Logic][B3E]
-- [**GO** - Gappy Object Logic][GO]
-- [**MH** - Paracomplete Hybrid Logic][MH]
-- [**L<sub>3</sub>** - Łukasiewicz 3-valued Logic][L3]
 - [**G<sub>3</sub>** - Gödel 3-valued Logic][G3]
-- [**LP** - Logic of Paradox][LP]
+- [**MH** - Paracomplete Hybrid Logic][MH]
 - [**NH** - Paraconsistent Hybrid Logic][NH]
+- [**GO** - Gappy Object Logic][GO]
 - [**P<sub>3</sub>** - Emil Post 3-valued Logic][P3]
-- [**RM<sub>3</sub>** - R-mingle 3][RM3]
 
 ### Many-valued Modal
 
 - [**KFDE** - FDE with K modal][KFDE]
+- [**TFDE** - FDE with T modal][TFDE]
+- [**S4FDE** - FDE with S4 modal][S4FDE]
+- [**S5FDE** - FDE with S5 modal][S5FDE]
 - [**KK<sub>3</sub>** - K<sub>3</sub> with K modal][KK3]
-- [**KL<sub>3</sub>** - L<sub>3</sub> with K modal][KL3]
+- [**TK<sub>3</sub>** - K<sub>3</sub> with T modal][TK3]
+- [**S4K<sub>3</sub>** - K<sub>3</sub> with S4 modal][S4K3]
+- [**S5K<sub>3</sub>** - K<sub>3</sub> with S5 modal][S5K3]
 - [**KLP** - LP with K modal][KLP]
+- [**TLP** - LP with T modal][TLP]
+- [**S4LP** - LP with S4 modal][S4LP]
+- [**S5LP** - LP with S5 modal][S5LP]
+- [**KL<sub>3</sub>** - L<sub>3</sub> with K modal][KL3]
 - [**KRM<sub>3</sub>** - RM<sub>3</sub> with K modal][KRM3]
 
 ## Docker
@@ -159,7 +168,16 @@ Copyright (C) 2014-2023 Doug Owings. Released under the [GNU Affero General Publ
 [RM3]: http://logic.dougowings.net/doc/logics/rm3.html
 
 [KFDE]: http://logic.dougowings.net/doc/logics/kfde.html
+[TFDE]: http://logic.dougowings.net/doc/logics/tfde.html
+[S4FDE]: http://logic.dougowings.net/doc/logics/s4fde.html
+[S5FDE]: http://logic.dougowings.net/doc/logics/s5fde.html
 [KK3]: http://logic.dougowings.net/doc/logics/kk3.html
+[TK3]: http://logic.dougowings.net/doc/logics/tk3.html
+[S4K3]: http://logic.dougowings.net/doc/logics/s4k3.html
+[S5K3]: http://logic.dougowings.net/doc/logics/s5k3.html
 [KL3]: http://logic.dougowings.net/doc/logics/kl3.html
 [KLP]: http://logic.dougowings.net/doc/logics/klp.html
+[TLP]: http://logic.dougowings.net/doc/logics/tlp.html
+[S4LP]: http://logic.dougowings.net/doc/logics/s4lp.html
+[S5LP]: http://logic.dougowings.net/doc/logics/s5lp.html
 [KRM3]: http://logic.dougowings.net/doc/logics/krm3.html

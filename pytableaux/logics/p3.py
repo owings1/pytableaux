@@ -29,7 +29,7 @@ class Meta(K3.Meta):
     description = (
         'Emil Post three-valued logic (T, F, and N) '
         'with mirror-image negation')
-    category_order = 120
+    category_order = 20
 
 class Model(FDE.Model):
 

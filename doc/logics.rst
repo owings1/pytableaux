@@ -50,7 +50,16 @@ Many-valued Modal
     :maxdepth: 1
 
     logics/kfde
+    logics/tfde
+    logics/s4fde
+    logics/s5fde
     logics/kk3
-    logics/kl3
+    logics/tk3
+    logics/s4k3
+    logics/s5k3
     logics/klp
+    logics/tlp
+    logics/s4lp
+    logics/s5lp
+    logics/kl3
     logics/krm3

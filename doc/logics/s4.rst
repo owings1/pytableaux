@@ -1,10 +1,12 @@
 .. _S4:
 
+.. module:: pytableaux.logics.s4
+
 **********************************
-L{S4} - S4 Normal Modal Logic
+L{} - S4 Normal Modal Logic
 **********************************
 
-L{S4} is an extension of {@K} with a reflexive and transitive access relation.
+L{} is an extension of {@K} with a reflexive and transitive access relation.
 
 .. contents::
     :local:
@@ -12,26 +14,24 @@ L{S4} is an extension of {@K} with a reflexive and transitive access relation.
 
 ------------------------
 
-.. module:: pytableaux.logics.s4
-
 .. _s4-semantics:
 
 Semantics
 =========
 
-L{S4} semantics behave just like {@K semantics}.
+L{} semantics behave just like {@K semantics}.
 
 Reflexivity
 -----------
 
-L{S4} includes the *reflexivity* restriction of {@T}:
+L{} includes the *reflexivity* restriction of {@T}:
 
 .. include:: include/t/m.reflexivity.rst
 
 Transitivity
 ------------
 
-L{S4} adds an additional *transitivity* restriction:
+L{} adds an additional *transitivity* restriction:
 
 .. include:: include/s4/m.transitivity.rst
 
@@ -40,9 +40,7 @@ L{S4} adds an additional *transitivity* restriction:
 Tableaux
 ========
 
-L{S4} tableaux are constructed just like {@K system} tableaux.
-
-.. _s4-rules:
+L{} tableaux are constructed just like {@K system} tableaux.
 
 Nodes
 -----
@@ -63,21 +61,18 @@ Closure
 
 .. tableau-rules::
   :group: closure
-  :titles:
-  :legend:
-  :doc:
+  :docflags:
+  :title: -
+
+.. _s4-rules:
 
 Rules
 -----
 
-L{S4} contains all the {@K rules}, the {@T} Reflexive rule, plus an
+L{} contains all the {@K rules}, the {@T} Reflexive rule, plus an
 additional Transitive rule.
 
-.. tableau-rules::
-  :group: ungrouped
-  :docflags:
-  :title: Access Rules
-  :include: Reflexive, Transitive
+.. include:: include/s4/access_rules_group.rst
 
 .. include:: include/k/rule_groups.rst
 

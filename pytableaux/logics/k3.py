@@ -31,7 +31,7 @@ class Meta(FDE.Meta):
     designated_values = frozenset({values.T})
     unassigned_value = values.N
     description = 'Three-valued logic (T, F, N)'
-    category_order = 20
+    category_order = 2
     extension_of = ('FDE')
 
 class Model(FDE.Model): pass

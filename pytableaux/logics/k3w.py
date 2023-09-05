@@ -26,7 +26,7 @@ class Meta(K3.Meta):
     name = 'K3W'
     title = 'Weak Kleene Logic'
     description = 'Three-valued logic with values T, F, and N'
-    category_order = 30
+    category_order = 7
     extension_of = ('K3WQ') # proof?
 
 class Model(FDE.Model):

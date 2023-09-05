@@ -27,7 +27,7 @@ class Meta(KLP.Meta):
     name = 'S5LP'
     title = 'LP with S5 modal'
     description = 'Modal version of LP based on S5 normal modal logic'
-    category_order = 24
+    category_order = 15
     extension_of = ('S4LP', 'S5FDE')
 
 class Model(S5FDE.Model): pass

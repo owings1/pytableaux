@@ -29,7 +29,7 @@ class Meta(K3.Meta):
     description = (
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator')
-    category_order = 80
+    category_order = 5
     native_operators = FDE.Meta.native_operators | (
         Operator.Conditional,
         Operator.Biconditional)

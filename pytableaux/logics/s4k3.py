@@ -27,7 +27,7 @@ class Meta(KK3.Meta):
     name = 'S4K3'
     title = 'K3 with S4 modal'
     description = 'Modal version of K3 based on S4 normal modal logic'
-    category_order = 23
+    category_order = 9
     extension_of = ('TK3', 'S4FDE')
 
 class Model(S4FDE.Model): pass

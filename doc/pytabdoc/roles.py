@@ -236,9 +236,9 @@ class metadress(BaseRole):
     modes = dict(
         logic_name = dict(
             match_map = {
-                r'^(?:(?P<main>B|K?G|K?K|K?L|K?Ł|K?P|K?RM)(?P<down>3))$' : ('subber',),
-                r'^(?:(?P<main>K?B)(?P<up>3)(?P<down>E))$'  : ('subsup',),
-                r'^(?:(?P<main>K?K)(?P<up>3)(?P<down>WQ?))$': ('subsup',)},
+                r'^(?:(?P<main>[DKT]?[BKLŁGP]|[DKT]?RM|S[45][BKLŁGP]|S[45]?RM)(?P<down>3))$' : ('subber',),
+                r'^(?:(?P<main>[DKT]?B|S[45]B)(?P<up>3)(?P<down>E))$'  : ('subsup',),
+                r'^(?:(?P<main>[DKT]?K|S[45]K)(?P<up>3)(?P<down>WQ?))$': ('subsup',)},
             nodecls = nodes.inline,
             nodecls_map = dict(
                 main= nodes.inline,

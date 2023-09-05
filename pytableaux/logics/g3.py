@@ -29,7 +29,7 @@ class Meta(L3.Meta):
     description = (
         'Three-valued logic (T, F, N) with alternate '
         'negation and conditional')
-    category_order = 90
+    category_order = 10
 
 class Model(FDE.Model):
 

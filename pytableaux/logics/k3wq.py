@@ -33,7 +33,7 @@ class Meta(K3.Meta):
     description = (
         'Three-valued logic with values T, F, and N, '
         'with alternate quantification')
-    category_order = 40
+    category_order = 8
 
 class Model(FDE.Model):
 

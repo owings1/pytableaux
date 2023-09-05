@@ -29,7 +29,7 @@ class Meta(KFDE.Meta):
     values = K3.Meta.values
     designated_values = K3.Meta.designated_values
     unassigned_value = K3.Meta.unassigned_value
-    category_order = 20
+    category_order = 6
     extension_of = ('KFDE', 'K3')
 
 class Model(KFDE.Model): pass
