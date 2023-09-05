@@ -21,7 +21,9 @@ pytableaux.logics
 """
 from __future__ import annotations
 
+import enum
 import itertools
+import operator as opr
 import sys
 from collections import defaultdict
 from collections.abc import Mapping, Set
@@ -33,7 +35,7 @@ from typing import TYPE_CHECKING, Any, Iterator, TypeVar
 
 from ..errors import Emsg, check
 from ..lang import Operator
-from ..tools import EMPTY_SET, abcs, closure, qset, qsetf, SequenceSet
+from ..tools import EMPTY_SET, abcs, closure, qset, qsetf, SequenceSet, membr, wraps
 from ..tools.hybrids import QsetView
 
 if TYPE_CHECKING:
@@ -268,7 +270,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
             if modname not in self.modules:
                 self.add(import_module(modname))
 
-    def grouped(self, keys, /, *, sort=True, key=None, reverse=False) -> dict[str, list[LogicType]]:
+    def grouped(self, keys=None, /, *, sort=True, key=None, reverse=False) -> dict[LogicType.Meta.Category, list[LogicType]]:
         """Group logics by category.
 
         Args:
@@ -283,6 +285,8 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         Raises:
             ValueError: if any not found.
         """
+        if keys is None:
+            keys = self.all()
         groups = defaultdict(list)
         for logic in map(self, keys):
             groups[logic.Meta.category].append(logic)
@@ -418,7 +422,7 @@ class LogicType(metaclass=LogicTypeMeta):
         designated_values: Set[Mval]
         unassigned_value: Mval
         many_valued: bool
-        category: str
+        category: LogicType.Meta.Category
         description: str = ''
         category_order: int = 0
         tags = SequenceSet[str]
@@ -437,34 +441,71 @@ class LogicType(metaclass=LogicTypeMeta):
             Operator.Biconditional)))
         extension_of: Set[str] = EMPTY_SET
 
+        class Category(enum.Enum):
+
+            Bivalent = 0, 'Bivalent'
+            BivalentModal = 1, 'Bivalent Modal'
+            ManyValued = 2, 'Many-valued'
+            ManyValuedModal = 3, 'Many-valued Modal'
+
+            def __init__(self, order: int, title: str):
+                self.order = order
+                self.title = title
+
+            @membr.defer
+            def wrapper(member: membr):
+                @wraps(oper := getattr(opr, member.name))
+                def wrapped(self: LogicType.Meta.Category, other, /):
+                    cls = type(self)
+                    if isinstance(other, str):
+                        other = cls(other)
+                    elif not isinstance(other, cls):
+                        return NotImplemented
+                    return oper(self.order, other.order)
+                return wrapped
+
+            __lt__ = __gt__ = __le__ = __ge__ = wrapper()
+
+            del(wrapper)
+
+            def __eq__(self, other):
+                if isinstance(other, str):
+                    return self.name == other or self.title == other
+                if not isinstance(other, type(self)):
+                    return NotImplemented
+                return self is other
+
+            def __hash__(self):
+                return hash(self.title)
+                
+            def __str__(self):
+                return self.title
+
         def __init_subclass__(cls):
             super().__init_subclass__()
             LogicTypeMeta.new_meta(cls)
             for name in ('native_operators', 'modal_operators', 'truth_functional_operators'):
                 setattr(cls, name, qsetf(sorted(getattr(cls, name))))
             tags = []
-            if cls.modal:
-                tags.append('modal')
             if cls.quantified:
                 tags.append('quantified')
             if len(cls.values) == 2:
                 cls.many_valued = False
                 tags.append('bivalent')
+                category = 'Bivalent'
             else:
                 cls.many_valued = True
                 tags.append('many-valued')
+                category = 'ManyValued'
                 if len(cls.values) - len(cls.designated_values):
                     tags.append('gappy')
                 if len(cls.designated_values) > 1:
                     tags.append('glutty')
-            cls.tags = qsetf(tags)
-            if cls.many_valued:
-                category = 'Many-valued'
-            else:
-                category = 'Bivalent'
             if cls.modal:
-                category += ' Modal'
-            cls.category = category
+                tags.append('modal')
+                category += 'Modal'
+            cls.tags = qsetf(tags)
+            cls.category = getattr(cls.Category, category)
             extension_of = cls.__dict__.get('extension_of', EMPTY_SET)
             if isinstance(extension_of, str):
                 extension_of = extension_of,

@@ -173,7 +173,7 @@ class App(EventEmitter):
             logics = self.logics_map,
             example_args = self.example_args,
             output_formats = sorted(set(Notation.get_common_formats()).intersection(writers.registry)),
-            logic_categories = logics.registry.grouped(self.logics_map),
+            logic_categories = logics.registry.grouped(),
             lw_html_ref = LexWriter(notation=Notation.standard, format='html'),
             toJson = self.tojson))
         self.on(Wevent.before_dispatch, self.before_dispatch)
