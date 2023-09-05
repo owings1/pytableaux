@@ -188,11 +188,10 @@ class BranchValueHook(BranchCache[_VT]):
 class BranchTarget(BranchValueHook[Target]):
     hook_method_name = '_branch_target_hook'
 
-class AplSentCount(BranchCache[dict[Sentence, int]]):
+class AplSentCount(BranchCache[dict[tuple[Sentence, bool|None], int]]):
     """
-    Count the times the rule has applied for a sentence per branch. This tracks
-    the `sentence` property of the rule's target. The target should also include
-    the `branch` key.
+    Count the times the rule has applied for a sentence (+/-) per branch. This tracks
+    the `sentence` and `designated` properties of the rule's target.
     """
     valuetype = partial(defaultdict, int)
 
@@ -201,7 +200,7 @@ class AplSentCount(BranchCache[dict[Sentence, int]]):
         def after_apply(target: Target):
             if target.get(Node.Key.flag):
                 return
-            self[target.branch][target.sentence] += 1
+            self[target.branch][target.sentence, target.designated] += 1
         self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
 
 class NodeCount(BranchCache[dict[Node, int]]):

@@ -77,6 +77,7 @@ class Rules(LogicType.Rules):
             w2 = branch.new_world()
             yield adds(
                 group(sdwnode(si, d, w2), anode(w1, w2)),
+                designated=d,
                 sentence=si)
 
         def score_candidate(self, target, /) -> float:
@@ -89,7 +90,7 @@ class Rules(LogicType.Rules):
             s = self.sentence(target.node)
             si = s.lhs
             # Don't bother checking for closure since we will always have a new world
-            track_count = self[AplSentCount][target.branch][si]
+            track_count = self[AplSentCount][target.branch][si, self.designation]
             if track_count == 0:
                 return 1.0
             return -1.0 * self[MaxWorlds].modals[s] * track_count
@@ -99,7 +100,7 @@ class Rules(LogicType.Rules):
                 return 1.0
             s = self.sentence(target.node)
             si = s.lhs
-            return -1.0 * self[AplSentCount][target.branch][si]
+            return -1.0 * self[AplSentCount][target.branch][si, self.designation]
 
     class PossibilityNegatedDesignated(System.OperatorNodeRule):
 
