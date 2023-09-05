@@ -19,7 +19,10 @@
 # pytableaux.logics.s5fde tests
 from __future__ import annotations
 
+from unittest import skip
+
 from . import test_fde as FDESuite
+from .test_s5 import TestArguments as S5Arguments
 
 from ..utils import BaseCase
 
@@ -29,6 +32,15 @@ class Base(BaseCase):
 
 class TestRules(Base, autorules=True, bare=True): pass
 
-class TestArguments(Base, autoargs=True): pass
+class TestArguments(Base, autoargs=True):
+
+    test_valid_optimize_nec_rule1 = S5Arguments.test_valid_optimize_nec_rule1
+    test_invalid_nested_diamond_within_box1 = S5Arguments.test_invalid_nested_diamond_within_box1
+
+    @skip('TODO: fix model')
+    def test_invalid_intermediate_mix_modal_quantifiers1(self):
+        #     self.assertTrue(model.is_countermodel_to(tab.argument))
+        # E   AssertionError: False is not true
+        self.invalid_tab('MSxGx', ('VxLSyUFxMGy', 'Fm'), max_steps=100)
 
 class TestTables(Base, FDESuite.TestTables): pass
