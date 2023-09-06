@@ -25,22 +25,22 @@
                 {%- for lextype in [LexType.Atomic, LexType.Constant, LexType.Variable] %}
                 <span class="label">{{ lextype.name|e }}s</span>
                 <ul class="item-symbols">
-                    {%- for i in range(lextype.maxi + 1) -%}
+                    {%- for i in range(lextype.maxi + 1) %}
                         <li>{{ table.reversed[lextype.cls, i]|e }}</li>
                     {%- endfor %}
                 </ul>
                 {%- endfor %}
                 <span class="label">Quantifiers</span>
                 <table class="operator-symbols quantifier-symbols">
-                    {%- for quantifier in Quantifier -%}
+                    {%- for item in Quantifier -%}
                         <tr>
                             <td>
                                 <span class="operator-symbol quantifier-symbol">
-                                    {{- table.reversed[quantifier]|e -}}
+                                    {{- table.reversed[item]|e -}}
                                 </span>
                             </td>
-                            <td class="html-ref-symbol">{{ lw_html_ref(quantifier) }}</td>
-                            <td>{{ quantifier.label|e }}</td>
+                            <td class="html-ref-symbol">{{ lw_html_ref(item) }}</td>
+                            <td>{{ item.label|e }}</td>
                         </tr>
                     {%- endfor %}
                 </table>
@@ -60,36 +60,23 @@
                 </ul>
             </div>
         {%- endfor %}
-
         <table id="predicates_input_table" class="predicates predicate-symbols">
-            {%- set PredSys = Predicate.System -%}
-            {%- for pred in PredSys -%}
+            {%- for pred in Predicate.System %}
                 <tr class="system-predicate">
                     <td>
                         {%- for notn in Notation -%}
-                            {%- set symbol = ParseTable.fetch(notn).reversed[pred] -%}
-                            {%- set subscript = pred.subscript -%}
+                            {%- set symbol = ParseTable.fetch(notn).reversed[pred] %}
+                            {%- set subscript = pred.subscript %}
                             <span class="lexicon predicate-symbol notation-{{ notn.name|e }} hidden">
-                                {{- symbol|e }}{% if pred.subscript > 0 %}<sub>{{ pred.subscript|e }}</sub>{% endif -%}
+                                {{- symbol|e }}{% if subscript > 0 %}<sub>{{ subscript|e }}</sub>{% endif -%}
                             </span>
-                        {% endfor %}
+                        {%- endfor %}
                     </td>
                     <td class="html-ref-symbol">{{ lw_html_ref(pred) }}</td>
                     <td>{{ pred.name|e }}</td>
                 </tr>
-            {%- endfor -%}
-            {# {%- for label in form_data['user_predicate_symbols[]'] %}
-                {%- set index, subscript = label.split('.')|map('int') -%}
-                {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
-                {%- call helper.predicate(index, subscript, arity) %}
-                    {%- for notn in Notation -%}
-                        {%- set table = ParseTable.fetch(notn) -%}
-                        {{- helper.predicate_symbol(notn.name, table.reversed[Predicate, index], subscript) }}
-                    {% endfor -%}
-                {%- endcall -%}
-            {%- endfor -%} #}
+            {%- endfor %}
         </table>
-        {# <div><a href="javascript:" class="add-predicate tooltip" title="Add a predicate"></a></div> #}
         <div class="clear"></div>
     </div>
     <div class="clear"></div>

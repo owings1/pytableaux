@@ -20,8 +20,6 @@ pytableaux.web.app
 """
 from __future__ import annotations
 
-from . import views
-
 import logging
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Mapping
@@ -33,15 +31,15 @@ from cherrypy import HTTPError, NotFound, expose
 from cherrypy._cprequest import Request, Response
 
 from ... import examples, logics, package
-from ...lang import (Argument, LexType, Notation, Operator, ParseTable, LexWriter,
-                    Predicate, Quantifier)
+from ...lang import (Argument, LexType, LexWriter, Notation, Operator,
+                     ParseTable, Predicate, Quantifier)
 from ...logics import LogicType
 from ...proof import writers
 from ...tools import inflect
 from ...tools.events import EventEmitter
 from .. import EnvConfig, StaticResource, Wevent, api
-from . import views
 from ..util import cp_staticdir_conf, get_logger, tojson
+from . import views
 
 if TYPE_CHECKING:
     from ..metrics import AppMetrics
@@ -222,10 +220,7 @@ class App(EventEmitter):
                     conclusion = lw(arg.conclusion)))
                 for lw in (
                     LexWriter(notation=notn, format='text', dialect='ascii')
-                    for notn in Notation)} | {
-                '@Predicates': tuple(
-                    p.spec for p in arg.predicates(sort=True)
-                        if not p.is_system)})
+                    for notn in Notation)})
             for arg in examples.args.values()})
 
     def _create_static_res(self):
@@ -239,16 +234,8 @@ class App(EventEmitter):
     def _build_jsapp_data(self):
         stdtbl = ParseTable.fetch(Notation.standard)
         stdlw = LexWriter(notation=Notation.standard, format='text', dialect='unicode')
-        nups = {}
-        for notn in Notation:
-            chars = []
-            table = ParseTable.fetch(notn)
-            for i in range(Predicate.TYPE.maxi + 1):
-                chars.append(table.reversed[Predicate, i])
-            nups[notn.name] = chars
         return MapProxy(dict(
             example_args = self.example_args,
-            nups = MapProxy(nups),
             display_trans = MapProxy({
                 'standard': MapProxy({
                     stdtbl.reversed[oper]: stdlw(oper)

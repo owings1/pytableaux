@@ -23,13 +23,12 @@ Language collection classes.
 from __future__ import annotations
 
 import operator as opr
-from collections import deque
 from collections.abc import Sequence
 from itertools import repeat, starmap
 from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Iterable
 
-from ..errors import Emsg, ParseError, check
+from ..errors import Emsg, check
 from ..tools import SequenceSet, abcs, group, lazy, membr, qset, qsetf, wraps
 from . import LangCommonMeta, Lexical, Predicate, Sentence
 
@@ -128,13 +127,6 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
             str: The argument string.
         """
         return ':'.join(map(__class__._argstr_lw, self))
-        # lw = __class__._argstr_lw
-        # preds = self.predicates(sort=True) - Predicate.System
-        # return '|'.join(
-        #     filter(None, (
-        #         ':'.join(map(lw, self)),
-        #         ','.join(
-        #             '.'.join(map(str, p.spec)) for p in preds))))
 
     @staticmethod
     def from_argstr(argstr: str, /, *, title:str|None = None) -> Argument:
@@ -157,32 +149,6 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         conc, *prems = argstr.split(':')
         parser = __class__._argstr_pclass(auto_preds=True)
         return parser.argument(conc, prems, title=title)
-        # try:
-        #     parts = deque(argstr.split('|'))
-        # except:
-        #     check.inst(argstr, str)
-        #     raise # pragma: no cover
-        # try:
-        #     conc, *prems = parts.popleft().split(':')
-        # except IndexError:
-        #     raise ParseError('Empty input')
-        # if parts:
-        #     auto_preds = False
-        #     try:
-        #         specsstr, = parts
-        #     except ValueError:
-        #         raise ParseError('Too many parts')
-        #     try:
-        #         preds = Predicates(
-        #             tuple(map(int, specstr.split('.')))
-        #             for specstr in specsstr.split(','))
-        #     except Exception as err:
-        #         raise ParseError(f'Error parsing predicates: {err}')
-        # else:
-        #     auto_preds = True
-        #     preds = Predicates()
-        # parser = __class__._argstr_pclass(predicates=preds, auto_preds=auto_preds)
-        # return parser.argument(conc, prems)
 
     #******  Equality & Ordering
 

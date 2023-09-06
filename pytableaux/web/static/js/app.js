@@ -50,11 +50,6 @@
         logicDetails : 'logic-details',
         notation     : 'notation',      // used as prefix, e.g. notation-polish
         options      : 'options',
-        predAdd      : 'add-predicate',
-        predDel      : 'del-predicate',
-        predicate    : 'predicate',
-        predicates   : 'predicates',
-        predSymbol   : 'predicate-symbol',
         premise      : 'premise',
         premiseAdd   : 'add-premise',
         premiseDel   : 'del-premise',
@@ -100,8 +95,6 @@
         fieldOutputNotn    : '#output_notation',
         fieldWriterRegistry: '#writer_registry',
 
-        fieldsArity       : `input.${Cls.arity}`,
-        fieldsPredSymbol  : `input.${Cls.predSymbol}`,
         fieldsPremise     : `input.${Cls.premise}`,
         fieldsSentence    : `input.${Cls.sentence}`,
 
@@ -109,19 +102,16 @@
         wrapDebugs        : '#pt_debugs_wrapper',
         uitabStatsLink    : '#uitab_stats_link',
 
-        inputPredicate    : `.${Cls.input}.${Cls.predicate}`,
         inputPremise      : `.${Cls.input}.${Cls.premise}`,
         inputSentence     : `.${Cls.input}.${Cls.sentence}`,
         linksButton       : `a.${Cls.button}`,
 
         debugs            : '.' + Cls.debug,
-        predicates        : '.' + Cls.predicates,
         premises          : '.' + Cls.premises,
         tableaux          : '.' + Cls.tableau,
 
         resultAdmon       : '.proof-result-admon',
         templatePrem      : '#template_premise',
-        templatePred      : '#template_predicate',
     }
 
     // Fixed optname -> checkbox mappings.
@@ -158,10 +148,8 @@
         const PageData = JSON.parse($(Sel.pageJson).html())
         const IS_DEBUG = Boolean(PageData.is_debug)
         const IS_PROOF = Boolean(PageData.is_proof)
-        const PRED_SYMCOUNT = Object.values(AppData.nups)[0].length
         const Templates = {
             premise    : $(Sel.templatePrem).html(),
-            predicate  : $(Sel.templatePred).html(),
         }
         const $AppBody = $(Sel.appBody)
         const $AppForm = $(Sel.appForm)
@@ -303,9 +291,6 @@
             } else if ($target.is(Sel.fieldsSentence)) {
                 // Change to a sentence input field.
                 refreshStatuses()
-            } else if ($target.hasClass(Cls.arity)) {
-                // Change to a predicate arity field.
-                refreshStatuses()
             } else if ($target.is(Sel.fieldLogic)) {
                 // Change to the selected logic.
                 refreshLogic()
@@ -317,17 +302,10 @@
             if ($target.hasClass(Cls.premiseAdd)) {
                 // Add premise.
                 addPremise()
-            } else if ($target.hasClass(Cls.predAdd)) {
-                // Add predicate.
-                // addPredicate(...getNextPredCoords(), 1).find(':input').focus()
             } else if ($target.hasClass(Cls.premiseDel)) {
                 // Delete premise.
                 removePremise($target.closest(Sel.inputPremise))
                 refreshStatuses()
-            } else if ($target.hasClass(Cls.predDel)) {
-                // Delete predicate.
-                // $target.closest(Sel.inputPredicate).remove()
-                // refreshStatuses()
             } else if ($target.is(Sel.clearArg)) {
                 // Clear the argument.
                 clearArgument()
@@ -455,68 +433,6 @@
             // TODO: Prune ParseCache?
             $prem.remove()
         }
-        /**
-         * Add a user-defined predicate row. The first two parameters, index
-         * and subscript, are required.
-         *
-         * @param {integer} index The integer index of the predicate.
-         * @param {integer} subscript The integer subscript of the predicate.
-         * @param {integer} arity The integer arity of the predicate (optional).
-         * @return {object} The jquery element of the created tr.
-         */
-        // function addPredicate(index, subscript, arity) {
-        //     const notation = CurrentInputNotation
-        //     arity = arity || ''
-        //     let symbol_html = ''
-        //     $.each(AppData.nups, (notn, symbols) => {
-        //         const classes = [
-        //             Cls.predSymbol,
-        //             Cls.lexicon,
-        //             [Cls.notation, esc(notn)].join('-')
-        //         ]
-        //         if (notn !== notation) {
-        //             classes.push(Cls.hidden)
-        //         }
-        //         symbol_html += '<span class="' + classes.join(' ') + '">'
-        //         symbol_html += $('<div/>').text(symbols[index]).html()
-        //         if (subscript > 0) {
-        //             symbol_html += '<sub>' + esc(subscript) + '</sub>'
-        //         }
-        //         symbol_html += '</span>'
-        //     })
-        //     const vars = {index, subscript, arity, symbol_html}
-        //     return $(render(Templates.predicate, vars)).appendTo(
-        //         $(Sel.predicates, $AppForm)
-        //     )
-        // }
-
-        /**
-         * Get the next available index, subscript.
-         * @return {array}
-         */
-        // function getNextPredCoords() {
-        //     const $symbols = $(Sel.fieldsPredSymbol, $AppForm)
-        //     let index = 0
-        //     let subscript = 0
-        //     if ($symbols.length > 0) {
-        //         const last = $symbols.last().val().split('.')
-        //         index = +last[0] + 1
-        //         subscript = +last[1]
-        //         if (index === PRED_SYMCOUNT) {
-        //             index = 0
-        //             subscript += 1
-        //         }
-        //     }
-        //     return [index, subscript]
-        // }
-
-        /**
-         * Clear all user predicates.
-         * @return {void}
-         */
-        function clearPredicates() {
-            $(Sel.inputPredicate, $AppForm).remove()
-        }
 
         /**
          * Clear all premises and conclusion inputs.
@@ -581,7 +497,6 @@
             if (!argName) {
                 return
             }
-            // clearPredicates()
             clearArgument()
             const notation = CurrentInputNotation
             const argBase = AppData.example_args[argName]
@@ -593,12 +508,6 @@
             // Set translated display values.
             $.each(arg.premises, (i, value) => addPremise(  (value)))
             $(Sel.fieldConclusion, $AppForm).val(sentenceDisplayValue(arg.conclusion))
-            // $.each(argBase['@Predicates'], (i, pred) => {
-            //     if (!Array.isArray(pred)) {
-            //         pred = [pred.index, pred.subscript, pred.arity]
-            //     }
-            //     addPredicate(...pred)
-            // })
         }
 
         /**
@@ -607,7 +516,6 @@
          * @return {void}
          */
         function refreshStatuses() {
-            // const predicates = getPredicatesData()
             const notation = CurrentInputNotation
             const input = []
             const $statuses = []
@@ -732,9 +640,6 @@
             if (!Object.keys(data.output.options).length) {
                 delete data.output.options
             }
-            // if (!data.argument.predicates.length) {
-            //     delete data.argument.predicates
-            // }
             if (!data.argument.premises.length) {
                 delete data.argument.premises
             }
@@ -744,8 +649,7 @@
         /**
          * Returns an object with the conclusion and premises
          * inputs, Empty premises are skipped. No other validation
-         * on the sentences. Includes predicates data from `getPredicatesData()`
-         * and the selected notation.
+         * on the sentences.
          * 
          * @return {object}
          */
@@ -761,44 +665,9 @@
                 notation   : CurrentInputNotation,
                 conclusion : sentenceInputValue($(Sel.fieldConclusion, $AppForm).val()),
                 premises   : premises,
-                // predicates : getPredicatesData(),
             }
         }
 
-        /**
-         * Returns array of {index, subscript, arity} objects from
-         * the form. Rows with no value of `arity` are skipped. Attempts
-         * to cast `arity` to a number, but if it false with NaN, the
-         * original input string is returned.
-         * 
-         * @return {array}
-         */
-        function getPredicatesData() {
-            const preds = []
-            $(Sel.inputPredicate, $AppForm).each(function() {
-                const $row = $(this)
-                const arity = $(Sel.fieldsArity, $row).val()
-                if (!arity.length) {
-                    // Skip blank values.
-                    return
-                }
-                const arityNumVal = +arity
-                // Let invalid arity value propagate.
-                let arityVal
-                if (isNaN(arityNumVal)) {
-                    arityVal = arity
-                } else {
-                    arityVal = arityNumVal
-                }
-                const spec = $(Sel.fieldsPredSymbol, $row).val().split('.')
-                preds.push({
-                    index     : +spec[0],
-                    subscript : +spec[1],
-                    arity     : arityVal,
-                })
-            })
-            return preds
-        }
         init()
     })
 
