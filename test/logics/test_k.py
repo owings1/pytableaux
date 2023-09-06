@@ -88,12 +88,6 @@ class TestRules(Base, autorules=True):
 
 class TestArguments(Base, autoargs=True):
 
-    def test_invalid_nested_diamond_within_box1(self):
-        self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
-
-    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        self.valid_tab('b', 'VxKFxKaNa')
-
     def test_invalid_existential_inside_univ_max_steps(self):
         self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
 
@@ -237,7 +231,7 @@ class TestModelModalAccess(Base):
 
 class TestModelQuantification(Base):
 
-    def test_model_existence_user_pred_true(self):
+    def test_model_existential_user_pred_true(self):
         pred, x = Predicate.first(), Variable.first()
         s1, s2 = pred(Constant.first()), pred(x)
         s3 = Quantifier.Existential(x, s2)
@@ -246,11 +240,11 @@ class TestModelQuantification(Base):
         res = m.value_of(s3, world=0)
         self.assertEqual(res, 'T')
 
-    def test_model_existense_user_pred_false(self):
+    def test_model_existential_user_pred_false(self):
         pred = Predicate(0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
-        s1, s2 = pred(m), pred(x)
+        s2 = pred(x)
         s3 = Quantified('Existential', x, s2)
         m = self.m().finish()
         res = m.value_of(s3, world=0)
@@ -277,10 +271,9 @@ class TestModelQuantification(Base):
 
     def test_model_universal_user_pred_false(self):
         pred = Predicate(0, 0, 1)
-        m = Constant(0, 0)
-        n = Constant(1, 0)
+        m, n = Constant.gen(2)
         x = Variable(0, 0)
-        s1, s2, s3 = (pred(p) for p in (m, x, n))
+        s1, s2, s3 = map(pred, (m, x, n))
         s4 = Quantified('Universal', x, s2)
     
         with self.m() as m:

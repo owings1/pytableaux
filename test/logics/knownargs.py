@@ -128,6 +128,7 @@ L('CFOL',
         'Self Identity 2',
         'Syllogism',
         'Universal Predicate Syllogism',
+        arg('b', ('VxKFxKaNa',), title='regression_efq_univeral_with_contradiction_no_constants'),
     ),
     invalid = (
         'KFDE Distribution Inference 1',
