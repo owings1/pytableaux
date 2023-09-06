@@ -319,15 +319,15 @@
                 addPremise()
             } else if ($target.hasClass(Cls.predAdd)) {
                 // Add predicate.
-                addPredicate(...getNextPredCoords(), 1).find(':input').focus() 
+                // addPredicate(...getNextPredCoords(), 1).find(':input').focus()
             } else if ($target.hasClass(Cls.premiseDel)) {
                 // Delete premise.
                 removePremise($target.closest(Sel.inputPremise))
                 refreshStatuses()
             } else if ($target.hasClass(Cls.predDel)) {
                 // Delete predicate.
-                $target.closest(Sel.inputPredicate).remove()
-                refreshStatuses()
+                // $target.closest(Sel.inputPredicate).remove()
+                // refreshStatuses()
             } else if ($target.is(Sel.clearArg)) {
                 // Clear the argument.
                 clearArgument()
@@ -464,51 +464,51 @@
          * @param {integer} arity The integer arity of the predicate (optional).
          * @return {object} The jquery element of the created tr.
          */
-        function addPredicate(index, subscript, arity) {
-            const notation = CurrentInputNotation
-            arity = arity || ''
-            let symbol_html = ''
-            $.each(AppData.nups, (notn, symbols) => {
-                const classes = [
-                    Cls.predSymbol,
-                    Cls.lexicon,
-                    [Cls.notation, esc(notn)].join('-')
-                ]
-                if (notn !== notation) {
-                    classes.push(Cls.hidden)
-                }
-                symbol_html += '<span class="' + classes.join(' ') + '">'
-                symbol_html += $('<div/>').text(symbols[index]).html()
-                if (subscript > 0) {
-                    symbol_html += '<sub>' + esc(subscript) + '</sub>'
-                }
-                symbol_html += '</span>'
-            })
-            const vars = {index, subscript, arity, symbol_html}
-            return $(render(Templates.predicate, vars)).appendTo(
-                $(Sel.predicates, $AppForm)
-            )
-        }
+        // function addPredicate(index, subscript, arity) {
+        //     const notation = CurrentInputNotation
+        //     arity = arity || ''
+        //     let symbol_html = ''
+        //     $.each(AppData.nups, (notn, symbols) => {
+        //         const classes = [
+        //             Cls.predSymbol,
+        //             Cls.lexicon,
+        //             [Cls.notation, esc(notn)].join('-')
+        //         ]
+        //         if (notn !== notation) {
+        //             classes.push(Cls.hidden)
+        //         }
+        //         symbol_html += '<span class="' + classes.join(' ') + '">'
+        //         symbol_html += $('<div/>').text(symbols[index]).html()
+        //         if (subscript > 0) {
+        //             symbol_html += '<sub>' + esc(subscript) + '</sub>'
+        //         }
+        //         symbol_html += '</span>'
+        //     })
+        //     const vars = {index, subscript, arity, symbol_html}
+        //     return $(render(Templates.predicate, vars)).appendTo(
+        //         $(Sel.predicates, $AppForm)
+        //     )
+        // }
 
         /**
          * Get the next available index, subscript.
          * @return {array}
          */
-        function getNextPredCoords() {
-            const $symbols = $(Sel.fieldsPredSymbol, $AppForm)
-            let index = 0
-            let subscript = 0
-            if ($symbols.length > 0) {
-                const last = $symbols.last().val().split('.')
-                index = +last[0] + 1
-                subscript = +last[1]
-                if (index === PRED_SYMCOUNT) {
-                    index = 0
-                    subscript += 1
-                }
-            }
-            return [index, subscript]
-        }
+        // function getNextPredCoords() {
+        //     const $symbols = $(Sel.fieldsPredSymbol, $AppForm)
+        //     let index = 0
+        //     let subscript = 0
+        //     if ($symbols.length > 0) {
+        //         const last = $symbols.last().val().split('.')
+        //         index = +last[0] + 1
+        //         subscript = +last[1]
+        //         if (index === PRED_SYMCOUNT) {
+        //             index = 0
+        //             subscript += 1
+        //         }
+        //     }
+        //     return [index, subscript]
+        // }
 
         /**
          * Clear all user predicates.
@@ -581,7 +581,7 @@
             if (!argName) {
                 return
             }
-            clearPredicates()
+            // clearPredicates()
             clearArgument()
             const notation = CurrentInputNotation
             const argBase = AppData.example_args[argName]
@@ -607,7 +607,7 @@
          * @return {void}
          */
         function refreshStatuses() {
-            const predicates = getPredicatesData()
+            // const predicates = getPredicatesData()
             const notation = CurrentInputNotation
             const input = []
             const $statuses = []
@@ -629,7 +629,7 @@
                 // Set translated display value.
                 $me.val(sentenceDisplayValue(value))
             })
-            const payload = {input, notation, predicates}
+            const payload = {input, notation}
             $.ajax({
                 url         : API_PARSE_URI,
                 method      : 'POST',
@@ -732,9 +732,9 @@
             if (!Object.keys(data.output.options).length) {
                 delete data.output.options
             }
-            if (!data.argument.predicates.length) {
-                delete data.argument.predicates
-            }
+            // if (!data.argument.predicates.length) {
+            //     delete data.argument.predicates
+            // }
             if (!data.argument.premises.length) {
                 delete data.argument.premises
             }
@@ -761,7 +761,7 @@
                 notation   : CurrentInputNotation,
                 conclusion : sentenceInputValue($(Sel.fieldConclusion, $AppForm).val()),
                 premises   : premises,
-                predicates : getPredicatesData(),
+                // predicates : getPredicatesData(),
             }
         }
 
