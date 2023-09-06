@@ -20,7 +20,10 @@
 from __future__ import annotations
 
 import time
-from pytableaux import examples
+from unittest import skip
+
+from pytest import raises
+
 from pytableaux.errors import *
 from pytableaux.logics import k as K
 from pytableaux.proof import *
@@ -28,13 +31,8 @@ from pytableaux.proof import rules
 from pytableaux.proof.filters import getkey
 from pytableaux.proof.helpers import *
 from pytableaux.proof.tableaux import *
-from pytest import raises
-from unittest import skip
+
 from ..utils import BaseCase
-
-
-
-exarg = examples.argument
 
 
 class TestSystem(BaseCase):
@@ -55,7 +53,7 @@ class TestTableau(BaseCase):
         self.assertIn('finished', self.tab('Addition').__repr__())
 
     def test_build_premature_max_steps(self):
-        self.assertTrue(self.tab('MMP', max_steps=1).premature)
+        self.assertTrue(self.tab('Material Modus Ponens', max_steps=1).premature)
 
     def test_construct_sets_is_rank_optim_option(self):
         tab = self.tab(is_rank_optim=False)
@@ -63,7 +61,7 @@ class TestTableau(BaseCase):
         self.assertFalse(tab.opts['is_rank_optim'])
 
     def test_timeout_1ms(self):
-        proof = Tableau('cpl', exarg('Addition'), build_timeout=1)
+        proof = self.tab('Addition', is_build=False, build_timeout=1)
         with proof.timers.build:
             time.sleep(0.005)
         with raises(ProofTimeoutError):
@@ -88,7 +86,7 @@ class TestTableau(BaseCase):
         self.assertEqual(len(tab.open), 0)
 
     def test_regress_structure_has_model_id(self):
-        tab = Tableau('CPL', exarg('Triviality 1'), is_build_models=True)
+        tab = self.tab('Triviality 1', is_build_models=True)
         tab.build()
         self.assertTrue(tab.tree.model_id)
 

@@ -20,7 +20,6 @@
 # pytableaux.proof.writers tests
 from __future__ import annotations
 
-from pytableaux import examples
 from pytableaux.errors import *
 from pytableaux.lang import *
 from pytableaux.proof import *
@@ -44,7 +43,7 @@ class TestHtml(BaseCase):
         res = pw(tab)
 
     def test_write_std_fde_1(self):
-        arg = examples.argument('Addition')
+        arg = self.parg('Addition')
         pw = TabWriter('html', 'standard')
         tab = Tableau('fde', arg).build()
         res = pw(tab)
@@ -59,7 +58,7 @@ class TestLatex(BaseCase):
         res = pw(tab)
 
     def test_write_std_fde_1(self):
-        arg = examples.argument('Addition')
+        arg = self.parg('Addition')
         pw = TabWriter('latex', 'standard')
         tab = Tableau('fde', arg).build()
         res = pw(tab)

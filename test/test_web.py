@@ -191,11 +191,11 @@ class AppTest(helper.CPWebCase):
 
     def test_post_api_prove_argstr_ok(self):
         body = {
-            'argument': 'VxCFxHx:VxCFxGx:VxCGxHx|0.0.1,1.0.1,2.0.1',
+            'argument': 'VxCFxHx:VxCFxGx:VxCGxHx',
             'logic': 'cfol',
         }
         res = self.post_json('/api/prove', body)
-        self.assertEqual(res['status'], 200)
+        self.assertEqual(res['status'], 200, res)
 
     def test_post_api_prove_400_1(self):
         body = {

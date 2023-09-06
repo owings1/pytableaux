@@ -146,7 +146,7 @@ class BaseCase(TestCase):
         if isinstance(conc, Argument):
             return conc
         try:
-            return examples.argument(conc)
+            return examples.args[conc]
         except (KeyError, TypeError):
             pass
         premises = []

@@ -134,6 +134,11 @@ class TestParsers(BaseCase):
         with self.assertRaises(ParseError):
             std('(A & ())')
 
+    def test_infix_identity_variable(self):
+        p = Parser('standard')
+        s = p('Lxx=x')
+        self.assertEqual(type(s), Quantified)
+
 class TestPolish(BaseCase):
 
     def test_parse_atomic(self):

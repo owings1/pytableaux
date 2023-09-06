@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from collections import defaultdict
 from types import MappingProxyType as MapProxy
-from typing import Any, Callable, Collection, Mapping, TypeVar
+from typing import Callable, Collection, Mapping, TypeVar
 
 from pytableaux import examples
-from pytableaux.lang import Argument, Parser
+from pytableaux.lang import Argument
 from pytableaux.logics import LogicType, registry
 from pytableaux.proof import Tableau
 from pytableaux.tools import qset, qsetf, wraps
 
 _F = TypeVar('_F', bound=Callable)
 
-arg = Parser('polish', examples.preds).argument
 
 validities = {}
 invalidities = {}
@@ -103,7 +102,6 @@ L('CPL',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
         'Self Identity 1',
-        'Simplification',
     ),
     invalid = (
         'Existential Syllogism',
@@ -128,7 +126,7 @@ L('CFOL',
         'Self Identity 2',
         'Syllogism',
         'Universal Predicate Syllogism',
-        arg('b', ('VxKFxKaNa',), title='regression_efq_univeral_with_contradiction_no_constants'),
+        Argument('b:VxKFxKaNa', title='regression_efq_univeral_with_contradiction_no_constants'),
     ),
     invalid = (
         'KFDE Distribution Inference 1',
@@ -199,7 +197,7 @@ L('S5',
         'S5 Material Inference 1',
     ),
     invalid = (
-        arg('KMNbc', ('LCaMNb', 'Ma'), title='nested_diamond_within_box1'),
+        Argument('KMNbc:LCaMNb:Ma', title='nested_diamond_within_box1'),
     ))
 # ---------------------------------------------------------------------------
 
@@ -209,6 +207,7 @@ L('FDE',
         'Conditional Contraposition 1',
         'Conditional Contraposition 2',
         'Conjunction Commutativity',
+        'Conjunction Elimination',
         'Conjunction Introduction',
         'Disjunction Commutativity',
         'Existential from Universal',
@@ -235,7 +234,6 @@ L('FDE',
         'DeMorgan 8',
         'Material Contraction',
         'Quantifier Interdefinability 4',
-        'Simplification',
     ),
     invalid = (
 
@@ -567,23 +565,23 @@ L('MH',
         'Material Contraposition 2',
         'Material Modus Ponens',
         'Material Modus Tollens',
-        arg('UaUba', title='hmh_axiom01'),
-        arg('UUaUbcUUabUac', title='hmh_axiom02'),
-        arg('UKaba', title='hmh_axiom03'),
-        arg('UKabb', title='hmh_axiom04'),
-        arg('UUabUUacUaKbc', title='hmh_axiom05'),
-        arg('UaAab', title='hmh_axiom06'),
-        arg('UbAab', title='hmh_axiom07'),
-        arg('UUacUUbcUAabc', title='hmh_axiom08'),
-        arg('BNNaa', title='hmh_axiom09'),
-        arg('AAaNaNAaNa', title='hmh_axiom10'),
-        arg('AUabNUab', title='hmh_axiom11'),
-        arg('UAaNaUUabUNbNa', title='hmh_axiom12'),
-        arg('BNKabANaNb', title='hmh_axiom13'),
-        arg('BNAabAKNaNbKNAaNaNAbNb', title='hmh_axiom14'),
-        arg('UANaNAaNaUab', title='hmh_axiom15'),
-        arg('UKaANbNAbNbNUab', title='hmh_axiom16'),
-        arg('BNAaNaNANaNNa', title='ifn'),
+        Argument('UaUba', title='hmh_axiom01'),
+        Argument('UUaUbcUUabUac', title='hmh_axiom02'),
+        Argument('UKaba', title='hmh_axiom03'),
+        Argument('UKabb', title='hmh_axiom04'),
+        Argument('UUabUUacUaKbc', title='hmh_axiom05'),
+        Argument('UaAab', title='hmh_axiom06'),
+        Argument('UbAab', title='hmh_axiom07'),
+        Argument('UUacUUbcUAabc', title='hmh_axiom08'),
+        Argument('BNNaa', title='hmh_axiom09'),
+        Argument('AAaNaNAaNa', title='hmh_axiom10'),
+        Argument('AUabNUab', title='hmh_axiom11'),
+        Argument('UAaNaUUabUNbNa', title='hmh_axiom12'),
+        Argument('BNKabANaNb', title='hmh_axiom13'),
+        Argument('BNAabAKNaNbKNAaNaNAbNb', title='hmh_axiom14'),
+        Argument('UANaNAaNaUab', title='hmh_axiom15'),
+        Argument('UKaANbNAbNbNUab', title='hmh_axiom16'),
+        Argument('BNAaNaNANaNNa', title='ifn'),
     ),
     invalid = (
         'Biconditional Elimination 2',
@@ -611,7 +609,7 @@ L('MH',
         'Self Identity 2',
         'Syllogism',
         'Universal Predicate Syllogism',
-        arg('UNbNa', ('NAaNa', 'Uab'), title='p_from_article'),
+        Argument('UNbNa:NAaNa:Uab', title='p_from_article'),
     ))
 
 L('L3',
@@ -635,6 +633,7 @@ L('L3',
         'Conditional Modus Tollens',
         'Conditional Pseudo Contraposition',
         'Conjunction Commutativity',
+        'Conjunction Elimination',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -665,7 +664,6 @@ L('L3',
         'Quantifier Interdefinability 2',
         'Quantifier Interdefinability 3',
         'Quantifier Interdefinability 4',
-        'Simplification',
         'Syllogism',
         'Universal Predicate Syllogism',
     ),
@@ -802,22 +800,22 @@ L('NH',
         'Material Identity',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
-        arg('UaUba', title='hnh_axiom01'),
-        arg('UUaUbcUUabUac', title='hnh_axiom02'),
-        arg('UKaba', title='hnh_axiom03'),
-        arg('UKabb', title='hnh_axiom04'),
-        arg('UUabUUacUaKbc', title='hnh_axiom05'),
-        arg('UaAab', title='hnh_axiom06'),
-        arg('UbAab', title='hnh_axiom07'),
-        arg('UUacUUbcUAabc', title='hnh_axiom08'),
-        arg('BNNaa', title='hnh_axiom09'),
-        arg('NKKaNaNKaNa', title='hnh_axiom17'),
-        arg('NKUabNUab', title='hnh_axiom18'),
-        arg('UNKaNaUUbaUNaNb', title='hnh_axiom19'),
-        arg('BKNaNbNAab', title='hnh_axiom20'),
-        arg('BANaNbANKabKKaNaKbNb', title='hnh_axiom21'),
-        arg('UKNKaNaNaUab', title='hnh_axiom22'),
-        arg('UKaKNKbNbNbNUab', title='hnh_axiom23'),
+        Argument('UaUba', title='hnh_axiom01'),
+        Argument('UUaUbcUUabUac', title='hnh_axiom02'),
+        Argument('UKaba', title='hnh_axiom03'),
+        Argument('UKabb', title='hnh_axiom04'),
+        Argument('UUabUUacUaKbc', title='hnh_axiom05'),
+        Argument('UaAab', title='hnh_axiom06'),
+        Argument('UbAab', title='hnh_axiom07'),
+        Argument('UUacUUbcUAabc', title='hnh_axiom08'),
+        Argument('BNNaa', title='hnh_axiom09'),
+        Argument('NKKaNaNKaNa', title='hnh_axiom17'),
+        Argument('NKUabNUab', title='hnh_axiom18'),
+        Argument('UNKaNaUUbaUNaNb', title='hnh_axiom19'),
+        Argument('BKNaNbNAab', title='hnh_axiom20'),
+        Argument('BANaNbANKabKKaNaKbNb', title='hnh_axiom21'),
+        Argument('UKNKaNaNaUab', title='hnh_axiom22'),
+        Argument('UKaKNKbNbNbNUab', title='hnh_axiom23'),
     ),
     invalid = (
         'Biconditional Elimination 2',
@@ -964,6 +962,7 @@ L('RM3',
         'Conditional Pseudo Contraction',
         'Conditional Pseudo Contraposition',
         'Conjunction Commutativity',
+        'Conjunction Elimination',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -990,7 +989,6 @@ L('RM3',
         'Quantifier Interdefinability 2',
         'Quantifier Interdefinability 3',
         'Quantifier Interdefinability 4',
-        'Simplification',
     ),
     invalid = (
     ))
@@ -1204,7 +1202,8 @@ L('KL3',
 
 class ArgSet(qset[Argument]):
 
-    _hook_cast = staticmethod(examples.argument)
+    def _hook_cast(self, value):
+        return examples.args.get(value) or Argument(value)
 
     def _default_sort_key(self, value):
         return value.title or value.argstr()
@@ -1220,13 +1219,15 @@ def caching(wrapped: _F) -> _F:
             return cache.setdefault(logic, wrapped(logic))
     return wrapper
 
-@caching
-def get_extends(logic) -> qsetf[LogicType]:
-    return registry.get_extends(logic)
+get_extends = caching(registry.get_extends)
+get_extensions = caching(registry.get_extensions)
+# @caching
+# def get_extends(logic):
+#     return registry.get_extends(logic)
 
-@caching
-def get_extensions(logic) -> qsetf[LogicType]:
-    return registry.get_extensions(logic)
+# @caching
+# def get_extensions(logic):
+#     return registry.get_extensions(logic)
 
 def known_getter(base: Mapping[str, Collection[str|Argument]]):
     if base is validities:
@@ -1250,18 +1251,19 @@ def known_getter(base: Mapping[str, Collection[str|Argument]]):
     return decorator
 
 @known_getter(validities)
-def get_validities(logic): ...
+def get_validities(): ...
 
 @known_getter(invalidities)
-def get_invalidities(logic): ...
+def get_invalidities(): ...
 
 def get_known(logic):
     return get_invalidities(logic), get_validities(logic)
 
 def find_missing(logic):
     logic = registry(logic)
-    exists = get_invalidities(logic) | get_validities(logic)
-    missing = set(examples.arguments()) - exists
+    valids, invalids = get_known(logic)
+    exists = valids | invalids
+    missing = set(examples.args.values()) - exists
     results = defaultdict(set)
     for arg in missing:
         results[Tableau(logic, arg).build().valid].add(arg.title)

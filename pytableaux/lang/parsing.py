@@ -28,7 +28,7 @@ from types import MappingProxyType as MapProxy
 from typing import Any, ClassVar, Iterable, Mapping, Self
 
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
-                      UnboundVariableError, check)
+                      UnboundVariableError, UndefinedPredicateError, check)
 from ..tools import MapCover, abcs, for_defaults
 from . import BiCoords, LangCommonMeta, Marking, Notation
 from .collect import Argument, Predicates, PredicatesBase
@@ -102,7 +102,7 @@ class Parser(metaclass=ParserMeta):
     table: ParseTable
     "The parse table instance."
 
-    predicates: PredicatesBase
+    predicates: Predicates
     "The predicates store."
 
     opts: Mapping
@@ -116,7 +116,7 @@ class Parser(metaclass=ParserMeta):
         else:
             self.table = check.inst(table, ParseTable)
         if predicates is None:
-            predicates = Predicates.EMPTY
+            predicates = Predicates()
         else:
             if not isinstance(predicates, PredicatesBase):
                 predicates = Predicates(predicates)
@@ -174,12 +174,12 @@ class Parser(metaclass=ParserMeta):
     def __repr__(self):
         return f'<{type(self).__name__}:{self.table.notation}.{self.table.dialect}>'
 
-    def __init_subclass__(subcls, primary = False, **kw):
+    def __init_subclass__(cls, primary = False, **kw):
         'Merge ``_defaults``, set primary.'
         super().__init_subclass__(**kw)
-        abcs.merge_attr(subcls, 'defaults', supcls=__class__)
+        abcs.merge_attr(cls, 'defaults', supcls=__class__)
         if primary:
-            subcls.notation.Parser = subcls
+            cls.notation.Parser = cls
 
 class ParseContext:
     "Parse context."
@@ -352,6 +352,8 @@ class Ctype(frozenset, Enum):
 class DefaultParser(Parser):
     "Parser default implementation."
 
+    defaults = dict(auto_preds=False)
+
     def __call__(self, input_: str, /) -> Sentence:
         if isinstance(input_, Sentence):
             return input_
@@ -395,8 +397,23 @@ class DefaultParser(Parser):
 
     def _read_predicated(self, context: ParseContext, /) -> Predicated:
         'Read a predicated sentence.'
-        pred = self._read_predicate(context)
-        return pred(self._read_params(context, pred.arity))
+        try:
+            pred = self._read_predicate(context)
+        except UndefinedPredicateError as err:
+            if not self.opts['auto_preds']:
+                raise
+            coords = err.coords
+        else:
+            return pred(self._read_params(context, pred.arity))
+        params = tuple(self._read_params_auto(context))
+        arity = len(params)
+        try:
+            pred = Predicate(*coords, arity)
+        except ValueError as err:
+            raise ParseError(
+                f'Error auto-creating predicate {coords=} {arity=}: {err}')
+        self.predicates.add(pred)
+        return pred(params)
 
     def _read_quantified(self, context: ParseContext, /) -> Quantified:
         'Read a quantified sentence.'
@@ -424,15 +441,22 @@ class DefaultParser(Parser):
         if context.type(pchar) is Predicate.System:
             context.advance()
             return Predicate(context.value(pchar))
+        coords = self._read_coords(context)
         try:
-            return self.predicates.get(self._read_coords(context))
+            return self.predicates.get(coords)
         except KeyError:
-            raise ParseError(
+            raise UndefinedPredicateError(
+                coords,
                 f"Undefined predicate symbol '{pchar}' at position {context.pos}")
 
     def _read_params(self, context: ParseContext, num: int, /) -> tuple[Parameter, ...]:
         'Read the given number of parameters.'
         return tuple(self._read_parameter(context) for _ in range(num))
+
+    def _read_params_auto(self, context: ParseContext, /) -> tuple[Parameter, ...]:
+        'Read indefinite number of parameters'
+        while context.type(context.current(), None) in Ctype.param:
+            yield self._read_parameter(context)
 
     def _read_parameter(self, context: ParseContext, /) -> Parameter:
         'Read a single parameter (constant or variable)'
@@ -522,7 +546,7 @@ class StandardParser(DefaultParser, primary=True):
             return super()._read(context)
         if ctype is Marking.paren_open:
             return self._read_from_paren_open(context)
-        if ctype is Constant:
+        if ctype in Ctype.param:
             return self._read_infix_predicated(context)
         raise ParseError(context._unexp_msg())
 
@@ -540,12 +564,30 @@ class StandardParser(DefaultParser, primary=True):
         lhp = self._read_parameter(context)
         context.assert_current_in(Ctype.pred)
         ppos = context.pos
-        pred = self._read_predicate(context)
-        arity = pred.arity
+        try:
+            pred = self._read_predicate(context)
+        except UndefinedPredicateError as err:
+            if not self.opts['auto_preds']:
+                raise
+            coords = err.coords
+        else:
+            arity = pred.arity
+            if arity < 2:
+                raise ParseError(
+                    f"Unexpected infixed {arity}-ary predicate symbol at position {ppos}")
+            return pred(lhp, *self._read_params(context, arity - 1))
+        params = (lhp, *self._read_params_auto(context))
+        arity = len(params)
         if arity < 2:
             raise ParseError(
                 f"Unexpected infixed {arity}-ary predicate symbol at position {ppos}")
-        return pred(lhp, *self._read_params(context, arity - 1))
+        try:
+            pred = Predicate(*coords, arity)
+        except ValueError as err:
+            raise ParseError(
+                f'Error auto-creating predicate {coords=} {arity=}: {err}')
+        self.predicates.add(pred)
+        return pred(params)
 
     def _read_from_paren_open(self, context: ParseContext, /) -> Operated:
         # if we have an open parenthesis, then we demand a binary infix operator sentence.

@@ -100,8 +100,8 @@ class TestModels(Base):
         return (m,b)
 
     def test_countermodels(self):
-        self.cm('LEM')
-        m = self.cm('LNC')
+        self.cm('Law of Excluded Middle')
+        m = self.cm('Law of Non-contradiction')
         self.assertEqual(m.value_of(Atomic.first()), 'B')
 
     def test_model_a_thus_b_is_countermodel_to_false(self):

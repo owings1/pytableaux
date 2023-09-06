@@ -45,10 +45,13 @@ NOARG = object()
 class ArgumentMeta(LangCommonMeta):
     'Argument Metaclass.'
 
-    def __call__(cls, *args, **kw) -> Argument:
-        if len(args) == 1 and not len(kw) and isinstance(args[0], cls):
-            return args[0]
-        return super().__call__(*args, **kw)
+    def __call__(cls, conclusion: Sentence, premises: Iterable[Sentence|None] = None, *, title: str|None = None) -> Argument:
+        if premises is None:
+            if title is None and isinstance(conclusion, Argument):
+                return conclusion
+            if isinstance(conclusion, str):
+                return Argument.from_argstr(conclusion, title=title)
+        return super().__call__(conclusion, premises, title=title)
 
     _argstr_lw: LexWriter
     _argstr_pclass: type[Parser]
@@ -74,10 +77,12 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         Keyword Args:
             title: An optional title.
         """
-        self.seq = tuple(
-            (Sentence(conclusion),) if premises is None
-            else map(Sentence, (conclusion, *premises)))
-        self.premises = tuple(self.seq[1:])
+        conclusion = Sentence(conclusion)
+        if premises is None:
+            self.seq = group(conclusion)
+        else:
+            self.seq = (conclusion, *map(Sentence, premises))
+        self.premises = self.seq[1:]
         if title is not None:
             check.inst(title, str)
         self.title = title
@@ -122,21 +127,25 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         Returns:
             str: The argument string.
         """
-        lw = __class__._argstr_lw
-        preds = self.predicates(sort=True) - Predicate.System
-        return '|'.join(
-            filter(None, (
-                ':'.join(map(lw, self)),
-                ','.join(
-                    '.'.join(map(str, p.spec)) for p in preds))))
+        return ':'.join(map(__class__._argstr_lw, self))
+        # lw = __class__._argstr_lw
+        # preds = self.predicates(sort=True) - Predicate.System
+        # return '|'.join(
+        #     filter(None, (
+        #         ':'.join(map(lw, self)),
+        #         ','.join(
+        #             '.'.join(map(str, p.spec)) for p in preds))))
 
     @staticmethod
-    def from_argstr(argstr: str, /) -> Argument:
+    def from_argstr(argstr: str, /, *, title:str|None = None) -> Argument:
         """Construct an argument from the canonical string representation from
         :meth:`argstr()`.
 
         Args:
-            argstr: The input string.
+            argstr (str): The input string.
+
+        Keyword Args:
+            title (str): An optional title.
 
         Returns:
             Argument: The argument.
@@ -145,33 +154,35 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
             ParseError
             TypeError
         """
-        try:
-            parts = deque(argstr.split('|'))
-        except:
-            check.inst(argstr, str)
-            raise # pragma: no cover
-        try:
-            conc, *prems = parts.popleft().split(':')
-        except IndexError:
-            raise ParseError('Empty input')
-        if parts:
-            try:
-                specsstr, = parts
-            except ValueError:
-                raise ParseError('Too many parts')
-            try:
-                preds = Predicates(
-                    tuple(map(int, specstr.split('.')))
-                    for specstr in specsstr.split(','))
-            except Exception as err:
-                raise ParseError(f'Error parsing predicates: {err}')
-        else:
-            preds = Predicates.EMPTY
-        if len(preds):
-            parser = __class__._argstr_pclass(predicates=preds)
-        else:
-            parser = __class__._argstr_parser_empty
-        return parser.argument(conc, prems)
+        conc, *prems = argstr.split(':')
+        parser = __class__._argstr_pclass(auto_preds=True)
+        return parser.argument(conc, prems, title=title)
+        # try:
+        #     parts = deque(argstr.split('|'))
+        # except:
+        #     check.inst(argstr, str)
+        #     raise # pragma: no cover
+        # try:
+        #     conc, *prems = parts.popleft().split(':')
+        # except IndexError:
+        #     raise ParseError('Empty input')
+        # if parts:
+        #     auto_preds = False
+        #     try:
+        #         specsstr, = parts
+        #     except ValueError:
+        #         raise ParseError('Too many parts')
+        #     try:
+        #         preds = Predicates(
+        #             tuple(map(int, specstr.split('.')))
+        #             for specstr in specsstr.split(','))
+        #     except Exception as err:
+        #         raise ParseError(f'Error parsing predicates: {err}')
+        # else:
+        #     auto_preds = True
+        #     preds = Predicates()
+        # parser = __class__._argstr_pclass(predicates=preds, auto_preds=auto_preds)
+        # return parser.argument(conc, prems)
 
     #******  Equality & Ordering
 
@@ -301,8 +312,9 @@ class Predicates(PredicatesBase, qset[Predicate]):
                         conflicts = {}
                     conflicts[prior] = pred
         if conflicts:
+            pop = conflicts.pop
             for prior in leaving:
-                conflicts.pop(prior, None)
+                pop(prior, None)
                 if not conflicts:
                     break
             else:
@@ -338,7 +350,7 @@ class Predicates(PredicatesBase, qset[Predicate]):
         return self.Frozen(self)
 
     class Frozen(PredicatesBase, qsetf[Predicate]):
-        "Frozen :class:`Predicates` implentation."
+        "Frozen :class:`Predicates` implementation."
 
         __slots__ = group('_lookup')
 

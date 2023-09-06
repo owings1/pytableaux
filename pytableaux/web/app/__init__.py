@@ -158,7 +158,7 @@ class App(EventEmitter):
         self.jinja = jinja2.Environment(
             loader = jinja2.FileSystemLoader(self.config['templates_path']))
         self.example_args = self._build_example_args()
-        self.example_args_rev = MapProxy({arg: arg.title for arg in examples.arguments()})
+        self.example_args_rev = MapProxy(dict(map(reversed, examples.args.items())))
         logics.registry.import_all()
         self.logics_map = MapProxy({
             logic.Meta.name.lower(): logic
@@ -226,7 +226,7 @@ class App(EventEmitter):
                 '@Predicates': tuple(
                     p.spec for p in arg.predicates(sort=True)
                         if not p.is_system)})
-            for arg in examples.arguments()})
+            for arg in examples.args.values()})
 
     def _create_static_res(self):
         app_json = self.tojson(self.jsapp_data)
@@ -248,7 +248,6 @@ class App(EventEmitter):
             nups[notn.name] = chars
         return MapProxy(dict(
             example_args = self.example_args,
-            example_preds = tuple(p.spec for p in examples.preds),
             nups = MapProxy(nups),
             display_trans = MapProxy({
                 'standard': MapProxy({

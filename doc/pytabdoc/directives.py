@@ -172,7 +172,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
 
         .. tableau::
              :logic: FDE
-             :argument: Modus Ponens
+             :argument: Conditional Modus Ponens
 
         .. tableau::
              :logic: FDE
@@ -204,7 +204,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         wnotn = Notation,
         classes = optspecs.classes,
         # argument mode
-        argument = examples.argument,
+        argument = examples.args.__getitem__,
         conclusion = optspecs.string,
         premises = optspecs.strings,
         pnotn = Notation,

@@ -28,33 +28,42 @@ from ..utils import BaseCase
 class TestArgument(BaseCase):
 
     def test_self_equality(self):
-        a = self.parg('Addition')
+        a = examples.args['Addition']
         self.assertEqual(a, a)
 
     def test_lt_sentence_not_implemented(self):
-        a = self.parg('Addition')
+        a = examples.args['Addition']
         s = Atomic.first()
         self.assertIs(a.__lt__(s), NotImplemented)
         
     def test_keystr_examples_restore(self):
-        for a1 in examples.arguments():
-            keystr = a1.argstr()
-            a2 = Argument.from_argstr(keystr)
+        for a1 in examples.args.values():
+            a2 = Argument.from_argstr(a1.argstr())
+            self.assertEqual(a1, a2)
+
+    def test_construct_with_keystr_and_title(self):
+        for a1 in examples.args.values():
+            a2 = Argument(a1.argstr(), title=a1.title)
+            self.assertEqual(a1, a2)
+
+    def test_construct_with_keystr_no_title(self):
+        for a1 in examples.args.values():
+            a2 = Argument(a1.argstr())
             self.assertEqual(a1, a2)
 
     def test_for_json_has_keys_coverage(self):
-        a = self.parg('Addition')
+        a = examples.args['Addition']
         res = a.for_json()
         self.assertIn('premises', res)
         self.assertIn('conclusion', res)
 
     def test_repr_str_coverage(self):
-        a = self.parg('a')
+        a = Argument('a')
         r = repr(a)
         self.assertIs(type(r), str)
 
     def test_set_attr_locked(self):
-        a = self.parg('a')
+        a = Argument('a')
         with self.assertRaises(AttributeError):
             a.premises = ()
 
@@ -161,8 +170,7 @@ class TestPredicates(BaseCase):
         self.assertNotIn(p3, v2)
 
     def test_conflict_leaves_collection_as_is(self):
-        p1 = Predicate(0,0,1)
-        p2 = Predicate(0,0,2)
+        p1, p2 = map(Predicate, [(0, 0, 1), (0, 0, 2)])
         v = Predicates()
         v.add(p1)
         with self.assertRaises(ValueError):
@@ -174,8 +182,7 @@ class TestPredicates(BaseCase):
         self.assertEqual(len(v), 1)
 
     def test_deletion(self):
-        p1 = Predicate(0,0,1)
-        p2 = Predicate(0,0,2)
+        p1, p2 = map(Predicate, [(0, 0, 1), (0, 0, 2)])
         v = Predicates()
         v.add(p1)
         self.assertEqual(set(v), {p1})
@@ -186,8 +193,7 @@ class TestPredicates(BaseCase):
         self.assertEqual(set(v), {p2})
 
     def test_overwrite_with_conflicting_value(self):
-        p1 = Predicate(0,0,1)
-        p2 = Predicate(0,0,2)
+        p1, p2 = map(Predicate, [(0, 0, 1), (0, 0, 2)])
         v = Predicates()
         v.append(p1)
         self.assertEqual(v[0], p1)
@@ -208,19 +214,20 @@ class TestPredicates(BaseCase):
         self.assertNotIn('Identity', v)
 
     def test_ior_cast(self):
+        specs = (0,0,1), (1,0,1)
         v = Predicates()
-        v |= (0,0,1), (1,0,1)
-        p1 = Predicate(0,0,1)
-        p2 = Predicate(1,0,1)
+        v |= specs
+        p1, p2 = map(Predicate, specs)
         self.assertIn(p1, v)
         self.assertIn(p2, v)
         self.assertEqual(len(v), 2)
 
     def test_setitem_slice(self):
-        p1 = Predicate(0,0,1)
-        p2 = Predicate(1,0,1)
-        p3 = Predicate(0,0,2)
-        p4 = Predicate(1,0,2)
+        p1, p2, p3, p4 = map(Predicate, [
+            (0,0,1),
+            (1,0,1),
+            (0,0,2),
+            (1,0,2)])
         v = Predicates((p1,p2))
         v[0:2] = p3, p4
         self.assertEqual(p3, v[0])
@@ -228,9 +235,10 @@ class TestPredicates(BaseCase):
         self.assertEqual(len(v), 2)
 
     def test_setitem_index_duplicate_value(self):
-        p1 = Predicate(0,0,1)
-        p2 = Predicate(1,0,1)
-        p3 = Predicate(0,0,2)
+        p1, p2, p3 = map(Predicate, [
+            (0,0,1),
+            (1,0,1),
+            (0,0,2)])
         v = Predicates((p1,p2))
         with self.assertRaises(ValueError):
             v[1] = p3

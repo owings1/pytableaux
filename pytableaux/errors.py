@@ -25,6 +25,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, TypeVar
 
 if  TYPE_CHECKING:
+    from .lang import BiCoords
     from typing import overload
 
 _ExT = TypeVar('_ExT', bound = Exception)
@@ -54,6 +55,11 @@ class TreePruningException(Exception):
 
 class ParseError(Exception):
     pass
+
+class UndefinedPredicateError(ParseError):
+    def __init__(self, coords: BiCoords, *args):
+        self.coords = coords
+        super().__init__(*args)
 
 class UnboundVariableError(ParseError):
     pass
