@@ -100,10 +100,10 @@ class BaseCase(TestCase):
         self.assertTrue(tab.valid)
         return tab
 
-    def invalid_tab(self, *args, **kw):
+    def invalid_tab(self, *args, skip_countermodel=False, **kw):
         tab = self.tab(*args, **kw)
         self.assertTrue(tab.invalid)
-        if tab.argument:
+        if tab.argument and not skip_countermodel:
             for model in tab.models:
                 self.assertTrue(model.is_countermodel_to(tab.argument))
         return tab

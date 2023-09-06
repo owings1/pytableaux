@@ -198,9 +198,8 @@ L('S5',
         'S5 Material Inference 1',
     ),
     invalid = (
-        
+        arg('KMNbc', ('LCaMNb', 'Ma'), title='nested_diamond_within_box1'),
     ))
-
 # ---------------------------------------------------------------------------
 
 L('FDE',

@@ -2,7 +2,9 @@
     {% set model = branch.model -%}
     {% set data = model.get_data() -%}
     <div id="model_{{ model.id|e }}" class="model" data-model-id="{{ model.id|e }}" data-branch-id="{{ branch.id|e }}">
-        {# <ul class="details">
+        {{ write_map(lw, data) }}
+        {%- if is_debug or not model.is_countermodel %}
+        <ul class="details">
             <li>
                 <div class="prop">Is countermodel</div>
                 <div class="value">
@@ -11,8 +13,8 @@
                     </span>
                 </div>
             </li>
-        </ul> #}
-        {{ write_map(lw, data) }}
+        </ul>
+        {%- endif %}
     </div>
 {% endmacro -%}
 

@@ -36,9 +36,6 @@ class TestArguments(Base, autoargs=True):
         # in the same group, and toward the end.
         self.valid_tab('MSxGx', ('VxLSyUFxMGy', 'Fm'), max_steps = 100)
 
-    def test_invalid_nested_diamond_within_box1(self):
-        self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
-
 class TestTables(Base, autotables=True):
     tables = dict(
         Assertion = 'FT',

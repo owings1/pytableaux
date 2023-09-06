@@ -19,15 +19,18 @@
 # pytableaux.logics.s5k3 tests
 from __future__ import annotations
 
-from . import test_k3 as K3Suite
-
 from ..utils import BaseCase
+from . import test_k3 as K3Suite
+from .test_s5 import TestArguments as S5Arguments
+
 
 class Base(BaseCase):
     logic = 'S5K3'
 
 class TestRules(Base, autorules=True, bare=True): pass
 
-class TestArguments(Base, autoargs=True): pass
+class TestArguments(Base, autoargs=True):
+    test_valid_optimize_nec_rule1 = S5Arguments.test_valid_optimize_nec_rule1
+    test_valid_intermediate_mix_modal_quantifiers1 = S5Arguments.test_valid_intermediate_mix_modal_quantifiers1
 
 class TestTables(Base, K3Suite.TestTables): pass

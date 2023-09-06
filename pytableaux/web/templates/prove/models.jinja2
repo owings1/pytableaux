@@ -1,4 +1,4 @@
-{%- import 'prove/model.jinja2' as model_helper -%}
+{%- import 'prove/model.jinja2' as model_helper with context -%}
 <div class="tableau-models 
     {{- ' single-branch inspected' if tableau.stats.branches == 1 }}"{#
     #} id="models_{{ tableau.id }}"{#

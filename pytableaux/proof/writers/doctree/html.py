@@ -100,6 +100,10 @@ class HtmlTranslator(Translator, DefaultNodeVisitor):
         self += self.strings[Marking.tableau, 'designation', node['data-designated']]
 
     def visit_flag(self, node):
+        try:
+            node['title'] = node['data-info']
+        except KeyError:
+            pass
         self.default_visitor(node)
         flag = node['data-flag']
         try:

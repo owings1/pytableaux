@@ -47,6 +47,7 @@ class Rules(LogicType.Rules):
     closure = KFDE.Rules.closure
 
     groups = (
+        # non-branching rules
         KFDE.Rules.groups[0],
         group(S4.Rules.Transitive),
         # modal operator rules
@@ -61,6 +62,6 @@ class Rules(LogicType.Rules):
 
     @classmethod
     def _check_groups(cls):
-        for branching, i in zip(range(2), (0, 5)):
+        for branching, i in zip(range(2), (0, -3)):
             for rulecls in cls.groups[i]:
                 assert rulecls.branching == branching, f'{rulecls}'
