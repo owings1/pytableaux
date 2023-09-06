@@ -305,7 +305,7 @@
                 refreshStatuses()
             } else if ($target.hasClass(Cls.arity)) {
                 // Change to a predicate arity field.
-                refreshStatuses(true)
+                refreshStatuses()
             } else if ($target.is(Sel.fieldLogic)) {
                 // Change to the selected logic.
                 refreshLogic()
@@ -548,36 +548,26 @@
          * @return {void}
          */
         function refreshNotation() {
-
+            const prevNotn = CurrentInputNotation
             CurrentInputNotation = $(Sel.fieldInputNotn, $AppForm).val()
-    
             const notation = CurrentInputNotation
             const notnClass = [Cls.notation, notation].join('-')
 
             // Show/hide lexicons
             $('.' + Cls.lexicon, $AppForm).each(function() {
                 const $me = $(this)
-                if ($me.hasClass(notnClass)) {
-                    $me.removeClass(Cls.hidden).show()
-                } else {
-                    $me.addClass(Cls.hidden).hide()
-                }
+                const show = $me.hasClass(notnClass)
+                $me.toggleClass(Cls.hidden, show).toggle(show)
             })
 
-            // Use built-in input strings for example arguments.
-            if ($(Sel.fieldArgExample, $AppForm).val()) {
-                refreshArgExample()
-                return
-            }
-
-            // Otherwise get translations from cached succesful api-parse responses.
             $(Sel.fieldsSentence, $AppForm).each(function() {
-                const value = sentenceInputValue($(this).val())
+                const value = sentenceInputValue($(this).val(), prevNotn)
                 const cache = ParseCache[value]
+                console.log({value, cache})
                 if (!cache || !cache[notation]) {
                     return
                 }
-                $(this).val(sentenceDisplayValue(cache[notation].default))
+                $(this).val(sentenceDisplayValue(cache[notation].text))
             })
         }
 
@@ -603,81 +593,79 @@
             // Set translated display values.
             $.each(arg.premises, (i, value) => addPremise(  (value)))
             $(Sel.fieldConclusion, $AppForm).val(sentenceDisplayValue(arg.conclusion))
-            $.each(argBase['@Predicates'], (i, pred) => {
-                if (!Array.isArray(pred)) {
-                    pred = [pred.index, pred.subscript, pred.arity]
-                }
-                addPredicate(...pred)
-            })
+            // $.each(argBase['@Predicates'], (i, pred) => {
+            //     if (!Array.isArray(pred)) {
+            //         pred = [pred.index, pred.subscript, pred.arity]
+            //     }
+            //     addPredicate(...pred)
+            // })
         }
 
         /**
-         * Make AJAX requests to parse the premises & conclusion.
+         * Make AJAX request to parse the premises & conclusion.
          *
-         * @param {bool} isForce Force refresh.
          * @return {void}
          */
-        function refreshStatuses(isForce) {
-            let predicates // lazy fetch
+        function refreshStatuses() {
+            const predicates = getPredicatesData()
             const notation = CurrentInputNotation
+            const input = []
+            const $statuses = []
             $(Sel.fieldsSentence, $AppForm).each(function() {
                 const $me = $(this)
                 const $status = $me
                     .closest(Sel.inputSentence)
                     .find('.' + Cls.status)
-                const input = sentenceInputValue($me.val())
-                if (!input) {
+                const value = sentenceInputValue($me.val())
+                if (!value) {
                     // Clear status.
                     $status
                         .removeClass([Cls.good, Cls.bad])
                         .attr({title: '', [Atr.dataHash]: ''})
                     return
                 }
+                input.push(value)
+                $statuses.push($status)
                 // Set translated display value.
-                $me.val(sentenceDisplayValue(input))
-                // Check for change since last request against stored value.
-                const hash = [input, notation].join('.')
-                const stored = $status.attr(Atr.dataHash)
-                if (!isForce && stored === hash) {
-                    return
-                }
-                $status.attr(Atr.dataHash, hash)
-                if (!predicates) {
-                    predicates = getPredicatesData()
-                }
-                const payload = {input, notation, predicates}
-                // Send api-parse request.
-                $.ajax({
-                    url         : API_PARSE_URI,
-                    method      : 'POST',
-                    contentType : 'application/json',
-                    dataType    : 'json',
-                    data        : JSON.stringify(payload),
-                    success: res => {
-                        $status
-                            .removeClass(Cls.bad)
-                            .addClass(Cls.good)
-                            .attr({title: res.result.type})
+                $me.val(sentenceDisplayValue(value))
+            })
+            const payload = {input, notation, predicates}
+            $.ajax({
+                url         : API_PARSE_URI,
+                method      : 'POST',
+                contentType : 'application/json',
+                dataType    : 'json',
+                data        : JSON.stringify(payload),
+                success: res => {
+                    for (let i = 0; i < res.result.length; ++i) {
+                        const result = res.result[i]
+                        const title = result
+                            ? result.type
+                            : res.errors[`input.${i}`]
+                        $statuses[i]
+                            .toggleClass(Cls.bad, !result)
+                            .toggleClass(Cls.good, Boolean(result))
+                            .attr({title})
                             .tooltip()
-                        ParseCache[input] = res.result.rendered
-                    },
-                    error: (...args) => {
-                        $status
-                            .removeClass(Cls.good)
-                            .addClass(Cls.bad)
-                            .attr({title: _makeAjaxParseErrorMessage(...args)})
-                            .tooltip()
+                        if (result) {
+                            ParseCache[input[i]] = result.rendered
+                        }
                     }
-                })
+                },
+                error: (...args) => {
+                    console.error(...args)
+                }
             })
         }
 
-        function sentenceDisplayValue(str) {
-            return translate(str, AppData.display_trans[CurrentInputNotation])
+        function sentenceDisplayValue(str, notation = undefined) {
+            notation = notation || CurrentInputNotation
+            return translate(str, AppData.display_trans[notation])
         }
-
-        function sentenceInputValue(str) {
-            return translate(str, AppData.parse_trans[CurrentInputNotation])
+        
+        function sentenceInputValue(str, notation = undefined) {
+            notation = notation || CurrentInputNotation
+            return translate(str, AppData.parse_trans[notation])
         }
 
         /**
@@ -854,19 +842,19 @@
         return encodeURIComponent(str)
     }
 
-    function _makeAjaxParseErrorMessage(xhr, textStatus, errorThrown) {
-        if (xhr.status !== 400) {
-            return [textStatus, errorThrown].join(': ')
-        }
-        const res = xhr.responseJSON
-        if (!res.errors) {
-            return [res.error, res.message].join(': ')
-        }
-        if (res.errors.Sentence) {
-            return res.errors.Sentence
-        }
-        const errKey = Object.keys(res.errors)[0]
-        return [errKey, res.errors[errKey]].join(': ')
-    }
+    // function _makeAjaxParseErrorMessage(xhr, textStatus, errorThrown) {
+    //     if (xhr.status !== 400) {
+    //         return [textStatus, errorThrown].join(': ')
+    //     }
+    //     const res = xhr.responseJSON
+    //     if (!res.errors) {
+    //         return [res.error, res.message].join(': ')
+    //     }
+    //     if (res.errors.input) {
+    //         return res.errors.input
+    //     }
+    //     const errKey = Object.keys(res.errors)[0]
+    //     return [errKey, res.errors[errKey]].join(': ')
+    // }
 
 })(window.jQuery);

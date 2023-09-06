@@ -43,7 +43,7 @@ class ParseView(View):
 
     payload_defaults: Mapping[str, Any] = MapProxy(dict(
         notation = Notation.polish.name,
-        predicates = Predicates.EMPTY,
+        predicates = (),
         input = ''))
 
     def POST(self):
@@ -72,26 +72,44 @@ class ParseView(View):
         """
         errors = self.errors
         payload = self.payload
+        input = payload['input']
+        single = input is None or isinstance(input, str)
+        print(single)
+        if single:
+            inputs = input,
+        else:
+            inputs = input
         try:
             notn = Notation[payload['notation']]
         except KeyError as err:
             errors['notation'] = f"Invalid notation: {err}"
-        preds = self.parse_preds('predicates')
+        preds = self.parse_preds()
         if errors:
             return
         parser = Parser(notation=notn, predicates=preds)
-        try:
-            sentence = parser(payload['input'])
-        except Exception as err:
-            errors['input'] = err
-            return
-        return dict(
-            type = sentence.TYPE.name,
-            rendered = {
-                notn.name: {
-                    format: LexWriter(notation=notn, format=format)(sentence)
-                    for format in notn.formats}
-                for notn in Notation})
+        results = deque()
+        for i, input in enumerate(inputs):
+            try:
+                sentence = parser(input)
+            except Exception as err:
+                key = 'input'
+                if not single:
+                    key += f'.{i}'
+                    results.append(None)
+                errors[key] = err
+                continue
+            results.append(dict(
+                type = sentence.TYPE.name,
+                rendered = {
+                    notn.name: {
+                        format: LexWriter(notation=notn, format=format)(sentence)
+                        for format in notn.formats}
+                    for notn in Notation}))
+        if single:
+            if errors:
+                return
+            return results[0]
+        return results
 
 class ProveView(View):
 

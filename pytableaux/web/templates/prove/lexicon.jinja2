@@ -50,6 +50,17 @@
     </div>
     <div class="panel">
         <span class="label">Predicates</span>
+        {%- for notn in Notation -%}
+            {%- set table = ParseTable.fetch(notn) -%}
+            <div class="lexicon hidden notation-{{ notn.name|e }}">
+                <ul class="item-symbols">
+                    {%- for i in range(Predicate.TYPE.maxi + 1) -%}
+                        <li>{{ table.reversed[Predicate, i]|e }}</li>
+                    {%- endfor %}
+                </ul>
+            </div>
+        {%- endfor %}
+
         <table id="predicates_input_table" class="predicates predicate-symbols">
             {%- set PredSys = Predicate.System -%}
             {%- for pred in PredSys -%}
@@ -67,7 +78,7 @@
                     <td>{{ pred.name|e }}</td>
                 </tr>
             {%- endfor -%}
-            {%- for label in form_data['user_predicate_symbols[]'] %}
+            {# {%- for label in form_data['user_predicate_symbols[]'] %}
                 {%- set index, subscript = label.split('.')|map('int') -%}
                 {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
                 {%- call helper.predicate(index, subscript, arity) %}
@@ -76,9 +87,9 @@
                         {{- helper.predicate_symbol(notn.name, table.reversed[Predicate, index], subscript) }}
                     {% endfor -%}
                 {%- endcall -%}
-            {%- endfor -%}
+            {%- endfor -%} #}
         </table>
-        <div><a href="javascript:" class="add-predicate tooltip" title="Add a predicate"></a></div>
+        {# <div><a href="javascript:" class="add-predicate tooltip" title="Add a predicate"></a></div> #}
         <div class="clear"></div>
     </div>
     <div class="clear"></div>

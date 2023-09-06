@@ -23,9 +23,8 @@ from pytableaux.errors import ParseError
 from pytableaux.lang import *
 from ..utils import BaseCase
 
-preds = Predicates(Predicate.gen(3))
-std = Parser('standard', preds)
-pol = Parser('polish', preds)
+std = Parser('standard')
+pol = Parser('polish')
 
 class TestParsers(BaseCase):
 
@@ -61,7 +60,7 @@ class TestParsers(BaseCase):
     def test_argument_repr_coverage(self):
         a = pol.argument('a', title='TestArg')
         res = a.__repr__()
-        assert '(0, 0)' in res or 'TestArg' in res
+        self.assertTrue('(0, 0)' in res or 'TestArg' in res)
 
     def test_parse_atomic(self):
         s = std('A')
@@ -112,8 +111,9 @@ class TestParsers(BaseCase):
             std('aF')
 
     def test_undefined_pred_error(self):
+        p = Parser(notation='standard', auto_preds=False)
         with raises(ParseError):
-            std('F1ab')
+            p('F1ab')
 
     def test_unbound_var_error(self):
         with raises(ParseError):

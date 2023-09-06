@@ -175,7 +175,7 @@ class BaseCase(TestCase):
         arg = None
         if val is not None:
             try:
-                arg = examples.argument(val)
+                arg = examples.args[val]
             except KeyError:
                 pass
 

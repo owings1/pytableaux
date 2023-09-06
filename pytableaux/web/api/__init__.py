@@ -63,9 +63,9 @@ class View(JsonView):
 
     def parse_preds(self, key: str = 'predicates') -> Predicates|None:
         specs = self.payload[key]
-        if not specs:
-            return Predicates.EMPTY
         preds = Predicates()
+        if not specs:
+            return preds
         errors = self.errors
         for i, spec in enumerate(specs):
             try:
@@ -75,11 +75,7 @@ class View(JsonView):
         if not errors:
             return preds
 
-
-
-
 from . import views
-
 
 class App:
     parse = views.ParseView()

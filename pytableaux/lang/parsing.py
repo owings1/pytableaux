@@ -50,7 +50,7 @@ class ParserMeta(LangCommonMeta):
 
     DEFAULT_NOTATION = Notation.polish
 
-    def __call__(cls, *args, **kw):
+    def __call__(cls, *args, **kw) -> Parser:
         if cls is Parser:
             if args:
                 notn = Notation(args[0])
@@ -350,9 +350,13 @@ class Ctype(frozenset, Enum):
     param = {Constant, Variable}
 
 class DefaultParser(Parser):
-    "Parser default implementation."
+    """Parser default implementation.
 
-    defaults = dict(auto_preds=False)
+    Options:
+        auto_preds: Deduce predicate arity from fist usage.
+    """
+
+    defaults = dict(auto_preds=True)
 
     def __call__(self, input_: str, /) -> Sentence:
         if isinstance(input_, Sentence):
