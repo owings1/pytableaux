@@ -44,40 +44,6 @@ class ImageFormat(str, enum.Enum):
     jpg = 'jpg'
     png = 'png'
 
-parser = argparse.ArgumentParser(
-    description='Generate image files from PDF files')
-
-arg = parser.add_argument
-arg(
-    '--srcdir', '-s',
-    type=abspath,
-    required=True,
-    help='The source directory')
-arg(
-    '--outdir', '-o',
-    type=abspath,
-    default=None,
-    help='The output directory, default is srcdir')
-arg(
-    '--format', '-f',
-    type=ImageFormat,
-    default=ImageFormat.jpg,
-    help=f'The image format, default jpg (options: {", ".join(f.value for f in ImageFormat)})')
-arg(
-    '--nocrop',
-    action='store_false',
-    dest='crop',
-    help='Do not crop files')
-arg(
-    '--incremental', '-i',
-    action='store_true',
-    help='Skip existing pdf files')
-arg(
-    '--threads', '-t',
-    type=lambda opt: min(MAX_THREADS, int(opt)),
-    default=1,
-    help=f'The number of threads to use, default is 1 (max {MAX_THREADS})')
-
 @dataclass(kw_only=True, slots=True)
 class Options:
     srcdir: str
@@ -87,9 +53,44 @@ class Options:
     format: ImageFormat
     crop: bool
 
+def parser():
+    parser = argparse.ArgumentParser(
+        description='Generate image files from PDF files')
+
+    arg = parser.add_argument
+    arg(
+        '--srcdir', '-s',
+        type=abspath,
+        required=True,
+        help='The source directory')
+    arg(
+        '--outdir', '-o',
+        type=abspath,
+        default=None,
+        help='The output directory, default is srcdir')
+    arg(
+        '--format', '-f',
+        type=ImageFormat,
+        default=ImageFormat.jpg,
+        help=f'The image format, default jpg (options: {", ".join(f.value for f in ImageFormat)})')
+    arg(
+        '--nocrop',
+        action='store_false',
+        dest='crop',
+        help='Do not crop files')
+    arg(
+        '--incremental', '-i',
+        action='store_true',
+        help='Skip existing image files')
+    arg(
+        '--threads', '-t',
+        type=lambda opt: min(MAX_THREADS, int(opt)),
+        default=1,
+        help=f'The number of threads to use, default is 1 (max {MAX_THREADS})')
+    return parser
 
 def main(*args):
-    opts = Options(**vars(parser.parse_args(args)))
+    opts = Options(**vars(parser().parse_args(args)))
     logging.basicConfig(level=logging.INFO)
     if opts.outdir is None:
         opts.outdir = opts.srcdir
@@ -98,34 +99,34 @@ def main(*args):
             os.mkdir(opts.outdir)
         except FileExistsError:
             pass
-    srcfiles = resolve_srcfiles(
+    files = resolve_srcfiles(
         srcdir=opts.srcdir,
         srcext='pdf',
         outdir=opts.outdir,
         outext=opts.format.value,
         incremental=opts.incremental)
-    if not len(srcfiles):
+    if not len(files):
         logger.warning(f'No files to process')
         return
-    logger.info(f'Processing {len(srcfiles)} files')
-    queue = deque(srcfiles)
-    workers = make_queue_workers(queue, opts.threads, makeimg, srcfiles, opts)
+    logger.info(f'Processing {len(files)} files')
+    queue = deque(files)
+    workers = make_queue_workers(queue, opts.threads, runner, files, opts)
     for worker in workers:
         worker.start()
     for worker in workers:
         worker.join()
 
-def makeimg(srcfile: str, srcfiles: Mapping[str, str], opts: Options):
-    outfile = srcfiles[srcfile]
+def runner(file: str, files: Mapping[str, str], opts: Options):
     with tempfile.TemporaryDirectory() as tmp:
-        images = convert_from_path(srcfile, output_folder=tmp, grayscale=True)
-    if len(images) != 1:
-        logger.warning(f'Skipping {srcfile}: got {len(images)} pages, expecting 1')
+        images = convert_from_path(file, output_folder=tmp, grayscale=True)
+    try:
+        image, = images
+    except ValueError:
+        logger.warning(f'Skipping {file}: got {len(images)} pages, expecting 1')
         return
-    image, = images
     if opts.crop:
         image = autocrop(image)
-    image.save(outfile)
+    image.save(files[file])
 
 if __name__ == '__main__':
     main(*sys.argv[1:])

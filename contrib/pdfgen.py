@@ -24,11 +24,12 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import os.path
 import subprocess
 import sys
 from collections import deque
 from dataclasses import dataclass
-from os.path import basename, abspath
+from itertools import filterfalse
 from typing import Mapping
 
 from . import make_queue_workers, resolve_srcfiles
@@ -36,35 +37,6 @@ from . import make_queue_workers, resolve_srcfiles
 MAX_THREADS = max(1, min(4, os.cpu_count()))
 
 logger = logging.getLogger('pdfgen')
-
-parser = argparse.ArgumentParser(
-    description='Generate PDF files from latex files')
-
-arg = parser.add_argument
-arg(
-    '--srcdir', '-s',
-    type=abspath,
-    required=True,
-    help='The source directory')
-arg(
-    '--outdir', '-o',
-    type=abspath,
-    default=None,
-    help='The output directory, default is srcdir')
-arg(
-    '--incremental', '-i',
-    action='store_true',
-    help='Skip existing pdf files')
-arg(
-    '--threads', '-t',
-    type=lambda opt: min(MAX_THREADS, int(opt)),
-    default=1,
-    help=f'The number of threads to use, default is 1 (max {MAX_THREADS})')
-arg(
-    '--noclean',
-    action='store_false',
-    dest='clean',
-    help='Do not clean .log and .aux files')
 
 @dataclass(kw_only=True, slots=True)
 class Options:
@@ -74,8 +46,39 @@ class Options:
     threads: int
     clean: bool
 
+def parser():
+    parser = argparse.ArgumentParser(
+        description='Generate PDF files from latex files')
+
+    arg = parser.add_argument
+    arg(
+        '--srcdir', '-s',
+        type=os.path.abspath,
+        required=True,
+        help='The source directory')
+    arg(
+        '--outdir', '-o',
+        type=os.path.abspath,
+        default=None,
+        help='The output directory, default is srcdir')
+    arg(
+        '--incremental', '-i',
+        action='store_true',
+        help='Skip existing pdf files')
+    arg(
+        '--threads', '-t',
+        type=lambda opt: min(MAX_THREADS, int(opt)),
+        default=1,
+        help=f'The number of threads to use, default is 1 (max {MAX_THREADS})')
+    arg(
+        '--noclean',
+        action='store_false',
+        dest='clean',
+        help='Do not clean .log and .aux files')
+    return parser
+
 def main(*args):
-    opts = Options(**vars(parser.parse_args(args)))
+    opts = Options(**vars(parser().parse_args(args)))
     logging.basicConfig(level=logging.INFO)
     if opts.outdir is None:
         opts.outdir = opts.srcdir
@@ -84,25 +87,28 @@ def main(*args):
             os.mkdir(opts.outdir)
         except FileExistsError:
             pass
-    srcfiles = resolve_srcfiles(
+    files = resolve_srcfiles(
         srcdir=opts.srcdir,
         srcext='tex',
         outdir=opts.outdir,
         outext='pdf',
         incremental=opts.incremental)
-    if not len(srcfiles):
+    if not len(files):
         logger.warning(f'No files to process')
         return
-    logger.info(f'Processing {len(srcfiles)} files')
-    queue = deque(srcfiles)
-    workers = make_queue_workers(queue, opts.threads, makepdf, srcfiles, opts)
+    logger.info(f'Processing {len(files)} files')
+    queue = deque(files)
+    workers = make_queue_workers(queue, opts.threads, runner, files, opts)
     for worker in workers:
         worker.start()
     for worker in workers:
         worker.join()
 
 
-def makepdf(srcfile: str, srcfiles: Mapping[str, str], opts: Options):
+def runner(file: str, files: Mapping[str, str], opts: Options):
+    outbase = '.'.join(files[file].split('.')[:-1])
+    auxfiles = tuple(filterfalse(os.path.exists, (
+        f'{outbase}.{ext}' for ext in ('aux', 'log'))))
     args = (
         'latex',
         '-interaction=nonstopmode',
@@ -110,7 +116,7 @@ def makepdf(srcfile: str, srcfiles: Mapping[str, str], opts: Options):
         '-output-directory',
         opts.outdir,
         '-output-format=pdf',
-        srcfile)
+        file)
     proc: subprocess.CompletedProcess = subprocess.run(args,
         capture_output=True,
         text=True,
@@ -118,18 +124,14 @@ def makepdf(srcfile: str, srcfiles: Mapping[str, str], opts: Options):
     try:
         proc.check_returncode()
     except:
-        print(proc.stdout)
-        print(proc.stderr)
+        logger.error(proc.stdout)
+        logger.error(proc.stderr)
         raise
-    outbase = '.'.join(srcfiles[srcfile].split('.')[:-1])
-    for ext in ('log', 'aux'):
+    for file in auxfiles:
         try:
-            os.unlink(f'{outbase}.{ext}')
+            os.unlink(file)
         except FileNotFoundError:
             pass
-
-
-    outname = basename(srcfiles[srcfile])
 
 if __name__ == '__main__':
     main(*sys.argv[1:])

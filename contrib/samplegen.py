@@ -34,53 +34,6 @@ from pytableaux.tools.inflect import slug
 
 logger = logging.getLogger('samplegen')
 
-parser = argparse.ArgumentParser(
-    description='Generate sample tableaux files')
-
-arg = parser.add_argument
-arg(
-    '--outdir', '-o',
-    type=abspath,
-    required=True,
-    help='The output directory')
-
-arg(
-    '--format', '-f',
-    type=str,
-    default='latex',
-    help='The output format, default is latex')
-
-arg(
-    '--notation', '-n',
-    type=Notation,
-    default=Notation.standard,
-    help='The output notation, default is standard')
-
-arg(
-    '--logic', '--logics', '-l',
-    dest='logics',
-    type=lambda opt: tuple(map(registry, readlist(opt))),
-    default=tuple(sorted(registry.all())),
-    help='Comma-separated logics to generate, default is all')
-
-arg(
-    '--argument', '--arguments', '-a',
-    dest='arguments',
-    type=lambda opt: tuple(Argument(examples.get(a, a)) for a in readlist(opt)),
-    default=examples.values(),
-    help='Comma-separated arguments to generate, default is all. Can be example name or argstr.')
-
-arg(
-    '--nodoc',
-    action='store_false',
-    dest='fulldoc',
-    help='Skip doc header/footer')
-
-arg(
-    '--inline-css',
-    action='store_true',
-    help='Include inline css (HTML only)')
-
 @dataclass(kw_only=True, slots=True)
 class Options:
     outdir: str
@@ -91,8 +44,51 @@ class Options:
     fulldoc: bool
     inline_css: bool
 
+def parser():
+    parser = argparse.ArgumentParser(
+        description='Generate sample tableaux files')
+
+    arg = parser.add_argument
+    arg(
+        '--outdir', '-o',
+        type=abspath,
+        required=True,
+        help='The output directory')
+    arg(
+        '--format', '-f',
+        type=str,
+        default='latex',
+        help='The output format, default is latex')
+    arg(
+        '--notation', '-n',
+        type=Notation,
+        default=Notation.standard,
+        help='The output notation, default is standard')
+    arg(
+        '--logic', '--logics', '-l',
+        dest='logics',
+        type=lambda opt: tuple(map(registry, readlist(opt))),
+        default=tuple(sorted(registry.all())),
+        help='Comma-separated logics to generate, default is all')
+    arg(
+        '--argument', '--arguments', '-a',
+        dest='arguments',
+        type=lambda opt: tuple(Argument(examples.get(a, a)) for a in readlist(opt)),
+        default=examples.values(),
+        help='Comma-separated arguments to generate, default is all. Can be example name or argstr.')
+    arg(
+        '--nodoc',
+        action='store_false',
+        dest='fulldoc',
+        help='Skip doc header/footer')
+    arg(
+        '--inline-css',
+        action='store_true',
+        help='Include inline css (HTML only)')
+    return parser
+
 def main(*args):
-    opts = Options(**vars(parser.parse_args(args)))
+    opts = Options(**vars(parser().parse_args(args)))
     logging.basicConfig(level=logging.INFO)
     try:
         mkdir(opts.outdir)
