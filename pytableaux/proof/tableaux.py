@@ -376,7 +376,9 @@ class RuleGroup(Sequence[Rule]):
 
     if TYPE_CHECKING:
         @overload
-        def get(self, ref:Any, default=...) -> Rule:...
+        def get(self, ref:str, default=...) -> Rule:...
+        @overload
+        def get(self, ref:type[_RT]) -> _RT:...
 
     def get(self, ref: type[_RT]|str, default = NOARG, /) -> _RT:
         """Get rule instance by name or type.
