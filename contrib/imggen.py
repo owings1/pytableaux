@@ -36,7 +36,7 @@ from pdf2image import convert_from_path
 
 from . import autocrop, make_queue_workers, resolve_srcfiles
 
-MAX_THREADS = max(1, int(os.cpu_count() // 1.2))
+MAX_THREADS = max(1, min(3, int(os.cpu_count() // 1.2)))
 
 logger = logging.getLogger('pdfgen')
 

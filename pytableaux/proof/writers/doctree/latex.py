@@ -147,6 +147,7 @@ class LatexTabWriter(DoctreeTabWriter):
     __slots__ = EMPTY_SET
 
     format = 'latex'
+    file_extension = 'tex'
     translator_type = LatexTranslator
 
     def build_doc(self, tab, /):

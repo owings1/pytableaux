@@ -151,6 +151,7 @@ class TextTabWriter(DoctreeTabWriter):
     __slots__ = EMPTY_SET
 
     format = 'text'
+    file_extension = 'txt'
     translator_type = TextTranslator
 
     def build_doc(self, tab, /):

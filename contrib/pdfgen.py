@@ -28,16 +28,17 @@ import subprocess
 import sys
 from collections import deque
 from dataclasses import dataclass
-from os.path import abspath
+from os.path import basename, abspath
+from typing import Mapping
 
 from . import make_queue_workers, resolve_srcfiles
 
-MAX_THREADS = max(1, int(os.cpu_count() * 1.5))
+MAX_THREADS = max(1, min(4, os.cpu_count()))
 
 logger = logging.getLogger('pdfgen')
 
 parser = argparse.ArgumentParser(
-    description='Generate sample tableaux files')
+    description='Generate PDF files from latex files')
 
 arg = parser.add_argument
 arg(
@@ -59,6 +60,11 @@ arg(
     type=lambda opt: min(MAX_THREADS, int(opt)),
     default=1,
     help=f'The number of threads to use, default is 1 (max {MAX_THREADS})')
+arg(
+    '--noclean',
+    action='store_false',
+    dest='clean',
+    help='Do not clean .log and .aux files')
 
 @dataclass(kw_only=True, slots=True)
 class Options:
@@ -66,6 +72,7 @@ class Options:
     outdir: str|None
     incremental: bool
     threads: int
+    clean: bool
 
 def main(*args):
     opts = Options(**vars(parser.parse_args(args)))
@@ -79,7 +86,7 @@ def main(*args):
             pass
     srcfiles = resolve_srcfiles(
         srcdir=opts.srcdir,
-        srcext='latex',
+        srcext='tex',
         outdir=opts.outdir,
         outext='pdf',
         incremental=opts.incremental)
@@ -88,14 +95,14 @@ def main(*args):
         return
     logger.info(f'Processing {len(srcfiles)} files')
     queue = deque(srcfiles)
-    workers = make_queue_workers(queue, opts.threads, makepdf, opts)
+    workers = make_queue_workers(queue, opts.threads, makepdf, srcfiles, opts)
     for worker in workers:
         worker.start()
     for worker in workers:
         worker.join()
 
 
-def makepdf(srcfile: str, opts: Options):
+def makepdf(srcfile: str, srcfiles: Mapping[str, str], opts: Options):
     args = (
         'latex',
         '-interaction=nonstopmode',
@@ -114,6 +121,15 @@ def makepdf(srcfile: str, opts: Options):
         print(proc.stdout)
         print(proc.stderr)
         raise
+    outbase = '.'.join(srcfiles[srcfile].split('.')[:-1])
+    for ext in ('log', 'aux'):
+        try:
+            os.unlink(f'{outbase}.{ext}')
+        except FileNotFoundError:
+            pass
+
+
+    outname = basename(srcfiles[srcfile])
 
 if __name__ == '__main__':
     main(*sys.argv[1:])

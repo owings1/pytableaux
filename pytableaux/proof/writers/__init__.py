@@ -90,6 +90,9 @@ class TabWriter(metaclass=TabWriterMeta):
     format: str
     "The format registry identifier."
 
+    file_extension: str
+    "The file extension for output files."
+
     defaults = EMPTY_MAP
     "Default options."
 
@@ -132,6 +135,15 @@ class TabWriter(metaclass=TabWriterMeta):
     def __call__(self, tab: Tableau, **kw) -> str:
         raise NotImplementedError
 
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        try:
+            cls.file_extension
+        except AttributeError:
+            try:
+                cls.file_extension = cls.format
+            except AttributeError:
+                pass
 
 class TabWriterRegistry(MapCover[str, type[TabWriter]], MutableMapping[str, type[TabWriter]]):
     "A tableau writer class registry."
