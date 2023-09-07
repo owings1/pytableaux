@@ -28,13 +28,8 @@ pol = Parser('polish')
 
 class TestParsers(BaseCase):
 
-    def test_parse_standard(self):
+    def test_parse_conjunction(self):
         s = Parser('standard')('A & B')
-        self.assertIs(s.TYPE, LexType.Operated)
-        self.assertEqual(s.operator , 'Conjunction')
-
-    def test_parse_polish(self):
-        s = Parser('polish')('Kab')
         self.assertIs(s.TYPE, LexType.Operated)
         self.assertEqual(s.operator , 'Conjunction')
 
@@ -42,25 +37,6 @@ class TestParsers(BaseCase):
         a = std.argument('A')
         self.assertEqual(len(a.premises) , 0)
         self.assertIs(a.conclusion.TYPE, LexType.Atomic)
-
-    def test_argument_prems_preparsed_titled(self):
-        premises = pol('Aab'), pol('Nb')
-        conclusion = pol('a')
-        a = pol.argument(conclusion, premises, title='TestArgument')
-        self.assertEqual(len(a.premises) , 2)
-        self.assertEqual(a.title , 'TestArgument')
-
-    def test_argument_parse_prems_preparsed_conclusion(self):
-        premises = ('Aab', 'Nb')
-        conclusion = pol('a')
-        a = pol.argument(conclusion, premises)
-        self.assertEqual(len(a.premises) , 2)
-        self.assertEqual(a.conclusion , conclusion)
-
-    def test_argument_repr_coverage(self):
-        a = pol.argument('a', title='TestArg')
-        res = a.__repr__()
-        self.assertTrue('(0, 0)' in res or 'TestArg' in res)
 
     def test_parse_atomic(self):
         s = std('A')
@@ -139,7 +115,17 @@ class TestParsers(BaseCase):
         s = p('Lxx=x')
         self.assertEqual(type(s), Quantified)
 
+    def test_comma_raises_parse_error(self):
+        p = Parser('standard')
+        with self.assertRaises(ParseError):
+            p('A % B,')
+
 class TestPolish(BaseCase):
+
+    def test_parse_conjunction(self):
+        s = Parser('polish')('Kab')
+        self.assertIs(s.TYPE, LexType.Operated)
+        self.assertEqual(s.operator , 'Conjunction')
 
     def test_parse_atomic(self):
         self.assertIs(pol('a').TYPE, LexType.Atomic)
@@ -154,3 +140,34 @@ class TestPolish(BaseCase):
     def test_empty_error(self):
         with raises(ParseError):
             pol('')
+
+    def test_argument_prems_preparsed_titled(self):
+        premises = map(pol, ('Aab', 'Nb'))
+        conclusion = pol('a')
+        a = pol.argument(conclusion, premises, title='TestArgument')
+        self.assertEqual(len(a.premises) , 2)
+        self.assertEqual(a.title , 'TestArgument')
+
+    def test_argument_parse_prems_preparsed_conclusion(self):
+        premises = ('Aab', 'Nb')
+        conclusion = pol('a')
+        a = pol.argument(conclusion, premises)
+        self.assertEqual(len(a.premises) , 2)
+        self.assertEqual(a.conclusion , conclusion)
+
+    def test_argument_repr_coverage(self):
+        a = pol.argument('a', title='TestArg')
+        res = a.__repr__()
+        self.assertTrue('(0, 0)' in res or 'TestArg' in res)
+    
+    def test_subscript_non_standard_digit_char(self):
+        table = ParseTable(dict(
+            notation = Notation.polish,
+            dialect = 'test',
+            mapping = dict(ParseTable.fetch('polish', 'default')) | {
+                '@': (Marking.digit, 0)}))
+        p = Parser(notation='polish', table=table)
+        s: Atomic = p('a2@3')
+        self.assertIsInstance(s, Atomic)
+        self.assertEqual(s.index, 0)
+        self.assertEqual(s.subscript, 203)

@@ -25,7 +25,8 @@ from abc import abstractmethod as abstract
 from collections import deque
 from enum import Enum
 from types import MappingProxyType as MapProxy
-from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Mapping, Self
+from typing import (TYPE_CHECKING, Any, ClassVar, Iterable, Iterator, Mapping,
+                    Self, TypeVar)
 
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
                       UnboundVariableError, UndefinedPredicateError, check)
@@ -45,23 +46,30 @@ __all__ = (
     'PolishParser',
     'StandardParser')
 
+_T = TypeVar('_T')
 NOARG = object()
 
 
 class ParserMeta(LangCommonMeta):
     'Parser Metaclass.'
 
-    DEFAULT_NOTATION = Notation.polish
+    DEFAULT_NOTATION: Notation = Notation.polish
 
+    if TYPE_CHECKING:
+        @overload
+        def __call__(cls,
+            notation:Notation|None=None,
+            predicates:Predicates|None=None,
+            table:ParseTable|str|None = None,
+            **opts) -> Parser:...
+        
     def __call__(cls, *args, **kw) -> Parser:
         if cls is Parser:
             if args:
                 notn = Notation(args[0])
                 args = args[1:]
-            elif 'notation' in kw:
-                notn = Notation(kw.pop('notation'))
             else:
-                notn = Parser.DEFAULT_NOTATION
+                notn = Notation(kw.pop('notation', Parser.DEFAULT_NOTATION))
             return notn.Parser(*args, **kw)
         return super().__call__(*args, **kw)
 
@@ -122,7 +130,11 @@ class Parser(metaclass=ParserMeta):
 
     if TYPE_CHECKING:
         @overload
-        def __init__(self, notation:Notation|None=None, predicates:Predicates|None=None, table:ParseTable|str|None = None, **opts): ...
+        def __init__(self,
+            notation:Notation|None=None,
+            predicates:Predicates|None=None,
+            table:ParseTable|str|None = None,
+            **opts): ...
         
     def __init__(self, predicates:Predicates|None=None, table:ParseTable|str|None = None, **opts):
         """
@@ -155,13 +167,6 @@ class Parser(metaclass=ParserMeta):
 
         Raises:
             ParseError
-        
-        Examples::
-
-            >>> parser = Parser('standard')
-            >>> parser('A V B')
-            <Sentence: A ∨ B>
-
         """
         raise NotImplementedError
 
@@ -181,12 +186,6 @@ class Parser(metaclass=ParserMeta):
         Raises:
             ParseError: if input cannot be parsed.
             TypeError: for bad argument types.
-        
-        Examples::
-
-            parser.argument('A V ~A')
-
-            parser.argument('A', (('A > B', '~B')))
         """
         return Argument(
             self(conclusion),
@@ -221,13 +220,15 @@ class ParseContext:
     predicates: PredicatesBase
     table: ParseTable
 
-    def __init__(self, input_: str, table: ParseTable, predicates: PredicatesBase, /):
-        self.input = input_
+    def __init__(self, input: str, table: ParseTable, predicates: PredicatesBase, /):
+        self.input = input
         self.table = table
         self.predicates = predicates
         self.is_open = False
 
-    def __enter__(self):
+    def open(self) -> Self:
+        """Open the context. A context can only be opened once.
+        """
         if self.is_open:
             raise IllegalStateError('Context already open')
         self.is_open = True
@@ -236,25 +237,37 @@ class ParseContext:
         self.chomp()
         return self
 
-    def __exit__(self, typ, value, traceback):
+    def close(self):
+        """Close the context. Eats remaining whitespace and checks that the
+        input is fully consumed.
+
+        Raises:
+            ParseError: if input is not fully consumed.
+        """
         self.chomp()
         self.assert_end()
 
-    def current(self):
+    def __enter__(self) -> Self:
+        return self.open()
+
+    def __exit__(self, typ, value, traceback):
+        self.close()
+
+    def current(self) -> str|None:
         'Return the current character, or ``None`` if after last.'
         try:
             return self.input[self.pos]
         except IndexError:
             pass
 
-    def next(self, n: int = 1, /):
+    def next(self, n: int = 1, /) -> str|None:
         'Get the nth character after the current, or ``None``.'
         try:
             return self.input[self.pos + n]
         except IndexError:
             pass
 
-    def assert_current(self):
+    def assert_current(self) -> Any:
         """
         Returns:
             Type of current char, e.g. ``Operator``, or ``None`` if
@@ -278,7 +291,7 @@ class ParseContext:
         if self.assert_current() is not ctype:
             raise ParseError(self._unexp_msg())
 
-    def assert_current_in(self, ctypes, /):
+    def assert_current_in(self, ctypes: Iterable[_T], /) -> _T:
         ctype = self.assert_current()
         if ctype in ctypes:
             return ctype
@@ -297,7 +310,7 @@ class ParseContext:
         'Whether there is a current character.'
         return len(self.input) > self.pos
 
-    def advance(self, n = 1, /):
+    def advance(self, n: int = 1, /) -> Self:
         """Advance the current pointer n-many characters, and then eat whitespace.
 
         Args:
@@ -357,6 +370,63 @@ class ParseContext:
         """
         return self.table[char][1]
 
+    def bind(self, v: Variable, /) -> Variable:
+        """Add a variable to the set of bound variables, checking that it is
+        not already bound.
+
+        Args:
+            v (Variable): The variable.
+        
+        Returns:
+            Variable: The variable passed.
+        
+        Raises:
+            BoundVariableError: if variable already bound.
+        """
+        if v in self.bound:
+            raise BoundVariableError(
+                f"Cannot rebind variable {v.spec} near position {self.pos}.")
+        self.bound.add(v)
+        return v
+
+    def check_bound(self, v: Variable, /) -> Variable:
+        """Check that a variable is already bound.
+
+        Args:
+            v (Variable): The variable.
+        
+        Returns:
+            Variable: The variable passed.
+        
+        Raises:
+            UnboundVariableError: if variable is not bound.
+        """
+        if v not in self.bound:
+            raise UnboundVariableError(
+                f"Unbound variable {v.spec} near position {self.pos}")
+        return v
+
+    def unbind(self, v: Variable, s: Sentence, /) -> tuple[Variable, Sentence]:
+        """Unbind a variable, checking that it is already bound, and used
+        within the sentence.
+
+        Args:
+            v (Variable): The variable.
+            s (Sentence): The sentence using the variable.
+        
+        Returns:
+            tuple[Variable, Sentence]: The variable and sentence passed.
+
+        Raises:
+            UnboundVariableError: if variable is not bound.
+            BoundVariableError: if variable is not used in the sentence.
+        """
+        if self.check_bound(v) not in s.variables:
+            raise BoundVariableError(
+                f"Unused bound variable {v.spec} near position {self.pos}")
+        self.bound.remove(v)
+        return v, s
+
     def _unexp_msg(self) -> str:
         char = self.input[self.pos]
         ctype = self.type(char, None)
@@ -368,18 +438,24 @@ class ParseContext:
 
 class Ctype(frozenset, Enum):
     pred = {Predicate, Predicate.System}
-    base = pred | {Quantifier, Atomic, Operator}
     param = {Constant, Variable}
 
 class DefaultParser(Parser):
     """Parser default implementation.
     """
 
-    def __call__(self, input_: str, /) -> Sentence:
-        if isinstance(input_, Sentence):
-            return input_
-        with ParseContext(input_, self.table, self.predicates) as context:
+    def __call__(self, input: str, /) -> Sentence:
+        if isinstance(input, Sentence):
+            return input
+        with ParseContext(input, self.table, self.predicates) as context:
             return self._read(context)
+
+    _methodmap = MapProxy({
+        Operator: '_read_operated',
+        Atomic: '_read_atomic',
+        Quantifier: '_read_quantified',
+        Predicate: '_read_predicated',
+        Predicate.System: '_read_predicated'})
 
     def _read(self, context: ParseContext, /) -> Sentence:
         """
@@ -387,26 +463,20 @@ class DefaultParser(Parser):
         This provides the default implementation for prefix notation sentences,
         i.e. atomic, predicated, and quantified sentences.
 
-        This does not parse operated sentences, Subclasses *must* override
-        this method, and delegate to ``super()`` for the default implementation
-        when appropriate.
+        Args:
+            context (ParseContext): The parse context
 
         Returns:
-            The sentence
+            Sentence: The sentence
 
         Raises:
             ParseError:
         """
-        ctype = context.assert_current_in(Ctype.base)
-        if ctype is Operator:
-            return self._read_operated(context)
-        if ctype is Atomic:
-            return self._read_atomic(context)
-        if ctype is Quantifier:
-            return self._read_quantified(context)
-        if ctype in Ctype.pred:
-            return self._read_predicated(context)
-        raise ParseError(context._unexp_msg())
+        try:
+            method = self._methodmap[context.assert_current()]
+        except KeyError:
+            raise ParseError(context._unexp_msg()) from None
+        return getattr(self, method)(context)
 
     @abstract
     def _read_operated(self, context: ParseContext, /) -> Operated:
@@ -438,23 +508,13 @@ class DefaultParser(Parser):
 
     def _read_quantified(self, context: ParseContext, /) -> Quantified:
         'Read a quantified sentence.'
-        q = context.value(context.current())
+        quant = context.value(context.current())
         context.advance()
-        v = Variable(self._read_coords(context))
-        if v in context.bound:
-            vchr = self.table.reversed[Variable, v.index]
-            raise BoundVariableError(
-                f"Cannot rebind variable '{vchr}' ({v.subscript}) "
-                f"at position {context.pos}.")
-        context.bound.add(v)
-        s = self._read(context)
-        if v not in s.variables:
-            vchr = self.table.reversed[Variable, v.index]
-            raise BoundVariableError(
-                f"Unused bound variable '{vchr}' ({v.subscript}) "
-                f"at position {context.pos}")
-        context.bound.remove(v)
-        return Quantified(q, v, s)
+        context.assert_current_is(Variable)
+        return quant(
+            *context.unbind(
+                context.bind(Variable(self._read_coords(context))),
+                self._read(context)))
 
     def _read_predicate(self, context: ParseContext, /) -> Predicate:
         'Read a predicate.'
@@ -470,27 +530,28 @@ class DefaultParser(Parser):
                 coords,
                 f"Undefined predicate symbol '{pchar}' at position {context.pos}")
 
-    def _read_params(self, context: ParseContext, num: int, /) -> tuple[Parameter, ...]:
+    def _read_params(self, context: ParseContext, num: int, /) -> Iterator[Parameter]:
         'Read the given number of parameters.'
-        return tuple(self._read_parameter(context) for _ in range(num))
+        read = self._read_parameter
+        for _ in range(num):
+            yield read(context)
 
-    def _read_params_auto(self, context: ParseContext, /) -> tuple[Parameter, ...]:
+    def _read_params_auto(self, context: ParseContext, /) -> Iterator[Parameter]:
         'Read indefinite number of parameters'
-        while context.type(context.current(), None) in Ctype.param:
-            yield self._read_parameter(context)
+        read = self._read_parameter
+        ftype = context.type
+        fcurr = context.current
+        ctypes = Ctype.param
+        while ftype(fcurr(), None) in ctypes:
+            yield read(context)
 
     def _read_parameter(self, context: ParseContext, /) -> Parameter:
         'Read a single parameter (constant or variable)'
         ctype = context.assert_current_in(Ctype.param)
-        if ctype is Constant:
-            return Constant(self._read_coords(context))
-        cpos = context.pos
-        v = Variable(self._read_coords(context))
-        if v not in context.bound:
-            vchr = self.table.reversed[Variable, v.index]
-            raise UnboundVariableError(
-                f"Unbound variable '{vchr}_{v.subscript}' at position {cpos}")
-        return v
+        param = ctype(self._read_coords(context))
+        if ctype is Variable:
+            context.check_bound(param)
+        return param
 
     def _read_subscript(self, context: ParseContext, /) -> int:
         """Read the subscript starting from the current character. If the current
@@ -500,19 +561,13 @@ class DefaultParser(Parser):
         returned.
         """
         digits = deque()
-        try:
-            while (cur := context.current()) is not None:
-                if context.type(cur) is not Marking.digit:
-                    break
-                digits.append(cur)
-                context.advance()
-        except KeyError:
-            # TODO: p('A % B,') raises key error
-            # raise ParseError(context._unexp_msg())
-            raise
-        if not len(digits):
-            return 0
-        return int(''.join(digits))
+        while True:
+            cur = context.current()
+            if context.type(cur, None) is not Marking.digit:
+                break
+            digits.append(context.value(cur))
+            context.advance()
+        return int(''.join(map(str, digits)) or 0)
 
     def _read_coords(self, context: ParseContext, /) -> BiCoords:
         """Read (index, subscript) coords starting from the current character,
@@ -547,29 +602,24 @@ class StandardParser(DefaultParser, primary=True):
     notation = Notation.standard
     defaults = dict(drop_parens=True)
 
-    def __call__(self, input_: str, /) -> Sentence:
+    def __call__(self, input: str, /) -> Sentence:
         try:
-            return super().__call__(input_)
+            return super().__call__(input)
         except ParseError:
             if self.opts['drop_parens']:
                 rev = self.table.reversed
                 popen = rev[Marking.paren_open]
                 pclose = rev[Marking.paren_close]
                 try:
-                    return super().__call__(f'{popen}{input_}{pclose}')
+                    return super().__call__(f'{popen}{input}{pclose}')
                 except ParseError:
                     pass
             raise
 
-    def _read(self, context: ParseContext, /) -> Sentence:
-        ctype = context.assert_current()
-        if ctype in Ctype.base:
-            return super()._read(context)
-        if ctype is Marking.paren_open:
-            return self._read_from_paren_open(context)
-        if ctype in Ctype.param:
-            return self._read_infix_predicated(context)
-        raise ParseError(context._unexp_msg())
+    _methodmap = MapProxy(dict(DefaultParser._methodmap) | {
+        Marking.paren_open: '_read_from_paren_open',
+        Constant: '_read_infix_predicated',
+        Variable: '_read_infix_predicated'})
 
     def _read_operated(self, context: ParseContext, /) -> Operated:
         oper = Operator(context.value(context.current()))
@@ -729,7 +779,6 @@ class ParseTable(MapCover[str, Any]):
         Marking.paren_close: (Marking.paren_close, 0),
         (Predicate, Predicate.Existence): (Predicate.System, Predicate.Existence),
         (Predicate, Predicate.Identity): (Predicate.System, Predicate.Identity)})
-
 
     def __setattr__(self, name, value, /, *, sa = object.__setattr__):
         if getattr(self, name, NOARG) is not NOARG:

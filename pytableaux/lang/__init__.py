@@ -303,98 +303,6 @@ from .lex import Quantifier as Quantifier
 from .lex import Sentence as Sentence
 from .lex import Variable as Variable
 
-
-class StringTable(MapCover[Any, str], metaclass=LangCommonMeta):
-    'Lexical writer strings table data class.'
-
-    _instances: dict[Any, Self] = {}
-
-    @classmethod
-    def load(cls, data: Mapping, /) -> Self:
-        """Create and store instance from data.
-
-        Args:
-            data: The data mapping
-
-        Raises:
-            Emsg.DuplicateKey: on duplicate key
-
-        Returns:
-            The instance
-        """
-        format = data['format']
-        key = format, Notation[data['notation']], data.get('dialect', format)
-        if key in cls._instances:
-            raise Emsg.DuplicateKey(key)
-        self = cls._instances.setdefault(key, cls(data))
-        self.notation.formats[self.format].add(self.dialect)
-        return self
-
-    @classmethod
-    def fetch(cls, format: str, notation: Notation, dialect: str = None) -> Self:
-        """Get a loaded instance.
-
-        Args:
-            format: The format.
-            notation: The notation
-            dialect: The dialect if any.
-
-        Returns:
-            The instance
-        """
-        return cls._instances[format, Notation[notation], dialect or format]
-
-    format: str
-    "The format (html, latex, text, rst, etc.)"
-    dialect: str
-    "The specific dialect, if any. Defaults to the name of the format."
-    notation: Notation
-    "The notation"
-
-    __slots__ = (
-        'format',
-        'notation',
-        'dialect',
-        'hash')
-
-    def __init__(self, data: Mapping, /):
-        strings = dict(data['strings'])
-        for key, defaultkey in self._keydefaults.items():
-            strings.setdefault(key, strings[defaultkey])
-        super().__init__(strings)
-        self.format = data['format']
-        self.dialect = data.get('dialect', self.format)
-        self.notation = Notation[data['notation']]
-        self.hash = self._compute_hash()
-
-    _keydefaults = {
-        (Predicate, Predicate.Identity.index): Predicate.Identity,
-        (Predicate, Predicate.Existence.index): Predicate.Existence,
-        Marking.whitespace: (Marking.whitespace, 0),
-        Marking.subscript_open: (Marking.subscript_open, 0),
-        Marking.subscript_close: (Marking.subscript_close, 0),
-        Marking.paren_open: (Marking.paren_open, 0),
-        Marking.paren_close: (Marking.paren_close, 0),
-        (Marking.tableau, 'closure', True): (Marking.tableau, 'flag', 'closure')}
-
-    def __hash__(self):
-        return self.hash
-
-    def __eq__(self, other):
-        return self is other or (
-            isinstance(other, __class__) and
-            hash(self) == hash(other) and
-            self.format == other.format and
-            self.notation == other.notation and
-            self.dialect == other.dialect and
-            self._cov_mapping == other._cov_mapping)
-
-    def _compute_hash(self) -> int:
-        return hash((
-            sum(map(hash, self)),
-            hash(tuple(sorted(self.values(), key=str)))))
-
-
 pass
 from .parsing import DefaultParser as DefaultParser
 from .parsing import Parser as Parser
@@ -410,6 +318,7 @@ pass
 from .writing import LexWriter as LexWriter
 from .writing import PolishLexWriter as PolishLexWriter
 from .writing import StandardLexWriter as StandardLexWriter
+from .writing import StringTable as StringTable
 
 
 @closure
@@ -446,7 +355,7 @@ def init():
                 return pred.name
         except AttributeError: # pragma: no cover
             pass
-        return tostr_item(pred)
+        return syslw(pred)
 
     @wraps(Lexical.__repr__)
     def repr_lex(obj: Lexical):

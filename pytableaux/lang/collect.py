@@ -150,8 +150,6 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         parser = __class__._argstr_pclass(auto_preds=True)
         return parser.argument(conc, prems, title=title)
 
-    #******  Equality & Ordering
-
     @abcs.abcf.temp
     @membr.defer
     def wrapper(member: membr):

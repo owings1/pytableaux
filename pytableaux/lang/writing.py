@@ -23,28 +23,29 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar, Mapping, Self
 
 from ..errors import Emsg
-from ..tools import EMPTY_MAP
+from ..tools import EMPTY_MAP, MapCover
 from . import (Atomic, Constant, CoordsItem, LangCommonMeta, Lexical, LexType,
                Marking, Notation, Operated, Operator, Predicate, Predicated,
-               Quantified, Quantifier, StringTable, Variable)
+               Quantified, Quantifier, Variable)
 
 if TYPE_CHECKING:
     from typing import overload
 
 __all__ = (
     'LexWriter',
+    'PolishLexWriter',
     'StandardLexWriter',
-    'PolishLexWriter')
+    'StringTable')
 
 
 class LexWriterMeta(LangCommonMeta):
     'LexWriter Metaclass.'
 
-    DEFAULT_FORMAT = 'text'
-    DEFAULT_NOTATION = Notation.polish
+    DEFAULT_FORMAT: str = 'text'
+    DEFAULT_NOTATION: Notation = Notation.polish
 
     def __call__(cls, *args, **kw):
         if cls is LexWriter:
@@ -58,12 +59,20 @@ class LexWriterMeta(LangCommonMeta):
             return notn.DefaultWriter(*args, **kw)
         return super().__call__(*args, **kw)
 
-
 class LexWriter(metaclass=LexWriterMeta):
     'LexWriter interface and coordinator.'
 
     notation: ClassVar[Notation]
-    defaults = EMPTY_MAP
+    "The writer's notation."
+    defaults: ClassVar[Mapping] = EMPTY_MAP
+    "The default options."
+    format: str
+    "The writer's format."
+    strings: StringTable
+    "The string table."
+    opts: dict
+    "The writer's options."
+
     _methodmap = MapProxy({
         Operator   : '_write_plain',
         Quantifier : '_write_plain',
@@ -76,10 +85,6 @@ class LexWriter(metaclass=LexWriterMeta):
         Operated   : '_write_operated'})
 
     __slots__ = ('opts', 'strings')
-
-    strings: StringTable
-    opts: dict
-    format: str
 
     @property
     def format(self) -> str:
@@ -113,12 +118,26 @@ class LexWriter(metaclass=LexWriterMeta):
             strings:StringTable|None=...,
             **opts): ...
 
-    def __call__(self, item) -> str:
-        'Write a lexical item.'
+    def __call__(self, item: Lexical) -> str:
+        """Write a lexical item.
+
+        Args:
+            item (Lexical): The item to write.
+        
+        Returns:
+            str: The rendered string.
+        """
         return self._write(item)
 
     def canwrite(self, obj: Any) -> bool:
-        "Whether the object can be written."
+        """Whether the object can be written.
+
+        Args:
+            obj (Any): The object to test.
+
+        Returns:
+            bool: Whether the object can be written.
+        """
         try:
             if obj in self.strings:
                 return True
@@ -190,7 +209,15 @@ class PolishLexWriter(LexWriter):
 
 @LexWriter.register
 class StandardLexWriter(LexWriter):
-    "Standard notation lexical writer implementation."
+    """Standard notation lexical writer implementation.
+
+    Options:
+        drop_parens: Drop outer parens, default ``True``.
+        identity_infix: Write identity sentences in infix notation (e.g. a = b),
+            default ``True``.
+        max_infix: The max arity for writing predicate sentences in infix
+            notation, default 0.
+    """
 
     notation = Notation.standard
     defaults = MapProxy(dict(
@@ -259,3 +286,93 @@ class StandardLexWriter(LexWriter):
         s2 = Operator.Conjunction(Atomic.gen(2))
         s3 = s2 | Atomic.first()
         return super()._test() + list(map(self, [s1, s2, s3]))
+
+class StringTable(MapCover[Any, str], metaclass=LangCommonMeta):
+    'Lexical writer strings table data class.'
+
+    _instances: dict[Any, Self] = {}
+
+    @classmethod
+    def load(cls, data: Mapping, /) -> Self:
+        """Create and store instance from data.
+
+        Args:
+            data: The data mapping
+
+        Raises:
+            Emsg.DuplicateKey: on duplicate key
+
+        Returns:
+            The instance
+        """
+        format = data['format']
+        key = format, Notation[data['notation']], data.get('dialect', format)
+        if key in cls._instances:
+            raise Emsg.DuplicateKey(key)
+        self = cls._instances.setdefault(key, cls(data))
+        self.notation.formats[self.format].add(self.dialect)
+        return self
+
+    @classmethod
+    def fetch(cls, format: str, notation: Notation, dialect: str = None) -> Self:
+        """Get a loaded instance.
+
+        Args:
+            format: The format.
+            notation: The notation
+            dialect: The dialect if any.
+
+        Returns:
+            The instance
+        """
+        return cls._instances[format, Notation[notation], dialect or format]
+
+    format: str
+    "The format (html, latex, text, rst, etc.)"
+    dialect: str
+    "The specific dialect, if any. Defaults to the name of the format."
+    notation: Notation
+    "The notation"
+
+    __slots__ = (
+        'format',
+        'notation',
+        'dialect',
+        'hash')
+
+    def __init__(self, data: Mapping, /):
+        self.format = data['format']
+        self.notation = Notation[data['notation']]
+        self.dialect = data.get('dialect', self.format)
+        strings = dict(data['strings'])
+        for key, defaultkey in self._keydefaults.items():
+            strings.setdefault(key, strings[defaultkey])
+        super().__init__(strings)
+        self.hash = self._compute_hash()
+
+    _keydefaults = {
+        (Predicate, Predicate.Identity.index): Predicate.Identity,
+        (Predicate, Predicate.Existence.index): Predicate.Existence,
+        Marking.whitespace: (Marking.whitespace, 0),
+        Marking.subscript_open: (Marking.subscript_open, 0),
+        Marking.subscript_close: (Marking.subscript_close, 0),
+        Marking.paren_open: (Marking.paren_open, 0),
+        Marking.paren_close: (Marking.paren_close, 0),
+        (Marking.tableau, 'closure', True): (Marking.tableau, 'flag', 'closure')}
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return self is other or (
+            isinstance(other, __class__) and
+            hash(self) == hash(other) and
+            self.format == other.format and
+            self.notation == other.notation and
+            self.dialect == other.dialect and
+            self._cov_mapping == other._cov_mapping)
+
+    def _compute_hash(self) -> int:
+        return hash((
+            sum(map(hash, self)),
+            hash(tuple(sorted(self.values(), key=str)))))

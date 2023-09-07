@@ -453,7 +453,7 @@ class CoordsItem(LexicalAbc):
     """
 
     __slots__ = (
-        'coords',
+        # 'coords',
         'index',
         'sort_tuple',
         'spec',
@@ -1496,11 +1496,12 @@ class LexType(LangCommonEnum):
                 # In Python 3.10 _member_names is a list
                 member_names += members.keys() # pragma: no cover
 
-        Predicate.System = SystemPredicate
-        Predicate.System.__name__ = 'System'
-        Predicate.System.__qualname__ = 'Predicate.System'
-        for pred in Predicate.System:
+        SystemPredicate.__name__ = 'System'
+        SystemPredicate.__qualname__ = 'Predicate.System'
+        for pred in SystemPredicate:
             setattr(Predicate, pred.name, pred)
+
+        Predicate.System = SystemPredicate
 
 
 #----------------------------------------------------------
