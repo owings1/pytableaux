@@ -31,17 +31,17 @@ Many-valued
 
     logics/fde
     logics/k3
+    logics/lp
+    logics/l3
+    logics/rm3
     logics/k3w
     logics/k3wq
     logics/b3e
-    logics/go
-    logics/mh
-    logics/l3
     logics/g3
-    logics/lp
+    logics/mh
     logics/nh
+    logics/go
     logics/p3
-    logics/rm3
 
 Many-valued Modal
 =================
@@ -62,4 +62,7 @@ Many-valued Modal
     logics/s4lp
     logics/s5lp
     logics/kl3
+    logics/tl3
+    logics/s4l3
+    logics/s5l3
     logics/krm3

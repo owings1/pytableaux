@@ -70,10 +70,12 @@ __all__ = (
     's4',
     's4fde',
     's4k3',
+    's4l3',
     's4lp',
     's5',
     's5fde',
     's5k3',
+    's5l3',
     's5lp',
     't',
     'tfde',
@@ -317,11 +319,10 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         return qsetf(result)
 
     def get_extensions(self, logic) -> qsetf[LogicType]:
-        self.import_all()
         result = LogicSet((logic,), registry=self)
         while True:
             length = len(result)
-            for other in self.values():
+            for other in map(self, self.all()):
                 extension_of = LogicSet(other.Meta.extension_of)
                 if len(result & extension_of):
                     result.add(other)

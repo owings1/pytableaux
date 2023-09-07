@@ -1197,6 +1197,23 @@ L('TL3',
         'Serial Inference 2',
     ),
     invalid = (
+    ))
+
+L('S4L3',
+    valid = (
+        'S4 Conditional Inference 1',
+        'S4 Conditional Inference 2',
+        'S4 Material Inference 2',
+    ),
+    invalid = (
+    ))
+
+L('S5L3',
+    valid = (
+        'S5 Conditional Inference 1',
+        'S5 Inference 1',
+    ),
+    invalid = (
         'Conditional Contraction',
         'Conditional Law of Excluded Middle',
         'Conditional Pseudo Contraction',
@@ -1208,6 +1225,8 @@ L('TL3',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
         'Reflexive Inference 1',
+        'S4 Material Inference 1',
+        'S5 Material Inference 1',
         'Self Identity 1',
         'Self Identity 2',
     ))

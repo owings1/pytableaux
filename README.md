@@ -55,6 +55,8 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**S5LP** - LP with S5 modal][S5LP]
 - [**KL<sub>3</sub>** - L<sub>3</sub> with K modal][KL3]
 - [**TL<sub>3</sub>** - L<sub>3</sub> with T modal][TL3]
+- [**S4L<sub>3</sub>** - L<sub>3</sub> with S4 modal][S4L3]
+- [**S5L<sub>3</sub>** - L<sub>3</sub> with S5 modal][S5L3]
 - [**KRM<sub>3</sub>** - RM<sub>3</sub> with K modal][KRM3]
 
 <!-- [logics-end] -->
@@ -182,5 +184,7 @@ Copyright (C) 2014-2023, Doug Owings. Released under the [GNU Affero General Pub
 [S5LP]: https://logic.dougowings.net/doc/logics/s5lp.html
 [KL3]: https://logic.dougowings.net/doc/logics/kl3.html
 [TL3]: https://logic.dougowings.net/doc/logics/tl3.html
+[S4L3]: https://logic.dougowings.net/doc/logics/s4l3.html
+[S5L3]: https://logic.dougowings.net/doc/logics/s5l3.html
 [KRM3]: https://logic.dougowings.net/doc/logics/krm3.html
 <!-- [refs-end] -->

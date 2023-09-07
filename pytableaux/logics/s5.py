@@ -32,7 +32,7 @@ class Meta(S4.Meta):
         'Normal modal logic with a reflexive, symmetric, and transitive '
         'access relation')
     category_order = 5
-    extension_of = ('S4', 'S5K3', 'S5LP')
+    extension_of = ('S4', 'S5K3', 'S5LP', 'S5L3')
 
 class Model(S4.Model):
 
