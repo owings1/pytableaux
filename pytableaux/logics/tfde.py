@@ -46,20 +46,15 @@ class Rules(LogicType.Rules):
     closure = KFDE.Rules.closure
 
     groups = (
+        # non-branching rules
         KFDE.Rules.groups[0],
-        group(
-            KFDE.Rules.NecessityDesignated,
-            KFDE.Rules.PossibilityUndesignated),
-        group(
-            KFDE.Rules.NecessityUndesignated,
-            KFDE.Rules.PossibilityDesignated),
-        group(
-            T.Rules.Reflexive),
+        # modal operator rules
+        *KFDE.Rules.groups[2:4],
+        group(T.Rules.Reflexive),
         # branching rules
         FDE.Rules.groups[1],
         # quantifier rules
-        FDE.Rules.groups[-2],
-        FDE.Rules.groups[-1])
+        *FDE.Rules.groups[-2:])
 
     @classmethod
     def _check_groups(cls):

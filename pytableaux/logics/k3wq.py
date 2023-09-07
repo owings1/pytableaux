@@ -19,7 +19,7 @@ from __future__ import annotations
 from types import MappingProxyType as MapProxy
 
 from ..lang import Operator, Quantified, Quantifier
-from ..proof import adds, sdwnode
+from ..proof import adds, sdwnode, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -65,7 +65,7 @@ class Model(FDE.Model):
         elif s.quantifier is Quantifier.Universal:
             oper = Operator.Conjunction
         else:
-            raise NotImplementedError from ValueError(s.quantifier) # pragma: no cover
+            raise NotImplementedError from ValueError(s.quantifier)
         return self.truth_function.generalize(oper, self._unquantify_values(s, world=world))
 
 class System(FDE.System): pass
@@ -89,9 +89,9 @@ class Rules(LogicType.Rules):
             d = self.designation
             w = node.get('world')
             yield adds(
-                group(
-                    sdwnode(self.quantifier.other(v, si | ~si), d, w),
-                    sdwnode(branch.new_constant() >> s, d, w)))
+                sdwgroup(
+                    (self.quantifier.other(v, si | ~si), d, w),
+                    (branch.new_constant() >> s, d, w)))
 
     class ExistentialUndesignated(System.QuantifierSkinnyRule):
         """
@@ -111,8 +111,8 @@ class Rules(LogicType.Rules):
             d = self.designation
             w = node.get('world')
             yield adds(
-                group(sdwnode(r, d, w), sdwnode(~r, d, w)),
-                group(sdwnode(self.quantifier.other(v, ~si), not d, w)))
+                sdwgroup((r, d, w), (~r, d, w)),
+                sdwgroup((self.quantifier.other(v, ~si), not d, w)))
 
     class ExistentialNegatedUndesignated(System.QuantifierSkinnyRule):
         """"
@@ -126,7 +126,7 @@ class Rules(LogicType.Rules):
             s = self.sentence(node)
             w = node.get('world')
             yield adds(
-                group(sdwnode(~(branch.new_constant() >> s), self.designation, w)))
+                sdwgroup((~(branch.new_constant() >> s), self.designation, w)))
 
     class UniversalNegatedDesignated(System.QuantifierSkinnyRule):
         """
@@ -144,9 +144,9 @@ class Rules(LogicType.Rules):
             d = self.designation
             w = node.get('world')
             yield adds(
-                group(
-                    sdwnode(self.quantifier(v, si | ~si), d, w),
-                    sdwnode(~(branch.new_constant() >> s), d, w)))
+                sdwgroup(
+                    (self.quantifier(v, si | ~si), d, w),
+                    (~(branch.new_constant() >> s), d, w)))
 
     class UniversalNegatedUndesignated(System.QuantifierSkinnyRule):
         """
@@ -165,8 +165,8 @@ class Rules(LogicType.Rules):
             d = self.designation
             w = node.get('world')
             yield adds(
-                group(sdwnode(r, d, w), sdwnode(~r, d, w)),
-                group(sdwnode(self.quantifier(v, si), not d, w)))
+                sdwgroup((r, d, w), (~r, d, w)),
+                sdwgroup((self.quantifier(v, si), not d, w)))
 
     groups = (
         group(

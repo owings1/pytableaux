@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator, Quantified, Quantifier
-from ..proof import adds, rules, sdwnode
+from ..proof import adds, rules, sdwgroup
 from ..tools import group, maxceil, minfloor
 from . import LogicType
 from . import b3e as B3E
@@ -76,8 +76,8 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdwnode(s.lhs, not d, w)),
-                group(sdwnode(s.rhs, not d, w)))
+                sdwgroup((s.lhs, not d, w)),
+                sdwgroup((s.rhs, not d, w)))
 
     class ConjunctionUndesignated(System.OperatorNodeRule):
         """
@@ -86,7 +86,7 @@ class Rules(LogicType.Rules):
         """
 
         def _get_sdw_targets(self, s, d, w, /):
-            yield adds(group(sdwnode(~s, not d, w)))
+            yield adds(sdwgroup((~s, not d, w)))
 
     class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -95,7 +95,7 @@ class Rules(LogicType.Rules):
         """
 
         def _get_sdw_targets(self, s, d, w, /):
-            yield adds(group(sdwnode(s, not d, w)))
+            yield adds(sdwgroup((s, not d, w)))
         
     class DisjunctionNegatedDesignated(System.OperatorNodeRule):
         """
@@ -104,7 +104,7 @@ class Rules(LogicType.Rules):
         """
 
         def _get_sdw_targets(self, s, d, w, /):
-            yield adds(group(sdwnode(s.lhs, not d, w), sdwnode(s.rhs, not d, w)))
+            yield adds(sdwgroup((s.lhs, not d, w), (s.rhs, not d, w)))
 
     class DisjunctionUndesignated(ConjunctionUndesignated): pass
     class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -117,7 +117,7 @@ class Rules(LogicType.Rules):
         """
 
         def _get_sdw_targets(self, s, d, w, /):
-            yield adds(group(sdwnode(~s.lhs, not d, w), sdwnode(s.rhs, not d, w)))
+            yield adds(sdwgroup((~s.lhs, not d, w), (s.rhs, not d, w)))
 
     class MaterialConditionalUndesignated(ConjunctionUndesignated): pass
     class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -132,8 +132,8 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdwnode(~s.lhs, not d, w), sdwnode( s.rhs, not d, w)),
-                group(sdwnode( s.lhs, not d, w), sdwnode(~s.rhs, not d, w)))
+                sdwgroup((~s.lhs, not d, w), ( s.rhs, not d, w)),
+                sdwgroup(( s.lhs, not d, w), (~s.rhs, not d, w)))
 
     class MaterialBiconditionalUndesignated(ConjunctionUndesignated): pass
     class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -149,13 +149,13 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(
-                    sdwnode(~lhs | rhs, d, w)),
-                group(
-                    sdwnode( lhs, not d, w),
-                    sdwnode( rhs, not d, w),
-                    sdwnode(~lhs, not d, w),
-                    sdwnode(~rhs, not d, w)))
+                sdwgroup(
+                    (~lhs | rhs, d, w)),
+                sdwgroup(
+                    ( lhs, not d, w),
+                    ( rhs, not d, w),
+                    (~lhs, not d, w),
+                    (~rhs, not d, w)))
 
     class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -168,8 +168,8 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdwnode( s.lhs, d, w), sdwnode(s.rhs, not d, w)),
-                group(sdwnode(~s.lhs, not d, w), sdwnode(~s.rhs, d, w)))
+                sdwgroup(( s.lhs, d, w), (s.rhs, not d, w)),
+                sdwgroup((~s.lhs, not d, w), (~s.rhs, d, w)))
 
     class ConditionalUndesignated(ConjunctionUndesignated): pass
     class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -183,9 +183,9 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
-            yield adds(group(
-                sdwnode(convert(s.operands), d, w),
-                sdwnode(convert(reversed(s)), d, w)))
+            yield adds(sdwgroup(
+                (convert(s.operands), d, w),
+                (convert(reversed(s)), d, w)))
 
     class BiconditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -198,8 +198,8 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
             yield adds(
-                group(sdwnode(~convert(s.operands), d, w)),
-                group(sdwnode(~convert(reversed(s)), d, w)))
+                sdwgroup((~convert(s.operands), d, w)),
+                sdwgroup((~convert(reversed(s)), d, w)))
 
     class BiconditionalUndesignated(ConjunctionUndesignated): pass
     class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -217,8 +217,7 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             v, si = s[1:]
             sq = self.quantifier.other(v, ~si | ~(si | ~si))
-            yield adds(
-                group(sdwnode(sq, d, w)))
+            yield adds(sdwgroup((sq, d, w)))
 
     class ExistentialUndesignated(ConjunctionUndesignated): pass
     class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated): pass
@@ -241,8 +240,8 @@ class Rules(LogicType.Rules):
             d = self.designation
             w = node.get('world')
             yield adds(
-                group(sdwnode(self.quantifier.other(v, ~si), d, w)),
-                group(sdwnode(r, not d, w), sdwnode(~r, not d, w)))
+                sdwgroup((self.quantifier.other(v, ~si), d, w)),
+                sdwgroup((r, not d, w), (~r, not d, w)))
 
     class UniversalUndesignated(ExistentialUndesignated): pass
     class UniversalNegatedUndesignated(ExistentialNegatedUndesignated): pass

@@ -185,6 +185,7 @@ class Rules(LogicType.Rules):
             NecessityNegatedUndesignated),
         # branching rules
         FDE.Rules.groups[1],
+        # modal operator rules
         group(
             NecessityDesignated,
             PossibilityUndesignated),
@@ -192,8 +193,7 @@ class Rules(LogicType.Rules):
             NecessityUndesignated,
             PossibilityDesignated),
         # quantifier rules
-        FDE.Rules.groups[-2],
-        FDE.Rules.groups[-1])
+        *FDE.Rules.groups[-2:])
 
     @classmethod
     def _check_groups(cls):

@@ -19,7 +19,6 @@ from __future__ import annotations
 from ..lang import Atomic
 from ..models import ValueK3
 from ..proof import rules, sdwnode
-from ..tools import group
 from . import fde as FDE
 from . import LogicType
 
@@ -54,6 +53,6 @@ class Rules(LogicType.Rules):
             yield sdwnode(a, True, w)
             yield sdwnode(~a, True, w)
 
-    closure = group(GlutClosure) + FDE.Rules.closure
+    closure = (GlutClosure, *FDE.Rules.closure)
     groups = FDE.Rules.groups
 

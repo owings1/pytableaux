@@ -554,6 +554,9 @@ def anode(w1, w2):
         Node.Key.world1: w1,
         Node.Key.world2: w2})
 
+def sdwgroup(*nodes):
+    return *itertools.starmap(sdwnode, nodes),
+
 from .common import AccessNode as AccessNode
 from .common import Branch as Branch
 from .common import ClosureNode as ClosureNode

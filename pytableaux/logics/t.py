@@ -81,39 +81,15 @@ class Rules(LogicType.Rules):
             yield swnode(Atomic.first(), 0)
 
     groups = (
-        group(
-            # non-branching rules
-            K.Rules.IdentityIndiscernability,
-            K.Rules.Assertion,
-            K.Rules.AssertionNegated,
-            K.Rules.Conjunction, 
-            K.Rules.DisjunctionNegated, 
-            K.Rules.MaterialConditionalNegated,
-            K.Rules.ConditionalNegated,
-            K.Rules.DoubleNegation,
-            K.Rules.PossibilityNegated,
-            K.Rules.NecessityNegated,
-            K.Rules.ExistentialNegated,
-            K.Rules.UniversalNegated),
-        group(
-            # modal rules
-            K.Rules.Necessity,
-            K.Rules.Possibility),
-        group(
-            Reflexive),
-        group(
-            # branching rules
-            K.Rules.ConjunctionNegated,
-            K.Rules.Disjunction, 
-            K.Rules.MaterialConditional, 
-            K.Rules.MaterialBiconditional,
-            K.Rules.MaterialBiconditionalNegated,
-            K.Rules.Conditional,
-            K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated),
-        group(
-            K.Rules.Existential,
-            K.Rules.Universal))
+        # non-branching rules
+        K.Rules.groups[0],
+        # modal rules
+        K.Rules.groups[2],
+        group(Reflexive),
+        # branching rules
+        K.Rules.groups[1],
+        # quantifier rules
+        K.Rules.groups[-1])
 
     @classmethod
     def _check_groups(cls):

@@ -86,7 +86,8 @@ class Rules(LogicType.Rules):
             nnode = pair.tonode()
             yield adds(group(nnode), **nnode)
 
-    groups = S4.Rules.groups + group(
+    groups = (
+        *S4.Rules.groups,
         group(Symmetric))
 
 

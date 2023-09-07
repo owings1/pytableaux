@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import adds, sdwnode
+from ..proof import adds, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -53,7 +53,7 @@ class Rules(LogicType.Rules):
         """
 
         def _get_sdw_targets(self, s, d, w, /):
-            yield adds(group(sdwnode(s, not d, w)))
+            yield adds(sdwgroup((s, not d, w)))
 
     class DoubleNegationUndesignated(DoubleNegationDesignated): pass
 
@@ -70,13 +70,13 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(
-                    sdwnode( lhs, d, w),
-                    sdwnode(~rhs, d, w)),
-                group(
-                    sdwnode( lhs, not d, w),
-                    sdwnode(~lhs, not d, w),
-                    sdwnode(~rhs, d, w)))
+                sdwgroup(
+                    ( lhs, d, w),
+                    (~rhs, d, w)),
+                sdwgroup(
+                    ( lhs, not d, w),
+                    (~lhs, not d, w),
+                    (~rhs, d, w)))
 
     class ConditionalNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -88,8 +88,8 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdwnode(~s.lhs, not d, w)),
-                group(sdwnode(~s.rhs, d, w)))
+                sdwgroup((~s.lhs, not d, w)),
+                sdwgroup((~s.rhs, d, w)))
 
     class BiconditionalDesignated(System.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedDesignated(System.ConditionalConjunctsReducingRule): pass
@@ -148,12 +148,8 @@ class Rules(LogicType.Rules):
             L3.Rules.ConditionalUndesignated,
             ConditionalNegatedUndesignated,
             ConditionalNegatedDesignated),
-        group(
-            FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated),
-        group(
-            FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated))
+        # quantifier rules
+        *FDE.Rules.groups[-2:])
 
     @classmethod
     def _check_groups(cls):

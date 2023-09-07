@@ -17,12 +17,13 @@
 from __future__ import annotations
 
 from ..lang import Operator as Operator
-from ..proof import adds, sdwnode
+from ..proof import adds, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
 from . import LogicType
+
 
 class Meta(K3.Meta):
     name = 'B3E'
@@ -55,7 +56,7 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             # Keep designation fixed to False for inheritance below
-            yield adds(group(sdwnode(s.lhs, False, w)))
+            yield adds(sdwgroup((s.lhs, False, w)))
 
     class AssertionUndesignated(AssertionNegatedDesignated): pass
 
@@ -66,27 +67,27 @@ class Rules(LogicType.Rules):
         """
 
         def _get_sdw_targets(self, s, d, w, /):
-            yield adds(group(sdwnode(s.lhs, not d, w)))
+            yield adds(sdwgroup((s.lhs, not d, w)))
 
     class MaterialBiconditionalUndesignated(System.OperatorNodeRule):
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdwnode(lhs, d, w), sdwnode(~lhs, d, w)),
-                group(sdwnode(rhs, d, w), sdwnode(~rhs, d, w)),
-                group(sdwnode(lhs, not d, w), sdwnode(~rhs, not d, w)),
-                group(sdwnode(~lhs, not d, w), sdwnode(rhs, not d, w)))
+                sdwgroup((lhs, d, w), (~lhs, d, w)),
+                sdwgroup((rhs, d, w), (~rhs, d, w)),
+                sdwgroup((lhs, not d, w), (~rhs, not d, w)),
+                sdwgroup((~lhs, not d, w), (rhs, not d, w)))
 
     class MaterialBiconditionalNegatedUndesignated(System.OperatorNodeRule):
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdwnode(lhs, d, w), sdwnode(~lhs, d, w)),
-                group(sdwnode(rhs, d, w), sdwnode(~rhs, d, w)),
-                group(sdwnode(~lhs, not d, w), sdwnode(~rhs, not d, w)),
-                group(sdwnode(lhs, not d, w), sdwnode(rhs, not d, w)))
+                sdwgroup((lhs, d, w), (~lhs, d, w)),
+                sdwgroup((rhs, d, w), (~rhs, d, w)),
+                sdwgroup((~lhs, not d, w), (~rhs, not d, w)),
+                sdwgroup((lhs, not d, w), (rhs, not d, w)))
 
     class ConditionalDesignated(System.OperatorNodeRule):
         """
@@ -102,7 +103,7 @@ class Rules(LogicType.Rules):
             if self.negated:
                 sn = ~sn
             # keep designation neutral for inheritance below
-            yield adds(group(sdwnode(sn, d, w)))
+            yield adds(sdwgroup((sn, d, w)))
 
     class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -113,7 +114,9 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             # Keep designation fixed for inheritance below.
-            yield adds(group(sdwnode(s.lhs, True, w), sdwnode(s.rhs, False, w)))
+            yield adds(sdwgroup(
+                (s.lhs, True, w),
+                (s.rhs, False, w)))
 
     class ConditionalUndesignated(ConditionalNegatedDesignated): pass
     class ConditionalNegatedUndesignated(ConditionalDesignated): pass
@@ -137,7 +140,9 @@ class Rules(LogicType.Rules):
                 sn1 = ~sn1
                 sn2 = ~sn2
             # Keep designation neutral for inheritance below.
-            yield adds(group(sdwnode(sn1, d, w), sdwnode(sn2, d, w)))
+            yield adds(sdwgroup(
+                (sn1, d, w),
+                (sn2, d, w)))
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
     class BiconditionalUndesignated(BiconditionalDesignated): pass
@@ -147,8 +152,8 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdwnode(lhs, d, w), sdwnode(rhs, d, w)),
-                group(sdwnode(lhs, not d, w), sdwnode(rhs, not d, w)))
+                sdwgroup((lhs, d, w), (rhs, d, w)),
+                sdwgroup((lhs, not d, w), (rhs, not d, w)))
 
     groups = (
         group(
@@ -193,12 +198,8 @@ class Rules(LogicType.Rules):
         group(
             MaterialBiconditionalUndesignated,
             MaterialBiconditionalNegatedUndesignated),
-        group(
-            FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated),
-        group(
-            FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated))
+        # quantifier rules
+        *FDE.Rules.groups[-2:])
 
     @classmethod
     def _check_groups(cls):

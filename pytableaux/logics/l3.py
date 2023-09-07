@@ -185,12 +185,8 @@ class Rules(LogicType.Rules):
             FDE.Rules.BiconditionalNegatedDesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalUndesignated),
-        group(
-            FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated),
-        group(
-            FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated))
+        # quantifier rules
+        *FDE.Rules.groups[-2:])
 
     @classmethod
     def _check_groups(cls):

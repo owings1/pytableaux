@@ -102,44 +102,15 @@ class Rules(LogicType.Rules):
             yield swnode(Atomic.first(), 0)
 
     groups = (
-        group(
-            # non-branching rules
-            K.Rules.IdentityIndiscernability,
-            K.Rules.Assertion,
-            K.Rules.AssertionNegated,
-            K.Rules.Conjunction, 
-            K.Rules.DisjunctionNegated, 
-            K.Rules.MaterialConditionalNegated,
-            K.Rules.ConditionalNegated,
-            K.Rules.DoubleNegation,
-            K.Rules.PossibilityNegated,
-            K.Rules.NecessityNegated,
-            K.Rules.ExistentialNegated,
-            K.Rules.UniversalNegated),
-        group(
-            # modal rules
-            K.Rules.Necessity,
-            K.Rules.Possibility),
-        group(
-            # branching rules
-            K.Rules.ConjunctionNegated,
-            K.Rules.Disjunction, 
-            K.Rules.MaterialConditional, 
-            K.Rules.MaterialBiconditional,
-            K.Rules.MaterialBiconditionalNegated,
-            K.Rules.Conditional,
-            K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated),
-        #[
-        #    # See comment on rule above -- using K rule now
-        #    ## special ordering of serial rule
-        #    #IdentityIndiscernability,
-        #    
-        #],
-        group(
-            K.Rules.Existential,
-            K.Rules.Universal),
-            # special ordering of serial rule
+        # non-branching rules
+        K.Rules.groups[0],
+        # modal rules
+        K.Rules.groups[2],
+        # branching rules
+        K.Rules.groups[1],
+        # quantifier rules
+        K.Rules.groups[-1],
+        # special ordering of serial rule
         group(Serial))
 
     @classmethod

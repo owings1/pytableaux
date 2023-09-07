@@ -18,11 +18,11 @@ from __future__ import annotations
 
 from collections import deque
 
-from ..lang import Atomic, Constant, Operated, Operator, Predicate, Predicated
+from ..lang import Atomic, Constant, Operator, Predicate, Predicated
 from ..models import ValueCPL
 from ..proof import SentenceNode, Target, WorldNode, adds, rules, swnode
 from ..proof.helpers import FilterHelper, PredNodes
-from ..tools import group, maxceil, minfloor, substitute
+from ..tools import group, substitute
 from . import LogicType
 from . import fde as FDE
 from . import kfde as KFDE
@@ -88,7 +88,7 @@ class Model(LogicType.Model[Meta.values]):
             return
         interp = self.frames[w].predicates[Predicate.Existence]
         # make sure each constant exists
-        interp.pos.update((c,) for c in self.constants)
+        interp.pos.update(map(group, self.constants))
 
     def _agument_extension_with_identicals(self, pred: Predicate, w):
         pos = self.frames[w].predicates[pred].pos

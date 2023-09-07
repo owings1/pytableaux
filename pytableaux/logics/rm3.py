@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..proof import adds, sdwnode
+from ..proof import adds, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import lp as LP
@@ -62,13 +62,13 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdwnode( lhs, not d, w)),
-                group(sdwnode(~rhs, not d, w)),
-                group(
-                    sdwnode( lhs, d, w),
-                    sdwnode(~lhs, d, w),
-                    sdwnode( rhs, d, w),
-                    sdwnode(~rhs, d, w)))
+                sdwgroup(( lhs, not d, w)),
+                sdwgroup((~rhs, not d, w)),
+                sdwgroup(
+                    ( lhs, d, w),
+                    (~lhs, d, w),
+                    ( rhs, d, w),
+                    (~rhs, d, w)))
 
     class ConditionalUndesignated(System.OperatorNodeRule):
         """
@@ -81,12 +81,12 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(
-                    sdwnode( s.lhs, not d, w),
-                    sdwnode( s.rhs, d, w)),
-                group(
-                    sdwnode(~s.lhs, d, w),
-                    sdwnode(~s.rhs, not d, w)))
+                sdwgroup(
+                    ( s.lhs, not d, w),
+                    ( s.rhs, d, w)),
+                sdwgroup(
+                    (~s.lhs, d, w),
+                    (~s.rhs, not d, w)))
 
     class BiconditionalDesignated(System.OperatorNodeRule):
         """
@@ -100,17 +100,17 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(
-                    sdwnode( lhs, not d, w),
-                    sdwnode( rhs, not d, w)),
-                group(
-                    sdwnode(~lhs, not d, w),
-                    sdwnode(~rhs, not d, w)),
-                group(
-                    sdwnode( lhs, d, w),
-                    sdwnode(~lhs, d, w),
-                    sdwnode( rhs, d, w),
-                    sdwnode(~rhs, d, w)))
+                sdwgroup(
+                    ( lhs, not d, w),
+                    ( rhs, not d, w)),
+                sdwgroup(
+                    (~lhs, not d, w),
+                    (~rhs, not d, w)),
+                sdwgroup(
+                    ( lhs, d, w),
+                    (~lhs, d, w),
+                    ( rhs, d, w),
+                    (~rhs, d, w)))
 
     class BiconditionalUndesignated(System.OperatorNodeRule):
         """
@@ -123,8 +123,8 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
             yield adds(
-                group(sdwnode(convert(s.lhs, s.rhs), d, w)),
-                group(sdwnode(convert(s.rhs, s.lhs), d, w)))
+                sdwgroup((convert(s.lhs, s.rhs), d, w)),
+                sdwgroup((convert(s.rhs, s.lhs), d, w)))
 
     class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
         """
@@ -136,12 +136,12 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(
-                    sdwnode(s.lhs, d, w),
-                    sdwnode(s.rhs, d, w)),
-                group(
-                    sdwnode(~s.lhs, d, w),
-                    sdwnode(~s.rhs, d, w)))
+                sdwgroup(
+                    (s.lhs, d, w),
+                    (s.rhs, d, w)),
+                sdwgroup(
+                    (~s.lhs, d, w),
+                    (~s.rhs, d, w)))
 
     groups = (
         group(
@@ -184,12 +184,8 @@ class Rules(LogicType.Rules):
             # 3 branching rules
             ConditionalDesignated,
             BiconditionalDesignated),
-        group(
-            FDE.Rules.ExistentialDesignated,
-            FDE.Rules.ExistentialUndesignated),
-        group(
-            FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated))
+        # quantifier rules
+        *FDE.Rules.groups[-2:])
 
     @classmethod
     def _check_groups(cls):

@@ -19,7 +19,6 @@ from __future__ import annotations as annotations
 from ..lang import Atomic
 from ..models import ValueLP
 from ..proof import rules, sdwnode
-from ..tools import group
 from . import LogicType
 from . import fde as FDE
 
@@ -35,7 +34,6 @@ class Meta(FDE.Meta):
     extension_of = ('FDE')
 
 class Model(FDE.Model): pass
-
 class System(FDE.System): pass
 
 class Rules(LogicType.Rules):
@@ -55,5 +53,5 @@ class Rules(LogicType.Rules):
             yield sdwnode(s, False, w)
             yield sdwnode(~s, False, w)
 
-    closure = group(GapClosure) + FDE.Rules.closure
+    closure = (GapClosure, *FDE.Rules.closure)
     groups = FDE.Rules.groups

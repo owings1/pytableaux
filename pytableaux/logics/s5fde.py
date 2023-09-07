@@ -44,5 +44,6 @@ class System(FDE.System): pass
 
 class Rules(LogicType.Rules):
     closure = KFDE.Rules.closure
-    groups = S4FDE.Rules.groups + group(
+    groups = (
+        *S4FDE.Rules.groups,
         group(S5.Rules.Symmetric))

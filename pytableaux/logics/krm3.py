@@ -47,17 +47,11 @@ class Rules(LogicType.Rules):
             KFDE.Rules.NecessityNegatedDesignated,
             KFDE.Rules.NecessityNegatedUndesignated),
         # branching rules
-        RM3.Rules.groups[1],
-        RM3.Rules.groups[2],
-        group(
-            KFDE.Rules.NecessityDesignated,
-            KFDE.Rules.PossibilityUndesignated),
-        group(
-            KFDE.Rules.NecessityUndesignated,
-            KFDE.Rules.PossibilityDesignated),
+        *RM3.Rules.groups[1:3],
+        # modal operator rules
+        *KFDE.Rules.groups[2:4],
         # quantifier rules
-        FDE.Rules.groups[-2],
-        FDE.Rules.groups[-1])
+        *FDE.Rules.groups[-2:])
 
     @classmethod
     def _check_groups(cls):

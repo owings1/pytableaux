@@ -51,14 +51,10 @@ class Rules(LogicType.Rules):
         KFDE.Rules.groups[0],
         group(S4.Rules.Transitive),
         # modal operator rules
-        KFDE.Rules.groups[2],
-        KFDE.Rules.groups[3],
+        *KFDE.Rules.groups[2:4],
         group(T.Rules.Reflexive),
-        # branching rules
-        FDE.Rules.groups[1],
-        # quantifier rules
-        FDE.Rules.groups[-2],
-        FDE.Rules.groups[-1])
+        # branching rules & quantifier rules
+        *FDE.Rules.groups[-3:])
 
     @classmethod
     def _check_groups(cls):
