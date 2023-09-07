@@ -25,7 +25,7 @@ from abc import abstractmethod as abstract
 from collections import deque
 from enum import Enum
 from types import MappingProxyType as MapProxy
-from typing import Any, ClassVar, Iterable, Mapping, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Mapping, Self
 
 from ..errors import (BoundVariableError, Emsg, IllegalStateError, ParseError,
                       UnboundVariableError, UndefinedPredicateError, check)
@@ -34,6 +34,9 @@ from . import BiCoords, LangCommonMeta, Marking, Notation
 from .collect import Argument, Predicates, PredicatesBase
 from .lex import (Atomic, Constant, Operated, Operator, Parameter, Predicate,
                   Predicated, Quantified, Quantifier, Sentence, Variable)
+
+if TYPE_CHECKING:
+    from typing import overload
 
 __all__ = (
     'Parser',
@@ -82,11 +85,20 @@ class Parser(metaclass=ParserMeta):
         <PolishParser:(<Notation.polish>, 'default')>
 
     To parse :class:`Predicated` sentences, the parser must know the predicate's
-    `arity`. For this, pass a :class:`Predicates` object with the predicates::
+    `arity`. By default, it will deduce the arity from the first usage.
+
+        >>> parser = Parser(notation='standard')
+        >>> parser('Fa & Gab')
+        <Sentence: Fa ∧ Gab>
+        >>> parser.predicates
+        Predicates({<Predicate: F>, <Predicate: G>})
+        >>> # parser('Fab') # raises ParseError
+
+    Alternatively, pass a :class:`Predicates` object with the predicates::
 
         >>> from pytableaux.lang import Predicates
         >>> preds = Predicates(((0, 0, 1), (1, 0, 2)))
-        >>> parser = Parser('standard', preds)
+        >>> parser = Parser('standard', preds, auto_preds=False)
         >>> parser('Fa & Gab')
         <Sentence: Fa ∧ Gab>
     """
@@ -96,7 +108,7 @@ class Parser(metaclass=ParserMeta):
     notation: ClassVar[Notation]
     "The parser notation."
 
-    defaults: ClassVar[dict] = {}
+    defaults: ClassVar[dict] = dict(auto_preds=True)
     "The default options."
 
     table: ParseTable
@@ -108,7 +120,15 @@ class Parser(metaclass=ParserMeta):
     opts: Mapping
     "The parser options."
 
-    def __init__(self, predicates:PredicatesBase|None=None, table:ParseTable|str|None = None, **opts):
+    if TYPE_CHECKING:
+        @overload
+        def __init__(self, notation:Notation|None=None, predicates:Predicates|None=None, table:ParseTable|str|None = None, **opts): ...
+        
+    def __init__(self, predicates:Predicates|None=None, table:ParseTable|str|None = None, **opts):
+        """
+        Options:
+            auto_preds: Deduce predicate arity from first usage. Default ``True``.
+        """
         if table is None:
             self.table = ParseTable.fetch(self.notation)
         elif isinstance(table, str):
@@ -124,14 +144,14 @@ class Parser(metaclass=ParserMeta):
         self.opts = for_defaults(self.defaults, opts)
 
     @abstract
-    def __call__(self, input_: str, /) -> Sentence:
+    def __call__(self, input: str, /) -> Sentence:
         """Parse a sentence from an input string.
 
         Args:
-            input_: The input string.
+            input: The input string.
         
         Returns:
-            The parsed sentence.
+            Sentence: The parsed sentence.
 
         Raises:
             ParseError
@@ -151,6 +171,8 @@ class Parser(metaclass=ParserMeta):
         Args:
             conclusion: The argument's conclusion.
             premises: Premise strings, if any.
+        
+        Keyword Args:
             title: An optional title.
 
         Returns:
@@ -351,12 +373,7 @@ class Ctype(frozenset, Enum):
 
 class DefaultParser(Parser):
     """Parser default implementation.
-
-    Options:
-        auto_preds: Deduce predicate arity from fist usage.
     """
-
-    defaults = dict(auto_preds=True)
 
     def __call__(self, input_: str, /) -> Sentence:
         if isinstance(input_, Sentence):

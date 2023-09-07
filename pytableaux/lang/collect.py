@@ -29,7 +29,7 @@ from types import MappingProxyType as MapProxy
 from typing import TYPE_CHECKING, Any, Iterable
 
 from ..errors import Emsg, check
-from ..tools import SequenceSet, abcs, group, lazy, membr, qset, qsetf, wraps
+from ..tools import SequenceSet, abcs, lazy, membr, qset, qsetf, wraps
 from . import LangCommonMeta, Lexical, Predicate, Sentence
 
 if TYPE_CHECKING:
@@ -78,7 +78,7 @@ class Argument(Sequence[Sentence], abcs.Copyable, immutcopy=True, metaclass=Argu
         """
         conclusion = Sentence(conclusion)
         if premises is None:
-            self.seq = group(conclusion)
+            self.seq = conclusion,
         else:
             self.seq = (conclusion, *map(Sentence, premises))
         self.premises = self.seq[1:]
@@ -245,7 +245,7 @@ class Predicates(PredicatesBase, qset[Predicate]):
     in the same set, which is necessary, for example, for determinate parsing.
     """
 
-    __slots__ = group('_lookup')
+    __slots__ = ('_lookup')
 
     def __init__(self, values=None, /, *, sort=False, key=None, reverse=False):
         """Create a new store from an iterable of predicate objects
@@ -318,7 +318,7 @@ class Predicates(PredicatesBase, qset[Predicate]):
     class Frozen(PredicatesBase, qsetf[Predicate]):
         "Frozen :class:`Predicates` implementation."
 
-        __slots__ = group('_lookup')
+        __slots__ = ('_lookup')
 
         def __init__(self, *args, **kw):
             v = Predicates(*args, **kw)
