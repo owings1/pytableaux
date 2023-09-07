@@ -1185,6 +1185,17 @@ L('KL3',
         'Necessity Distribution 1',
         'Necessity Distribution 2',
     ),
+    invalid = ( 
+    ))
+
+L('TL3',
+    valid = (
+        'NP Collapse 1',
+        'Necessity Elimination',
+        'Possibility Addition',
+        'Serial Inference 1',
+        'Serial Inference 2',
+    ),
     invalid = (
         'Conditional Contraction',
         'Conditional Law of Excluded Middle',
@@ -1196,8 +1207,9 @@ L('KL3',
         'Material Identity',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
+        'Reflexive Inference 1',
         'Self Identity 1',
-        'Self Identity 2',        
+        'Self Identity 2',
     ))
 
 class ArgSet(qset[Argument]):

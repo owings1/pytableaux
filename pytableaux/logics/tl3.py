@@ -16,49 +16,38 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..tools import group
 from . import LogicType
 from . import fde as FDE
 from . import k3 as K3
-from . import kfde as KFDE
-from . import kk3 as KK3
+from . import tfde as TFDE
+from . import kl3 as KL3
 from . import l3 as L3
 
 
-class Meta(KK3.Meta):
-    name = 'KL3'
-    title = 'L3 with K modal'
-    description = 'Modal version of L3 based on K normal modal logic'
-    native_operators = KFDE.Meta.native_operators | L3.Meta.native_operators
-    category_order = 16
-    extension_of = ('L3')
+class Meta(KL3.Meta):
+    name = 'TL3'
+    title = 'L3 with T modal'
+    description = 'Modal version of L3 based on T normal modal logic'
+    category_order = 18
+    extension_of = ('KL3')
 
-class Model(KFDE.Model, L3.Model): pass
+class Model(TFDE.Model, L3.Model): pass
 class System(FDE.System): pass
 
 class Rules(LogicType.Rules):
     closure = K3.Rules.closure
     groups = (
-        L3.Rules.groups[0] + group(
-            # non-branching rules
-            KFDE.Rules.PossibilityNegatedDesignated,
-            KFDE.Rules.PossibilityNegatedUndesignated,
-            KFDE.Rules.NecessityNegatedDesignated,
-            KFDE.Rules.NecessityNegatedUndesignated),
+        # non-branching rules
+        KL3.Rules.groups[0],
+        # modal rules
+        *TFDE.Rules.groups[1:4],
         # branching rules
         L3.Rules.groups[1],
-        group(
-            KFDE.Rules.NecessityDesignated,
-            KFDE.Rules.PossibilityUndesignated),
-        group(
-            KFDE.Rules.NecessityUndesignated,
-            KFDE.Rules.PossibilityDesignated),
         # quantifier rules
-        FDE.Rules.groups[-2],
-        FDE.Rules.groups[-1])
+        *FDE.Rules.groups[-2:])
 
     @classmethod
     def _check_groups(cls):
-        for branching, group in zip(range(2), cls.groups):
-            for rulecls in group:
+        for branching, i in zip(range(2), (0, -3)):
+            for rulecls in cls.groups[i]:
                 assert rulecls.branching == branching, f'{rulecls}'

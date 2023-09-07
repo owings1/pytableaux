@@ -36,7 +36,7 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**G<sub>3</sub>** - Gödel 3-valued Logic][G3]
 - [**MH** - Paracomplete Hybrid Logic][MH]
 - [**NH** - Paraconsistent Hybrid Logic][NH]
-- [**GO** - Gappy Object 3-valued Logic][GO]
+- [**GO** - Gappy Object Logic][GO]
 - [**P<sub>3</sub>** - Post 3-valued Logic][P3]
 
 ### Many-valued Modal
@@ -54,6 +54,7 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**S4LP** - LP with S4 modal][S4LP]
 - [**S5LP** - LP with S5 modal][S5LP]
 - [**KL<sub>3</sub>** - L<sub>3</sub> with K modal][KL3]
+- [**TL<sub>3</sub>** - L<sub>3</sub> with T modal][TL3]
 - [**KRM<sub>3</sub>** - RM<sub>3</sub> with K modal][KRM3]
 
 <!-- [logics-end] -->
@@ -180,5 +181,6 @@ Copyright (C) 2014-2023, Doug Owings. Released under the [GNU Affero General Pub
 [S4LP]: https://logic.dougowings.net/doc/logics/s4lp.html
 [S5LP]: https://logic.dougowings.net/doc/logics/s5lp.html
 [KL3]: https://logic.dougowings.net/doc/logics/kl3.html
+[TL3]: https://logic.dougowings.net/doc/logics/tl3.html
 [KRM3]: https://logic.dougowings.net/doc/logics/krm3.html
 <!-- [refs-end] -->
