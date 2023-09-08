@@ -69,6 +69,10 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**TB<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with T modal][TB3E]
 - [**S4B<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with S4 modal][S4B3E]
 - [**S5B<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with S5 modal][S5B3E]
+- [**KG<sub>3</sub>** - G<sub>3</sub> with K modal][KG3]
+- [**TG<sub>3</sub>** - G<sub>3</sub> with T modal][TG3]
+- [**S4G<sub>3</sub>** - G<sub>3</sub> with S4 modal][S4G3]
+- [**S5G<sub>3</sub>** - G<sub>3</sub> with S5 modal][S5G3]
 
 <!-- [logics-end] -->
 
@@ -209,4 +213,8 @@ Copyright (C) 2014-2023, Doug Owings. Released under the [GNU Affero General Pub
 [TB3E]: https://logic.dougowings.net/doc/logics/tb3e.html
 [S4B3E]: https://logic.dougowings.net/doc/logics/s4b3e.html
 [S5B3E]: https://logic.dougowings.net/doc/logics/s5b3e.html
+[KG3]: https://logic.dougowings.net/doc/logics/kg3.html
+[TG3]: https://logic.dougowings.net/doc/logics/tg3.html
+[S4G3]: https://logic.dougowings.net/doc/logics/s4g3.html
+[S5G3]: https://logic.dougowings.net/doc/logics/s5g3.html
 <!-- [refs-end] -->
