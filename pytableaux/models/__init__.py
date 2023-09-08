@@ -433,7 +433,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
     @classmethod
     def __init_subclass__(cls):
         super().__init_subclass__()
-        Meta = cls.__dict__.get('Meta', LogicType.meta_for_module(cls.__module__))
+        Meta = cls.__dict__.get('Meta', LogicType.Meta.for_module(cls.__module__))
         if not Meta:
             return
         cls.Meta = Meta

@@ -222,7 +222,7 @@ class GetLogicMetaMixinMetaType(type):
 
     @property
     def Meta(self) -> type[LogicType.Meta]|None:
-        return LogicType.meta_for_module(self.__module__)
+        return LogicType.Meta.for_module(self.__module__)
 
 class SystemMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
 

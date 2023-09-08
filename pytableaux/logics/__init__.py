@@ -25,24 +25,25 @@ import enum
 import itertools
 import operator as opr
 import sys
-from collections import defaultdict
+from collections import defaultdict, deque
 from collections.abc import Mapping, Set
 from importlib import import_module
 from types import FunctionType
 from types import MappingProxyType as MapProxy
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any, Iterator, TypeVar
+from typing import TYPE_CHECKING, Any, Iterator
 
 from ..errors import Emsg, check
 from ..lang import Operator
-from ..tools import EMPTY_SET, abcs, closure, qset, qsetf, SequenceSet, membr, wraps
+from ..tools import (EMPTY_SET, SequenceSet, abcs, closure, membr, qset, qsetf,
+                     wraps)
 from ..tools.hybrids import QsetView
 
 if TYPE_CHECKING:
-    from ..models import BaseModel, Mval
-    from ..proof import Rule, ClosingRule
+    from typing import overload
 
-_T = TypeVar('_T')
+    from ..models import Mval
+    from ..proof import ClosingRule, Rule
 
 __all__ = (
     'b3e',
@@ -175,12 +176,14 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
                 searchit = itertools.chain(
                     (f'{pkgname}.{keylc}' for pkgname in self.packages),
                     (f'{pkgname}.{key}' for pkgname in self.packages))
-            tried = []
+            tried: deque|None = None
             for srchname in searchit:
-                tried.append(srchname)
                 try:
                     module = import_module(srchname)
                 except ModuleNotFoundError:
+                    if tried is None:
+                        tried = deque()
+                    tried.append(srchname)
                     continue
                 break
             else:
@@ -280,7 +283,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         Args:
             keys: Iterable of keys accepted by :meth:`get()`.
             sort: Whether to sort each group. Default ``True``.
-            key: The sort key for the groups. Default is ``.Meta.category_order``.
+            key: The sort key for the groups. Default is ``logic.Meta``.
             reverse: Whether to reverse sort each group.
 
         Returns:
@@ -297,14 +300,14 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         if not sort:
             return dict(groups)
         if key is None:
-            key = key_category_order
+            key = key_meta
         for group in groups.values():
             group.sort(key=key, reverse=reverse)
         return {
             category: groups[category]
             for category in sorted(groups, reverse=reverse)}
 
-    def get_extends(self, logic) -> qsetf[LogicType]:
+    def get_extends(self, logic: str|LogicType) -> qsetf[LogicType]:
         result = LogicSet(registry=self)
         todo = LogicSet((logic,), registry=self)
         while len(todo):
@@ -319,14 +322,15 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         result.sort()
         return qsetf(result)
 
-    def get_extensions(self, logic) -> qsetf[LogicType]:
+    def get_extensions(self, logic: str|LogicType) -> qsetf[LogicType]:
         result = LogicSet((logic,), registry=self)
+        inresult = result.__contains__
+        add = result.add
         while True:
             length = len(result)
             for other in map(self, self.all()):
-                extension_of = LogicSet(other.Meta.extension_of)
-                if len(result & extension_of):
-                    result.add(other)
+                if any(map(inresult, map(self, other.Meta.extension_of))):
+                    add(other)
             if len(result) == length:
                 break
         result.remove(logic)
@@ -359,9 +363,7 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
         
     @staticmethod
     def _package_all(package: ModuleType, /):
-        fmt = f'{package.__name__}.%s'.__mod__
-        for value in package.__all__:
-            yield fmt(value)
+        yield from map(f'{package.__name__}.%s'.__mod__, package.__all__)
 
     def __contains__(self, key):
         return key in self.index
@@ -408,9 +410,9 @@ class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
             super().update(upd)
 
 
-def key_category_order(logic: LogicType) -> int:
-    "Returns the category order from the logic, e.g. for sorting."
-    return logic.Meta.category_order
+def key_meta(logic: LogicType) -> type[LogicType.Meta]:
+    "Function to sort logics by their Meta class."
+    return logic.Meta
 
 
 registry: Registry = Registry()
@@ -419,35 +421,139 @@ registry: Registry = Registry()
 registry.packages.add(__package__)
 
 
+class LogicMetaMeta(type):
+
+    __modmap = {}
+
+    def __new__(self, clsname, bases, ns: dict, **kw):
+        cls = super().__new__(self, clsname, bases, ns, **kw)
+        modname = cls.__module__
+        if modname == __package__:
+            return cls
+        cls = check.subcls(cls, LogicType.Meta)
+        self.__modmap[modname] = cls
+        if 'name' not in ns:
+            cls.name = modname.split('.')[-1].upper()
+        for name in ('title', 'description'):
+            if name not in ns:
+                setattr(cls, name, cls.name)
+        for name in ('native_operators', 'modal_operators', 'truth_functional_operators'):
+            setattr(cls, name, qsetf(sorted(getattr(cls, name))))
+        extension_of = ns.get('extension_of', EMPTY_SET)
+        if isinstance(extension_of, str):
+            extension_of = extension_of,
+        cls.extension_of = qsetf(sorted(extension_of))
+        tags = deque()
+        if cls.quantified:
+            tags.append('quantified')
+        if len(cls.values) == 2:
+            cls.many_valued = False
+            tags.append('bivalent')
+            category = 'Bivalent'
+        else:
+            cls.many_valued = True
+            tags.append('many-valued')
+            category = 'ManyValued'
+            if len(cls.values) - len(cls.designated_values):
+                tags.append('gappy')
+            if len(cls.designated_values) > 1:
+                tags.append('glutty')
+        if cls.modal:
+            tags.append('modal')
+            category += 'Modal'
+        cls.tags = qsetf(tags)
+        cls.category = cls.Category[category]
+        return cls
+
+    if TYPE_CHECKING:
+        @overload
+        def for_module(self, name: str) -> type[LogicType.Meta]|None: ...
+
+    for_module = staticmethod(__modmap.get)
+
+    @membr.defer
+    def wrapper(member: membr):
+        @wraps(oper := getattr(opr, member.name))
+        def wrapped(self: type[LogicType.Meta], other, /):
+            if isinstance(other, type) and issubclass(other, LogicType.Meta):
+                return oper(
+                    (self.category, self.category_order),
+                    (other.category, other.category_order))
+            return NotImplemented
+        return wrapped
+
+    __lt__ = __gt__ = __le__ = __ge__ = wrapper()
+
+    del(wrapper)
+
+    class Category(enum.Enum):
+
+        Bivalent = 0, 'Bivalent'
+        BivalentModal = 1, 'Bivalent Modal'
+        ManyValued = 2, 'Many-valued'
+        ManyValuedModal = 3, 'Many-valued Modal'
+
+        def __init__(self, order: int, title: str):
+            self.order = order
+            self.title = title
+
+        @membr.defer
+        def wrapper(member: membr):
+            @wraps(oper := getattr(opr, member.name))
+            def wrapped(self: LogicMetaMeta.Category, other, /):
+                cls = type(self)
+                if isinstance(other, str):
+                    other = cls(other)
+                elif not isinstance(other, cls):
+                    return NotImplemented
+                return oper(self.order, other.order)
+            return wrapped
+
+        __lt__ = __gt__ = __le__ = __ge__ = wrapper()
+
+        del(wrapper)
+
+        def __eq__(self, other):
+            if isinstance(other, str):
+                return self.name == other or self.title == other
+            if isinstance(other, type(self)):
+                return self is other
+            return NotImplemented
+
+        def __hash__(self):
+            return hash(self.title)
+            
+        def __str__(self):
+            return self.title
+
 class LogicTypeMeta(type):
 
     __call__ = None
+    _instcache = set()
 
-    @staticmethod
-    def __instancecheck__(obj):
-        return instancecheck(obj)
+    def __instancecheck__(self, obj: LogicType):
+        cache = self._instcache
+        key = id(obj)
+        if key not in cache:
+            try:
+                check.inst(obj, ModuleType)
+                check.subcls(obj.Rules, LogicType.Rules)
+                check.subcls(obj.Meta, LogicType.Meta)
+                check.subcls(obj.System, LogicType.System)
+                check.subcls(obj.Model, LogicType.Model)
+            except:
+                return False
+            cache.add(key)
+        return True
 
-    _metamap = {}
-
-    @staticmethod
-    @closure
-    def new_meta(metamap = _metamap):
-        def new(meta):
-            metamap[meta.__module__] = check.subcls(meta, LogicType.Meta)
-        return new
-
-    @staticmethod
-    @closure
-    def meta_for_module(metamap: dict = _metamap):
-        def get(name: str) -> type[LogicType.Meta]|None:
-            return metamap.get(name)
-        return get
-
-    _metamap = MapProxy(_metamap)
 
 class LogicType(metaclass=LogicTypeMeta):
     "Stub class definition for a logic interface."
-    class Meta:
+
+    __new__ = None
+
+    class Meta(metaclass=LogicMetaMeta):
+
         name: str
         modal: bool = False
         quantified: bool = False
@@ -457,99 +563,23 @@ class LogicType(metaclass=LogicTypeMeta):
         many_valued: bool
         category: LogicType.Meta.Category
         title: str
-        description: str = ''
+        description: str
         category_order: int = 0
         tags = SequenceSet[str]
         native_operators: SequenceSet[Operator] = qsetf()
         modal_operators: SequenceSet[Operator] = qsetf(sorted((
             Operator.Possibility,
             Operator.Necessity)))
-        truth_functional_operators: SequenceSet[Operator] = qsetf(sorted((
-            Operator.Assertion,
-            Operator.Negation,
-            Operator.Conjunction,
-            Operator.Disjunction,
-            Operator.MaterialConditional,
-            Operator.MaterialBiconditional,
-            Operator.Conditional,
-            Operator.Biconditional)))
+        truth_functional_operators: SequenceSet[Operator] = qsetf(sorted(
+            set(Operator) - modal_operators))
         extension_of: Set[str] = EMPTY_SET
 
-        class Category(enum.Enum):
-
-            Bivalent = 0, 'Bivalent'
-            BivalentModal = 1, 'Bivalent Modal'
-            ManyValued = 2, 'Many-valued'
-            ManyValuedModal = 3, 'Many-valued Modal'
-
-            def __init__(self, order: int, title: str):
-                self.order = order
-                self.title = title
-
-            @membr.defer
-            def wrapper(member: membr):
-                @wraps(oper := getattr(opr, member.name))
-                def wrapped(self: LogicType.Meta.Category, other, /):
-                    cls = type(self)
-                    if isinstance(other, str):
-                        other = cls(other)
-                    elif not isinstance(other, cls):
-                        return NotImplemented
-                    return oper(self.order, other.order)
-                return wrapped
-
-            __lt__ = __gt__ = __le__ = __ge__ = wrapper()
-
-            del(wrapper)
-
-            def __eq__(self, other):
-                if isinstance(other, str):
-                    return self.name == other or self.title == other
-                if not isinstance(other, type(self)):
-                    return NotImplemented
-                return self is other
-
-            def __hash__(self):
-                return hash(self.title)
-                
-            def __str__(self):
-                return self.title
-
-        def __init_subclass__(cls):
-            super().__init_subclass__()
-            LogicTypeMeta.new_meta(cls)
-            for name in ('native_operators', 'modal_operators', 'truth_functional_operators'):
-                setattr(cls, name, qsetf(sorted(getattr(cls, name))))
-            tags = []
-            if cls.quantified:
-                tags.append('quantified')
-            if len(cls.values) == 2:
-                cls.many_valued = False
-                tags.append('bivalent')
-                category = 'Bivalent'
-            else:
-                cls.many_valued = True
-                tags.append('many-valued')
-                category = 'ManyValued'
-                if len(cls.values) - len(cls.designated_values):
-                    tags.append('gappy')
-                if len(cls.designated_values) > 1:
-                    tags.append('glutty')
-            if cls.modal:
-                tags.append('modal')
-                category += 'Modal'
-            cls.tags = qsetf(tags)
-            cls.category = getattr(cls.Category, category)
-            extension_of = cls.__dict__.get('extension_of', EMPTY_SET)
-            if isinstance(extension_of, str):
-                extension_of = extension_of,
-            cls.extension_of = qsetf(sorted(extension_of))
-
     if TYPE_CHECKING:
+        from ..models import BaseModel as Model
         from ..proof import System
-        class Model(BaseModel[_T]): ...
 
     class Rules:
+
         closure: tuple[type[ClosingRule], ...]
         groups: tuple[tuple[type[Rule], ...], ...]
 
@@ -563,7 +593,7 @@ class LogicType(metaclass=LogicTypeMeta):
         def _check_groups(cls):
             pass
 
-
+LogicTypeMeta.__new__ = None
 
 class LogicSet(qset[LogicType]):
 
@@ -573,39 +603,15 @@ class LogicSet(qset[LogicType]):
         self._hook_cast = registry
         super().__init__(*args)
 
-    def _default_sort_key(self, value):
-        return (value.Meta.category, value.Meta.category_order)
-        # return value.Meta.name
+    _default_sort_key = staticmethod(key_meta)
 
 @closure
-def instancecheck():
+def init():
 
-    from ..proof import System
     from ..models import BaseModel
-
-    LogicType.__new__ = None
-    LogicTypeMeta.__new__ = None
+    from ..proof import System
 
     LogicType.System = System
     LogicType.Model = BaseModel
 
-    def validate(obj: LogicType):
-        check.inst(obj, ModuleType)
-        check.subcls(obj.Rules, LogicType.Rules)
-        check.subcls(obj.Meta, LogicType.Meta)
-        check.subcls(obj.System, LogicType.System)
-        check.subcls(obj.Model, LogicType.Model)
-
-    cache = set()
-
-    def instancecheck(obj):
-        key = id(obj)
-        if key not in cache:
-            try:
-                validate(obj)
-            except:
-                return False
-            cache.add(key)
-        return True
-
-    return instancecheck
+del(init)
