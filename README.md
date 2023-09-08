@@ -65,6 +65,10 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**TK<sup>3</sup><sub>W</sub>** - K<sup>3</sup><sub>W</sub> with T modal][TK3W]
 - [**S4K<sup>3</sup><sub>W</sub>** - K<sup>3</sup><sub>W</sub> with S4 modal][S4K3W]
 - [**S5K<sup>3</sup><sub>W</sub>** - K<sup>3</sup><sub>W</sub> with S5 modal][S5K3W]
+- [**KB<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with K modal][KB3E]
+- [**TB<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with T modal][TB3E]
+- [**S4B<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with S4 modal][S4B3E]
+- [**S5B<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with S5 modal][S5B3E]
 
 <!-- [logics-end] -->
 
@@ -201,4 +205,8 @@ Copyright (C) 2014-2023, Doug Owings. Released under the [GNU Affero General Pub
 [TK3W]: https://logic.dougowings.net/doc/logics/tk3w.html
 [S4K3W]: https://logic.dougowings.net/doc/logics/s4k3w.html
 [S5K3W]: https://logic.dougowings.net/doc/logics/s5k3w.html
+[KB3E]: https://logic.dougowings.net/doc/logics/kb3e.html
+[TB3E]: https://logic.dougowings.net/doc/logics/tb3e.html
+[S4B3E]: https://logic.dougowings.net/doc/logics/s4b3e.html
+[S5B3E]: https://logic.dougowings.net/doc/logics/s5b3e.html
 <!-- [refs-end] -->

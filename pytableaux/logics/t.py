@@ -28,7 +28,7 @@ class Meta(K.Meta):
     title = 'Reflexive Normal Modal Logic'
     description = 'Normal modal logic with a reflexive access relation'
     category_order = 3
-    extension_of = ('D', 'TK3', 'TLP', 'TL3', 'TRM3', 'TK3W')
+    extension_of = ('D', 'TK3', 'TLP', 'TL3', 'TRM3', 'TK3W', 'TB3E')
 
 class Model(K.Model):
 

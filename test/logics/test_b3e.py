@@ -14,7 +14,7 @@ class TestArguments(Base, autoargs=True):
         self.valid_tab('AANaTbNa', 'Na')
 
 
-class TestTruthTables(Base, autotables=True):
+class TestTables(Base, autotables=True):
     tables = dict(
         Assertion = 'FFT',
         Negation = 'TNF',
