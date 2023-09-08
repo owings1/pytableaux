@@ -6,7 +6,7 @@ from typing import Any, Callable, Collection, Iterable, Mapping, TypeVar
 
 from pytableaux.examples import args as examples
 from pytableaux.lang import Argument
-from pytableaux.logics import LogicType, registry
+from pytableaux.logics import LogicType, registry, LogicSet
 from pytableaux.proof import Tableau
 from pytableaux.tools import qset, qsetf, wraps
 
@@ -202,75 +202,6 @@ L('S5',
 
 # ---------------------------------------------------------------------------
 
-L('K3W',
-    valid = (
-        'Assertion Elimination 1',
-        'Assertion Elimination 2',
-        'Biconditional Elimination 1',
-        'Biconditional Elimination 2',
-        'Biconditional Elimination 3',
-        'Biconditional Introduction 1',
-        'Biconditional Introduction 2',
-        'Biconditional Introduction 3',
-        'Conditional Contraction',
-        'Conditional Contraposition 1',
-        'Conditional Contraposition 2',
-        'Conditional Modus Ponens',
-        'Conditional Modus Tollens',
-        'Conjunction Commutativity',
-        'Conjunction Elimination',
-        'Conjunction Introduction',
-        'DeMorgan 1',
-        'DeMorgan 2',
-        'DeMorgan 3',
-        'DeMorgan 4',
-        'DeMorgan 5',
-        'DeMorgan 6',
-        'DeMorgan 7',
-        'DeMorgan 8',
-        'Disjunction Commutativity',
-        'Disjunctive Syllogism 2',
-        'Disjunctive Syllogism',
-        'Existential from Universal',
-        'Existential Syllogism',
-        'Law of Non-contradiction',
-        'Material Biconditional Elimination 1',
-        'Material Biconditional Elimination 2',
-        'Material Biconditional Elimination 3',
-        'Material Biconditional Introduction 1',
-        'Material Contraction',
-        'Material Contraposition 1',
-        'Material Contraposition 2',
-        'Material Modus Ponens',
-        'Material Modus Tollens',
-        'Quantifier Interdefinability 1',
-        'Quantifier Interdefinability 2',
-        'Quantifier Interdefinability 3',
-        'Quantifier Interdefinability 4',
-        'Syllogism',
-        'Universal Predicate Syllogism',
-    ),
-    invalid = (        
-        'Addition',
-        'Asserted Addition',
-        'Biconditional Identity',
-        'Conditional Double Negation',
-        'Conditional Identity',
-        'Conditional Law of Excluded Middle',
-        'Conditional Pseudo Contraction',
-        'Conditional Pseudo Contraposition',
-        'Conjunction Pseudo Commutativity',
-        'Disjunction Pseudo Commutativity',
-        'Identity Indiscernability 1',
-        'Identity Indiscernability 2',
-        'Law of Excluded Middle',
-        'Material Biconditional Identity',
-        'Material Identity',
-        'Material Pseudo Contraction',
-        'Material Pseudo Contraposition',
-        'Self Identity 1',
-        'Self Identity 2',
-    ))
 
 L('K3WQ',
     valid = (
@@ -1267,6 +1198,130 @@ L('S5RM3',
         'Universal Predicate Syllogism',
     ))
 
+# -------------
+
+
+
+L('K3W',
+    valid = (
+        'Assertion Elimination 1',
+        'Assertion Elimination 2',
+        'Biconditional Elimination 1',
+        'Biconditional Elimination 2',
+        'Biconditional Elimination 3',
+        'Biconditional Introduction 1',
+        'Biconditional Introduction 2',
+        'Biconditional Introduction 3',
+        'Conditional Contraction',
+        'Conditional Contraposition 1',
+        'Conditional Contraposition 2',
+        'Conditional Modus Ponens',
+        'Conditional Modus Tollens',
+        'Conjunction Commutativity',
+        'Conjunction Elimination',
+        'Conjunction Introduction',
+        'DeMorgan 1',
+        'DeMorgan 2',
+        'DeMorgan 3',
+        'DeMorgan 4',
+        'DeMorgan 5',
+        'DeMorgan 6',
+        'DeMorgan 7',
+        'DeMorgan 8',
+        'Disjunction Commutativity',
+        'Disjunctive Syllogism 2',
+        'Disjunctive Syllogism',
+        'Existential from Universal',
+        'Existential Syllogism',
+        'Law of Non-contradiction',
+        'Material Biconditional Elimination 1',
+        'Material Biconditional Elimination 2',
+        'Material Biconditional Elimination 3',
+        'Material Biconditional Introduction 1',
+        'Material Contraction',
+        'Material Contraposition 1',
+        'Material Contraposition 2',
+        'Material Modus Ponens',
+        'Material Modus Tollens',
+        'Quantifier Interdefinability 1',
+        'Quantifier Interdefinability 2',
+        'Quantifier Interdefinability 3',
+        'Quantifier Interdefinability 4',
+        'Syllogism',
+        'Universal Predicate Syllogism',
+    ),
+    invalid = (
+
+    ))
+
+L('KK3W',
+    valid = (
+        'KFDE Distribution Inference 1',
+        'Modal Transformation 1',
+        'Modal Transformation 2',
+        'Modal Transformation 3',
+        'Modal Transformation 4',
+        'NP Conditional Modus Ponens',
+        'Necessity Distribution 2',
+    ),
+    invalid = (
+
+    ))
+
+L('TK3W',
+    valid = (
+        'Necessity Elimination',
+        'NP Collapse 1',
+        'Possibility Addition',
+        'Serial Inference 2',
+    ),
+    invalid = (
+
+    ))
+
+L('S4K3W',
+    valid = (
+        'S4 Conditional Inference 2',
+        'S4 Material Inference 2',
+    ),
+    invalid = (
+
+    ))
+
+L('S5K3W',
+    valid = (
+        'S5 Inference 1',
+    ),
+    invalid = (
+        'Addition',
+        'Asserted Addition',
+        'Biconditional Identity',
+        'Conditional Double Negation',
+        'Conditional Identity',
+        'Conditional Law of Excluded Middle',
+        'Conditional Pseudo Contraction',
+        'Conditional Pseudo Contraposition',
+        'Conjunction Pseudo Commutativity',
+        'Disjunction Pseudo Commutativity',
+        'Identity Indiscernability 1',
+        'Identity Indiscernability 2',
+        'Law of Excluded Middle',
+        'Material Biconditional Identity',
+        'Material Identity',
+        'Material Pseudo Contraction',
+        'Material Pseudo Contraposition',
+        'Necessity Distribution 1',
+        'Reflexive Inference 1',
+        'S4 Conditional Inference 1',
+        'S4 Material Inference 1',
+        'S5 Conditional Inference 1',
+        'S5 Material Inference 1',
+        'Self Identity 1',
+        'Self Identity 2',
+        'Serial Inference 1',
+    ))
+
+
 del(L)
 validities = MapProxy(validities)
 invalidities = MapProxy(invalidities)
@@ -1317,14 +1372,31 @@ def find_missing(logic):
     missing = set(examples.values()) - exists
     results = defaultdict(set)
     for arg in missing:
-        results[Tableau(logic, arg).build().valid].add(arg.title)
+        results[Tableau(logic, arg).build().valid].add(arg.title or arg.argstr())
     return {key: sorted(value) for key, value in results.items()}
 
 def find_missing_all():
-    registry.import_all()
-    for name in sorted(registry):
-        missing = find_missing(name)
+    logics = LogicSet(registry.all())
+    logics.sort()
+    for logic in logics:
+        missing = find_missing(logic)
         if missing:
-            yield name, find_missing(name)
+            yield logic, find_missing(logic)
 
 del(caching, known_getter)
+
+if __name__ == '__main__':
+    import sys
+    from textwrap import indent
+    args = sys.argv[1:]
+    if args:
+        it = ((logic, find_missing(logic)) for logic in map(registry, args))
+    else:
+        it = find_missing_all()
+    for logic, results in it:
+        print(logic.Meta.name)
+        for result, titles in results.items():
+            print(indent('valid' if result else 'invalid', '    '))
+            for title in titles:
+                print(indent(repr(title) + ',', '        '))
+
