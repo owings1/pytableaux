@@ -213,10 +213,8 @@ class StandardLexWriter(LexWriter):
 
     Options:
         drop_parens: Drop outer parens, default ``True``.
-        identity_infix: Write identity sentences in infix notation (e.g. a = b),
-            default ``True``.
-        max_infix: The max arity for writing predicate sentences in infix
-            notation, default 0.
+        identity_infix: Write identity sentences in infix notation (e.g. a = b), default ``True``.
+        max_infix: The max arity for writing predicate sentences in infix notation, default 0.
     """
 
     notation = Notation.standard
