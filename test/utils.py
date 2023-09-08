@@ -9,7 +9,7 @@ from pytableaux import examples
 from pytableaux.lang import *
 from pytableaux.logics import registry, LogicType
 from pytableaux.proof import *
-from pytableaux.tools import inflect
+from pytableaux.tools import inflect, EMPTY_MAP
 
 from .logics import knownargs
 
@@ -74,15 +74,14 @@ class BaseCase(TestCase):
                 self.logic.Rules._check_groups()
             setattr(cls, name, test)
         if autoargs:
+            kws = getattr(cls, 'autoargs_kws', EMPTY_MAP)
             it = zip(knownargs.get_known(cls.logic), ('invalid', 'valid'), strict=True)
             for known, category in it:
                 for arg in known:
-                    if isinstance(arg, Argument):
-                        title = arg.title or arg.argstr()
-                    else:
-                        title = arg
+                    title = arg.title or arg.argstr()
+                    kw = kws.get(title, EMPTY_MAP)
                     name = f'test_{category}_{inflect.slug(title)}_auto'
-                    setattr(cls, name, cls.maketest(f'{category}_tab', arg))
+                    setattr(cls, name, cls.maketest(f'{category}_tab', arg, **kw))
         if autotables:
             for oper, exp in getattr(cls, 'tables', {}).items():
                 name = f'test_truth_table_{inflect.slug(oper)}_auto'
