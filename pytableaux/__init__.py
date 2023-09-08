@@ -25,7 +25,7 @@ import os.path
 import typing
 from dataclasses import dataclass
 
-__version__ = 2, 3, 1, 'final'
+__version__ = 2, 3, 2, 'dev'
 'Version tuple (major, minor, patch, release).'
 
 __year__ = 2023
