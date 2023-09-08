@@ -81,7 +81,8 @@ __all__ = (
     'tfde',
     'tk3',
     'tl3',
-    'tlp')
+    'tlp',
+    'trm3')
 
 NOARG = object()
 
