@@ -19,19 +19,19 @@ from __future__ import annotations
 from . import LogicType
 from . import fde as FDE
 from . import lp as LP
-from . import tfde as TFDE
+from . import s4fde as S4FDE
 from . import krm3 as KRM3
 from . import rm3 as RM3
 
 
 class Meta(KRM3.Meta):
-    name = 'TRM3'
-    title = 'RM3 with T modal'
-    description = 'Modal version of RM3 based on T normal modal logic'
-    category_order = 23
-    extension_of = ('KRM3')
+    name = 'S4RM3'
+    title = 'RM3 with S4 modal'
+    description = 'Modal version of RM3 based on S4 normal modal logic'
+    category_order = 24
+    extension_of = ('TRM3')
 
-class Model(TFDE.Model, RM3.Model): pass
+class Model(S4FDE.Model, RM3.Model): pass
 class System(FDE.System): pass
 
 class Rules(LogicType.Rules):
@@ -40,7 +40,7 @@ class Rules(LogicType.Rules):
         # non-branching rules
         KRM3.Rules.groups[0],
         # modal rules
-        *TFDE.Rules.groups[1:4],
+        *S4FDE.Rules.groups[1:5],
         # branching rules
         *RM3.Rules.groups[1:3],
         # quantifier rules

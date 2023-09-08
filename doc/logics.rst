@@ -66,3 +66,6 @@ Many-valued Modal
     logics/s4l3
     logics/s5l3
     logics/krm3
+    logics/trm3
+    logics/s4rm3
+    logics/s5rm3
