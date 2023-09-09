@@ -49,7 +49,6 @@ class Rules(LogicType.Rules):
     closure = K3.Rules.closure
 
     class AssertionNegatedDesignated(System.FlippingOperandsRule): pass
-    class AssertionUndesignated(System.OperandsRule): pass
     class AssertionNegatedUndesignated(System.FlippingOperandsRule): pass
 
     class MaterialBiconditionalUndesignated(System.OperatorNodeRule):
@@ -141,7 +140,7 @@ class Rules(LogicType.Rules):
     groups = (
         group(
             FDE.Rules.AssertionDesignated,
-            AssertionUndesignated,
+            FDE.Rules.AssertionUndesignated,
             AssertionNegatedDesignated,
             AssertionNegatedUndesignated,
             FDE.Rules.ConjunctionDesignated,

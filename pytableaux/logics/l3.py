@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..proof import adds, sdwnode, sdwgroup
+from ..proof import adds, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -63,12 +63,13 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdwnode(~lhs | rhs, d, w)),
-                group(
-                    sdwnode( lhs, not d, w),
-                    sdwnode(~lhs, not d, w),
-                    sdwnode( rhs, not d, w),
-                    sdwnode(~rhs, not d, w)))
+                sdwgroup(
+                    (~lhs | rhs, d, w)),
+                sdwgroup(
+                    ( lhs, not d, w),
+                    ( rhs, not d, w),
+                    (~lhs, not d, w),
+                    (~rhs, not d, w)))
 
     class ConditionalUndesignated(System.OperatorNodeRule):
         """
@@ -82,13 +83,13 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(
-                    sdwnode(lhs, not d, w),
-                    sdwnode(rhs, d, w)),
-                group(
-                    sdwnode( lhs, d, w),
-                    sdwnode(~lhs, d, w),
-                    sdwnode(~rhs, not d, w)))
+                sdwgroup(
+                    (lhs, not d, w),
+                    (rhs, d, w)),
+                sdwgroup(
+                    ( lhs, d, w),
+                    (~lhs, d, w),
+                    (~rhs, not d, w)))
 
     class BiconditionalDesignated(System.OperatorNodeRule):
         """
@@ -104,12 +105,12 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdwnode(self.convert(lhs, rhs), d, w)),
-                group(
-                    sdwnode( lhs, not d, w),
-                    sdwnode(~lhs, not d, w),
-                    sdwnode( rhs, not d, w),
-                    sdwnode(~rhs, not d, w)))
+                sdwgroup((self.convert(lhs, rhs), d, w)),
+                sdwgroup(
+                    ( lhs, not d, w),
+                    (~lhs, not d, w),
+                    ( rhs, not d, w),
+                    (~rhs, not d, w)))
 
     class BiconditionalUndesignated(System.OperatorNodeRule):
         """
@@ -139,12 +140,12 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdwnode(~self.convert(lhs, rhs), d, w)),
-                group(
-                    sdwnode( lhs, d, w),
-                    sdwnode(~lhs, d, w),
-                    sdwnode( rhs, d, w),
-                    sdwnode(~rhs, d, w)))
+                sdwgroup((~self.convert(lhs, rhs), d, w)),
+                sdwgroup(
+                    ( lhs, d, w),
+                    (~lhs, d, w),
+                    ( rhs, d, w),
+                    (~rhs, d, w)))
 
     groups = (
         group(

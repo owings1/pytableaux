@@ -20,6 +20,7 @@ from ..proof import adds, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
+from . import l3 as L3
 from . import LogicType
 
 class Meta(K3.Meta):
@@ -194,7 +195,7 @@ class Rules(LogicType.Rules):
             # five-branching rules (formerly)
             DisjunctionNegatedUndesignated),
         # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *FDE.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

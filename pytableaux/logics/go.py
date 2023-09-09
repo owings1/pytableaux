@@ -23,6 +23,7 @@ from . import LogicType
 from . import b3e as B3E
 from . import fde as FDE
 from . import k3 as K3
+from . import l3 as L3
 
 
 class Meta(K3.Meta):
@@ -96,25 +97,6 @@ class Rules(LogicType.Rules):
             yield adds(
                 sdwgroup((~s.lhs, not d, w), ( s.rhs, not d, w)),
                 sdwgroup(( s.lhs, not d, w), (~s.rhs, not d, w)))
-
-    class ConditionalDesignated(System.OperatorNodeRule):
-        """
-        From an unticked, designated, conditional node *n* on a branch *b*, make two branches
-        *b'* and *b''* from *b*. On *b'* add a designated node with a disjunction of the
-        negated antecedent and the consequent. On *b''* add undesignated nodes for the
-        antecedent, consequent, and their negations. Then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            lhs, rhs = s
-            yield adds(
-                sdwgroup(
-                    (~lhs | rhs, d, w)),
-                sdwgroup(
-                    ( lhs, not d, w),
-                    ( rhs, not d, w),
-                    (~lhs, not d, w),
-                    (~rhs, not d, w)))
 
     class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -223,7 +205,7 @@ class Rules(LogicType.Rules):
         group(
             # non-branching rules
             FDE.Rules.AssertionDesignated,
-            B3E.Rules.AssertionUndesignated,
+            FDE.Rules.AssertionUndesignated,
             B3E.Rules.AssertionNegatedDesignated,
             B3E.Rules.AssertionNegatedUndesignated,
             FDE.Rules.ConjunctionDesignated,
@@ -258,7 +240,7 @@ class Rules(LogicType.Rules):
             FDE.Rules.MaterialConditionalDesignated,
             FDE.Rules.MaterialBiconditionalDesignated,
             MaterialBiconditionalNegatedDesignated,
-            ConditionalDesignated,
+            L3.Rules.ConditionalDesignated,
             ConditionalNegatedDesignated,
             BiconditionalNegatedDesignated,
             UniversalNegatedDesignated))
