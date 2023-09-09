@@ -41,12 +41,6 @@ class Meta(FDE.Meta):
 
 class Model(FDE.Model):
 
-    def _unmodal_values(self, s: Operated, w1: int, /):
-        lhs, = s
-        value_of = self.value_of
-        for w2 in self.R[w1]:
-            yield value_of(lhs, world=w2)
-
     def value_of_operated(self, s: Operated, /, *, world: int = 0):
         self._check_finished()
         oper = s.operator

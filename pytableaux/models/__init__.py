@@ -27,13 +27,14 @@ from dataclasses import dataclass
 from functools import partial
 from itertools import product, starmap
 from types import MappingProxyType as MapProxy
-from typing import Any, Generic, Iterable, Literal, Mapping, NamedTuple, Self, TypeVar
+from typing import (Any, Generic, Iterable, Iterator, Literal, Mapping,
+                    NamedTuple, Self, TypeVar)
 
-from ..errors import Emsg, check, ModelValueError, DenotationError
+from ..errors import DenotationError, Emsg, ModelValueError, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
                     Predicated, Quantified, Sentence)
 from ..logics import LogicType
-from ..proof import Branch, Node, AccessNode, SentenceNode, WorldNode
+from ..proof import AccessNode, Branch, Node, SentenceNode, WorldNode
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, maxceil, minfloor
 
 __all__ = (
@@ -230,6 +231,12 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         except AttributeError:
             check.inst(s, Quantified)
             raise # pragma: no cover
+
+    def _unmodal_values(self, s: Operated, w1: int, /) -> Iterator[MvalT_co]:
+        lhs, = s
+        value_of = self.value_of
+        for w2 in self.R[w1]:
+            yield value_of(lhs, world=w2)
 
     def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
         self._check_finished()
