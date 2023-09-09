@@ -46,17 +46,6 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class DoubleNegationDesignated(System.OperatorNodeRule):
-        """
-        From an unticked, designated double-negation node `n` on a branch `b`,
-        add an undesignated node with the negatum of `n`. Then tick `n`.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(sdwgroup((s, not d, w)))
-
-    class DoubleNegationUndesignated(DoubleNegationDesignated): pass
-
     class ConditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated conditional node `n` on a branch
@@ -91,6 +80,8 @@ class Rules(LogicType.Rules):
                 sdwgroup((~s.lhs, not d, w)),
                 sdwgroup((~s.rhs, d, w)))
 
+    class DoubleNegationDesignated(System.FlippingRule): pass
+    class DoubleNegationUndesignated(System.FlippingRule): pass
     class BiconditionalDesignated(System.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedDesignated(System.ConditionalConjunctsReducingRule): pass
     class BiconditionalUndesignated(System.ConditionalConjunctsReducingRule): pass

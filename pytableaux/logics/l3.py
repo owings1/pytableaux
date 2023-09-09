@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..proof import adds, sdwnode
+from ..proof import adds, sdwnode, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -122,8 +122,8 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
             yield adds(
-                group(sdwnode(convert(s.operands), d, w)),
-                group(sdwnode(convert(reversed(s)), d, w)))
+                sdwgroup((convert(s.operands), d, w)),
+                sdwgroup((convert(reversed(s)), d, w)))
 
     class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
         """

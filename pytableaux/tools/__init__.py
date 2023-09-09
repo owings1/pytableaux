@@ -446,8 +446,8 @@ class NoSetAttr:
 
     __slots__ =  ('cache', 'opts', 'enabled')
 
-    opts: dict
-    cache: dict[tuple, dict]
+    opts: dict[str, Any]
+    cache: dict[Callable, dict[tuple, Any]]
 
     def __init__(self, /, *, enabled = True, **opts):
         self.enabled = bool(enabled)

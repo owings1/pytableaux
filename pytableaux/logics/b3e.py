@@ -48,26 +48,9 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class AssertionNegatedDesignated(System.OperatorNodeRule):
-        """
-        From an unticked, designated, negated assertion node *n* on a branch *b*,
-        add an undesignated node to *b* with the assertion of *n*, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            # Keep designation fixed to False for inheritance below
-            yield adds(sdwgroup((s.lhs, False, w)))
-
-    class AssertionUndesignated(AssertionNegatedDesignated): pass
-
-    class AssertionNegatedUndesignated(System.OperatorNodeRule):
-        """
-        From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
-        a designated node to *b* with the assertion of *n*, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(sdwgroup((s.lhs, not d, w)))
+    class AssertionNegatedDesignated(System.FlippingOperandsRule): pass
+    class AssertionUndesignated(System.OperandsRule): pass
+    class AssertionNegatedUndesignated(System.FlippingOperandsRule): pass
 
     class MaterialBiconditionalUndesignated(System.OperatorNodeRule):
 
@@ -199,7 +182,7 @@ class Rules(LogicType.Rules):
             MaterialBiconditionalUndesignated,
             MaterialBiconditionalNegatedUndesignated),
         # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *FDE.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

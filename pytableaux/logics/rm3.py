@@ -20,6 +20,7 @@ from ..lang import Operator
 from ..proof import adds, sdwgroup
 from ..tools import group
 from . import fde as FDE
+from . import l3 as L3
 from . import lp as LP
 from . import LogicType
 
@@ -112,20 +113,6 @@ class Rules(LogicType.Rules):
                     ( rhs, d, w),
                     (~rhs, d, w)))
 
-    class BiconditionalUndesignated(System.OperatorNodeRule):
-        """
-        From an unticked undesignated biconditional node *n* on a branch *b*, add a
-        conjunction undesignated node to *b*, with first conjunct being a conditional
-        with the same operands as *n*, and the second conjunct being a conditional
-        with the reversed operands of *n*, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            convert = self.operator.other
-            yield adds(
-                sdwgroup((convert(s.lhs, s.rhs), d, w)),
-                sdwgroup((convert(s.rhs, s.lhs), d, w)))
-
     class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
         """
         From an unticked undesignated negated biconditional node *n* on a branch *b*,
@@ -178,14 +165,14 @@ class Rules(LogicType.Rules):
             ConditionalUndesignated,
             FDE.Rules.ConditionalNegatedUndesignated,
             FDE.Rules.BiconditionalNegatedDesignated,
-            BiconditionalUndesignated,
+            L3.Rules.BiconditionalUndesignated,
             BiconditionalNegatedUndesignated),
         group(
             # 3 branching rules
             ConditionalDesignated,
             BiconditionalDesignated),
         # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *FDE.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):
