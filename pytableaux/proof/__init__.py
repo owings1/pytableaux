@@ -316,6 +316,8 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         configs: dict[type[Rule.Helper], Any] = {}
         for parent in abcs.mroiter(self, mcls=cls):
             value = parent.Helpers
+            if isinstance(value, type):
+                value = value,
             if isinstance(value, Sequence):
                 configs = dict.fromkeys(value) | configs
             else:

@@ -32,7 +32,16 @@ class Meta(T.Meta):
         'Normal modal logic with a reflexive and '
         'transitive access relation')
     category_order = 4
-    extension_of = ('T', 'S4K3', 'S4LP', 'S4L3', 'S4RM3', 'S4K3W', 'S4B3E', 'S4G3')
+    extension_of = (
+        'S4B3E',
+        'S4G3',
+        'S4GO',
+        'S4K3',
+        'S4K3W',
+        'S4L3',
+        'S4LP',
+        'S4RM3',
+        'T')
 
 class Model(T.Model):
 

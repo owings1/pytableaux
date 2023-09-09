@@ -3,13 +3,14 @@
     {% set data = model.get_data() -%}
     <div id="model_{{ model.id|e }}" class="model" data-model-id="{{ model.id|e }}" data-branch-id="{{ branch.id|e }}">
         {{ write_map(lw, data) }}
-        {%- if is_debug or not model.is_countermodel %}
+        {%- set is_countermodel = model.is_countermodel_to(tableau.argument) %}
+        {%- if is_debug or not is_countermodel %}
         <ul class="details">
             <li>
                 <div class="prop">Is countermodel</div>
                 <div class="value">
-                    <span class="is-countermodel {{ bool_to_yn(model.is_countermodel)|lower }}">
-                        {{- bool_to_yn(model.is_countermodel) -}}
+                    <span class="is-countermodel {{ bool_to_yn(is_countermodel)|lower }}">
+                        {{- bool_to_yn(is_countermodel) -}}
                     </span>
                 </div>
             </li>

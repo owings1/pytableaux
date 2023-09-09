@@ -16,9 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified, Quantifier
-from ..proof import adds, rules, sdwgroup
-from ..tools import group, maxceil, minfloor
+from ..lang import Operator, Quantified
+from ..proof import adds, sdwgroup
+from ..tools import group
 from . import LogicType
 from . import b3e as B3E
 from . import fde as FDE
@@ -52,13 +52,8 @@ class Model(FDE.Model):
                 return self.values.T
             return self.MaterialConditional(a, b)
 
-    def value_of_quantified(self, s: Quantified, /, *, world: int = 0):
-        it = map(self.truth_function.Assertion, self._unquantify_values(s, world=world))
-        if s.quantifier is Quantifier.Existential:
-            return maxceil(self.maxval, it, self.minval)
-        if s.quantifier is Quantifier.Universal:
-            return minfloor(self.minval, it, self.maxval)
-        raise NotImplementedError from ValueError(s.quantifier)
+    def _unquantify_values(self, s: Quantified, /, **kw):
+        return map(self.truth_function.Assertion, super()._unquantify_values(s, **kw))
 
 class System(FDE.System): pass
 
@@ -79,36 +74,6 @@ class Rules(LogicType.Rules):
                 sdwgroup((s.lhs, not d, w)),
                 sdwgroup((s.rhs, not d, w)))
 
-    class ConjunctionUndesignated(System.OperatorNodeRule):
-        """
-        From an unticked, undesignated conjunction node *n* on a branch *b*, add a
-        designated node to *b* with the negation of the conjunction, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(sdwgroup((~s, not d, w)))
-
-    class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
-        """
-        From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
-        add a designated node to *b* with the (un-negated) conjuction, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(sdwgroup((s, not d, w)))
-        
-    class DisjunctionNegatedDesignated(System.OperatorNodeRule):
-        """
-        From an unticked, designated, negated disjunction node *n* on a branch *b*,
-        add an undesignated node to *b* for each disjunct, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(sdwgroup((s.lhs, not d, w), (s.rhs, not d, w)))
-
-    class DisjunctionUndesignated(ConjunctionUndesignated): pass
-    class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated): pass
-
     class MaterialConditionalNegatedDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated, negated material conditional node *n* on a branch
@@ -118,9 +83,6 @@ class Rules(LogicType.Rules):
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(sdwgroup((~s.lhs, not d, w), (s.rhs, not d, w)))
-
-    class MaterialConditionalUndesignated(ConjunctionUndesignated): pass
-    class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
     class MaterialBiconditionalNegatedDesignated(System.OperatorNodeRule):
         """
@@ -134,9 +96,6 @@ class Rules(LogicType.Rules):
             yield adds(
                 sdwgroup((~s.lhs, not d, w), ( s.rhs, not d, w)),
                 sdwgroup(( s.lhs, not d, w), (~s.rhs, not d, w)))
-
-    class MaterialBiconditionalUndesignated(ConjunctionUndesignated): pass
-    class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
     class ConditionalDesignated(System.OperatorNodeRule):
         """
@@ -171,9 +130,6 @@ class Rules(LogicType.Rules):
                 sdwgroup(( s.lhs, d, w), (s.rhs, not d, w)),
                 sdwgroup((~s.lhs, not d, w), (~s.rhs, d, w)))
 
-    class ConditionalUndesignated(ConjunctionUndesignated): pass
-    class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
-
     class BiconditionalDesignated(System.OperatorNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add two
@@ -201,10 +157,7 @@ class Rules(LogicType.Rules):
                 sdwgroup((~convert(s.operands), d, w)),
                 sdwgroup((~convert(reversed(s)), d, w)))
 
-    class BiconditionalUndesignated(ConjunctionUndesignated): pass
-    class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated): pass
-
-    class ExistentialNegatedDesignated(System.DefaultNodeRule, rules.QuantifiedSentenceRule):
+    class ExistentialNegatedDesignated(System.QuantifierNodeRule):
         """
         From an unticked, designated negated existential node *n* on a branch *b*,
         add a designated node *n'* to *b* with a universal sentence consisting of
@@ -218,9 +171,6 @@ class Rules(LogicType.Rules):
             v, si = s[1:]
             sq = self.quantifier.other(v, ~si | ~(si | ~si))
             yield adds(sdwgroup((sq, d, w)))
-
-    class ExistentialUndesignated(ConjunctionUndesignated): pass
-    class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated): pass
 
     class UniversalNegatedDesignated(System.QuantifierSkinnyRule):
         """
@@ -243,8 +193,31 @@ class Rules(LogicType.Rules):
                 sdwgroup((self.quantifier.other(v, ~si), d, w)),
                 sdwgroup((r, not d, w), (~r, not d, w)))
 
-    class UniversalUndesignated(ExistentialUndesignated): pass
-    class UniversalNegatedUndesignated(ExistentialNegatedUndesignated): pass
+    class DisjunctionNegatedDesignated(System.FlippingOperandsRule): pass
+
+    class ConjunctionUndesignated(System.NegatingFlippingRule): pass
+    class DisjunctionUndesignated(System.NegatingFlippingRule): pass
+    class MaterialConditionalUndesignated(System.NegatingFlippingRule): pass
+    class MaterialBiconditionalUndesignated(System.NegatingFlippingRule): pass
+    class ConditionalUndesignated(System.NegatingFlippingRule): pass
+    class BiconditionalUndesignated(System.NegatingFlippingRule): pass
+    class ExistentialUndesignated(System.NegatingFlippingRule): pass
+    class UniversalUndesignated(System.NegatingFlippingRule): pass
+
+    class ConjunctionNegatedUndesignated(System.FlippingRule): pass
+    class DisjunctionNegatedUndesignated(System.FlippingRule): pass
+    class MaterialConditionalNegatedUndesignated(System.FlippingRule): pass
+    class MaterialBiconditionalNegatedUndesignated(System.FlippingRule): pass
+    class ConditionalNegatedUndesignated(System.FlippingRule): pass
+    class BiconditionalNegatedUndesignated(System.FlippingRule): pass
+    class ExistentialNegatedUndesignated(System.FlippingRule): pass
+    class UniversalNegatedUndesignated(System.FlippingRule): pass
+
+    unquantifying_rules = (
+        FDE.Rules.ExistentialDesignated, # skinny
+        UniversalNegatedDesignated, # skinny + branching
+        FDE.Rules.UniversalDesignated) # fat
+    unquantifying_groups = tuple(map(group, unquantifying_rules))
 
     groups = (
         group(

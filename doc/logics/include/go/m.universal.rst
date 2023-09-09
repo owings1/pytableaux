@@ -3,4 +3,4 @@ of the sentences that result from replacing each constant for the quantified
 variable.
 
 This is in accord with interpreting the universal quantifier
-in terms of generalized conjunction.
+in terms of `generalized conjunction`.

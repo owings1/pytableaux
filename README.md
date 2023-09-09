@@ -73,6 +73,7 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**TG<sub>3</sub>** - G<sub>3</sub> with T modal][TG3]
 - [**S4G<sub>3</sub>** - G<sub>3</sub> with S4 modal][S4G3]
 - [**S5G<sub>3</sub>** - G<sub>3</sub> with S5 modal][S5G3]
+- [**S4GO** - GO S4 modal logic][S4GO]
 
 <!-- [logics-end] -->
 
@@ -217,4 +218,5 @@ Copyright (C) 2014-2023, Doug Owings. Released under the [GNU Affero General Pub
 [TG3]: https://logic.dougowings.net/doc/logics/tg3.html
 [S4G3]: https://logic.dougowings.net/doc/logics/s4g3.html
 [S5G3]: https://logic.dougowings.net/doc/logics/s5g3.html
+[S4GO]: https://logic.dougowings.net/doc/logics/s4go.html
 <!-- [refs-end] -->
