@@ -476,10 +476,10 @@ class Rules(LogicType.Rules):
 
     unquantifying_groups = (
         group(
-            ExistentialDesignated,
+            UniversalDesignated,
             ExistentialUndesignated),
         group(
-            UniversalDesignated,
+            ExistentialDesignated,
             UniversalUndesignated))
     unquantifying_rules = tuple(chain(*unquantifying_groups))
 
