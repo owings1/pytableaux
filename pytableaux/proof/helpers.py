@@ -33,8 +33,10 @@ from typing import (TYPE_CHECKING, Any, Callable, Iterator, Mapping,
 from ..errors import Emsg, check
 from ..lang import Constant, Operator, Predicated, Sentence
 from ..tools import EMPTY_SET, abcs, minfloor, wraps
-from . import AccessNode, Branch, Node, Rule, Tableau, Target, filters
-from .common import ClosureNode, QuitFlagNode, SentenceNode
+from . import filters
+from .common import (AccessNode, Branch, ClosureNode, Node, QuitFlagNode,
+                     SentenceNode, Target)
+from .tableaux import Rule, Tableau
 
 if TYPE_CHECKING:
     from ..tools import TypeInstMap

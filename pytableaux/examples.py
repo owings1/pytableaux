@@ -26,14 +26,11 @@ from __future__ import annotations
 from types import MappingProxyType as MapProxy
 
 from .lang import Argument
-from .logics import registry
-from .proof import Tableau
 
 __all__ = (
-    'args',
-    'tabiter')
+    'arguments',)
 
-args = MapProxy(dict((key, Argument(value, title=key)) for key, value in {
+arguments = MapProxy(dict((key, Argument(value, title=key)) for key, value in {
     'Addition'                         : 'Aab:a',
     'Affirming a Disjunct 1'           : 'b:Aab:a',
     'Affirming a Disjunct 2'           : 'Nb:Aab:a',
@@ -61,6 +58,8 @@ args = MapProxy(dict((key, Argument(value, title=key)) for key, value in {
     'Conditional Pseudo Contraposition': 'BUabUNbNa',
     'Conjunction Commutativity'        : 'Kba:Kab',
     'Conjunction Elimination'          : 'a:Kab',
+    'Conjunction Idempotence 1'        : 'Kaa:a',
+    'Conjunction Idempotence 2'        : 'a:Kaa',
     'Conjunction Introduction'         : 'Kab:a:b',
     'Conjunction Pseudo Commutativity' : 'BKabKba',
     'DeMorgan 1'                       : 'KNaNb:NAab',
@@ -73,6 +72,8 @@ args = MapProxy(dict((key, Argument(value, title=key)) for key, value in {
     'DeMorgan 8'                       : 'Kab:NANaNb',
     'Denying the Antecedent'           : 'b:Cab:Na',
     'Disjunction Commutativity'        : 'Aba:Aab',
+    'Disjunction Idempotence 1'        : 'Aaa:a',
+    'Disjunction Idempotence 2'        : 'a:Aaa',
     'Disjunction Pseudo Commutativity' : 'BAabAba',
     'Disjunctive Syllogism 2'          : 'Na:ANab:Nb',
     'Disjunctive Syllogism'            : 'a:Aab:Nb',
@@ -139,19 +140,5 @@ args = MapProxy(dict((key, Argument(value, title=key)) for key, value in {
 }.items()))
 
 
-def tabiter(*logics, build=True, grouparg=False, registry=registry, shuffle=False, **opts):
-    if not len(logics):
-        logics = tuple(registry.all())
-    if grouparg:
-        it = ((logic, arg) for arg in args.values() for logic in logics)
-    else:
-        it = ((logic, arg) for logic in logics for arg in args.values())
-    if shuffle:
-        import random
-        it = list(it)
-        random.shuffle(it)
-    for logic, arg in it:
-        tab = Tableau(logic, arg, **opts)
-        if build:
-            tab.build()
-        yield tab
+
+args = arguments

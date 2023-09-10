@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from os import mkdir
 from os.path import abspath
 
-from pytableaux.examples import args as examples
+from pytableaux.examples import arguments
 from pytableaux.lang import Argument, Notation
 from pytableaux.logics import LogicType, registry
 from pytableaux.proof import Tableau, TabWriter
@@ -73,8 +73,8 @@ def parser():
     arg(
         '--argument', '--arguments', '-a',
         dest='arguments',
-        type=lambda opt: tuple(Argument(examples.get(a, a)) for a in readlist(opt)),
-        default=examples.values(),
+        type=lambda opt: tuple(Argument(arguments.get(a, a)) for a in readlist(opt)),
+        default=arguments.values(),
         help='Comma-separated arguments to generate, default is all. Can be example name or argstr.')
     arg(
         '--nodoc',

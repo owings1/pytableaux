@@ -9,8 +9,7 @@ class TestRules(Base, autorules=True):
 
     def test_Negation_nodes(self):
         sdn = self.sdnode
-        rtd = self.rule_eg('DoubleNegationDesignated')
-        rule, tab = rtd
+        tab = self.rule_test('DoubleNegationDesignated').tableau
         self.assertTrue(tab[0].all((
             sdn('a', False),
             sdn('Na', False),

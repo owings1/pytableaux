@@ -18,10 +18,10 @@ class TestRules(Base, autorules=True):
 class TestArguments(Base, autoargs=True):
 
     def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        self.valid_tab('b', 'VxKFxKaNa')
+        self.valid_tab('b:VxKFxKaNa')
 
     def test_invalid_existential_inside_univ_max_steps(self):
-        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
+        self.invalid_tab('b:VxUFxSyFy', max_steps = 100)
 
 class TestTables(Base, autotables=True):
     tables = dict(
@@ -61,7 +61,7 @@ class TestModels(Base):
         self.assertEqual(m.value_of(s1), 'T')
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
-        tab = self.tab('a', ('NLa', 'b'), is_build_models = True)
+        tab = self.tab('a:NLa:b', is_build_models = True)
         m, = tab.models
         s1, s2, s3 = self.pp('a', 'La', 'NLa')
         self.assertEqual(m.value_of(s1), 'F')
@@ -73,7 +73,7 @@ class TestModels(Base):
         # For this we needed to add constants that occur within opaque sentences.
         # The use of the existential is important given the way the K model
         # computes quantified values (short-circuit), as opposed to FDE (min/max).
-        tab = self.tab('b', 'SxUNFxSyMFy', is_build_models = True)
+        tab = self.tab('b:SxUNFxSyMFy', is_build_models = True)
         arg = tab.argument
         self.assertEqual(len(tab), 2)
         self.assertEqual(len(tab.models), 2)

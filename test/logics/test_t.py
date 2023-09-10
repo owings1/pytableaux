@@ -3,7 +3,7 @@ from ..utils import BaseCase
 class Base(BaseCase):
     logic = 'T'
 
-class TestRules(Base, autorules=True, bare=True):
+class TestRules(Base, autorules=True):
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
         # Rule ordering benchmark result:
@@ -22,12 +22,12 @@ class TestRules(Base, autorules=True, bare=True):
         #        D: 8 branches, 57 steps
 
         # 200 might be agressive
-        self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
+        self.invalid_tab('b:LVxSyUFxLMGy', max_steps = 200)
 
 class TestArguments(Base, autoargs=True):
 
     def test_valid_optimize_nec_rule1(self):
-        self.valid_tab('NLVxNFx', 'LMSxFx', build_timeout = 1000)
+        self.valid_tab('NLVxNFx:LMSxFx', build_timeout = 1000)
 
 class TestTables(Base, autotables=True):
     tables = dict(

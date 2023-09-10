@@ -27,7 +27,7 @@ from .test_s5 import TestArguments as S5Arguments
 class Base(BaseCase):
     logic = 'S5K3'
 
-class TestRules(Base, autorules=True, bare=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base, autoargs=True):
     test_valid_optimize_nec_rule1 = S5Arguments.test_valid_optimize_nec_rule1

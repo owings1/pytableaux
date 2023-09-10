@@ -8,10 +8,10 @@ class TestRules(Base, autorules=True): pass
 class TestArguments(Base, autoargs=True):
 
     def test_invalid_prior_rule_defect(self):
-        self.invalid_tab('ANAabNa', 'Na')
+        self.invalid_tab('ANAabNa:Na')
 
     def test_valid_prior_rule_defect2(self):
-        self.valid_tab('AANaTbNa', 'Na')
+        self.valid_tab('AANaTbNa:Na')
 
 
 class TestTables(Base, autotables=True):

@@ -36,15 +36,16 @@ class TestRules(Base, autorules=True):
 
     def bt(self, *nitems):
         sdn = self.sdnode
-        tab, b = self.tabb()
+        tab = self.tab()
+        b = tab.branch()
         b += (sdn(s,d) for s,d in nitems)
         return (tab, b)
 
 class TestArguments(Base, autoargs=True):
 
     def test_arguments_various(self):
-        self.invalid_tab('ANAabNa', 'Na')
-        self.invalid_tab('AaTb', 'a')
+        self.invalid_tab('ANAabNa:Na')
+        self.invalid_tab('AaTb:a')
         self.invalid_tab('AUabNUab')
 
 class TestTables(Base, autotables=True):
@@ -62,7 +63,8 @@ class TestTables(Base, autotables=True):
 class TestOptimizations(Base):
     def test_optimize1(self):
         sdn = self.sdnode
-        tab, b = self.tabb()
+        tab = self.tab()
+        b = tab.branch()
         b += sdn('ANaUab', False)
         b += sdn('NANaUab', False)
         step = tab.step()
@@ -74,7 +76,7 @@ class TestModels(Base):
         # this was because sorting of constants had not been implemented.
         # it was only observed when we were sorting predicated sentences
         # that ended up in the opaques of a model.
-        arg = self.parg('VxMFx', 'VxUFxSyMFy', 'Fm')
+        arg = Argument('VxMFx:VxUFxSyMFy:Fm')
         tab = self.tab(arg, is_build_models=True, max_steps=100)
         self.assertTrue(tab.invalid)
         for b in tab.open:

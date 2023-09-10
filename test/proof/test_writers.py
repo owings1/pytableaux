@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 from pytableaux.errors import *
+from pytableaux.examples import arguments as examples
 from pytableaux.lang import *
 from pytableaux.proof import *
 
@@ -43,7 +44,7 @@ class TestHtml(BaseCase):
         res = pw(tab)
 
     def test_write_std_fde_1(self):
-        arg = self.parg('Addition')
+        arg = examples['Addition']
         pw = TabWriter('html', 'standard')
         tab = Tableau('fde', arg).build()
         res = pw(tab)
@@ -58,7 +59,7 @@ class TestLatex(BaseCase):
         res = pw(tab)
 
     def test_write_std_fde_1(self):
-        arg = self.parg('Addition')
+        arg = examples['Addition']
         pw = TabWriter('latex', 'standard')
         tab = Tableau('fde', arg).build()
         res = pw(tab)

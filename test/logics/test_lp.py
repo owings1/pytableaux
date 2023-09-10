@@ -1,17 +1,34 @@
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2023 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux.logics.lp tests
+from __future__ import annotations
+
+from pytableaux.lang import Argument
+
 from ..utils import BaseCase
+
 
 class Base(BaseCase):
     logic = 'LP'
 
 class TestRules(Base, autorules=True): pass
-
-class TestArguments(Base, autoargs=True):
-
-    def test_arguments(self):
-        self.valid_tab('NUab', ('a', 'Na', 'Nb'))
-        self.invalid_tab('NUab', ('a', 'UaNUbc'))
-        self.invalid_tab('NUbc', ('a', 'UaNUbc'))
-        self.invalid_tab('NBab', ('c', 'BcNUab'))
+class TestArguments(Base, autoargs=True): pass
 
 class TestTables(Base, autotables=True):
     tables = dict(
@@ -27,7 +44,7 @@ class TestTables(Base, autotables=True):
 class TestOperatorRules(Base):
 
     def test_regression_bad_rule_neg_bicond_undes(self):
-        tab = self.tab('NBab', 'NBab', is_build = False)
+        tab = self.tab('NBab:NBab', is_build = False)
         rule = tab.rules.get('BiconditionalNegatedUndesignated')
         self.assertTrue(rule.target(tab[0]))
         tab.build()
@@ -36,11 +53,8 @@ class TestOperatorRules(Base):
 class TestModels(Base):
 
     def test_regression_model_not_a_countermodel(self):
-        arg = self.parg('NBab', 'c', 'BcNUab')
-        s1, s2, s3 = self.pp(*'abc')
-        m = self.m()
-        m.set_literal_value(s1, 'F')
-        m.set_literal_value(s2, 'T')
-        m.set_literal_value(s3, 'B')
-        m.finish()
+        arg = Argument('NBab:c:BcNUab')
+        with self.m() as m:
+            for s, v in zip(self.pp(*'abc'), 'FTB'):
+                m.set_value(s, v)
         self.assertEqual(m.value_of(arg.premises[1]), 'B')

@@ -22,27 +22,27 @@ from __future__ import annotations
 import time
 from unittest import skip
 
-from pytest import raises
-
 from pytableaux.errors import *
+from pytableaux.examples import arguments as examples
 from pytableaux.logics import k as K
+from pytableaux.lang import Argument
 from pytableaux.proof import *
 from pytableaux.proof import rules
 from pytableaux.proof.filters import getkey
 from pytableaux.proof.helpers import *
 from pytableaux.proof.tableaux import *
 
-from ..utils import BaseCase
+from ..utils import BaseCase as Base
 
 
-class TestSystem(BaseCase):
+class TestSystem(Base):
 
     def test_build_trunk_base_not_impl(self):
         proof = Tableau()
         with self.assertRaises(NotImplementedError):
             System.build_trunk(proof, None)
 
-class TestTableau(BaseCase):
+class TestTableau(Base):
 
     logic = 'CPL'
 
@@ -64,7 +64,7 @@ class TestTableau(BaseCase):
         proof = self.tab('Addition', is_build=False, build_timeout=1)
         with proof.timers.build:
             time.sleep(0.005)
-        with raises(ProofTimeoutError):
+        with self.assertRaises(ProofTimeoutError):
             proof.build()
 
     def test_finish_empty_sets_build_duration_ms_0(self):
@@ -114,9 +114,9 @@ class TestTableau(BaseCase):
         self.assertIs(rule._checkparent, None)
 
     def test_ticked_step_flag_refactored_from_node(self):
-        tab, b = self.tabb([
-            dict(sentence=s) for s in self.pp('NNa', 'Kab', 'Aab')
-        ])
+        tab = self.tab()
+        b = tab.branch()
+        b += map(self.snode, ('NNa', 'Kab', 'Aab'))
         step = tab.step()
         stat = tab.stat(b, step.target.node, Tableau.StatKey.FLAGS)
         self.assertIn(Tableau.Flag.TICKED, stat)
@@ -124,7 +124,7 @@ class TestTableau(BaseCase):
     def test_raises_illegal_state_set_argument_started(self):
         tab = self.tab('Addition')
         with self.assertRaises(IllegalStateError):
-            tab.argument = self.parg('DeMorgan 1')
+            tab.argument = examples['DeMorgan 1']
 
     def test_raises_illegal_state_set_logic_started(self):
         tab = self.tab('Addition')
@@ -133,11 +133,11 @@ class TestTableau(BaseCase):
 
     def test_auto_build_trunk_1(self):
         tab = self.tab()
-        tab.argument = self.parg('Addition')
+        tab.argument = examples['Addition']
         self.assertTrue(len(tab))
 
     def test_auto_build_trunk_2(self):
-        tab = Tableau(None, self.parg('Addition'))
+        tab = Tableau(None, examples['Addition'])
         tab.logic = 'K'
         self.assertTrue(len(tab))
 
@@ -147,7 +147,7 @@ class TestTableau(BaseCase):
             tab.build_trunk()
 
     def test_build_trunk_raises_no_logic(self):
-        tab = Tableau(None, self.parg('Addition'))
+        tab = Tableau(None, examples['Addition'])
         with self.assertRaises(IllegalStateError):
             tab.build_trunk()
 
@@ -187,12 +187,12 @@ class TestTableau(BaseCase):
         self.assertIn('invalid', repr(tab))
 
     
-class TestBranchStat(BaseCase):
+class TestBranchStat(Base):
     def test_view_coverage(self):
         stat = Tableau.BranchStat()
         stat.view()
 
-class TestRule(BaseCase):
+class TestRule(Base):
 
     def test_base_not_impl_various(self):
         with self.assertRaises(TypeError):
@@ -242,7 +242,7 @@ class TestRule(BaseCase):
         self.assertIs(type(repr(rules.NoopRule(Tableau()))), str)
 
 
-class TestRuleGroup(BaseCase):
+class TestRuleGroup(Base):
 
     def test_contains_name(self):
         group = RuleGroup(None, RulesRoot(Tableau()))
@@ -292,7 +292,7 @@ class TestRuleGroup(BaseCase):
         with self.assertRaises(IllegalStateError):
             group.clear()
 
-class TestRuleGroups(BaseCase):
+class TestRuleGroups(Base):
 
     def test_append_iterable_rule_type(self):
         groups = RuleGroups(RulesRoot(Tableau()))
@@ -325,7 +325,7 @@ class TestRuleGroups(BaseCase):
     def test_repr_is_string_coverage(self):
         self.assertIs(type(repr(RuleGroups(RulesRoot(Tableau())))), str)
 
-class TestRulesRoot(BaseCase):
+class TestRulesRoot(Base):
 
     class Rule1(rules.NoopRule): pass
     class Rule2(rules.NoopRule): pass
@@ -375,13 +375,13 @@ class TestRulesRoot(BaseCase):
         with self.assertRaises(IllegalStateError):
             root.lock()
 
-class TestClosureRule(BaseCase):
+class TestClosureRule(Base):
 
     def test_base_not_impl_various(self):
-        with raises(TypeError):
+        with self.assertRaises(TypeError):
             ClosingRule(Tableau())
 
-class TestFilters(BaseCase):
+class TestFilters(Base):
 
 
     def test_AttrFilter_key_node_designated(self):
@@ -395,7 +395,7 @@ class TestFilters(BaseCase):
         assert not f(Node({'foo': 'bar'}))
 
 
-class TestEllispsisHelper(BaseCase):
+class TestEllispsisHelper(Base):
 
     logic = 'FDE'
 
@@ -412,40 +412,7 @@ class TestEllispsisHelper(BaseCase):
         self.assertEqual(len(b), 4)
         self.assertIs(node, b[1])
 
-class Test_K_DefaultNodeFilterRule(BaseCase):
-
-    logic = 'K'
-
-    def ngen(self, n):
-        sgen = self.sgen(n)
-        wn = 0
-        for i in range(n):
-            s = next(sgen)
-            if i == 0:
-                n = {'sentence':s}
-            elif i % 3 == 0:
-                w1 = wn
-                w2 = wn = w1 + 1
-                n = {'world1':w1, 'world2':w2}
-            else:
-                n = {'sentence':s, 'world':wn}
-            yield Node.for_mapping(n)
-        sgen.close()
-
-    def case1(self, n = 10, **kw):
-        class Impl(K.System.DefaultNodeRule):
-            def _get_node_targets(self, node, branch):
-                yield from ()
-                pass
-        rule, tab = self.rule_tab(Impl, **kw)
-        tab.branch().extend(self.ngen(n))
-        return (rule, tab)
-
-    def test_rule_sentence_impl(self):
-        rule, tab = self.case1()
-
-
-class TestMaxConstantsTracker(BaseCase):
+class TestMaxConstantsTracker(Base):
 
     logic = 'S5'
 
@@ -460,7 +427,7 @@ class TestMaxConstantsTracker(BaseCase):
     
         proof = self.tab()
         proof.rules.append(MtrTestRule)
-        proof.argument = self.parg('NLVxNFx', 'LMSxFx')
+        proof.argument = Argument('NLVxNFx:LMSxFx')
         rule = proof.rules.get(MtrTestRule)
         branch = proof[0]
         self.assertEqual(rule[MaxConsts]._compute(branch), 3)

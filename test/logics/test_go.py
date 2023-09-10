@@ -8,7 +8,7 @@ class Base(BaseCase):
 class TestArguments(Base, autoargs=True):
 
     def test_valid_prior_b3e_rule_defect2(self):
-        self.valid_tab('AANaTbNa', 'Na')
+        self.valid_tab('AANaTbNa:Na')
 
 class TestTables(Base, autotables=True):
     tables = dict(
@@ -25,14 +25,18 @@ class TestRules(Base, autorules=True):
 
     def test_MaterialConditionalNegatedDesignated_step(self):
         sdn = self.sdnode
-        tab, b = self.tabb(sdn('NCab', True))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('NCab', True)
         tab.step()
         self.assertTrue(b.has(sdn('Na',  False)))
         self.assertTrue(b.has(sdn('b',  False)))
 
     def test_MaterialBionditionalNegatedDesignated_step(self):
         sdn = self.sdnode
-        tab = self.tab(nn=sdn('NEab', True))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('NEab', True)
         tab.step()
         b1, b2 = tab
         self.assertTrue(b1.has(sdn('Na', False)))
@@ -42,7 +46,9 @@ class TestRules(Base, autorules=True):
 
     def test_ConditionalDesignated_step(self):
         sdn = self.sdnode
-        tab = self.tab(nn=sdn('Uab', True))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('Uab', True)
         tab.step()
         b1, b2 = tab
         self.assertTrue(b1.has(sdn('ANab', True)))
@@ -53,7 +59,9 @@ class TestRules(Base, autorules=True):
 
     def test_ConditionalNegatedDesignated_step(self):
         sdn = self.sdnode
-        tab = self.tab(nn=sdn('NUab', True))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('NUab', True)
         tab.step()
         b1, b2 = tab
         self.assertTrue(b1.has(sdn('a', True)))
@@ -63,14 +71,18 @@ class TestRules(Base, autorules=True):
 
     def test_BiconditionalDesignated_step(self):
         sdn = self.sdnode
-        tab, b = self.tabb(sdn('Bab', True))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('Bab', True)
         tab.step()
         self.assertTrue(b.has(sdn('Uab', True)))
         self.assertTrue(b.has(sdn('Uba', True)))
 
     def test_BiconditionalNegatedDesignated_step(self):
         sdn = self.sdnode
-        tab = self.tab(nn=sdn('NBab', True))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('NBab', True)
         tab.step()
         b1, b2 = tab
         self.assertTrue(b1.has(sdn('NUab', True)))
@@ -78,24 +90,32 @@ class TestRules(Base, autorules=True):
 
     def test_AssertionUndesignated_step(self):
         sdn = self.sdnode
-        tab, b = self.tabb(sdn('Ta', False))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('Ta', False)
         tab.step()
         self.assertTrue(b.has(sdn('a', False)))
 
     def test_AssertionNegatedDesignated_step(self):
         sdn = self.sdnode
-        tab, b = self.tabb(sdn('NTa', True))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('NTa', True)
         tab.step()
         self.assertTrue(b.has(sdn('a', False)))
 
     def test_AssertionNegatedUndesignated_step(self):
         sdn = self.sdnode
-        tab, b = self.tabb(sdn('NTa', False))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('NTa', False)
         tab.step()
         self.assertTrue(b.has(sdn('a', True)))
 
     def test_branching_complexity_inherits_branchables(self):
         sdn = self.sdnode
-        tab, b = self.tabb(sdn('Kab', False))
+        tab = self.tab()
+        b = tab.branch()
+        b += sdn('Kab', False)
         node = b[0]
         self.assertEqual(self.logic.System.branching_complexity(node, tab.rules), 0)

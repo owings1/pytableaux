@@ -24,13 +24,14 @@ from typing import cast
 
 from pytableaux import errors
 from pytableaux.errors import *
+from pytableaux.examples import arguments as examples
 from pytableaux.lang import *
 from pytableaux.lang import BiCoords
 from pytableaux.lang.lex import *
 from pytableaux.lang.lex import LexicalAbcMeta
 from pytableaux.tools import EMPTY_SET
 
-from ..utils import BaseCase
+from ..utils import BaseCase, maketest
 
 Firsts = dict(
     (cls, cls.first()) for cls in LexType.classes)
@@ -272,11 +273,10 @@ class TestQuantified(BaseCase):
         self.assertEqual(res, check)
 
     def test_complex_quantified_substitution(self):
-        preds = Predicates({(0, 0, 2)})
-        s1 = cast(Quantified, self.p('SxMVyFxy', preds))
+        s1 = cast(Quantified, self.p('SxMVyFxy'))
         m = Constant(0, 0)
         s2 = s1.sentence.substitute(m, s1.variable)
-        s3 = self.p('MVyFmy', preds)
+        s3 = self.p('MVyFmy')
         self.assertEqual(s2, s3)
 
     def test_substitute_a_for_a_returns_self(self):
@@ -465,8 +465,8 @@ class TestSorting(BaseCase):
         self.assertFalse(x <= a)
 
     def test_compare1(self):
-        a1 = self.parg('Denying the Antecedent')
-        a2 = self.parg('Biconditional Introduction 3')
+        a1 = examples['Denying the Antecedent']
+        a2 = examples['Biconditional Introduction 3']
         self.assertLess(a1.conclusion, a2.conclusion)
         self.assertEqual(len(a1), len(a2))
         self.assertGreater(a2, a1)
@@ -565,7 +565,7 @@ class TestClasses(BaseCase):
                 func = getattr(itm, '__%s__' % oper.__name__)
                 res = func(other)
                 name = f'test_{type(itm)}_{oper.__name__}_{type(other)}_is_notimplemented'
-                yield name, cls.maketest('assertIs', res, NotImplemented)
+                yield name, maketest('assertIs', res, NotImplemented)
                 if oper is not opr.eq:
                     name = f'test_{type(itm)}_{oper.__name__}_{type(other)}_raises_typeerror'
                     yield name, maketest_raises(oper, itm, other)

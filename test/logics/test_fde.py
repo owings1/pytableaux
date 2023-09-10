@@ -30,10 +30,8 @@ class TestTables(Base, autotables=True):
 class TestOperators(Base):
 
     def test_Conjunction(self):
-        o = Operator.Conjunction
-        rtnd = self.rule_eg(f'{o.name}NegatedDesignated')
-
-        n = rtnd[1].history[0].target.node
+        tab = self.rule_test(f'ConjunctionNegatedDesignated').tableau
+        n = tab.history[0].target.node
         s: Operated = n['sentence']
         self.assertEqual(
             (s.operator, s.lhs.operator, n['designated']),
@@ -43,13 +41,12 @@ class TestQuantifiers(Base):
 
     def test_Existential(self):
         q = Quantifier.Existential
-        rtu = self.rule_eg(f'{q.name}Undesignated')
-
-        b = rtu[1][0]
+        tab = self.rule_test(f'ExistentialUndesignated').tableau
+        b = tab[0]
         self.assertTrue(b.has(sdnode(Quantified.first(q), False)))
 
     def test_invalid_existential_inside_univ_max_steps(self):
-        tab = self.invalid_tab('b', 'VxUFxSyFy', max_steps=100, is_build_models=True)
+        tab = self.invalid_tab('b:VxUFxSyFy', max_steps=100, is_build_models=True)
         self.assertLess(len(tab.history), 100)
 
 class TestBranchingComplexity(Base):
@@ -99,16 +96,16 @@ class TestModels(Base):
         m.read_branch(b)
         return (m,b)
 
-    def test_countermodels(self):
-        self.cm('Law of Excluded Middle')
-        m = self.cm('Law of Non-contradiction')
+    def test_lnc_countermodel_a_has_value_b(self):
+        tab = self.invalid_tab('Law of Non-contradiction')
+        m, = tab.models
         self.assertEqual(m.value_of(Atomic.first()), 'B')
 
     def test_model_a_thus_b_is_countermodel_to_false(self):
-        arg = self.parg('b', 'a')
+        arg = Argument('b:a')
         with self.m() as m:
-            m.set_literal_value(arg.premises[0], 'F')
-            m.set_literal_value(arg.conclusion, 'F')
+            for s in arg:
+                m.set_value(s, 'F')
         assert not m.is_countermodel_to(arg)
 
     def test_model_b_value_atomic_branch(self):
@@ -215,7 +212,7 @@ class TestModels(Base):
             self.m().finish().value_of_quantified(s)
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
-        tab = self.tab('a', 'NLa', 'b')
+        tab = self.tab('a:NLa:b')
         m = tab[0].model
         s1, s2, s3 = self.pp('a', 'La', 'NLa')
         self.assertEqual(m.value_of(s1), 'F')
@@ -224,7 +221,7 @@ class TestModels(Base):
         self.assertTrue(m.is_countermodel_to(tab.argument))
 
     def test_observed_value_of_universal_with_diamond_min_arg_is_an_empty_sequence(self):
-        arg = self.parg('b', 'VxUFxSyMFy')
+        arg = Argument('b:VxUFxSyMFy')
         tab = self.tab(arg, is_build_models=False, max_steps=100)
         self.assertTrue(tab.invalid)
         b = tab[-1]

@@ -28,7 +28,7 @@ from . import test_k3w as K3WSuite
 class Base(BaseCase):
     logic = 'S4K3W'
 
-class TestRules(Base, autorules=True, bare=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base, autoargs=True):
     autoargs_kws = {

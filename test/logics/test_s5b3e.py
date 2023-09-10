@@ -28,7 +28,7 @@ from . import test_b3e as B3ESuite
 class Base(BaseCase):
     logic = 'S5B3E'
 
-class TestRules(Base, autorules=True, bare=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base, autoargs=True):
     autoargs_kws = {

@@ -26,7 +26,7 @@ from ..utils import BaseCase
 class Base(BaseCase):
     logic = 'S4LP'
 
-class TestRules(Base, autorules=True, bare=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base, autoargs=True): pass
 

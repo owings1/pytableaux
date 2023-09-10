@@ -3,7 +3,7 @@ from ..utils import BaseCase
 class Base(BaseCase):
     logic = 'S5'
 
-class TestRules(Base, autorules=True, bare=True):
+class TestRules(Base, autorules=True):
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
 
         # Rule ordering benchmark result:
@@ -21,20 +21,20 @@ class TestRules(Base, autorules=True, bare=True):
         #        T: 8 branches, 91 steps
         #        D: 8 branches, 57 steps
         # 200 might be agressive
-        self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
+        self.invalid_tab('b:LVxSyUFxLMGy', max_steps = 200)
 
 class TestArguments(Base, autoargs=True):
 
     def test_valid_s4_complex_possibility_with_max_steps(self):
-        self.valid_tab('MNb', ('LCaMMMNb', 'Ma'), max_steps = 200)
+        self.valid_tab('MNb:LCaMMMNb:Ma', max_steps = 200)
 
     def test_valid_optimize_nec_rule1(self):
-        self.valid_tab('NLVxNFx', 'LMSxFx', build_timeout = 1000)
+        self.valid_tab('NLVxNFx:LMSxFx', build_timeout = 1000)
 
     def test_valid_intermediate_mix_modal_quantifiers1(self):
         # For this we needed to put Universal and Existential rules
         # in the same group, and toward the end.
-        self.valid_tab('MSxGx', ('VxLSyUFxMGy', 'Fm'), max_steps = 100)
+        self.valid_tab('MSxGx:VxLSyUFxMGy:Fm', max_steps = 100)
 
 class TestTables(Base, autotables=True):
     tables = dict(

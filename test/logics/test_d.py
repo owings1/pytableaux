@@ -22,10 +22,10 @@ class TestRules(Base, autorules=True):
 class TestArguments(Base, autoargs=True):
 
     def test_valid_long_serial_max_steps_50(self):
-        self.valid_tab('MMMMMa', 'LLLLLa', max_steps = 50)
+        self.valid_tab('MMMMMa:LLLLLa', max_steps = 50)
 
     def test_invalid_optimize_nec_rule1_max_steps_50(self):
-        self.invalid_tab('NLVxNFx', 'LMSxFx', max_steps = 50)
+        self.invalid_tab('NLVxNFx:LMSxFx', max_steps = 50)
 
     def test_verify_core_bugfix_branch_should_not_have_w1_with_more_than_one_w2(self):
         tab = self.tab('CaLMa')

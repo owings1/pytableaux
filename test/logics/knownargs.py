@@ -4,7 +4,7 @@ from collections import defaultdict
 from types import MappingProxyType as MapProxy
 from typing import Any, Callable, Collection, Iterable, Mapping, TypeVar
 
-from pytableaux.examples import args as examples
+from pytableaux.examples import arguments as examples
 from pytableaux.lang import Argument
 from pytableaux.logics import LogicType, registry, LogicSet
 from pytableaux.proof import Tableau
@@ -20,8 +20,19 @@ def L(name, valid=(), invalid=()):
     validities[name] = valid
     invalidities[name] = invalid
 
+arguments = dict(examples)
+arguments.update((key, Argument(value, title=key)) for key, value in dict.items({
+    'Test Arrow Negation 1': 'NUbc:a:UaNUbc',
+    'Test Arrow Negation 2': 'NUab:a:UaNUbc',
+    'Test Biarrow Negation 1': 'NBab:c:BcNUab',
+    'Test Contradiction Arrow 1': 'NUab:a:Na:Nb',
+}))
+
+
 L('*',
     valid = (
+        'Disjunction Idempotence 1',
+        'Disjunction Idempotence 2',
         'Modal Platitude 1',
         'Modal Platitude 2',
         'Modal Platitude 3',
@@ -39,6 +50,7 @@ L('*',
         'Possibility Distribution',
         'Triviality 1',
         'Triviality 2',
+        'Test Arrow Negation 2',
         'Universal from Existential',
     ))
 
@@ -69,6 +81,8 @@ L('CPL',
         'Conditional Pseudo Contraposition',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -102,6 +116,7 @@ L('CPL',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
         'Self Identity 1',
+        'Test Contradiction Arrow 1',
     ),
     invalid = (
         'Existential Syllogism',
@@ -220,6 +235,8 @@ L('K3WQ',
         'Conditional Modus Tollens',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'DeMorgan 1',
         'DeMorgan 2',
@@ -273,6 +290,8 @@ L('MH',
         'Conditional Pseudo Contraction',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 2',
@@ -295,6 +314,7 @@ L('MH',
         'Material Contraposition 2',
         'Material Modus Ponens',
         'Material Modus Tollens',
+        'Test Contradiction Arrow 1',
         Argument('UaUba', title='hmh_axiom01'),
         Argument('UUaUbcUUabUac', title='hmh_axiom02'),
         Argument('UKaba', title='hmh_axiom03'),
@@ -362,6 +382,8 @@ L('NH',
         'Conditional Pseudo Contraction',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -428,6 +450,7 @@ L('NH',
         'Self Identity 1',
         'Self Identity 2',
         'Syllogism',
+        'Test Contradiction Arrow 1',
         'Universal Predicate Syllogism',
     ))
 
@@ -455,6 +478,7 @@ L('P3',
         'Material Contraction',
         'Material Modus Ponens',
         'Material Modus Tollens',
+        'Test Contradiction Arrow 1',
     ),
     invalid = (
         'Biconditional Elimination 3',
@@ -469,6 +493,8 @@ L('P3',
         'Conditional Pseudo Contraction',
         'Conditional Pseudo Contraposition',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -531,6 +557,8 @@ L('FDE',
         'Conditional Contraposition 2',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Disjunction Commutativity',
         'Existential from Universal',
@@ -557,6 +585,7 @@ L('FDE',
         'DeMorgan 8',
         'Material Contraction',
         'Quantifier Interdefinability 4',
+        'Test Contradiction Arrow 1',
     ),
     invalid = (
 
@@ -620,6 +649,8 @@ L('K3',
         'Material Modus Tollens',
         'Syllogism',
         'Universal Predicate Syllogism',
+        'Test Arrow Negation 1',
+        'Test Biarrow Negation 1',
     ),
     invalid = (
 
@@ -695,7 +726,8 @@ L('LP',
         'Material Pseudo Contraposition',
     ),
     invalid = (
-
+        'Test Arrow Negation 1',
+        'Test Biarrow Negation 1',
     ))
 
 L('KLP',
@@ -777,6 +809,8 @@ L('L3',
         'Conditional Pseudo Contraposition',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -808,6 +842,7 @@ L('L3',
         'Quantifier Interdefinability 3',
         'Quantifier Interdefinability 4',
         'Syllogism',
+        'Test Contradiction Arrow 1',
         'Universal Predicate Syllogism',
     ),
     invalid = (
@@ -895,6 +930,8 @@ L('RM3',
         'Conditional Pseudo Contraposition',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -921,6 +958,7 @@ L('RM3',
         'Quantifier Interdefinability 2',
         'Quantifier Interdefinability 3',
         'Quantifier Interdefinability 4',
+        'Test Contradiction Arrow 1',
     ),
     invalid = (
     ))
@@ -1009,6 +1047,8 @@ L('K3W',
         'Conditional Modus Tollens',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'DeMorgan 1',
         'DeMorgan 2',
@@ -1039,6 +1079,7 @@ L('K3W',
         'Quantifier Interdefinability 4',
         'Syllogism',
         'Universal Predicate Syllogism',
+        'Test Contradiction Arrow 1',
     ),
     invalid = (
 
@@ -1132,6 +1173,8 @@ L('B3E',
         'Conditional Pseudo Contraposition',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -1163,6 +1206,7 @@ L('B3E',
         'Quantifier Interdefinability 3',
         'Quantifier Interdefinability 4',
         'Syllogism',
+        'Test Contradiction Arrow 1',
         'Universal Predicate Syllogism',
     ),
     invalid = (
@@ -1255,6 +1299,8 @@ L('G3',
         'Conditional Pseudo Contraction',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 1',
@@ -1283,6 +1329,7 @@ L('G3',
         'Quantifier Interdefinability 3',
         'Quantifier Interdefinability 4',
         'Syllogism',
+        'Test Contradiction Arrow 1',
         'Universal Predicate Syllogism',
     ),
     invalid = (
@@ -1377,6 +1424,8 @@ L('GO',
         'Conditional Pseudo Contraposition',
         'Conjunction Commutativity',
         'Conjunction Elimination',
+        'Conjunction Idempotence 1',
+        'Conjunction Idempotence 2',
         'Conjunction Introduction',
         'Conjunction Pseudo Commutativity',
         'DeMorgan 3',
@@ -1403,6 +1452,7 @@ L('GO',
         'Quantifier Interdefinability 1',
         'Quantifier Interdefinability 3',
         'Syllogism',
+        'Test Contradiction Arrow 1',
         'Universal Predicate Syllogism',
     ),
     invalid = (
@@ -1449,6 +1499,9 @@ L('S4GO',
         'Quantifier Interdefinability 4',
         'Self Identity 1',
         'Self Identity 2',
+        Argument('KaNa:NAaNa', title='diss_06'),
+        Argument('AKaaKNaNa', title='diss_07'),
+        Argument('AAaaANaNa', title='diss_08'),
         Argument('LMa:Ma', title='diss_81'),
     ))
 
@@ -1460,7 +1513,7 @@ invalidities = MapProxy(invalidities)
 class ArgSet(qset[Argument]):
 
     def _hook_cast(self, value):
-        return examples.get(value) or Argument(value)
+        return arguments.get(value) or Argument(value)
 
     def _default_sort_key(self, value):
         return value.title or value.argstr()
@@ -1500,7 +1553,7 @@ def find_missing(logic):
     logic = registry(logic)
     valids, invalids = get_known(logic)
     exists = valids | invalids
-    missing = set(examples.values()) - exists
+    missing = set(arguments.values()) - exists
     results = defaultdict(set)
     for arg in missing:
         results[Tableau(logic, arg).build().valid].add(arg.title or arg.argstr())
@@ -1512,7 +1565,7 @@ def find_missing_all():
     for logic in logics:
         missing = find_missing(logic)
         if missing:
-            yield logic, find_missing(logic)
+            yield logic, missing
 
 del(caching, known_getter)
 

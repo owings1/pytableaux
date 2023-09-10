@@ -27,7 +27,7 @@ from .test_s5 import TestArguments as S5Arguments
 class Base(BaseCase):
     logic = 'S5FDE'
 
-class TestRules(Base, autorules=True, bare=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base, autoargs=True):
 
@@ -35,6 +35,6 @@ class TestArguments(Base, autoargs=True):
 
     def test_invalid_intermediate_mix_modal_quantifiers1(self):
         # Countermodels don't work well with quit flags
-        self.invalid_tab('MSxGx', ('VxLSyUFxMGy', 'Fm'), max_steps=100, skip_countermodel=True)
+        self.invalid_tab('MSxGx:VxLSyUFxMGy:Fm', max_steps=100, skip_countermodel=True)
 
 class TestTables(Base, FDESuite.TestTables): pass

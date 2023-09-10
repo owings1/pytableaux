@@ -28,7 +28,9 @@ from typing import Generic, Iterable, TypeVar, final
 from ..lang import (Constant, Operated, Operator, Predicate, Predicated,
                     Quantified, Quantifier, Sentence)
 from ..tools import EMPTY_SET, group
-from . import Branch, Node, Rule, Target, adds, filters
+from . import adds, filters
+from .common import Branch, Node, Target
+from .tableaux import Rule
 
 __all__ = (
     'BaseClosureRule',

@@ -11,18 +11,17 @@ class Base(BaseCase):
 class TestRules(Base, autorules=True):
 
     def test_IdentityIndiscernability_not_applies(self):
-        s1, s2 = self.pp('Fmn', 'Io1o2', Predicates({(0, 0, 2)}))
-        tab, b = self.tabb((
-            {'sentence': s1, 'world': 0},
-            {'sentence': s2, 'world': 0}))
+        tab = self.tab()
+        b = tab.branch()
+        b += map(self.swnode, ('Fmn', 'Io1o2'))
         rule = tab.rules.get('IdentityIndiscernability')
         self.assertFalse(rule.target(b))
 
 class TestArguments(Base, autoargs=True):
 
     def test_arguments(self):
-        self.invalid_tab('Nb', ('Bab'))
-        self.invalid_tab('Nb', ('NBab'))
+        self.invalid_tab('Nb:Bab')
+        self.invalid_tab('Nb:NBab')
 
 class TestTables(Base, autotables=True):
     tables = dict(
@@ -39,7 +38,7 @@ class TestTables(Base, autotables=True):
 class TestRuleOptimizations(Base):
 
     def test_group_score_from_candidate_score(self):
-        tab = self.valid_tab('Na', ('Cab', 'Nb', 'Acd'))
+        tab = self.valid_tab('Na:Cab:Nb:Acd')
         self.assertEqual(len(tab), 2)
 
 class TestModels(Base):

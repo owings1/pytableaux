@@ -20,13 +20,14 @@ pytableaux.proof.tableaux
 
 """
 from __future__ import annotations
+from dataclasses import dataclass
 
 import operator as opr
 from abc import abstractmethod
 from collections import deque
 from collections.abc import Set
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping,
+from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Iterator, Mapping,
                     Optional, Self, Sequence, SupportsIndex, TypeVar, final)
 
 from ..errors import Emsg, ProofTimeoutError, check
@@ -265,25 +266,47 @@ class Rule(EventEmitter, metaclass=RuleMeta):
             f'applied:{len(self.history)}>')
 
     @classmethod
-    def test(cls, /, *, noassert = False):
+    def test(cls, /, *, logic=None, noassert = False) -> Rule.TestResult[Self]:
         """Run a simple test on the rule."""
-        tab = Tableau()
+        tab = Tableau(logic)
+        tab.rules.clear()
         tab.rules.append(cls)
         rule = tab.rules.get(cls)
-        nodes = deque(rule.example_nodes())
+        nodes = tuple(rule.example_nodes())
         branch = tab.branch()
-        branch.extend(nodes)
+        branch += nodes
         entry = tab.step()
         tab.finish()
+        tests = dict(
+            history=len(rule.history) > 0,
+            entry=entry and entry.rule == rule,
+            branching=rule.branching == len(tab) - 1)
+        if isinstance(rule, ClosingRule):
+            tests['closing'] = len(tab.open) == 0
+        failures = tuple(key for key, value in tests.items() if not value)
         if not noassert:
-            assert len(rule.history) > 0
-        return dictns(
+            assert not failures, f'{failures=}'
+        return cls.TestResult(
             cls     = cls,
             rule    = rule,
             tableau = tab,
             branch  = branch,
             nodes   = nodes,
-            entry   = entry)
+            entry   = entry,
+            tests   = tests,
+            failures = failures)
+
+    @dataclass(kw_only=True)
+    class TestResult(Generic[_RT]):
+        cls: type[_RT]
+        rule: _RT
+        tableau: Tableau
+        branch: Branch
+        nodes: Sequence[Node]
+        entry: Tableau.StepEntry
+        tests: Mapping[str, bool]
+        failures: Sequence[str]
+
 # ----------------------------------------------
 
 def locking(method: _F) -> _F:
@@ -1480,3 +1503,7 @@ class Tableau(Sequence[Branch], EventEmitter, metaclass=TableauMeta):
                 tree.balanced_line_margin = widths[0] / tree.width
             else:
                 tree.balanced_line_width = tree.balanced_line_margin = 0
+
+pass
+
+from .rules import ClosingRule

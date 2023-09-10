@@ -3,21 +3,21 @@ from ..utils import BaseCase
 class Base(BaseCase):
     logic = 'S4'
 
-class TestRules(Base, autorules=True, bare=True): pass
+class TestRules(Base, autorules=True): pass
 
 class TestArguments(Base, autoargs=True):
 
     def test_valid_s4_complex_possibility_with_max_steps(self):
-        self.valid_tab('MNb', ['LCaMMMNb', 'Ma'], max_steps = 200)
+        self.valid_tab('MNb:LCaMMMNb:Ma', max_steps = 200)
 
     def test_valid_optimize_nec_rule1(self):
-        self.valid_tab('NLVxNFx', 'LMSxFx', build_timeout = 1000)
+        self.valid_tab('NLVxNFx:LMSxFx', build_timeout = 1000)
 
     def test_invalid_problematic_1_with_timeout(self):
-        self.invalid_tab('b', 'LMa', build_timeout = 2000)
+        self.invalid_tab('b:LMa', build_timeout = 2000)
 
     def test_invalid_nested_diamond_within_box1(self):
-        self.invalid_tab('KMNbc', ['LCaMNb', 'Ma'])
+        self.invalid_tab('KMNbc:LCaMNb:Ma')
         # model.add_access(0, 1)
         # model.add_access(1, 2)
         # model.finish()
@@ -41,7 +41,7 @@ class TestArguments(Base, autoargs=True):
         #        D: 8 branches, 57 steps
 
         # 200 might be agressive
-        self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
+        self.invalid_tab('b:LVxSyUFxLMGy', max_steps = 200)
 
 class TestTables(Base, autotables=True):
     tables = dict(

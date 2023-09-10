@@ -31,7 +31,7 @@ from importlib import import_module
 from types import FunctionType
 from types import MappingProxyType as MapProxy
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, TypeVar
 
 from ..errors import Emsg, check
 from ..lang import Operator
@@ -101,6 +101,7 @@ __all__ = (
     'trm3')
 
 NOARG = object()
+_RT = TypeVar('_RT', bound='Rule')
 
 class Registry(Mapping[Any, 'LogicType'], abcs.Copyable):
     """Logic module registry."""
@@ -605,6 +606,15 @@ class LogicType(metaclass=LogicTypeMeta):
                 yield from group
 
         @classmethod
+        def get(cls, ref: str|type[_RT]|_RT) -> type[_RT]:
+            if isinstance(ref, Rule):
+                ref = type(ref)
+            for rulecls in cls.all():
+                if rulecls == ref or rulecls.name == ref:
+                    return rulecls
+            raise ValueError(ref)
+
+        @classmethod
         def _check_groups(cls):
             pass
 
@@ -630,3 +640,5 @@ def init():
     LogicType.Model = BaseModel
 
 del(init)
+
+from ..proof import Rule

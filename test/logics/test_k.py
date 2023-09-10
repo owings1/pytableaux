@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from unittest import skip
+
 from pytableaux.errors import *
 from pytableaux.lang import *
 from pytableaux.logics import k as K
@@ -8,7 +9,7 @@ from pytableaux.proof import *
 from pytableaux.proof import rules
 from pytableaux.proof.tableaux import *
 
-from ..utils import BaseCase
+from ..utils import BaseCase, maketest
 
 
 class Base(BaseCase):
@@ -20,34 +21,37 @@ class Base(BaseCase):
 class TestRules(Base, autorules=True):
 
     def test_Disjunction_node(self):
-        rule, tab = self.rule_eg('DisjunctionNegated', step = False)
+        tab = self.rule_test('DisjunctionNegated').tableau
         s = tab[0][0]['sentence']
         self.assertEqual(s.operator, Operator.Negation)
 
     def test_Possibility_node_world_0(self):
-        rule, tab = self.rule_eg('Possibility', step = False)
+        tab = self.rule_test('Possibility').tableau
         node = tab[0][0]
         self.assertEqual(node['world'], 0)
 
     def test_Existential_node_quantifier(self):
-        rule, tab = self.rule_eg('Existential', step = False)
+        tab = self.rule_test('Existential').tableau
         node = tab[0][0]
         self.assertEqual(node['sentence'].quantifier, Quantifier.Existential)
 
     def test_IdentityIndiscernability_not_target_after_apply(self):
-        rule, tab = self.rule_eg('IdentityIndiscernability')
+        test = self.rule_test('IdentityIndiscernability')
+        tab = test.tableau
         b = tab.branch()
         b += map(self.swnode, ['Imn', 'Fs'])
-        self.assertFalse(rule.target(b))
+        self.assertFalse(test.rule.target(b))
 
     def test_IdentityIndiscernability_target_predicate_sentence(self):
-        tab, b = self.tabb()
+        tab = self.tab()
+        b = tab.branch()
         rule = tab.rules.get(K.Rules.IdentityIndiscernability)
         b += map(self.swnode, ['Imn', 'Fm'])
         self.assertTrue(rule.target(b))
 
     def test_IdentityIndiscernability_not_target_self_identity(self):
-        tab, b = self.tabb()
+        tab = self.tab()
+        b = tab.branch()
         rule = tab.rules.get(K.Rules.IdentityIndiscernability)
         # need 2 nodes to trigger test, since the rule skips the node if
         # it is the self-same node it is comparing to
@@ -55,13 +59,15 @@ class TestRules(Base, autorules=True):
         self.assertFalse(rule.target(b))
 
     def test_IdentityIndiscernability_skip_self_identity_coverage(self):
-        tab, b = self.tabb()
+        tab = self.tab()
+        b = tab.branch()
         rule = tab.rules.get(K.Rules.IdentityIndiscernability)
         b += self.swnode('Imm')
         self.assertFalse(rule.target(b))
 
     def test_IdentityIndiscernability_not_target_duplicate(self):
-        tab, b = self.tabb()
+        tab = self.tab()
+        b = tab.branch()
         rule = tab.rules.get(K.Rules.IdentityIndiscernability)
         b += map(self.swnode, ['Imn', 'Fm', 'Fn'])
         self.assertFalse(rule.target(b))
@@ -71,14 +77,16 @@ class TestRules(Base, autorules=True):
             self.assertIs(rcls.modal, True)
 
     def test_Necessity_node_targets(self):
-        tab, b = self.tabb()
+        tab = self.tab()
+        b = tab.branch()
         b += self.swnode('La', 0), anode(0, 0)
         rule = tab.rules.get(K.Rules.Necessity)
         targets = list(rule._get_node_targets(b[0], b))
         self.assertEqual(len(targets), 1)
 
     def test_Necessity_node_targets_does_not_duplicate_node(self):
-        tab, b = self.tabb()
+        tab = self.tab()
+        b = tab.branch()
         b += map(self.swnode, ('a', 'La'))
         b += anode(0, 0)
         rule = tab.rules.get(K.Rules.Necessity)
@@ -89,7 +97,7 @@ class TestRules(Base, autorules=True):
 class TestArguments(Base, autoargs=True):
 
     def test_invalid_existential_inside_univ_max_steps(self):
-        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
+        self.invalid_tab('b:VxUFxSyFy', max_steps = 100)
 
 class TestTables(Base, autotables=True):
     tables = dict(
@@ -337,8 +345,7 @@ class TestFrame(Base):
         self.assertEqual(f2, f1)
 
     def test_difference_extension_keys_diff(self):
-        preds = Predicates({(0, 0, 1), (1, 0, 2)})
-        s1, s2 = self.pp('Fm', 'Gmn', preds)
+        s1, s2 = self.pp('Fm', 'Gmn')
         with self.m() as m:
             m.set_value(s1, 'T', world=0)
             m.set_value(s2, 'T', world=1)
@@ -437,7 +444,7 @@ class TestFrame(Base):
 class TestCounterModel(Base):
 
     def test_countermodel_to_false1(self):
-        arg = self.parg('b', 'a')
+        arg = Argument('b:a')
         s1, = arg.premises
         with self.m() as m:
             m.set_value(s1, 'F')
@@ -483,7 +490,7 @@ class TestBranchables(Base):
         for rulecls in cls.logic.Rules.all():
             exp = cls.branchings.get(rulecls.name, 0)
             name = f'test_{rulecls.name}_branching_is_{exp}'
-            yield name, cls.maketest('assertEqual', rulecls.branching, exp)
+            yield name, maketest('assertEqual', rulecls.branching, exp)
 
 class TestSystem(Base):
 

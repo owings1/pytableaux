@@ -24,16 +24,16 @@ class TestArguments(Base, autoargs=True):
         self.valid_tab('UUNNaaAaNa')
 
     def test_valid_a_dblarrow_b_thus_a_arrow_b_and_b_arrow_a(self):
-        self.valid_tab('KUabUba', 'Bab')
+        self.valid_tab('KUabUba:Bab')
 
     def test_valid_a_arrow_b_and_b_arrow_a_thus_a_dblarrow_b(self):
-        self.valid_tab('Bab', 'KUabUba')
+        self.valid_tab('Bab:KUabUba')
 
     def test_valid_not_a_arrow_b_or_not_b_arrow_a_thus_not_a_dblarrow_b(self):
-        self.valid_tab('NBab', 'ANUabNUba')
+        self.valid_tab('NBab:ANUabNUba')
 
     def test_valid_not_a_dblarrow_b_thus_not_a_arrow_b_or_not_b_arrow_a(self):
-        self.valid_tab('ANUabNUba', 'NBab')
+        self.valid_tab('ANUabNUba:NBab')
 
 class TestTables(Base, autotables=True):
     tables = dict(
