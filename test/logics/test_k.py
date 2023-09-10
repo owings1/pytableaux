@@ -1,3 +1,22 @@
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2023 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux.logics.k tests
 from __future__ import annotations
 
 from unittest import skip
@@ -10,13 +29,16 @@ from pytableaux.proof import rules
 from pytableaux.proof.tableaux import *
 
 from ..utils import BaseCase, maketest
-
+from .test_cpl import TestTables as BaseTables
 
 class Base(BaseCase):
     logic = K
     def m(self, *args, **kw) -> K.Model:
         return super().m(*args, **kw)
 
+
+p = Base.p
+pp = Base.pp
 
 class TestRules(Base, autorules=True):
 
@@ -99,25 +121,13 @@ class TestArguments(Base, autoargs=True):
     def test_invalid_existential_inside_univ_max_steps(self):
         self.invalid_tab('b:VxUFxSyFy', max_steps = 100)
 
-class TestTables(Base, autotables=True):
-    tables = dict(
-        Assertion = 'FT',
-        Negation = 'TF',
-        Conjunction = 'FFFT',
-        Disjunction = 'FTTT',
-        MaterialConditional = 'TTFT',
-        MaterialBiconditional = 'TFFT',
-        Conditional = 'TTFT',
-        Biconditional = 'TFFT')
-
+class TestTables(Base, BaseTables): pass
 
 class TestModelRefactorBugs(Base):
 
     def test_model_branch_proof_deny_antec(self):
         tab = self.tab('Denying the Antecedent')
-        m = self.m()
-        b = tab.open[0]
-        m.read_branch(b)
+        m = self.m(tab.open[0])
         s = Atomic(0, 0)
         self.assertEqual(m.value_of(s, world=0), 'F')
         self.assertEqual(m.value_of(~s, world=0), 'T')
@@ -154,10 +164,9 @@ class TestModelPredication(Base):
 
     def test_branch_no_proof_predicated(self):
         s1 = self.p('Imn')
-        m = self.m()
         b = Branch()
         b += swnode(s1, 0)
-        m.read_branch(b)
+        m = self.m(b)
         self.assertEqual(m.value_of(s1, world=0), 'T')
 
     def test_set_predicated_value1(self):
@@ -168,7 +177,7 @@ class TestModelPredication(Base):
         self.assertEqual(res, 'T')
 
     def test_model_identity_extension_non_empty_with_sentence(self):
-        s = self.p('Imn')
+        s = p('Imn')
         with self.m() as m:
             m.set_value(s, 'T', world=0)
         interp = m.frames[0].predicates[Predicate.Identity]
@@ -176,20 +185,19 @@ class TestModelPredication(Base):
         self.assertIn((Constant(0, 0), Constant(1, 0)), interp.pos)
 
     def test_set_predicated_raises_free_variables(self):
+        pred = Predicate(0, 0, 1)
+        s1, s2 = pred(Constant.first()), pred(Variable.first())
         m = self.m()
-        s1 = Predicated(Predicate(0,0,1), Constant(0,0))
         m.set_value(s1, 'F')
-        s2 = Predicated(Predicate(0,0,1), Variable(0,0))
         with self.assertRaises(ValueError):
             m.set_predicated_value(s2, 'F')
 
 class TestModelModalAccess(Base):
 
     def test_model_branch_no_proof_access(self):
-        m = self.m()
         b = Branch()
         b += anode(0, 1)
-        m.read_branch(b)
+        m = self.m(b)
         self.assertIn(1, m.R[0])
 
     def test_model_add_access_sees(self):
@@ -198,8 +206,7 @@ class TestModelModalAccess(Base):
         self.assertTrue(m.R.has((0,0)))
 
     def test_model_possibly_a_with_access_true(self):
-        s1 = Atomic(0, 0)
-        s2 = Operator.Possibility(s1)
+        s1, s2 = pp('a', 'La')
         with self.m() as m:        
             m.set_value(s1, 'T', world=1)
             m.R.add((0,1))
@@ -207,8 +214,7 @@ class TestModelModalAccess(Base):
         self.assertEqual(res, 'T')
 
     def test_model_possibly_a_no_access_false(self):
-        s1 = Atomic(0, 0)
-        s2 = Operator.Possibility(s1)
+        s1, s2 = self.pp('a', 'Ma')
         with self.m() as m:        
             m.set_value(s1, 'T', world=1)
         self.assertEqual(m.value_of(s2, world=0), 'F')
@@ -419,7 +425,7 @@ class TestFrame(Base):
     def test_equals_self(self):
         s = self.p('a')
         with self.m() as m:
-            m.set_literal_value(s, 'T', world=0)
+            m.set_value(s, 'T', world=0)
         f = m.frames[0]
         self.assertEqual(f, f)
 
@@ -483,7 +489,7 @@ class TestBranchables(Base):
         Disjunction=1,
         MaterialBiconditional=1,
         MaterialBiconditionalNegated=1,
-        MaterialConditional=1,)
+        MaterialConditional=1)
 
     @classmethod
     def gentest(cls):

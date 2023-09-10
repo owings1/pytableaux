@@ -1,9 +1,29 @@
-from unittest import skip
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2023 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux.logics.cfol tests
+from __future__ import annotations
 
 from pytableaux.errors import *
 from pytableaux.proof import *
 
 from ..utils import BaseCase
+from .test_cpl import TestTables as BaseTables
 
 
 class Base(BaseCase):
@@ -17,22 +37,10 @@ class TestRules(Base, autorules=True):
 
 class TestArguments(Base, autoargs=True):
 
-    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        self.valid_tab('b:VxKFxKaNa')
-
     def test_invalid_existential_inside_univ_max_steps(self):
         self.invalid_tab('b:VxUFxSyFy', max_steps = 100)
 
-class TestTables(Base, autotables=True):
-    tables = dict(
-        Assertion = 'FT',
-        Negation = 'TF',
-        Conjunction = 'FFFT',
-        Disjunction = 'FTTT',
-        MaterialConditional = 'TTFT',
-        MaterialBiconditional = 'TFFT',
-        Conditional = 'TTFT',
-        Biconditional = 'TFFT')
+class TestTables(Base, BaseTables): pass
 
 class TestModels(Base):
 

@@ -41,12 +41,7 @@ class TestRules(Base, autorules=True):
         b += (sdn(s,d) for s,d in nitems)
         return (tab, b)
 
-class TestArguments(Base, autoargs=True):
-
-    def test_arguments_various(self):
-        self.invalid_tab('ANAabNa:Na')
-        self.invalid_tab('AaTb:a')
-        self.invalid_tab('AUabNUab')
+class TestArguments(Base, autoargs=True): pass
 
 class TestTables(Base, autotables=True):
     tables = dict(
@@ -76,8 +71,7 @@ class TestModels(Base):
         # this was because sorting of constants had not been implemented.
         # it was only observed when we were sorting predicated sentences
         # that ended up in the opaques of a model.
-        arg = Argument('VxMFx:VxUFxSyMFy:Fm')
-        tab = self.tab(arg, is_build_models=True, max_steps=100)
+        tab = self.tab('VxMFx:VxUFxSyMFy:Fm', is_build_models=True, max_steps=100)
         self.assertTrue(tab.invalid)
         for b in tab.open:
             m = b.model

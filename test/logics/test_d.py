@@ -1,10 +1,31 @@
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2023 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux.logics.d tests
 from __future__ import annotations
+
 from collections import defaultdict
-from pytableaux.logics import d as D
 
 from pytableaux.lang import *
+from pytableaux.logics import d as D
 
 from ..utils import BaseCase
+from .test_cpl import TestTables as BaseTables
 
 
 class Base(BaseCase):
@@ -45,16 +66,7 @@ class TestArguments(Base, autoargs=True):
         # sanity check
         self.assertGreater(len(b.worlds), 2)
 
-class TestTables(Base, autotables=True):
-    tables = dict(
-        Assertion = 'FT',
-        Negation = 'TF',
-        Conjunction = 'FFFT',
-        Disjunction = 'FTTT',
-        MaterialConditional = 'TTFT',
-        MaterialBiconditional = 'TFFT',
-        Conditional = 'TTFT',
-        Biconditional = 'TFFT')
+class TestTables(Base, BaseTables): pass
 
 class TestModels(Base):
 
@@ -63,7 +75,6 @@ class TestModels(Base):
         self.assertIn((0,1), list(m.R.flat()))
 
     def test_serial_does_not_add_if_already_serial(self):
-        m = self.m()
-        m.R.add((0,0))
-        m.finish()
+        with self.m() as m:
+            m.R.add((0,0))
         self.assertEqual([(0,0)], list(m.R.flat()))

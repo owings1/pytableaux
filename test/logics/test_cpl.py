@@ -1,9 +1,30 @@
-from ..utils import BaseCase
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2023 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux.logics.cpl tests
+from __future__ import annotations
+
 from pytableaux.errors import *
 from pytableaux.lang import *
 from pytableaux.proof import *
 
-Fa = Predicated.first()
+from ..utils import BaseCase
+
 
 class Base(BaseCase):
     logic = 'CPL'
@@ -17,11 +38,11 @@ class TestRules(Base, autorules=True):
         rule = tab.rules.get('IdentityIndiscernability')
         self.assertFalse(rule.target(b))
 
-class TestArguments(Base, autoargs=True):
+    def test_optim_group_score_from_candidate_score(self):
+        tab = self.valid_tab('Na:Cab:Nb:Acd')
+        self.assertEqual(len(tab), 2)
 
-    def test_arguments(self):
-        self.invalid_tab('Nb:Bab')
-        self.invalid_tab('Nb:NBab')
+class TestArguments(Base, autoargs=True): pass
 
 class TestTables(Base, autotables=True):
     tables = dict(
@@ -32,30 +53,21 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTFT',
         MaterialBiconditional = 'TFFT',
         Conditional = 'TTFT',
-        Biconditional = 'TFFT',
-    )
-
-class TestRuleOptimizations(Base):
-
-    def test_group_score_from_candidate_score(self):
-        tab = self.valid_tab('Na:Cab:Nb:Acd')
-        self.assertEqual(len(tab), 2)
+        Biconditional = 'TFFT')
 
 class TestModels(Base):
 
     def test_branch_deny_antec(self):
         tab = self.tab('Denying the Antecedent')
+        m = self.m(tab.open[0])
         s = Atomic.first()
-        m = self.m()
-        m.read_branch(tab.open[0])
         self.assertEqual(m.value_of(s), 'F')
         self.assertEqual(m.value_of(~s), 'T')
 
     def test_branch_extract_disj_2(self):
         tab = self.tab('Extracting a Disjunct 2')
         s = Atomic.first()
-        m = self.m()
-        m.read_branch(tab.open[0])
+        m = self.m(tab.open[0])
         self.assertEqual(m.value_of(s), 'T')
         self.assertEqual(m.value_of(~s), 'F')
 
@@ -63,8 +75,7 @@ class TestModels(Base):
         b = Branch()
         s1 = self.p('Fm')
         b += snode(s1)
-        m = self.m()
-        m.read_branch(b)
+        m = self.m(b)
         self.assertEqual(m.value_of(s1), 'T')
         
     def test_set_literal_value_predicated1(self):
@@ -77,16 +88,14 @@ class TestModels(Base):
         s = self.p('La')
         b = self.tab().branch()
         b += snode(s)
-        m = self.m()
-        m.read_branch(b)
+        m = self.m(b)
         self.assertEqual(m.value_of(s), 'T')
 
     def test_opaque_neg_necessity_branch_make_model(self):
         s = self.p('La')
         b = self.tab().branch()
         b += snode(~s)
-        with self.m() as m:
-            m.read_branch(b)
+        m = self.m(b)
         self.assertEqual(m.value_of(s), 'F')
 
     def test_get_data_triv(self):
@@ -104,8 +113,7 @@ class TestModels(Base):
 
     def test_value_of_opaque_unassigned(self):
         s = self.p('La')
-        m = self.m()
-        m.finish()
+        m = self.m().finish()
         self.assertEqual(m.value_of(s), m.Meta.unassigned_value)
 
     def test_set_predicated_false_value_error_on_set_to_true(self):
