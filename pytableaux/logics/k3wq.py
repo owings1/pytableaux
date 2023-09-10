@@ -19,7 +19,7 @@ from __future__ import annotations
 from types import MappingProxyType as MapProxy
 
 from ..lang import Operator, Quantified, Quantifier
-from ..proof import adds, sdwnode, sdwgroup
+from ..proof import adds, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -34,6 +34,7 @@ class Meta(K3.Meta):
         'Three-valued logic with values T, F, and N, '
         'with alternate quantification')
     category_order = 8
+    extension_of = ('K3W') # proof?
 
 class Model(FDE.Model):
 
