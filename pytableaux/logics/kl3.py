@@ -17,27 +17,21 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import LogicType
-from . import fde as FDE
-from . import k3 as K3
 from . import kfde as KFDE
-from . import kk3 as KK3
 from . import l3 as L3
 
 
-class Meta(KK3.Meta):
+class Meta(L3.Meta, KFDE.Meta):
     name = 'KL3'
     title = 'L3 with K modal'
     description = 'Modal version of L3 based on K normal modal logic'
-    native_operators = KFDE.Meta.native_operators | L3.Meta.native_operators
     category_order = 16
     extension_of = ('L3')
 
-class Model(KFDE.Model, L3.Model): pass
-class System(FDE.System): pass
+class Model(L3.Model, KFDE.Model): pass
+class System(L3.System, KFDE.System): pass
 
-class Rules(LogicType.Rules):
-    closure = K3.Rules.closure
+class Rules(L3.Rules, KFDE.Rules):
     groups = (
         L3.Rules.groups[0] + group(
             # non-branching rules
@@ -48,9 +42,9 @@ class Rules(LogicType.Rules):
         # branching rules
         L3.Rules.groups[1],
         # modal operator rules
-        *KFDE.Rules.groups[2:4],
+        *KFDE.Rules.unmodal_groups,
         # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *L3.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

@@ -17,12 +17,11 @@
 from __future__ import annotations
 
 from ..lang import Operator as Operator
-from ..proof import adds, sdwgroup, rules
+from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
-from . import LogicType
 
 
 class Meta(K3.Meta):
@@ -30,26 +29,21 @@ class Meta(K3.Meta):
     title = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 9
-    native_operators = FDE.Meta.native_operators | [Operator.Assertion]
+    native_operators = K3.Meta.native_operators | [Operator.Assertion]
 
-class Model(FDE.Model):
+class Model(K3.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
-        def Assertion(self, v, /):
-            return self.values[v // 1]
-        
-        def Conditional(self, a, b, /):
+        def Assertion(self, a: Meta.values) -> Meta.values:
+            return self.values[a // 1]
+
+        def Conditional(self, a: Meta.values, b: Meta.values) -> Meta.values:
             return super().Conditional(*map(self.Assertion, (a, b)))
 
-class System(FDE.System): pass
+class System(K3.System): pass
 
-class Rules(LogicType.Rules):
-
-    closure = K3.Rules.closure
-
-    class AssertionNegatedDesignated(rules.FlippingOperandsRule): pass
-    class AssertionNegatedUndesignated(rules.FlippingOperandsRule): pass
+class Rules(K3W.Rules):
 
     class MaterialBiconditionalUndesignated(rules.OperatorNodeRule):
 
@@ -100,9 +94,6 @@ class Rules(LogicType.Rules):
                 (s.lhs, True, w),
                 (s.rhs, False, w)))
 
-    class ConditionalUndesignated(ConditionalNegatedDesignated): pass
-    class ConditionalNegatedUndesignated(ConditionalDesignated): pass
-
     class BiconditionalDesignated(rules.OperatorNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add
@@ -126,9 +117,6 @@ class Rules(LogicType.Rules):
                 (sn1, d, w),
                 (sn2, d, w)))
 
-    class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
-    class BiconditionalUndesignated(BiconditionalDesignated): pass
-
     class BiconditionalNegatedUndesignated(rules.OperatorNodeRule):
 
         def _get_sdw_targets(self, s, d, w, /):
@@ -136,6 +124,14 @@ class Rules(LogicType.Rules):
             yield adds(
                 sdwgroup((lhs, d, w), (rhs, d, w)),
                 sdwgroup((lhs, not d, w), (rhs, not d, w)))
+
+
+    class AssertionNegatedDesignated(rules.FlippingOperandsRule): pass
+    class AssertionNegatedUndesignated(rules.FlippingOperandsRule): pass
+    class ConditionalUndesignated(ConditionalNegatedDesignated): pass
+    class ConditionalNegatedUndesignated(ConditionalDesignated): pass
+    class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
+    class BiconditionalUndesignated(BiconditionalDesignated): pass
 
     groups = (
         group(

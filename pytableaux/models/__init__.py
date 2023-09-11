@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from functools import partial
 from itertools import product, starmap
 from types import MappingProxyType as MapProxy
-from typing import (Any, Generic, Iterable, Iterator, Literal, Mapping,
+from typing import (Any, Generic, Iterable, Iterator, Literal, Mapping, TYPE_CHECKING,
                     NamedTuple, Self, TypeVar)
 
 from ..errors import DenotationError, Emsg, ModelValueError, check
@@ -37,6 +37,8 @@ from ..proof import (AccessNode, Branch, DesignationNode, Node, SentenceNode,
                      WorldNode, sdwnode)
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, maxceil, minfloor
 
+if TYPE_CHECKING:
+    from typing import overload
 __all__ = (
     'BaseModel',
     'Mval',
@@ -203,11 +205,11 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             raise NotImplementedError from ValueError(s)
         return func(s, **kw)
 
-    def value_of_opaque(self, s: Sentence, /, *, world: int = 0):
+    def value_of_opaque(self, s: Sentence, /, *, world: int = 0) -> MvalT_co:
         self._check_finished()
         return self.frames[world].opaques.get(s, self.Meta.unassigned_value)
 
-    def value_of_atomic(self, s: Atomic, /, *, world: int = 0):
+    def value_of_atomic(self, s: Atomic, /, *, world: int = 0) -> MvalT_co:
         self._check_finished()
         return self.frames[world].atomics.get(s, self.Meta.unassigned_value)
 
@@ -531,29 +533,32 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                 raise NotImplementedError from ValueError(oper)
             return func(*args)
 
-        def Assertion(self, a, /):
+        def Assertion(self, a: MvalT) -> MvalT:
             return self.values[a]
 
-        def Negation(self, a, /):
+        def Negation(self, a: MvalT) -> MvalT:
             if a == 'F':
                 return self.values['T']
             if a == 'T':
                 return self.values['F']
             return self.values[a]
 
-        Conjunction = staticmethod(min)
-
-        Disjunction = staticmethod(max)
-
-        def MaterialConditional(self, a, b, /):
+        def MaterialConditional(self, a: MvalT, b: MvalT) -> MvalT:
             return self.Disjunction(self.Negation(a), b)
 
-        def MaterialBiconditional(self, a, b, /):
+        def Conjunction(self, a: MvalT, b: MvalT) -> MvalT:
+            return min(a, b)
+
+        def Disjunction(self, a: MvalT, b: MvalT) -> MvalT:
+            return max(a, b)
+
+        def Conditional(self, a: MvalT, b: MvalT) -> MvalT:
+            return self.MaterialConditional(a, b)
+
+        def MaterialBiconditional(self, a: MvalT, b: MvalT) -> MvalT:
             return self.Conjunction(*starmap(self.MaterialConditional, ((a, b), (b, a))))
 
-        Conditional = MaterialConditional
-
-        def Biconditional(self, a, b, /):
+        def Biconditional(self, a: MvalT, b: MvalT) -> MvalT:
             return self.Conjunction(*starmap(self.Conditional, ((a, b), (b, a))))
 
         def generalize(self, oper: Operator, it: Iterable[MvalT], /) -> MvalT:

@@ -16,23 +16,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations as annotations
 
+from typing import TYPE_CHECKING
+
 from ..lang import Atomic
 from ..models import ValueLP
 from ..proof import rules, sdwnode
+from . import LogicType
 from . import fde as FDE
 
 
 class Meta(FDE.Meta):
     name = 'LP'
     title = 'Logic of Paradox'
-    values = ValueLP
-    designated_values = frozenset({values.B, values.T})
-    unassigned_value = values.F
+    values: type[ValueLP] = ValueLP
+    unassigned_value = 'F'
     description = 'Three-valued logic (T, F, B)'
     category_order = 3
     extension_of = ('FDE')
 
-class Model(FDE.Model): pass
+class Model(LogicType.Model[Meta.values]):
+    class TruthFunction(LogicType.Model.TruthFunction[Meta.values]): pass
+
 class System(FDE.System): pass
 
 class Rules(FDE.Rules):

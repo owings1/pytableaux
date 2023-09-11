@@ -16,18 +16,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
-from . import t as T
-from . import kfde as KFDE
 from ..tools import group
+from . import kfde as KFDE
+from . import t as T
 
 
 class Meta(KFDE.Meta):
     name = 'TFDE'
     title = 'FDE with T modal'
     description = 'Modal version of FDE based on T normal modal logic'
-    category_order = T.Meta.category_order * 10 + 100 * KFDE.Meta.category_order
     category_order = 3
     extension_of = ('KFDE')
 
@@ -40,21 +37,22 @@ class Model(KFDE.Model):
         self._ensure_reflexive()
         return super().finish()
 
-class System(FDE.System): pass
+class System(KFDE.System): pass
 
-class Rules(LogicType.Rules):
-    closure = KFDE.Rules.closure
+class Rules(KFDE.Rules):
+
+    Reflexive = T.Rules.Reflexive
 
     groups = (
         # non-branching rules
         KFDE.Rules.groups[0],
         # modal operator rules
-        *KFDE.Rules.groups[2:4],
-        group(T.Rules.Reflexive),
+        *KFDE.Rules.unmodal_groups,
+        group(Reflexive),
         # branching rules
-        FDE.Rules.groups[1],
+        KFDE.Rules.groups[1],
         # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *KFDE.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

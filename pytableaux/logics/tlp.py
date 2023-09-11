@@ -16,24 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
 from . import lp as LP
-from . import klp as KLP
 from . import tfde as TFDE
 
 
-class Meta(KLP.Meta):
+class Meta(LP.Meta, TFDE.Meta):
     name = 'TLP'
     title = 'LP with T modal'
     description = 'Modal version of LP based on T normal modal logic'
     category_order = 13
     extension_of = ('KLP', 'TFDE')
 
-class Model(TFDE.Model): pass
-class System(FDE.System): pass
-
-class Rules(LogicType.Rules):
-    closure = LP.Rules.closure
-    groups = TFDE.Rules.groups
-
+class Model(LP.Model, TFDE.Model): pass
+class System(LP.System, TFDE.System): pass
+class Rules(LP.Rules, TFDE.Rules): pass

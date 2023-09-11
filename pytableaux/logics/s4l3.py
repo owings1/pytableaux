@@ -16,35 +16,32 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
-from . import k3 as K3
-from . import s4fde as S4FDE
+from ..tools import group
 from . import kl3 as KL3
 from . import l3 as L3
+from . import s4fde as S4FDE
 
 
-class Meta(KL3.Meta):
+class Meta(L3.Meta, S4FDE.Meta):
     name = 'S4L3'
     title = 'L3 with S4 modal'
     description = 'Modal version of L3 based on S4 normal modal logic'
     category_order = 19
     extension_of = ('TL3')
 
-class Model(S4FDE.Model, L3.Model): pass
-class System(FDE.System): pass
+class Model(L3.Model, S4FDE.Model): pass
+class System(L3.System, S4FDE.System): pass
 
-class Rules(LogicType.Rules):
-    closure = K3.Rules.closure
+class Rules(L3.Rules, S4FDE.Rules):
     groups = (
         # non-branching rules
         KL3.Rules.groups[0],
-        # modal rules
-        *S4FDE.Rules.groups[1:5],
+        group(S4FDE.Rules.Transitive),
+        *KL3.Rules.unmodal_groups,
+        group(S4FDE.Rules.Reflexive),
         # branching rules
         L3.Rules.groups[1],
-        # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *L3.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

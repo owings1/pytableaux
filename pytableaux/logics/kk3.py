@@ -16,26 +16,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
 from . import k3 as K3
 from . import kfde as KFDE
 
 
-class Meta(KFDE.Meta):
+class Meta(K3.Meta, KFDE.Meta):
     name = 'KK3'
     title = 'K3 with K modal'
     description = 'Modal version of K3 based on K normal modal logic'
-    values = K3.Meta.values
-    designated_values = K3.Meta.designated_values
-    unassigned_value = K3.Meta.unassigned_value
     category_order = 6
-    extension_of = ('KFDE', 'K3')
+    extension_of = ('K3', 'KFDE')
 
-class Model(KFDE.Model): pass
-class System(FDE.System): pass
-
-class Rules(LogicType.Rules):
-    closure = K3.Rules.closure
-    groups = KFDE.Rules.groups
+class Model(K3.Model, KFDE.Model): pass
+class System(K3.System, KFDE.System): pass
+class Rules(K3.Rules, KFDE.Rules): pass
 

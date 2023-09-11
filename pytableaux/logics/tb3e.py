@@ -16,35 +16,32 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
-from . import k3 as K3
-from . import tfde as TFDE
-from . import kb3e as KB3E
+from ..tools import group
 from . import b3e as B3E
+from . import kb3e as KB3E
+from . import tfde as TFDE
 
 
-class Meta(KB3E.Meta):
+class Meta(B3E.Meta, TFDE.Meta):
     name = 'TB3E'
     title = 'B3E with T modal'
     description = 'Modal version of B3E based on T normal modal logic'
     category_order = 33
     extension_of = ('KB3E')
 
-class Model(TFDE.Model, B3E.Model): pass
-class System(FDE.System): pass
+class Model(B3E.Model, TFDE.Model): pass
+class System(B3E.System, TFDE.System): pass
 
-class Rules(LogicType.Rules):
-    closure = K3.Rules.closure
+class Rules(B3E.Rules):
+    Reflexive = TFDE.Rules.Reflexive
     groups = (
         # non-branching rules
         KB3E.Rules.groups[0],
-        # modal rules
-        *TFDE.Rules.groups[1:4],
+        *KB3E.Rules.unmodal_groups,
+        group(Reflexive),
         # branching rules
         *B3E.Rules.groups[1:4],
-        # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *B3E.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

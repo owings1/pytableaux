@@ -16,35 +16,33 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
-from . import k3 as K3
-from . import tfde as TFDE
-from . import kk3w as KK3W
 from . import k3w as K3W
+from . import kk3w as KK3W
+from . import tfde as TFDE
 
 
-class Meta(KK3W.Meta):
+class Meta(K3W.Meta, TFDE.Meta):
     name = 'TK3W'
     title = 'K3W with T modal'
     description = 'Modal version of K3W based on T normal modal logic'
     category_order = 28
     extension_of = ('KK3W')
 
-class Model(TFDE.Model, K3W.Model): pass
-class System(FDE.System): pass
+class Model(K3W.Model, TFDE.Model): pass
+class System(K3W.System, TFDE.System): pass
 
-class Rules(LogicType.Rules):
-    closure = K3.Rules.closure
+class Rules(K3W.Rules):
     groups = (
         # non-branching rules
         KK3W.Rules.groups[0],
         # modal rules
-        *TFDE.Rules.groups[1:4],
+        *TFDE.Rules.unmodal_groups,
+        # reflexive rule
+        TFDE.Rules.groups[3],
         # branching rules
         *K3W.Rules.groups[1:3],
         # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *K3W.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

@@ -166,7 +166,7 @@ class Rules(LP.Rules):
             ConditionalDesignated,
             BiconditionalDesignated),
         # quantifier rules
-        *FDE.Rules.unquantifying_groups)
+        *LP.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

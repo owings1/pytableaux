@@ -32,16 +32,16 @@ class Meta(L3.Meta):
         'negation and conditional')
     category_order = 10
 
-class Model(FDE.Model):
+class Model(K3.Model):
 
     class TruthFunction(L3.Model.TruthFunction):
 
-        def Negation(self, a, /):
-            if a == self.values.N:
+        def Negation(self, a):
+            if a == 'N':
                 return self.values.F
             return super().Negation(a)
 
-class System(FDE.System): pass
+class System(K3.System): pass
 
 class Rules(LogicType.Rules):
 
@@ -97,6 +97,7 @@ class Rules(LogicType.Rules):
     class MaterialBiconditionalNegatedUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
 
 
+    unquantifying_groups = FDE.Rules.unquantifying_groups
     groups = (
         group(
             # non-branching rules
@@ -135,7 +136,7 @@ class Rules(LogicType.Rules):
             ConditionalNegatedUndesignated,
             ConditionalNegatedDesignated),
         # quantifier rules
-        *FDE.Rules.unquantifying_groups)
+        *unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

@@ -28,11 +28,10 @@ from . import LogicType
 class Meta(LogicType.Meta):
     name = 'FDE'
     title = 'First Degree Entailment'
-    modal = False
     quantified = True
-    values = ValueFDE
-    designated_values = frozenset({values.B, values.T})
-    unassigned_value = values.N
+    values: type[ValueFDE] = ValueFDE
+    designated_values = 'BT'
+    unassigned_value = 'N'
     description = 'Four-valued logic (True, False, Neither, Both)'
     category_order = 1
     native_operators = (
@@ -43,7 +42,6 @@ class Meta(LogicType.Meta):
         Operator.MaterialBiconditional)
 
 class Model(LogicType.Model[Meta.values]): pass
-
 class System(LogicType.System):
 
     @classmethod

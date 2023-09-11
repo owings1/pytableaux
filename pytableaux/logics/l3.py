@@ -38,7 +38,7 @@ class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
-        def Conditional(self, a, b, /):
+        def Conditional(self, a: Meta.values, b: Meta.values) -> Meta.values:
             if a == b:
                 return self.values.T
             return self.MaterialConditional(a, b)
@@ -181,7 +181,7 @@ class Rules(K3.Rules):
             BiconditionalNegatedUndesignated,
             BiconditionalUndesignated),
         # quantifier rules
-        *FDE.Rules.unquantifying_groups)
+        *K3.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

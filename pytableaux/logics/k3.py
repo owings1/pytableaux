@@ -16,9 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ..lang import Atomic
 from ..models import ValueK3
 from ..proof import rules, sdwnode
+from . import LogicType
 from . import fde as FDE
 
 
@@ -26,13 +29,15 @@ class Meta(FDE.Meta):
     name = 'K3'
     title = 'Strong Kleene Logic'
     values: type[ValueK3] = ValueK3
-    designated_values = frozenset({values.T})
-    unassigned_value = values.N
+    designated_values = 'T'
     description = 'Three-valued logic (T, F, N)'
     category_order = 2
     extension_of = ('FDE')
 
-class Model(FDE.Model): pass
+class Model(LogicType.Model[Meta.values]):
+    if TYPE_CHECKING:
+        class TruthFunction(LogicType.Model.TruthFunction[Meta.values]): pass
+
 class System(FDE.System): pass
 
 class Rules(FDE.Rules):
@@ -53,4 +58,3 @@ class Rules(FDE.Rules):
             yield sdwnode(~a, True, w)
 
     closure = (GlutClosure, *FDE.Rules.closure)
-

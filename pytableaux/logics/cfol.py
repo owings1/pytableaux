@@ -19,7 +19,6 @@ from __future__ import annotations
 from itertools import chain
 
 from ..tools import group
-from . import LogicType
 from . import cpl as CPL
 from . import fde as FDE
 
@@ -47,7 +46,7 @@ class Meta(CPL.Meta):
 class Model(CPL.Model): pass
 class System(CPL.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(CPL.Rules):
 
     class Existential(FDE.Rules.ExistentialDesignated): pass
     class Universal(FDE.Rules.UniversalDesignated): pass
@@ -63,7 +62,6 @@ class Rules(LogicType.Rules):
             UniversalNegated))
     unquantifying_rules = tuple(chain(*unquantifying_groups))
 
-    closure = CPL.Rules.closure
     groups = (
         *CPL.Rules.groups,
         *unquantifying_groups)

@@ -34,7 +34,6 @@ class Meta(FDE.Meta):
     extension_of = ('FDE')
 
 class Model(FDE.Model): pass
-
 class System(FDE.System): pass
 
 class Rules(FDE.Rules):
@@ -148,6 +147,14 @@ class Rules(FDE.Rules):
     class NecessityUndesignated(PossibilityDesignated): pass
     class NecessityNegatedUndesignated(PossibilityNegatedDesignated): pass
 
+    unmodal_groups = (
+        group(
+            NecessityDesignated,
+            PossibilityUndesignated),
+        group(
+            NecessityUndesignated,
+            PossibilityDesignated))
+
     groups = (
         FDE.Rules.groups[0] + group(
             # non-branching rules
@@ -158,12 +165,7 @@ class Rules(FDE.Rules):
         # branching rules
         FDE.Rules.groups[1],
         # modal operator rules
-        group(
-            NecessityDesignated,
-            PossibilityUndesignated),
-        group(
-            NecessityUndesignated,
-            PossibilityDesignated),
+        *unmodal_groups,
         # quantifier rules
         *FDE.Rules.unquantifying_groups)
 

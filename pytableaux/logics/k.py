@@ -19,7 +19,6 @@ from __future__ import annotations
 from itertools import chain
 
 from ..tools import group
-from . import LogicType
 from . import cfol as CFOL
 from . import kfde as KFDE
 
@@ -30,7 +29,6 @@ class Meta(CFOL.Meta):
     modal = True
     description = 'Base normal modal logic with no access relation restrictions'
     category_order = 1
-    native_operators = CFOL.Meta.native_operators | LogicType.Meta.modal_operators
     extension_of = (
         'CFOL',
         'KB3E',

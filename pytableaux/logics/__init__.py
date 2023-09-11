@@ -455,6 +455,15 @@ class LogicMetaMeta(type):
                 setattr(cls, name, cls.name)
         for name in ('native_operators', 'modal_operators', 'truth_functional_operators'):
             setattr(cls, name, qsetf(sorted(getattr(cls, name))))
+        native_operators = set(cls.native_operators)
+        for base in bases:
+            if isinstance(base, self):
+                native_operators.update(base.native_operators)
+        if cls.modal:
+            native_operators.update(cls.modal_operators)
+        cls.native_operators = qsetf(sorted(native_operators))
+        cls.designated_values = frozenset(map(cls.values, map(str, cls.designated_values)))
+        cls.unassigned_value = cls.values(str(cls.unassigned_value))
         extension_of = ns.get('extension_of', EMPTY_SET)
         if isinstance(extension_of, str):
             extension_of = extension_of,

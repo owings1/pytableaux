@@ -16,16 +16,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
-from . import tfde as TFDE
+from ..tools import group
 from . import kfde as KFDE
 from . import s4 as S4
-from . import t as T
-from ..tools import group
+from . import tfde as TFDE
 
 
-class Meta(KFDE.Meta):
+class Meta(TFDE.Meta):
     name = 'S4FDE'
     title = 'FDE with S4 modal'
     description = 'Modal version of FDE based on S4 normal modal logic'
@@ -41,20 +38,22 @@ class Model(TFDE.Model):
         self._ensure_reflexive_transitive()
         return super().finish()
 
-class System(FDE.System): pass
+class System(TFDE.System): pass
 
-class Rules(LogicType.Rules):
-    closure = KFDE.Rules.closure
+class Rules(TFDE.Rules):
+
+    Transitive = S4.Rules.Transitive
 
     groups = (
         # non-branching rules
         KFDE.Rules.groups[0],
-        group(S4.Rules.Transitive),
+        group(Transitive),
         # modal operator rules
-        *KFDE.Rules.groups[2:4],
-        group(T.Rules.Reflexive),
-        # branching rules & quantifier rules
-        *FDE.Rules.groups[-3:])
+        *KFDE.Rules.unmodal_groups,
+        group(TFDE.Rules.Reflexive),
+        # branching rules
+        KFDE.Rules.groups[1],
+        *KFDE.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

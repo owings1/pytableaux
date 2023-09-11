@@ -16,7 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator, Quantified
+from itertools import chain
+
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import LogicType
@@ -26,21 +27,19 @@ from . import k3 as K3
 from . import l3 as L3
 
 
-class Meta(K3.Meta):
+class Meta(L3.Meta, B3E.Meta):
     name = 'GO'
     title = 'Gappy Object Logic'
     description = (
         'Three-valued logic (True, False, Neither) with '
         'classical-like binary operators')
     category_order = 13
-    native_operators = FDE.Meta.native_operators | [
-        Operator.Assertion,
-        Operator.Conditional,
-        Operator.Biconditional]
 
-class Model(FDE.Model):
+class Model(K3.Model):
 
-    class TruthFunction(B3E.Model.TruthFunction):
+    class TruthFunction(K3.Model.TruthFunction):
+
+        Assertion = B3E.Model.TruthFunction.Assertion
 
         def Disjunction(self, *args):
             return max(map(self.Assertion, args))
@@ -48,15 +47,15 @@ class Model(FDE.Model):
         def Conjunction(self, *args):
             return min(map(self.Assertion, args))
 
-        def Conditional(self, a, b, /):
+        def Conditional(self, a, b):
             if a == b:
                 return self.values.T
             return self.MaterialConditional(a, b)
 
-    def _unquantify_values(self, s: Quantified, /, **kw):
+    def _unquantify_values(self, s, /, **kw):
         return map(self.truth_function.Assertion, super()._unquantify_values(s, **kw))
 
-class System(FDE.System): pass
+class System(K3.System): pass
 
 class Rules(LogicType.Rules):
 
@@ -195,11 +194,17 @@ class Rules(LogicType.Rules):
     class ExistentialNegatedUndesignated(rules.FlippingRule): pass
     class UniversalNegatedUndesignated(rules.FlippingRule): pass
 
-    unquantifying_rules = (
-        FDE.Rules.ExistentialDesignated, # skinny
-        UniversalNegatedDesignated, # skinny + branching
-        FDE.Rules.UniversalDesignated) # fat
-    unquantifying_groups = tuple(map(group, unquantifying_rules))
+    unquantifying_groups = (
+        group(
+            FDE.Rules.UniversalDesignated, #fat
+        ),
+        group(
+            FDE.Rules.ExistentialDesignated, # skinny
+        ),
+        group(
+            UniversalNegatedDesignated, # skinny + branching
+        ))
+    unquantifying_rules = tuple(chain(*unquantifying_groups))
 
     groups = (
         group(

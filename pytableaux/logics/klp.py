@@ -16,26 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
 from . import kfde as KFDE
 from . import lp as LP
 
 
-class Meta(KFDE.Meta):
+class Meta(LP.Meta, KFDE.Meta):
     name = 'KLP'
     title = 'LP with K modal'
     description = 'Modal version of LP based on K normal modal logic'
-    values = LP.Meta.values
-    designated_values = LP.Meta.designated_values
-    unassigned_value = LP.Meta.unassigned_value
     category_order = 11
     extension_of = ('KFDE', 'LP')
 
-class Model(KFDE.Model): pass
-class System(FDE.System): pass
-
-class Rules(LogicType.Rules):
-    closure = LP.Rules.closure
-    groups = KFDE.Rules.groups
-
+class Model(LP.Model, KFDE.Model): pass
+class System(LP.System, KFDE.System): pass
+class Rules(LP.Rules, KFDE.Rules): pass

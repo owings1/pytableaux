@@ -23,9 +23,10 @@ from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3w as K3W
+from . import k3 as K3
 
 
-class Meta(K3W.Meta):
+class Meta(K3.Meta):
     name = 'K3WQ'
     title = 'Weak Kleene alt-Q Logic'
     description = (
@@ -34,7 +35,7 @@ class Meta(K3W.Meta):
     category_order = 8
     extension_of = ('K3W') # proof?
 
-class Model(K3W.Model):
+class Model(K3.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
@@ -67,7 +68,7 @@ class Model(K3W.Model):
             raise NotImplementedError from ValueError(s.quantifier)
         return self.truth_function.generalize(oper, self._unquantify_values(s, world=world))
 
-class System(K3W.System): pass
+class System(K3.System): pass
 
 class Rules(K3W.Rules):
 

@@ -31,8 +31,8 @@ class Meta(LogicType.Meta):
     name = 'CPL'
     title = 'Classical Predicate Logic'
     values: type[ValueCPL] = ValueCPL
-    designated_values = frozenset({values.T})
-    unassigned_value = values.F
+    designated_values = 'T'
+    unassigned_value = 'F'
     description = 'Standard bivalent logic with predication, without quantification'
     category_order = 1
     native_operators = (
@@ -43,6 +43,8 @@ class Meta(LogicType.Meta):
         Operator.MaterialBiconditional)
 
 class Model(LogicType.Model[Meta.values]):
+
+    class TruthFunction(LogicType.Model.TruthFunction[Meta.values]): pass
 
     def finish(self):
         self._check_not_finished()
@@ -256,6 +258,6 @@ class Rules(LogicType.Rules):
 
     @classmethod
     def _check_groups(cls):
-        for branching, group in enumerate(cls.groups):
+        for branching, group in zip(range(2), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

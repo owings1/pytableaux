@@ -21,6 +21,7 @@ from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
 
+
 class Meta(K3.Meta):
     name = 'K3W'
     title = 'Weak Kleene Logic'
@@ -31,13 +32,13 @@ class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
-        def Conjunction(self, a, b, /):
-            if self.values.N in (a, b):
+        def Conjunction(self, a: Meta.values, b: Meta.values) -> Meta.values:
+            if a == 'N' or b == 'N':
                 return self.values.N
             return super().Conjunction(a, b)
 
-        def Disjunction(self, a, b, /):
-            if self.values.N in (a, b):
+        def Disjunction(self, a: Meta.values, b: Meta.values) -> Meta.values:
+            if a == 'N' or b == 'N':
                 return self.values.N
             return super().Disjunction(a, b)
 
