@@ -16,19 +16,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from abc import abstractmethod
-from typing import TYPE_CHECKING, Iterable
-
-from ..lang import Operated, Operator
-from ..proof import Branch, Node, Target, adds, anode, rules, sdwgroup, sdwnode
-from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
-                             NodeCount, NodesWorlds, QuitFlag, WorldIndex)
-from ..tools import EMPTY_SET, group, maxceil, minfloor
+from ..proof import Branch, Node, adds, anode, rules, sdwgroup, sdwnode
+from ..proof.helpers import (AdzHelper, AplSentCount, MaxWorlds, NodeCount,
+                             NodesWorlds, WorldIndex)
+from ..tools import EMPTY_SET, group
 from . import LogicType
 from . import fde as FDE
 
-if TYPE_CHECKING:
-    from typing import overload
 
 class Meta(FDE.Meta):
     name = 'KFDE'
@@ -39,67 +33,13 @@ class Meta(FDE.Meta):
     category_order = 1
     extension_of = ('FDE')
 
-class Model(FDE.Model):
+class Model(FDE.Model): pass
 
-    def value_of_operated(self, s: Operated, /, *, world: int = 0):
-        self._check_finished()
-        oper = s.operator
-        if self.Meta.modal and oper in self.Meta.modal_operators:
-            it = self._unmodal_values(s, world)
-            if oper is Operator.Possibility:
-                return maxceil(self.maxval, it, self.minval)
-            if oper is Operator.Necessity:
-                return minfloor(self.minval, it, self.maxval)
-            raise NotImplementedError from ValueError(oper)
-        # Must call explicit parent function so K.Model can reuse this
-        # method by direct reference without inheritance
-        # return super().value_of_operated(s, world=world)
-        return LogicType.Model.value_of_operated(self, s, world=world)
+class System(FDE.System): pass
 
-class System(FDE.System):
+class Rules(FDE.Rules):
 
-    class ModalOperatorRule(rules.OperatorNodeRule):
-
-        Helpers = (QuitFlag, MaxWorlds)
-
-        @FilterHelper.node_targets
-        def _get_targets(self, node: Node, branch: Branch, /):
-            """Wrapped by ``@FilterHelper.node_targets``. Checks MaxWorlds,
-            and delegates to abstract method ``_get_node_targets()``.
-            """
-            # Check for max worlds reached
-            res = self._check_maxworlds(node, branch)
-            if res:
-                if res is not True:
-                    yield res
-                return
-            yield from self._get_node_targets(node, branch)
-
-        @abstractmethod
-        def _get_node_targets(self, node: Node, branch: Branch, /) -> Iterable[Target]:
-            yield from EMPTY_SET
-
-        if TYPE_CHECKING:
-            @overload
-            def new_designation(self, d: bool) -> bool: ...
-
-        new_designation = staticmethod(bool)
-
-        def _check_maxworlds(self, node: Node, branch: Branch, /) -> bool|dict:
-            # Check for max worlds reached
-            if self[MaxWorlds].is_exceeded(branch):
-                self[FilterHelper].release(node, branch)
-                if not self[QuitFlag].get(branch):
-                    fnode = self[MaxWorlds].quit_flag(branch)
-                    return adds(group(fnode), flag=fnode[Node.Key.flag])
-                return True
-            return False
-
-class Rules(LogicType.Rules):
-
-    closure = FDE.Rules.closure
-
-    class PossibilityDesignated(System.ModalOperatorRule):
+    class PossibilityDesignated(rules.ModalOperatorRule):
 
         Helpers = (AplSentCount)
 
@@ -149,7 +89,7 @@ class Rules(LogicType.Rules):
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(sdwgroup((self.operator.other(~s.lhs), d, w)))
 
-    class NecessityDesignated(System.ModalOperatorRule):
+    class NecessityDesignated(rules.ModalOperatorRule):
 
         ticking = False
         Helpers = (NodeCount, NodesWorlds, WorldIndex)

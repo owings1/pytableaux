@@ -41,9 +41,7 @@ class Meta(CFOL.Meta):
         'KLP',
         'KRM3')
 
-class Model(CFOL.Model):
-    value_of_operated = KFDE.Model.value_of_operated
-
+class Model(CFOL.Model): pass
 class System(CFOL.System): pass
 
 class Rules(CFOL.Rules):

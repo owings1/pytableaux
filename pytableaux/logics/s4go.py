@@ -40,8 +40,8 @@ class Meta(GO.Meta):
 
 class Model(S4FDE.Model, GO.Model):
 
-    def _unmodal_values(self, s, w1, /):
-        return map(self.truth_function.Assertion, super()._unmodal_values(s, w1))
+    def _unmodal_values(self, s, /, **kw):
+        return map(self.truth_function.Assertion, super()._unmodal_values(s, **kw))
 
 class System(FDE.System): pass
 

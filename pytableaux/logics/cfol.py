@@ -44,9 +44,7 @@ class Meta(CPL.Meta):
         'NH',
         'RM3')
 
-class Model(CPL.Model):
-    value_of_quantified = FDE.Model.value_of_quantified
-
+class Model(CPL.Model): pass
 class System(CPL.System): pass
 
 class Rules(LogicType.Rules):

@@ -21,16 +21,12 @@ from __future__ import annotations
 
 from pytableaux.errors import *
 from pytableaux.lang import *
-from pytableaux.logics import fde as FDE
 from pytableaux.proof import *
-from pytableaux.proof import rules
 
 from ..utils import BaseCase
 
-A = Atomic.first()
-
 class Base(BaseCase):
-    logic = FDE
+    logic = 'FDE'
 
 class TestRules(Base, autorules=True): pass
 
@@ -45,8 +41,7 @@ class TestTables(Base, autotables=True):
         MaterialConditional = 'TTTTNNBTBBBTFNBT',
         MaterialBiconditional = 'TNBFNNBNBBBBFNBT',
         Conditional = 'TTTTNNBTBBBTFNBT',
-        Biconditional = 'TNBFNNBNBBBBFNBT',
-    )
+        Biconditional = 'TNBFNNBNBBBBFNBT')
 
 class TestOperators(Base):
 
@@ -229,8 +224,6 @@ class TestModels(Base):
         s = self.p('Aab')
         with self.assertRaises(NotImplementedError):
             self.m().set_literal_value(s, 'T')
-        with self.assertRaises(TypeError):
-            self.m().finish().value_of_quantified(s)
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
         tab = self.tab('a:NLa:b')
@@ -277,14 +270,6 @@ class TestModels(Base):
         s2 = Predicated(Predicate(0,0,1), Variable(0,0))
         with self.assertRaises(ValueError):
             m.set_predicated_value(s2, 'N')
-
-    def test_unquantify_value_map_raises_type_error_coverage(self):
-        m = self.m()
-        # check positive case
-        for _ in m._unquantify_values(Quantified.first()): _
-        s2 = Atomic.first()
-        with self.assertRaises(TypeError):
-            m._unquantify_values(s2)
 
 class TestBranchables(Base):
     exp = dict(

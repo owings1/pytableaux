@@ -20,7 +20,7 @@ from collections import deque
 
 from ..lang import Atomic, Constant, Operator, Predicate, Predicated
 from ..models import ValueCPL
-from ..proof import SentenceNode, Target, WorldNode, adds, rules, swnode
+from ..proof import Target, adds, rules, swnode
 from ..proof.helpers import FilterHelper, PredNodes
 from ..tools import group, substitute
 from . import LogicType
@@ -43,23 +43,6 @@ class Meta(LogicType.Meta):
         Operator.MaterialBiconditional)
 
 class Model(LogicType.Model[Meta.values]):
-
-    TruthFunction = FDE.Model.TruthFunction
-    value_of_quantified = None
-
-    def _read_node(self, node, branch, /):
-        super()._read_node(node, branch)
-        if not isinstance(node, SentenceNode):
-            return
-        s = node['sentence']
-        if isinstance(node, WorldNode):
-            w = node['world']
-        else:
-            w = 0
-        if self.is_sentence_opaque(s):
-            self.set_opaque_value(s, self.values.T, world = w)
-        elif self.is_sentence_literal(s):
-            self.set_literal_value(s, self.values.T, world = w)
 
     def finish(self):
         self._check_not_finished()

@@ -21,7 +21,6 @@ pytableaux.models
 """
 from __future__ import annotations
 
-from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import partial
@@ -32,9 +31,10 @@ from typing import (Any, Generic, Iterable, Iterator, Literal, Mapping,
 
 from ..errors import DenotationError, Emsg, ModelValueError, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
-                    Predicated, Quantified, Sentence)
+                    Predicated, Quantified, Quantifier, Sentence)
 from ..logics import LogicType
-from ..proof import AccessNode, Branch, Node, SentenceNode, WorldNode
+from ..proof import (AccessNode, Branch, DesignationNode, Node, SentenceNode,
+                     WorldNode, sdwnode)
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, maxceil, minfloor
 
 __all__ = (
@@ -219,32 +219,42 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                 raise DenotationError(f'Parameter {param} is not in the constants')
         return self.frames[world].predicates[s.predicate].get_value(params, self.values)
 
-    @abstractmethod
-    def value_of_quantified(self, s: Quantified, /, *, world: int = 0) -> MvalT_co:
+    def value_of_quantified(self, s: Quantified, /, **kw) -> MvalT_co:
+        if not self.Meta.quantified:
+            raise NotImplementedError(f'Model does not support quantification')
         self._check_finished()
+        it = self._unquantify_values(s, **kw)
+        if s.quantifier is Quantifier.Existential:
+            return maxceil(self.maxval, it, self.minval)
+        if s.quantifier is Quantifier.Universal:
+            return minfloor(self.minval, it, self.maxval)
+        raise NotImplementedError from ValueError(s.quantifier)
 
-    def _unquantify_values(self, s: Quantified, /, **kw):
-        try:
-            return map(
-                lambda s: self.value_of(s, **kw),
-                map(s.unquantify, self.constants))
-        except AttributeError:
-            check.inst(s, Quantified)
-            raise # pragma: no cover
-
-    def _unmodal_values(self, s: Operated, w1: int, /) -> Iterator[MvalT_co]:
-        lhs, = s
+    def _unquantify_values(self, s: Quantified, /, **kw) -> Iterator[MvalT_co]:
         value_of = self.value_of
-        for w2 in self.R[w1]:
-            yield value_of(lhs, world=w2)
+        for c in self.constants:
+            yield value_of(c >> s, **kw)
+
+    def _unmodal_values(self, s: Operated, /, world: int = 0) -> Iterator[MvalT_co]:
+        value_of = self.value_of
+        for w2 in self.R[world]:
+            yield value_of(s.lhs, world=w2)
 
     def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
         self._check_finished()
-        if s.operator in self.Meta.truth_functional_operators:
-            return self.truth_function(s.operator,
-                *map(lambda s: self.value_of(s, **kw), s))
-        check.inst(s, Operated)
-        raise NotImplementedError from ValueError(s.operator)
+        oper = s.operator
+        if oper in self.Meta.truth_functional_operators:
+            it = (self.value_of(s, **kw) for s in s)
+            return self.truth_function(oper, *it)
+        if oper in self.Meta.modal_operators:
+            if not self.Meta.modal:
+                raise NotImplementedError(f'Model does not support modal operators')
+            it = self._unmodal_values(s, **kw)
+            if oper is Operator.Possibility:
+                return maxceil(self.maxval, it, self.minval)
+            if oper is Operator.Necessity:
+                return minfloor(self.minval, it, self.maxval)
+        raise NotImplementedError from ValueError(oper)
 
     def set_value(self, s: Sentence, value: MvalT_co, /, **kw):
         self._check_not_finished()
@@ -316,7 +326,6 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         self.finish()
         return self
 
-    @abstractmethod
     def _read_node(self, node: Node, branch: Branch, /) -> Self:
         self._check_not_finished()
         if isinstance(node, AccessNode):
@@ -331,6 +340,36 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         else:
             w = 0
         self.R[w]
+        if not isinstance(node, SentenceNode):
+            return
+        s = node['sentence']
+        is_literal = self.is_sentence_literal(s)
+        is_opaque = self.is_sentence_opaque(s)
+        if not is_literal and not is_opaque:
+            return
+        if isinstance(node, DesignationNode):
+            d = node['designated']
+            s_negative = -s
+            has_negative = branch.has(sdwnode(s_negative, d, node.get('world')))
+            is_negated = type(s) is Operated and s.operator is Operator.Negation
+            if is_negated:
+                s = s_negative
+                if d:
+                    value = 'FB'[has_negative]
+                else:
+                    value = 'TN'[has_negative]
+            else:
+                if d:
+                    value = 'TB'[has_negative]
+                else:
+                    value = 'FN'[has_negative]
+        else:
+            value = 'T'
+        value = self.values[value]
+        if is_opaque:
+            self.set_opaque_value(s, value, world=w)
+        else:
+            self.set_literal_value(s, value, world=w)
 
     def finish(self) -> Self:
         self._check_not_finished()
@@ -492,37 +531,30 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                 raise NotImplementedError from ValueError(oper)
             return func(*args)
 
-        @abstractmethod
-        def Assertion(self, a: MvalT, /) -> MvalT:
-            raise NotImplementedError
+        def Assertion(self, a, /):
+            return self.values[a]
 
-        @abstractmethod
-        def Negation(self, a: MvalT, /) -> MvalT:
-            raise NotImplementedError
+        def Negation(self, a, /):
+            if a == 'F':
+                return self.values['T']
+            if a == 'T':
+                return self.values['F']
+            return self.values[a]
 
-        @abstractmethod
-        def Conjunction(self, a: MvalT, b: MvalT, /) -> MvalT:
-            raise NotImplementedError
+        Conjunction = staticmethod(min)
 
-        @abstractmethod
-        def Disjunction(self, a: MvalT, b: MvalT, /) -> MvalT:
-            raise NotImplementedError
+        Disjunction = staticmethod(max)
 
-        @abstractmethod
-        def Conditional(self, a: MvalT, b: MvalT, /) -> MvalT:
-            raise NotImplementedError
+        def MaterialConditional(self, a, b, /):
+            return self.Disjunction(self.Negation(a), b)
 
-        @abstractmethod
-        def Biconditional(self, a: MvalT, b: MvalT, /) -> MvalT:
-            raise NotImplementedError
+        def MaterialBiconditional(self, a, b, /):
+            return self.Conjunction(*starmap(self.MaterialConditional, ((a, b), (b, a))))
 
-        @abstractmethod
-        def MaterialConditional(self, a: MvalT, b: MvalT, /) -> MvalT:
-            raise NotImplementedError
+        Conditional = MaterialConditional
 
-        @abstractmethod
-        def MaterialBiconditional(self, a: MvalT, b: MvalT, /) -> MvalT:
-            raise NotImplementedError
+        def Biconditional(self, a, b, /):
+            return self.Conjunction(*starmap(self.Conditional, ((a, b), (b, a))))
 
         def generalize(self, oper: Operator, it: Iterable[MvalT], /) -> MvalT:
             mode = self.generalizing_operators[oper]

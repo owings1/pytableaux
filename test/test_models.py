@@ -11,11 +11,6 @@ class TestModel(Base):
 
     logic = 'CPL'
 
-    def test_abstract(self):
-        with self.assertRaises(TypeError):
-            BaseModel()
-
-
 
 class TestAccessGraph(Base):
 

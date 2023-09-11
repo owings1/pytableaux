@@ -23,14 +23,17 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections import deque
-from typing import Generic, Iterable, TypeVar, final
+from typing import TYPE_CHECKING, Generic, Iterable, TypeVar, final
 
 from ..lang import (Constant, Operated, Operator, Predicate, Predicated,
                     Quantified, Quantifier, Sentence)
-from ..tools import EMPTY_SET, group, abcs, wraps
+from ..tools import EMPTY_SET, abcs, group, wraps
 from . import adds, filters, sdwgroup
 from .common import Branch, Node, Target
 from .tableaux import Rule
+
+if TYPE_CHECKING:
+    from typing import overload
 
 __all__ = (
     'BaseClosureRule',
@@ -45,7 +48,6 @@ __all__ = (
     'Rule')
 
 _ST = TypeVar('_ST', bound=Sentence)
-_T = TypeVar('_T')
 
 FIRST_CONST_SET = frozenset({Constant.first()})
 
@@ -84,7 +86,7 @@ class ClosingRule(Rule):
         return False
 
 from .helpers import (AdzHelper, BranchTarget, FilterHelper, MaxConsts,
-                      NodeConsts, NodeCount, PredNodes, QuitFlag)
+                      MaxWorlds, NodeConsts, NodeCount, PredNodes, QuitFlag)
 
 
 class BaseClosureRule(ClosingRule):
@@ -369,3 +371,40 @@ class MaterialConditionalReducingRule(OperatorNodeRule, intermediate=True):
         if self.negated:
             sn = ~sn
         yield adds(sdwgroup((sn, d, w)))
+
+class ModalOperatorRule(OperatorNodeRule, intermediate=True):
+
+    Helpers = (QuitFlag, MaxWorlds)
+
+    @FilterHelper.node_targets
+    def _get_targets(self, node: Node, branch: Branch, /):
+        """Wrapped by ``@FilterHelper.node_targets``. Checks MaxWorlds,
+        and delegates to abstract method ``_get_node_targets()``.
+        """
+        # Check for max worlds reached
+        res = self._check_maxworlds(node, branch)
+        if res:
+            if res is not True:
+                yield res
+            return
+        yield from self._get_node_targets(node, branch)
+
+    @abstractmethod
+    def _get_node_targets(self, node: Node, branch: Branch, /) -> Iterable[Target]:
+        yield from EMPTY_SET
+
+    if TYPE_CHECKING:
+        @overload
+        def new_designation(self, d: bool) -> bool: ...
+
+    new_designation = staticmethod(bool)
+
+    def _check_maxworlds(self, node: Node, branch: Branch, /) -> bool|dict:
+        # Check for max worlds reached
+        if self[MaxWorlds].is_exceeded(branch):
+            self[FilterHelper].release(node, branch)
+            if not self[QuitFlag].get(branch):
+                fnode = self[MaxWorlds].quit_flag(branch)
+                return adds(group(fnode), flag=fnode[Node.Key.flag])
+            return True
+        return False

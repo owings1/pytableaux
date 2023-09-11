@@ -772,6 +772,8 @@ class MaxWorlds(Rule.HelperDict[Branch, int]):
         try:
             return cls.Config(rulecls.Meta.modal_operators)
         except AttributeError as err:
+            if abcs.isabstract(rulecls):
+                return
             raise Emsg.MissingAttribute(str(err))
 
     class Config(NamedTuple):
