@@ -160,10 +160,3 @@ class Rules(K3W.Rules):
         *nonbranching_groups,
         *branching_groups,
         *K3.Rules.unquantifying_groups)
-
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip(range(4), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'

@@ -92,6 +92,20 @@ class BaseCase(TestCase):
         self.assertEqual(res, exp)
         return table
 
+    def nonbranching_groups_test(self):
+        for group in self.logic.Rules.nonbranching_groups:
+            for cls in group:
+                self.assertEqual(cls.branching, 0)
+
+    def branching_groups_test(self):
+        b = 1
+        for group in filter(len, self.logic.Rules.branching_groups):
+            cls = group[0]
+            self.assertGreaterEqual(cls.branching, b)
+            b = cls.branching
+            for cls in group:
+                self.assertEqual(cls.branching, b)
+
     def m(self, b: Branch = None):
         m = self.Model()
         if b:
@@ -133,10 +147,10 @@ class BaseCase(TestCase):
             for rulecls in cls.logic.Rules.all():
                 name = f'test_rule_{rulecls.name}_auto'
                 setattr(cls, name, maketest('rule_test', rulecls))
-            name = 'test_rules_check_groups_auto'
-            def test(self: BaseCase):
-                self.logic.Rules._check_groups()
-            setattr(cls, name, test)
+            name = f'test_branching_groups_{inflect.slug(cls.logic.Meta.name)}_auto'
+            setattr(cls, name, maketest('branching_groups_test'))
+            name = f'test_nonbranching_groups_{inflect.slug(cls.logic.Meta.name)}_auto'
+            setattr(cls, name, maketest('nonbranching_groups_test'))
         if autoargs:
             kws = getattr(cls, 'autoargs_kws', EMPTY_MAP)
             it = zip(knownargs.get_known(cls.logic), ('invalid', 'valid'), strict=True)

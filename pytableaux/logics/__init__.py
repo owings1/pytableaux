@@ -608,6 +608,9 @@ class LogicType(metaclass=LogicTypeMeta):
         closure: tuple[type[ClosingRule], ...]
         groups: tuple[tuple[type[Rule], ...], ...]
 
+        nonbranching_groups: tuple[tuple[type[Rule], ...], ...]
+        branching_groups: tuple[tuple[type[Rule], ...], ...]
+
         @classmethod
         def all(cls):
             yield from cls.closure
@@ -622,10 +625,6 @@ class LogicType(metaclass=LogicTypeMeta):
                 if rulecls == ref or rulecls.name == ref:
                     return rulecls
             raise ValueError(ref)
-
-        @classmethod
-        def _check_groups(cls):
-            pass
 
 LogicTypeMeta.__new__ = None
 
