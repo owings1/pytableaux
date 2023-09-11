@@ -219,3 +219,11 @@ class TestQset(Base):
             del s['']
         with self.assertRaises(TypeError):
             s[''] = ''
+
+    def test_isub_calls_cast_hook(self):
+        class impl(qset):
+            _hook_cast = staticmethod(int)
+        v = impl('12')
+        self.assertEqual(list(v), [1,2])
+        v -= '1'
+        self.assertNotIn(1, v)

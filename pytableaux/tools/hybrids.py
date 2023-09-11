@@ -235,6 +235,9 @@ class qset(MutableSequenceSet[_T], abcs.Copyable):
     __reversed__ = qsetf.__reversed__
     __repr__     = qsetf.__repr__
 
+    def discard(self, value):
+        return super().discard(self._hook_cast(value))
+
     def reverse(self):
         'Reverse in place.'
         self._seq_.reverse()
