@@ -16,8 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from pytableaux.lang import Quantified
-
 from ..lang import Operator
 from ..proof import adds, rules, sdnode, sdwgroup
 from ..tools import group
@@ -47,7 +45,7 @@ class Model(K3.Model):
                 return self.values.F
             return self.values.T
 
-    def value_of_quantified(self, s: Quantified, /, **kw):
+    def value_of_quantified(self, s, /, **kw):
         quant = s.quantifier
         if quant is not quant.Existential:
             return super().value_of_quantified(s, **kw)
@@ -137,7 +135,7 @@ class Rules(K3.Rules):
                   ¬∃xFx +
                ______|_______
               |              |
-            ∀x¬Fa +    ∀x¬(Fx ∨ ¬Fx) +
+            ∀x¬Fx +    ∀x¬(Fx ∨ ¬Fx) +
         """
         def _get_sdw_targets(self, s, d, w, /):
             q = self.quantifier.other

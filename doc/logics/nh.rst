@@ -1,10 +1,12 @@
 .. _NH:
 
-********************************
-NH - Paraconsistent Hybrid Logic
-********************************
+.. module:: pytableaux.logics.nh
 
-L{NH} is a three-valued predicate logic with values V{T}, V{F}, and V{B}.
+*********************************************
+L{} - Paraconsistent Hybrid Logic
+*********************************************
+
+L{} is a three-valued predicate logic with values V{T}, V{F}, and V{B}.
 It is the `glutty` dual of {@MH}.
 
 .. contents:: Contents
@@ -13,7 +15,6 @@ It is the `glutty` dual of {@MH}.
 
 ------------------------
 
-.. module:: pytableaux.logics.nh
 
 .. _nh-semantics:
 .. _nh-model:
@@ -32,7 +33,7 @@ Common labels for the values include:
 
 .. rubric:: Designated Values
 
-The set of *designated values* for L{NH} is: { V{T}, V{B} }
+The set of *designated values* for L{} is: { V{T}, V{B} }
 
 .. _nh-truth-tables:
 
@@ -56,7 +57,7 @@ Truth Tables
 
 .. rubric:: Compatibility Tables
 
-L{NH} does not have a separate `Assertion` operator, but we include a table
+L{} does not have a separate `Assertion` operator, but we include a table
 and rules for it, for cross-compatibility.
 
 .. truth-tables::
@@ -68,6 +69,30 @@ Predication
 -----------
 
 .. include:: include/lp/predication.rst
+
+.. _nh-quantification:
+
+Quantification
+--------------
+
+Although quantification was not defined in Caret's original paper, here we apply
+the idea of generalized disjunction & conjunction.
+
+.. rubric:: Existential
+
+Since disjunction behaves just like {@LP}, existential quantification is the same.
+
+.. include:: include/lp/m.existential.rst
+
+.. rubric:: Universal
+
+Let :m:`M` be the set of values of the sentences that result from replacing each
+constant for the quantified variable of a universal sentence :m:`A`. The value
+of :m:`A` is:
+
+* V{F} if V{F} is in :m:`M`.
+* V{B} if both V{B} and V{T} are in :m:`M`.
+* V{T} otherwise.
 
 .. _nh-consequence:
 
@@ -84,7 +109,7 @@ Consequence
 Tableaux
 ========
 
-L{NH} tableaux are built similary to L{FDE}.
+L{} tableaux are built similary to L{FDE}.
 
 Nodes
 -----
@@ -119,13 +144,17 @@ Rules
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: Assertion
+  :exclude: non_native
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
 
 .. tableau-rules::
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: Assertion
+  :include: non_native
 
 
 Notes

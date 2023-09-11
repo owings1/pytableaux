@@ -84,11 +84,11 @@ Quantification
 
 .. rubric:: Existential
 
-.. include:: include/fde/m.existential.rst
+.. include:: include/lp/m.existential.rst
 
 .. rubric:: Universal
 
-.. include:: include/fde/m.universal.rst
+.. include:: include/lp/m.universal.rst
 
 .. _lp-consequence:
 
