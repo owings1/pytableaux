@@ -119,7 +119,7 @@ class Rules(LogicType.Rules):
         # branching rules
         K.Rules.groups[1],
         # quantifier rules
-        K.Rules.groups[-1])
+        *K.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

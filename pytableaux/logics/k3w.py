@@ -160,10 +160,6 @@ class Rules(LogicType.Rules):
             FDE.Rules.AssertionNegatedUndesignated,
             FDE.Rules.ConjunctionDesignated, 
             FDE.Rules.DisjunctionNegatedDesignated,
-            FDE.Rules.ExistentialNegatedDesignated,
-            FDE.Rules.ExistentialNegatedUndesignated,
-            FDE.Rules.UniversalNegatedDesignated,
-            FDE.Rules.UniversalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
             FDE.Rules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)

@@ -144,10 +144,6 @@ class Rules(LogicType.Rules):
             FDE.Rules.MaterialConditionalNegatedDesignated,
             FDE.Rules.MaterialConditionalUndesignated,
             FDE.Rules.ConditionalNegatedDesignated,
-            FDE.Rules.ExistentialNegatedDesignated,
-            FDE.Rules.ExistentialNegatedUndesignated,
-            FDE.Rules.UniversalNegatedDesignated,
-            FDE.Rules.UniversalNegatedUndesignated,
             FDE.Rules.DoubleNegationDesignated,
             FDE.Rules.DoubleNegationUndesignated),
         group(

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections import deque
+from itertools import chain
 
 from ..lang import Atomic, Constant, Operator, Predicate, Predicated
 from ..models import ValueCPL
@@ -238,9 +239,9 @@ class Rules(LogicType.Rules):
     class Biconditional(MaterialBiconditional): pass
     class BiconditionalNegated(MaterialBiconditionalNegated): pass
     class Existential(FDE.Rules.ExistentialDesignated): pass
-    class ExistentialNegated(FDE.Rules.ExistentialNegatedDesignated): pass
     class Universal(FDE.Rules.UniversalDesignated): pass
-    class UniversalNegated(ExistentialNegated): pass
+    class ExistentialNegated(FDE.Rules.ExistentialNegatedDesignated): pass
+    class UniversalNegated(FDE.Rules.UniversalNegatedDesignated): pass
     class Possibility(KFDE.Rules.PossibilityDesignated): pass
     class PossibilityNegated(KFDE.Rules.PossibilityNegatedDesignated): pass
     class Necessity(KFDE.Rules.NecessityDesignated): pass
@@ -293,6 +294,15 @@ class Rules(LogicType.Rules):
             s2 = self.predicate((s1[0], s1[0].next()))
             yield swnode(s2, w)
 
+    unquantifying_groups = (
+        group(
+            Universal,
+            ExistentialNegated),
+        group(
+            Existential,
+            UniversalNegated))
+    unquantifying_rules = tuple(chain(*unquantifying_groups))
+
     closure = (
         ContradictionClosure,
         SelfIdentityClosure,
@@ -310,9 +320,7 @@ class Rules(LogicType.Rules):
             ConditionalNegated,
             DoubleNegation,
             PossibilityNegated,
-            NecessityNegated,
-            ExistentialNegated,
-            UniversalNegated),
+            NecessityNegated),
         group(
             # branching rules
             ConjunctionNegated,
@@ -327,9 +335,7 @@ class Rules(LogicType.Rules):
             # modal operator rules
             Necessity,
             Possibility),
-        group(
-            Existential,
-            Universal))
+        *unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

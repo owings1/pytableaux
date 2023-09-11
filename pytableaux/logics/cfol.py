@@ -60,9 +60,7 @@ class Rules(LogicType.Rules):
             K.Rules.DisjunctionNegated,
             K.Rules.MaterialConditionalNegated,
             K.Rules.ConditionalNegated,
-            K.Rules.DoubleNegation,
-            K.Rules.ExistentialNegated,
-            K.Rules.UniversalNegated),
+            K.Rules.DoubleNegation),
         group(
             # branching rules
             K.Rules.ConjunctionNegated,
@@ -72,6 +70,5 @@ class Rules(LogicType.Rules):
             K.Rules.MaterialBiconditionalNegated,
             K.Rules.Conditional,
             K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated,
-            K.Rules.Existential,
-            K.Rules.Universal))
+            K.Rules.BiconditionalNegated),
+        *K.Rules.unquantifying_groups)

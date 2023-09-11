@@ -440,23 +440,13 @@ class Rules(LogicType.Rules):
         """
 
         def _get_node_targets(self, node, branch, /):
-            s = self.sentence(node)
+            s = branch.new_constant() >> self.sentence(node)
+            if self.negated:
+                s = ~s
             yield adds(
-                sdwgroup((branch.new_constant() >> s, self.designation, node.get('world'))))
+                sdwgroup((s, self.designation, node.get('world'))))
 
-    class ExistentialNegatedDesignated(System.QuantifierNodeRule):
-        """
-        From an unticked designated negated existential node *n* on a branch *b*,
-        quantifying over variable *v* into sentence *s*, add a designated node to *b*
-        that universally quantifies over *v* into the negation of *s* (i.e. change
-        :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            v, si = s[1:]
-            yield adds(sdwgroup((self.quantifier.other(v, ~si), d, w)))
-
-    class ExistentialUndesignated(System.QuantifierFatRule):
+    class UniversalDesignated(System.QuantifierFatRule):
         """
         From an undesignated existential node *n* on a branch *b*, for any constant *c* on
         *b* such that the result *r* of substituting *c* for the variable bound by the
@@ -466,20 +456,28 @@ class Rules(LogicType.Rules):
         """
 
         def _get_constant_nodes(self, node, c, branch, /):
-            yield sdwnode(c >> self.sentence(node), self.designation, node.get('world'))
+            s = c >> self.sentence(node)
+            if self.negated:
+                s = ~s
+            yield sdwnode(s, self.designation, node.get('world'))
 
-    class ExistentialNegatedUndesignated(ExistentialNegatedDesignated): pass
-    class UniversalDesignated(ExistentialUndesignated): pass
-    class UniversalNegatedDesignated(ExistentialNegatedDesignated): pass
+    class ExistentialNegatedDesignated(UniversalDesignated): pass
+    class ExistentialNegatedUndesignated(ExistentialDesignated): pass
+    class ExistentialUndesignated(UniversalDesignated): pass
+    class UniversalNegatedDesignated(ExistentialDesignated): pass
     class UniversalUndesignated(ExistentialDesignated): pass
-    class UniversalNegatedUndesignated(ExistentialNegatedDesignated): pass
+    class UniversalNegatedUndesignated(UniversalDesignated): pass
 
     unquantifying_groups = (
         group(
             UniversalDesignated,
+            UniversalNegatedUndesignated,
+            ExistentialNegatedDesignated,
             ExistentialUndesignated),
         group(
             ExistentialDesignated,
+            ExistentialNegatedUndesignated,
+            UniversalNegatedDesignated,
             UniversalUndesignated))
     unquantifying_rules = tuple(chain(*unquantifying_groups))
 
@@ -500,10 +498,6 @@ class Rules(LogicType.Rules):
             MaterialConditionalUndesignated,
             ConditionalUndesignated, 
             ConditionalNegatedDesignated,
-            ExistentialNegatedDesignated,
-            ExistentialNegatedUndesignated,
-            UniversalNegatedDesignated,
-            UniversalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated),
         group(

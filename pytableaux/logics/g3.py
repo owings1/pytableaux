@@ -107,12 +107,6 @@ class Rules(LogicType.Rules):
             FDE.Rules.ConjunctionNegatedUndesignated,
             FDE.Rules.DisjunctionNegatedDesignated,
             FDE.Rules.DisjunctionUndesignated,
-
-            FDE.Rules.ExistentialNegatedDesignated,
-            FDE.Rules.ExistentialNegatedUndesignated,
-            FDE.Rules.UniversalNegatedDesignated,
-            FDE.Rules.UniversalNegatedUndesignated,
-
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
             # reduction rules
@@ -140,7 +134,7 @@ class Rules(LogicType.Rules):
             ConditionalNegatedUndesignated,
             ConditionalNegatedDesignated),
         # quantifier rules
-        *FDE.Rules.groups[-2:])
+        *FDE.Rules.unquantifying_groups)
 
     @classmethod
     def _check_groups(cls):

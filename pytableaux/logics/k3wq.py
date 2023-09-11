@@ -178,7 +178,6 @@ class Rules(LogicType.Rules):
             FDE.Rules.AssertionNegatedUndesignated,
             FDE.Rules.ConjunctionDesignated, 
             FDE.Rules.DisjunctionNegatedDesignated,
-            FDE.Rules.ExistentialNegatedDesignated,
             FDE.Rules.DoubleNegationDesignated,
             FDE.Rules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)
@@ -216,6 +215,7 @@ class Rules(LogicType.Rules):
             UniversalNegatedDesignated,
             UniversalNegatedUndesignated),
         group(
+            FDE.Rules.ExistentialNegatedDesignated,
             FDE.Rules.UniversalDesignated,
             FDE.Rules.UniversalUndesignated))
 
