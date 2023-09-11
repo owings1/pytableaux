@@ -17,10 +17,9 @@
 from __future__ import annotations
 
 from ..lang import Marking
-from ..proof import AccessNode, adds, anode
+from ..proof import AccessNode, adds, anode, filters, rules
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
-from . import LogicType
 from . import k as K
 from . import t as T
 
@@ -68,11 +67,9 @@ class Model(T.Model):
 
 class System(K.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(T.Rules):
 
-    closure = K.Rules.closure
-
-    class Transitive(System.DefaultNodeRule):
+    class Transitive(rules.GetNodeTargetsRule):
         """
         .. _transitive-rule:
 
@@ -81,6 +78,7 @@ class Rules(LogicType.Rules):
         appear on *b*, then add *wRw''* to *b*.
         """
         Helpers = (MaxWorlds, WorldIndex)
+        NodeFilters = group(filters.NodeType)
         NodeType = AccessNode
         ticking = False
         marklegend = [(Marking.tableau, ('access', 'transitive'))]
@@ -114,7 +112,7 @@ class Rules(LogicType.Rules):
         # is a good idea.
         group(Transitive),
         # modal operator rules
-        K.Rules.groups[2],
+        *K.Rules.unmodal_groups,
         group(T.Rules.Reflexive),
         # branching rules
         K.Rules.groups[1],

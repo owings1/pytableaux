@@ -16,12 +16,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from pytableaux.lang import Quantified
+
 from ..lang import Operator
-from ..proof import adds, sdnode
+from ..proof import adds, rules, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
-from . import LogicType
+
 
 class Meta(K3.Meta):
     name = 'MH'
@@ -31,11 +33,11 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with non-standard disjunction, '
         'and a classical-like conditional')
     category_order = 11
-    native_operators = FDE.Meta.native_operators | (
+    native_operators = K3.Meta.native_operators | (
         Operator.Conditional,
         Operator.Biconditional)
 
-class Model(FDE.Model):
+class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
@@ -49,13 +51,24 @@ class Model(FDE.Model):
                 return self.values.F
             return self.values.T
 
-class System(FDE.System): pass
+    def _wip_value_of_quantified(self, s: Quantified, /, **kw):
+        quant = s.quantifier
+        if quant is not quant.Existential:
+            return super().value_of_quantified(s, **kw)
+        valset = set(self._unquantify_values(s, **kw))
+        values = self.values
+        if values.T in valset:
+            return values.T
+        if len(valset) > 1:
+            return values.N
+        return values.F
 
-class Rules(LogicType.Rules):
 
-    closure = K3.Rules.closure
+class System(K3.System): pass
 
-    class DisjunctionNegatedDesignated(System.OperatorNodeRule):
+class Rules(K3.Rules):
+
+    class DisjunctionNegatedDesignated(rules.OperatorNodeRule):
         """
         From an unticked, negated, designated disjunction node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'* add four undesignated
@@ -75,7 +88,7 @@ class Rules(LogicType.Rules):
                     sdnode(~lhs, d),
                     sdnode(~rhs, d)))
 
-    class DisjunctionNegatedUndesignated(System.OperatorNodeRule):
+    class DisjunctionNegatedUndesignated(rules.OperatorNodeRule):
         """
         From an unticked, negated, undesignated disjunction node *n* on a branch
         *b*, make four branches from *b*: *b'*, *b''*, *b'''*, and *b''''*. On *b'*,
@@ -109,7 +122,7 @@ class Rules(LogicType.Rules):
                 group(
                     sdnode(rhs, d), sdnode(~rhs, d), sdnode(~lhs, not d)))
 
-    class MaterialConditionalNegatedDesignated(System.OperatorNodeRule):
+    class MaterialConditionalNegatedDesignated(rules.OperatorNodeRule):
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
@@ -122,7 +135,7 @@ class Rules(LogicType.Rules):
                     sdnode(lhs, d),
                     sdnode(~rhs, d)))
 
-    class MaterialConditionalNegatedUndesignated(System.OperatorNodeRule):
+    class MaterialConditionalNegatedUndesignated(rules.OperatorNodeRule):
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
             yield adds(
@@ -135,12 +148,12 @@ class Rules(LogicType.Rules):
                 group(
                     sdnode(rhs, d), sdnode(~rhs, d), sdnode(lhs, not d)))
 
-    class MaterialBiconditionalDesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedDesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
 
-    class ConditionalDesignated(System.OperatorNodeRule):
+    class ConditionalDesignated(rules.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add an undesignated node
@@ -154,7 +167,7 @@ class Rules(LogicType.Rules):
                 group(sdnode(s.lhs, False)),
                 group(sdnode(s.rhs, True)))
 
-    class ConditionalNegatedDesignated(System.OperatorNodeRule):
+    class ConditionalNegatedDesignated(rules.OperatorNodeRule):
         """
         From an unticked, negated, desigated conditional node *n* on a branch *b*,
         add two nodes to *b*:
@@ -171,11 +184,10 @@ class Rules(LogicType.Rules):
 
     class ConditionalUndesignated(ConditionalNegatedDesignated): pass
     class ConditionalNegatedUndesignated(ConditionalDesignated): pass
-    class BiconditionalDesignated(System.ConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedDesignated(System.ConditionalConjunctsReducingRule): pass
-    class BiconditionalUndesignated(System.ConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedUndesignated(System.ConditionalConjunctsReducingRule): pass
-
+    class BiconditionalDesignated(rules.ConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedDesignated(rules.ConditionalConjunctsReducingRule): pass
+    class BiconditionalUndesignated(rules.ConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedUndesignated(rules.ConditionalConjunctsReducingRule): pass
 
     groups = (
         # Non-branching rules.

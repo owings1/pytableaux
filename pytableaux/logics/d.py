@@ -17,10 +17,9 @@
 from __future__ import annotations
 
 from ..lang import Atomic, Marking
-from ..proof import Branch, Target, adds, anode, swnode, rules
+from ..proof import Branch, Target, adds, anode, rules, swnode
 from ..proof.helpers import MaxWorlds, UnserialWorlds
 from ..tools import group
-from . import LogicType
 from . import k as K
 
 
@@ -48,9 +47,7 @@ class Model(K.Model):
 
 class System(K.System): pass
 
-class Rules(LogicType.Rules):
-
-    closure = K.Rules.closure
+class Rules(K.Rules):
 
     class Serial(rules.BaseSimpleRule):
         """
@@ -105,7 +102,7 @@ class Rules(LogicType.Rules):
         # non-branching rules
         K.Rules.groups[0],
         # modal rules
-        K.Rules.groups[2],
+        *K.Rules.unmodal_groups,
         # branching rules
         K.Rules.groups[1],
         # quantifier rules

@@ -27,8 +27,8 @@ from typing import Generic, Iterable, TypeVar, final
 
 from ..lang import (Constant, Operated, Operator, Predicate, Predicated,
                     Quantified, Quantifier, Sentence)
-from ..tools import EMPTY_SET, group
-from . import adds, filters
+from ..tools import EMPTY_SET, group, abcs, wraps
+from . import adds, filters, sdwgroup
 from .common import Branch, Node, Target
 from .tableaux import Rule
 
@@ -253,3 +253,119 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
         node_apply_count = self[NodeCount][target.branch][target.node]
         return 1 / (node_apply_count + 1)
 
+
+class DefaultNodeRule(GetNodeTargetsRule, intermediate=True):
+    """Default node rule with:
+    
+    - BaseSimpleRule:
+        - `_apply()` delegates to AdzHelper's `_apply()`. ticking is default True
+        - `score_candidate()` delegates to AdzHelper's `closure_score()`
+    - BaseNodeRule:
+        - loads FilterHelper. ignore_ticked is default True
+        - `example_nodes()` delegates to FilterHelper.
+    - GetNodeTargetsRule:
+        - `_get_targets()` wrapped by FilterHelper, then delegates to
+        abstract `_get_node_targets()`.
+    - DefaultNodeRule (this rule):
+        - uses autoattrs to set attrs from the rule name.
+        - implements `_get_node_targets()` with optional `_get_sd_targers()`.
+            NB it is not marked as abstract but will throw NotImplementError.
+        - adds a NodeDesignation filter.
+    """
+    NodeFilters = group(filters.NodeDesignation, filters.NodeType)
+    autoattrs = True
+
+    def _get_node_targets(self, node: Node, branch: Branch, /):
+        return self._get_sdw_targets(self.sentence(node), node['designated'], node.get('world'))
+
+    def _get_sdw_targets(self, s: Operated, d: bool, w: int|None, /):
+        return self._get_sd_targets(s, d)
+
+    def _get_sd_targets(self, s: Operated, d: bool, /):
+        raise NotImplementedError
+
+class QuantifierNodeRule(DefaultNodeRule, QuantifiedSentenceRule, intermediate=True): pass
+class QuantifierSkinnyRule(NarrowQuantifierRule, QuantifierNodeRule, intermediate=True): pass
+class QuantifierFatRule(ExtendedQuantifierRule, QuantifierNodeRule, intermediate=True): pass
+
+class OperatorNodeRule(DefaultNodeRule, OperatedSentenceRule, intermediate=True):
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        pass
+        if abcs.isabstract(cls):
+            return
+        if all(
+            getattr(cls, name) is getattr(__class__, name)
+            for name in (
+                '_get_targets',
+                '_get_node_targets',
+                '_get_sdw_targets',
+                '_get_sd_targets')):
+                @abstractmethod
+                @wraps(cls._get_sd_targets)
+                def wrapped(self, s: Sentence, d: bool, /):
+                    raise NotImplementedError
+                setattr(cls, '_get_sd_targets', wrapped)
+
+class FlippingRule(OperatorNodeRule, intermediate=True):
+
+    def _get_sdw_targets(self, s, d, w, /):
+        yield adds(sdwgroup((s, not d, w)))
+
+class NegatingFlippingRule(OperatorNodeRule, intermediate=True):
+
+    def _get_sdw_targets(self, s, d, w, /):
+        yield adds(sdwgroup((~s, not d, w)))
+
+class OperandsRule(OperatorNodeRule, intermediate=True):
+
+    def _get_sdw_targets(self, s, d, w, /):
+        yield adds(sdwgroup(*((s, d, w) for s in s)))
+
+class FlippingOperandsRule(OperatorNodeRule, intermediate=True):
+
+    def _get_sdw_targets(self, s, d, w, /):
+        yield adds(sdwgroup(*((s, not d, w) for s in s)))
+
+class NegatingOperandsRule(OperatorNodeRule, intermediate=True):
+
+    def _get_sdw_targets(self, s, d, w, /):
+        yield adds(sdwgroup(*((~s, d, w) for s in s)))
+
+class BranchingOperandsRule(OperatorNodeRule, intermediate=True):
+
+    def _get_sdw_targets(self, s, d, w, /):
+        yield adds(*(map(sdwgroup, ((s, d, w) for s in s))))
+
+class NegatingBranchingOperandsRule(OperatorNodeRule, intermediate=True):
+
+    def _get_sdw_targets(self, s, d, w, /):
+        yield adds(*(map(sdwgroup, ((~s, d, w) for s in s))))
+
+class ConjunctionReducingRule(OperatorNodeRule, intermediate=True):
+
+    conjoined: Operator
+
+    def _get_sdw_targets(self, s, d, w, /):
+        oper = self.conjoined
+        lhs, rhs = s
+        s = oper(lhs, rhs) & oper(rhs, lhs)
+        if self.negated:
+            s = ~s
+        yield adds(sdwgroup((s, d, w)))
+
+class MaterialConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
+    conjoined = Operator.MaterialConditional
+
+class ConditionalConjunctsReducingRule(ConjunctionReducingRule, intermediate=True):
+    conjoined = Operator.Conditional
+
+class MaterialConditionalReducingRule(OperatorNodeRule, intermediate=True):
+    "This rule reduces to a disjunction."
+
+    def _get_sdw_targets(self, s, d, w, /):
+        sn = ~s.lhs | s.rhs
+        if self.negated:
+            sn = ~sn
+        yield adds(sdwgroup((sn, d, w)))

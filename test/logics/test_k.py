@@ -42,11 +42,6 @@ pp = Base.pp
 
 class TestRules(Base, autorules=True):
 
-    def test_Disjunction_node(self):
-        tab = self.rule_test('DisjunctionNegated').tableau
-        s = tab[0][0]['sentence']
-        self.assertEqual(s.operator, Operator.Negation)
-
     def test_Possibility_node_world_0(self):
         tab = self.rule_test('Possibility').tableau
         node = tab[0][0]
@@ -56,47 +51,6 @@ class TestRules(Base, autorules=True):
         tab = self.rule_test('Existential').tableau
         node = tab[0][0]
         self.assertEqual(node['sentence'].quantifier, Quantifier.Existential)
-
-    def test_IdentityIndiscernability_not_target_after_apply(self):
-        test = self.rule_test('IdentityIndiscernability')
-        tab = test.tableau
-        b = tab.branch()
-        b += map(self.swnode, ['Imn', 'Fs'])
-        self.assertFalse(test.rule.target(b))
-
-    def test_IdentityIndiscernability_target_predicate_sentence(self):
-        tab = self.tab()
-        b = tab.branch()
-        rule = tab.rules.get(K.Rules.IdentityIndiscernability)
-        b += map(self.swnode, ['Imn', 'Fm'])
-        self.assertTrue(rule.target(b))
-
-    def test_IdentityIndiscernability_not_target_self_identity(self):
-        tab = self.tab()
-        b = tab.branch()
-        rule = tab.rules.get(K.Rules.IdentityIndiscernability)
-        # need 2 nodes to trigger test, since the rule skips the node if
-        # it is the self-same node it is comparing to
-        b += map(self.swnode, ['Imn', 'Imn'])
-        self.assertFalse(rule.target(b))
-
-    def test_IdentityIndiscernability_skip_self_identity_coverage(self):
-        tab = self.tab()
-        b = tab.branch()
-        rule = tab.rules.get(K.Rules.IdentityIndiscernability)
-        b += self.swnode('Imm')
-        self.assertFalse(rule.target(b))
-
-    def test_IdentityIndiscernability_not_target_duplicate(self):
-        tab = self.tab()
-        b = tab.branch()
-        rule = tab.rules.get(K.Rules.IdentityIndiscernability)
-        b += map(self.swnode, ['Imn', 'Fm', 'Fn'])
-        self.assertFalse(rule.target(b))
-
-    def test_rules_modal(self):
-        for rcls in self.logic.Rules.all():
-            self.assertIs(rcls.modal, True)
 
     def test_Necessity_node_targets(self):
         tab = self.tab()

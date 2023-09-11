@@ -20,7 +20,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Iterable
 
 from ..lang import Operated, Operator
-from ..proof import Branch, Node, Target, adds, anode, sdwgroup, sdwnode
+from ..proof import Branch, Node, Target, adds, anode, rules, sdwgroup, sdwnode
 from ..proof.helpers import (AdzHelper, AplSentCount, FilterHelper, MaxWorlds,
                              NodeCount, NodesWorlds, QuitFlag, WorldIndex)
 from ..tools import EMPTY_SET, group, maxceil, minfloor
@@ -58,7 +58,7 @@ class Model(FDE.Model):
 
 class System(FDE.System):
 
-    class ModalOperatorRule(FDE.System.OperatorNodeRule):
+    class ModalOperatorRule(rules.OperatorNodeRule):
 
         Helpers = (QuitFlag, MaxWorlds)
 
@@ -144,7 +144,7 @@ class Rules(LogicType.Rules):
                 d = self.new_designation(d)
             return -1.0 * self[AplSentCount][target.branch][si, d]
 
-    class PossibilityNegatedDesignated(System.OperatorNodeRule):
+    class PossibilityNegatedDesignated(rules.OperatorNodeRule):
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(sdwgroup((self.operator.other(~s.lhs), d, w)))

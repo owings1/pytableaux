@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import adds, sdnode
+from ..proof import adds, rules, sdnode
 from ..tools import group
 from . import fde as FDE
 from . import lp as LP
@@ -47,13 +47,13 @@ class Model(LP.Model):
                 return self.values.F
             return self.values.T
 
-class System(FDE.System): pass
+class System(LP.System): pass
 
 class Rules(LogicType.Rules):
 
     closure = LP.Rules.closure
 
-    class ConjunctionNegatedDesignated(System.OperatorNodeRule):
+    class ConjunctionNegatedDesignated(rules.OperatorNodeRule):
         """
         From an unticked, negated, designated conjunction node *n* on a branch *b*,
         make four new branches from *b*: *b'*, *b''*, *b'''*, *b''''*. On *b'*, add
@@ -89,7 +89,7 @@ class Rules(LogicType.Rules):
                     sdnode(~rhs, True),
                     sdnode(~lhs, False)))
 
-    class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
+    class ConjunctionNegatedUndesignated(rules.OperatorNodeRule):
         """
         From an unticked, negated, undesignated conjunction node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'*, add two undesignated nodes,
@@ -109,12 +109,12 @@ class Rules(LogicType.Rules):
                     sdnode( rhs, True),
                     sdnode(~rhs, True)))
 
-    class MaterialConditionalNegatedDesignated(System.OperatorNodeRule):
+    class MaterialConditionalNegatedDesignated(rules.OperatorNodeRule):
 
         def _get_sd_targets(self, s, d, /):
             yield adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
 
-    class MaterialConditionalNegatedUndesignated(System.OperatorNodeRule):
+    class MaterialConditionalNegatedUndesignated(rules.OperatorNodeRule):
 
         def _get_sd_targets(self, s, d, /):
             yield adds(

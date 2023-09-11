@@ -17,18 +17,26 @@
 from __future__ import annotations
 
 from ..lang import Atomic, Marking
-from ..proof import WorldPair, adds, swnode
+from ..proof import WorldPair, adds, rules, swnode
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
-from . import LogicType
+
 
 class Meta(K.Meta):
     name = 'T'
     title = 'Reflexive Normal Modal Logic'
     description = 'Normal modal logic with a reflexive access relation'
     category_order = 3
-    extension_of = ('D', 'TK3', 'TLP', 'TL3', 'TRM3', 'TK3W', 'TB3E', 'TG3')
+    extension_of = (
+        'D',
+        'TB3E',
+        'TG3',
+        'TK3',
+        'TK3W',
+        'TL3',
+        'TLP',
+        'TRM3')
 
 class Model(K.Model):
 
@@ -45,11 +53,9 @@ class Model(K.Model):
 
 class System(K.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(K.Rules):
 
-    closure = K.Rules.closure
-
-    class Reflexive(System.DefaultNodeRule):
+    class Reflexive(rules.GetNodeTargetsRule):
         """
         .. _reflexive-rule:
 
@@ -84,7 +90,7 @@ class Rules(LogicType.Rules):
         # non-branching rules
         K.Rules.groups[0],
         # modal rules
-        K.Rules.groups[2],
+        *K.Rules.unmodal_groups,
         group(Reflexive),
         # branching rules
         K.Rules.groups[1],

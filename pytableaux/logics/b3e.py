@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operator as Operator
-from ..proof import adds, sdwgroup
+from ..proof import adds, sdwgroup, rules
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
@@ -48,10 +48,10 @@ class Rules(LogicType.Rules):
 
     closure = K3.Rules.closure
 
-    class AssertionNegatedDesignated(System.FlippingOperandsRule): pass
-    class AssertionNegatedUndesignated(System.FlippingOperandsRule): pass
+    class AssertionNegatedDesignated(rules.FlippingOperandsRule): pass
+    class AssertionNegatedUndesignated(rules.FlippingOperandsRule): pass
 
-    class MaterialBiconditionalUndesignated(System.OperatorNodeRule):
+    class MaterialBiconditionalUndesignated(rules.OperatorNodeRule):
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -61,7 +61,7 @@ class Rules(LogicType.Rules):
                 sdwgroup((lhs, not d, w), (~rhs, not d, w)),
                 sdwgroup((~lhs, not d, w), (rhs, not d, w)))
 
-    class MaterialBiconditionalNegatedUndesignated(System.OperatorNodeRule):
+    class MaterialBiconditionalNegatedUndesignated(rules.OperatorNodeRule):
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -71,7 +71,7 @@ class Rules(LogicType.Rules):
                 sdwgroup((~lhs, not d, w), (~rhs, not d, w)),
                 sdwgroup((lhs, not d, w), (rhs, not d, w)))
 
-    class ConditionalDesignated(System.OperatorNodeRule):
+    class ConditionalDesignated(rules.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*,
         add a designated node to *b* with a disjunction, where the
@@ -87,7 +87,7 @@ class Rules(LogicType.Rules):
             # keep designation neutral for inheritance below
             yield adds(sdwgroup((sn, d, w)))
 
-    class ConditionalNegatedDesignated(System.OperatorNodeRule):
+    class ConditionalNegatedDesignated(rules.OperatorNodeRule):
         """
         From an unticked, designated negated conditional node *n* on a branch *b*,
         add a designated node with the antecedent, and an undesigntated node
@@ -103,7 +103,7 @@ class Rules(LogicType.Rules):
     class ConditionalUndesignated(ConditionalNegatedDesignated): pass
     class ConditionalNegatedUndesignated(ConditionalDesignated): pass
 
-    class BiconditionalDesignated(System.OperatorNodeRule):
+    class BiconditionalDesignated(rules.OperatorNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add
         two designated nodes to *b*, one with a disjunction, where the first
@@ -129,7 +129,7 @@ class Rules(LogicType.Rules):
     class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
     class BiconditionalUndesignated(BiconditionalDesignated): pass
 
-    class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
+    class BiconditionalNegatedUndesignated(rules.OperatorNodeRule):
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s

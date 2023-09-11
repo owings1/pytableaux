@@ -17,12 +17,12 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..proof import adds, sdwgroup
+from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import l3 as L3
 from . import lp as LP
-from . import LogicType
+
 
 class Meta(LP.Meta):
     name = 'RM3'
@@ -37,20 +37,18 @@ class Meta(LP.Meta):
 
 class Model(LP.Model):
 
-    class TruthFunction(FDE.Model.TruthFunction):
+    class TruthFunction(LP.Model.TruthFunction):
 
         def Conditional(self, a, b):
             if a > b:
                 return self.values.F
             return super().Conditional(a, b)
 
-class System(FDE.System): pass
+class System(LP.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(LP.Rules):
 
-    closure = LP.Rules.closure
-
-    class ConditionalDesignated(System.OperatorNodeRule):
+    class ConditionalDesignated(rules.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add an undesignated
@@ -71,7 +69,7 @@ class Rules(LogicType.Rules):
                     ( rhs, d, w),
                     (~rhs, d, w)))
 
-    class ConditionalUndesignated(System.OperatorNodeRule):
+    class ConditionalUndesignated(rules.OperatorNodeRule):
         """
         From an unticked, undesignated, conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'*, add a designated node
@@ -89,7 +87,7 @@ class Rules(LogicType.Rules):
                     (~s.lhs, d, w),
                     (~s.rhs, not d, w)))
 
-    class BiconditionalDesignated(System.OperatorNodeRule):
+    class BiconditionalDesignated(rules.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated
@@ -113,7 +111,7 @@ class Rules(LogicType.Rules):
                     ( rhs, d, w),
                     (~rhs, d, w)))
 
-    class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
+    class BiconditionalNegatedUndesignated(rules.OperatorNodeRule):
         """
         From an unticked undesignated negated biconditional node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'* add an undesignated node

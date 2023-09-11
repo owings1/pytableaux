@@ -17,11 +17,11 @@
 from __future__ import annotations
 
 from ..lang import Operator
-from ..proof import adds, sdwgroup
+from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
-from . import LogicType
+
 
 class Meta(K3.Meta):
     name = 'L3'
@@ -30,26 +30,24 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator')
     category_order = 5
-    native_operators = FDE.Meta.native_operators | (
+    native_operators = K3.Meta.native_operators | (
         Operator.Conditional,
         Operator.Biconditional)
 
-class Model(FDE.Model):
+class Model(K3.Model):
 
-    class TruthFunction(FDE.Model.TruthFunction):
+    class TruthFunction(K3.Model.TruthFunction):
 
         def Conditional(self, a, b, /):
             if a == b:
                 return self.values.T
             return self.MaterialConditional(a, b)
 
-class System(FDE.System): pass
+class System(K3.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(K3.Rules):
 
-    closure = K3.Rules.closure
-
-    class ConditionalDesignated(System.OperatorNodeRule):
+    class ConditionalDesignated(rules.OperatorNodeRule):
         """
         From an unticked designated conditional node *n* on a branch *b*, make two
         new branches *b'* and *b''* from *b*. To *b'* add a designated disjunction
@@ -71,7 +69,7 @@ class Rules(LogicType.Rules):
                     (~lhs, not d, w),
                     (~rhs, not d, w)))
 
-    class ConditionalUndesignated(System.OperatorNodeRule):
+    class ConditionalUndesignated(rules.OperatorNodeRule):
         """
         From an unticked undesignated conditional node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*. On *b'* add a designated node
@@ -91,7 +89,7 @@ class Rules(LogicType.Rules):
                     (~lhs, d, w),
                     (~rhs, not d, w)))
 
-    class BiconditionalDesignated(System.OperatorNodeRule):
+    class BiconditionalDesignated(rules.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add a designated material
@@ -112,7 +110,7 @@ class Rules(LogicType.Rules):
                     ( rhs, not d, w),
                     (~rhs, not d, w)))
 
-    class BiconditionalUndesignated(System.OperatorNodeRule):
+    class BiconditionalUndesignated(rules.OperatorNodeRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add an undesignated conditional
@@ -126,7 +124,7 @@ class Rules(LogicType.Rules):
                 sdwgroup((convert(s.operands), d, w)),
                 sdwgroup((convert(reversed(s)), d, w)))
 
-    class BiconditionalNegatedUndesignated(System.OperatorNodeRule):
+    class BiconditionalNegatedUndesignated(rules.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add an undesignated negated material

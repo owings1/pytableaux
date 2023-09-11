@@ -256,7 +256,33 @@ class System(metaclass=SystemMeta):
         Returns:
             int: The number of new branches.
         """
-        return 0
+        try:
+            s = node['sentence']
+        except KeyError:
+            return 0
+        negated = False
+        result = 0
+        for oper in s.operators:
+            if not negated and oper is Operator.Negation:
+                negated = True
+                continue
+            if negated and oper is Operator.Negation:
+                name = 'DoubleNegation'
+            else:
+                name = oper.name
+                if negated:
+                    name += 'Negated'
+            d = node.get('designated')
+            if d is not None:
+                if d:
+                    name += 'Designated'
+                else:
+                    name += 'Undesignated'
+            rulecls = rules.get(name, None)
+            if rulecls:
+                result += rulecls.branching
+                negated = False
+        return result
 
     @classmethod
     def branching_complexity_hashable(cls, node: Node, /) -> Hashable:
@@ -270,8 +296,10 @@ class System(metaclass=SystemMeta):
         Returns:
             A hashable object.
         """
-        return node
-
+        try:
+            return node['sentence'].operators, node.get('designated')
+        except KeyError:
+            pass
 
 class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
     """Rule meta class."""
@@ -310,7 +338,8 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
             default={}, transform=MapProxy)
         abcs.merge_attr(self, 'timer_names', mcls=cls,
             default=EMPTY_QSET, transform=qsetf)
-        if self.autoattrs:
+        isconcrete = not intermediate and not abcs.isabstract(self)
+        if isconcrete and self.autoattrs:
             for name, value in self.induce_attrs().items():
                 setattr(self, name, value)
         configs: dict[type[Rule.Helper], Any] = {}
@@ -325,7 +354,6 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         self.Helpers = MapProxy(configs)
         for helpercls, config in configs.items():
             configs[helpercls] = helpercls.configure_rule(self, config)
-        isconcrete = not intermediate and not abcs.isabstract(self)
         if isconcrete:
             self.legend = tuple(self.build_legend())
             if 'branching' not in self.__dict__:
@@ -421,6 +449,7 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
 
 class RuleNameAttrInducer:
 
+    Legend = RuleMeta.Legend
     names = (
         'operator',
         'quantifier',
@@ -452,8 +481,9 @@ class RuleNameAttrInducer:
         return self.name.startswith(self.doubleneg)
 
     def build(self):
+        Legend = self.Legend
         for name in self.names:
-            name = Rule.Legend(name).value
+            name = Legend(name).value
             if not getattr(self, f'do_{name}')(name):
                 self.notfounds.append(name)
         self.find_conflicts()

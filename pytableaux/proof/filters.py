@@ -29,7 +29,7 @@ from typing import Any, Callable, NamedTuple
 from ..lang import (Lexical, Operated, Operator, Predicated, Quantified,
                     Sentence)
 from ..tools import EMPTY_MAP, EMPTY_SET, abcs, dictns, thru
-from . import AccessNode, DesignationNode, Node, SentenceNode, WorldNode
+from .common import AccessNode, DesignationNode, Node, SentenceNode, WorldNode
 
 __all__ = (
     'CompareAttr',

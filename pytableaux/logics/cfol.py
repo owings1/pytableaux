@@ -16,18 +16,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
-from . import k as K
-from ..tools import group
+from itertools import chain
 
-class Meta(K.Meta):
+from ..tools import group
+from . import LogicType
+from . import cpl as CPL
+from . import fde as FDE
+
+
+class Meta(CPL.Meta):
     name = 'CFOL'
     title = 'Classical First Order Logic'
-    modal = False
+    quantified = True
     description = 'Standard bivalent logic with full first-order quantification'
     category_order = 2
-    native_operators = FDE.Meta.native_operators
     extension_of = (
         'B3E',
         'CPL',
@@ -42,33 +44,28 @@ class Meta(K.Meta):
         'NH',
         'RM3')
 
-class Model(K.Model): pass
+class Model(CPL.Model):
+    value_of_quantified = FDE.Model.value_of_quantified
 
-class System(K.System): pass
+class System(CPL.System): pass
 
 class Rules(LogicType.Rules):
 
-    closure = K.Rules.closure
+    class Existential(FDE.Rules.ExistentialDesignated): pass
+    class Universal(FDE.Rules.UniversalDesignated): pass
+    class ExistentialNegated(FDE.Rules.ExistentialNegatedDesignated): pass
+    class UniversalNegated(FDE.Rules.UniversalNegatedDesignated): pass
 
+    unquantifying_groups = (
+        group(
+            Universal,
+            ExistentialNegated),
+        group(
+            Existential,
+            UniversalNegated))
+    unquantifying_rules = tuple(chain(*unquantifying_groups))
+
+    closure = CPL.Rules.closure
     groups = (
-        group(
-            # non-branching rules
-            K.Rules.IdentityIndiscernability,
-            K.Rules.Assertion,
-            K.Rules.AssertionNegated,
-            K.Rules.Conjunction,
-            K.Rules.DisjunctionNegated,
-            K.Rules.MaterialConditionalNegated,
-            K.Rules.ConditionalNegated,
-            K.Rules.DoubleNegation),
-        group(
-            # branching rules
-            K.Rules.ConjunctionNegated,
-            K.Rules.Disjunction,
-            K.Rules.MaterialConditional,
-            K.Rules.MaterialBiconditional,
-            K.Rules.MaterialBiconditionalNegated,
-            K.Rules.Conditional,
-            K.Rules.Biconditional,
-            K.Rules.BiconditionalNegated),
-        *K.Rules.unquantifying_groups)
+        *CPL.Rules.groups,
+        *unquantifying_groups)

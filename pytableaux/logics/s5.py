@@ -17,12 +17,11 @@
 from __future__ import annotations
 
 from ..lang import Marking
-from ..proof import AccessNode, adds
+from ..proof import AccessNode, adds, filters, rules
 from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from ..tools import group
 from . import k as K
 from . import s4 as S4
-from . import LogicType
 
 
 class Meta(S4.Meta):
@@ -32,7 +31,15 @@ class Meta(S4.Meta):
         'Normal modal logic with a reflexive, symmetric, and transitive '
         'access relation')
     category_order = 5
-    extension_of = ('S4', 'S5K3', 'S5LP', 'S5L3', 'S5RM3', 'S5K3W', 'S5B3E', 'S5G3')
+    extension_of = (
+        'S4',
+        'S5B3E',
+        'S5G3',
+        'S5K3',
+        'S5K3W',
+        'S5L3',
+        'S5LP',
+        'S5RM3')
 
 class Model(S4.Model):
 
@@ -57,11 +64,9 @@ class Model(S4.Model):
 
 class System(K.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(S4.Rules):
 
-    closure = K.Rules.closure
-
-    class Symmetric(System.DefaultNodeRule):
+    class Symmetric(rules.GetNodeTargetsRule):
         """
         .. _symmetric-rule:
 
@@ -70,6 +75,7 @@ class Rules(LogicType.Rules):
         *w'Rw* to *b*.
         """
         Helpers = (MaxWorlds, WorldIndex)
+        NodeFilters = group(filters.NodeType)
         NodeType = AccessNode
         ticking = False
         marklegend = [(Marking.tableau, ('access', 'symmetric'))]

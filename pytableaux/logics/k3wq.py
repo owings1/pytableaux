@@ -19,15 +19,13 @@ from __future__ import annotations
 from types import MappingProxyType as MapProxy
 
 from ..lang import Operator, Quantified, Quantifier
-from ..proof import adds, sdwgroup
+from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import fde as FDE
-from . import k3 as K3
 from . import k3w as K3W
-from . import LogicType
 
 
-class Meta(K3.Meta):
+class Meta(K3W.Meta):
     name = 'K3WQ'
     title = 'Weak Kleene alt-Q Logic'
     description = (
@@ -36,7 +34,7 @@ class Meta(K3.Meta):
     category_order = 8
     extension_of = ('K3W') # proof?
 
-class Model(FDE.Model):
+class Model(K3W.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
@@ -69,13 +67,11 @@ class Model(FDE.Model):
             raise NotImplementedError from ValueError(s.quantifier)
         return self.truth_function.generalize(oper, self._unquantify_values(s, world=world))
 
-class System(FDE.System): pass
+class System(K3W.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(K3W.Rules):
 
-    closure = K3.Rules.closure
-
-    class ExistentialDesignated(System.QuantifierSkinnyRule):
+    class ExistentialDesignated(rules.QuantifierSkinnyRule):
         """
         From an unticked, designated existential node `n` on a branch `b`, add
         two designated nodes to `b`. One node is the result of universally
@@ -94,7 +90,7 @@ class Rules(LogicType.Rules):
                     (self.quantifier.other(v, si | ~si), d, w),
                     (branch.new_constant() >> s, d, w)))
 
-    class ExistentialUndesignated(System.QuantifierSkinnyRule):
+    class ExistentialUndesignated(rules.QuantifierSkinnyRule):
         """
         From an unticked, undesignated existential node `n` on a branch `b`, make
         two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,
@@ -115,7 +111,7 @@ class Rules(LogicType.Rules):
                 sdwgroup((r, d, w), (~r, d, w)),
                 sdwgroup((self.quantifier.other(v, ~si), not d, w)))
 
-    class ExistentialNegatedUndesignated(System.QuantifierSkinnyRule):
+    class ExistentialNegatedUndesignated(rules.QuantifierSkinnyRule):
         """"
         From an unticked, undesignated, negated existential node `n` on a branch
         `b`, add an undesignated node to `b` with the negation of the inner
@@ -129,7 +125,7 @@ class Rules(LogicType.Rules):
             yield adds(
                 sdwgroup((~(branch.new_constant() >> s), self.designation, w)))
 
-    class UniversalNegatedDesignated(System.QuantifierSkinnyRule):
+    class UniversalNegatedDesignated(rules.QuantifierSkinnyRule):
         """
         From an unticked, designated, negated universal node `n` on a branch `b`,
         add two designated nodes to `b`. The first node is a universally quantified
@@ -149,7 +145,7 @@ class Rules(LogicType.Rules):
                     (self.quantifier(v, si | ~si), d, w),
                     (~(branch.new_constant() >> s), d, w)))
 
-    class UniversalNegatedUndesignated(System.QuantifierSkinnyRule):
+    class UniversalNegatedUndesignated(rules.QuantifierSkinnyRule):
         """
         From an unticked, undesignated, negated universal node `n` on a branch `b`,
         make two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,

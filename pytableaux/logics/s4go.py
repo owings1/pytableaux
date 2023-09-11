@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import operator as opr
 
+from ..proof import rules
 from ..tools import group, qset
 from . import LogicType
 from . import fde as FDE
@@ -54,10 +55,10 @@ class Rules(LogicType.Rules):
     class NecessityNegatedDesignated(KFDE.Rules.PossibilityDesignated):
         new_designation = staticmethod(opr.not_)
 
-    class PossibilityUndesignated(System.NegatingFlippingRule): pass
-    class NecessityUndesignated(System.NegatingFlippingRule): pass
-    class PossibilityNegatedUndesignated(System.FlippingRule): pass
-    class NecessityNegatedUndesignated(System.FlippingRule): pass
+    class PossibilityUndesignated(rules.NegatingFlippingRule): pass
+    class NecessityUndesignated(rules.NegatingFlippingRule): pass
+    class PossibilityNegatedUndesignated(rules.FlippingRule): pass
+    class NecessityNegatedUndesignated(rules.FlippingRule): pass
 
     groups = (
         # non-branching rules

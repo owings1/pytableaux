@@ -16,23 +16,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import adds, sdwgroup
+from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import fde as FDE
 from . import k3 as K3
-from . import l3 as L3
-from . import LogicType
 
 class Meta(K3.Meta):
     name = 'K3W'
     title = 'Weak Kleene Logic'
     description = 'Three-valued logic with values T, F, and N'
     category_order = 7
-    # extension_of = ('K3WQ') # proof?
 
-class Model(FDE.Model):
+class Model(K3.Model):
 
-    class TruthFunction(FDE.Model.TruthFunction):
+    class TruthFunction(K3.Model.TruthFunction):
 
         def Conjunction(self, a, b, /):
             if self.values.N in (a, b):
@@ -45,13 +42,11 @@ class Model(FDE.Model):
             return super().Disjunction(a, b)
 
 
-class System(FDE.System): pass
+class System(K3.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(K3.Rules):
 
-    closure = K3.Rules.closure
-
-    class ConjunctionNegatedDesignated(System.OperatorNodeRule):
+    class ConjunctionNegatedDesignated(rules.OperatorNodeRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -68,7 +63,7 @@ class Rules(LogicType.Rules):
                 sdwgroup((~lhs, True, w), ( rhs, True, w)),
                 sdwgroup((~lhs, True, w), (~rhs, True, w)))
 
-    class ConjunctionNegatedUndesignated(System.OperatorNodeRule):
+    class ConjunctionNegatedUndesignated(rules.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated nodes
@@ -84,7 +79,7 @@ class Rules(LogicType.Rules):
                 sdwgroup((rhs, False, w), (~rhs, False, w)),
                 sdwgroup((lhs, True, w),  ( rhs, True, w)))
 
-    class DisjunctionDesignated(System.OperatorNodeRule):
+    class DisjunctionDesignated(rules.OperatorNodeRule):
         """
         From an unticked, designated, disjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -101,7 +96,7 @@ class Rules(LogicType.Rules):
                 sdwgroup((~lhs, True, w), ( rhs, True, w)),
                 sdwgroup(( lhs, True, w), ( rhs, True, w)))
             
-    class DisjunctionUndesignated(System.OperatorNodeRule):
+    class DisjunctionUndesignated(rules.OperatorNodeRule):
         """
         From an unticked, undesignated disjunction node *n* on a branch *b*, make three
         new branches *b'*, *b''*, and *b'''* from b. On *b'* add undesignated nodes for
@@ -117,7 +112,7 @@ class Rules(LogicType.Rules):
                 sdwgroup(( rhs, False, w), (~rhs, False, w)),
                 sdwgroup((~lhs, True, w),  (~rhs, True, w)))
 
-    class DisjunctionNegatedUndesignated(System.OperatorNodeRule):
+    class DisjunctionNegatedUndesignated(rules.OperatorNodeRule):
         """
         Either the disjunction is designated, or at least one of the disjuncts
         has the value V{N}. So, from an unticked, undesignated, negated
@@ -134,22 +129,22 @@ class Rules(LogicType.Rules):
                 sdwgroup((s.lhs, False, w), (~s.lhs, False, w)),
                 sdwgroup((s.rhs, False, w), (~s.rhs, False, w)))
 
-    class MaterialConditionalDesignated(System.MaterialConditionalReducingRule): pass
-    class MaterialConditionalNegatedDesignated(System.MaterialConditionalReducingRule): pass
-    class MaterialConditionalUndesignated(System.MaterialConditionalReducingRule): pass
-    class MaterialConditionalNegatedUndesignated(System.MaterialConditionalReducingRule): pass
-    class MaterialBiconditionalDesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedDesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class ConditionalDesignated(System.MaterialConditionalReducingRule): pass
-    class ConditionalNegatedDesignated(System.MaterialConditionalReducingRule): pass
-    class ConditionalUndesignated(System.MaterialConditionalReducingRule): pass
+    class MaterialConditionalDesignated(rules.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedDesignated(rules.MaterialConditionalReducingRule): pass
+    class MaterialConditionalUndesignated(rules.MaterialConditionalReducingRule): pass
+    class MaterialConditionalNegatedUndesignated(rules.MaterialConditionalReducingRule): pass
+    class MaterialBiconditionalDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class ConditionalDesignated(rules.MaterialConditionalReducingRule): pass
+    class ConditionalNegatedDesignated(rules.MaterialConditionalReducingRule): pass
+    class ConditionalUndesignated(rules.MaterialConditionalReducingRule): pass
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated): pass
-    class BiconditionalDesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedDesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class BiconditionalUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
-    class BiconditionalNegatedUndesignated(System.MaterialConditionalConjunctsReducingRule): pass
+    class BiconditionalDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class BiconditionalUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class BiconditionalNegatedUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
 
     groups = (
         group(

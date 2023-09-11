@@ -24,7 +24,6 @@ from unittest import skip
 
 from pytableaux.errors import *
 from pytableaux.examples import arguments as examples
-from pytableaux.logics import k as K
 from pytableaux.lang import Argument
 from pytableaux.proof import *
 from pytableaux.proof import rules
@@ -457,3 +456,36 @@ class TestMaxConstantsTracker(Base):
         self.assertEqual(res, 3)
 
 
+
+
+class TestSystem(Base):
+
+
+    def test_branch_complexity_hashable_none_if_no_sentence(self):
+        n = Node({})
+        self.assertIs(None, System.branching_complexity_hashable(n))
+
+    def test_branch_complexity_0_if_no_sentence(self):
+        tab = Tableau()
+        n = Node({})
+        self.assertEqual(0, System.branching_complexity(n, tab.rules))
+class TestRules(Base):
+
+    def test_abstract_default_node_rule(self):
+        class Impl(rules.DefaultNodeRule, intermediate=True): pass
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            Impl._get_sd_targets(rule, Node({}), Branch())
+
+    def test_abstract_operator_node_rule(self):
+        class Impl(rules.OperatorNodeRule): pass
+        with self.assertRaises(TypeError):
+            Impl(Tableau())
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            Impl._get_sd_targets(rule, Node({}), Branch())
+
+    def test_notimpl_coverage(self):
+        rule = rules.NoopRule(Tableau())
+        with self.assertRaises(NotImplementedError):
+            rules.OperatorNodeRule._get_sd_targets(rule, self.p('a'), False)

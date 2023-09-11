@@ -20,7 +20,6 @@ from ..lang import Atomic
 from ..models import ValueK3
 from ..proof import rules, sdwnode
 from . import fde as FDE
-from . import LogicType
 
 
 class Meta(FDE.Meta):
@@ -36,7 +35,7 @@ class Meta(FDE.Meta):
 class Model(FDE.Model): pass
 class System(FDE.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(FDE.Rules):
 
     class GlutClosure(rules.FindClosingNodeRule):
         """A branch closes when a sentence and its negation both appear as
@@ -54,5 +53,4 @@ class Rules(LogicType.Rules):
             yield sdwnode(~a, True, w)
 
     closure = (GlutClosure, *FDE.Rules.closure)
-    groups = FDE.Rules.groups
 
