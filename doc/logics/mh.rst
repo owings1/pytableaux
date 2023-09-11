@@ -69,6 +69,30 @@ Predication
 
 .. include:: include/k3/m.predication.rst
 
+.. _mh-quantification:
+
+Quantification
+--------------
+
+Although quantification was not defined in Caret's original paper, here we apply
+the idea of generalized disjunction & conjunction.
+
+.. rubric:: Existential
+
+Let :m:`M` be the set of values of the sentences that result from replacing each
+constant for the quantified variable of an existential sentence :m:`A`. The value
+of :m:`A` is:
+
+* V{T} if V{T} is in :m:`M`.
+* V{N} if both V{N} and V{F} are in :m:`M`.
+* V{F} otherwise.
+
+.. rubric:: Universal
+
+Since conjunction behaves just like {@K3}, universal quantification is the same.
+
+.. include:: include/k3/m.universal.rst
+
 .. _mh-consequence:
 
 Consequence
@@ -119,13 +143,17 @@ Rules
 .. tableau-rules::
   :docflags:
   :group: operator
-  :exclude: Assertion
+  :exclude: non_native
+
+.. tableau-rules::
+  :docflags:
+  :group: quantifier
 
 .. tableau-rules::
   :docflags:
   :title: Compatibility Rules
   :group: operator
-  :include: Assertion
+  :include: non_native
 
 
 Notes

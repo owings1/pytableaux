@@ -19,7 +19,7 @@ from __future__ import annotations
 from pytableaux.lang import Quantified
 
 from ..lang import Operator
-from ..proof import adds, rules, sdnode
+from ..proof import adds, rules, sdnode, sdwgroup
 from ..tools import group
 from . import k3 as K3
 
@@ -27,7 +27,6 @@ from . import k3 as K3
 class Meta(K3.Meta):
     name = 'MH'
     title = 'Paracomplete Hybrid Logic'
-    quantified = False
     description = (
         'Three-valued logic (T, F, N) with non-standard disjunction, '
         'and a classical-like conditional')
@@ -48,7 +47,7 @@ class Model(K3.Model):
                 return self.values.F
             return self.values.T
 
-    def _wip_value_of_quantified(self, s: Quantified, /, **kw):
+    def value_of_quantified(self, s: Quantified, /, **kw):
         quant = s.quantifier
         if quant is not quant.Existential:
             return super().value_of_quantified(s, **kw)
@@ -132,6 +131,45 @@ class Rules(K3.Rules):
             # Keep designation fixed for inheritance below.
             yield adds(group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
+    class ExistentialNegatedDesignated(rules.QuantifierNodeRule):
+        pass
+        """
+                  ¬∃xFx +
+               ______|_______
+              |              |
+            ∀x¬Fa +    ∀x¬(Fx ∨ ¬Fx) +
+        """
+        def _get_sdw_targets(self, s, d, w, /):
+            q = self.quantifier.other
+            v = s.variable
+            s = s.sentence
+            yield adds(
+                sdwgroup((q(v, ~s), d, w)),
+                sdwgroup((q(v, ~(s | ~s)), d, w)))
+    
+    class ExistentialNegatedUndesignated(rules.QuantifierSkinnyRule):
+        pass
+        """
+                  ¬∃xFx -
+               ______|_______
+              |              |
+             Fa +           ¬Fa +
+                       ∃x¬(Fx ∨ ¬Fx) +
+        """
+
+        def _get_node_targets(self, node, branch, /):
+            c = branch.new_constant()
+            s = self.sentence(node)
+            v = s.variable
+            sc = c >> s
+            q = self.quantifier
+            si = s.sentence
+            w = node.get('world')
+            d = not self.designation
+            yield adds(
+                sdwgroup((sc, d, w)),
+                sdwgroup((~sc, d, w), (q(v, ~(si | ~si)), d, w)))
+
     class MaterialBiconditionalDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalNegatedDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
@@ -175,14 +213,26 @@ class Rules(K3.Rules):
             K3.Rules.MaterialConditionalDesignated,
             MaterialConditionalNegatedDesignated,
             ConditionalDesignated,
-            ConditionalNegatedUndesignated),
+            ConditionalNegatedUndesignated,
+            ExistentialNegatedDesignated),
         # 3-branching rules.
         group(
             MaterialConditionalNegatedUndesignated,
             DisjunctionNegatedUndesignated))
 
-    unquantifying_groups = ()
+    unquantifying_groups = group(
+        group(
+            K3.Rules.UniversalDesignated,
+            K3.Rules.UniversalNegatedUndesignated,
+            K3.Rules.ExistentialUndesignated),
+        group(
+            K3.Rules.ExistentialDesignated,
+            K3.Rules.UniversalNegatedDesignated,
+            K3.Rules.UniversalUndesignated),
+        group(
+            ExistentialNegatedUndesignated))
 
     groups = (
         *nonbranching_groups,
-        *branching_groups)
+        *branching_groups,
+        *unquantifying_groups)
