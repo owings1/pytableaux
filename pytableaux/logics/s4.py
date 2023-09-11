@@ -103,23 +103,9 @@ class Rules(T.Rules):
             yield anode(1, 2)
 
     groups = (
-        # non-branching rules
-        K.Rules.groups[0],
-        # Things seem to work better with the Transitive rule before
-        # the modal operator rules, and the other access rules after.
-        # However, if we put the Transitive after, then some trees
-        # fail to close. It is so far an open question whether this
-        # is a good idea.
+        *K.Rules.nonbranching_groups,
         group(Transitive),
         *K.Rules.unmodal_groups,
         group(T.Rules.Reflexive),
-        # branching rules
-        K.Rules.groups[1],
+        *K.Rules.branching_groups,
         *K.Rules.unquantifying_groups)
-
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, i in zip(range(2), (0, 4)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'

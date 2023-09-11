@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+from itertools import chain
 
 from ..proof import Branch, Node, adds, anode, rules, sdwgroup, sdwnode
 from ..proof.helpers import (AdzHelper, AplSentCount, MaxWorlds, NodeCount,
@@ -145,6 +146,17 @@ class Rules(FDE.Rules):
     class NecessityUndesignated(PossibilityDesignated): pass
     class NecessityNegatedUndesignated(PossibilityNegatedDesignated): pass
 
+    nonbranching_modal_group = group(
+        PossibilityNegatedDesignated,
+        PossibilityNegatedUndesignated,
+        NecessityNegatedDesignated,
+        NecessityNegatedUndesignated)
+
+    nonbranching_groups = group(
+        group(
+            *chain(*FDE.Rules.nonbranching_groups),
+            *nonbranching_modal_group))
+
     unmodal_groups = (
         group(
             NecessityDesignated,
@@ -154,13 +166,7 @@ class Rules(FDE.Rules):
             PossibilityDesignated))
 
     groups = (
-        FDE.Rules.groups[0] + group(
-            # non-branching rules
-            PossibilityNegatedDesignated,
-            PossibilityNegatedUndesignated,
-            NecessityNegatedDesignated,
-            NecessityNegatedUndesignated),
-        # branching rules
-        FDE.Rules.groups[1],
+        *nonbranching_groups,
+        *FDE.Rules.branching_groups,
         *unmodal_groups,
         *FDE.Rules.unquantifying_groups)

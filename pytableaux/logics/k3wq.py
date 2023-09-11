@@ -21,21 +21,17 @@ from types import MappingProxyType as MapProxy
 from ..lang import Operator, Quantified, Quantifier
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
-from . import fde as FDE
 from . import k3w as K3W
-from . import k3 as K3
 
 
-class Meta(K3.Meta):
+class Meta(K3W.Meta):
     name = 'K3WQ'
     title = 'Weak Kleene alt-Q Logic'
-    description = (
-        'Three-valued logic with values T, F, and N, '
-        'with alternate quantification')
+    description = 'Weak Kleene logic with alternate quantification'
     category_order = 8
     extension_of = ('K3W') # proof?
 
-class Model(K3.Model):
+class Model(K3W.Model):
 
     class TruthFunction(K3W.Model.TruthFunction):
 
@@ -68,17 +64,11 @@ class Model(K3.Model):
             raise NotImplementedError from ValueError(s.quantifier)
         return self.truth_function.generalize(oper, self._unquantify_values(s, world=world))
 
-class System(K3.System): pass
+class System(K3W.System): pass
 
 class Rules(K3W.Rules):
 
     class ExistentialDesignated(rules.QuantifierSkinnyRule):
-        """
-        From an unticked, designated existential node `n` on a branch `b`, add
-        two designated nodes to `b`. One node is the result of universally
-        quantifying over the disjunction of the inner sentence with its negation.
-        The other node is a substitution of a constant new to `b`. Then tick `n`.
-        """
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -92,14 +82,6 @@ class Rules(K3W.Rules):
                     (branch.new_constant() >> s, d, w)))
 
     class ExistentialUndesignated(rules.QuantifierSkinnyRule):
-        """
-        From an unticked, undesignated existential node `n` on a branch `b`, make
-        two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,
-        one with the substituion of a constant new to `b` for the inner sentence,
-        and the other with the negation of that sentence. On `b''` add a designated
-        node with universal quantifier over the negation of the inner sentence.
-        Then tick `n`.
-        """
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -113,12 +95,6 @@ class Rules(K3W.Rules):
                 sdwgroup((self.quantifier.other(v, ~si), not d, w)))
 
     class ExistentialNegatedUndesignated(rules.QuantifierSkinnyRule):
-        """"
-        From an unticked, undesignated, negated existential node `n` on a branch
-        `b`, add an undesignated node to `b` with the negation of the inner
-        sentence, substituting a constant new to `b` for the variable. Then
-        tick `n`.
-        """
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -127,13 +103,6 @@ class Rules(K3W.Rules):
                 sdwgroup((~(branch.new_constant() >> s), self.designation, w)))
 
     class UniversalNegatedDesignated(rules.QuantifierSkinnyRule):
-        """
-        From an unticked, designated, negated universal node `n` on a branch `b`,
-        add two designated nodes to `b`. The first node is a universally quantified
-        disjunction of the inner sentence and its negation. The second node is the
-        negation of the inner sentence, substituting a constant new to `b` for the
-        variable. Then tick `n`.
-        """
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -147,13 +116,6 @@ class Rules(K3W.Rules):
                     (~(branch.new_constant() >> s), d, w)))
 
     class UniversalNegatedUndesignated(rules.QuantifierSkinnyRule):
-        """
-        From an unticked, undesignated, negated universal node `n` on a branch `b`,
-        make two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,
-        one with the substitution of a constant new to `b` for the inner sentence
-        of `n`, and the other with the negation of that sentence. On `b''`, add
-        a designated node with the negatum of `n`. Then tick `n`.
-        """
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -166,7 +128,7 @@ class Rules(K3W.Rules):
                 sdwgroup((r, d, w), (~r, d, w)),
                 sdwgroup((self.quantifier(v, si), not d, w)))
 
-    unquantifying_groups = (
+    unquantifying_groups = group(
         group(
             ExistentialDesignated,
             ExistentialNegatedUndesignated,
@@ -174,54 +136,11 @@ class Rules(K3W.Rules):
             UniversalNegatedDesignated,
             UniversalNegatedUndesignated),
         group(
-            FDE.Rules.ExistentialNegatedDesignated,
-            FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated))
+            K3W.Rules.ExistentialNegatedDesignated,
+            K3W.Rules.UniversalDesignated,
+            K3W.Rules.UniversalUndesignated))
 
     groups = (
-        group(
-            # non-branching rules
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
-            FDE.Rules.AssertionNegatedDesignated,
-            FDE.Rules.AssertionNegatedUndesignated,
-            FDE.Rules.ConjunctionDesignated, 
-            FDE.Rules.DisjunctionNegatedDesignated,
-            FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated,
-            # reduction rules (thus, non-branching)
-            K3W.Rules.MaterialConditionalDesignated,
-            K3W.Rules.MaterialConditionalUndesignated,
-            K3W.Rules.MaterialConditionalNegatedDesignated,
-            K3W.Rules.MaterialConditionalNegatedUndesignated,
-            K3W.Rules.ConditionalDesignated,
-            K3W.Rules.ConditionalUndesignated,
-            K3W.Rules.ConditionalNegatedDesignated,
-            K3W.Rules.ConditionalNegatedUndesignated,
-            K3W.Rules.MaterialBiconditionalDesignated,
-            K3W.Rules.MaterialBiconditionalUndesignated,
-            K3W.Rules.MaterialBiconditionalNegatedDesignated,
-            K3W.Rules.MaterialBiconditionalNegatedUndesignated,
-            K3W.Rules.BiconditionalDesignated,
-            K3W.Rules.BiconditionalUndesignated,
-            K3W.Rules.BiconditionalNegatedDesignated,
-            K3W.Rules.BiconditionalNegatedUndesignated),
-        group(
-            # two-branching rules
-            FDE.Rules.ConjunctionUndesignated),
-        group(
-            # three-branching rules
-            K3W.Rules.DisjunctionDesignated,
-            K3W.Rules.DisjunctionUndesignated,
-            K3W.Rules.ConjunctionNegatedDesignated,
-            K3W.Rules.ConjunctionNegatedUndesignated,
-            # five-branching rules (formerly)
-            K3W.Rules.DisjunctionNegatedUndesignated),
+        *K3W.Rules.nonbranching_groups,
+        *K3W.Rules.branching_groups,
         *unquantifying_groups)
-
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip(range(3), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'

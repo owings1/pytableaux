@@ -17,25 +17,22 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import b3e as B3E
 from . import s4b3e as S4B3E
 from . import s5fde as S5FDE
 
 
-class Meta(B3E.Meta, S5FDE.Meta):
+class Meta(S4B3E.Meta, S5FDE.Meta):
     name = 'S5B3E'
     title = 'B3E with S5 modal'
     description = 'Modal version of B3E based on S5 normal modal logic'
     category_order = 35
     extension_of = ('S4B3E')
 
-class Model(B3E.Model, S5FDE.Model): pass
-class System(B3E.System, S5FDE.System): pass
+class Model(S4B3E.Model, S5FDE.Model): pass
+class System(S4B3E.System, S5FDE.System): pass
 
-class Rules(S4B3E.Rules):
-
-    Symmetric = S5FDE.Rules.Symmetric
+class Rules(S4B3E.Rules, S5FDE.Rules):
 
     groups = (
         *S4B3E.Rules.groups,
-        group(Symmetric))
+        group(S5FDE.Rules.Symmetric))

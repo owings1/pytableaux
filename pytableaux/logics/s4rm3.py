@@ -18,31 +18,25 @@ from __future__ import annotations
 
 from ..tools import group
 from . import s4fde as S4FDE
-from . import krm3 as KRM3
 from . import trm3 as TRM3
-from . import rm3 as RM3
 
 
-class Meta(RM3.Meta, S4FDE.Meta):
+class Meta(TRM3.Meta, S4FDE.Meta):
     name = 'S4RM3'
     title = 'RM3 with S4 modal'
     description = 'Modal version of RM3 based on S4 normal modal logic'
     category_order = 24
     extension_of = ('TRM3')
 
-class Model(RM3.Model, S4FDE.Model): pass
-class System(RM3.System, S4FDE.System): pass
+class Model(TRM3.Model, S4FDE.Model): pass
+class System(TRM3.System, S4FDE.System): pass
 
-class Rules(TRM3.Rules):
-
-    Transitive = S4FDE.Rules.Transitive
+class Rules(TRM3.Rules, S4FDE.Rules):
 
     groups = (
-        # non-branching rules
-        KRM3.Rules.groups[0],
-        group(Transitive),
-        *KRM3.Rules.unmodal_groups,
+        *TRM3.Rules.nonbranching_groups,
+        group(S4FDE.Rules.Transitive),
+        *TRM3.Rules.unmodal_groups,
         group(TRM3.Rules.Reflexive),
-        # branching rules
-        *RM3.Rules.groups[1:3],
-        *RM3.Rules.unquantifying_groups)
+        *TRM3.Rules.branching_groups,
+        *TRM3.Rules.unquantifying_groups)

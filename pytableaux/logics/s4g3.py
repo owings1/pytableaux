@@ -17,32 +17,26 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import g3 as G3
-from . import kg3 as KG3
 from . import s4fde as S4FDE
 from . import tg3 as TG3
 
 
-class Meta(G3.Meta, S4FDE.Meta):
+class Meta(TG3.Meta, S4FDE.Meta):
     name = 'S4G3'
     title = 'G3 with S4 modal'
     description = 'Modal version of G3 based on S4 normal modal logic'
     category_order = 39
     extension_of = ('TG3')
 
-class Model(G3.Model, S4FDE.Model): pass
-class System(G3.System, S4FDE.System): pass
+class Model(TG3.Model, S4FDE.Model): pass
+class System(TG3.System, S4FDE.System): pass
 
-class Rules(TG3.Rules):
-
-    Transitive = S4FDE.Rules.Transitive
+class Rules(TG3.Rules, S4FDE.Rules):
 
     groups = (
-        # non-branching rules
-        KG3.Rules.groups[0],
-        group(Transitive),
-        *KG3.Rules.unmodal_groups,
+        *TG3.Rules.nonbranching_groups,
+        group(S4FDE.Rules.Transitive),
+        *TG3.Rules.unmodal_groups,
         group(TG3.Rules.Reflexive),
-        # branching rules
-        G3.Rules.groups[1],
-        *G3.Rules.unquantifying_groups)
+        *TG3.Rules.branching_groups,
+        *TG3.Rules.unquantifying_groups)

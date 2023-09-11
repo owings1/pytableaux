@@ -18,8 +18,6 @@ from __future__ import annotations
 
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
-from . import LogicType
-from . import fde as FDE
 from . import k3 as K3
 from . import l3 as L3
 
@@ -43,19 +41,9 @@ class Model(K3.Model):
 
 class System(K3.System): pass
 
-class Rules(LogicType.Rules):
-
-    closure = K3.Rules.closure
+class Rules(K3.Rules):
 
     class ConditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, negated conditional node `n` on a branch
-        `b`, make two branches `b'` and `b''` from `b`. On `b'` add two designated
-        nodes, one with the antecedent, and one with the negation of the consequent.
-        On `b''` add two undesignated nodes, one with the antecedent, and one with
-        the negation of the antecedent, and one designated node with the negation
-        of the consequent. Then tick `n`.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -69,12 +57,6 @@ class Rules(LogicType.Rules):
                     (~rhs, d, w)))
 
     class ConditionalNegatedUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, undesignated, negated conditional node `n` on a branch
-        `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
-        node with the negation of the antecedent. On `b''` add an undesignated
-        node with the negation of the consequent. Then tick `n`.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
@@ -96,19 +78,20 @@ class Rules(LogicType.Rules):
     class MaterialBiconditionalUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalNegatedUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
 
+    ConditionalDesignated = L3.Rules.ConditionalDesignated
+    ConditionalUndesignated = L3.Rules.ConditionalUndesignated
 
-    unquantifying_groups = FDE.Rules.unquantifying_groups
-    groups = (
+    nonbranching_groups = group(
         group(
             # non-branching rules
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
-            FDE.Rules.AssertionNegatedDesignated,
-            FDE.Rules.AssertionNegatedUndesignated,
-            FDE.Rules.ConjunctionDesignated,
-            FDE.Rules.ConjunctionNegatedUndesignated,
-            FDE.Rules.DisjunctionNegatedDesignated,
-            FDE.Rules.DisjunctionUndesignated,
+            K3.Rules.AssertionDesignated,
+            K3.Rules.AssertionUndesignated,
+            K3.Rules.AssertionNegatedDesignated,
+            K3.Rules.AssertionNegatedUndesignated,
+            K3.Rules.ConjunctionDesignated,
+            K3.Rules.ConjunctionNegatedUndesignated,
+            K3.Rules.DisjunctionNegatedDesignated,
+            K3.Rules.DisjunctionUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
             # reduction rules
@@ -123,24 +106,20 @@ class Rules(LogicType.Rules):
             BiconditionalDesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalUndesignated,
-            BiconditionalNegatedDesignated),
+            BiconditionalNegatedDesignated))
+
+    branching_groups = group(
         group(
-            # branching rules
-            FDE.Rules.ConjunctionNegatedDesignated,
-            FDE.Rules.ConjunctionUndesignated,
-            FDE.Rules.DisjunctionDesignated,
-            FDE.Rules.DisjunctionNegatedUndesignated,
-
-            L3.Rules.ConditionalDesignated,
-            L3.Rules.ConditionalUndesignated,
+            K3.Rules.ConjunctionNegatedDesignated,
+            K3.Rules.ConjunctionUndesignated,
+            K3.Rules.DisjunctionDesignated,
+            K3.Rules.DisjunctionNegatedUndesignated,
+            ConditionalDesignated,
+            ConditionalUndesignated,
             ConditionalNegatedUndesignated,
-            ConditionalNegatedDesignated),
-        # quantifier rules
-        *unquantifying_groups)
+            ConditionalNegatedDesignated))
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip(range(2), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    groups = (
+        *nonbranching_groups,
+        *branching_groups,
+        *K3.Rules.unquantifying_groups)

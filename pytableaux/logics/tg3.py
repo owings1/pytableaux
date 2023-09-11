@@ -17,30 +17,25 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import g3 as G3
 from . import kg3 as KG3
 from . import tfde as TFDE
 
 
-class Meta(G3.Meta, TFDE.Meta):
+class Meta(KG3.Meta, TFDE.Meta):
     name = 'TG3'
     title = 'G3 with T modal'
     description = 'Modal version of G3 based on T normal modal logic'
     category_order = 38
     extension_of = ('KG3')
 
-class Model(G3.Model, TFDE.Model): pass
-class System(G3.System, TFDE.System): pass
+class Model(KG3.Model, TFDE.Model): pass
+class System(KG3.System, TFDE.System): pass
 
-class Rules(KG3.Rules):
-
-    Reflexive = TFDE.Rules.Reflexive
+class Rules(KG3.Rules, TFDE.Rules):
 
     groups = (
-        # non-branching rules
-        KG3.Rules.groups[0],
+        *KG3.Rules.nonbranching_groups,
         *KG3.Rules.unmodal_groups,
-        group(Reflexive),
-        # branching rules
-        G3.Rules.groups[1],
-        *G3.Rules.unquantifying_groups)
+        group(TFDE.Rules.Reflexive),
+        *KG3.Rules.branching_groups,
+        *KG3.Rules.unquantifying_groups)

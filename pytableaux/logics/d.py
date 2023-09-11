@@ -99,20 +99,11 @@ class Rules(K.Rules):
             yield swnode(Atomic.first(), 0)
 
     groups = (
-        # non-branching rules
-        K.Rules.groups[0],
+        *K.Rules.nonbranching_groups,
         *K.Rules.unmodal_groups,
-        # branching rules
-        K.Rules.groups[1],
+        *K.Rules.branching_groups,
         *K.Rules.unquantifying_groups,
         group(Serial))
-
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, i in zip(range(2), (0, 2)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'
 
     # NB: Since we have redesigned the modal rules, it is not obvious that we need this
     #     alternate rule. So far I have not been able to think of a way to break it. I

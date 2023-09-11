@@ -32,14 +32,12 @@ class Meta(L3.Meta, S4FDE.Meta):
 class Model(L3.Model, S4FDE.Model): pass
 class System(L3.System, S4FDE.System): pass
 
-class Rules(L3.Rules, S4FDE.Rules):
+class Rules(KL3.Rules, S4FDE.Rules):
 
     groups = (
-        # non-branching rules
-        KL3.Rules.groups[0],
+        *KL3.Rules.nonbranching_groups,
         group(S4FDE.Rules.Transitive),
         *KL3.Rules.unmodal_groups,
         group(S4FDE.Rules.Reflexive),
-        # branching rules
-        L3.Rules.groups[1],
-        *L3.Rules.unquantifying_groups)
+        *KL3.Rules.branching_groups,
+        *KL3.Rules.unquantifying_groups)

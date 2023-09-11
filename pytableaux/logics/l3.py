@@ -46,15 +46,6 @@ class System(K3.System): pass
 class Rules(K3.Rules):
 
     class ConditionalDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked designated conditional node *n* on a branch *b*, make two
-        new branches *b'* and *b''* from *b*. To *b'* add a designated disjunction
-        node with the negation of the antecedent as the first disjunct, and the
-        consequent as the second disjunct. On *b''* add four undesignated nodes:
-        a node with the antecedent, a node with the negation of the antecedent,
-        a node with the consequent, and a node with the negation of the consequent.
-        Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -68,13 +59,6 @@ class Rules(K3.Rules):
                     (~rhs, not d, w)))
 
     class ConditionalUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked undesignated conditional node *n* on a branch *b*,
-        make two new branches *b'* and *b''* from *b*. On *b'* add a designated node
-        with the antecedent and an undesignated node with the consequent. On *b''*,
-        add undesignated nodes for the antecedent and its negation, and a designated
-        with the negation of the consequent. Then tick *n*.   
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -88,13 +72,6 @@ class Rules(K3.Rules):
                     (~rhs, not d, w)))
 
     class BiconditionalDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked designated biconditional node *n* on a branch *b*, add
-        two branches *b'* and *b''* to *b*. On *b'* add a designated material
-        biconditional node with the same operands. On *b''* add four undesignated
-        nodes, with the antecedent, the negation of the antecedent, the consequent,
-        and the negation of the consequent, respectively. Then tick *n*.
-        """
 
         convert = Operator.MaterialBiconditional
 
@@ -109,12 +86,6 @@ class Rules(K3.Rules):
                     (~rhs, not d, w)))
 
     class BiconditionalUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked undesignated biconditional node *n* on a branch *b*, make
-        two branches *b'* and *b''* from *b*. On *b'* add an undesignated conditional
-        node with the same operands. On *b''* add an undesignated conditional node
-        with the reversed operands. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
@@ -123,13 +94,6 @@ class Rules(K3.Rules):
                 sdwgroup((convert(reversed(s)), d, w)))
 
     class BiconditionalNegatedUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked designated biconditional node *n* on a branch *b*, add
-        two branches *b'* and *b''* to *b*. On *b'* add an undesignated negated material
-        biconditional node with the same operands. On *b''* add four undesignated
-        nodes, with the antecedent, the negation of the antecedent, the consequent,
-        and the negation of the consequent, respectively. Then tick *n*.
-        """
 
         convert = Operator.MaterialBiconditional
 
@@ -143,9 +107,8 @@ class Rules(K3.Rules):
                     ( rhs, d, w),
                     (~rhs, d, w)))
 
-    groups = (
+    nonbranching_groups = group(
         group(
-            # non-branching rules
             FDE.Rules.AssertionDesignated,
             FDE.Rules.AssertionUndesignated,
             FDE.Rules.AssertionNegatedDesignated,
@@ -158,9 +121,10 @@ class Rules(K3.Rules):
             FDE.Rules.MaterialConditionalUndesignated,
             FDE.Rules.ConditionalNegatedDesignated,
             FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated),
+            FDE.Rules.DoubleNegationUndesignated))
+
+    branching_groups = group(
         group(
-            # branching rules
             FDE.Rules.ConjunctionNegatedDesignated,
             FDE.Rules.ConjunctionUndesignated,
             FDE.Rules.DisjunctionDesignated,
@@ -177,13 +141,9 @@ class Rules(K3.Rules):
             BiconditionalDesignated,
             FDE.Rules.BiconditionalNegatedDesignated,
             BiconditionalNegatedUndesignated,
-            BiconditionalUndesignated),
-        # quantifier rules
-        *K3.Rules.unquantifying_groups)
+            BiconditionalUndesignated))
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip(range(2), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    groups = (
+        *nonbranching_groups,
+        *branching_groups,
+        *K3.Rules.unquantifying_groups)

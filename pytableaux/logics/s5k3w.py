@@ -17,25 +17,22 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import k3w as K3W
 from . import s4k3w as S4K3W
 from . import s5fde as S5FDE
 
 
-class Meta(K3W.Meta, S5FDE.Meta):
+class Meta(S4K3W.Meta, S5FDE.Meta):
     name = 'S5K3W'
     title = 'K3W with S5 modal'
     description = 'Modal version of K3W based on S5 normal modal logic'
     category_order = 30
     extension_of = ('S4K3W')
 
-class Model(K3W.Model, S5FDE.Model): pass
-class System(K3W.System, S5FDE.System): pass
+class Model(S4K3W.Model, S5FDE.Model): pass
+class System(S4K3W.System, S5FDE.System): pass
 
-class Rules(S4K3W.Rules):
-
-    Symmetric = S5FDE.Rules.Symmetric
+class Rules(S4K3W.Rules, S5FDE.Rules):
 
     groups = (
         *S4K3W.Rules.groups,
-        group(Symmetric))
+        group(S5FDE.Rules.Symmetric))

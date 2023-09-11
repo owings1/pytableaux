@@ -17,30 +17,25 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import b3e as B3E
 from . import kb3e as KB3E
 from . import tfde as TFDE
 
 
-class Meta(B3E.Meta, TFDE.Meta):
+class Meta(KB3E.Meta, TFDE.Meta):
     name = 'TB3E'
     title = 'B3E with T modal'
     description = 'Modal version of B3E based on T normal modal logic'
     category_order = 33
     extension_of = ('KB3E')
 
-class Model(B3E.Model, TFDE.Model): pass
-class System(B3E.System, TFDE.System): pass
+class Model(KB3E.Model, TFDE.Model): pass
+class System(KB3E.System, TFDE.System): pass
 
-class Rules(B3E.Rules):
-
-    Reflexive = TFDE.Rules.Reflexive
+class Rules(KB3E.Rules, TFDE.Rules):
 
     groups = (
-        # non-branching rules
-        KB3E.Rules.groups[0],
+        *KB3E.Rules.nonbranching_groups,
         *KB3E.Rules.unmodal_groups,
-        group(Reflexive),
-        # branching rules
-        *B3E.Rules.groups[1:4],
-        *B3E.Rules.unquantifying_groups)
+        group(TFDE.Rules.Reflexive),
+        *KB3E.Rules.branching_groups,
+        *KB3E.Rules.unquantifying_groups)

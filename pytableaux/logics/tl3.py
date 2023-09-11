@@ -32,14 +32,11 @@ class Meta(L3.Meta, TFDE.Meta):
 class Model(L3.Model, TFDE.Model): pass
 class System(L3.System, TFDE.System): pass
 
-class Rules(L3.Rules, TFDE.Rules):
+class Rules(KL3.Rules, TFDE.Rules):
 
     groups = (
-        # non-branching rules
-        KL3.Rules.groups[0],
+        *KL3.Rules.nonbranching_groups,
         *KL3.Rules.unmodal_groups,
         group(TFDE.Rules.Reflexive),
-        # branching rules
-        L3.Rules.groups[1],
-        *L3.Rules.unquantifying_groups)
-
+        *KL3.Rules.branching_groups,
+        *KL3.Rules.unquantifying_groups)

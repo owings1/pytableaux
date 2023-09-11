@@ -234,9 +234,8 @@ class Rules(LogicType.Rules):
         SelfIdentityClosure,
         NonExistenceClosure)
 
-    groups = (
+    nonbranching_groups = group(
         group(
-            # non-branching rules
             IdentityIndiscernability,
             Assertion,
             AssertionNegated,
@@ -244,9 +243,10 @@ class Rules(LogicType.Rules):
             DisjunctionNegated, 
             MaterialConditionalNegated,
             ConditionalNegated,
-            DoubleNegation),
+            DoubleNegation))
+
+    branching_groups = group(
         group(
-            # branching rules
             ConjunctionNegated,
             Disjunction,
             MaterialConditional,
@@ -256,9 +256,6 @@ class Rules(LogicType.Rules):
             Biconditional,
             BiconditionalNegated))
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip(range(2), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    groups = (
+        *nonbranching_groups,
+        *branching_groups)

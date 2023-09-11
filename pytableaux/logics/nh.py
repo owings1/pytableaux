@@ -18,10 +18,8 @@ from __future__ import annotations
 
 from ..proof import adds, rules, sdnode
 from ..tools import group
-from . import fde as FDE
 from . import lp as LP
 from . import mh as MH
-from . import LogicType
 
 class Meta(LP.Meta):
     name = 'NH'
@@ -49,31 +47,9 @@ class Model(LP.Model):
 
 class System(LP.System): pass
 
-class Rules(LogicType.Rules):
-
-    closure = LP.Rules.closure
+class Rules(LP.Rules):
 
     class ConjunctionNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, negated, designated conjunction node *n* on a branch *b*,
-        make four new branches from *b*: *b'*, *b''*, *b'''*, *b''''*. On *b'*, add
-        an undesignated node with the first conjunct. On *b''*, add an undesignated
-        node with the second conjunct.
-
-        On *b'''*, add three nodes:
-
-        - A designated node with the first conjunct.
-        - A designated node with the negation of the first conjunct.
-        - An undesignated node with the negation of the second conjunct.
-
-        On *b''''*, add three nodes:
-
-        - A designated node with the second conjunct.
-        - A designated node with the negation of the second conjunct.
-        - An undesignated node with the negation of the first conjunct.
-
-        Then, tick *n*.
-        """
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -90,12 +66,6 @@ class Rules(LogicType.Rules):
                     sdnode(~lhs, False)))
 
     class ConjunctionNegatedUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, negated, undesignated conjunction node *n* on a branch *b*,
-        make two branches *b'* and *b''* from *b*. On *b'*, add two undesignated nodes,
-        one for the negation of each conjunct. On *b''*, add four designated nodes, one
-        for each of the conjuncts and its negation. Then tick *n*.
-        """
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -121,47 +91,59 @@ class Rules(LogicType.Rules):
                 group(sdnode(s.lhs, d)),
                 group(sdnode(~s.rhs, d)))
 
-    groups = (
-        # Non-branching rules.
+    MaterialBiconditionalDesignated = MH.Rules.MaterialBiconditionalDesignated
+    MaterialBiconditionalNegatedDesignated = MH.Rules.MaterialBiconditionalNegatedDesignated
+    MaterialBiconditionalUndesignated = MH.Rules.MaterialBiconditionalUndesignated
+    MaterialBiconditionalNegatedUndesignated = MH.Rules.MaterialBiconditionalNegatedUndesignated
+    ConditionalUndesignated = MH.Rules.ConditionalUndesignated
+    ConditionalNegatedDesignated = MH.Rules.ConditionalNegatedDesignated
+    BiconditionalDesignated = MH.Rules.BiconditionalDesignated
+    BiconditionalNegatedDesignated = MH.Rules.BiconditionalNegatedDesignated
+    BiconditionalUndesignated = MH.Rules.BiconditionalUndesignated
+    BiconditionalNegatedUndesignated = MH.Rules.BiconditionalNegatedUndesignated
+    ConditionalDesignated = MH.Rules.ConditionalDesignated
+    ConditionalNegatedUndesignated = MH.Rules.ConditionalNegatedUndesignated
+
+    nonbranching_groups = group(
         group(
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
-            FDE.Rules.AssertionNegatedDesignated,
-            FDE.Rules.AssertionNegatedUndesignated,
-            FDE.Rules.ConjunctionDesignated,
-            FDE.Rules.DisjunctionUndesignated,
-            FDE.Rules.DisjunctionNegatedDesignated,
+            LP.Rules.AssertionDesignated,
+            LP.Rules.AssertionUndesignated,
+            LP.Rules.AssertionNegatedDesignated,
+            LP.Rules.AssertionNegatedUndesignated,
+            LP.Rules.ConjunctionDesignated,
+            LP.Rules.DisjunctionUndesignated,
+            LP.Rules.DisjunctionNegatedDesignated,
             MaterialConditionalNegatedDesignated,
-            FDE.Rules.MaterialConditionalUndesignated,
-            MH.Rules.MaterialBiconditionalDesignated,
-            MH.Rules.MaterialBiconditionalNegatedDesignated,
-            MH.Rules.MaterialBiconditionalUndesignated,
-            MH.Rules.MaterialBiconditionalNegatedUndesignated,
-            MH.Rules.ConditionalUndesignated,
-            MH.Rules.ConditionalNegatedDesignated,
-            MH.Rules.BiconditionalDesignated,
-            MH.Rules.BiconditionalNegatedDesignated,
-            MH.Rules.BiconditionalUndesignated,
-            MH.Rules.BiconditionalNegatedUndesignated,
-            FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated),
-        # 1-branching rules.
+            LP.Rules.MaterialConditionalUndesignated,
+            MaterialBiconditionalDesignated,
+            MaterialBiconditionalNegatedDesignated,
+            MaterialBiconditionalUndesignated,
+            MaterialBiconditionalNegatedUndesignated,
+            ConditionalUndesignated,
+            ConditionalNegatedDesignated,
+            BiconditionalDesignated,
+            BiconditionalNegatedDesignated,
+            BiconditionalUndesignated,
+            BiconditionalNegatedUndesignated,
+            LP.Rules.DoubleNegationDesignated,
+            LP.Rules.DoubleNegationUndesignated))
+
+    branching_groups = group(
         group(
-            FDE.Rules.ConjunctionUndesignated,
+            LP.Rules.ConjunctionUndesignated,
             ConjunctionNegatedUndesignated,
-            FDE.Rules.DisjunctionDesignated,
-            FDE.Rules.DisjunctionNegatedUndesignated,
-            FDE.Rules.MaterialConditionalDesignated,
+            LP.Rules.DisjunctionDesignated,
+            LP.Rules.DisjunctionNegatedUndesignated,
+            LP.Rules.MaterialConditionalDesignated,
             MaterialConditionalNegatedUndesignated,
-            MH.Rules.ConditionalDesignated,
-            MH.Rules.ConditionalNegatedUndesignated),
+            ConditionalDesignated,
+            ConditionalNegatedUndesignated),
         # 3-branching rules.
         group(
             ConjunctionNegatedDesignated))
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip((0, 1, 3), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    unquantifying_groups = ()
+
+    groups = (
+        *nonbranching_groups,
+        *branching_groups)

@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
+from itertools import chain
 
 from ..tools import group
 from . import g3 as G3
@@ -31,23 +32,15 @@ class Meta(G3.Meta, KFDE.Meta):
 class Model(G3.Model, KFDE.Model): pass
 class System(G3.System, KFDE.System): pass
 
-class Rules(G3.Rules):
-    unmodal_groups = KFDE.Rules.unmodal_groups
-    groups = (
-        G3.Rules.groups[0] + group(
-            # non-branching rules
-            KFDE.Rules.PossibilityNegatedDesignated,
-            KFDE.Rules.PossibilityNegatedUndesignated,
-            KFDE.Rules.NecessityNegatedDesignated,
-            KFDE.Rules.NecessityNegatedUndesignated),
-        # branching rules
-        G3.Rules.groups[1],
-        *unmodal_groups,
-        *G3.Rules.unquantifying_groups)
+class Rules(G3.Rules, KFDE.Rules):
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip(range(2), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    nonbranching_groups = group(
+        group(
+            *chain(*G3.Rules.nonbranching_groups),
+            *KFDE.Rules.nonbranching_modal_group))
+
+    groups = (
+        *nonbranching_groups,
+        *G3.Rules.branching_groups,
+        *KFDE.Rules.unmodal_groups,
+        *G3.Rules.unquantifying_groups)

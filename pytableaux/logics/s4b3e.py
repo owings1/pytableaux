@@ -17,32 +17,26 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import b3e as B3E
-from . import kb3e as KB3E
 from . import s4fde as S4FDE
 from . import tb3e as TB3E
 
 
-class Meta(B3E.Meta, S4FDE.Meta):
+class Meta(TB3E.Meta, S4FDE.Meta):
     name = 'S4B3E'
     title = 'B3E with S4 modal'
     description = 'Modal version of B3E based on S4 normal modal logic'
-    category_order = 34
+    category_order = 29
     extension_of = ('TB3E')
 
-class Model(B3E.Model, S4FDE.Model): pass
-class System(B3E.System, S4FDE.System): pass
+class Model(TB3E.Model, S4FDE.Model): pass
+class System(TB3E.System, S4FDE.System): pass
 
-class Rules(TB3E.Rules):
-
-    Transitive = S4FDE.Rules.Transitive
+class Rules(TB3E.Rules, S4FDE.Rules):
 
     groups = (
-        # non-branching rules
-        KB3E.Rules.groups[0],
-        group(Transitive),
-        *KB3E.Rules.unmodal_groups,
+        *TB3E.Rules.nonbranching_groups,
+        group(S4FDE.Rules.Transitive),
+        *TB3E.Rules.unmodal_groups,
         group(TB3E.Rules.Reflexive),
-        # branching rules
-        *B3E.Rules.groups[1:4],
-        *B3E.Rules.unquantifying_groups)
+        *TB3E.Rules.branching_groups,
+        *TB3E.Rules.unquantifying_groups)

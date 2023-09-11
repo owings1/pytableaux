@@ -49,17 +49,19 @@ class Rules(CFOL.Rules):
     class Necessity(KFDE.Rules.NecessityDesignated): pass
     class NecessityNegated(PossibilityNegated): pass
 
+    nonbranching_groups = group(
+        group(
+            *chain(*CFOL.Rules.nonbranching_groups),
+            PossibilityNegated,
+            NecessityNegated))
+
     unmodal_groups = group(
         group(
             Necessity,
             Possibility))
-    unmodal_rules = tuple(chain(*unmodal_groups))
 
     groups = (
-        group(
-            *CFOL.Rules.groups[0],
-            PossibilityNegated,
-            NecessityNegated),
-        CFOL.Rules.groups[1],
+        *nonbranching_groups,
+        *CFOL.Rules.branching_groups,
         *unmodal_groups,
         *CFOL.Rules.unquantifying_groups)

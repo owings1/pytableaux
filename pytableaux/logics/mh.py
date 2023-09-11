@@ -21,7 +21,6 @@ from pytableaux.lang import Quantified
 from ..lang import Operator
 from ..proof import adds, rules, sdnode
 from ..tools import group
-from . import fde as FDE
 from . import k3 as K3
 
 
@@ -30,7 +29,7 @@ class Meta(K3.Meta):
     title = 'Paracomplete Hybrid Logic'
     quantified = False
     description = (
-        'Three-valued logic (True, False, Neither) with non-standard disjunction, '
+        'Three-valued logic (T, F, N) with non-standard disjunction, '
         'and a classical-like conditional')
     category_order = 11
     native_operators = [Operator.Conditional, Operator.Biconditional]
@@ -61,18 +60,11 @@ class Model(K3.Model):
             return values.N
         return values.F
 
-
 class System(K3.System): pass
 
 class Rules(K3.Rules):
 
     class DisjunctionNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, negated, designated disjunction node *n* on a branch *b*,
-        make two branches *b'* and *b''* from *b*. On *b'* add four undesignated
-        nodes, one for each disjunct and its negation. On *b''* add two designated
-        nodes, one for the negation of each disjunct. Then tick *n*.
-        """
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -87,26 +79,6 @@ class Rules(K3.Rules):
                     sdnode(~rhs, d)))
 
     class DisjunctionNegatedUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, negated, undesignated disjunction node *n* on a branch
-        *b*, make four branches from *b*: *b'*, *b''*, *b'''*, and *b''''*. On *b'*,
-        add a designated node with the first disjunct, and on *b''*, add a designated
-        node with the second disjunct.
-
-        On *b'''* add three nodes:
-
-        - An undesignated node with the first disjunct.
-        - An undesignated node with the negation of the first disjunct.
-        - A designated node with the negation of the second disjunct.
-
-        On *b''''* add three nodes:
-
-        - An undesignated node with the second disjunct.
-        - An undesignated node with the negation of the second disjunct.
-        - A designated node with the negation of the first disjunct.
-
-        Then tick *n*.
-        """
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -146,18 +118,7 @@ class Rules(K3.Rules):
                 group(
                     sdnode(rhs, d), sdnode(~rhs, d), sdnode(lhs, not d)))
 
-    class MaterialBiconditionalDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
-    class MaterialBiconditionalNegatedUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
-
     class ConditionalDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated conditional node *n* on a branch *b*, make
-        two branches *b'* and *b''* from *b*. On *b'* add an undesignated node
-        with the antecedent, and on *b''* add a designated node with the consequent.
-        Then tick *n*.
-        """
 
         def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.
@@ -166,20 +127,15 @@ class Rules(K3.Rules):
                 group(sdnode(s.rhs, True)))
 
     class ConditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, negated, desigated conditional node *n* on a branch *b*,
-        add two nodes to *b*:
-
-        - A designated node with the antecedent.
-        - An undesignated node with the consequent.
-
-        Then tick *n*.
-        """
 
         def _get_sd_targets(self, s, d, /):
             # Keep designation fixed for inheritance below.
             yield adds(group(sdnode(s.lhs, True), sdnode(s.rhs, False)))
 
+    class MaterialBiconditionalDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
+    class MaterialBiconditionalNegatedUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
     class ConditionalUndesignated(ConditionalNegatedDesignated): pass
     class ConditionalNegatedUndesignated(ConditionalDesignated): pass
     class BiconditionalDesignated(rules.ConditionalConjunctsReducingRule): pass
@@ -187,17 +143,16 @@ class Rules(K3.Rules):
     class BiconditionalUndesignated(rules.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedUndesignated(rules.ConditionalConjunctsReducingRule): pass
 
-    groups = (
-        # Non-branching rules.
+    nonbranching_groups = group(
         group(
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
-            FDE.Rules.AssertionNegatedDesignated,
-            FDE.Rules.AssertionNegatedUndesignated,
-            FDE.Rules.ConjunctionDesignated,
-            FDE.Rules.ConjunctionNegatedUndesignated,
-            FDE.Rules.DisjunctionUndesignated,
-            FDE.Rules.MaterialConditionalUndesignated,
+            K3.Rules.AssertionDesignated,
+            K3.Rules.AssertionUndesignated,
+            K3.Rules.AssertionNegatedDesignated,
+            K3.Rules.AssertionNegatedUndesignated,
+            K3.Rules.ConjunctionDesignated,
+            K3.Rules.ConjunctionNegatedUndesignated,
+            K3.Rules.DisjunctionUndesignated,
+            K3.Rules.MaterialConditionalUndesignated,
             MaterialBiconditionalDesignated,
             MaterialBiconditionalNegatedDesignated,
             MaterialBiconditionalUndesignated,
@@ -208,15 +163,16 @@ class Rules(K3.Rules):
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
-            FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated),
-        # 1-branching rules.
+            K3.Rules.DoubleNegationDesignated,
+            K3.Rules.DoubleNegationUndesignated))
+
+    branching_groups = group(
         group(
-            FDE.Rules.ConjunctionUndesignated,
-            FDE.Rules.ConjunctionNegatedDesignated,
-            FDE.Rules.DisjunctionDesignated,
+            K3.Rules.ConjunctionUndesignated,
+            K3.Rules.ConjunctionNegatedDesignated,
+            K3.Rules.DisjunctionDesignated,
             DisjunctionNegatedDesignated,
-            FDE.Rules.MaterialConditionalDesignated,
+            K3.Rules.MaterialConditionalDesignated,
             MaterialConditionalNegatedDesignated,
             ConditionalDesignated,
             ConditionalNegatedUndesignated),
@@ -225,9 +181,8 @@ class Rules(K3.Rules):
             MaterialConditionalNegatedUndesignated,
             DisjunctionNegatedUndesignated))
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip((0, 1, 3), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    unquantifying_groups = ()
+
+    groups = (
+        *nonbranching_groups,
+        *branching_groups)

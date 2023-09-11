@@ -35,7 +35,8 @@ class Meta(FDE.Meta):
     extension_of = ('FDE')
 
 class Model(LogicType.Model[Meta.values]):
-    class TruthFunction(LogicType.Model.TruthFunction[Meta.values]): pass
+    if TYPE_CHECKING:
+        class TruthFunction(LogicType.Model.TruthFunction[Meta.values]): pass
 
 class System(FDE.System): pass
 

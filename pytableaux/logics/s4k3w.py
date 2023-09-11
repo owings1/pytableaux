@@ -17,33 +17,26 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import k3w as K3W
-from . import kk3w as KK3W
 from . import s4fde as S4FDE
 from . import tk3w as TK3W
 
 
-class Meta(K3W.Meta, S4FDE.Meta):
+class Meta(TK3W.Meta, S4FDE.Meta):
     name = 'S4K3W'
     title = 'K3W with S4 modal'
     description = 'Modal version of K3W based on S4 normal modal logic'
     category_order = 29
     extension_of = ('TK3W')
 
-class Model(K3W.Model, S4FDE.Model): pass
-class System(K3W.System, S4FDE.System): pass
+class Model(TK3W.Model, S4FDE.Model): pass
+class System(TK3W.System, S4FDE.System): pass
 
-class Rules(TK3W.Rules):
-
-    Transitive = S4FDE.Rules.Transitive
+class Rules(TK3W.Rules, S4FDE.Rules):
 
     groups = (
-        # non-branching rules
-        KK3W.Rules.groups[0],
-        group(Transitive),
-        *KK3W.Rules.unmodal_groups,
+        *TK3W.Rules.nonbranching_groups,
+        group(S4FDE.Rules.Transitive),
+        *TK3W.Rules.unmodal_groups,
         group(TK3W.Rules.Reflexive),
-        # branching rules
-        *K3W.Rules.groups[1:3],
-        # quantifier rules
-        *K3W.Rules.unquantifying_groups)
+        *TK3W.Rules.branching_groups,
+        *TK3W.Rules.unquantifying_groups)

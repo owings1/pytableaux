@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import kfde as KFDE
 from . import s4 as S4
 from . import tfde as TFDE
 
@@ -45,11 +44,9 @@ class Rules(TFDE.Rules):
     Transitive = S4.Rules.Transitive
 
     groups = (
-        # non-branching rules
-        KFDE.Rules.groups[0],
+        *TFDE.Rules.nonbranching_groups,
         group(Transitive),
-        *KFDE.Rules.unmodal_groups,
+        *TFDE.Rules.unmodal_groups,
         group(TFDE.Rules.Reflexive),
-        # branching rules
-        KFDE.Rules.groups[1],
-        *KFDE.Rules.unquantifying_groups)
+        *TFDE.Rules.branching_groups,
+        *TFDE.Rules.unquantifying_groups)

@@ -17,30 +17,25 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import k3w as K3W
 from . import kk3w as KK3W
 from . import tfde as TFDE
 
 
-class Meta(K3W.Meta, TFDE.Meta):
+class Meta(KK3W.Meta, TFDE.Meta):
     name = 'TK3W'
     title = 'K3W with T modal'
     description = 'Modal version of K3W based on T normal modal logic'
     category_order = 28
     extension_of = ('KK3W')
 
-class Model(K3W.Model, TFDE.Model): pass
-class System(K3W.System, TFDE.System): pass
+class Model(KK3W.Model, TFDE.Model): pass
+class System(KK3W.System, TFDE.System): pass
 
-class Rules(K3W.Rules):
-
-    Reflexive = TFDE.Rules.Reflexive
+class Rules(KK3W.Rules, TFDE.Rules):
 
     groups = (
-        # non-branching rules
-        KK3W.Rules.groups[0],
+        *KK3W.Rules.nonbranching_groups,
         *KK3W.Rules.unmodal_groups,
-        group(Reflexive),
-        # branching rules
-        *K3W.Rules.groups[1:3],
-        *K3W.Rules.unquantifying_groups)
+        group(TFDE.Rules.Reflexive),
+        *KK3W.Rules.branching_groups,
+        *KK3W.Rules.unquantifying_groups)

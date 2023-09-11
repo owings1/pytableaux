@@ -18,20 +18,19 @@ from __future__ import annotations
 
 from ..proof import adds, rules, sdnode
 from ..tools import group
-from . import fde as FDE
 from . import k3 as K3
-from . import LogicType
+
 
 class Meta(K3.Meta):
     name = 'P3'
     title = 'Post 3-valued Logic'
     quantified = False
     description = (
-        'Emil Post three-valued logic (T, F, and N) '
+        'Emil Post three-valued logic (T, F, N) '
         'with mirror-image negation')
     category_order = 20
 
-class Model(FDE.Model):
+class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
@@ -41,30 +40,17 @@ class Model(FDE.Model):
         def Conjunction(self, a, b):
             return self.Negation(self.Disjunction(*map(self.Negation, (a, b))))
 
-class System(FDE.System): pass
+class System(K3.System): pass
 
-class Rules(LogicType.Rules):
-
-    closure = K3.Rules.closure
+class Rules(K3.Rules):
 
     class DoubleNegationDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, double-negation node `n` on a branch `b`,
-        add two undesignated nodes to `b`, one with the double-negatum, and one
-        with the negatum. Then tick `n`.
-        """
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
                 group(sdnode(~s.lhs, not d), sdnode(s.lhs, not d)))
 
     class DoubleNegationUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, undesignated, double-negation node `n` on a branch `b`,
-        make two branches `b'` and `b''` from `b`. On `b'` add a designated
-        node with the negatum, and on `b'` add a designated node with the
-        double-negatum. Then tick `n`.
-        """
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -72,11 +58,6 @@ class Rules(LogicType.Rules):
                 group(sdnode( s.lhs, not d)))
 
     class ConjunctionDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated conjunction node `n` on a branch `b`, add
-        four undesignated nodes to `b`, one for each conjunct, and one for the
-        negation of each conjunct. Then tick `n`.
-        """
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -87,14 +68,6 @@ class Rules(LogicType.Rules):
                     sdnode( s.rhs, not d)))
 
     class ConjunctionNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, negated conjunction node `n` on a branch
-        `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
-        node with the first conjunct, and an undesignated node with the negation
-        of the second conjunct. On `b''` add a designated node with the second
-        conjunct, and an undesignated node with the negation of the frist conjunct.
-        Then tick `n`.
-        """
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -102,14 +75,6 @@ class Rules(LogicType.Rules):
                 group(sdnode(s.rhs, d), sdnode(~s.lhs, not d)))
 
     class ConjunctionUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, undesignated conjunction node `n` on a branch `b`, make
-        four branches `b'`, `b''`, `b'''`, and `b''''` from `b`. On `b'`, add a
-        designated node with the negation of the first conjunct. On `b''`, add
-        a designated node ith the first conjunct. On `b'''`, add a designated
-        node with the negation of the second conjunct. On `b''''`, add a designated
-        node with the second conjunct. Then tick `n`.
-        """
 
         def _get_sd_targets(self, s, d, /):
             yield adds(
@@ -119,14 +84,6 @@ class Rules(LogicType.Rules):
                 group(sdnode(~s.rhs, not d)))
 
     class ConjunctionNegatedUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, undesignated, negated conjunction node `n` on a branch
-        `b`, make three branches `b'`, `b''`, and `b'''` from `b`. On `b'`, add
-        four undesignated nodes, one for each conjunct, and one for the negation
-        of each conjunct. On `b''`, add a designated node with the negation of
-        the first conjunct. On `b'''`, add a designated node with the negation
-        of the second conjunct. Then tick `n`.
-        """
 
         def _get_sd_targets(self, s, d, /):
             lhs, rhs = s
@@ -155,6 +112,54 @@ class Rules(LogicType.Rules):
     class BiconditionalNegatedDesignated(rules.ConditionalConjunctsReducingRule): pass
     class BiconditionalUndesignated(rules.ConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedUndesignated(rules.ConditionalConjunctsReducingRule): pass
+
+    nonbranching_groups = group(
+        group(
+            K3.Rules.AssertionDesignated,
+            K3.Rules.AssertionUndesignated,
+            K3.Rules.AssertionNegatedDesignated,
+            K3.Rules.AssertionNegatedUndesignated,
+            ConjunctionDesignated,
+            K3.Rules.DisjunctionUndesignated,
+            K3.Rules.DisjunctionNegatedDesignated,
+            DoubleNegationDesignated,
+            # reduction rules (thus, non-branching)
+            MaterialConditionalDesignated,
+            MaterialConditionalUndesignated,
+            MaterialConditionalNegatedDesignated,
+            MaterialConditionalNegatedUndesignated,
+            ConditionalDesignated,
+            ConditionalUndesignated,
+            ConditionalNegatedDesignated,
+            ConditionalNegatedUndesignated,
+            MaterialBiconditionalDesignated,
+            MaterialBiconditionalUndesignated,
+            MaterialBiconditionalNegatedDesignated,
+            MaterialBiconditionalNegatedUndesignated,
+            BiconditionalDesignated,
+            BiconditionalUndesignated,
+            BiconditionalNegatedDesignated,
+            BiconditionalNegatedUndesignated))
+
+    branching_groups = group(
+        group(
+            DoubleNegationUndesignated,
+            ConjunctionNegatedDesignated,
+            K3.Rules.DisjunctionDesignated,
+            K3.Rules.DisjunctionNegatedUndesignated),
+        group(
+            # three-branching rules
+            ConjunctionNegatedUndesignated),
+        group(
+            # four-branching rules
+            ConjunctionUndesignated))
+
+    unquantifying_groups = ()
+
+    groups = (
+        *nonbranching_groups,
+        *branching_groups)
+
 
     # class ExistentialNegatedDesignated(rules.QuantifierFatRule):
     #     """
@@ -229,62 +234,3 @@ class Rules(LogicType.Rules):
     #         yield adds(
     #             group(sdnode(branch.new_constant() >> s, not d)),
     #             group(sdnode(s, not d)))
-
-    groups = (
-        group(
-            # non-branching rules
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
-            FDE.Rules.AssertionNegatedDesignated,
-            FDE.Rules.AssertionNegatedUndesignated,
-            ConjunctionDesignated,
-            FDE.Rules.DisjunctionUndesignated,
-            FDE.Rules.DisjunctionNegatedDesignated,
-            DoubleNegationDesignated,
-            # reduction rules (thus, non-branching)
-            MaterialConditionalDesignated,
-            MaterialConditionalUndesignated,
-            MaterialConditionalNegatedDesignated,
-            MaterialConditionalNegatedUndesignated,
-            ConditionalDesignated,
-            ConditionalUndesignated,
-            ConditionalNegatedDesignated,
-            ConditionalNegatedUndesignated,
-            MaterialBiconditionalDesignated,
-            MaterialBiconditionalUndesignated,
-            MaterialBiconditionalNegatedDesignated,
-            MaterialBiconditionalNegatedUndesignated,
-            BiconditionalDesignated,
-            BiconditionalUndesignated,
-            BiconditionalNegatedDesignated,
-            BiconditionalNegatedUndesignated),
-        group(
-            # two-branching rules
-            DoubleNegationUndesignated,
-            ConjunctionNegatedDesignated,
-            FDE.Rules.DisjunctionDesignated,
-            FDE.Rules.DisjunctionNegatedUndesignated),
-        group(
-            # three-branching rules
-            ConjunctionNegatedUndesignated),
-        group(
-            # four-branching rules
-            ConjunctionUndesignated),
-        # group(
-        #     FDE.Rules.ExistentialDesignated,
-        #     UniversalUndesignated,
-        #     UniversalNegatedDesignated,
-        #     UniversalNegatedUndesignated),
-        # group(
-        #     UniversalDesignated,
-        #     FDE.Rules.ExistentialUndesignated,
-        #     ExistentialNegatedDesignated,
-        #     ExistentialNegatedUndesignated)
-            )
-
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in enumerate(cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'

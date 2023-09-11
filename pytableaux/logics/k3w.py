@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
-from . import fde as FDE
 from . import k3 as K3
 
 
@@ -42,20 +41,11 @@ class Model(K3.Model):
                 return self.values.N
             return super().Disjunction(a, b)
 
-
 class System(K3.System): pass
 
 class Rules(K3.Rules):
 
     class ConjunctionNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, negated conjunction node *n* on a branch *b*, make
-        three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
-        node with the first conjunct, and a designated node with the negation of the
-        second conjunct. On *b''* add a designated node with the negation of the first
-        conjunct, and a designated node with the second conjunct. On *b'''* add
-        designated nodes with the negation of each conjunct. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -65,13 +55,6 @@ class Rules(K3.Rules):
                 sdwgroup((~lhs, True, w), (~rhs, True, w)))
 
     class ConjunctionNegatedUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, undesignated, negated conjunction node *n* on a branch *b*, make
-        three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated nodes
-        for the first conjunct and its negation. On *b''* add undesignated nodes for the
-        second conjunct and its negation. On *b'''* add a designated node for each conjunct.
-        Then tick *n*. 
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -81,14 +64,6 @@ class Rules(K3.Rules):
                 sdwgroup((lhs, True, w),  ( rhs, True, w)))
 
     class DisjunctionDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, disjunction node *n* on a branch *b*, make
-        three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
-        node with the first disjunct, and a designated node with the negation of the
-        second disjunct. On *b''* add a designated node with the negation of the first
-        disjunct, and a designated node with the second disjunct. On *b'''* add a
-        designated node with each disjunct. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -98,13 +73,6 @@ class Rules(K3.Rules):
                 sdwgroup(( lhs, True, w), ( rhs, True, w)))
             
     class DisjunctionUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, undesignated disjunction node *n* on a branch *b*, make three
-        new branches *b'*, *b''*, and *b'''* from b. On *b'* add undesignated nodes for
-        the first disjunct and its negation. On *b''* add undesignated nodes for the
-        second disjunct and its negation. On *b'''* add designated nodes for the negation
-        of each disjunct. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
@@ -114,15 +82,6 @@ class Rules(K3.Rules):
                 sdwgroup((~lhs, True, w),  (~rhs, True, w)))
 
     class DisjunctionNegatedUndesignated(rules.OperatorNodeRule):
-        """
-        Either the disjunction is designated, or at least one of the disjuncts
-        has the value V{N}. So, from an unticked, undesignated, negated
-        disjunction node *n* on a branch *b*, make three branches *b'*, *b''*,
-        and *b'''* from *b*. On *b'* add a designated node with the disjunction.
-        On *b''* add two undesignated nodes with the first disjunct and its
-        negation, respectively. On *b'''* add undesignated nodes with the second
-        disjunct and its negation, respectively. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
@@ -147,17 +106,16 @@ class Rules(K3.Rules):
     class BiconditionalUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
     class BiconditionalNegatedUndesignated(rules.MaterialConditionalConjunctsReducingRule): pass
 
-    groups = (
+    nonbranching_groups = group(
         group(
-            # non-branching rules
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
-            FDE.Rules.AssertionNegatedDesignated,
-            FDE.Rules.AssertionNegatedUndesignated,
-            FDE.Rules.ConjunctionDesignated, 
-            FDE.Rules.DisjunctionNegatedDesignated,
-            FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated,
+            K3.Rules.AssertionDesignated,
+            K3.Rules.AssertionUndesignated,
+            K3.Rules.AssertionNegatedDesignated,
+            K3.Rules.AssertionNegatedUndesignated,
+            K3.Rules.ConjunctionDesignated, 
+            K3.Rules.DisjunctionNegatedDesignated,
+            K3.Rules.DoubleNegationDesignated,
+            K3.Rules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)
             MaterialConditionalDesignated,
             MaterialConditionalUndesignated,
@@ -174,10 +132,12 @@ class Rules(K3.Rules):
             BiconditionalDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
-            BiconditionalNegatedUndesignated),
+            BiconditionalNegatedUndesignated))
+
+    branching_groups = group(
         group(
             # two-branching rules
-            FDE.Rules.ConjunctionUndesignated),
+            K3.Rules.ConjunctionUndesignated),
         group(
             # three-branching rules
             DisjunctionDesignated,
@@ -185,7 +145,11 @@ class Rules(K3.Rules):
             ConjunctionNegatedDesignated,
             ConjunctionNegatedUndesignated,
             # five-branching rules (formerly)
-            DisjunctionNegatedUndesignated),
+            DisjunctionNegatedUndesignated))
+
+    groups = (
+        *nonbranching_groups,
+        *branching_groups,
         *K3.Rules.unquantifying_groups)
 
     @staticmethod

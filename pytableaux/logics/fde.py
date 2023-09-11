@@ -66,6 +66,68 @@ class Rules(LogicType.Rules):
             s = Atomic.first()
             w = 0 if self.modal else None
             yield from sdwgroup((s, True, w), (s, False, w))
+
+    class MaterialConditionalDesignated(rules.OperatorNodeRule):
+
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(
+                sdwgroup((~s.lhs, d, w)),
+                sdwgroup(( s.rhs, d, w)))
+
+    class MaterialConditionalNegatedDesignated(rules.OperatorNodeRule):
+
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(sdwgroup((s.lhs, d, w), (~s.rhs, d, w)))
+
+    class MaterialConditionalUndesignated(rules.OperatorNodeRule):
+
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(sdwgroup((~s.lhs, d, w), (s.rhs, d, w)))
+
+    class MaterialConditionalNegatedUndesignated(rules.OperatorNodeRule):
+
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(
+                sdwgroup(( s.lhs, d, w)),
+                sdwgroup((~s.rhs, d, w)))
+
+    class MaterialBiconditionalDesignated(rules.OperatorNodeRule):
+
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(
+                sdwgroup((~s.lhs, d, w), (~s.rhs, d, w)),
+                sdwgroup(( s.rhs, d, w), ( s.lhs, d, w)))
+
+    class MaterialBiconditionalNegatedDesignated(rules.OperatorNodeRule):
+
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(
+                sdwgroup(( s.lhs, d, w), (~s.rhs, d, w)),
+                sdwgroup((~s.lhs, d, w), ( s.rhs, d, w)))
+
+    class ExistentialDesignated(rules.QuantifierSkinnyRule):
+
+        def _get_node_targets(self, node, branch, /):
+            s = branch.new_constant() >> self.sentence(node)
+            if self.negated:
+                s = ~s
+            yield adds(
+                sdwgroup((s, self.designation, node.get('world'))))
+
+    class UniversalDesignated(rules.QuantifierFatRule):
+
+        def _get_constant_nodes(self, node, c, branch, /):
+            s = c >> self.sentence(node)
+            if self.negated:
+                s = ~s
+            yield sdwnode(s, self.designation, node.get('world'))
+
+    class ExistentialNegatedDesignated(UniversalDesignated): pass
+    class ExistentialNegatedUndesignated(ExistentialDesignated): pass
+    class ExistentialUndesignated(UniversalDesignated): pass
+    class UniversalNegatedDesignated(ExistentialDesignated): pass
+    class UniversalUndesignated(ExistentialDesignated): pass
+    class UniversalNegatedUndesignated(UniversalDesignated): pass
             
     class DoubleNegationDesignated(rules.OperandsRule): pass
     class DoubleNegationUndesignated(rules.OperandsRule): pass
@@ -81,81 +143,6 @@ class Rules(LogicType.Rules):
     class DisjunctionNegatedDesignated(rules.NegatingOperandsRule): pass
     class DisjunctionUndesignated(rules.OperandsRule): pass
     class DisjunctionNegatedUndesignated(rules.NegatingBranchingOperandsRule): pass
-
-    class MaterialConditionalDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked designated material conditional node *n* on a branch *b*, make
-        two new branches *b'* and *b''* from *b*, add a designated node with the negation
-        of the antecedent to *b'*, add a designated node with the consequent to *b''*,
-        then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(
-                sdwgroup((~s.lhs, d, w)),
-                sdwgroup(( s.rhs, d, w)))
-
-    class MaterialConditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked designated negated material conditional node *n* on a
-        branch *b*, add a designated node with the antecedent, and a designated
-        node with the negation of the consequent to *b*, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(sdwgroup((s.lhs, d, w), (~s.rhs, d, w)))
-
-    class MaterialConditionalUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked undesignated material conditional node *n* on a branch *b*, add
-        an undesignated node with the negation of the antecedent and an undesignated node
-        with the consequent to *b*, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(sdwgroup((~s.lhs, d, w), (s.rhs, d, w)))
-
-    class MaterialConditionalNegatedUndesignated(rules.OperatorNodeRule):
-        """
-        From an unticked undesignated negated material conditional node *n* on a branch *b*, make
-        two new branches *b'* and *b''* from *b*, add an undesignated node with the antecedent to
-        *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
-        tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(
-                sdwgroup(( s.lhs, d, w)),
-                sdwgroup((~s.rhs, d, w)))
-
-    class MaterialBiconditionalDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked designated material biconditional node *n* on a branch *b*, make
-        two new branches *b'* and *b''* from *b*, add a designated node with the negation
-        of the antecedent and a designated node with the negation of the consequent to *b'*,
-        and add a designated node with the antecedent and a designated node with the
-        consequent to *b''*, then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(
-                sdwgroup((~s.lhs, d, w), (~s.rhs, d, w)),
-                sdwgroup(( s.rhs, d, w), ( s.lhs, d, w)))
-
-    class MaterialBiconditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked designated negated material biconditional node *n* on a branch *b*, make
-        two branches *b'* and *b''* from *b*, add a designated node with the antecedent and a
-        designated node with the negation of the consequent to *b'*, and add a designated node
-        with the negation of the antecedent and a designated node with the consequent to *b''*,
-        then tick *n*.
-        """
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(
-                sdwgroup(( s.lhs, d, w), (~s.rhs, d, w)),
-                sdwgroup((~s.lhs, d, w), ( s.rhs, d, w)))
-
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated): pass
     class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalDesignated): pass
     class ConditionalDesignated(MaterialConditionalDesignated): pass
@@ -167,59 +154,10 @@ class Rules(LogicType.Rules):
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated): pass
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated): pass
 
-    class ExistentialDesignated(rules.QuantifierSkinnyRule):
-        """
-        From an unticked designated existential node *n* on a branch *b* quantifying over
-        variable *v* into sentence *s*, add a designated node to *b* with the substitution
-        into *s* of a new constant not yet appearing on *b* for *v*, then tick *n*.
-        """
-
-        def _get_node_targets(self, node, branch, /):
-            s = branch.new_constant() >> self.sentence(node)
-            if self.negated:
-                s = ~s
-            yield adds(
-                sdwgroup((s, self.designation, node.get('world'))))
-
-    class UniversalDesignated(rules.QuantifierFatRule):
-        """
-        From an undesignated existential node *n* on a branch *b*, for any constant *c* on
-        *b* such that the result *r* of substituting *c* for the variable bound by the
-        sentence of *n* does not appear on *b*, then add an undesignated node with *r* to *b*.
-        If there are no constants yet on *b*, then instantiate with a new constant. The node
-        *n* is never ticked.
-        """
-
-        def _get_constant_nodes(self, node, c, branch, /):
-            s = c >> self.sentence(node)
-            if self.negated:
-                s = ~s
-            yield sdwnode(s, self.designation, node.get('world'))
-
-    class ExistentialNegatedDesignated(UniversalDesignated): pass
-    class ExistentialNegatedUndesignated(ExistentialDesignated): pass
-    class ExistentialUndesignated(UniversalDesignated): pass
-    class UniversalNegatedDesignated(ExistentialDesignated): pass
-    class UniversalUndesignated(ExistentialDesignated): pass
-    class UniversalNegatedUndesignated(UniversalDesignated): pass
-
-    unquantifying_groups = (
-        group(
-            UniversalDesignated,
-            UniversalNegatedUndesignated,
-            ExistentialNegatedDesignated,
-            ExistentialUndesignated),
-        group(
-            ExistentialDesignated,
-            ExistentialNegatedUndesignated,
-            UniversalNegatedDesignated,
-            UniversalUndesignated))
-
     closure = group(DesignationClosure)
 
-    groups = (
+    nonbranching_groups = group(
         group(
-            # non-branching rules
             AssertionDesignated,
             AssertionUndesignated,
             AssertionNegatedDesignated,
@@ -233,9 +171,10 @@ class Rules(LogicType.Rules):
             ConditionalUndesignated, 
             ConditionalNegatedDesignated,
             DoubleNegationDesignated,
-            DoubleNegationUndesignated),
+            DoubleNegationUndesignated))
+
+    branching_groups = group(
         group(
-            # branching rules
             ConjunctionNegatedDesignated,
             ConjunctionUndesignated,
             DisjunctionDesignated,
@@ -251,12 +190,21 @@ class Rules(LogicType.Rules):
             BiconditionalDesignated,
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
-            BiconditionalNegatedUndesignated),
-        *unquantifying_groups)
+            BiconditionalNegatedUndesignated))
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip(range(2), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    unquantifying_groups = group(
+        group(
+            UniversalDesignated,
+            UniversalNegatedUndesignated,
+            ExistentialNegatedDesignated,
+            ExistentialUndesignated),
+        group(
+            ExistentialDesignated,
+            ExistentialNegatedUndesignated,
+            UniversalNegatedDesignated,
+            UniversalUndesignated))
+
+    groups = (
+        *nonbranching_groups,
+        *branching_groups,
+        *unquantifying_groups)

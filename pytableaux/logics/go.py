@@ -16,13 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from itertools import chain
-
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
-from . import LogicType
 from . import b3e as B3E
-from . import fde as FDE
 from . import k3 as K3
 from . import l3 as L3
 
@@ -31,7 +27,7 @@ class Meta(L3.Meta, B3E.Meta):
     name = 'GO'
     title = 'Gappy Object Logic'
     description = (
-        'Three-valued logic (True, False, Neither) with '
+        'Three-valued logic (T, F, N) with '
         'classical-like binary operators')
     category_order = 13
 
@@ -57,17 +53,9 @@ class Model(K3.Model):
 
 class System(K3.System): pass
 
-class Rules(LogicType.Rules):
-
-    closure = K3.Rules.closure
+class Rules(K3.Rules):
 
     class ConjunctionNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, negated conjunction node *n* on a branch *b*,
-        make two new branches *b'* and *b''* from *b*, add an undesignated node to
-        *b'* with one conjunct, and an undesignated node to *b''* with the other
-        conjunct, then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
@@ -75,22 +63,11 @@ class Rules(LogicType.Rules):
                 sdwgroup((s.rhs, not d, w)))
 
     class MaterialConditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, negated material conditional node *n* on a branch
-        *b*, add an undesignated node with the negation of the antecedent, and an
-        undesignated node with the consequent to *b*, then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(sdwgroup((~s.lhs, not d, w), (s.rhs, not d, w)))
 
     class MaterialBiconditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, negated, material biconditional node *n* on a branch
-        *b*, make two branches *b'* and *b''* from *b*. On *b'* add undesignated nodes for
-        the negation of the antecent, and for the consequent. On *b''* add undesignated
-        nodes for the antecedent, and for the negation of the consequent. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
@@ -98,13 +75,6 @@ class Rules(LogicType.Rules):
                 sdwgroup(( s.lhs, not d, w), (~s.rhs, not d, w)))
 
     class ConditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, negated conditional node *n* on a branch *b*, make
-        two branches *b'* and *b''* from *b*. On *b'* add a designated node with the
-        antecedent, and an undesignated node with the consequent. On *b''* add an
-        undesignated node with the negation of the antencedent, and a designated node
-        with the negation of the consequent. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             yield adds(
@@ -112,11 +82,6 @@ class Rules(LogicType.Rules):
                 sdwgroup((~s.lhs, not d, w), (~s.rhs, d, w)))
 
     class BiconditionalDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated biconditional node *n* on a branch *b*, add two
-        designated conditional nodes to *b*, one with the operands of the biconditional,
-        and the other with the reversed operands. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
@@ -125,12 +90,6 @@ class Rules(LogicType.Rules):
                 (convert(reversed(s)), d, w)))
 
     class BiconditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated, negated biconditional node *n* on a branch *b*, make
-        two branches *b'* and *b''* from *b*. On *b'* add a designated negated conditional
-        node with the operands of the biconditional. On *b''* add a designated negated
-        conditional node with the reversed operands of the biconditional. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             convert = self.operator.other
@@ -139,14 +98,6 @@ class Rules(LogicType.Rules):
                 sdwgroup((~convert(reversed(s)), d, w)))
 
     class ExistentialNegatedDesignated(rules.QuantifierNodeRule):
-        """
-        From an unticked, designated negated existential node *n* on a branch *b*,
-        add a designated node *n'* to *b* with a universal sentence consisting of
-        disjunction, whose first disjunct is the negated inner sentence of *n*,
-        and whose second disjunct is the negation of a disjunction *d*, where the
-        first disjunct of *d* is the inner sentence of *n*, and the second disjunct
-        of *d* is the negation of the inner sentence of *n*. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             v, si = s[1:]
@@ -154,14 +105,6 @@ class Rules(LogicType.Rules):
             yield adds(sdwgroup((sq, d, w)))
 
     class UniversalNegatedDesignated(rules.QuantifierSkinnyRule):
-        """
-        From an unticked, designated universal existential node *n* on a branch *b*,
-        make two branches *b'* and *b''* from *b*. On *b'*, add a designtated node
-        with the standard translation of the sentence on *b*. For *b''*, substitute
-        a new constant *c* for the quantified variable, and add two undesignated
-        nodes to *b''*, one with the substituted inner sentence, and one with its
-        negation, then tick *n*.
-        """
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
@@ -194,26 +137,19 @@ class Rules(LogicType.Rules):
     class ExistentialNegatedUndesignated(rules.FlippingRule): pass
     class UniversalNegatedUndesignated(rules.FlippingRule): pass
 
-    unquantifying_groups = (
-        group(
-            FDE.Rules.UniversalDesignated, #fat
-        ),
-        group(
-            FDE.Rules.ExistentialDesignated, # skinny
-        ),
-        group(
-            UniversalNegatedDesignated, # skinny + branching
-        ))
-    unquantifying_rules = tuple(chain(*unquantifying_groups))
+    AssertionNegatedDesignated = B3E.Rules.AssertionNegatedDesignated
+    AssertionNegatedUndesignated = B3E.Rules.AssertionNegatedUndesignated
+    ConditionalDesignated = L3.Rules.ConditionalDesignated
 
-    groups = (
+    nonbranching_groups = group(
         group(
-            # non-branching rules
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
-            B3E.Rules.AssertionNegatedDesignated,
-            B3E.Rules.AssertionNegatedUndesignated,
-            FDE.Rules.ConjunctionDesignated,
+            K3.Rules.DoubleNegationDesignated,
+            K3.Rules.DoubleNegationUndesignated,
+            K3.Rules.AssertionDesignated,
+            K3.Rules.AssertionUndesignated,
+            AssertionNegatedDesignated,
+            AssertionNegatedUndesignated,
+            K3.Rules.ConjunctionDesignated,
             ConjunctionUndesignated,
             ConjunctionNegatedUndesignated,
             DisjunctionNegatedDesignated,
@@ -229,30 +165,30 @@ class Rules(LogicType.Rules):
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalDesignated,
-            FDE.Rules.ExistentialDesignated,
             ExistentialNegatedDesignated,
             ExistentialUndesignated,
             ExistentialNegatedUndesignated,
-            FDE.Rules.UniversalDesignated,
             UniversalUndesignated,
-            UniversalNegatedUndesignated,
-            FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated),
-        group(
-            # branching rules
-            FDE.Rules.DisjunctionDesignated,
-            ConjunctionNegatedDesignated,
-            FDE.Rules.MaterialConditionalDesignated,
-            FDE.Rules.MaterialBiconditionalDesignated,
-            MaterialBiconditionalNegatedDesignated,
-            L3.Rules.ConditionalDesignated,
-            ConditionalNegatedDesignated,
-            BiconditionalNegatedDesignated,
-            UniversalNegatedDesignated))
+            UniversalNegatedUndesignated))
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in enumerate(cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    branching_groups = group(
+        group(
+            K3.Rules.DisjunctionDesignated,
+            ConjunctionNegatedDesignated,
+            K3.Rules.MaterialConditionalDesignated,
+            K3.Rules.MaterialBiconditionalDesignated,
+            MaterialBiconditionalNegatedDesignated,
+            ConditionalDesignated,
+            ConditionalNegatedDesignated,
+            BiconditionalNegatedDesignated))
+
+    unquantifying_groups = (
+        group(K3.Rules.UniversalDesignated),
+        group(K3.Rules.ExistentialDesignated),
+        # existential + branching
+        group(UniversalNegatedDesignated))
+
+    groups = (
+        *nonbranching_groups,
+        *branching_groups,
+        *unquantifying_groups)

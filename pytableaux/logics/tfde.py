@@ -44,10 +44,8 @@ class Rules(KFDE.Rules):
     Reflexive = T.Rules.Reflexive
 
     groups = (
-        # non-branching rules
-        KFDE.Rules.groups[0],
+        *KFDE.Rules.nonbranching_groups,
         *KFDE.Rules.unmodal_groups,
         group(Reflexive),
-        # branching rules
-        KFDE.Rules.groups[1],
+        *KFDE.Rules.branching_groups,
         *KFDE.Rules.unquantifying_groups)

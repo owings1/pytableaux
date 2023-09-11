@@ -32,7 +32,7 @@ class Meta(L3.Meta, S5FDE.Meta):
 class Model(L3.Model, S5FDE.Model): pass
 class System(L3.System, S5FDE.System): pass
 
-class Rules(L3.Rules, S5FDE.Rules):
+class Rules(S4L3.Rules, S5FDE.Rules):
 
     groups = (
         *S4L3.Rules.groups,

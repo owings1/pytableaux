@@ -16,10 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Operator as Operator
+from ..lang import Operator
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
-from . import fde as FDE
 from . import k3 as K3
 from . import k3w as K3W
 
@@ -66,12 +65,6 @@ class Rules(K3W.Rules):
                 sdwgroup((lhs, not d, w), (rhs, not d, w)))
 
     class ConditionalDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated conditional node *n* on a branch *b*,
-        add a designated node to *b* with a disjunction, where the
-        first disjunction is the negation of the assertion of the antecedent,
-        and the second disjunct is the assertion of the consequent. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             sn = ~+s.lhs | +s.rhs
@@ -82,11 +75,6 @@ class Rules(K3W.Rules):
             yield adds(sdwgroup((sn, d, w)))
 
     class ConditionalNegatedDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated negated conditional node *n* on a branch *b*,
-        add a designated node with the antecedent, and an undesigntated node
-        with the consequent to *b*. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             # Keep designation fixed for inheritance below.
@@ -95,13 +83,6 @@ class Rules(K3W.Rules):
                 (s.rhs, False, w)))
 
     class BiconditionalDesignated(rules.OperatorNodeRule):
-        """
-        From an unticked, designated biconditional node *n* on a branch *b*, add
-        two designated nodes to *b*, one with a disjunction, where the first
-        disjunct is the negated asserted antecedent, and the second disjunct is
-        the asserted consequent, and the other node is the same with the disjuncts
-        inverted. Then tick *n*.
-        """
 
         def _get_sdw_targets(self, s, d, w, /):
             lhsa = +s.lhs
@@ -133,18 +114,18 @@ class Rules(K3W.Rules):
     class BiconditionalNegatedDesignated(BiconditionalDesignated): pass
     class BiconditionalUndesignated(BiconditionalDesignated): pass
 
-    groups = (
+    nonbranching_groups = group(
         group(
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
+            K3.Rules.AssertionDesignated,
+            K3.Rules.AssertionUndesignated,
             AssertionNegatedDesignated,
             AssertionNegatedUndesignated,
-            FDE.Rules.ConjunctionDesignated,
-            FDE.Rules.DisjunctionNegatedDesignated,
+            K3.Rules.ConjunctionDesignated,
+            K3.Rules.DisjunctionNegatedDesignated,
             ConditionalNegatedDesignated,
             ConditionalUndesignated,
-            FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated,
+            K3.Rules.DoubleNegationDesignated,
+            K3.Rules.DoubleNegationUndesignated,
             # reduction rules (thus, non-branching)
             K3W.Rules.MaterialConditionalDesignated,
             K3W.Rules.MaterialConditionalUndesignated,
@@ -156,10 +137,12 @@ class Rules(K3W.Rules):
             K3W.Rules.MaterialBiconditionalNegatedDesignated,
             BiconditionalDesignated,
             BiconditionalUndesignated,
-            BiconditionalNegatedDesignated),
+            BiconditionalNegatedDesignated))
+
+    branching_groups = group(
         group(
             # two-branching rules
-            FDE.Rules.ConjunctionUndesignated,
+            K3.Rules.ConjunctionUndesignated,
             BiconditionalNegatedUndesignated),
         group(
             # three-branching rules
@@ -171,9 +154,12 @@ class Rules(K3W.Rules):
             K3W.Rules.DisjunctionNegatedUndesignated),
         group(
             MaterialBiconditionalUndesignated,
-            MaterialBiconditionalNegatedUndesignated),
-        # quantifier rules
-        *FDE.Rules.unquantifying_groups)
+            MaterialBiconditionalNegatedUndesignated))
+    
+    groups = (
+        *nonbranching_groups,
+        *branching_groups,
+        *K3.Rules.unquantifying_groups)
 
     @staticmethod
     def _check_groups():

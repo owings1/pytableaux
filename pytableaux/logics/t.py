@@ -87,19 +87,8 @@ class Rules(K.Rules):
             yield swnode(Atomic.first(), 0)
 
     groups = (
-        # non-branching rules
-        K.Rules.groups[0],
-        # modal rules
+        *K.Rules.nonbranching_groups,
         *K.Rules.unmodal_groups,
         group(Reflexive),
-        # branching rules
-        K.Rules.groups[1],
-        # quantifier rules
+        *K.Rules.branching_groups,
         *K.Rules.unquantifying_groups)
-
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, i in zip(range(2), (0, 3)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'

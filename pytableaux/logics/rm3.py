@@ -19,7 +19,6 @@ from __future__ import annotations
 from ..lang import Operator
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
-from . import fde as FDE
 from . import l3 as L3
 from . import lp as LP
 
@@ -126,48 +125,47 @@ class Rules(LP.Rules):
                     (~s.lhs, d, w),
                     (~s.rhs, d, w)))
 
-    groups = (
+    BiconditionalUndesignated = L3.Rules.BiconditionalUndesignated
+
+    nonbranching_groups = group(
         group(
-            # non-branching rules
-            FDE.Rules.AssertionDesignated,
-            FDE.Rules.AssertionUndesignated,
-            FDE.Rules.AssertionNegatedDesignated,
-            FDE.Rules.AssertionNegatedUndesignated,
-            FDE.Rules.ConjunctionDesignated,
-            FDE.Rules.ConjunctionNegatedUndesignated,
-            FDE.Rules.DisjunctionNegatedDesignated,
-            FDE.Rules.DisjunctionUndesignated,
-            FDE.Rules.MaterialConditionalNegatedDesignated,
-            FDE.Rules.MaterialConditionalUndesignated,
-            FDE.Rules.ConditionalNegatedDesignated,
-            FDE.Rules.DoubleNegationDesignated,
-            FDE.Rules.DoubleNegationUndesignated),
+            LP.Rules.AssertionDesignated,
+            LP.Rules.AssertionUndesignated,
+            LP.Rules.AssertionNegatedDesignated,
+            LP.Rules.AssertionNegatedUndesignated,
+            LP.Rules.ConjunctionDesignated,
+            LP.Rules.ConjunctionNegatedUndesignated,
+            LP.Rules.DisjunctionNegatedDesignated,
+            LP.Rules.DisjunctionUndesignated,
+            LP.Rules.MaterialConditionalNegatedDesignated,
+            LP.Rules.MaterialConditionalUndesignated,
+            LP.Rules.ConditionalNegatedDesignated,
+            LP.Rules.DoubleNegationDesignated,
+            LP.Rules.DoubleNegationUndesignated))
+
+    branching_groups = group(
         group(
-            # 2 branching rules
-            FDE.Rules.ConjunctionNegatedDesignated,
-            FDE.Rules.ConjunctionUndesignated,
-            FDE.Rules.DisjunctionDesignated,
-            FDE.Rules.DisjunctionNegatedUndesignated,
-            FDE.Rules.MaterialConditionalDesignated,
-            FDE.Rules.MaterialConditionalNegatedUndesignated,
-            FDE.Rules.MaterialBiconditionalDesignated,
-            FDE.Rules.MaterialBiconditionalNegatedDesignated,
-            FDE.Rules.MaterialBiconditionalUndesignated,
-            FDE.Rules.MaterialBiconditionalNegatedUndesignated,
+            LP.Rules.ConjunctionNegatedDesignated,
+            LP.Rules.ConjunctionUndesignated,
+            LP.Rules.DisjunctionDesignated,
+            LP.Rules.DisjunctionNegatedUndesignated,
+            LP.Rules.MaterialConditionalDesignated,
+            LP.Rules.MaterialConditionalNegatedUndesignated,
+            LP.Rules.MaterialBiconditionalDesignated,
+            LP.Rules.MaterialBiconditionalNegatedDesignated,
+            LP.Rules.MaterialBiconditionalUndesignated,
+            LP.Rules.MaterialBiconditionalNegatedUndesignated,
             ConditionalUndesignated,
-            FDE.Rules.ConditionalNegatedUndesignated,
-            FDE.Rules.BiconditionalNegatedDesignated,
-            L3.Rules.BiconditionalUndesignated,
+            LP.Rules.ConditionalNegatedUndesignated,
+            LP.Rules.BiconditionalNegatedDesignated,
+            BiconditionalUndesignated,
             BiconditionalNegatedUndesignated),
         group(
             # 3 branching rules
             ConditionalDesignated,
-            BiconditionalDesignated),
-        *LP.Rules.unquantifying_groups)
+            BiconditionalDesignated))
 
-    @staticmethod
-    def _check_groups():
-        cls = __class__
-        for branching, group in zip(range(3), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'
+    groups = (
+        *nonbranching_groups,
+        *branching_groups,
+        *LP.Rules.unquantifying_groups)
