@@ -97,8 +97,9 @@ class Rules(K.Rules):
         # quantifier rules
         *K.Rules.unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, i in zip(range(2), (0, 3)):
             for rulecls in cls.groups[i]:
                 assert rulecls.branching == branching, f'{rulecls}'

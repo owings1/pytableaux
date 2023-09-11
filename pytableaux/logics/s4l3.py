@@ -33,6 +33,7 @@ class Model(L3.Model, S4FDE.Model): pass
 class System(L3.System, S4FDE.System): pass
 
 class Rules(L3.Rules, S4FDE.Rules):
+
     groups = (
         # non-branching rules
         KL3.Rules.groups[0],
@@ -42,9 +43,3 @@ class Rules(L3.Rules, S4FDE.Rules):
         # branching rules
         L3.Rules.groups[1],
         *L3.Rules.unquantifying_groups)
-
-    @classmethod
-    def _check_groups(cls):
-        for branching, i in zip(range(2), (0, -3)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'

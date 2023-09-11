@@ -31,9 +31,7 @@ class Meta(LP.Meta):
         'Three-valued logic (True, False, Both) with a primitive '
         'Conditional operator')
     category_order = 6
-    native_operators = FDE.Meta.native_operators | (
-        Operator.Conditional,
-        Operator.Biconditional)
+    native_operators = [Operator.Conditional, Operator.Biconditional]
 
 class Model(LP.Model):
 
@@ -165,11 +163,11 @@ class Rules(LP.Rules):
             # 3 branching rules
             ConditionalDesignated,
             BiconditionalDesignated),
-        # quantifier rules
         *LP.Rules.unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip(range(3), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

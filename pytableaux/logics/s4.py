@@ -111,16 +111,15 @@ class Rules(T.Rules):
         # fail to close. It is so far an open question whether this
         # is a good idea.
         group(Transitive),
-        # modal operator rules
         *K.Rules.unmodal_groups,
         group(T.Rules.Reflexive),
         # branching rules
         K.Rules.groups[1],
-        # quantifier rules
         *K.Rules.unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, i in zip(range(2), (0, 4)):
             for rulecls in cls.groups[i]:
                 assert rulecls.branching == branching, f'{rulecls}'

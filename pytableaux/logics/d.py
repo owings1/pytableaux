@@ -101,17 +101,15 @@ class Rules(K.Rules):
     groups = (
         # non-branching rules
         K.Rules.groups[0],
-        # modal rules
         *K.Rules.unmodal_groups,
         # branching rules
         K.Rules.groups[1],
-        # quantifier rules
         *K.Rules.unquantifying_groups,
-        # special ordering of serial rule
         group(Serial))
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, i in zip(range(2), (0, 2)):
             for rulecls in cls.groups[i]:
                 assert rulecls.branching == branching, f'{rulecls}'

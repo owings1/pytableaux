@@ -33,16 +33,14 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with non-standard disjunction, '
         'and a classical-like conditional')
     category_order = 11
-    native_operators = K3.Meta.native_operators | (
-        Operator.Conditional,
-        Operator.Biconditional)
+    native_operators = [Operator.Conditional, Operator.Biconditional]
 
 class Model(K3.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
         def Disjunction(self, a, b):
-            if a == self.values.N and b == self.values.N:
+            if a == b == self.values.N:
                 return self.values.F
             return super().Disjunction(a, b)
 
@@ -227,8 +225,9 @@ class Rules(K3.Rules):
             MaterialConditionalNegatedUndesignated,
             DisjunctionNegatedUndesignated))
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip((0, 1, 3), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

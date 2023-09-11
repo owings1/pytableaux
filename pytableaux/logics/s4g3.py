@@ -34,7 +34,9 @@ class Model(G3.Model, S4FDE.Model): pass
 class System(G3.System, S4FDE.System): pass
 
 class Rules(TG3.Rules):
+
     Transitive = S4FDE.Rules.Transitive
+
     groups = (
         # non-branching rules
         KG3.Rules.groups[0],
@@ -44,9 +46,3 @@ class Rules(TG3.Rules):
         # branching rules
         G3.Rules.groups[1],
         *G3.Rules.unquantifying_groups)
-
-    @classmethod
-    def _check_groups(cls):
-        for branching, i in zip(range(2), (0, -3)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'

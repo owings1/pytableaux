@@ -16,12 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
-from . import s4fde as S4FDE
-from . import kfde as KFDE
-from . import s5 as S5
 from ..tools import group
+from . import kfde as KFDE
+from . import s4fde as S4FDE
+from . import s5 as S5
 
 
 class Meta(KFDE.Meta):
@@ -40,10 +38,12 @@ class Model(S4FDE.Model):
         self._ensure_global_access()
         return super().finish()
 
-class System(FDE.System): pass
+class System(KFDE.System): pass
 
-class Rules(LogicType.Rules):
-    closure = KFDE.Rules.closure
+class Rules(S4FDE.Rules):
+
+    Symmetric = S5.Rules.Symmetric
+
     groups = (
         *S4FDE.Rules.groups,
-        group(S5.Rules.Symmetric))
+        group(Symmetric))

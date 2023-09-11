@@ -41,13 +41,5 @@ class Rules(RM3.Rules, KFDE.Rules):
             KFDE.Rules.NecessityNegatedUndesignated),
         # branching rules
         *RM3.Rules.groups[1:3],
-        # modal operator rules
         *KFDE.Rules.unmodal_groups,
-        # quantifier rules
         *RM3.Rules.unquantifying_groups)
-
-    @classmethod
-    def _check_groups(cls):
-        for branching, group in zip(range(3), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'

@@ -20,34 +20,29 @@ import operator as opr
 
 from ..proof import rules
 from ..tools import group, qset
-from . import LogicType
-from . import fde as FDE
 from . import go as GO
-from . import k3 as K3
 from . import kfde as KFDE
-from . import s4 as S4
 from . import s4fde as S4FDE
-from . import t as T
 
 
-class Meta(GO.Meta):
+class Meta(GO.Meta, S4FDE.Meta):
     name = 'S4GO'
-    modal = True
     title = 'GO S4 modal logic'
     description = 'Modal version of GO with S4 access'
     category_order = 59
     extension_of = ('GO')
 
-class Model(S4FDE.Model, GO.Model):
+class Model(GO.Model, S4FDE.Model):
 
     def _unmodal_values(self, s, /, **kw):
         return map(self.truth_function.Assertion, super()._unmodal_values(s, **kw))
 
-class System(FDE.System): pass
+class System(GO.System, S4FDE.System): pass
 
-class Rules(LogicType.Rules):
+class Rules(GO.Rules):
 
-    closure = K3.Rules.closure
+    Reflexive = S4FDE.Rules.Reflexive
+    Transitive = S4FDE.Rules.Transitive
 
     class PossibilityNegatedDesignated(KFDE.Rules.NecessityDesignated):
         new_designation = staticmethod(opr.not_)
@@ -60,6 +55,14 @@ class Rules(LogicType.Rules):
     class PossibilityNegatedUndesignated(rules.FlippingRule): pass
     class NecessityNegatedUndesignated(rules.FlippingRule): pass
 
+    unmodal_groups = (
+        group(
+            KFDE.Rules.NecessityDesignated,
+            PossibilityNegatedDesignated),
+        group(
+            KFDE.Rules.PossibilityDesignated,
+            NecessityNegatedDesignated))
+
     groups = (
         # non-branching rules
         tuple(qset(GO.Rules.groups[0]) - GO.Rules.unquantifying_rules) + (
@@ -67,22 +70,16 @@ class Rules(LogicType.Rules):
             PossibilityNegatedUndesignated,
             NecessityUndesignated,
             NecessityNegatedUndesignated),
-        group(S4.Rules.Transitive),
-        # modal operator rules
-        group(
-            KFDE.Rules.NecessityDesignated,
-            PossibilityNegatedDesignated),
-        group(
-            KFDE.Rules.PossibilityDesignated,
-            NecessityNegatedDesignated),
-        group(T.Rules.Reflexive),
+        group(Transitive),
+        *unmodal_groups,
+        group(Reflexive),
         # branching rules
         tuple(qset(GO.Rules.groups[1]) - GO.Rules.unquantifying_rules),
-        # quantifier rules
         *GO.Rules.unquantifying_groups)
     
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, i in zip(range(2), (0, -4)):
             for rulecls in cls.groups[i]:
                 assert rulecls.branching == branching, f'{rulecls}'

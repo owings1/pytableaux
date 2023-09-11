@@ -41,13 +41,12 @@ class Rules(K3W.Rules, KFDE.Rules):
             KFDE.Rules.NecessityNegatedUndesignated),
         # branching rules
         *K3W.Rules.groups[1:3],
-        # modal operator rules
         *KFDE.Rules.unmodal_groups,
-        # quantifier rules
         *K3W.Rules.unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip(range(3), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

@@ -16,8 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from itertools import chain
-
 from ..tools import group
 from . import cpl as CPL
 from . import fde as FDE
@@ -60,7 +58,6 @@ class Rules(CPL.Rules):
         group(
             Existential,
             UniversalNegated))
-    unquantifying_rules = tuple(chain(*unquantifying_groups))
 
     groups = (
         *CPL.Rules.groups,

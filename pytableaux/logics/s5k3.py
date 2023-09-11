@@ -16,24 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import LogicType
-from . import fde as FDE
 from . import k3 as K3
-from . import kk3 as KK3
 from . import s5fde as S5FDE
 
 
-class Meta(KK3.Meta):
+class Meta(K3.Meta, S5FDE.Meta):
     name = 'S5K3'
     title = 'K3 with S5 modal'
     description = 'Modal version of K3 based on S5 normal modal logic'
     category_order = 10
     extension_of = ('S4K3', 'S5FDE')
 
-class Model(S5FDE.Model): pass
-class System(FDE.System): pass
-
-class Rules(LogicType.Rules):
-    closure = K3.Rules.closure
-    groups = S5FDE.Rules.groups
-
+class Model(K3.Model, S5FDE.Model): pass
+class System(K3.System, S5FDE.System): pass
+class Rules(K3.Rules, S5FDE.Rules): pass

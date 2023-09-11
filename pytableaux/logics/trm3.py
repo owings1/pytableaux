@@ -33,22 +33,14 @@ class Model(RM3.Model, TFDE.Model): pass
 class System(RM3.System, TFDE.System): pass
 
 class Rules(RM3.Rules):
+
     Reflexive = TFDE.Rules.Reflexive
 
     groups = (
         # non-branching rules
         KRM3.Rules.groups[0],
-        # modal rules
         *KRM3.Rules.unmodal_groups,
-        # reflexive rule
         group(Reflexive),
         # branching rules
         *RM3.Rules.groups[1:3],
-        # quantifier rules
         *RM3.Rules.unquantifying_groups)
-
-    @classmethod
-    def _check_groups(cls):
-        for branching, i in zip(range(3), (0, -4, -3)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'

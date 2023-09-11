@@ -30,4 +30,3 @@ class Meta(K3.Meta, KFDE.Meta):
 class Model(K3.Model, KFDE.Model): pass
 class System(K3.System, KFDE.System): pass
 class Rules(K3.Rules, KFDE.Rules): pass
-

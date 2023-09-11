@@ -186,11 +186,11 @@ class Rules(K3.Rules):
             ConjunctionNegatedUndesignated,
             # five-branching rules (formerly)
             DisjunctionNegatedUndesignated),
-        # quantifier rules
-        *FDE.Rules.unquantifying_groups)
+        *K3.Rules.unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip(range(3), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

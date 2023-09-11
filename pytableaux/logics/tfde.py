@@ -46,16 +46,8 @@ class Rules(KFDE.Rules):
     groups = (
         # non-branching rules
         KFDE.Rules.groups[0],
-        # modal operator rules
         *KFDE.Rules.unmodal_groups,
         group(Reflexive),
         # branching rules
         KFDE.Rules.groups[1],
-        # quantifier rules
         *KFDE.Rules.unquantifying_groups)
-
-    @classmethod
-    def _check_groups(cls):
-        for branching, i in zip(range(2), (0, 4)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'

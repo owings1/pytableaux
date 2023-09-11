@@ -35,10 +35,10 @@ class Model(FDE.Model):
 
     class TruthFunction(K3.Model.TruthFunction):
 
-        def Negation(self, value, /):
-            return self.values_sequence[self.values_indexes[value] - 1]
+        def Negation(self, a):
+            return self.values_sequence[self.values_indexes[a] - 1]
 
-        def Conjunction(self, a, b, /):
+        def Conjunction(self, a, b):
             return self.Negation(self.Disjunction(*map(self.Negation, (a, b))))
 
 class System(FDE.System): pass
@@ -282,8 +282,9 @@ class Rules(LogicType.Rules):
         #     ExistentialNegatedUndesignated)
             )
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in enumerate(cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

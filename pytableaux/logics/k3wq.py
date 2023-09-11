@@ -166,6 +166,18 @@ class Rules(K3W.Rules):
                 sdwgroup((r, d, w), (~r, d, w)),
                 sdwgroup((self.quantifier(v, si), not d, w)))
 
+    unquantifying_groups = (
+        group(
+            ExistentialDesignated,
+            ExistentialNegatedUndesignated,
+            ExistentialUndesignated,
+            UniversalNegatedDesignated,
+            UniversalNegatedUndesignated),
+        group(
+            FDE.Rules.ExistentialNegatedDesignated,
+            FDE.Rules.UniversalDesignated,
+            FDE.Rules.UniversalUndesignated))
+
     groups = (
         group(
             # non-branching rules
@@ -205,19 +217,11 @@ class Rules(K3W.Rules):
             K3W.Rules.ConjunctionNegatedUndesignated,
             # five-branching rules (formerly)
             K3W.Rules.DisjunctionNegatedUndesignated),
-        group(
-            ExistentialDesignated,
-            ExistentialNegatedUndesignated,
-            ExistentialUndesignated,
-            UniversalNegatedDesignated,
-            UniversalNegatedUndesignated),
-        group(
-            FDE.Rules.ExistentialNegatedDesignated,
-            FDE.Rules.UniversalDesignated,
-            FDE.Rules.UniversalUndesignated))
+        *unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip(range(3), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

@@ -48,15 +48,8 @@ class Rules(TFDE.Rules):
         # non-branching rules
         KFDE.Rules.groups[0],
         group(Transitive),
-        # modal operator rules
         *KFDE.Rules.unmodal_groups,
         group(TFDE.Rules.Reflexive),
         # branching rules
         KFDE.Rules.groups[1],
         *KFDE.Rules.unquantifying_groups)
-
-    @classmethod
-    def _check_groups(cls):
-        for branching, i in zip(range(2), (0, -3)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'

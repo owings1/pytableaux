@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from ..tools import group
 from . import k3w as K3W
 from . import kk3w as KK3W
 from . import tfde as TFDE
@@ -32,20 +33,14 @@ class Model(K3W.Model, TFDE.Model): pass
 class System(K3W.System, TFDE.System): pass
 
 class Rules(K3W.Rules):
+
+    Reflexive = TFDE.Rules.Reflexive
+
     groups = (
         # non-branching rules
         KK3W.Rules.groups[0],
-        # modal rules
-        *TFDE.Rules.unmodal_groups,
-        # reflexive rule
-        TFDE.Rules.groups[3],
+        *KK3W.Rules.unmodal_groups,
+        group(Reflexive),
         # branching rules
         *K3W.Rules.groups[1:3],
-        # quantifier rules
         *K3W.Rules.unquantifying_groups)
-
-    @classmethod
-    def _check_groups(cls):
-        for branching, i in zip(range(2), (0, -4, -3)):
-            for rulecls in cls.groups[i]:
-                assert rulecls.branching == branching, f'{rulecls}'

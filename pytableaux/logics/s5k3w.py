@@ -17,28 +17,25 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import LogicType
-from . import fde as FDE
-from . import k3 as K3
-from . import kk3w as KK3W
 from . import k3w as K3W
 from . import s4k3w as S4K3W
-from . import s5 as S5
 from . import s5fde as S5FDE
 
 
-class Meta(KK3W.Meta):
+class Meta(K3W.Meta, S5FDE.Meta):
     name = 'S5K3W'
     title = 'K3W with S5 modal'
     description = 'Modal version of K3W based on S5 normal modal logic'
     category_order = 30
     extension_of = ('S4K3W')
 
-class Model(S5FDE.Model, K3W.Model): pass
-class System(FDE.System): pass
+class Model(K3W.Model, S5FDE.Model): pass
+class System(K3W.System, S5FDE.System): pass
 
-class Rules(LogicType.Rules):
-    closure = K3.Rules.closure
+class Rules(S4K3W.Rules):
+
+    Symmetric = S5FDE.Rules.Symmetric
+
     groups = (
         *S4K3W.Rules.groups,
-        group(S5.Rules.Symmetric))
+        group(Symmetric))

@@ -16,8 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from itertools import chain
-
 from ..lang import Argument, Atomic, Operator
 from ..models import ValueFDE
 from ..proof import Branch, Node, adds, rules, sdwgroup, sdwnode
@@ -42,6 +40,7 @@ class Meta(LogicType.Meta):
         Operator.MaterialBiconditional)
 
 class Model(LogicType.Model[Meta.values]): pass
+
 class System(LogicType.System):
 
     @classmethod
@@ -215,7 +214,6 @@ class Rules(LogicType.Rules):
             ExistentialNegatedUndesignated,
             UniversalNegatedDesignated,
             UniversalUndesignated))
-    unquantifying_rules = tuple(chain(*unquantifying_groups))
 
     closure = group(DesignationClosure)
 
@@ -256,8 +254,9 @@ class Rules(LogicType.Rules):
             BiconditionalNegatedUndesignated),
         *unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip(range(2), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

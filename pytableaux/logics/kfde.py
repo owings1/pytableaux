@@ -20,7 +20,6 @@ from ..proof import Branch, Node, adds, anode, rules, sdwgroup, sdwnode
 from ..proof.helpers import (AdzHelper, AplSentCount, MaxWorlds, NodeCount,
                              NodesWorlds, WorldIndex)
 from ..tools import EMPTY_SET, group
-from . import LogicType
 from . import fde as FDE
 
 
@@ -29,7 +28,6 @@ class Meta(FDE.Meta):
     title = 'FDE with K modal'
     modal = True
     description = 'Modal version of FDE based on K normal modal logic'
-    native_operators = FDE.Meta.native_operators | LogicType.Meta.modal_operators
     category_order = 1
     extension_of = ('FDE')
 
@@ -164,13 +162,5 @@ class Rules(FDE.Rules):
             NecessityNegatedUndesignated),
         # branching rules
         FDE.Rules.groups[1],
-        # modal operator rules
         *unmodal_groups,
-        # quantifier rules
         *FDE.Rules.unquantifying_groups)
-
-    @classmethod
-    def _check_groups(cls):
-        for branching, group in zip(range(2), cls.groups):
-            for rulecls in group:
-                assert rulecls.branching == branching, f'{rulecls}'

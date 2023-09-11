@@ -29,7 +29,7 @@ class Meta(K3.Meta):
     title = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     category_order = 9
-    native_operators = K3.Meta.native_operators | [Operator.Assertion]
+    native_operators = [Operator.Assertion]
 
 class Model(K3.Model):
 
@@ -175,8 +175,9 @@ class Rules(K3W.Rules):
         # quantifier rules
         *FDE.Rules.unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip(range(4), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

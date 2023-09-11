@@ -30,9 +30,7 @@ class Meta(K3.Meta):
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator')
     category_order = 5
-    native_operators = K3.Meta.native_operators | (
-        Operator.Conditional,
-        Operator.Biconditional)
+    native_operators = [Operator.Conditional, Operator.Biconditional]
 
 class Model(K3.Model):
 
@@ -183,8 +181,9 @@ class Rules(K3.Rules):
         # quantifier rules
         *K3.Rules.unquantifying_groups)
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip(range(2), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

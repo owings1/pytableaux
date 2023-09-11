@@ -38,7 +38,7 @@ class Model(LP.Model):
     class TruthFunction(LP.Model.TruthFunction):
 
         def Conjunction(self, a, b):
-            if a == self.values.B and b == self.values.B:
+            if a == b == self.values.B:
                 return self.values.T
             return super().Conjunction(a, b)
 
@@ -159,8 +159,9 @@ class Rules(LogicType.Rules):
         group(
             ConjunctionNegatedDesignated))
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip((0, 1, 3), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'

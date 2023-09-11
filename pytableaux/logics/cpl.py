@@ -256,8 +256,9 @@ class Rules(LogicType.Rules):
             Biconditional,
             BiconditionalNegated))
 
-    @classmethod
-    def _check_groups(cls):
+    @staticmethod
+    def _check_groups():
+        cls = __class__
         for branching, group in zip(range(2), cls.groups):
             for rulecls in group:
                 assert rulecls.branching == branching, f'{rulecls}'
