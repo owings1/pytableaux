@@ -198,3 +198,4 @@ References
 .. autoclass:: Rules()
   :members:
   :undoc-members:
+  :noindex:

@@ -20,22 +20,23 @@ pytableaux.proof.tableaux
 
 """
 from __future__ import annotations
-from dataclasses import dataclass
 
 import operator as opr
 from abc import abstractmethod
 from collections import deque
 from collections.abc import Set
+from dataclasses import dataclass
 from types import MappingProxyType as MapProxy
-from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Iterator, Mapping,
-                    Optional, Self, Sequence, SupportsIndex, TypeVar, final)
+from typing import (TYPE_CHECKING, Any, Callable, Generic, Iterable, Iterator,
+                    Mapping, Optional, Self, Sequence, SupportsIndex, TypeVar,
+                    final)
 
 from ..errors import Emsg, ProofTimeoutError, check
 from ..lang.collect import Argument
 from ..lang.lex import Sentence
 from ..logics import registry
-from ..tools import (EMPTY_MAP, EMPTY_SET, SeqCover, absindex, dictns,
-                     for_defaults, qset, qsetf, wraps)
+from ..tools import (EMPTY_MAP, EMPTY_SET, SeqCover, absindex, for_defaults,
+                     qset, qsetf, wraps)
 from ..tools.events import EventEmitter
 from ..tools.hybrids import SequenceSet, qset
 from ..tools.linked import linqset
@@ -52,7 +53,6 @@ if TYPE_CHECKING:
 
 _F = TypeVar('_F', bound=Callable)
 _RT = TypeVar('_RT', bound='Rule')
-_T = TypeVar('_T')
 _RHT = TypeVar('_RHT', bound=RuleMeta.AbstractHelper)
 
 __all__ = (

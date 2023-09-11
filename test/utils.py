@@ -147,9 +147,9 @@ class BaseCase(TestCase):
             for rulecls in cls.logic.Rules.all():
                 name = f'test_rule_{rulecls.name}_auto'
                 setattr(cls, name, maketest('rule_test', rulecls))
-            name = f'test_branching_groups_{inflect.slug(cls.logic.Meta.name)}_auto'
+            name = f'test_branching_groups_auto'
             setattr(cls, name, maketest('branching_groups_test'))
-            name = f'test_nonbranching_groups_{inflect.slug(cls.logic.Meta.name)}_auto'
+            name = f'test_nonbranching_groups_auto'
             setattr(cls, name, maketest('nonbranching_groups_test'))
         if autoargs:
             kws = getattr(cls, 'autoargs_kws', EMPTY_MAP)

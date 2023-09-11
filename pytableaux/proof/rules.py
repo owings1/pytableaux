@@ -256,7 +256,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
         return 1 / (node_apply_count + 1)
 
 
-class DefaultNodeRule(GetNodeTargetsRule, intermediate=True):
+class DefaultNodeRule(GetNodeTargetsRule, Generic[_ST], intermediate=True):
     """Default node rule with:
     
     - BaseSimpleRule:
@@ -280,17 +280,17 @@ class DefaultNodeRule(GetNodeTargetsRule, intermediate=True):
     def _get_node_targets(self, node: Node, branch: Branch, /):
         return self._get_sdw_targets(self.sentence(node), node['designated'], node.get('world'))
 
-    def _get_sdw_targets(self, s: Operated, d: bool, w: int|None, /):
+    def _get_sdw_targets(self, s: _ST, d: bool, w: int|None, /):
         return self._get_sd_targets(s, d)
 
-    def _get_sd_targets(self, s: Operated, d: bool, /):
+    def _get_sd_targets(self, s: _ST, d: bool, /):
         raise NotImplementedError
 
-class QuantifierNodeRule(DefaultNodeRule, QuantifiedSentenceRule, intermediate=True): pass
+class QuantifierNodeRule(DefaultNodeRule[Quantified], QuantifiedSentenceRule, intermediate=True): pass
 class QuantifierSkinnyRule(NarrowQuantifierRule, QuantifierNodeRule, intermediate=True): pass
 class QuantifierFatRule(ExtendedQuantifierRule, QuantifierNodeRule, intermediate=True): pass
 
-class OperatorNodeRule(DefaultNodeRule, OperatedSentenceRule, intermediate=True):
+class OperatorNodeRule(DefaultNodeRule[Operated], OperatedSentenceRule, intermediate=True):
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
