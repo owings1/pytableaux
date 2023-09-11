@@ -1,15 +1,7 @@
 
-from pytableaux.errors import *
-from pytableaux.lang import Operator
-from pytableaux.logics import registry
-from pytableaux.models import AccessGraph, BaseModel
+from pytableaux.models import AccessGraph
 
 from .utils import BaseCase as Base
-
-
-class TestModel(Base):
-
-    logic = 'CPL'
 
 
 class TestAccessGraph(Base):
