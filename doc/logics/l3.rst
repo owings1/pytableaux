@@ -5,7 +5,8 @@ L{L3} - Łukasiewicz 3-valued Logic
 ********************************************
 
 L{L3} is a three-valued logic with values V{T}, V{F}, and V{N}. It is
-similar to {@K3}, but with a different Conditional.
+similar to {@K3}, but with a different Conditional. It is considered
+the `gappy` dual of {@RM3}.
 
 .. contents:: Contents
   :local:

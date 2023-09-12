@@ -5,8 +5,8 @@ L{RM3} - R-mingle 3
 ***************************
 
 L{RM3} is a three-valued logic with values V{T}, V{F}, and V{B}.
-It is similar to {@LP}, with a different conditional operator. It can be
-considered as the `glutty` dual of {@L3}.
+It is similar to {@LP}, with a different conditional operator. It is
+considered the `glutty` dual of {@L3}.
 
 .. contents:: Contents
   :local:
