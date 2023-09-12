@@ -16,9 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from types import MappingProxyType as MapProxy
-
-from ..lang import Operator, Quantified, Quantifier
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import k3w as K3W
@@ -33,36 +30,18 @@ class Meta(K3W.Meta):
 
 class Model(K3W.Model):
 
-    class TruthFunction(K3W.Model.TruthFunction):
-
-        generalizing_operators = MapProxy({
-            Operator.Disjunction: 'max',
-            Operator.Conjunction: 'min'})
-        generalized_orderings = MapProxy(dict(
-            max = tuple(map(Meta.values, 'FTN')),
-            min = tuple(map(Meta.values, 'NFT'))))
-
-    def value_of_quantified(self, s: Quantified, /, *, world: int = 0):
-        """
-        An existential sentence is interpreted in terms of `generalized disjunction`.
-        If we order the values least to greatest as V{N}, V{T}, V{F}, then we
-        can define the value of an existential in terms of the `maximum` value of
-        the set of values for the substitution of each constant in the model for
-        the variable.
-
-        A universal sentence is interpreted in terms of `generalized conjunction`.
-        If we order the values least to greatest as V{N}, V{F}, V{T}, then we
-        can define the value of a universal in terms of the `minimum` value of
-        the set of values for the substitution of each constant in the model for
-        the variable.
-        """
-        if s.quantifier is Quantifier.Existential:
-            oper = Operator.Disjunction
-        elif s.quantifier is Quantifier.Universal:
-            oper = Operator.Conjunction
-        else:
-            raise NotImplementedError from ValueError(s.quantifier)
-        return self.truth_function.generalize(oper, self._unquantify_values(s, world=world))
+    def value_of_quantified(self, s, /, **kw):
+        self._check_finished()
+        valset = set(self._unquantify_values(s, **kw))
+        values = self.values
+        if values.N in valset:
+            return values.N
+        q = s.quantifier
+        if q is q.Existential:
+            return max(valset, default=values.F)
+        if q is q.Universal:
+            return min(valset, default=values.T)
+        raise NotImplementedError from ValueError(q)
 
 class System(K3W.System): pass
 

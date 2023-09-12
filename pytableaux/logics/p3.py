@@ -35,7 +35,11 @@ class Model(K3.Model):
     class TruthFunction(K3.Model.TruthFunction):
 
         def Negation(self, a):
-            return self.values_sequence[self.values_indexes[a] - 1]
+            if a == 'T':
+                return self.values.N
+            if a == 'N':
+                return self.values.F
+            return self.values.T
 
         def Conjunction(self, a, b):
             return self.Negation(self.Disjunction(*map(self.Negation, (a, b))))

@@ -46,6 +46,7 @@ class Model(K3.Model):
             return self.values.T
 
     def value_of_quantified(self, s, /, **kw):
+        self._check_finished()
         quant = s.quantifier
         if quant is not quant.Existential:
             return super().value_of_quantified(s, **kw)
