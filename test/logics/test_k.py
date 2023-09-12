@@ -135,8 +135,9 @@ class TestModelPredication(Base):
         with self.m() as m:
             m.set_value(s, 'T', world=0)
         interp = m.frames[0].predicates[Predicate.Identity]
-        self.assertGreater(len(interp.pos), 0)
-        self.assertIn((Constant(0, 0), Constant(1, 0)), interp.pos)
+        self.assertGreater(len(interp), 0)
+        self.assertIn(s.params, interp)
+        self.assertEqual(interp[s.params], 'T')
 
     def test_set_predicated_raises_free_variables(self):
         pred = Predicate(0, 0, 1)

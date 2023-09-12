@@ -165,11 +165,3 @@ class TestModels(Base):
         with self.assertRaises(ModelValueError):
             m.set_literal_value(s, 'T')
 
-    def test_get_anti_extension(self):
-        # coverage
-        s = Predicated.first()
-        m = self.m()
-        interp = m.frames[0].predicates[s.predicate]
-        self.assertEqual(len(interp.neg), 0)
-        m.set_literal_value(s, 'F')
-        self.assertIn(s.params, interp.neg)

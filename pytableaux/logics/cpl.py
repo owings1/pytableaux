@@ -61,33 +61,34 @@ class Model(LogicType.Model[Meta.values]):
             return
         interp = self.frames[w].predicates[Predicate.Identity]
         # make sure each constant is self-identical
-        interp.pos.update((c, c) for c in self.constants)
+        for c in self.constants:
+            interp[c, c] = 'T'
 
     def _ensure_self_existence(self, w):
         if not len(self.constants):
             return
         interp = self.frames[w].predicates[Predicate.Existence]
         # make sure each constant exists
-        interp.pos.update(map(group, self.constants))
+        for params in map(group, self.constants):
+            interp[params] = 'T'
 
     def _agument_extension_with_identicals(self, pred: Predicate, w):
-        pos = self.frames[w].predicates[pred].pos
-        add = pos.add
+        interp = self.frames[w].predicates[pred]
         for c in self.constants:
             identicals = self._get_identicals(c, w)
             to_add = set()
-            for params in pos:
+            for params in interp.having('T'):
                 if c in params:
                     for new_c in identicals:
                         to_add.add(substitute(params, c, new_c))
             for params in to_add:
-                add(params)
+                interp[params] = 'T'
 
     def _get_identicals(self, c: Constant, w=0) -> set[Constant]:
         interp = self.frames[w].predicates[Predicate.Identity]
         identicals = set()
         update = identicals.update
-        for params in interp.pos:
+        for params in interp.having('T'):
             if c in params:
                 update(params)
         identicals.discard(c)
