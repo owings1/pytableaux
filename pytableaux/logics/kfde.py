@@ -15,9 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
-from itertools import chain
 
-from ..proof import Branch, Node, adds, anode, rules, sdwgroup, sdwnode
+from ..proof import Branch, Node, adds, anode, rules, sdwnode
 from ..proof.helpers import (AdzHelper, AplSentCount, MaxWorlds, NodeCount,
                              NodesWorlds, WorldIndex)
 from ..tools import EMPTY_SET, group
@@ -42,7 +41,10 @@ class Rules(FDE.Rules):
         Helpers = (AplSentCount)
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
-            si = self.sentence(node).lhs
+            s = self.sentence(node)
+            si = s.lhs
+            if self.new_negated(self.negated):
+                si = ~si
             d = self.designation
             # Allow override for S4GO
             if d is not None:
@@ -63,6 +65,8 @@ class Rules(FDE.Rules):
             # override
             s = self.sentence(target.node)
             si = s.lhs
+            if self.new_negated(self.negated):
+                si = ~si
             d = self.designation
             if d is not None:
                 d = self.new_designation(d)
@@ -77,15 +81,12 @@ class Rules(FDE.Rules):
                 return 1.0
             s = self.sentence(target.node)
             si = s.lhs
+            if self.new_negated(self.negated):
+                si = ~si
             d = self.designation
             if d is not None:
                 d = self.new_designation(d)
             return -1.0 * self[AplSentCount][target.branch][si, d]
-
-    class PossibilityNegatedDesignated(rules.OperatorNodeRule):
-
-        def _get_sdw_targets(self, s, d, w, /):
-            yield adds(sdwgroup((self.operator.other(~s.lhs), d, w)))
 
     class NecessityDesignated(rules.ModalOperatorRule):
 
@@ -98,10 +99,12 @@ class Rules(FDE.Rules):
                 return
 
             s = self.sentence(node)
+            si = s.lhs
+            if self.new_negated(self.negated):
+                si = ~si
             d = self.designation
             if d is not None:
                 d = self.new_designation(d)
-            si = s.lhs
             w1 = node['world']
 
             for w2 in self[WorldIndex][branch].get(w1, EMPTY_SET):
@@ -140,33 +143,28 @@ class Rules(FDE.Rules):
             yield from super().example_nodes()
             yield anode(0, 1)
 
-    class PossibilityNegatedUndesignated(PossibilityNegatedDesignated): pass
+    class NecessityNegatedUndesignated(NecessityDesignated): pass
     class PossibilityUndesignated(NecessityDesignated): pass
-    class NecessityNegatedDesignated(PossibilityNegatedDesignated): pass
+    class PossibilityNegatedDesignated(NecessityDesignated): pass
+
+    class PossibilityNegatedUndesignated(PossibilityDesignated): pass
     class NecessityUndesignated(PossibilityDesignated): pass
-    class NecessityNegatedUndesignated(PossibilityNegatedDesignated): pass
-
-    nonbranching_modal_group = group(
-        PossibilityNegatedDesignated,
-        PossibilityNegatedUndesignated,
-        NecessityNegatedDesignated,
-        NecessityNegatedUndesignated)
-
-    nonbranching_groups = group(
-        group(
-            *chain(*FDE.Rules.nonbranching_groups),
-            *nonbranching_modal_group))
+    class NecessityNegatedDesignated(PossibilityDesignated): pass
 
     unmodal_groups = (
         group(
             NecessityDesignated,
-            PossibilityUndesignated),
+            PossibilityUndesignated,
+            PossibilityNegatedDesignated,
+            NecessityNegatedUndesignated),
         group(
             NecessityUndesignated,
-            PossibilityDesignated))
+            PossibilityDesignated,
+            PossibilityNegatedUndesignated,
+            NecessityNegatedDesignated))
 
     groups = (
-        *nonbranching_groups,
+        *FDE.Rules.nonbranching_groups,
         *FDE.Rules.branching_groups,
         *unmodal_groups,
         *FDE.Rules.unquantifying_groups)

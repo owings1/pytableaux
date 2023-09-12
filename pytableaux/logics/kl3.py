@@ -15,9 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
-from itertools import chain
 
-from ..tools import group
 from . import kfde as KFDE
 from . import l3 as L3
 
@@ -34,13 +32,8 @@ class System(L3.System, KFDE.System): pass
 
 class Rules(L3.Rules, KFDE.Rules):
 
-    nonbranching_groups = group(
-        group(
-            *chain(*L3.Rules.nonbranching_groups),
-            *KFDE.Rules.nonbranching_modal_group))
-
     groups = (
-        *nonbranching_groups,
+        *L3.Rules.nonbranching_groups,
         *L3.Rules.branching_groups,
         *KFDE.Rules.unmodal_groups,
         *L3.Rules.unquantifying_groups)

@@ -47,7 +47,7 @@ class Rules(CFOL.Rules):
     class Possibility(KFDE.Rules.PossibilityDesignated): pass
     class PossibilityNegated(KFDE.Rules.PossibilityNegatedDesignated): pass
     class Necessity(KFDE.Rules.NecessityDesignated): pass
-    class NecessityNegated(PossibilityNegated): pass
+    class NecessityNegated(KFDE.Rules.NecessityNegatedDesignated): pass
 
     nonbranching_groups = group(
         group(

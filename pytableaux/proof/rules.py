@@ -398,8 +398,11 @@ class ModalOperatorRule(OperatorNodeRule, intermediate=True):
     if TYPE_CHECKING:
         @overload
         def new_designation(self, d: bool) -> bool: ...
+        @overload
+        def new_negated(self, v: bool) -> bool: ...
 
     new_designation = staticmethod(bool)
+    new_negated = staticmethod(bool)
 
     def _check_maxworlds(self, node: Node, branch: Branch, /) -> bool|dict:
         # Check for max worlds reached

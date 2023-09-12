@@ -1,10 +1,5 @@
 .. tableau-rules::
   :docflags:
-  :group: operator
-  :exclude: non_native modal
-
-.. tableau-rules::
-  :docflags:
   :title: Modal Operator Rules
   :group: operator
   :include: modal
@@ -12,11 +7,16 @@
 
 .. tableau-rules::
   :docflags:
-  :group: predicate
+  :group: operator
+  :exclude: non_native modal
 
 .. tableau-rules::
   :docflags:
   :group: quantifier
+
+.. tableau-rules::
+  :docflags:
+  :group: predicate
 
 .. tableau-rules::
   :docflags:

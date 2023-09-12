@@ -27,8 +27,7 @@ class Meta(S4.Meta):
     name = 'S5'
     title = 'S5 Normal Modal Logic'
     description = (
-        'Normal modal logic with a reflexive, symmetric, and transitive '
-        'access relation')
+        'Normal modal logic with global access relation')
     category_order = 5
     extension_of = (
         'S4',

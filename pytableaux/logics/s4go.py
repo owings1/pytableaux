@@ -42,10 +42,10 @@ class System(GO.System, S4FDE.System): pass
 class Rules(GO.Rules, S4FDE.Rules):
 
     class PossibilityNegatedDesignated(S4FDE.Rules.NecessityDesignated):
-        new_designation = staticmethod(opr.not_)
+        new_designation = new_negated = staticmethod(opr.not_)
 
     class NecessityNegatedDesignated(S4FDE.Rules.PossibilityDesignated):
-        new_designation = staticmethod(opr.not_)
+        new_designation = new_negated = staticmethod(opr.not_)
 
     class PossibilityUndesignated(rules.NegatingFlippingRule): pass
     class NecessityUndesignated(rules.NegatingFlippingRule): pass
