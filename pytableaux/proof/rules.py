@@ -25,11 +25,11 @@ from abc import abstractmethod
 from collections import deque
 from typing import TYPE_CHECKING, Generic, Iterable, TypeVar, final
 
-from ..lang import (Constant, Operated, Operator, Predicate, Predicated,
-                    Quantified, Quantifier, Sentence)
+from ..lang import (Atomic, Constant, Marking, Operated, Operator, Predicate,
+                    Predicated, Quantified, Quantifier, Sentence)
 from ..tools import EMPTY_SET, abcs, group, wraps
-from . import adds, filters, sdwgroup
-from .common import Branch, Node, Target
+from . import WorldPair, adds, anode, filters, sdwgroup, sdwnode
+from .common import AccessNode, Branch, Node, Target, SentenceNode
 from .tableaux import Rule
 
 if TYPE_CHECKING:
@@ -47,6 +47,7 @@ __all__ = (
     'QuantifiedSentenceRule',
     'Rule')
 
+_NT = TypeVar('_NT', bound=Node)
 _ST = TypeVar('_ST', bound=Sentence)
 
 FIRST_CONST_SET = frozenset({Constant.first()})
@@ -86,7 +87,8 @@ class ClosingRule(Rule):
         return False
 
 from .helpers import (AdzHelper, BranchTarget, FilterHelper, MaxConsts,
-                      MaxWorlds, NodeConsts, NodeCount, PredNodes, QuitFlag)
+                      MaxWorlds, NodeConsts, NodeCount, PredNodes, QuitFlag,
+                      UnserialWorlds, WorldIndex)
 
 
 class BaseClosureRule(ClosingRule):
@@ -192,7 +194,7 @@ class PredicatedSentenceRule(BaseSentenceRule[Predicated]):
 class QuantifiedSentenceRule(BaseSentenceRule[Quantified]): pass
 class OperatedSentenceRule(BaseSentenceRule[Operated]): pass
 
-class GetNodeTargetsRule(BaseNodeRule):
+class GetNodeTargetsRule(BaseNodeRule, Generic[_NT]):
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch, /):
@@ -202,10 +204,10 @@ class GetNodeTargetsRule(BaseNodeRule):
         return self._get_node_targets(node, branch)
 
     @abstractmethod
-    def _get_node_targets(self, node: Node, branch: Branch, /):
+    def _get_node_targets(self, node: _NT, branch: Branch, /):
         yield from EMPTY_SET
 
-class NarrowQuantifierRule(GetNodeTargetsRule, QuantifiedSentenceRule):
+class NarrowQuantifierRule(GetNodeTargetsRule[SentenceNode], QuantifiedSentenceRule):
 
     Helpers = (FilterHelper, QuitFlag, MaxConsts)
 
@@ -256,7 +258,7 @@ class ExtendedQuantifierRule(NarrowQuantifierRule):
         return 1 / (node_apply_count + 1)
 
 
-class DefaultNodeRule(GetNodeTargetsRule, Generic[_ST], intermediate=True):
+class DefaultNodeRule(GetNodeTargetsRule[SentenceNode], Generic[_ST], intermediate=True):
     """Default node rule with:
     
     - BaseSimpleRule:
@@ -277,7 +279,7 @@ class DefaultNodeRule(GetNodeTargetsRule, Generic[_ST], intermediate=True):
     NodeFilters = group(filters.NodeDesignation, filters.NodeType)
     autoattrs = True
 
-    def _get_node_targets(self, node: Node, branch: Branch, /):
+    def _get_node_targets(self, node: SentenceNode, branch: Branch, /):
         return self._get_sdw_targets(self.sentence(node), node['designated'], node.get('world'))
 
     def _get_sdw_targets(self, s: _ST, d: bool, w: int|None, /):
@@ -408,3 +410,120 @@ class ModalOperatorRule(OperatorNodeRule, intermediate=True):
                 return adds(group(fnode), flag=fnode[Node.Key.flag])
             return True
         return False
+
+class BaseAccessRule(BaseSimpleRule, intermediate=True):
+    Helpers = (MaxWorlds)
+    ignore_ticked = False
+    ticking = False
+
+class AccessNodeRule(GetNodeTargetsRule[AccessNode], BaseAccessRule, intermediate=True):
+
+    Helpers = (WorldIndex)
+
+    @FilterHelper.node_targets
+    def _get_targets(self, node: Node, branch: Branch, /):
+        if self[MaxWorlds].is_exceeded(branch):
+            self[FilterHelper].release(node, branch)
+            return
+        yield from self._get_node_targets(node, branch)
+
+class access:
+
+    class Serial(BaseAccessRule, intermediate=True):
+        """
+        The Serial rule applies to a an open branch *b* when there is a world *w*
+        that appears on *b*, but there is no world *w'* such that *w* accesses *w'*.
+
+        The exception to this is when the Serial rule was the last rule to apply to
+        the branch. This prevents infinite repetition of the Serial rule for open
+        branches that are otherwise finished. For this reason, the Serial rule is
+        ordered last in the rules, so that all other rules are checked before it.
+
+        For a node *n* on an open branch *b* on which appears a world *w* for
+        which there is no world *w'* on *b* such that *w* accesses *w'*, add a
+        node to *b* with *w* as world1, and *w1* as world2, where *w1* does not
+        yet appear on *b*.
+        """
+        Helpers = (UnserialWorlds)
+        marklegend = [(Marking.tableau, ('access', 'serial'))]
+
+        def _get_targets(self, branch: Branch, /):
+            if not self._should_apply(branch):
+                return
+            for w in self[UnserialWorlds][branch]:
+                yield Target(adds(
+                    group(anode(w, branch.new_world())),
+                    world=w,
+                    branch=branch))
+
+        def _should_apply(self, branch: Branch,/):
+            try:
+                entry = next(reversed(self.tableau.history))
+            except StopIteration:
+                pass
+            else:
+                # This tends to stop modal explosion better than the max worlds check,
+                # at least in its current form (all modal operators + worlds + 1).
+                if entry.rule == self and entry.target.branch == branch:
+                    return False
+            # As above, this is unnecessary
+            if self[MaxWorlds].is_exceeded(branch):
+                return False
+            return True
+
+        def example_nodes(self):
+            yield sdwnode(Atomic.first(), None, 0)
+
+
+    class Reflexive(AccessNodeRule, intermediate=True):
+
+        marklegend = [(Marking.tableau, ('access', 'reflexive'))]
+        defaults = dict(is_rank_optim = False)
+
+        def _get_node_targets(self, node, branch, /):
+            for w in node.worlds():
+                pair = WorldPair(w, w)
+                if self[WorldIndex].has(branch, pair):
+                    self[FilterHelper].release(node, branch)
+                    continue
+                yield adds(group(pair.tonode()), world=w)
+
+        def example_nodes(self):
+            yield sdwnode(Atomic.first(), None, 0)
+
+    class Transitive(AccessNodeRule, intermediate=True):
+
+        NodeFilters = group(filters.NodeType)
+        NodeType = AccessNode
+        marklegend = [(Marking.tableau, ('access', 'transitive'))]
+
+        def _get_node_targets(self, node, branch, /):
+            w1, w2 = pair = node.pair()
+            for w3 in self[WorldIndex].intransitives(branch, pair):
+                nnode = anode(w1, w3)
+                yield adds(group(nnode),
+                    nodes=(node, branch.find(anode(w2, w3))),
+                    **nnode)
+
+        def score_candidate(self, target, /):
+            # Rank the highest world
+            return float(target.world2)
+
+        def example_nodes(self):
+            yield anode(0, 1)
+            yield anode(1, 2)
+
+    class Symmetric(AccessNodeRule, intermediate=True):
+
+        NodeFilters = group(filters.NodeType)
+        NodeType = AccessNode
+        marklegend = [(Marking.tableau, ('access', 'symmetric'))]
+        defaults = dict(is_rank_optim = False)
+
+        def _get_node_targets(self, node, branch,/):
+            pair = node.pair().reversed()
+            if self[WorldIndex].has(branch, pair):
+                self[FilterHelper].release(node, branch)
+                return
+            nnode = pair.tonode()
+            yield adds(group(nnode), **nnode)

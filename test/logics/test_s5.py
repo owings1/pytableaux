@@ -71,3 +71,7 @@ class TestModels(Base):
         # model.finish()
         # assert 0 in model.visibles(1)
 
+# TODO:
+# Some problematic arguments for S5:
+#
+#   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)

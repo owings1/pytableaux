@@ -30,13 +30,7 @@ class Meta(KFDE.Meta):
     extension_of = ('S4FDE')
 
 class Model(S4FDE.Model):
-
-    _ensure_global_access = S5.Model._ensure_global_access
-
-    def finish(self):
-        self._check_not_finished()
-        self._ensure_global_access()
-        return super().finish()
+    Access: type[S5.Model.Access] = S5.Model.Access
 
 class System(KFDE.System): pass
 

@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from functools import partial
 from itertools import product, starmap
 from types import MappingProxyType as MapProxy
-from typing import Any, Generic, Iterable, Iterator, Self, TypeVar
+from typing import Any, Generic, Iterable, Iterator, Self, TypeVar, TYPE_CHECKING
 
 from ..errors import DenotationError, IllegalStateError, ModelValueError, check
 from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
@@ -36,6 +36,9 @@ from ..logics import LogicType
 from ..proof import (AccessNode, Branch, DesignationNode, Node, SentenceNode,
                      WorldNode, sdwnode)
 from ..tools import EMPTY_SET, abcs, maxceil, minfloor
+
+if TYPE_CHECKING:
+    from ..logics import LogicType as Logic
 
 __all__ = (
     'BaseModel',
@@ -132,22 +135,22 @@ class ModelsMeta(abcs.AbcMeta):
 
 class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
-    Meta: type[LogicType.Meta]
+    Meta: type[Logic.Meta]
 
     values: type[MvalT_co]
     "The values of the model"
 
-    truth_function: LogicType.Model.TruthFunction[MvalT_co]
+    truth_function: Logic.Model.TruthFunction[MvalT_co]
     "The truth function instance"
 
-    frames: Mapping[int, LogicType.Model.Frame[MvalT_co]]
+    frames: Mapping[int, Logic.Model.Frame[MvalT_co]]
     "A map from worlds to their frame"
 
     constants: set[Constant]
 
     sentences: set[Sentence]
 
-    R: AccessGraph
+    R: Logic.Model.Access
     "The `access` relation"
 
     __slots__ = (
@@ -175,7 +178,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             self.frames = MapProxy({0: self.Frame(self)})
         self.constants = set()
         self.sentences = set()
-        self.R = AccessGraph()
+        self.R = self.Access()
         self.frames[0]
         self.R[0]
 
@@ -238,7 +241,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         for c in self.constants:
             yield value_of(c >> s, **kw)
 
-    def _unmodal_values(self, s: Operated, /, world: int = 0) -> Iterator[MvalT_co]:
+    def _unmodal_values(self, s: Operated, /, *, world: int = 0) -> Iterator[MvalT_co]:
         value_of = self.value_of
         for w2 in self.R[world]:
             yield value_of(s.lhs, world=w2)
@@ -370,6 +373,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
     def finish(self) -> Self:
         self._check_not_finished()
         self._complete_frames()
+        self.R.enforce()
         self._finished = True
         return self
 
@@ -431,8 +435,8 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         for w in self.R:
             self.frames[w]
         # ensure R has each world
-        # for w in self.frames:
-        #     self.R[w]
+        for w in self.frames:
+            self.R[w]
         for w, frame in self.frames.items():
             atomics.update(frame.atomics)
             opaques.update(frame.opaques)
@@ -554,12 +558,12 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         predicates: Mapping[Predicate, PredicateInterpretation[MvalT]]
         "A mapping of predicates to their interpretation"
 
-        model: LogicType.Model[MvalT]
+        model: Logic.Model[MvalT]
         'Reference to the parent model'
 
         __slots__ = ('atomics', 'opaques', 'predicates', 'model')
 
-        def __init__(self, model: LogicType.Model[MvalT], /):
+        def __init__(self, model: Logic.Model[MvalT], /):
             self.model = model
             self.atomics = {}
             self.opaques = {}
@@ -631,6 +635,36 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                     return False
             return True
 
+    class Access(defaultdict[int, set[int]]):
+
+        __slots__ = EMPTY_SET
+
+        def __init__(self, *args, **kw):
+            super().__init__(set, *args, **kw)
+
+        def has(self, pair: tuple[int, int], /) -> bool:
+            w1, w2 = pair
+            return w1 in self and w2 in self[w1]
+
+        def add(self, pair: tuple[int, int], /):
+            w1, w2 = pair
+            self[w1].add(w2)
+            self[w2]
+
+        def addall(self, it):
+            for _ in map(self.add, it): pass
+
+        def flat(self, *, w1s=None, sort=False):
+            if w1s is None:
+                w1s = sorted(self) if sort else self
+            for w1 in w1s:
+                w2s = sorted(self[w1]) if sort else self[w1]
+                for w2 in w2s:
+                    yield w1, w2
+
+        def enforce(self):
+            pass
+
 @dataclass(kw_only = True)
 class TruthTable(Generic[MvalT]):
     'Truth table data class.'
@@ -645,7 +679,7 @@ class PredicateInterpretation(Mapping[tuple[Constant, ...], MvalT]):
 
     __slots__ = ('model', 'mapping')
 
-    def __init__(self, model: LogicType.Model[MvalT]):
+    def __init__(self, model: Logic.Model[MvalT]):
         self.model = model
         self.mapping = {}
 
@@ -680,29 +714,54 @@ class PredicateInterpretation(Mapping[tuple[Constant, ...], MvalT]):
             return NotImplemented
         return self.mapping == other.mapping
 
-class AccessGraph(defaultdict[int, set[int]]):
+class SerialAccess(BaseModel.Access):
 
-    __slots__ = EMPTY_SET
+    def enforce(self):
+        needs_world = {w for w in self if not self[w]}
+        if needs_world:
+            # only add one extra world
+            w2 = max(self) + 1
+            add = self.add
+            for w1 in needs_world:
+                # make all who need it access the new world
+                add((w1, w2))
+            # make the new world access itself
+            add((w2, w2))
 
-    def __init__(self, *args, **kw):
-        super().__init__(set, *args, **kw)
+class ReflexiveAccess(BaseModel.Access):
 
-    def has(self, pair: tuple[int, int], /) -> bool:
-        w1, w2 = pair
-        return w1 in self and w2 in self[w1]
+    def enforce(self):
+        for w in self:
+            self.add((w, w))
 
-    def add(self, pair: tuple[int, int], /):
-        w1, w2 = pair
-        self[w1].add(w2)
-        self[w2]
+class ReflexiveTransitiveAccesss(ReflexiveAccess):
 
-    def addall(self, it):
-        for _ in map(self.add, it): pass
+    def enforce(self):
+        while True:
+            super().enforce()
+            to_add = set()
+            add = to_add.add
+            for w1 in self:
+                for w2 in self[w1]:
+                    for w3 in self[w2]:
+                        if w3 not in self[w1]:
+                            add((w1, w3))
+            if not to_add:
+                break
+            for _ in map(self.add, to_add): pass
 
-    def flat(self, *, w1s=None, sort=False):
-        if w1s is None:
-            w1s = sorted(self) if sort else self
-        for w1 in w1s:
-            w2s = sorted(self[w1]) if sort else self[w1]
-            for w2 in w2s:
-                yield w1, w2
+class GlobalAccess(ReflexiveTransitiveAccesss):
+
+    def enforce(self):
+
+        while True:
+            super().enforce()
+            to_add = set()
+            add = to_add.add
+            for w1 in self:
+                for w2 in self[w1]:
+                    if w1 not in self[w2]:
+                        add((w2, w1))
+            if not to_add:
+                break
+            for _ in map(self.add, to_add): pass

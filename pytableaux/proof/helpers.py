@@ -688,6 +688,7 @@ class MaxWorlds(Rule.HelperDict[Branch, int]):
 
     shareable = True
 
+    class Config(NamedTuple): operators: Set[Operator]
     config: MaxWorlds.Config
     modals: MaxWorlds.ModalsCounts
 
@@ -695,6 +696,7 @@ class MaxWorlds(Rule.HelperDict[Branch, int]):
 
     def __init__(self, rule: Rule,/):
         super().__init__(rule)
+        self.config = self.Config(rule.Meta.modal_operators)
         self.modals = self.ModalsCounts(self.config)
 
     def listen_on(self):
@@ -765,19 +767,6 @@ class MaxWorlds(Rule.HelperDict[Branch, int]):
                 for node in filterfalse(branch.is_ticked, branch)
                     if isinstance(node, SentenceNode))))
 
-    @classmethod
-    def configure_rule(cls, rulecls, config):
-        "``Rule.Helper`` init hook. Set the `modal_operators` attribute."
-        super().configure_rule(rulecls, config)
-        try:
-            return cls.Config(rulecls.Meta.modal_operators)
-        except AttributeError as err:
-            if abcs.isabstract(rulecls):
-                return
-            raise Emsg.MissingAttribute(str(err))
-
-    class Config(NamedTuple):
-        operators: Set[Operator]
 
     class ModalsCounts(dict[Sentence, int]):
         """

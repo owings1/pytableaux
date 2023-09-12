@@ -88,11 +88,6 @@ class TestModelRefactorBugs(Base):
 
 class TestModelAtomics(Base):
 
-    def test_model_value_of_atomic_unassigned(self):
-        s = Atomic(0, 0)
-        m = self.m().finish()
-        self.assertEqual(m.value_of(s), m.Meta.unassigned_value)
-
     def test_model_branch_no_proof_atomic(self):
         s = Atomic(0, 0)
         m = self.m()
@@ -123,13 +118,6 @@ class TestModelPredication(Base):
         m = self.m(b)
         self.assertEqual(m.value_of(s1, world=0), 'T')
 
-    def test_set_predicated_value1(self):
-        s = Predicate.Identity(Constant.gen(2))
-        with self.m() as m:
-            m.set_value(s, 'T', world=0)
-        res = m.value_of(s, world=0)
-        self.assertEqual(res, 'T')
-
     def test_model_identity_extension_non_empty_with_sentence(self):
         s = p('Imn')
         with self.m() as m:
@@ -138,14 +126,6 @@ class TestModelPredication(Base):
         self.assertGreater(len(interp), 0)
         self.assertIn(s.params, interp)
         self.assertEqual(interp[s.params], 'T')
-
-    def test_set_predicated_raises_free_variables(self):
-        pred = Predicate(0, 0, 1)
-        s1, s2 = pred(Constant.first()), pred(Variable.first())
-        m = self.m()
-        m.set_value(s1, 'F')
-        with self.assertRaises(ValueError):
-            m.set_predicated_value(s2, 'F')
 
 class TestModelModalAccess(Base):
 
@@ -276,31 +256,6 @@ class TestFrame(Base):
         with self.m() as m:
             m.set_value(s1, 'T', world=0)
             m.set_value(s1, 'T', world=1)
-        f1, f2 = m.frames.values()
-        self.assertEqual(f1, f2)
-        self.assertEqual(f2, f1)
-
-    def test_difference_opaque_keys_diff(self):
-        with self.m() as m:
-            m.set_opaque_value(self.p('Ma'), 'T', world=0)
-            m.set_opaque_value(self.p('Mb'), 'T', world=1)
-        f1, f2 = m.frames.values()
-        self.assertNotEqual(f1, f2)
-        self.assertNotEqual(f2, f1)
-
-    def test_difference_opaque_values_diff(self):
-        s1 = self.p('Ma')
-        with self.m() as m:
-            m.set_opaque_value(s1, 'T', world=0)
-            m.set_opaque_value(s1, 'F', world=1)
-        f1, f2 = m.frames.values()
-        self.assertNotEqual(f1, f2)
-        self.assertNotEqual(f2, f1)
-
-    def test_difference_opaque_values_equiv(self):
-        with self.m() as m:
-            m.set_opaque_value(self.p('Ma'), 'T', world=0)
-            m.set_opaque_value(self.p('Ma'), 'T', world=1)
         f1, f2 = m.frames.values()
         self.assertEqual(f1, f2)
         self.assertEqual(f2, f1)

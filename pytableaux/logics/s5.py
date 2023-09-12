@@ -16,9 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Marking
-from ..proof import AccessNode, adds, filters, rules
-from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from ..models import GlobalAccess
+from ..proof import rules
 from ..tools import group
 from . import k as K
 from . import s4 as S4
@@ -42,62 +41,14 @@ class Meta(S4.Meta):
         'S5RM3')
 
 class Model(S4.Model):
-
-    def finish(self):
-        self._check_not_finished()
-        self._ensure_global_access()
-        return super().finish()
-
-    def _ensure_global_access(self):
-        R = self.R
-        while True:
-            self._ensure_reflexive_transitive()
-            to_add = set()
-            add = to_add.add
-            for w1 in self.frames:
-                for w2 in R[w1]:
-                    if w1 not in R[w2]:
-                        add((w2, w1))
-            if not to_add:
-                break
-            for _ in map(R.add, to_add): pass
+    Access: type[GlobalAccess] = GlobalAccess
 
 class System(K.System): pass
 
 class Rules(S4.Rules):
 
-    class Symmetric(rules.GetNodeTargetsRule):
-        """
-        .. _symmetric-rule:
-
-        For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
-        if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add
-        *w'Rw* to *b*.
-        """
-        Helpers = (MaxWorlds, WorldIndex)
-        NodeFilters = group(filters.NodeType)
-        NodeType = AccessNode
-        ticking = False
-        marklegend = [(Marking.tableau, ('access', 'symmetric'))]
-        defaults = dict(is_rank_optim = False)
-
-        def _get_node_targets(self, node: AccessNode, branch,/):
-            if self[MaxWorlds].is_exceeded(branch):
-                self[FilterHelper].release(node, branch)
-                return
-            pair = node.pair().reversed()
-            if self[WorldIndex].has(branch, pair):
-                self[FilterHelper].release(node, branch)
-                return
-            nnode = pair.tonode()
-            yield adds(group(nnode), **nnode)
+    Symmetric = rules.access.Symmetric
 
     groups = (
         *S4.Rules.groups,
         group(Symmetric))
-
-
-# TODO:
-# Some problematic arguments for S5:
-#
-#   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)

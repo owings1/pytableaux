@@ -16,9 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..lang import Atomic, Marking
-from ..proof import WorldPair, adds, rules, swnode
-from ..proof.helpers import FilterHelper, MaxWorlds, WorldIndex
+from ..models import ReflexiveAccess
+from ..proof import rules
 from ..tools import group
 from . import k as K
 
@@ -39,52 +38,13 @@ class Meta(K.Meta):
         'TRM3')
 
 class Model(K.Model):
-
-    def finish(self):
-        self._check_not_finished()
-        self._ensure_reflexive()
-        return super().finish()
-
-    def _ensure_reflexive(self):
-        self._check_not_finished()
-        add = self.R.add
-        for w in self.frames:
-            add((w, w))
+    Access: type[ReflexiveAccess] = ReflexiveAccess
 
 class System(K.System): pass
 
 class Rules(K.Rules):
 
-    class Reflexive(rules.GetNodeTargetsRule):
-        """
-        .. _reflexive-rule:
-
-        The Reflexive rule applies to an open branch *b* when there is a node *n*
-        on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
-
-        For a node *n* on an open branch *b* on which appears a world *w* for which there is
-        no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
-        is *w*.
-        """
-        Helpers = (MaxWorlds, WorldIndex)
-        ignore_ticked = False
-        ticking = False
-        marklegend = [(Marking.tableau, ('access', 'reflexive'))]
-        defaults = dict(is_rank_optim = False)
-
-        def _get_node_targets(self, node, branch, /):
-            if self[MaxWorlds].is_exceeded(branch):
-                self[FilterHelper].release(node, branch)
-                return
-            for w in node.worlds():
-                pair = WorldPair(w, w)
-                if self[WorldIndex].has(branch, pair):
-                    self[FilterHelper].release(node, branch)
-                    continue
-                yield adds(group(pair.tonode()), world=w)
-
-        def example_nodes(self):
-            yield swnode(Atomic.first(), 0)
+    Reflexive = rules.access.Reflexive
 
     groups = (
         *K.Rules.nonbranching_groups,

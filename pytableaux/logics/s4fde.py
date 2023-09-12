@@ -29,13 +29,7 @@ class Meta(TFDE.Meta):
     extension_of = ('TFDE')
 
 class Model(TFDE.Model):
-
-    _ensure_reflexive_transitive = S4.Model._ensure_reflexive_transitive
-
-    def finish(self):
-        self._check_not_finished()
-        self._ensure_reflexive_transitive()
-        return super().finish()
+    Access = S4.Model.Access
 
 class System(TFDE.System): pass
 

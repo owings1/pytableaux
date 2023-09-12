@@ -29,13 +29,7 @@ class Meta(KFDE.Meta):
     extension_of = ('KFDE')
 
 class Model(KFDE.Model):
-
-    _ensure_reflexive = T.Model._ensure_reflexive
-
-    def finish(self):
-        self._check_not_finished()
-        self._ensure_reflexive()
-        return super().finish()
+    Access = T.Model.Access
 
 class System(KFDE.System): pass
 
