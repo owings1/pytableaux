@@ -384,12 +384,18 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
         refid = refname
         inserts = list(inserts)
         nametext = inflect.snakespace(rulecls.name)
-        is_local = rulecls.Meta.name == self.logic.Meta.name
-        if 'origin' in opts:
-            if not is_local or opts['origin'] != 'foreign':
-                refp = refplus.logic_link_node(rulecls.Meta.name)
-                refp['classes'].append('rule-origin-logic')
-                inserts.append(refp)
+        extraattrs = {}
+        try:
+            is_local = rulecls.Meta.name == self.logic.Meta.name
+        except AttributeError:
+            is_local = False
+        else:
+            if 'origin' in opts:
+                if not is_local or opts['origin'] != 'foreign':
+                    refp = refplus.logic_link_node(rulecls.Meta.name)
+                    refp['classes'].append('rule-origin-logic')
+                    inserts.append(refp)
+            extraattrs['data-rule-origin-logic'] = rulecls.Meta.name
         if is_local:
             classes.append('rule-origin-local')
         else:
@@ -415,7 +421,7 @@ class TableauDirective(BaseDirective, ParserOptionMixin, LogicOptionMixin):
             domain=domain,
             objtype=objtype,
             classes=classes,
-            **{'data-rule-origin-logic': rulecls.Meta.name})
+            **extraattrs)
 
     def getnodes_rule_legend(self, rulecls: type[Rule]):
         lw = self.lwuni

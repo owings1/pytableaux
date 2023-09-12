@@ -47,7 +47,7 @@ class System(K.System): pass
 
 class Rules(S4.Rules):
 
-    Symmetric = rules.access.Symmetric
+    class Symmetric(rules.access.Symmetric): pass
 
     groups = (
         *S4.Rules.groups,

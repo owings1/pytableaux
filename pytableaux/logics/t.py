@@ -44,7 +44,7 @@ class System(K.System): pass
 
 class Rules(K.Rules):
 
-    Reflexive = rules.access.Reflexive
+    class Reflexive(rules.access.Reflexive): pass
 
     groups = (
         *K.Rules.nonbranching_groups,

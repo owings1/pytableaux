@@ -48,7 +48,7 @@ class System(K.System): pass
 
 class Rules(T.Rules):
 
-    Transitive = rules.access.Transitive
+    class Transitive(rules.access.Transitive): pass
 
     groups = (
         *K.Rules.nonbranching_groups,

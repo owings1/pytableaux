@@ -36,7 +36,7 @@ class System(K.System): pass
 
 class Rules(K.Rules):
 
-    Serial = rules.access.Serial
+    class Serial(rules.access.Serial): pass
 
     groups = (
         *K.Rules.nonbranching_groups,
