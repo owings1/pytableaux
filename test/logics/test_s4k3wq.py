@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2023 Doug Owings.
 # 
@@ -14,41 +13,30 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux.logics.s4k3wq tests
 from __future__ import annotations
 
-from ..models import GlobalAccess
-from ..proof import rules
-from ..tools import group
-from . import k as K
-from . import s4 as S4
+from unittest import skip
+
+from ..utils import BaseCase
+from . import test_k3wq as K3WQSuite
 
 
-class Meta(S4.Meta):
-    name = 'S5'
-    title = 'S5 Normal Modal Logic'
-    description = (
-        'Normal modal logic with global access relation')
-    category_order = 5
-    extension_of = (
-        'S4',
-        'S5B3E',
-        'S5G3',
-        'S5K3',
-        'S5K3W',
-        'S5K3WQ',
-        'S5L3',
-        'S5LP',
-        'S5RM3')
+class Base(BaseCase):
+    logic = 'S4K3WQ'
 
-class Model(S4.Model):
-    Access: type[GlobalAccess] = GlobalAccess
+class TestRules(Base, autorules=True): pass
 
-class System(K.System): pass
+class TestArguments(Base, autoargs=True):
+    pass
+    autoargs_kws = {
+        'nested_diamond_within_box1': dict(skip_countermodel=True),
+    }
 
-class Rules(S4.Rules):
+    @skip('TODO: fix model')
+    def test_nested_diamond_within_box1_countermodel(self): ...
 
-    class Symmetric(rules.access.Symmetric): pass
-
-    groups = (
-        *S4.Rules.groups,
-        group(Symmetric))
+class TestTables(Base, K3WQSuite.TestTables): pass

@@ -35,6 +35,7 @@ class Meta(CFOL.Meta):
         'KG3',
         'KK3',
         'KK3W',
+        'KK3WQ',
         'KL3',
         'KLP',
         'KRM3')

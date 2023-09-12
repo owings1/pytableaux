@@ -217,7 +217,11 @@ def setup(app: Sphinx):
     app.add_autodocumenter(AttributeDocumenter, True)
 
     # app.connect('autodoc-process-docstring', EnumMemberValue(), -1)
-    for cls in (RuledocInherit, RuledocExample, BuildtrunkExample):
+    # for cls in (RuledocInherit, RuledocExample, BuildtrunkExample):
+    for cls in (
+        # RuledocInherit,
+        RuledocExample,
+        BuildtrunkExample):
         app.connect('autodoc-process-docstring', cls())
 
     for cls in (RolewrapReplace,):

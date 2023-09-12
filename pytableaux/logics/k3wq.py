@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
+from functools import reduce
+from ..lang import Operator
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import k3w as K3W
@@ -32,16 +34,11 @@ class Model(K3W.Model):
 
     def value_of_quantified(self, s, /, **kw):
         self._check_finished()
-        valset = set(self._unquantify_values(s, **kw))
-        values = self.values
-        if values.N in valset:
-            return values.N
         q = s.quantifier
-        if q is q.Existential:
-            return max(valset, default=values.F)
-        if q is q.Universal:
-            return min(valset, default=values.T)
-        raise NotImplementedError from ValueError(q)
+        it = self._unquantify_values(s, **kw)
+        # initial is least for existential, greatest for universal
+        initial = self.valseq[-q.index]
+        return self.truth_function.generalize(q, it, initial)
 
 class System(K3W.System): pass
 
@@ -64,6 +61,7 @@ class Rules(K3W.Rules):
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
+            q = self.quantifier
             v = s.variable
             si = s.sentence
             r = branch.new_constant() >> s
@@ -71,7 +69,7 @@ class Rules(K3W.Rules):
             w = node.get('world')
             yield adds(
                 sdwgroup((r, d, w), (~r, d, w)),
-                sdwgroup((self.quantifier.other(v, ~si), not d, w)))
+                sdwgroup((q.other(v, ~si), not d, w)))
 
     class ExistentialNegatedUndesignated(rules.QuantifierSkinnyRule):
 

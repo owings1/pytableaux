@@ -63,16 +63,20 @@ For the live site, [see here][site]. For documentation, [see here][doc].
 - [**S5RM<sub>3</sub>** - RM<sub>3</sub> with S5 modal][S5RM3]
 - [**KK<sup>3</sup><sub>W</sub>** - K<sup>3</sup><sub>W</sub> with K modal][KK3W]
 - [**TK<sup>3</sup><sub>W</sub>** - K<sup>3</sup><sub>W</sub> with T modal][TK3W]
+- [**TK<sup>3</sup><sub>WQ</sub>** - K<sup>3</sup><sub>WQ</sub> with T modal][TK3WQ]
+- [**S4B<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with S4 modal][S4B3E]
 - [**S4K<sup>3</sup><sub>W</sub>** - K<sup>3</sup><sub>W</sub> with S4 modal][S4K3W]
+- [**S4K<sup>3</sup><sub>WQ</sub>** - K<sup>3</sup><sub>WQ</sub> with S4 modal][S4K3WQ]
 - [**S5K<sup>3</sup><sub>W</sub>** - K<sup>3</sup><sub>W</sub> with S5 modal][S5K3W]
+- [**S5K<sup>3</sup><sub>WQ</sub>** - K<sup>3</sup><sub>WQ</sub> with S5 modal][S5K3WQ]
+- [**KK<sup>3</sup><sub>WQ</sub>** - K<sup>3</sup><sub>WQ</sub> with K modal][KK3WQ]
 - [**KB<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with K modal][KB3E]
 - [**TB<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with T modal][TB3E]
-- [**S4B<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with S4 modal][S4B3E]
 - [**S5B<sup>3</sup><sub>E</sub>** - B<sup>3</sup><sub>E</sub> with S5 modal][S5B3E]
+- [**S5G<sub>3</sub>** - G<sub>3</sub> with S5 modal][S5G3]
 - [**KG<sub>3</sub>** - G<sub>3</sub> with K modal][KG3]
 - [**TG<sub>3</sub>** - G<sub>3</sub> with T modal][TG3]
 - [**S4G<sub>3</sub>** - G<sub>3</sub> with S4 modal][S4G3]
-- [**S5G<sub>3</sub>** - G<sub>3</sub> with S5 modal][S5G3]
 - [**S4GO** - GO S4 modal logic][S4GO]
 
 <!-- [logics-end] -->
@@ -208,15 +212,19 @@ Copyright (C) 2014-2023, Doug Owings. Released under the [GNU Affero General Pub
 [S5RM3]: https://logic.dougowings.net/doc/logics/s5rm3.html
 [KK3W]: https://logic.dougowings.net/doc/logics/kk3w.html
 [TK3W]: https://logic.dougowings.net/doc/logics/tk3w.html
+[TK3WQ]: https://logic.dougowings.net/doc/logics/tk3wq.html
+[S4B3E]: https://logic.dougowings.net/doc/logics/s4b3e.html
 [S4K3W]: https://logic.dougowings.net/doc/logics/s4k3w.html
+[S4K3WQ]: https://logic.dougowings.net/doc/logics/s4k3wq.html
 [S5K3W]: https://logic.dougowings.net/doc/logics/s5k3w.html
+[S5K3WQ]: https://logic.dougowings.net/doc/logics/s5k3wq.html
+[KK3WQ]: https://logic.dougowings.net/doc/logics/kk3wq.html
 [KB3E]: https://logic.dougowings.net/doc/logics/kb3e.html
 [TB3E]: https://logic.dougowings.net/doc/logics/tb3e.html
-[S4B3E]: https://logic.dougowings.net/doc/logics/s4b3e.html
 [S5B3E]: https://logic.dougowings.net/doc/logics/s5b3e.html
+[S5G3]: https://logic.dougowings.net/doc/logics/s5g3.html
 [KG3]: https://logic.dougowings.net/doc/logics/kg3.html
 [TG3]: https://logic.dougowings.net/doc/logics/tg3.html
 [S4G3]: https://logic.dougowings.net/doc/logics/s4g3.html
-[S5G3]: https://logic.dougowings.net/doc/logics/s5g3.html
 [S4GO]: https://logic.dougowings.net/doc/logics/s4go.html
 <!-- [refs-end] -->

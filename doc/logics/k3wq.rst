@@ -1,7 +1,9 @@
+.. module:: pytableaux.logics.k3wq
+
 .. _K3WQ:
 
 *******************************************************************
-L{K3WQ} - Weak Kleene Logic with alternate quantification
+L{} - Weak Kleene Logic with alternate quantification
 *******************************************************************
 
 This is a version of {@K3W} with a different treatment of the quantifiers
@@ -14,7 +16,6 @@ rules for the quantifiers, given the behavior of those operators in {@K3W}.
 
 ------------------------
 
-.. module:: pytableaux.logics.k3wq
 
 .. _k3wq-semantics:
 .. _k3wq-model:
@@ -27,13 +28,11 @@ Semantics
 Truth Values
 ------------
 
-Common labels for the values include:
-
 .. include:: include/k3w/value-table.rst
 
 .. rubric:: Designated Values
 
-The set of *designated values* for L{K3WQ} is the singleton: { V{T} }
+The set of *designated values* for L{} is the singleton: { V{T} }
 
 .. _k3wq-truth-tables:
 
@@ -71,21 +70,26 @@ Predication
 Quantification
 --------------
 
+For L{} we give a treatment of quantification in terms of generalized disjunction &
+conjunction, instead of the {@FDE} min/max fubctions.
+
 .. rubric:: Existential
 
-An existential sentence is interpreted in terms of `generalized disjunction`.
-If we order the values least to greatest as V{N}, V{T}, V{F}, then we
-can define the value of an existential in terms of the `maximum` value of
-the set of values for the substitution of each constant in the model for
-the variable.
+Let :m:`M` be the set of values of the sentences that result from replacing each
+constant for the quantified variable of an existential sentence :m:`A`. The value
+of :m:`A` is:
+
+* V{N} if V{N} is in :m:`M`.
+* V{T} if V{N} in not in :m:`M`, and V{T} is in :m:`M`.
+* V{F} otherwise.
 
 .. rubric:: Universal
 
-A universal sentence is interpreted in terms of `generalized conjunction`.
-If we order the values least to greatest as V{N}, V{F}, V{T}, then we
-can define the value of a universal in terms of the `minimum` value of
-the set of values for the substitution of each constant in the model for
-the variable.
+For a universal sentence, the value is:
+
+* V{N} if V{N} is in :m:`M`.
+* V{F} if V{N} in not in :m:`M`, and V{F} is in :m:`M`.
+* V{T} otherwise.
 
 .. _k3wq-consequence:
 
@@ -102,7 +106,7 @@ Consequence
 Tableaux
 ========
 
-L{K3WQ} tableaux are built similary to L{FDE}.
+L{} tableaux are built similary to L{FDE}.
 
 Nodes
 -----
@@ -136,12 +140,12 @@ Rules
 
 .. tableau-rules::
   :docflags:
-  :group: operator
-  :exclude: non_native
+  :group: quantifier
 
 .. tableau-rules::
   :docflags:
-  :group: quantifier
+  :group: operator
+  :exclude: non_native
 
 .. tableau-rules::
   :docflags:

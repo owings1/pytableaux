@@ -33,6 +33,7 @@ class Meta(K.Meta):
         'TG3',
         'TK3',
         'TK3W',
+        'TK3WQ',
         'TL3',
         'TLP',
         'TRM3')

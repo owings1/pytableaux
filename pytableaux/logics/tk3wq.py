@@ -16,39 +16,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..models import GlobalAccess
-from ..proof import rules
 from ..tools import group
-from . import k as K
-from . import s4 as S4
+from . import kk3wq as KK3WQ
+from . import tfde as TFDE
 
 
-class Meta(S4.Meta):
-    name = 'S5'
-    title = 'S5 Normal Modal Logic'
-    description = (
-        'Normal modal logic with global access relation')
-    category_order = 5
-    extension_of = (
-        'S4',
-        'S5B3E',
-        'S5G3',
-        'S5K3',
-        'S5K3W',
-        'S5K3WQ',
-        'S5L3',
-        'S5LP',
-        'S5RM3')
+class Meta(KK3WQ.Meta, TFDE.Meta):
+    name = 'TK3WQ'
+    title = 'K3WQ with T modal'
+    description = 'Modal version of K3WQ based on T normal modal logic'
+    category_order = 30.3
+    extension_of = ('KK3WQ')
 
-class Model(S4.Model):
-    Access: type[GlobalAccess] = GlobalAccess
+class Model(KK3WQ.Model, TFDE.Model): pass
+class System(KK3WQ.System, TFDE.System): pass
 
-class System(K.System): pass
-
-class Rules(S4.Rules):
-
-    class Symmetric(rules.access.Symmetric): pass
+class Rules(KK3WQ.Rules, TFDE.Rules):
 
     groups = (
-        *S4.Rules.groups,
-        group(Symmetric))
+        *KK3WQ.Rules.nonbranching_groups,
+        *KK3WQ.Rules.unmodal_groups,
+        group(TFDE.Rules.Reflexive),
+        *KK3WQ.Rules.branching_groups,
+        *KK3WQ.Rules.unquantifying_groups)

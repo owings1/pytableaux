@@ -24,13 +24,13 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
-from functools import partial
+from functools import partial, reduce
 from itertools import product, starmap
 from types import MappingProxyType as MapProxy
-from typing import Any, Generic, Iterable, Iterator, Self, TypeVar, TYPE_CHECKING
+from typing import Any, Generic, Iterable, Iterator, Literal, Self, Sequence, TypeVar, TYPE_CHECKING
 
 from ..errors import DenotationError, IllegalStateError, ModelValueError, check
-from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
+from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,Quantifier, 
                     Predicated, Quantified, Sentence)
 from ..logics import LogicType
 from ..proof import (AccessNode, Branch, DesignationNode, Node, SentenceNode,
@@ -52,10 +52,14 @@ __all__ = (
 
 MvalT = TypeVar('MvalT', bound='Mval')
 MvalT_co = TypeVar('MvalT_co', bound='Mval', covariant=True)
+NOARG = object()
 
 class Mval(abcs.Ebc):
 
     __slots__ = ('name', 'value')
+
+    F: float
+    T: float
 
     def __eq__(self, other):
         if self is other:
@@ -139,6 +143,11 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
     values: type[MvalT_co]
     "The values of the model"
+
+    valseq: Sequence[MvalT_co]
+
+    minval: MvalT_co
+    maxval: MvalT_co
 
     truth_function: Logic.Model.TruthFunction[MvalT_co]
     "The truth function instance"
@@ -483,16 +492,23 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         if not Meta:
             return
         cls.Meta = Meta
-        cls.values = Meta.values
-        cls.minval = min(Meta.values)
-        cls.maxval = max(Meta.values)
-        cls.truth_function = cls.TruthFunction(Meta.values)
+        values = Meta.values
+        cls.values = values
+        cls.valseq = tuple(values)
+        cls.minval = min(values)
+        cls.maxval = max(values)
+        cls.truth_function = cls.TruthFunction(values)
 
     class TruthFunction(Generic[MvalT], metaclass=ModelsMeta):
 
         values: type[MvalT]
         maxval: MvalT
         minval: MvalT
+        generalizers = MapProxy({
+            Quantifier.Existential: Operator.Disjunction,
+            Quantifier.Universal: Operator.Conjunction,
+            Operator.Possibility: Operator.Disjunction,
+            Operator.Necessity: Operator.Conjunction})
 
         __slots__ = (
             'maxval',
@@ -520,9 +536,9 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
         def Negation(self, a: MvalT) -> MvalT:
             if a == 'F':
-                return self.values['T']
+                return self.values.T
             if a == 'T':
-                return self.values['F']
+                return self.values.F
             return self.values[a]
 
         def MaterialConditional(self, a: MvalT, b: MvalT) -> MvalT:
@@ -543,6 +559,9 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         def Biconditional(self, a: MvalT, b: MvalT) -> MvalT:
             return self.Conjunction(*starmap(self.Conditional, ((a, b), (b, a))))
 
+        def generalize(self, oper: Operator|Quantifier, it: Iterable[MvalT], *args, **kw) -> MvalT:
+            oper = Operator(self.generalizers.get(oper, oper))
+            return reduce(getattr(self, oper.name), it, *args, **kw)
 
     class Frame(Generic[MvalT], metaclass=ModelsMeta):
         """
