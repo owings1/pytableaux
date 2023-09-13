@@ -45,12 +45,12 @@ class Model(K3.Model):
                 return self.values.F
             return self.values.T
 
-    def value_of_quantified(self, s, /, **kw):
+    def value_of_quantified(self, s, w, /):
         self._check_finished()
-        quant = s.quantifier
-        if quant is not quant.Existential:
-            return super().value_of_quantified(s, **kw)
-        valset = set(self._unquantify_values(s, **kw))
+        q = s.quantifier
+        if q is not q.Existential:
+            return super().value_of_quantified(s, w)
+        valset = set(self.unquantify_values(s, w))
         values = self.values
         if values.T in valset:
             return values.T

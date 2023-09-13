@@ -31,21 +31,20 @@ class Meta(K3WQ.Meta, KFDE.Meta):
 
 class Model(K3WQ.Model, KFDE.Model):
 
-    def value_of_operated(self, s, /, **kw):
-        self._check_finished()
-        oper = s.operator
-        if oper not in self.Meta.modal_operators:
-            return super().value_of_operated(s, **kw)
-        it = self._unmodal_values(s, **kw)
-        # initial is least for Possibility, greatest for Necessity
-        initial = self.valseq[oper.Possibility.index - oper.index]
-        return self.truth_function.generalize(oper, it, initial)
+    def value_of_operated(self, s, w, /):
+        o = s.operator
+        if o not in self.Meta.modal_operators:
+            return super().value_of_operated(s, w)
+        it = self.unmodal_values(s, w)
+        initial = self.valseq[-(o is o.Necessity)]
+        return self.truth_function.generalize(o, it, initial)
 
 class System(K3WQ.System, KFDE.System): pass
 
 class Rules(K3WQ.Rules, KFDE.Rules):
 
     class PossibilityDesignated(KFDE.Rules.PossibilityDesignated):
+
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
             o = s.operator
@@ -112,33 +111,8 @@ class Rules(K3WQ.Rules, KFDE.Rules):
                 designated=d,
                 sentence=si)
 
-    class NecessityNegatedDesignated(PossibilityDesignated):
-        pass
-
-    #     def _get_node_targets(self, node, branch, /):
-    #         s = self.sentence(node)
-    #         v = s.variable
-    #         si = s.sentence
-    #         d = self.designation
-    #         w = node.get('world')
-    #         yield adds(
-    #             sdwgroup(
-    #                 (self.quantifier(v, si | ~si), d, w),
-    #                 (~(branch.new_constant() >> s), d, w)))
-
-    class NecessityNegatedUndesignated(PossibilityUndesignated):
-        pass
-
-    #     def _get_node_targets(self, node, branch, /):
-    #         s = self.sentence(node)
-    #         v = s.variable
-    #         si = s.sentence
-    #         r = branch.new_constant() >> s
-    #         d = self.designation
-    #         w = node.get('world')
-    #         yield adds(
-    #             sdwgroup((r, d, w), (~r, d, w)),
-    #             sdwgroup((self.quantifier(v, si), not d, w)))
+    class NecessityNegatedDesignated(PossibilityDesignated): pass
+    class NecessityNegatedUndesignated(PossibilityUndesignated): pass
 
     unmodal_groups = (
         group(
@@ -148,14 +122,10 @@ class Rules(K3WQ.Rules, KFDE.Rules):
             KFDE.Rules.NecessityUndesignated,
             PossibilityDesignated,
             PossibilityNegatedUndesignated,
-            # KFDE.Rules.NecessityNegatedUndesignated,
-            # KFDE.Rules.NecessityNegatedDesignated,
-            NecessityNegatedDesignated,
-            ),
+            NecessityNegatedDesignated),
         group(
             PossibilityUndesignated,
-            NecessityNegatedUndesignated,
-        ))
+            NecessityNegatedUndesignated))
 
     groups = (
         *K3WQ.Rules.nonbranching_groups,

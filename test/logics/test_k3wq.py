@@ -28,14 +28,14 @@ class TestModels(Base):
         s1, s2 = arg = Argument('SxFx:Fm')
         s3 = self.p('Fn')
         m, = self.tab(arg, is_build_models = True).models
-        self.assertIn(str(m.value_of(s1)), {'F', 'N'})
-        self.assertEqual(m.value_of(s2), 'T')
-        self.assertEqual(m.value_of(s3), 'N')
+        self.assertIn(str(m[s1]), {'F', 'N'})
+        self.assertEqual(m[s2], 'T')
+        self.assertEqual(m[s3], 'N')
         self.assertTrue(m.is_countermodel_to(arg))
 
     def test_model_universal_from_predicate_sentence_countermodel(self):
         s1, s2 = arg = Argument('VxFx:Fm')
         m, = self.tab(arg, is_build_models = True).models
-        self.assertIn(m.value_of(s1), ('F', 'N'))
-        self.assertEqual(m.value_of(s2), 'T')
+        self.assertIn(m[s1], ('F', 'N'))
+        self.assertEqual(m[s2], 'T')
         self.assertTrue(m.is_countermodel_to(arg))

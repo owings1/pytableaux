@@ -27,11 +27,12 @@ from dataclasses import dataclass
 from functools import partial, reduce
 from itertools import product, starmap
 from types import MappingProxyType as MapProxy
-from typing import Any, Generic, Iterable, Iterator, Literal, Self, Sequence, TypeVar, TYPE_CHECKING
+from typing import (TYPE_CHECKING, Generic, Iterable, Iterator, Self, Sequence,
+                    TypeVar)
 
 from ..errors import DenotationError, IllegalStateError, ModelValueError, check
-from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,Quantifier, 
-                    Predicated, Quantified, Sentence)
+from ..lang import (Argument, Atomic, Constant, Operated, Operator, Predicate,
+                    Predicated, Quantified, Quantifier, Sentence)
 from ..logics import LogicType
 from ..proof import (AccessNode, Branch, DesignationNode, Node, SentenceNode,
                      WorldNode, sdwnode)
@@ -43,7 +44,6 @@ if TYPE_CHECKING:
 __all__ = (
     'BaseModel',
     'Mval',
-    'PredicateInterpretation',
     'TruthTable',
     'ValueFDE',
     'ValueK3',
@@ -52,6 +52,7 @@ __all__ = (
 
 MvalT = TypeVar('MvalT', bound='Mval')
 MvalT_co = TypeVar('MvalT_co', bound='Mval', covariant=True)
+_T = TypeVar('_T')
 NOARG = object()
 
 class Mval(abcs.Ebc):
@@ -164,7 +165,6 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
     __slots__ = (
         '_finished',
-        '_is_frame_complete',
         'constants',
         'frames',
         'R',
@@ -180,64 +180,52 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
     def __init__(self):
         self._finished = False
-        self._is_frame_complete = False
         if self.Meta.modal:
             self.frames = defaultdict(partial(self.Frame, self))
         else:
             self.frames = MapProxy({0: self.Frame(self)})
         self.constants = set()
         self.sentences = set()
-        self.R = self.Access()
+        self.R = self.Access(hook=self.frames.__getitem__)
         self.frames[0]
         self.R[0]
 
-    def is_sentence_opaque(self, s: Sentence, /) -> bool:
-        if not self.Meta.quantified and type(s) is Quantified:
+    def isopaque(self, s: Sentence, /) -> bool:
+        Meta = self.Meta
+        if not Meta.quantified and type(s) is Quantified:
             return True
-        if not self.Meta.modal and type(s) is Operated and s.operator in self.Meta.modal_operators:
+        if not Meta.modal and type(s) is Operated and s.operator in Meta.modal_operators:
             return True
         return False
 
-    def is_sentence_literal(self, s: Sentence, /) -> bool:
-        return type(s) in (Atomic, Predicated) or (
+    def isliteral(self, s: Sentence, /) -> bool:
+        return self.isopaque(s) or type(s) in (Atomic, Predicated) or (
             type(s) is Operated and
             (oper := s.operator) is oper.Negation and (
                 type(s.lhs) in (Atomic, Predicated) or
-                self.is_sentence_opaque(s.lhs)))
+                self.isopaque(s.lhs)))
 
-    def value_of(self, s: Sentence, /, **kw) -> MvalT_co:
+    def value_of_opaque(self, s: Sentence, w: int, /) -> MvalT_co:
         self._check_finished()
-        if self.is_sentence_opaque(s):
-            return self.value_of_opaque(s, **kw)
-        try:
-            name = f'value_of_{type(s).__name__.lower()}'
-            func = getattr(self, name)
-        except AttributeError:
-            check.inst(s, Sentence)
-            raise NotImplementedError from ValueError(s)
-        return func(s, **kw)
+        return self.frames[w].opaques.get(s, self.Meta.unassigned_value)
 
-    def value_of_opaque(self, s: Sentence, /, *, world: int = 0) -> MvalT_co:
+    def value_of_atomic(self, s: Atomic, w: int, /) -> MvalT_co:
         self._check_finished()
-        return self.frames[world].opaques.get(s, self.Meta.unassigned_value)
+        return self.frames[w].atomics.get(s, self.Meta.unassigned_value)
 
-    def value_of_atomic(self, s: Atomic, /, *, world: int = 0) -> MvalT_co:
-        self._check_finished()
-        return self.frames[world].atomics.get(s, self.Meta.unassigned_value)
-
-    def value_of_predicated(self, s: Predicated, /, *, world: int = 0) -> MvalT_co:
+    def value_of_predicated(self, s: Predicated, w: int, /) -> MvalT_co:
         self._check_finished()
         params = s.params
         for param in params:
             if param not in self.constants:
                 raise DenotationError(f'Parameter {param} is not in the constants')
-        return self.frames[world].predicates[s.predicate].get(params, self.Meta.unassigned_value)
+        return self.frames[w].predicates[s.predicate].get(params, self.Meta.unassigned_value)
 
-    def value_of_quantified(self, s: Quantified, /, **kw) -> MvalT_co:
+    def value_of_quantified(self, s: Quantified, w: int, /) -> MvalT_co:
         self._check_finished()
         if not self.Meta.quantified:
             raise NotImplementedError(f'Model does not support quantification')
-        it = self._unquantify_values(s, **kw)
+        it = self.unquantify_values(s, w)
         q = s.quantifier
         if q is q.Existential:
             return maxceil(self.maxval, it, self.minval)
@@ -245,93 +233,35 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             return minfloor(self.minval, it, self.maxval)
         raise NotImplementedError from ValueError(s.quantifier)
 
-    def _unquantify_values(self, s: Quantified, /, **kw) -> Iterator[MvalT_co]:
-        value_of = self.value_of
-        for c in self.constants:
-            yield value_of(c >> s, **kw)
-
-    def _unmodal_values(self, s: Operated, /, *, world: int = 0) -> Iterator[MvalT_co]:
-        value_of = self.value_of
-        for w2 in self.R[world]:
-            yield value_of(s.lhs, world=w2)
-
-    def value_of_operated(self, s: Operated, /, **kw) -> MvalT_co:
+    def value_of_operated(self, s: Operated, w: int, /) -> MvalT_co:
         self._check_finished()
         oper = s.operator
-        if oper in self.Meta.truth_functional_operators:
-            it = (self.value_of(s, **kw) for s in s)
-            return self.truth_function(oper, *it)
-        if oper in self.Meta.modal_operators:
-            if not self.Meta.modal:
+        Meta = self.Meta
+        if oper in Meta.truth_functional_operators:
+            return self.truth_function(oper, *(self[s, w] for s in s))
+        if oper in Meta.modal_operators:
+            if not Meta.modal:
                 raise NotImplementedError(f'Model does not support modal operators')
-            it = self._unmodal_values(s, **kw)
+            it = self.unmodal_values(s, w)
             if oper is oper.Possibility:
                 return maxceil(self.maxval, it, self.minval)
             if oper is oper.Necessity:
                 return minfloor(self.minval, it, self.maxval)
         raise NotImplementedError from ValueError(oper)
 
-    def set_value(self, s: Sentence, value: MvalT_co, /, **kw):
-        self._check_not_finished()
-        value = self.values[value]
-        if self.is_sentence_opaque(s):
-            return self.set_opaque_value(s, value, **kw)
-        if self.is_sentence_literal(s):
-            return self.set_literal_value(s, value, **kw)
-        raise NotImplementedError from TypeError(type(s))
+    def unquantify_values(self, s: Quantified, w: int, /) -> Iterator[MvalT_co]:
+        for c in self.constants:
+            yield self[c >> s, w]
 
-    def set_literal_value(self, s: Sentence, value: MvalT_co, /, **kw):
-        self._check_not_finished()
-        value = self.values[value]
-        if self.is_sentence_opaque(s):
-            return self.set_opaque_value(s, value, **kw)
-        if type(s) is Operated and (oper := s.operator) is oper.Negation:
-            value = self.truth_function(oper, value)
-            return self.set_literal_value(s.lhs, value, **kw)
-        if type(s) is Atomic:
-            return self.set_atomic_value(s, value, **kw)
-        if type(s) is Predicated:
-            return self.set_predicated_value(s, value, **kw)
-        raise NotImplementedError from TypeError(type(s))
-
-    def set_opaque_value(self, s: Sentence, value: MvalT_co, /, *, world: int = 0):
-        self._check_not_finished()
-        value = self.values[value]
-        frame = self.frames[world]
-        opaques = frame.opaques
-        if opaques.get(s, value) is not value:
-            raise ModelValueError(f'Inconsistent value for sentence {s}: {value}')
-        opaques[s] = value
-        self.sentences.add(s)
-        # We might have a quantified opaque sentence, in which case we will need
-        # to still check every subsitution, so we want the constants.
-        for pred in s.predicates:
-            frame.predicates[pred]
-        self.constants.update(s.constants)
-
-    def set_atomic_value(self, s: Atomic, value: MvalT_co, /, *, world: int = 0):
-        self._check_not_finished()
-        value = self.values[value]
-        atomics = self.frames[world].atomics
-        if atomics.get(s, value) is not value:
-            raise ModelValueError(f'Inconsistent value for sentence {s}: {value}')
-        atomics[s] = value
-        self.sentences.add(s)
-
-    def set_predicated_value(self, s: Predicated, value: MvalT_co, /, *, world: int = 0):
-        self._check_not_finished()
-        value = self.values[value]
-        frame = self.frames[world]
-        if len(s.variables):
-            raise ValueError(f'Free variables not allowed')
-        frame.predicates[s.predicate][s.params] = value
-        self.constants.update(s.constants)
-        self.sentences.add(s)
+    def unmodal_values(self, s: Operated, w: int, /) -> Iterator[MvalT_co]:
+        s, = s
+        for w2 in self.R[w]:
+            yield self[s, w2]
 
     def is_countermodel_to(self, a: Argument, /) -> bool:
-        return (
-            all(map(self.Meta.designated_values.__contains__, map(self.value_of, a.premises))) and
-            self.value_of(a.conclusion) not in self.Meta.designated_values)
+        isdes = self.Meta.designated_values.__contains__
+        it = map(self.__getitem__, a)
+        return not isdes(next(it)) and all(map(isdes, it))
 
     def read_branch(self, branch: Branch, /) -> Self:
         self._check_not_finished()
@@ -356,9 +286,7 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         s = node['sentence']
         self.sentences.add(s)
         self.constants.update(s.constants)
-        is_literal = self.is_sentence_literal(s)
-        is_opaque = self.is_sentence_opaque(s)
-        if not is_literal and not is_opaque:
+        if not self.isliteral(s):
             return
         if isinstance(node, DesignationNode):
             d = node['designated']
@@ -373,15 +301,10 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             value = base[2 * d + has_negative]
         else:
             value = 'T'
-        value = self.values[value]
-        if is_opaque:
-            self.set_opaque_value(s, value, world=w)
-        else:
-            self.set_literal_value(s, value, world=w)
+        self[s, w] = value
 
     def finish(self) -> Self:
         self._check_not_finished()
-        self._complete_frames()
         self.R.enforce()
         self._finished = True
         return self
@@ -421,6 +344,52 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                         value       = frames[w].get_data())
                     for w in worlds]))
 
+    def __getitem__(self, key: tuple[Sentence, int]|Sentence) -> MvalT_co:
+        if isinstance(key, tuple):
+            s, w = key
+        else:
+            s, w = key, 0
+        self._check_finished()
+        if self.isopaque(s):
+            name = 'value_of_opaque'
+        else:
+            name = f'value_of_{type(s).__name__.lower()}'
+        try:
+            func = getattr(self, name)
+        except AttributeError:
+            check.inst(s, Sentence)
+            raise NotImplementedError from ValueError(s)
+        return func(s, w)
+
+    def __setitem__(self, key: tuple[Sentence, int]|Sentence, value: MvalT_co):
+        if isinstance(key, tuple):
+            s, w = key
+        else:
+            s, w = key, 0
+        self._check_not_finished()
+        value = self.values[value]
+        frame = self.frames[w]
+        if self.isopaque(s):
+            frame.opaques[s] = value
+        elif type(s) is Operated and (oper := s.operator) is oper.Negation:
+            value = self.truth_function(oper, value)
+            self[s.lhs, w] = value
+            return
+        elif type(s) is Atomic:
+            frame.atomics[s] = value
+        elif type(s) is Predicated:
+            if len(s.variables):
+                raise ValueError(f'Free variables not allowed')
+            frame.predicates[s.predicate][s.params] = value
+        else:
+            raise NotImplementedError from TypeError(type(s))
+        self.sentences.add(s)
+        for pred in s.predicates:
+            frame.predicates[pred]
+        self.constants.update(s.constants)
+
+    __iter__ = None
+
     def __enter__(self) -> Self:
         self._check_not_finished()
         return self
@@ -428,39 +397,6 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
     def __exit__(self, type, value, traceback):
         if not self.finished:
             self.finish()
-
-    def _complete_frames(self):
-        self._check_not_finished()
-        if self._is_frame_complete:
-            return
-        # track all atomics and opaques
-        atomics = set()
-        opaques = set()
-        preds = set()
-        for s in self.sentences:
-            atomics.update(s.atomics)
-            preds.update(s.predicates)
-        # ensure frames for each world
-        for w in self.R:
-            self.frames[w]
-        # ensure R has each world
-        for w in self.frames:
-            self.R[w]
-        for w, frame in self.frames.items():
-            atomics.update(frame.atomics)
-            opaques.update(frame.opaques)
-            preds.update(frame.predicates)
-        unass = self.Meta.unassigned_value
-        for w, frame in self.frames.items():
-            for pred in preds:
-                frame.predicates[pred]
-            for s in atomics:
-                if s not in frame.atomics:
-                    frame.atomics[s] = unass
-            for s in opaques:
-                if s not in frame.opaques:
-                    frame.opaques[s] = unass
-        self._is_frame_complete = True
 
     def _check_finished(self):
         if not self.finished:
@@ -535,11 +471,12 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
             return self.values[a]
 
         def Negation(self, a: MvalT) -> MvalT:
-            if a == 'F':
-                return self.values.T
-            if a == 'T':
-                return self.values.F
-            return self.values[a]
+            a = self.values[a]
+            if a is a.F:
+                return a.T
+            if a is a.T:
+                return a.F
+            return a
 
         def MaterialConditional(self, a: MvalT, b: MvalT) -> MvalT:
             return self.Disjunction(self.Negation(a), b)
@@ -568,13 +505,13 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
         A Frame comprises the interpretation of sentences and predicates at a world.
         """
 
-        atomics: dict[Atomic, MvalT]
+        atomics: Interpretation[Atomic, MvalT]
         "An assignment of each atomic sentence to a truth value"
 
-        opaques: dict[Sentence, MvalT]
+        opaques: Interpretation[Sentence, MvalT]
         "An assignment of each opaque (un-interpreted) sentence to a value"
 
-        predicates: Mapping[Predicate, PredicateInterpretation[MvalT]]
+        predicates: Mapping[Predicate, Interpretation[tuple[Constant, ...], MvalT]]
         "A mapping of predicates to their interpretation"
 
         model: Logic.Model[MvalT]
@@ -584,9 +521,9 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
         def __init__(self, model: Logic.Model[MvalT], /):
             self.model = model
-            self.atomics = {}
-            self.opaques = {}
-            self.predicates = defaultdict(partial(PredicateInterpretation, model))
+            self.atomics = Interpretation(model)
+            self.opaques = Interpretation(model)
+            self.predicates = defaultdict(partial(Interpretation, model))
 
         def get_data(self) -> dict:
             return dict(
@@ -654,11 +591,12 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
                     return False
             return True
 
-    class Access(defaultdict[int, set[int]]):
+    class Access(defaultdict[int, set[int]], metaclass=ModelsMeta):
 
-        __slots__ = EMPTY_SET
+        __slots__ = ('hook')
 
-        def __init__(self, *args, **kw):
+        def __init__(self, *args, hook=None, **kw):
+            self.hook = hook or int
             super().__init__(set, *args, **kw)
 
         def has(self, pair: tuple[int, int], /) -> bool:
@@ -667,11 +605,10 @@ class BaseModel(Generic[MvalT_co], metaclass=ModelsMeta):
 
         def add(self, pair: tuple[int, int], /):
             w1, w2 = pair
+            self.hook(w1)
+            self.hook(w2)
             self[w1].add(w2)
             self[w2]
-
-        def addall(self, it):
-            for _ in map(self.add, it): pass
 
         def flat(self, *, w1s=None, sort=False):
             if w1s is None:
@@ -694,7 +631,7 @@ class TruthTable(Generic[MvalT]):
     values: type[MvalT]
     mapping: Mapping[tuple[MvalT, ...], MvalT]
 
-class PredicateInterpretation(Mapping[tuple[Constant, ...], MvalT]):
+class Interpretation(Mapping[_T, MvalT]):
 
     __slots__ = ('model', 'mapping')
 
@@ -702,14 +639,14 @@ class PredicateInterpretation(Mapping[tuple[Constant, ...], MvalT]):
         self.model = model
         self.mapping = {}
 
-    def having(self, *values) -> Iterator[tuple[Constant, ...]]:
+    def having(self, *values) -> Iterator[_T]:
         get = self.model.values.get
         values = set(filter(None, (get(str(value), None) for value in values)))
         if not values:
             return
-        for params, value in self.items():
+        for key, value in self.items():
             if value in values:
-                yield params
+                yield key
 
     def __setitem__(self, key, value):
         value = self.model.values[value]
@@ -750,14 +687,17 @@ class SerialAccess(BaseModel.Access):
 class ReflexiveAccess(BaseModel.Access):
 
     def enforce(self):
+        add = self.add
         for w in self:
-            self.add((w, w))
+            add((w, w))
 
 class ReflexiveTransitiveAccesss(ReflexiveAccess):
 
     def enforce(self):
+        myadd = self.add
+        enforce = super().enforce
         while True:
-            super().enforce()
+            enforce()
             to_add = set()
             add = to_add.add
             for w1 in self:
@@ -767,14 +707,15 @@ class ReflexiveTransitiveAccesss(ReflexiveAccess):
                             add((w1, w3))
             if not to_add:
                 break
-            for _ in map(self.add, to_add): pass
+            for _ in map(myadd, to_add): pass
 
 class GlobalAccess(ReflexiveTransitiveAccesss):
 
     def enforce(self):
-
+        myadd = self.add
+        enforce = super().enforce
         while True:
-            super().enforce()
+            enforce()
             to_add = set()
             add = to_add.add
             for w1 in self:
@@ -783,4 +724,4 @@ class GlobalAccess(ReflexiveTransitiveAccesss):
                         add((w2, w1))
             if not to_add:
                 break
-            for _ in map(self.add, to_add): pass
+            for _ in map(myadd, to_add): pass

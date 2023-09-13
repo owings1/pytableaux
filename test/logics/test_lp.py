@@ -56,5 +56,5 @@ class TestModels(Base):
         arg = Argument('NBab:c:BcNUab')
         with self.m() as m:
             for s, v in zip(self.pp(*'abc'), 'FTB'):
-                m.set_value(s, v)
-        self.assertEqual(m.value_of(arg.premises[1]), 'B')
+                m[s] = v
+        self.assertEqual(m[arg.premises[1]], 'B')

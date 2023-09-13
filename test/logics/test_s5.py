@@ -66,10 +66,7 @@ class TestModels(Base):
     def test_model_finish_symmetry_visibles(self):
         with self.m() as m:
             m.R.add((0,1))
-        self.assertIn(0, m.R[1])
-        # model.add_access(0, 1)
-        # model.finish()
-        # assert 0 in model.visibles(1)
+        self.assertTrue(m.R.has((1,0)))
 
 # TODO:
 # Some problematic arguments for S5:

@@ -96,6 +96,7 @@ class Rules(FDE.Rules):
         def _get_node_targets(self, node, branch, /):
             # Only count least-applied-to nodes
             if not self[NodeCount].isleast(node, branch):
+                pass
                 return
 
             s = self.sentence(node)
@@ -142,6 +143,10 @@ class Rules(FDE.Rules):
         def example_nodes(self):
             yield from super().example_nodes()
             yield anode(0, 1)
+
+        def _check_maxworlds(self, node: Node, branch: Branch) -> bool | dict:
+            # return False
+            return super()._check_maxworlds(node, branch)
 
     class NecessityNegatedUndesignated(NecessityDesignated): pass
     class PossibilityUndesignated(NecessityDesignated): pass

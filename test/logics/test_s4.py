@@ -41,10 +41,6 @@ class TestArguments(Base, autoargs=True):
 
     def test_invalid_nested_diamond_within_box1(self):
         self.invalid_tab('KMNbc:LCaMNb:Ma')
-        # model.add_access(0, 1)
-        # model.add_access(1, 2)
-        # model.finish()
-        # assert 2 in model.visibles(0)
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
 
@@ -74,4 +70,4 @@ class TestModels(Base):
         with self.m() as m:
             m.R.add((0,1))
             m.R.add((1,2))
-        self.assertIn(2, m.R[0])
+        self.assertTrue(m.R.has((0,2)))

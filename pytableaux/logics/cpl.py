@@ -48,7 +48,7 @@ class Model(LogicType.Model[Meta.values]):
 
     def finish(self):
         self._check_not_finished()
-        self._complete_frames()
+        # self._complete_frames()
         for w, frame in self.frames.items():
             for pred in deque(frame.predicates):
                 self._agument_extension_with_identicals(pred, w)

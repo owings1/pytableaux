@@ -36,6 +36,18 @@ class TestArguments(Base, autoargs=True):
     }
 
     @skip('TODO: fix model')
-    def test_nested_diamond_within_box1_countermodel(self): ...
+    def test_nested_diamond_within_box1_countermodel(self):
+        """
+        The issue is that models use 'unassigned_value' for missing atomics. When
+        the necessity rule quits it does not put a node with a sentence. The
+        unassigned value is N. This is fine for FDE variants, but for K3W variants
+        it makes necessity sentences undesignated.
+
+        Two potential solutions:
+
+        * Implement model branching (hard)
+        * Refactor quit flag behavior so that only access rules & possibility
+          stop applying (confusing).
+        """
 
 class TestTables(Base, K3WSuite.TestTables): pass

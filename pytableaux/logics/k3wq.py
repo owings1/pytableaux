@@ -16,8 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from functools import reduce
-from ..lang import Operator
 from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import k3w as K3W
@@ -32,12 +30,10 @@ class Meta(K3W.Meta):
 
 class Model(K3W.Model):
 
-    def value_of_quantified(self, s, /, **kw):
-        self._check_finished()
+    def value_of_quantified(self, s, w, /):
         q = s.quantifier
-        it = self._unquantify_values(s, **kw)
-        # initial is least for existential, greatest for universal
-        initial = self.valseq[-q.index]
+        it = self.unquantify_values(s, w)
+        initial = self.valseq[-(q is q.Universal)]
         return self.truth_function.generalize(q, it, initial)
 
 class System(K3W.System): pass
@@ -48,13 +44,14 @@ class Rules(K3W.Rules):
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
+            q = s.quantifier
             v = s.variable
             si = s.sentence
             d = self.designation
             w = node.get('world')
             yield adds(
                 sdwgroup(
-                    (self.quantifier.other(v, si | ~si), d, w),
+                    (q.Universal(v, si | ~si), d, w),
                     (branch.new_constant() >> s, d, w)))
 
     class ExistentialUndesignated(rules.QuantifierSkinnyRule):

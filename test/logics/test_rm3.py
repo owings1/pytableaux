@@ -39,10 +39,10 @@ class TestTables(Base, autotables=True):
 
 class TestModels(Base):
 
-    def test_model_value_of_biconditional(self):
+    def test_model_value_biconditional(self):
         s1, s2, s3 = self.pp('a', 'b', 'Bab')
         m = self.m()
-        m.set_literal_value(s1, 'B')
-        m.set_literal_value(s2, 'F')
+        m[s1] = 'B'
+        m[s2] = 'F'
         m.finish()
-        self.assertEqual(m.value_of(s3), 'F')
+        self.assertEqual(m[s3], 'F')
