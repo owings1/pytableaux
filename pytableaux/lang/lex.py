@@ -672,6 +672,8 @@ class Sentence(LexicalAbc):
     * :class:`Operated`
     """
 
+    connective: Quantifier|Operator|None
+
     predicates: frozenset[Predicate]
     "Set of predicates, recursive."
 
@@ -988,7 +990,7 @@ class Constant(Parameter):
     def __init__(self, *spec):
         pass
 
-    def __rshift__(self, other):
+    def __rshift__(self, other: Quantified) -> Sentence:
         'Same as ``other.unquantify(self)``.'
         if type(other) is Quantified:
             return other.unquantify(self)
@@ -1017,11 +1019,12 @@ class Atomic(CoordsItem, Sentence):
     True
     """
 
-    predicates = EMPTY_SET
+    connective = None
     constants = EMPTY_SET
-    variables = EMPTY_SET
-    quantifiers = EMPTY_SEQ
     operators = EMPTY_SEQ
+    predicates = EMPTY_SET
+    quantifiers = EMPTY_SEQ
+    variables = EMPTY_SET
 
     __slots__ = 'atomics'
 
@@ -1031,9 +1034,10 @@ class Atomic(CoordsItem, Sentence):
 class Predicated(Sentence, Sequence[Parameter]):
     'Predicated sentence implementation.'
 
+    atomics = EMPTY_SET
+    connective = None
     operators = EMPTY_SEQ
     quantifiers = EMPTY_SEQ
-    atomics = EMPTY_SET
 
     def __init__(self, pred, *params):
         """
@@ -1158,6 +1162,14 @@ class Quantified(Sentence, Sequence):
 
     items: tuple[Quantifier, Variable, Sentence]
     "The items sequence: :class:`Quantifer`, :class:`Variable`, :class:`Sentence`."
+
+    @property
+    def connective(self):
+        return self.quantifier
+
+    @property
+    def inner(self) -> Sentence:
+        return self.sentence
 
     @property
     def constants(self):
@@ -1289,6 +1301,14 @@ class Operated(Sentence, Sequence[Sentence]):
 
     rhs: Sentence
     "The last (right-most) operand."
+
+    @property
+    def connective(self) -> Operator:
+        return self.operator
+
+    @property
+    def inner(self) -> Sentence:
+        return self.lhs
 
     @lazy.prop
     def predicates(self):

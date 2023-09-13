@@ -16,7 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import adds, sdwnode, sdwgroup, anode
+from ..lang import Operated, Sentence
+from ..proof import Branch, Node, anode, rules
 from ..tools import group
 from . import k3wq as K3WQ
 from . import kfde as KFDE
@@ -39,78 +40,32 @@ class Model(K3WQ.Model, KFDE.Model):
         initial = self.valseq[-(o is o.Necessity)]
         return self.truth_function.generalize(o, it, initial)
 
-class System(K3WQ.System, KFDE.System): pass
+class System(K3WQ.System, KFDE.System):
+
+    class GeneralModalRule(rules.ModalOperatorRule, K3WQ.System.ReduceResolveBase[Operated], intermediate=True):
+
+        def _get_node_targets(self, node: Node, branch: Branch, /):
+            yield from self._redres_targets(node, branch)
+
+        def _resolved(self, s, node, branch) -> Sentence:
+            return super()._resolved(s.lhs, node, branch)
+
+        def _new_world(self, node, branch):
+            return branch.new_world()
+
+        def _makenodes(self, s, node, branch):
+            for n in super()._makenodes(s, node, branch):
+                yield n
+            yield anode(node['world'], n['world'])
+
+        def _reduced(self, s, node, branch):
+            return s.operator.Necessity(super()._reduced(s, node, branch))
 
 class Rules(K3WQ.Rules, KFDE.Rules):
 
-    class PossibilityDesignated(KFDE.Rules.PossibilityDesignated):
-
-        def _get_node_targets(self, node, branch, /):
-            s = self.sentence(node)
-            o = s.operator
-            si = s.lhs
-            if self.new_negated(self.negated):
-                so = si
-                si = ~si
-            else:
-                so = ~si
-            d = self.designation
-            if d is not None:
-                d = self.new_designation(d)
-            w1 = node['world']
-            w2 = branch.new_world()
-            yield adds(
-                group(
-                    sdwnode(o.Necessity(si | so), d, w1),
-                    sdwnode(si, d, w2),
-                    anode(w1, w2)),
-                designated=d,
-                sentence=si)
-
-    class PossibilityUndesignated(KFDE.Rules.PossibilityDesignated):
-
-        def _get_node_targets(self, node, branch, /):
-            s = self.sentence(node)
-            o = s.operator
-            si = s.lhs
-            if self.new_negated(self.negated):
-                so = si
-                si = ~si
-            else:
-                so = ~si
-            d = self.designation
-            if d is not None:
-                d = self.new_designation(d)
-            w1 = node['world']
-            w2 = branch.new_world()
-            yield adds(
-                group(
-                    sdwnode(si, d, w2),
-                    sdwnode(so, d, w2),
-                    anode(w1, w2)),
-                sdwgroup((o.Necessity(so), not d, w1)),
-                designated=d,
-                sentence=si)
-
-    class PossibilityNegatedUndesignated(KFDE.Rules.PossibilityDesignated):
-
-        def _get_node_targets(self, node, branch, /):
-            s = self.sentence(node)
-            si = s.lhs
-            if self.new_negated(self.negated):
-                si = ~si
-            d = self.designation
-            if d is not None:
-                d = self.new_designation(d)
-            w1 = node['world']
-            w2 = branch.new_world()
-            yield adds(
-                group(
-                    sdwnode(si, d, w2),
-                    anode(w1, w2)),
-                designated=d,
-                sentence=si)
-
+    class PossibilityDesignated(System.GeneralModalRule, System.GeneralDisjunctionDesignated): pass
+    class PossibilityUndesignated(System.GeneralModalRule, System.GeneralDisjunctionUndesignated): pass
+    class PossibilityNegatedUndesignated(System.GeneralModalRule, System.GeneralDisjunctionNegatedUndesignated): pass
     class NecessityNegatedDesignated(PossibilityDesignated): pass
     class NecessityNegatedUndesignated(PossibilityUndesignated): pass
 
