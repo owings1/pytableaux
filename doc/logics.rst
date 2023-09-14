@@ -76,7 +76,7 @@ Many-valued Modal
     logics/kk3wq
     logics/tk3wq
     logics/s4k3wq
-    logics/s53wq
+    logics/s5k3wq
     logics/kb3e
     logics/tb3e
     logics/s4b3e

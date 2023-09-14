@@ -48,8 +48,8 @@ class Model(K3.Model):
                 return self.values.T
             return self.MaterialConditional(a, b)
 
-    def unquantify_values(self, s, /, world:int = 0):
-        return map(self.truth_function.Assertion, super().unquantify_values(s, world))
+    def unquantify_values(self, s, w, /):
+        return map(self.truth_function.Assertion, super().unquantify_values(s, w))
 
 class System(K3.System): pass
 

@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..lang import Operated, Sentence
-from ..proof import Branch, Node, anode, rules
+from ..proof import anode, rules
 from ..tools import group
 from . import k3wq as K3WQ
 from . import kfde as KFDE
@@ -44,11 +44,11 @@ class System(K3WQ.System, KFDE.System):
 
     class GeneralModalRule(rules.ModalOperatorRule, K3WQ.System.ReduceResolveBase[Operated], intermediate=True):
 
-        def _get_node_targets(self, node: Node, branch: Branch, /):
+        def _get_node_targets(self, node, branch    , /):
             yield from self._redres_targets(node, branch)
 
         def _resolved(self, s, node, branch) -> Sentence:
-            return super()._resolved(s.lhs, node, branch)
+            return super()._resolved(s.inner, node, branch)
 
         def _new_world(self, node, branch):
             return branch.new_world()

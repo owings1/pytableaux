@@ -145,5 +145,5 @@ class Rules(K3W.Rules):
 
     groups = (
         *K3W.Rules.nonbranching_groups,
-        *K3W.Rules.branching_groups,
-        *unquantifying_groups)
+        *unquantifying_groups,
+        *K3W.Rules.branching_groups)
