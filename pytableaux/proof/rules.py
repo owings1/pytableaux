@@ -58,7 +58,7 @@ class NoopRule(Rule):
     branching = 0
 
     def _get_targets(self, branch: Branch, /):
-        "Yields from empty set."
+        "Yields empty."
         yield from EMPTY_SET
 
     def _apply(self, target: Target, /):
@@ -66,7 +66,7 @@ class NoopRule(Rule):
         pass
 
     def example_nodes(self):
-        "Yields from empty set."
+        "Yields empty."
         yield from EMPTY_SET
 
 class ClosingRule(Rule):
@@ -152,7 +152,7 @@ class FindClosingNodeRule(BaseClosureRule):
 
 class BaseSimpleRule(Rule):
 
-    Helpers = group(AdzHelper)
+    Helpers = (AdzHelper)
     ticking = True
 
     def _apply(self, target: Target, /) -> None:
@@ -165,7 +165,7 @@ class BaseSimpleRule(Rule):
 
 class BaseNodeRule(BaseSimpleRule):
 
-    Helpers = group(FilterHelper)
+    Helpers = (FilterHelper)
     NodeFilters = ()
     ignore_ticked = True
     '(FilterHelper) Whether to ignore all ticked nodes.'
@@ -189,7 +189,7 @@ class BaseSentenceRule(BaseNodeRule, Generic[_ST]):
         return self[FilterHelper].config.filters[filters.NodeSentence].sentence(node)
 
 class PredicatedSentenceRule(BaseSentenceRule[Predicated]):
-    Helpers = group(PredNodes)
+    Helpers = (PredNodes)
 
 class QuantifiedSentenceRule(BaseSentenceRule[Quantified]): pass
 class OperatedSentenceRule(BaseSentenceRule[Operated]): pass
@@ -282,10 +282,7 @@ class DefaultNodeRule(GetNodeTargetsRule[SentenceNode], Generic[_ST], intermedia
     def _get_node_targets(self, node: SentenceNode, branch: Branch, /):
         return self._get_sdw_targets(self.sentence(node), node['designated'], node.get('world'))
 
-    def _get_sdw_targets(self, s: _ST, d: bool, w: int|None, /):
-        return self._get_sd_targets(s, d)
-
-    def _get_sd_targets(self, s: _ST, d: bool, /):
+    def _get_sdw_targets(self, s: _ST, d: bool|None, w: int|None, /):
         raise NotImplementedError
 
 class QuantifierNodeRule(DefaultNodeRule[Quantified], QuantifiedSentenceRule, intermediate=True): pass
@@ -296,7 +293,6 @@ class OperatorNodeRule(DefaultNodeRule[Operated], OperatedSentenceRule, intermed
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
-        pass
         if abcs.isabstract(cls):
             return
         if all(
@@ -304,13 +300,12 @@ class OperatorNodeRule(DefaultNodeRule[Operated], OperatedSentenceRule, intermed
             for name in (
                 '_get_targets',
                 '_get_node_targets',
-                '_get_sdw_targets',
-                '_get_sd_targets')):
+                '_get_sdw_targets')):
                 @abstractmethod
-                @wraps(cls._get_sd_targets)
-                def wrapped(self, s: Sentence, d: bool, /):
+                @wraps(cls._get_sdw_targets)
+                def wrapped(self, s: Sentence, d: bool|None, w:int|None, /):
                     raise NotImplementedError
-                setattr(cls, '_get_sd_targets', wrapped)
+                setattr(cls, '_get_sdw_targets', wrapped)
 
 class FlippingRule(OperatorNodeRule, intermediate=True):
 
@@ -453,9 +448,10 @@ class access:
         def _get_targets(self, branch: Branch, /):
             if not self._should_apply(branch):
                 return
+            w2 = branch.new_world()
             for w in self[UnserialWorlds][branch]:
                 yield Target(adds(
-                    group(anode(w, branch.new_world())),
+                    group(anode(w, w2)),
                     world=w,
                     branch=branch))
 

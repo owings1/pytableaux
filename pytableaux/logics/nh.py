@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import adds, rules, sdnode, sdwgroup
+from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import lp as LP
 from . import mh as MH
@@ -64,45 +64,45 @@ class Rules(LP.Rules):
 
     class ConjunctionNegatedDesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(sdnode(lhs, False)),
-                group(sdnode(rhs, False)),
-                group(
-                    sdnode(lhs, True),
-                    sdnode(~lhs, True),
-                    sdnode(~rhs, False)),
-                group(
-                    sdnode(rhs, True),
-                    sdnode(~rhs, True),
-                    sdnode(~lhs, False)))
+                sdwgroup((lhs, False, w)),
+                sdwgroup((rhs, False, w)),
+                sdwgroup(
+                    (lhs, True, w),
+                    (~lhs, True, w),
+                    (~rhs, False, w)),
+                sdwgroup(
+                    (rhs, True, w),
+                    (~rhs, True, w),
+                    (~lhs, False, w)))
 
     class ConjunctionNegatedUndesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(
-                    sdnode(~lhs, False),
-                    sdnode(~rhs, False)),
-                group(
-                    sdnode( lhs, True),
-                    sdnode(~lhs, True),
-                    sdnode( rhs, True),
-                    sdnode(~rhs, True)))
+                sdwgroup(
+                    (~lhs, False, w),
+                    (~rhs, False, w)),
+                sdwgroup(
+                    ( lhs, True, w),
+                    (~lhs, True, w),
+                    ( rhs, True, w),
+                    (~rhs, True, w)))
 
     class MaterialConditionalNegatedDesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
-            yield adds(group(sdnode(s.lhs, d), sdnode(~s.rhs, d)))
+        def _get_sdw_targets(self, s, d, w, /):
+            yield adds(sdwgroup((s.lhs, d, w), (~s.rhs, d, w)))
 
     class MaterialConditionalNegatedUndesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(s.lhs, d)),
-                group(sdnode(~s.rhs, d)))
+                sdwgroup((s.lhs, d, w)),
+                sdwgroup((~s.rhs, d, w)))
 
     class UniversalNegatedDesignated(rules.QuantifierSkinnyRule):
         pass

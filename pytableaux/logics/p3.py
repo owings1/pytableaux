@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..proof import adds, rules, sdnode
+from ..proof import adds, rules, sdwgroup
 from ..tools import group
 from . import k3 as K3
 
@@ -50,55 +50,55 @@ class Rules(K3.Rules):
 
     class DoubleNegationDesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(~s.lhs, not d), sdnode(s.lhs, not d)))
+                sdwgroup((~s.lhs, not d, w), (s.lhs, not d, w)))
 
     class DoubleNegationUndesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(~s.lhs, not d)),
-                group(sdnode( s.lhs, not d)))
+                sdwgroup((~s.lhs, not d, w)),
+                sdwgroup(( s.lhs, not d, w)))
 
     class ConjunctionDesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(
-                    sdnode(~s.lhs, not d),
-                    sdnode( s.lhs, not d),
-                    sdnode(~s.rhs, not d),
-                    sdnode( s.rhs, not d)))
+                sdwgroup(
+                    (~s.lhs, not d, w),
+                    ( s.lhs, not d, w),
+                    (~s.rhs, not d, w),
+                    ( s.rhs, not d, w)))
 
     class ConjunctionNegatedDesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(s.lhs, d), sdnode(~s.rhs, not d)),
-                group(sdnode(s.rhs, d), sdnode(~s.lhs, not d)))
+                sdwgroup((s.lhs, d, w), (~s.rhs, not d, w)),
+                sdwgroup((s.rhs, d, w), (~s.lhs, not d, w)))
 
     class ConjunctionUndesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             yield adds(
-                group(sdnode(~s.lhs, not d)),
-                group(sdnode( s.lhs, not d)),
-                group(sdnode( s.rhs, not d)),
-                group(sdnode(~s.rhs, not d)))
+                sdwgroup((~s.lhs, not d, w)),
+                sdwgroup(( s.lhs, not d, w)),
+                sdwgroup(( s.rhs, not d, w)),
+                sdwgroup((~s.rhs, not d, w)))
 
     class ConjunctionNegatedUndesignated(rules.OperatorNodeRule):
 
-        def _get_sd_targets(self, s, d, /):
+        def _get_sdw_targets(self, s, d, w, /):
             lhs, rhs = s
             yield adds(
-                group(
-                    sdnode(~lhs, d),
-                    sdnode( lhs, d),
-                    sdnode(~rhs, d),
-                    sdnode( rhs, d)),
-                group(sdnode(~lhs, not d)),
-                group(sdnode(~rhs, not d)))
+                sdwgroup(
+                    (~lhs, d, w),
+                    ( lhs, d, w),
+                    (~rhs, d, w),
+                    ( rhs, d, w)),
+                sdwgroup((~lhs, not d, w)),
+                sdwgroup((~rhs, not d, w)))
 
     class MaterialConditionalDesignated(rules.MaterialConditionalReducingRule): pass
     class MaterialConditionalNegatedDesignated(rules.MaterialConditionalReducingRule): pass
