@@ -25,7 +25,7 @@ class Meta(TB3E.Meta, S4FDE.Meta):
     name = 'S4B3E'
     title = 'B3E with S4 modal'
     description = 'Modal version of B3E based on S4 normal modal logic'
-    category_order = 29
+    category_order = 39
     extension_of = ('TB3E')
 
 class Model(TB3E.Model, S4FDE.Model): pass

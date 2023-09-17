@@ -78,4 +78,3 @@ class Rules(GO.Rules, S4FDE.Rules):
         group(S4FDE.Rules.Reflexive),
         *GO.Rules.branching_groups,
         *GO.Rules.unquantifying_groups)
-    

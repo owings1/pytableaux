@@ -25,7 +25,7 @@ class Meta(TNH.Meta, S4FDE.Meta):
     name = 'S4NH'
     title = 'NH with S4 modal'
     description = 'Modal version of NH based on S4 normal modal logic'
-    category_order = 44
+    category_order = 54
     extension_of = ('TNH')
 
 class Model(TNH.Model, S4FDE.Model): pass

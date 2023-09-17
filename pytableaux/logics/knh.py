@@ -26,7 +26,7 @@ class Meta(NH.Meta, KFDE.Meta):
     name = 'KNH'
     title = 'NH with K modal'
     description = 'Modal version of NH based on K normal modal logic'
-    category_order = 41
+    category_order = 51
     extension_of = ('NH')
 
 class Model(NH.Model, KFDE.Model):

@@ -26,7 +26,7 @@ class Meta(MH.Meta, S4FDE.Meta):
     name = 'S4MH'
     title = 'MH with S4 modal'
     description = 'Modal version of MH based on S4 normal modal logic'
-    category_order = 39
+    category_order = 49
     extension_of = ('TMH')
 
 class Model(MH.Model, S4FDE.Model): pass

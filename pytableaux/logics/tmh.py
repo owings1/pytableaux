@@ -26,7 +26,7 @@ class Meta(MH.Meta, TFDE.Meta):
     name = 'TMH'
     title = 'MH with T modal'
     description = 'Modal version of MH based on T normal modal logic'
-    category_order = 38
+    category_order = 48
     extension_of = ('KMH')
 
 class Model(MH.Model, TFDE.Model): pass

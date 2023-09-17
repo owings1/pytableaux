@@ -24,7 +24,7 @@ class Meta(G3.Meta, KFDE.Meta):
     name = 'KG3'
     title = 'G3 with K modal'
     description = 'Modal version of G3 based on K normal modal logic'
-    category_order = 36
+    category_order = 41
     extension_of = ('G3')
 
 class Model(G3.Model, KFDE.Model): pass

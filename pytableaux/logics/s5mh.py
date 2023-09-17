@@ -26,7 +26,7 @@ class Meta(MH.Meta, S5FDE.Meta):
     name = 'S5MH'
     title = 'MH with S5 modal'
     description = 'Modal version of MH based on S5 normal modal logic'
-    category_order = 40
+    category_order = 50
     extension_of = ('S4MH')
 
 class Model(MH.Model, S5FDE.Model): pass

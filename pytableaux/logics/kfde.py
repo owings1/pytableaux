@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ..proof import Branch, Node, adds, anode, rules, sdwnode
-from ..proof.helpers import NodeCount, WorldIndex
+from ..proof.helpers import WorldIndex
 from ..tools import group
 from . import fde as FDE
 
