@@ -110,7 +110,8 @@ class Rules(LogicType.Rules):
             s = self.sentence(node)
             if s is not None:
                 d = self.designation
-                return branch.find(sdwnode(-s, d, node.get('world')))
+                if d is node.get('designated'):
+                    return branch.find(sdwnode(-s, d, node.get('world')))
 
         def example_nodes(self):
             s = Atomic.first()

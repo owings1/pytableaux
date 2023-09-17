@@ -18,10 +18,9 @@ from __future__ import annotations as annotations
 
 from typing import TYPE_CHECKING
 
-from ..lang import Atomic
 from ..models import ValueLP
-from ..proof import rules, sdwnode
 from . import LogicType
+from . import cpl as CPL
 from . import fde as FDE
 
 
@@ -42,19 +41,7 @@ class System(FDE.System): pass
 
 class Rules(FDE.Rules):
 
-    class GapClosure(rules.FindClosingNodeRule):
-        """
-        A branch closes when a sentence and its negation both appear as undesignated nodes.
-        """
-
-        def _find_closing_node(self, node, branch, /):
-            if node['designated'] is False:
-                return branch.find(sdwnode(-self.sentence(node), False, node.get('world')))
-
-        def example_nodes(self):
-            s = Atomic.first()
-            w = 0 if self.modal else None
-            yield sdwnode(s, False, w)
-            yield sdwnode(~s, False, w)
+    class GapClosure(CPL.Rules.ContradictionClosure):
+        designation = False
 
     closure = (GapClosure, *FDE.Rules.closure)

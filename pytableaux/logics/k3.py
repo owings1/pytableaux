@@ -18,10 +18,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..lang import Atomic
 from ..models import ValueK3
-from ..proof import rules, sdwnode
 from . import LogicType
+from . import cpl as CPL
 from . import fde as FDE
 
 
@@ -42,19 +41,7 @@ class System(FDE.System): pass
 
 class Rules(FDE.Rules):
 
-    class GlutClosure(rules.FindClosingNodeRule):
-        """A branch closes when a sentence and its negation both appear as
-        designated nodes on the branch.
-        """
-
-        def _find_closing_node(self, node, branch, /):
-            if node['designated']:
-                return branch.find(sdwnode(-node['sentence'], True, node.get('world')))
-
-        def example_nodes(self):
-            a = Atomic.first()
-            w = 0 if self.modal else None
-            yield sdwnode(a, True, w)
-            yield sdwnode(~a, True, w)
+    class GlutClosure(CPL.Rules.ContradictionClosure):
+        designation = True
 
     closure = (GlutClosure, *FDE.Rules.closure)
