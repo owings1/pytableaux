@@ -16,41 +16,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..models import GlobalAccess
-from ..proof import rules
 from ..tools import group
-from . import k as K
-from . import s4 as S4
+from . import knh as KNH
+from . import nh as NH
+from . import tfde as TFDE
 
 
-class Meta(S4.Meta):
-    name = 'S5'
-    title = 'S5 Normal Modal Logic'
-    description = (
-        'Normal modal logic with global access relation')
-    category_order = 5
-    extension_of = (
-        'S4',
-        'S5B3E',
-        'S5G3',
-        'S5K3',
-        'S5K3W',
-        'S5K3WQ',
-        'S5L3',
-        'S5LP',
-        'S5MH',
-        'S5NH',
-        'S5RM3')
+class Meta(NH.Meta, TFDE.Meta):
+    name = 'TNH'
+    title = 'NH with T modal'
+    description = 'Modal version of NH based on T normal modal logic'
+    category_order = 43
+    extension_of = ('KNH')
 
-class Model(S4.Model):
-    Access: type[GlobalAccess] = GlobalAccess
+class Model(NH.Model, TFDE.Model): pass
+class System(NH.System, TFDE.System): pass
 
-class System(K.System): pass
-
-class Rules(S4.Rules):
-
-    class Symmetric(rules.access.Symmetric): pass
+class Rules(KNH.Rules, TFDE.Rules):
 
     groups = (
-        *S4.Rules.groups,
-        group(Symmetric))
+        *KNH.Rules.nonbranching_groups,
+        *KNH.Rules.unmodal_groups,
+        group(TFDE.Rules.Reflexive),
+        *KNH.Rules.branching_groups,
+        *KNH.Rules.unquantifying_groups)

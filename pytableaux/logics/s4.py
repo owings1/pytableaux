@@ -39,6 +39,8 @@ class Meta(T.Meta):
         'S4K3WQ',
         'S4L3',
         'S4LP',
+        'S4MH',
+        'S4NH',
         'S4RM3',
         'T')
 

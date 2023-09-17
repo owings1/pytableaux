@@ -1446,7 +1446,43 @@ L('MH',
 
 L('KMH',
     valid=(
+        'KFDE Distribution Inference 1',
+        'Modal Transformation 1',
+        'Modal Transformation 3',
+        'Modal Transformation 4',
+        'NP Conditional Modus Ponens',
+        'Necessity Distribution 1',
+        'Necessity Distribution 2',
+    ),
+    invalid = (
+    ))
 
+L('TMH',
+    valid=(
+        'NP Collapse 1',
+        'Necessity Elimination',
+        'Possibility Addition',
+        'Serial Inference 1',
+        'Serial Inference 2',
+    ),
+    invalid = (
+
+    ))
+
+L('S4MH',
+    valid=(
+        'S4 Conditional Inference 1',
+        'S4 Conditional Inference 2',
+        'S4 Material Inference 2',
+    ),
+    invalid = (
+
+    ))
+
+L('S5MH',
+    valid=(
+        'S5 Conditional Inference 1',
+        'S5 Inference 1',
     ),
     invalid = (
         'Biconditional Elimination 2',
@@ -1465,35 +1501,15 @@ L('KMH',
         'Material Identity',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
+        # 'Modal Transformation 2',
         'Quantifier Interdefinability 4',
+        'Reflexive Inference 1',
+        'S4 Material Inference 1',
+        'S5 Material Inference 1',
         'Self Identity 1',
         'Self Identity 2',
         Argument('UNbNa:NAaNa:Uab', title='p_from_article'),
     ))
-
-# L('TMH',
-#     valid=(
-
-#     ),
-#     invalid = (
-
-#     ))
-
-# L('S4MH',
-#     valid=(
-
-#     ),
-#     invalid = (
-
-#     ))
-
-# L('S5MH',
-#     valid=(
-
-#     ),
-#     invalid = (
-
-#     ))
 
 # --------------
 
@@ -1567,7 +1583,45 @@ L('NH',
 
 L('KNH',
     valid=(
+        'KFDE Distribution Inference 1',
+        'Modal Transformation 1',
+        'Modal Transformation 2',
+        'Modal Transformation 3',
+        'NP Conditional Modus Ponens',
+        'Necessity Distribution 1',
+        'Necessity Distribution 2',
+    ),
+    invalid = (
+    ))
 
+L('TNH',
+    valid=(
+        'NP Collapse 1',
+        'Necessity Elimination',
+        'Possibility Addition',
+        'Reflexive Inference 1',
+        'Serial Inference 1',
+        'Serial Inference 2',
+    ),
+    invalid = (
+
+    ))
+
+L('S4NH',
+    valid=(
+        'S4 Conditional Inference 1',
+        'S4 Conditional Inference 2',
+        'S4 Material Inference 1',
+    ),
+    invalid = (
+
+    ))
+
+L('S5NH',
+    valid=(
+        'S5 Conditional Inference 1',
+        'S5 Inference 1',
+        'S5 Material Inference 1',
     ),
     invalid = (
         'Biconditional Elimination 2',
@@ -1591,37 +1645,15 @@ L('KNH',
         'Material Biconditional Elimination 3',
         'Material Modus Ponens',
         'Material Modus Tollens',
+        'Modal Transformation 4',
         'Quantifier Interdefinability 3',
+        'S4 Material Inference 2',
         'Self Identity 1',
         'Self Identity 2',
         'Syllogism',
         'Test Contradiction Arrow 1',
         'Universal Predicate Syllogism',
     ))
-
-# L('TNH',
-#     valid=(
-
-#     ),
-#     invalid = (
-
-#     ))
-
-# L('S4NH',
-#     valid=(
-
-#     ),
-#     invalid = (
-
-#     ))
-
-# L('S5NH',
-#     valid=(
-
-#     ),
-#     invalid = (
-
-#     ))
 # --------------
 
 L('GO',

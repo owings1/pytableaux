@@ -36,6 +36,8 @@ class Meta(K.Meta):
         'TK3WQ',
         'TL3',
         'TLP',
+        'TMH',
+        'TNH',
         'TRM3')
 
 class Model(K.Model):

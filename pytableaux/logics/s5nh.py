@@ -16,41 +16,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..models import GlobalAccess
-from ..proof import rules
 from ..tools import group
-from . import k as K
-from . import s4 as S4
+from . import s4nh as S4NH
+from . import s5fde as S5FDE
 
 
-class Meta(S4.Meta):
-    name = 'S5'
-    title = 'S5 Normal Modal Logic'
-    description = (
-        'Normal modal logic with global access relation')
-    category_order = 5
-    extension_of = (
-        'S4',
-        'S5B3E',
-        'S5G3',
-        'S5K3',
-        'S5K3W',
-        'S5K3WQ',
-        'S5L3',
-        'S5LP',
-        'S5MH',
-        'S5NH',
-        'S5RM3')
+class Meta(S4NH.Meta, S5FDE.Meta):
+    name = 'S5NH'
+    title = 'NH with S5 modal'
+    description = 'Modal version of NH based on S5 normal modal logic'
+    category_order = 45
+    extension_of = ('S4NH')
 
-class Model(S4.Model):
-    Access: type[GlobalAccess] = GlobalAccess
+class Model(S4NH.Model, S5FDE.Model): pass
+class System(S4NH.System, S5FDE.System): pass
 
-class System(K.System): pass
-
-class Rules(S4.Rules):
-
-    class Symmetric(rules.access.Symmetric): pass
+class Rules(S4NH.Rules, S5FDE.Rules):
 
     groups = (
-        *S4.Rules.groups,
-        group(Symmetric))
+        *S4NH.Rules.groups,
+        group(S5FDE.Rules.Symmetric))

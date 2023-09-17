@@ -16,41 +16,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from ..models import GlobalAccess
-from ..proof import rules
 from ..tools import group
-from . import k as K
-from . import s4 as S4
+from . import kmh as KMH
+from . import mh as MH
+from . import s4fde as S4FDE
 
 
-class Meta(S4.Meta):
-    name = 'S5'
-    title = 'S5 Normal Modal Logic'
-    description = (
-        'Normal modal logic with global access relation')
-    category_order = 5
-    extension_of = (
-        'S4',
-        'S5B3E',
-        'S5G3',
-        'S5K3',
-        'S5K3W',
-        'S5K3WQ',
-        'S5L3',
-        'S5LP',
-        'S5MH',
-        'S5NH',
-        'S5RM3')
+class Meta(MH.Meta, S4FDE.Meta):
+    name = 'S4MH'
+    title = 'MH with S4 modal'
+    description = 'Modal version of MH based on S4 normal modal logic'
+    category_order = 39
+    extension_of = ('TMH')
 
-class Model(S4.Model):
-    Access: type[GlobalAccess] = GlobalAccess
+class Model(MH.Model, S4FDE.Model): pass
+class System(MH.System, S4FDE.System): pass
 
-class System(K.System): pass
-
-class Rules(S4.Rules):
-
-    class Symmetric(rules.access.Symmetric): pass
+class Rules(KMH.Rules, S4FDE.Rules):
 
     groups = (
-        *S4.Rules.groups,
-        group(Symmetric))
+        *KMH.Rules.nonbranching_groups,
+        group(S4FDE.Rules.Transitive),
+        *KMH.Rules.unmodal_groups,
+        group(S4FDE.Rules.Reflexive),
+        *KMH.Rules.branching_groups,
+        *KMH.Rules.unquantifying_groups)

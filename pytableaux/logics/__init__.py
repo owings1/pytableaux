@@ -84,6 +84,8 @@ __all__ = (
     's4k3wq',
     's4l3',
     's4lp',
+    's4mh',
+    's4nh',
     's4rm3',
     's5',
     's5b3e',
@@ -94,6 +96,8 @@ __all__ = (
     's5k3wq',
     's5l3',
     's5lp',
+    's5mh',
+    's5nh',
     's5rm3',
     't',
     'tb3e',
@@ -104,6 +108,8 @@ __all__ = (
     'tk3wq',
     'tl3',
     'tlp',
+    'tmh',
+    'tnh',
     'trm3')
 
 NOARG = object()
