@@ -39,6 +39,7 @@ class Meta(CFOL.Meta):
         'KL3',
         'KLP',
         'KMH',
+        'KNH',
         'KRM3')
 
 class Model(CFOL.Model): pass

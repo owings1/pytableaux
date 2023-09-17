@@ -19,60 +19,44 @@ from __future__ import annotations
 from ..proof import adds, anode, rules, sdwgroup, sdwnode
 from ..tools import group
 from . import kfde as KFDE
-from . import mh as MH
+from . import nh as NH
 
 
-class Meta(MH.Meta, KFDE.Meta):
-    name = 'KMH'
-    title = 'MH with K modal'
-    description = 'Modal version of MH based on K normal modal logic'
-    category_order = 36
-    extension_of = ('MH')
+class Meta(NH.Meta, KFDE.Meta):
+    name = 'KNH'
+    title = 'NH with K modal'
+    description = 'Modal version of NH based on K normal modal logic'
+    category_order = 41
+    extension_of = ('NH')
 
-class Model(MH.Model, KFDE.Model):
+class Model(NH.Model, KFDE.Model):
 
     def value_of_operated(self, s, w, /):
         o = s.operator
-        if o is not o.Possibility:
+        if o is not o.Necessity:
             return super().value_of_operated(s, w)
         valset = set(self.unmodal_values(s, w))
         values = self.values
-        if values.T in valset:
-            return values.T
+        if values.F in valset:
+            return values.F
         if len(valset) > 1:
-            return values.N
-        return values.F
+            return values.B
+        return values.T
 
-class System(MH.System, KFDE.System): pass
+class System(NH.System, KFDE.System): pass
 
-class Rules(MH.Rules, KFDE.Rules):
+class Rules(NH.Rules, KFDE.Rules):
 
 
-    class PossibilityNegatedDesignated(rules.OperatorNodeRule):
+    class NecessityNegatedDesignated(rules.PossibilityRule):
         pass
         """
-                   ¬◇A w +
-               ______|_______
-              |              |
-           ◻¬A w +     ◻¬(A ∨ ¬A) w +
-        """
-        def _get_sdw_targets(self, s, d, w, /):
-            con = s.connective.other
-            inner = s.inner
-            joined = inner | ~inner
-            yield adds(
-                sdwgroup((con(~inner), d, w)),
-                sdwgroup((con(~joined), d, w)))
-
-    class PossibilityNegatedUndesignated(rules.PossibilityRule):
-        pass
-        """
-                  ¬◇A w0 -
+                  ¬◻A w0 +
                ______|_______
               |              |
             w0Rw1           w0Rw1
-             A w1 +        ¬A w1 +
-                        ◇¬(A ∨ ¬A) w0 +
+           A w1 -          ¬A w1 -
+                        ◇(A ∧ ¬A) w0 +
         """
 
         def new_designation(self, d: bool) -> bool:
@@ -80,11 +64,11 @@ class Rules(MH.Rules, KFDE.Rules):
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)
-            con = s.connective
+            con = s.connective.other
             inner = s.inner
             resolved = inner
-            joined = inner | ~inner
-            reduced = con(~joined)
+            joined = inner & ~inner
+            reduced = con(joined)
             w = node['world']
             w2 = branch.new_world()
             d = self.designation
@@ -97,29 +81,45 @@ class Rules(MH.Rules, KFDE.Rules):
                 group(
                     anode(w, w2),
                     sdwnode(~resolved, d, w2),
-                    sdwnode(reduced, d, w)),
+                    sdwnode(reduced, not d, w)),
                 sentence=inner,
                 designated=self.designation)
 
+    class NecessityNegatedUndesignated(rules.OperatorNodeRule):
+        pass
+        """
+                  ¬◻A w -
+               ______|_______
+              |              |
+          ◇¬A w -       ◻(A ∧ ¬A) w +
+        """
+        def _get_sdw_targets(self, s, d, w, /):
+            con = s.connective
+            inner = s.inner
+            joined = inner & ~inner
+            yield adds(
+                sdwgroup((con.other(~inner), d, w)),
+                sdwgroup((con(joined), not d, w)))
+
     branching_groups = (
         group(
-            *MH.Rules.branching_groups[0],
-            PossibilityNegatedDesignated),
-        *MH.Rules.branching_groups[1:])
+            *NH.Rules.branching_groups[0],
+            NecessityNegatedUndesignated),
+        *NH.Rules.branching_groups[1:])
 
     unmodal_groups = (
         group(
             KFDE.Rules.NecessityDesignated,
-            KFDE.Rules.NecessityNegatedUndesignated,
+            KFDE.Rules.PossibilityNegatedDesignated,
             KFDE.Rules.PossibilityUndesignated),
-        group(PossibilityNegatedUndesignated),
+        group(NecessityNegatedDesignated),
         group(
             KFDE.Rules.PossibilityDesignated,
-            KFDE.Rules.NecessityUndesignated,
-            KFDE.Rules.NecessityNegatedDesignated))
+            KFDE.Rules.PossibilityNegatedUndesignated,
+            KFDE.Rules.NecessityUndesignated))
 
     groups = (
-        *MH.Rules.nonbranching_groups,
+        *NH.Rules.nonbranching_groups,
         *branching_groups,
         *unmodal_groups,
-        *MH.Rules.unquantifying_groups)
+        *NH.Rules.unquantifying_groups)

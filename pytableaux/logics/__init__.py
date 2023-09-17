@@ -66,6 +66,7 @@ __all__ = (
     'kl3',
     'klp',
     'kmh',
+    'knh',
     'krm3',
     'l3',
     'lp',
