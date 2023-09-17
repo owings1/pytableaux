@@ -20,7 +20,7 @@ from collections import deque
 
 from ..lang import Atomic, Constant, Operator, Predicate, Predicated
 from ..models import ValueCPL
-from ..proof import Target, adds, rules, swnode
+from ..proof import Target, adds, rules, sdwnode
 from ..proof.helpers import FilterHelper, PredNodes
 from ..tools import group, substitute
 from . import LogicType
@@ -48,7 +48,6 @@ class Model(LogicType.Model[Meta.values]):
 
     def finish(self):
         self._check_not_finished()
-        # self._complete_frames()
         for w, frame in self.frames.items():
             for pred in deque(frame.predicates):
                 self._agument_extension_with_identicals(pred, w)
@@ -99,33 +98,29 @@ class System(LogicType.System):
     @classmethod
     def build_trunk(cls, b, arg, /):
         w = 0 if cls.modal else None
-        b += (swnode(s, w) for s in arg.premises)
-        b += swnode(~arg.conclusion, w)
+        d = None
+        b += (sdwnode(s, d, w) for s in arg.premises)
+        b += sdwnode(~arg.conclusion, d, w)
 
 class Rules(LogicType.Rules):
 
-    class ContradictionClosure(rules.FindClosingNodeRule):
-        """
-        A branch closes when a sentence and its negation both appear on a node **with the
-        same world** on the branch.
-        """
+    class ContradictionClosure(rules.FindClosingNodeRule, rules.BaseSentenceRule):
 
         def _find_closing_node(self, node, branch, /):
             s = self.sentence(node)
             if s is not None:
-                return branch.find(swnode(-s, node.get('world')))
+                d = self.designation
+                return branch.find(sdwnode(-s, d, node.get('world')))
 
         def example_nodes(self):
             s = Atomic.first()
             w = 0 if self.modal else None
-            yield swnode(s, w)
-            yield swnode(~s, w)
+            d = self.designation
+            yield sdwnode(s, d, w)
+            yield sdwnode(~s, d, w)
 
     class SelfIdentityClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
-        """
-        A branch closes when a sentence of the form :s:`~a = a` appears on the
-        branch *at any world*.
-        """
+
         negated = True
         predicate = Predicate.Identity
 
@@ -133,7 +128,6 @@ class Rules(LogicType.Rules):
             if self.node_will_close_branch(node, branch):
                 return Target(node=node, branch=branch)
             self[FilterHelper].release(node, branch)
-            self[PredNodes].release(node, branch)
 
         def node_will_close_branch(self, node, branch, /) -> bool:
             return (
@@ -142,14 +136,15 @@ class Rules(LogicType.Rules):
 
         def example_nodes(self):
             w = 0 if self.modal else None
+            d = self.designation
             c = Constant.first()
-            yield swnode(~self.predicate((c, c)), w)
+            s = self.predicate((c, c))
+            if self.negated:
+                s = ~s
+            yield sdwnode(s, d, w)
 
     class NonExistenceClosure(rules.BaseClosureRule, rules.PredicatedSentenceRule):
-        """
-        A branch closes when a sentence of the form :s:`~!a` appears on the branch
-        *at any world*.
-        """
+
         negated = True
         predicate = Predicate.Existence
 
@@ -157,17 +152,11 @@ class Rules(LogicType.Rules):
             if self.node_will_close_branch(node, branch):
                 return Target(node=node, branch=branch)
             self[FilterHelper].release(node, branch)
-            self[PredNodes].release(node, branch)
 
         def node_will_close_branch(self, node, branch, /):
             return self[FilterHelper](node, branch)
 
-        def example_nodes(self):
-            s = ~Predicated.first(self.predicate)
-            w = 0 if self.modal else None
-            yield swnode(s, w)
-
-    class IdentityIndiscernability(rules.GetNodeTargetsRule, rules.PredicatedSentenceRule):
+    class IdentityIndiscernability(rules.PredicateNodeRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
@@ -176,6 +165,7 @@ class Rules(LogicType.Rules):
         """
         ticking   = False
         predicate = Predicate.Identity
+        Helpers = (PredNodes)
 
         def _get_node_targets(self, node, branch, /):
             pa, pb = self.sentence(node)
@@ -183,9 +173,14 @@ class Rules(LogicType.Rules):
                 # Substituting a param for itself would be silly.
                 return
             w = node.get('world')
+            d = self.designation
             # Find other nodes with one of the identicals.
             for n in self[PredNodes][branch]:
                 if n is node:
+                    continue
+                if n.get('world') != w:
+                    continue
+                if n.get('designated') != d:
                     continue
                 s = self.sentence(n)
                 if pa in s.params:
@@ -200,7 +195,7 @@ class Rules(LogicType.Rules):
                 if s.predicate == self.predicate and params[0] == params[1]:
                     continue
                 # Create a node with the substituted param.
-                n_new = swnode(s.predicate(params), w)
+                n_new = sdwnode(s.predicate(params), d, w)
                 # Check if it already appears on the branch.
                 if branch.has(n_new):
                     continue
@@ -210,9 +205,10 @@ class Rules(LogicType.Rules):
         def example_nodes(self):
             s1 = Predicated.first()
             w = 0 if self.modal else None
-            yield swnode(s1, w)
+            d = self.designation
+            yield sdwnode(s1, d, w)
             s2 = self.predicate((s1[0], s1[0].next()))
-            yield swnode(s2, w)
+            yield sdwnode(s2, d, w)
 
     class DoubleNegation(FDE.Rules.DoubleNegationDesignated): pass
     class Assertion(FDE.Rules.AssertionDesignated): pass

@@ -104,7 +104,7 @@ class Rules(K3.Rules):
             sq = self.quantifier.other(v, ~si | ~(si | ~si))
             yield adds(sdwgroup((sq, d, w)))
 
-    class UniversalNegatedDesignated(rules.QuantifierSkinnyRule):
+    class UniversalNegatedDesignated(rules.ExistentialQuantifierRule):
 
         def _get_node_targets(self, node, branch, /):
             s = self.sentence(node)

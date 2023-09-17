@@ -105,7 +105,7 @@ class Rules(LogicType.Rules):
                 sdwgroup(( s.lhs, d, w), (~s.rhs, d, w)),
                 sdwgroup((~s.lhs, d, w), ( s.rhs, d, w)))
 
-    class ExistentialDesignated(rules.QuantifierSkinnyRule):
+    class ExistentialDesignated(rules.ExistentialQuantifierRule):
 
         def _get_node_targets(self, node, branch, /):
             s = branch.new_constant() >> self.sentence(node)
@@ -114,7 +114,7 @@ class Rules(LogicType.Rules):
             yield adds(
                 sdwgroup((s, self.designation, node.get('world'))))
 
-    class UniversalDesignated(rules.QuantifierFatRule):
+    class UniversalDesignated(rules.UniversalQuantifierRule):
 
         def _get_constant_nodes(self, node, c, branch, /):
             s = c >> self.sentence(node)

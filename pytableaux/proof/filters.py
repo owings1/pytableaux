@@ -218,7 +218,7 @@ class CompareSentence(Comparer):
         filter, returns the value retrieved unaltered.
         """
         if (s := self.rget(rhs)) is not None:
-            if self.compitem.negated:
+            if self.compitem and self.compitem.negated:
                 if type(s) is Operated and s.operator is Operator.Negation:
                     return s.lhs
             else:
@@ -226,8 +226,11 @@ class CompareSentence(Comparer):
 
     def __call__(self, rhs, /) -> bool:
         "Return whether the rhs passes the filter."
+        s = self.sentence(rhs)
+        if s is None:
+            return False
         return (compitem := self.compitem) is None or (
-            type(s := self.sentence(rhs)) is compitem.type and
+            type(s) is compitem.type and
             compitem.fcmp(getattr(s, compitem.name), compitem.item))
 
     def example(self):

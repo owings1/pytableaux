@@ -41,6 +41,7 @@ class Options:
     arguments: tuple[Argument, ...]
     format: str
     limit: int|None
+    summary_only: bool
 
 def parser():
     parser = ArgumentParser(description='Count proof nodes & branches for benchmarking')
@@ -71,6 +72,11 @@ def parser():
         type=int,
         default=None,
         help='The limit of results to display')
+    arg(
+        '--summary-only', '-s',
+        dest='summary_only',
+        action='store_true',
+        help='Only display the summary')
     return parser
 
 class Builder:
@@ -156,7 +162,8 @@ def main(*args):
     opts = Options(**vars(parser().parse_args(args)))
     logging.basicConfig(level=logging.INFO)
     builder = Builder(opts).build()
-    print(builder.table())
+    if not opts.summary_only:
+        print(builder.table())
     print(builder.totals())
 
 def logicopt(s: str):

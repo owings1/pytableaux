@@ -111,7 +111,7 @@ class System(K3W.System):
                 inner = ~inner
             return inner
 
-    class QuantifierRule(rules.QuantifierSkinnyRule, ReduceResolveBase[Quantified], intermediate=True):
+    class QuantifierRule(rules.ExistentialQuantifierRule, ReduceResolveBase[Quantified], intermediate=True):
 
         def _get_node_targets(self, node: Node, branch: Branch, /):
             yield from self._redres_targets(node, branch)

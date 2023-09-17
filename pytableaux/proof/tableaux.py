@@ -296,6 +296,10 @@ class Rule(EventEmitter, metaclass=RuleMeta):
             tests   = tests,
             failures = failures)
 
+    @classmethod
+    def _init_rulecls(cls) -> None:
+        pass
+
     @dataclass(kw_only=True)
     class TestResult(Generic[_RT]):
         cls: type[_RT]

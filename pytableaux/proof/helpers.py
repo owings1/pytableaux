@@ -54,7 +54,6 @@ __all__ = (
     'MaxWorlds',
     'NodeConsts',
     'NodeCount',
-    'NodesWorlds',
     'PredNodes',
     'QuitFlag',
     'UnserialWorlds',
@@ -240,22 +239,6 @@ class NodeCount(BranchCache[dict[Node, int]]):
             bool: Whether the node is a least-applied-to node
         """        
         return self.min(branch) >= self[branch][node]
-
-class NodesWorlds(BranchCache[set[tuple[Node, int]]]):
-    """
-    Track the nodes applied to by the rule for each world on the branch. The
-    target must have `node`, and `world` attributes. The values of the cache
-    are ``(node, world)`` pairs.
-    """
-    valuetype = set
-
-    def listen_on(self):
-        super().listen_on()
-        def after_apply(target: Target):
-            if target.get(Node.Key.flag):
-                return
-            self[target.branch].add((target.node, target.world))
-        self.rule.on(Rule.Events.AFTER_APPLY, after_apply)
 
 class UnserialWorlds(BranchCache[set[int]]):
     "Track the unserial worlds on the branch."

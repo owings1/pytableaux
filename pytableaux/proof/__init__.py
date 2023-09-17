@@ -263,10 +263,10 @@ class System(metaclass=SystemMeta):
         negated = False
         result = 0
         for oper in s.operators:
-            if not negated and oper is Operator.Negation:
+            if not negated and oper is oper.Negation:
                 negated = True
                 continue
-            if negated and oper is Operator.Negation:
+            if negated and oper is oper.Negation:
                 name = 'DoubleNegation'
             else:
                 name = oper.name
@@ -339,9 +339,11 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
         abcs.merge_attr(self, 'timer_names', mcls=cls,
             default=EMPTY_QSET, transform=qsetf)
         isconcrete = not intermediate and not abcs.isabstract(self)
-        if isconcrete and self.autoattrs:
-            for name, value in self.induce_attrs().items():
-                setattr(self, name, value)
+        if isconcrete:
+            if self.autoattrs:
+                for name, value in self.induce_attrs().items():
+                    setattr(self, name, value)
+            self.legend = tuple(self.build_legend())
         configs: dict[type[Rule.Helper], Any] = {}
         for parent in abcs.mroiter(self, mcls=cls):
             value = parent.Helpers
@@ -352,12 +354,12 @@ class RuleMeta(abcs.AbcMeta, GetLogicMetaMixinMetaType):
             else:
                 configs.update(value)
         self.Helpers = MapProxy(configs)
-        for helpercls, config in configs.items():
-            configs[helpercls] = helpercls.configure_rule(self, config)
         if isconcrete:
-            self.legend = tuple(self.build_legend())
+            for helpercls, config in configs.items():
+                configs[helpercls] = helpercls.configure_rule(self, config)
             if 'branching' not in self.__dict__:
                 self.branching = self.induce_branching()
+            self._init_rulecls()
         return self
 
     def build_legend(self):

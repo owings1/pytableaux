@@ -104,7 +104,7 @@ class Rules(LP.Rules):
                 sdwgroup((s.lhs, d, w)),
                 sdwgroup((~s.rhs, d, w)))
 
-    class UniversalNegatedDesignated(rules.QuantifierSkinnyRule):
+    class UniversalNegatedDesignated(rules.ExistentialQuantifierRule):
         pass
         """
                   ¬∀xFx +

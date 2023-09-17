@@ -152,7 +152,7 @@ class Rules(K3.Rules):
                 sdwgroup((q(v, ~s), d, w)),
                 sdwgroup((q(v, ~(s | ~s)), d, w)))
     
-    class ExistentialNegatedUndesignated(rules.QuantifierSkinnyRule):
+    class ExistentialNegatedUndesignated(rules.ExistentialQuantifierRule):
         pass
         """
                   ¬∃xFx -
@@ -227,15 +227,15 @@ class Rules(K3.Rules):
 
     unquantifying_groups = group(
         group(
-            K3.Rules.UniversalDesignated,
-            K3.Rules.UniversalNegatedUndesignated,
-            K3.Rules.ExistentialUndesignated),
-        group(
             K3.Rules.ExistentialDesignated,
             K3.Rules.UniversalNegatedDesignated,
             K3.Rules.UniversalUndesignated),
         group(
-            ExistentialNegatedUndesignated))
+            ExistentialNegatedUndesignated),
+        group(
+            K3.Rules.UniversalDesignated,
+            K3.Rules.UniversalNegatedUndesignated,
+            K3.Rules.ExistentialUndesignated))
 
     groups = (
         *nonbranching_groups,
