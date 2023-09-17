@@ -65,6 +65,7 @@ __all__ = (
     'kk3wq',
     'kl3',
     'klp',
+    'kmh',
     'krm3',
     'l3',
     'lp',

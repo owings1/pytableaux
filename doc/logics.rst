@@ -85,4 +85,5 @@ Many-valued Modal
     logics/tg3
     logics/s4g3
     logics/s5g3
+    logics/kmh
     logics/s4go

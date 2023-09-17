@@ -145,12 +145,13 @@ class Rules(K3.Rules):
             ∀x¬Fx +    ∀x¬(Fx ∨ ¬Fx) +
         """
         def _get_sdw_targets(self, s, d, w, /):
-            q = self.quantifier.other
+            con = s.connective.other
             v = s.variable
-            s = s.sentence
+            inner = s.inner
+            joined = inner | ~inner
             yield adds(
-                sdwgroup((q(v, ~s), d, w)),
-                sdwgroup((q(v, ~(s | ~s)), d, w)))
+                sdwgroup((con(v, ~inner), d, w)),
+                sdwgroup((con(v, ~joined), d, w)))
     
     class ExistentialNegatedUndesignated(rules.ExistentialQuantifierRule):
         pass
@@ -163,17 +164,20 @@ class Rules(K3.Rules):
         """
 
         def _get_node_targets(self, node, branch, /):
-            c = branch.new_constant()
             s = self.sentence(node)
+            con = s.connective
             v = s.variable
-            sc = c >> s
-            q = self.quantifier
-            si = s.sentence
+            inner = s.inner
+            resolved = branch.new_constant() >> s
+            joined = inner | ~inner
+            reduced = con(v, ~joined)
             w = node.get('world')
-            d = not self.designation
+            d = self.designation
+            if d is not None:
+                d = not d
             yield adds(
-                sdwgroup((sc, d, w)),
-                sdwgroup((~sc, d, w), (q(v, ~(si | ~si)), d, w)))
+                sdwgroup((resolved, d, w)),
+                sdwgroup((~resolved, d, w), (reduced, d, w)))
 
     class MaterialBiconditionalDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
     class MaterialBiconditionalNegatedDesignated(rules.MaterialConditionalConjunctsReducingRule): pass
