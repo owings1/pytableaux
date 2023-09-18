@@ -22,9 +22,12 @@ sphinx-rtd-theme = "*"
 sphinx-toolbox = "*"
 tabulate = "*"
 
+[table-packages]
+tabulate = "*"
+
 [dev-packages]
 coverage = "*"
 pytest = "*"
 
-[img-packages]
+[image-packages]
 pdf2image = "*"
