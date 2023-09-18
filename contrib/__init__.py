@@ -32,6 +32,9 @@ from typing import TYPE_CHECKING, Callable, Iterator
 if TYPE_CHECKING:
     from PIL import Image
 
+def readlist(s: str, /, *, sep=','):
+    return filter(None, map(str.strip, s.split(sep)))
+
 def make_queue_workers(queue: deque, threadcount: int, func: Callable, *args, **kw):
     return tuple(
         threading.Thread(

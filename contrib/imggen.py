@@ -17,17 +17,17 @@
 """
 Generates cropped image files for all sample PDF files.
 
-Requires img-packages dependencies.
+Requires image-packages dependencies.
 """
 from __future__ import annotations
 
 import argparse
-from collections import deque
 import enum
 import logging
 import os
 import sys
 import tempfile
+from collections import deque
 from dataclasses import dataclass
 from os.path import abspath
 from typing import Mapping

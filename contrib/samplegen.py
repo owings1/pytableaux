@@ -32,6 +32,8 @@ from pytableaux.logics import LogicType, registry
 from pytableaux.proof import Tableau, TabWriter
 from pytableaux.tools.inflect import slug
 
+from . import readlist
+
 logger = logging.getLogger('samplegen')
 
 @dataclass(kw_only=True, slots=True)
@@ -109,9 +111,6 @@ def main(*args):
             logger.info(f'writing {file}')
             with open(file, 'w') as file:
                 file.write(pw(tab))
-
-def readlist(s: str, /, *, sep=','):
-    return filter(None, map(str.strip, s.split(sep)))
 
 if __name__ == '__main__':
     main(*sys.argv[1:])

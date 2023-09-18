@@ -160,15 +160,7 @@ L('CPL',
 
 L('CFOL',
     valid = (
-        'Existential from Universal',
-        'Existential Syllogism',
-        'Quantifier Interdefinability 1',
-        'Quantifier Interdefinability 2',
-        'Quantifier Interdefinability 3',
-        'Quantifier Interdefinability 4',
         'Self Identity 2',
-        'Syllogism',
-        'Universal Predicate Syllogism',
         Argument('b:VxKFxKaNa', title='cfol_regression_efq_univeral_with_contradiction_no_constants'),
     ),
     invalid = (
@@ -207,10 +199,6 @@ L('D',
 
 L('T',
     valid = (
-        'Necessity Elimination',
-        'NP Collapse 1',
-        'Possibility Addition',
-        'Reflexive Inference 1',
     ),
     invalid = (
         'S4 Conditional Inference 1',
@@ -221,10 +209,6 @@ L('T',
 
 L('S4',
     valid = (
-        'S4 Conditional Inference 1',
-        'S4 Conditional Inference 2',
-        'S4 Material Inference 1',
-        'S4 Material Inference 2',
     ),
     invalid = (
         'S5 Conditional Inference 1',
@@ -234,8 +218,6 @@ L('S4',
 
 L('S5',
     valid = (
-        'S5 Conditional Inference 1',
-        'S5 Material Inference 1',
     ),
     invalid = (
         Argument('KMNbc:LCaMNb:Ma', title='nested_diamond_within_box1'),
@@ -418,7 +400,6 @@ L('S5FDE',
         'S5 Inference 1',
     ),
     invalid = (
-        'NP Conditional Modus Ponens',
     ))
 
 # -----------------
@@ -795,6 +776,7 @@ L('TRM3',
     invalid = (
 
     ))
+
 L('S4RM3',
     valid = (
         'S4 Conditional Inference 1',
@@ -804,6 +786,7 @@ L('S4RM3',
     invalid = (
 
     ))
+
 L('S5RM3',
     valid = (
         'S5 Conditional Inference 1',
@@ -833,8 +816,6 @@ L('S5RM3',
     ))
 
 # -------------
-
-
 
 L('K3W',
     valid = (
@@ -891,7 +872,6 @@ L('K3W',
     ),
     invalid = (
         Argument('ANAabNa:Na', title='b3e_prior_rule_defect_1'),
-        Argument('AaTb:a'),
         Argument('AaTb:a'),
     ))
 
@@ -1022,14 +1002,7 @@ L('K3WQ',
         'Universal Predicate Syllogism',
     ),
     invalid = (
-        'Necessity Distribution 1',
-        'Reflexive Inference 1',
-        'S4 Conditional Inference 1',
-        'S4 Material Inference 1',
-        'S5 Conditional Inference 1',
-        'S5 Material Inference 1',
-        'Serial Inference 1',
-        
+
     ))
 
 L('KK3WQ',
@@ -1043,13 +1016,7 @@ L('KK3WQ',
         'Necessity Distribution 2',
     ),
     invalid = (
-        'Necessity Distribution 1',
-        'Necessity Elimination',
-        'NP Collapse 1',
-        'Possibility Addition',
-        'Reflexive Inference 1',
-        'Serial Inference 1',
-        'Serial Inference 2',
+
     ))
 
 L('TK3WQ',
@@ -1059,10 +1026,6 @@ L('TK3WQ',
         'Serial Inference 2',
     ),
     invalid = (
-        'S4 Conditional Inference 1',
-        'S4 Conditional Inference 2',
-        'S4 Material Inference 1',
-        'S4 Material Inference 2',
 
     ))
 
