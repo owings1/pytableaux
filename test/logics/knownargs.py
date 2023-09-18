@@ -1054,7 +1054,9 @@ L('KK3WQ',
 
 L('TK3WQ',
     valid = (
-
+        'NP Collapse 1',
+        'Necessity Elimination',
+        'Serial Inference 2',
     ),
     invalid = (
         'S4 Conditional Inference 1',
@@ -1066,13 +1068,11 @@ L('TK3WQ',
 
 L('S4K3WQ',
     valid = (
-
+        'S4 Conditional Inference 2',
+        'S4 Material Inference 2',
     ),
     invalid = (
 
-        'S5 Conditional Inference 1',
-        'S5 Inference 1',
-        'S5 Material Inference 1',
     ))
 
 L('S5K3WQ',
@@ -1099,6 +1099,15 @@ L('S5K3WQ',
         'Material Pseudo Contraposition',
         'Self Identity 1',
         'Self Identity 2',
+        'Necessity Distribution 1',
+        'Possibility Addition',
+        'Reflexive Inference 1',
+        'S4 Conditional Inference 1',
+        'S4 Material Inference 1',
+        'S5 Conditional Inference 1',
+        'S5 Inference 1',
+        'S5 Material Inference 1',
+        'Serial Inference 1',
     ))
 
 
@@ -1501,7 +1510,7 @@ L('S5MH',
         'Material Identity',
         'Material Pseudo Contraction',
         'Material Pseudo Contraposition',
-        # 'Modal Transformation 2',
+        'Modal Transformation 2',
         'Quantifier Interdefinability 4',
         'Reflexive Inference 1',
         'S4 Material Inference 1',
