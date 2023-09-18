@@ -414,7 +414,8 @@ class ModalOperatorRule(OperatorNodeRule, intermediate=True):
                 fnode = self[MaxWorlds].quit_flag(branch)
                 return adds(group(fnode), flag=fnode[Node.Key.flag])
             return True
-        return False
+        # Only count least-applied-to nodes
+        return not self[NodeCount].isleast(node, branch)
 
 class PossibilityRule(ModalOperatorRule, intermediate=True):
 
@@ -449,13 +450,6 @@ class PossibilityRule(ModalOperatorRule, intermediate=True):
             d = self.new_designation(d)
         return -1.0 * self[AplSentCount][target.branch][si, d]
 
-    def _check_skip(self, node: Node, branch: Branch, /) -> bool|dict:
-        res = super()._check_skip(node, branch)
-        if res:
-            return res
-        # Only count least-applied-to nodes
-        return not self[NodeCount].isleast(node, branch)
-
 class NecessityRule(ModalOperatorRule, intermediate=True):
 
     ticking = False
@@ -465,7 +459,7 @@ class NecessityRule(ModalOperatorRule, intermediate=True):
         if target.get('flag'):
             return 1.0
         # We are already restricted to least-applied-to nodes by
-        # ``_get_node_targets()``
+        # ``_check_skip()``
         # Check for closure
         if self[AdzHelper].closure_score(target) == 1:
             return 1.0
@@ -477,7 +471,7 @@ class NecessityRule(ModalOperatorRule, intermediate=True):
         return -1.0 * self.tableau.branching_complexity(target.node)
 
     def group_score(self, target, /) -> float:
-        if self.score_candidate(target) > 0:
+        if target['candidate_score'] > 0:
             return 1.0
         return -1.0 * self[NodeCount][target.branch][target.node]
 
@@ -512,11 +506,6 @@ class access:
         the branch. This prevents infinite repetition of the Serial rule for open
         branches that are otherwise finished. For this reason, the Serial rule is
         ordered last in the rules, so that all other rules are checked before it.
-
-        For a node *n* on an open branch *b* on which appears a world *w* for
-        which there is no world *w'* on *b* such that *w* accesses *w'*, add a
-        node to *b* with *w* as world1, and *w1* as world2, where *w1* does not
-        yet appear on *b*.
         """
         Helpers = (UnserialWorlds)
         marklegend = [(Marking.tableau, ('access', 'serial'))]
