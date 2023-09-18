@@ -38,13 +38,20 @@ if TYPE_CHECKING:
 
 __all__ = (
     'BaseClosureRule',
-    'BaseNodeRule',
     'ClosingRule',
-    'GetNodeTargetsRule',
+    'DefaultNodeRule',
+    'NodeRule',
+    'NodeRule',
+    'NodeTargetsRule',
     'OperatedSentenceRule',
+    'OperatorNodeRule',
     'PredicatedSentenceRule',
+    'PredicateNodeRule',
     'QuantifiedSentenceRule',
-    'Rule')
+    'QuantifierNodeRule',
+    'Rule',
+    'SentenceRule',
+    'SimpleRule')
 
 _NT = TypeVar('_NT', bound=Node)
 _ST = TypeVar('_ST', bound=Sentence)
@@ -149,7 +156,7 @@ class FindClosingNodeRule(BaseClosureRule, intermediate=True):
     def _find_closing_node(self, node: Node, branch: Branch, /) -> Node|None:
         pass
 
-class BaseSimpleRule(Rule, intermediate=True):
+class SimpleRule(Rule, intermediate=True):
 
     Helpers = (AdzHelper)
     ticking = True
@@ -162,7 +169,7 @@ class BaseSimpleRule(Rule, intermediate=True):
         'Uses ``AdzHelper.closure_score()`` to score the candidate target.'
         return self[AdzHelper].closure_score(target)
 
-class BaseNodeRule(BaseSimpleRule, intermediate=True):
+class NodeRule(SimpleRule, intermediate=True):
 
     Helpers = (FilterHelper)
     NodeFilters = (filters.NodeType)
@@ -173,7 +180,7 @@ class BaseNodeRule(BaseSimpleRule, intermediate=True):
         'Delegates to ``(FilterHelper.example_node(),)``'
         yield self[FilterHelper].example_node()
 
-class BaseSentenceRule(BaseNodeRule, Generic[_ST], intermediate=True):
+class SentenceRule(NodeRule, Generic[_ST], intermediate=True):
 
     NodeFilters = (filters.NodeSentence, filters.NodeDesignation)
 
@@ -187,14 +194,14 @@ class BaseSentenceRule(BaseNodeRule, Generic[_ST], intermediate=True):
         'Delegates to ``filters.SentenceNode`` of ``FilterHelper``.'
         return self[FilterHelper].config.filters[filters.NodeSentence].sentence(node)
 
-class PredicatedSentenceRule(BaseSentenceRule[Predicated], intermediate=True): pass
-class QuantifiedSentenceRule(BaseSentenceRule[Quantified], intermediate=True): pass
-class OperatedSentenceRule(BaseSentenceRule[Operated], intermediate=True): pass
+class PredicatedSentenceRule(SentenceRule[Predicated], intermediate=True): pass
+class QuantifiedSentenceRule(SentenceRule[Quantified], intermediate=True): pass
+class OperatedSentenceRule(SentenceRule[Operated], intermediate=True): pass
 
-class GetNodeTargetsRule(BaseNodeRule, Generic[_NT], intermediate=True):
+class NodeTargetsRule(NodeRule, Generic[_NT], intermediate=True):
 
     @FilterHelper.node_targets
-    def _get_targets(self, node: Node, branch: Branch, /):
+    def _get_targets(self, node: _NT, branch: Branch, /):
         """Wrapped by ``@FilterHelper.node_targets`` and delegates to abstract method
         ``_get_node_targets()``.
         """
@@ -204,7 +211,7 @@ class GetNodeTargetsRule(BaseNodeRule, Generic[_NT], intermediate=True):
     def _get_node_targets(self, node: _NT, branch: Branch, /):
         yield from EMPTY_SET
 
-class DefaultNodeRule(GetNodeTargetsRule[SentenceNode], Generic[_ST], intermediate=True):
+class DefaultNodeRule(NodeTargetsRule[SentenceNode], Generic[_ST], intermediate=True):
     """Default node rule with:
     
     - BaseSimpleRule:
@@ -213,7 +220,7 @@ class DefaultNodeRule(GetNodeTargetsRule[SentenceNode], Generic[_ST], intermedia
     - BaseNodeRule:
         - loads FilterHelper. ignore_ticked is default True
         - `example_nodes()` delegates to FilterHelper.
-    - GetNodeTargetsRule:
+    - NodeTargetsRule:
         - `_get_targets()` wrapped by FilterHelper, then delegates to
         abstract `_get_node_targets()`.
     - DefaultNodeRule (this rule):
@@ -222,11 +229,13 @@ class DefaultNodeRule(GetNodeTargetsRule[SentenceNode], Generic[_ST], intermedia
             NB it is not marked as abstract but will throw NotImplementError.
         - adds a NodeDesignation filter.
     """
-    # NodeFilters = (filters.NodeDesignation)
     autoattrs = True
 
     def _get_node_targets(self, node: SentenceNode, branch: Branch, /):
-        return self._get_sdw_targets(self.sentence(node), node['designated'], node.get('world'))
+        return self._get_sdw_targets(
+            self.sentence(node),
+            node.get('designated'),
+            node.get('world'))
 
     def _get_sdw_targets(self, s: _ST, d: bool|None, w: int|None, /):
         raise NotImplementedError
@@ -479,12 +488,12 @@ class NecessityRule(ModalOperatorRule, intermediate=True):
         yield from super().example_nodes()
         yield anode(0, 1)
 
-class BaseAccessRule(BaseNodeRule, intermediate=True):
+class AccessRule(NodeRule, intermediate=True):
     Helpers = (MaxWorlds)
     ignore_ticked = False
     ticking = False
 
-class AccessNodeRule(GetNodeTargetsRule[AccessNode], BaseAccessRule, intermediate=True):
+class AccessNodeRule(NodeTargetsRule[AccessNode], AccessRule, intermediate=True):
 
     Helpers = (WorldIndex)
 
@@ -497,7 +506,7 @@ class AccessNodeRule(GetNodeTargetsRule[AccessNode], BaseAccessRule, intermediat
 
 class access:
 
-    class Serial(BaseAccessRule, intermediate=True):
+    class Serial(AccessRule, intermediate=True):
         """
         The Serial rule applies to a an open branch *b* when there is a world *w*
         that appears on *b*, but there is no world *w'* such that *w* accesses *w'*.

@@ -63,15 +63,6 @@ NOGET = object()
 
 class AdzHelper(Rule.Helper):
 
-    __slots__ = ('closure_rules')
-
-    closure_rules: tuple[ClosingRule, ...]
-
-    def __init__(self, rule, /):
-        super().__init__(rule)
-        self.closure_rules = self.tableau.rules.groups.get(
-            'closure', EMPTY_SET)
-
     def _apply(self, target: Target):
         adds = target['adds']
         for i, nodes in enumerate(adds):
@@ -86,15 +77,15 @@ class AdzHelper(Rule.Helper):
             target.branch.tick(target.node)
 
     def closure_score(self, target: Target):
-
-        if not len(self.closure_rules):
+        closure_rules: Sequence[ClosingRule] = self.tableau.rules.groups.get('closure', EMPTY_SET)
+        if not len(closure_rules):
             return 0.0
         close_count = 0
         branch = target.branch
         for nodes in target['adds']:
             # assert all(isinstance(node, Node) for node in nodes)
             # nodes = tuple(map(Node, nodes))
-            for rule in self.closure_rules:
+            for rule in closure_rules:
                 if rule.nodes_will_close_branch(nodes, branch):
                     close_count += 1
                     break

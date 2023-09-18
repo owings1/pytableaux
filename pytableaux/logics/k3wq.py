@@ -42,7 +42,7 @@ class Model(K3W.Model):
 
 class System(K3W.System):
 
-    class ReduceResolveBase(rules.BaseSentenceRule[_ST], intermediate=True):
+    class ReduceResolveBase(rules.SentenceRule[_ST], intermediate=True):
 
         def _redres_targets(self, node: Node, branch: Branch, /):
             s = self.sentence(node)

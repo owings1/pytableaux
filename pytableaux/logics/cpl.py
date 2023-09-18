@@ -104,7 +104,7 @@ class System(LogicType.System):
 
 class Rules(LogicType.Rules):
 
-    class ContradictionClosure(rules.FindClosingNodeRule, rules.BaseSentenceRule):
+    class ContradictionClosure(rules.FindClosingNodeRule, rules.SentenceRule):
 
         def _find_closing_node(self, node, branch, /):
             s = self.sentence(node)
