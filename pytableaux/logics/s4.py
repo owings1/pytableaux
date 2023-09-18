@@ -29,7 +29,7 @@ class Meta(T.Meta):
     description = (
         'Normal modal logic with a reflexive and '
         'transitive access relation')
-    category_order = 4
+    category_order = T.Meta.category_order + 1
     extension_of = (
         'S4B3E',
         'S4G3',

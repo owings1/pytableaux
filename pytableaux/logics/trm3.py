@@ -18,19 +18,18 @@ from __future__ import annotations
 
 from ..tools import group
 from . import krm3 as KRM3
-from . import rm3 as RM3
 from . import tfde as TFDE
 
 
-class Meta(RM3.Meta, TFDE.Meta):
+class Meta(KRM3.Meta, TFDE.Meta):
     name = 'TRM3'
     title = 'RM3 with T modal'
     description = 'Modal version of RM3 based on T normal modal logic'
-    category_order = 23
+    category_order = KRM3.Meta.category_order + 2
     extension_of = ('KRM3')
 
-class Model(RM3.Model, TFDE.Model): pass
-class System(RM3.System, TFDE.System): pass
+class Model(KRM3.Model, TFDE.Model): pass
+class System(KRM3.System, TFDE.System): pass
 
 class Rules(KRM3.Rules, TFDE.Rules):
 

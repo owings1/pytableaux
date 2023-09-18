@@ -30,7 +30,7 @@ class Meta(FDE.Meta):
     values: type[ValueK3] = ValueK3
     designated_values = 'T'
     description = 'Three-valued logic (T, F, N)'
-    category_order = 2
+    category_order = FDE.Meta.category_order + 1
     extension_of = ('FDE')
 
 class Model(LogicType.Model[Meta.values]):

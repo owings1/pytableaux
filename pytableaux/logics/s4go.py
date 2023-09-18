@@ -29,7 +29,7 @@ class Meta(GO.Meta, S4FDE.Meta):
     name = 'S4GO'
     title = 'GO S4 modal logic'
     description = 'Modal version of GO with S4 access'
-    category_order = 59
+    category_order = S4FDE.Meta.category_order + 55
     extension_of = ('GO')
 
 class Model(GO.Model, S4FDE.Model):

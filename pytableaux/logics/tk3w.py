@@ -25,7 +25,7 @@ class Meta(KK3W.Meta, TFDE.Meta):
     name = 'TK3W'
     title = 'K3W with T modal'
     description = 'Modal version of K3W based on T normal modal logic'
-    category_order = 28
+    category_order = KK3W.Meta.category_order + 2
     extension_of = ('KK3W')
 
 class Model(KK3W.Model, TFDE.Model): pass

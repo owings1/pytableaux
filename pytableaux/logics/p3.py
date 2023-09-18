@@ -28,7 +28,7 @@ class Meta(K3.Meta):
     description = (
         'Emil Post three-valued logic (T, F, N) '
         'with mirror-image negation')
-    category_order = 20
+    category_order = K3.Meta.category_order + 11
 
 class Model(K3.Model):
 

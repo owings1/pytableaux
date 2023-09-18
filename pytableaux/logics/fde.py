@@ -31,7 +31,7 @@ class Meta(LogicType.Meta):
     designated_values = 'BT'
     unassigned_value = 'N'
     description = 'Four-valued logic (True, False, Neither, Both)'
-    category_order = 1
+    category_order = 0
     native_operators = (
         Operator.Negation,
         Operator.Conjunction,
@@ -128,7 +128,7 @@ class Rules(LogicType.Rules):
     class UniversalNegatedDesignated(ExistentialDesignated): pass
     class UniversalUndesignated(ExistentialDesignated): pass
     class UniversalNegatedUndesignated(UniversalDesignated): pass
-            
+
     class DoubleNegationDesignated(rules.OperandsRule): pass
     class DoubleNegationUndesignated(rules.OperandsRule): pass
     class AssertionDesignated(rules.OperandsRule): pass

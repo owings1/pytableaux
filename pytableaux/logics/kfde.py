@@ -27,7 +27,7 @@ class Meta(FDE.Meta):
     title = 'FDE with K modal'
     modal = True
     description = 'Modal version of FDE based on K normal modal logic'
-    category_order = 1
+    category_order = FDE.Meta.category_order
     extension_of = ('FDE')
 
 class Model(FDE.Model): pass

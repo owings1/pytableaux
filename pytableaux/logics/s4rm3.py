@@ -25,7 +25,7 @@ class Meta(TRM3.Meta, S4FDE.Meta):
     name = 'S4RM3'
     title = 'RM3 with S4 modal'
     description = 'Modal version of RM3 based on S4 normal modal logic'
-    category_order = 24
+    category_order = TRM3.Meta.category_order + 1
     extension_of = ('TRM3')
 
 class Model(TRM3.Model, S4FDE.Model): pass

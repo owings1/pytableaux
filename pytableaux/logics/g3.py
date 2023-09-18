@@ -28,7 +28,7 @@ class Meta(L3.Meta):
     description = (
         'Three-valued logic (T, F, N) with alternate '
         'negation and conditional')
-    category_order = 10
+    category_order = L3.Meta.category_order + 5
 
 class Model(K3.Model):
 

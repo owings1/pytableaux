@@ -27,7 +27,7 @@ class Meta(LP.Meta):
     description = (
         'Three-valued logic (True, False, Both) with non-standard conjunction, '
         'and a classical-like conditional')
-    category_order = 12
+    category_order = MH.Meta.category_order + 1
     native_operators = MH.Meta.native_operators
 
 class Model(LP.Model):

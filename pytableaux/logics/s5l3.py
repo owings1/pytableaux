@@ -17,20 +17,19 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import l3 as L3
 from . import s4l3 as S4L3
 from . import s5fde as S5FDE
 
 
-class Meta(L3.Meta, S5FDE.Meta):
+class Meta(S4L3.Meta, S5FDE.Meta):
     name = 'S5L3'
     title = 'L3 with S5 modal'
     description = 'Modal version of L3 based on S5 normal modal logic'
-    category_order = 20
+    category_order = S4L3.Meta.category_order + 1
     extension_of = ('S4L3')
 
-class Model(L3.Model, S5FDE.Model): pass
-class System(L3.System, S5FDE.System): pass
+class Model(S4L3.Model, S5FDE.Model): pass
+class System(S4L3.System, S5FDE.System): pass
 
 class Rules(S4L3.Rules, S5FDE.Rules):
 

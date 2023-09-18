@@ -17,27 +17,26 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import kmh as KMH
-from . import mh as MH
 from . import s4fde as S4FDE
+from . import tmh as TMH
 
 
-class Meta(MH.Meta, S4FDE.Meta):
+class Meta(TMH.Meta, S4FDE.Meta):
     name = 'S4MH'
     title = 'MH with S4 modal'
     description = 'Modal version of MH based on S4 normal modal logic'
-    category_order = 49
+    category_order = TMH.Meta.category_order + 1
     extension_of = ('TMH')
 
-class Model(MH.Model, S4FDE.Model): pass
-class System(MH.System, S4FDE.System): pass
+class Model(TMH.Model, S4FDE.Model): pass
+class System(TMH.System, S4FDE.System): pass
 
-class Rules(KMH.Rules, S4FDE.Rules):
+class Rules(TMH.Rules, S4FDE.Rules):
 
     groups = (
-        *KMH.Rules.nonbranching_groups,
+        *TMH.Rules.nonbranching_groups,
         group(S4FDE.Rules.Transitive),
-        *KMH.Rules.unmodal_groups,
-        group(S4FDE.Rules.Reflexive),
-        *KMH.Rules.branching_groups,
-        *KMH.Rules.unquantifying_groups)
+        *TMH.Rules.unmodal_groups,
+        group(TMH.Rules.Reflexive),
+        *TMH.Rules.branching_groups,
+        *TMH.Rules.unquantifying_groups)

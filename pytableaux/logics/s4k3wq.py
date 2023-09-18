@@ -25,7 +25,7 @@ class Meta(TK3WQ.Meta, S4FDE.Meta):
     name = 'S4K3WQ'
     title = 'K3WQ with S4 modal'
     description = 'Modal version of K3WQ based on S4 normal modal logic'
-    category_order = 34
+    category_order = TK3WQ.Meta.category_order + 1
     extension_of = ('TK3WQ')
 
 class Model(TK3WQ.Model, S4FDE.Model): pass

@@ -26,7 +26,7 @@ class Meta(CPL.Meta):
     title = 'Classical First Order Logic'
     quantified = True
     description = 'Standard bivalent logic with full first-order quantification'
-    category_order = 2
+    category_order = CPL.Meta.category_order + 1
     extension_of = (
         'B3E',
         'CPL',

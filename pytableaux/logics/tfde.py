@@ -25,7 +25,7 @@ class Meta(KFDE.Meta):
     name = 'TFDE'
     title = 'FDE with T modal'
     description = 'Modal version of FDE based on T normal modal logic'
-    category_order = 3
+    category_order = KFDE.Meta.category_order + 2
     extension_of = ('KFDE')
 
 class Model(KFDE.Model):

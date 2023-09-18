@@ -16,17 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import lp as LP
+from . import s4lp as S4LP
 from . import s5fde as S5FDE
 
 
-class Meta(LP.Meta, S5FDE.Meta):
+class Meta(S4LP.Meta, S5FDE.Meta):
     name = 'S5LP'
     title = 'LP with S5 modal'
     description = 'Modal version of LP based on S5 normal modal logic'
-    category_order = 15
+    category_order = S4LP.Meta.category_order + 1
     extension_of = ('S4LP', 'S5FDE')
 
-class Model(LP.Model, S5FDE.Model): pass
-class System(LP.System, S5FDE.System): pass
-class Rules(LP.Rules, S5FDE.Rules): pass
+class Model(S4LP.Model, S5FDE.Model): pass
+class System(S4LP.System, S5FDE.System): pass
+class Rules(S4LP.Rules, S5FDE.Rules): pass

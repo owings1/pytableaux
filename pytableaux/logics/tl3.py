@@ -18,19 +18,18 @@ from __future__ import annotations
 
 from ..tools import group
 from . import kl3 as KL3
-from . import l3 as L3
 from . import tfde as TFDE
 
 
-class Meta(L3.Meta, TFDE.Meta):
+class Meta(KL3.Meta, TFDE.Meta):
     name = 'TL3'
     title = 'L3 with T modal'
     description = 'Modal version of L3 based on T normal modal logic'
-    category_order = 18
+    category_order = KL3.Meta.category_order + 2
     extension_of = ('KL3')
 
-class Model(L3.Model, TFDE.Model): pass
-class System(L3.System, TFDE.System): pass
+class Model(KL3.Model, TFDE.Model): pass
+class System(KL3.System, TFDE.System): pass
 
 class Rules(KL3.Rules, TFDE.Rules):
 

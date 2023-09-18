@@ -28,7 +28,7 @@ class Meta(CFOL.Meta):
     title = 'Kripke Normal Modal Logic'
     modal = True
     description = 'Base normal modal logic with no access relation restrictions'
-    category_order = 1
+    category_order = 0
     extension_of = (
         'CFOL',
         'KB3E',

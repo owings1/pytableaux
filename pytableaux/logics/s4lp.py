@@ -16,17 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import lp as LP
 from . import s4fde as S4FDE
+from . import tlp as TLP
 
 
-class Meta(LP.Meta, S4FDE.Meta):
+class Meta(TLP.Meta, S4FDE.Meta):
     name = 'S4LP'
     title = 'LP with S4 modal'
     description = 'Modal version of LP based on S4 normal modal logic'
-    category_order = 14
+    category_order = TLP.Meta.category_order + 1
     extension_of = ('TLP', 'S4FDE')
 
-class Model(LP.Model, S4FDE.Model): pass
-class System(LP.System, S4FDE.System): pass
-class Rules(LP.Rules, S4FDE.Rules): pass
+class Model(TLP.Model, S4FDE.Model): pass
+class System(TLP.System, S4FDE.System): pass
+class Rules(TLP.Rules, S4FDE.Rules): pass

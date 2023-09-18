@@ -29,7 +29,7 @@ class Meta(LP.Meta):
     description = (
         'Three-valued logic (True, False, Both) with a primitive '
         'Conditional operator')
-    category_order = 6
+    category_order = LP.Meta.category_order + 2
     native_operators = [Operator.Conditional, Operator.Biconditional]
 
 class Model(LP.Model):

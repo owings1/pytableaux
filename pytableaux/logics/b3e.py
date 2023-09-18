@@ -27,7 +27,7 @@ class Meta(K3.Meta):
     name = 'B3E'
     title = 'Bochvar 3 External Logic'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
-    category_order = 9
+    category_order = K3W.Meta.category_order + 2
     native_operators = [Operator.Assertion]
 
 class Model(K3.Model):

@@ -25,7 +25,7 @@ class Meta(K3.Meta):
     name = 'K3W'
     title = 'Weak Kleene Logic'
     description = 'Three-valued logic with values T, F, and N'
-    category_order = 7
+    category_order = K3.Meta.category_order + 4
 
 class Model(K3.Model):
 

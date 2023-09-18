@@ -29,7 +29,7 @@ class Meta(L3.Meta, B3E.Meta):
     description = (
         'Three-valued logic (T, F, N) with '
         'classical-like binary operators')
-    category_order = 13
+    category_order = B3E.Meta.category_order + 4
 
 class Model(K3.Model):
 

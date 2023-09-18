@@ -29,7 +29,7 @@ class Meta(K3W.Meta):
     name = 'K3WQ'
     title = 'Weak Kleene alt-Q Logic'
     description = 'Weak Kleene logic with alternate quantification'
-    category_order = 8
+    category_order = K3W.Meta.category_order + 1
     extension_of = ('K3W') # proof?
 
 class Model(K3W.Model):

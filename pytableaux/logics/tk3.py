@@ -16,17 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import annotations
 
-from . import k3 as K3
+from . import kk3 as KK3
 from . import tfde as TFDE
 
 
-class Meta(K3.Meta, TFDE.Meta):
+class Meta(KK3.Meta, TFDE.Meta):
     name = 'TK3'
     title = 'K3 with T modal'
     description = 'Modal version of K3 based on T normal modal logic'
-    category_order = 8
+    category_order = KK3.Meta.category_order + 2
     extension_of = ('KK3', 'TFDE')
 
-class Model(K3.Model, TFDE.Model): pass
-class System(K3.System, TFDE.System): pass
-class Rules(K3.Rules, TFDE.Rules): pass
+class Model(KK3.Model, TFDE.Model): pass
+class System(KK3.System, TFDE.System): pass
+class Rules(KK3.Rules, TFDE.Rules): pass

@@ -26,7 +26,7 @@ class Meta(K.Meta):
     name = 'T'
     title = 'Reflexive Normal Modal Logic'
     description = 'Normal modal logic with a reflexive access relation'
-    category_order = 3
+    category_order = K.Meta.category_order + 2
     extension_of = (
         'D',
         'TB3E',

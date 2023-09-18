@@ -18,19 +18,18 @@ from __future__ import annotations
 
 from ..tools import group
 from . import kmh as KMH
-from . import mh as MH
 from . import tfde as TFDE
 
 
-class Meta(MH.Meta, TFDE.Meta):
+class Meta(KMH.Meta, TFDE.Meta):
     name = 'TMH'
     title = 'MH with T modal'
     description = 'Modal version of MH based on T normal modal logic'
-    category_order = 48
+    category_order = KMH.Meta.category_order + 2
     extension_of = ('KMH')
 
-class Model(MH.Model, TFDE.Model): pass
-class System(MH.System, TFDE.System): pass
+class Model(KMH.Model, TFDE.Model): pass
+class System(KMH.System, TFDE.System): pass
 
 class Rules(KMH.Rules, TFDE.Rules):
 

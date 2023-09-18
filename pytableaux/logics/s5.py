@@ -19,7 +19,6 @@ from __future__ import annotations
 from ..models import GlobalAccess
 from ..proof import rules
 from ..tools import group
-from . import k as K
 from . import s4 as S4
 
 
@@ -28,7 +27,7 @@ class Meta(S4.Meta):
     title = 'S5 Normal Modal Logic'
     description = (
         'Normal modal logic with global access relation')
-    category_order = 5
+    category_order = S4.Meta.category_order + 1
     extension_of = (
         'S4',
         'S5B3E',
@@ -45,7 +44,7 @@ class Meta(S4.Meta):
 class Model(S4.Model):
     Access: type[GlobalAccess] = GlobalAccess
 
-class System(K.System): pass
+class System(S4.System): pass
 
 class Rules(S4.Rules):
 

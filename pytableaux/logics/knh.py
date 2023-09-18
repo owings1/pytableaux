@@ -26,7 +26,7 @@ class Meta(NH.Meta, KFDE.Meta):
     name = 'KNH'
     title = 'NH with K modal'
     description = 'Modal version of NH based on K normal modal logic'
-    category_order = 51
+    category_order = KFDE.Meta.category_order + 50
     extension_of = ('NH')
 
 class Model(NH.Model, KFDE.Model):
@@ -46,7 +46,6 @@ class Model(NH.Model, KFDE.Model):
 class System(NH.System, KFDE.System): pass
 
 class Rules(NH.Rules, KFDE.Rules):
-
 
     class NecessityNegatedDesignated(rules.PossibilityRule):
         pass

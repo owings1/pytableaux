@@ -18,19 +18,18 @@ from __future__ import annotations
 
 from ..tools import group
 from . import knh as KNH
-from . import nh as NH
 from . import tfde as TFDE
 
 
-class Meta(NH.Meta, TFDE.Meta):
+class Meta(KNH.Meta, TFDE.Meta):
     name = 'TNH'
     title = 'NH with T modal'
     description = 'Modal version of NH based on T normal modal logic'
-    category_order = 53
+    category_order = KNH.Meta.category_order + 2
     extension_of = ('KNH')
 
-class Model(NH.Model, TFDE.Model): pass
-class System(NH.System, TFDE.System): pass
+class Model(KNH.Model, TFDE.Model): pass
+class System(KNH.System, TFDE.System): pass
 
 class Rules(KNH.Rules, TFDE.Rules):
 

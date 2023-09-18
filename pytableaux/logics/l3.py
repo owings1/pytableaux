@@ -29,7 +29,7 @@ class Meta(K3.Meta):
     description = (
         'Three-valued logic (True, False, Neither) with a '
         'primitive Conditional operator')
-    category_order = 5
+    category_order = K3.Meta.category_order + 2
     native_operators = [Operator.Conditional, Operator.Biconditional]
 
 class Model(K3.Model):

@@ -34,7 +34,7 @@ class Meta(LogicType.Meta):
     designated_values = 'T'
     unassigned_value = 'F'
     description = 'Standard bivalent logic with predication, without quantification'
-    category_order = 1
+    category_order = 0
     native_operators = (
         Operator.Negation,
         Operator.Conjunction,

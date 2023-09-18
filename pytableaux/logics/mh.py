@@ -28,7 +28,7 @@ class Meta(K3.Meta):
     description = (
         'Three-valued logic (T, F, N) with non-standard disjunction, '
         'and a classical-like conditional')
-    category_order = 11
+    category_order = K3.Meta.category_order + 8
     native_operators = [Operator.Conditional, Operator.Biconditional]
 
 class Model(K3.Model):

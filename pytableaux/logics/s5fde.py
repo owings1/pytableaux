@@ -17,22 +17,21 @@
 from __future__ import annotations
 
 from ..tools import group
-from . import kfde as KFDE
 from . import s4fde as S4FDE
 from . import s5 as S5
 
 
-class Meta(KFDE.Meta):
+class Meta(S4FDE.Meta):
     name = 'S5FDE'
     title = 'FDE with S5 modal'
     description = 'Modal version of FDE based on S5 normal modal logic'
-    category_order = 5
+    category_order = S4FDE.Meta.category_order + 1
     extension_of = ('S4FDE')
 
 class Model(S4FDE.Model):
     Access: type[S5.Model.Access] = S5.Model.Access
 
-class System(KFDE.System): pass
+class System(S4FDE.System): pass
 
 class Rules(S4FDE.Rules):
 
